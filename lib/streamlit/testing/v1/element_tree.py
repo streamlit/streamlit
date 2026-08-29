@@ -55,6 +55,7 @@ from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.common import TESTING_KEY, user_key_from_element_id
+from streamlit.testing.v1.errors import AppTestError
 
 if TYPE_CHECKING:
     from pandas import DataFrame as PandasDataframe
@@ -97,13 +98,18 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 
-class AppTestError(builtins.Exception):
-    """Raised when an AppTest query or interaction is invalid.
+def _unknown_element_content(proto: Any) -> Any:
+    """Best-effort payload for an unimplemented element's proto.
 
-    AppTest can run apps that contain unimplemented or browser-only elements.
-    This error is reserved for an explicit test action that a browser user
-    could not perform, such as updating a disabled widget.
+    Many display protos store content in ``body``, ``text``, or ``label``
+    rather than ``value`` (for example ``st.html``).
     """
+    fields = getattr(getattr(proto, "DESCRIPTOR", None), "fields_by_name", None)
+    if fields:
+        for name in ("value", "body", "text", "label"):
+            if name in fields:
+                return getattr(proto, name)
+    return getattr(proto, "value", None)
 
 
 def _format_value_for_widget(format_func: Callable[[Any], str], value: Any) -> str:
@@ -214,7 +220,7 @@ class UnknownElement(Element):
                 # Missing or unreadable widget state is expected for
                 # unimplemented elements; fall back to a proto field.
                 pass
-        return getattr(self.proto, "value", None)
+        return _unknown_element_content(self.proto)
 
 
 @dataclass(repr=False)
@@ -323,13 +329,42 @@ class BlockList:
     def __len__(self) -> int:
         return len(self._list)
 
+    @property
+    def len(self) -> int:
+        return len(self)
+
+    @overload
+    def __getitem__(self, idx: int) -> Block: ...
+
+    @overload
+    def __getitem__(self, idx: slice) -> BlockList: ...
+
+    def __getitem__(self, idx: int | slice) -> Block | BlockList:
+        if isinstance(idx, slice):
+            return BlockList(self._list[idx])
+        return self._list[idx]
+
     def __iter__(self) -> Iterator[Block]:
         return iter(self._list)
 
-    def __getitem__(self, idx: int) -> Block:
-        return self._list[idx]
+    def __repr__(self) -> str:
+        return util.repr_(self)
+
+    def __eq__(self, other: BlockList | object) -> bool:
+        if isinstance(other, BlockList):
+            return self._list == other._list
+        return self._list == other
+
+    def __hash__(self) -> int:
+        return hash(tuple(self._list))
 
     def __call__(self, key: str) -> Block:
+        """Return the first block in this collection with the given user key.
+
+        Unlike ``get_by_key``, this keeps first-match behavior so typed
+        lookups such as ``at.container("x")`` stay compatible with
+        ``at.button("x")``.
+        """
         for e in self._list:
             if e.key == key:
                 return e

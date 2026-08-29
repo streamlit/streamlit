@@ -1771,6 +1771,27 @@ def test_element_list_slice_repr_and_equality():
     assert at.markdown != ["not", "matching"]
 
 
+def test_block_list_slice_repr_and_len() -> None:
+    """BlockList matches ElementList for slice, repr, len, and equality."""
+
+    def script():
+        import streamlit as st
+
+        with st.container(key="one"):
+            st.text("a")
+        with st.container(key="two"):
+            st.text("b")
+
+    at = AppTest.from_function(script).run()
+    subset = at.container[0:1]
+    assert isinstance(subset, type(at.container))
+    assert subset.len == 1
+    assert subset[0].key == "one"
+    assert repr(at.container)
+    assert at.container == list(at.container)
+    assert at.container != ["not", "matching"]
+
+
 def test_button_value_reflects_set_value_before_run():
     """Button.value returns the locally set value before a rerun commits it."""
 
@@ -2044,6 +2065,16 @@ def test_expander_key_and_get_by_key() -> None:
     at = AppTest.from_function(script).run()
     assert at.expander[0].key == "details"
     assert at.get_by_key("details").label == "Details"
+
+
+def test_app_test_error_is_public_builtin_exception() -> None:
+    """AppTestError lives outside element_tree so it is a real builtin Exception."""
+    from streamlit.testing.v1 import AppTestError as PublicError
+    from streamlit.testing.v1.errors import AppTestError as ErrorsError
+
+    assert PublicError is AppTestError
+    assert PublicError is ErrorsError
+    assert issubclass(PublicError, Exception)
 
 
 def test_disabled_widget_rejects_update() -> None:

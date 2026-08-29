@@ -499,7 +499,8 @@ def test_run_tolerates_unimplemented_elements() -> None:
     assert at.title[0].value == "still works"
     assert len(at.get("progress")) == 1
     assert at.get("progress")[0].value == 40
-    assert at.get("html")[0].value is None
+    assert at.get("html")[0].value == "<b>hi</b>"
+    assert at.get("page_link")[0].value == "Example"
 
 
 def test_switch_page_respects_custom_url_path(tmp_path: Path) -> None:
