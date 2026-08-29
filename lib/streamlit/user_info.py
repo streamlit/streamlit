@@ -21,8 +21,10 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Final,
+    Literal,
     NoReturn,
     cast,
+    overload,
 )
 
 from streamlit import config, logger, runtime
@@ -488,6 +490,11 @@ class TokensProxy(Mapping[str, str]):
             # Use the tokens for API verification
     """
 
+    # Declare the documented token names so IDEs autocomplete ``.id`` and
+    # ``.access``; any other name still resolves through ``__getattr__``.
+    id: str
+    access: str
+
     def __init__(self, tokens: dict[str, str]) -> None:
         self._tokens = tokens
 
@@ -653,6 +660,19 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
         }
 
     """
+
+    # Narrow the documented is_logged_in field; provider-specific claims retain
+    # the mapping's general value type.
+    is_logged_in: bool
+
+    @overload
+    def __getitem__(self, key: Literal["is_logged_in"]) -> bool: ...
+
+    @overload
+    def __getitem__(self, key: Literal["tokens"]) -> TokensProxy: ...
+
+    @overload
+    def __getitem__(self, key: str) -> str | bool | TokensProxy | None: ...
 
     def __getitem__(self, key: str) -> str | bool | TokensProxy | None:
         if key == "tokens":

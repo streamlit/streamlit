@@ -61,8 +61,10 @@ typing errors in parameters or return types by using mypy, ty, and `assert_type`
 
 - **These are NOT pytest tests** — they are checked by mypy and ty, never executed at runtime.
 - All assertions and imports go inside `if TYPE_CHECKING:` blocks.
-- Do **not** use `def test_*()` functions or `import streamlit as st`.
-- Import from Mixin classes directly (e.g. `LayoutsMixin().expander`).
+- Do **not** use `def test_*()` functions. Import mixin methods directly
+  (e.g. `LayoutsMixin().expander`). For module-level objects such as
+  `st.context`, `st.user`, `st.bottom`, and `st.App`, import
+  `streamlit as st`.
 - Always include `from __future__ import annotations` at the top.
 - Overloads discriminated on `bool` need an explicit fallback overload for
   non-literal values, because mypy does not expand `bool` into
@@ -82,12 +84,13 @@ typing errors in parameters or return types by using mypy, ty, and `assert_type`
   instead, so the suppression can be removed once ty catches up.
 - For dict-like return values backed by `AttributeDictionary` /
   `ReadOnlyAttributeDictionary` subclasses (e.g. dataframe/chart selection
-  state, `ButtonColumn` click state, `st.data_editor` edit state), assert both
-  attribute and bracket access (e.g. `state.selection.rows` and
-  `state["selection"]["rows"]`, or `edit_state.edited_rows` and
-  `edit_state["edited_rows"]`). Use a separate `TypedDict` (`*Input`) for
-  values users assign (e.g. `selection_default`), not the returned
-  attribute-dictionary class.
+  state, `ButtonColumn` click state, `st.data_editor` edit state), and for
+  module-level objects that support both notations (`st.context`, `st.user`,
+  `st.user.tokens`), assert both attribute and bracket access (e.g.
+  `state.selection.rows` and `state["selection"]["rows"]`, or
+  `st.context.timezone` and `st.context["timezone"]`). Use a separate
+  `TypedDict` (`*Input`) for values users assign (e.g. `selection_default`),
+  not the returned attribute-dictionary class.
 
 ## Docstrings for Public API
 
