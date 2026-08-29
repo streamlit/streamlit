@@ -623,3 +623,30 @@ def test_switch_page_keeps_navigation_registry_after_failed_run(
     assert at.exception
     with pytest.raises(ValueError, match="navigation page"):
         at.switch_page("orphan.py")
+
+
+def test_switch_page_drops_registry_when_navigation_is_skipped(
+    tmp_path: Path,
+) -> None:
+    """A successful run that skips st.navigation must not keep the old pages."""
+    (tmp_path / "orphan.py").write_text(
+        'import streamlit as st\nst.text("orphan page")\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "if st.session_state.get('plain'):\n"
+        "    st.text('plain page')\n"
+        "else:\n"
+        "    def home():\n"
+        "        st.text('home page')\n"
+        "    pg = st.navigation([st.Page(home, title='Home')])\n"
+        "    pg.run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    assert at.text[0].value == "home page"
+    at.session_state["plain"] = True
+    at.run()
+    assert at.text[0].value == "plain page"
+    at.switch_page("orphan.py")

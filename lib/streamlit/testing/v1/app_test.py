@@ -412,12 +412,15 @@ class AppTest:
                 widget_state, self.query_params, timeout, self._page_hash
             )
             self._tree._runner = self
-            # A run that fails before st.navigation leaves a main-page-only
-            # fallback. Keep the last navigation registry so switch_page()
-            # does not silently fall back to a filename hash.
+            # A failed run that never reaches st.navigation leaves a
+            # main-page-only fallback. Keep the last navigation registry in
+            # that case so switch_page() does not silently hash the filename.
+            # A successful run that no longer calls st.navigation must drop
+            # the stale map.
             new_pages = pages_manager.get_pages()
-            if any("url_pathname" in info for info in new_pages.values()) or not any(
-                "url_pathname" in info for info in self._registered_pages.values()
+            if (
+                any("url_pathname" in info for info in new_pages.values())
+                or not self.exception
             ):
                 self._registered_pages = new_pages
         # Last event is SHUTDOWN, so the corresponding data includes query string
