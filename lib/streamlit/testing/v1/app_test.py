@@ -39,6 +39,7 @@ from streamlit.runtime.state.session_state import SessionState
 from streamlit.source_util import page_icon_and_name
 from streamlit.testing.v1.element_tree import (
     Block,
+    BlockList,
     Button,
     ButtonGroup,
     Caption,
@@ -182,6 +183,9 @@ class AppTest:
         self.args = args
         self.kwargs = kwargs
         self._page_hash = ""
+        # Pages registered by the most recent run, used to resolve switch_page()
+        # against st.navigation hashes (which follow url_path, not filename).
+        self._registered_pages: dict[str, Any] = {}
         # Cache the discovered component manager so installed CCv2 components are
         # only scanned once per AppTest instance instead of on every rerun.
         self._bidi_component_manager: BidiComponentManager | None = None
@@ -408,6 +412,7 @@ class AppTest:
                 widget_state, self.query_params, timeout, self._page_hash
             )
             self._tree._runner = self
+            self._registered_pages = pages_manager.get_pages()
         # Last event is SHUTDOWN, so the corresponding data includes query string
         query_string = script_runner.event_data[-1]["client_state"].query_string
         self.query_params = parse.parse_qs(query_string)
@@ -502,9 +507,51 @@ class AppTest:
                 f"{str(full_page_path.resolve())!r}."
             )
         page_path_str = str(full_page_path.resolve())
-        _, page_name = page_icon_and_name(Path(page_path_str))
-        self._page_hash = calc_hash(page_name)
+        self._page_hash = self._resolve_page_hash(page_path_str)
         return self
+
+    def _resolve_page_hash(self, page_path_str: str) -> str:
+        """Map a page file to the script hash a real session would use.
+
+        ``st.Page`` hashes ``url_path``, which may differ from the filename.
+        After the first run, match the resolved script path against pages
+        registered by ``st.navigation`` or a ``pages/`` directory.
+        """
+        _, page_name = page_icon_and_name(Path(page_path_str))
+        filename_hash = calc_hash(page_name)
+        target = Path(page_path_str).resolve()
+
+        path_matches = [
+            page_hash
+            for page_hash, info in self._registered_pages.items()
+            if (script_path := info.get("script_path"))
+            and Path(str(script_path)).resolve() == target
+        ]
+        if len(path_matches) == 1:
+            return path_matches[0]
+        if len(path_matches) > 1:
+            raise ValueError(f"Multiple navigation pages use script {page_path_str!r}.")
+        if filename_hash in self._registered_pages:
+            return filename_hash
+
+        # File pages registered by st.navigation include a script_path. If any
+        # exist and none matched, fail instead of silently opening the default
+        # page (https://github.com/streamlit/streamlit/issues/16611).
+        registered_files = [
+            str(info["script_path"])
+            for info in self._registered_pages.values()
+            if info.get("script_path")
+        ]
+        has_navigation_registry = any(
+            "url_pathname" in info for info in self._registered_pages.values()
+        )
+        if registered_files and has_navigation_registry:
+            raise ValueError(
+                f"Could not find a navigation page for {page_path_str!r}. "
+                "AppTest.switch_page() matches registered script paths. "
+                f"Known script paths: {registered_files}."
+            )
+        return filename_hash
 
     @property
     def main(self) -> Block:
@@ -692,6 +739,19 @@ class AppTest:
             is an extension of the Block class.
         """
         return self._tree.columns
+
+    @property
+    def container(self) -> BlockList:
+        """Sequence of ``st.container`` blocks.
+
+        Returns
+        -------
+        BlockList
+            Sequence of ``st.container`` / flex-container blocks. Individual
+            blocks can be accessed by index or user key. For example,
+            ``at.container[0]`` or ``at.container(key="filters")``.
+        """
+        return self._tree.container
 
     @property
     def dataframe(self) -> ElementList[Dataframe]:
@@ -1250,6 +1310,30 @@ class AppTest:
             the ``st.slider`` widget with a given key.
         """
         return self._tree.get(element_type)
+
+    def get_by_key(self, key: str) -> Node:
+        """Return the unique current node with this user key.
+
+        Works for widgets, keyed display elements, and keyed containers.
+
+        Parameters
+        ----------
+        key : str
+            The user-provided ``key`` of the element or container.
+
+        Returns
+        -------
+        Element or Block
+            The matching node.
+
+        Raises
+        ------
+        KeyError
+            If no current node has this key.
+        AppTestError
+            If more than one current node has this key.
+        """
+        return self._tree.get_by_key(key)
 
     def __repr__(self) -> str:
         return repr_(self)

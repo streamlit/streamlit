@@ -26,7 +26,7 @@ from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentM
 from streamlit.dataframe import lazy_df_source as dataframe_source
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
 from streamlit.testing.v1.app_test import AppTest
-from streamlit.testing.v1.element_tree import _format_value_for_widget
+from streamlit.testing.v1.element_tree import AppTestError, _format_value_for_widget
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -1989,3 +1989,47 @@ def test_spinner_transient_delta_is_skipped():
     at = AppTest.from_function(script).run()
     assert not at.exception
     assert at.text[0].value == "done"
+
+
+def test_container_key_and_get_by_key() -> None:
+    """Keyed containers expose .key and can be looked up semantically.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/13163
+    """
+
+    def script():
+        import streamlit as st
+
+        with st.container(key="filters"):
+            st.text_input("Query", key="query")
+        st.button("Outside", key="outside")
+
+    at = AppTest.from_function(script).run()
+    assert at.container("filters").key == "filters"
+    assert at.get_by_key("filters").key == "filters"
+    assert at.container("filters").text_input[0].key == "query"
+    assert at.get_by_key("query").key == "query"
+    assert at.get_by_key("outside").label == "Outside"
+    with pytest.raises(KeyError):
+        at.container("missing")
+
+
+def test_disabled_widget_rejects_update() -> None:
+    """Disabled widgets reject forged interactions.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/12844
+    """
+
+    def script():
+        import streamlit as st
+
+        st.text_input("Text", value="initial", disabled=True, key="k_text")
+        st.button("Go", disabled=True, key="k_btn")
+
+    at = AppTest.from_function(script).run()
+    with pytest.raises(AppTestError, match="disabled"):
+        at.text_input("k_text").set_value("new value")
+    with pytest.raises(AppTestError, match="disabled"):
+        at.button("k_btn").click()
+    at = at.run()
+    assert at.text_input("k_text").value == "initial"
