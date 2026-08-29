@@ -161,6 +161,33 @@ describe("DateTimeInput widget", () => {
     expect(calendar).toBeVisible()
   })
 
+  // CalendarPopoverHeader is shared with st.date_input, so the year-boundary
+  // regression in #16686 applies here too.
+  it("year picker lists the boundary year when min/max cross a year", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateTimeInput
+        {...getProps({
+          min: "2024-08-03T00:00",
+          max: "2025-02-03T23:59",
+          default: ["2025-02-01T10:00"],
+        })}
+      />
+    )
+
+    await user.click(screen.getAllByRole("spinbutton")[0])
+    const calendar = screen.getByTestId("stDateTimeInputCalendar")
+    const yearTrigger = within(calendar).getByRole("button", { name: "year" })
+    expect(yearTrigger).toHaveTextContent("2025")
+    expect(yearTrigger).not.toHaveTextContent("2024")
+
+    await user.click(yearTrigger)
+    const years = (await screen.findAllByRole("option")).map(
+      option => option.textContent
+    )
+    expect(years).toEqual(["2024", "2025"])
+  })
+
   it("calendar selection stays open and commits on close", async () => {
     const user = userEvent.setup()
     const props = getProps({
