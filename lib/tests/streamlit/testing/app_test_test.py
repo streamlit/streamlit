@@ -549,3 +549,25 @@ def test_switch_page_unknown_navigation_page_raises(tmp_path: Path) -> None:
     at = AppTest.from_file(tmp_path / "app.py").run()
     with pytest.raises(ValueError, match="navigation page"):
         at.switch_page("orphan.py")
+
+
+def test_switch_page_rejects_unregistered_file_in_callable_navigation(
+    tmp_path: Path,
+) -> None:
+    """Callable-only navigation must not silently open the default page."""
+    (tmp_path / "orphan.py").write_text(
+        'import streamlit as st\nst.text("orphan page")\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "def home():\n"
+        "    st.text('home page')\n"
+        "pg = st.navigation([st.Page(home, title='Home')])\n"
+        "pg.run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    assert at.text[0].value == "home page"
+    with pytest.raises(ValueError, match="navigation page"):
+        at.switch_page("orphan.py")

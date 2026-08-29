@@ -534,22 +534,23 @@ class AppTest:
         if filename_hash in self._registered_pages:
             return filename_hash
 
-        # File pages registered by st.navigation include a script_path. If any
-        # exist and none matched, fail instead of silently opening the default
-        # page (https://github.com/streamlit/streamlit/issues/16611).
-        registered_files = [
-            str(info["script_path"])
-            for info in self._registered_pages.values()
-            if info.get("script_path")
-        ]
+        # st.navigation registers url_pathname even for callable-only pages.
+        # Fail instead of silently opening the default page when the requested
+        # file is not in that registry (https://github.com/streamlit/streamlit/issues/16611).
         has_navigation_registry = any(
             "url_pathname" in info for info in self._registered_pages.values()
         )
-        if registered_files and has_navigation_registry:
+        if has_navigation_registry:
+            known_pages = [
+                str(info["script_path"])
+                if info.get("script_path")
+                else str(info.get("url_pathname") or info.get("page_name") or page_hash)
+                for page_hash, info in self._registered_pages.items()
+            ]
             raise ValueError(
                 f"Could not find a navigation page for {page_path_str!r}. "
                 "AppTest.switch_page() matches registered script paths. "
-                f"Known script paths: {registered_files}."
+                f"Known pages: {known_pages}."
             )
         return filename_hash
 

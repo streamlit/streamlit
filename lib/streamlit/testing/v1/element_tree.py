@@ -97,7 +97,7 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 
-class AppTestError(Exception):
+class AppTestError(builtins.Exception):
     """Raised when an AppTest query or interaction is invalid.
 
     AppTest can run apps that contain unimplemented or browser-only elements.
@@ -211,6 +211,8 @@ class UnknownElement(Element):
                 if state is not None:
                     return state[proto_id]
             except (KeyError, ValueError, AttributeError, TypeError):
+                # Missing or unreadable widget state is expected for
+                # unimplemented elements; fall back to a proto field.
                 pass
         return getattr(self.proto, "value", None)
 
@@ -1683,7 +1685,9 @@ class Slider(Widget, Generic[SliderValueT]):
         self, v: SliderValueT | Sequence[SliderValueT]
     ) -> Slider[SliderValueT]:
         """Set the (single) value of the slider."""
-        return super().set_value(v)
+        self._assert_can_interact()
+        self._value = v
+        return self
 
     @property
     def _widget_state(self) -> WidgetState:
