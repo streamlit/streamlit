@@ -69,7 +69,11 @@ _LOGGER: Final = get_logger(__name__)
 
 
 class RetriesExceededError(Exception):
-    """Raised when the server cannot find an available port after max retries."""
+    """Internal signal that port binding exhausted its retries.
+
+    Raised during server startup and handled by the CLI. Not an uncaught
+    user-facing ``st.*`` exception.
+    """
 
 
 # ---------------------------------------------------------------------------

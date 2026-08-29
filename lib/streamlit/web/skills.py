@@ -114,12 +114,12 @@ def classify_write_error(error: OSError) -> _InstallFailureReason:
 
 
 class InstallError(click.ClickException):
-    """A skills-install failure carrying a stable machine-readable ``reason`` code.
+    """Internal skills-install failure with a stable ``reason`` code.
 
-    The backend-operation handler forwards the ``reason`` to the client, which emits
-    it as a telemetry label suffix - hence the fixed :data:`_InstallFailureReason`
-    vocabulary, never user input. Behaves like a plain ``click.ClickException``
-    otherwise, so raising it changes nothing a user sees.
+    Not an uncaught user-facing ``st.*`` exception. The backend-operation
+    handler forwards ``reason`` to the client as a telemetry label suffix
+    (fixed :data:`_InstallFailureReason` vocabulary, never user input).
+    Behaves like a plain ``click.ClickException`` otherwise.
     """
 
     def __init__(self, message: str, *, reason: _InstallFailureReason) -> None:

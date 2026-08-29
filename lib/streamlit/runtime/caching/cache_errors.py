@@ -46,7 +46,11 @@ def get_return_value_type(return_value: Any) -> str:
 
 
 class UnhashableTypeError(Exception):
-    pass
+    """Internal signal that a cache key value cannot be hashed.
+
+    Caught and re-raised as ``UnhashableParamError``. Not an uncaught
+    user-facing exception on its own.
+    """
 
 
 class UnhashableParamError(StreamlitAPIException):
@@ -91,11 +95,18 @@ def {func_name}({arg_replacement_name}, ...):
 
 
 class CacheKeyNotFoundError(Exception):
-    pass
+    """Internal cache-miss signal.
+
+    Caught by the cache lookup path to compute a fresh value. Not an
+    uncaught user-facing ``st.*`` exception.
+    """
 
 
 class CacheError(Exception):
-    pass
+    """Internal cache storage or pickle failure.
+
+    Caught by the cache APIs. Not an uncaught user-facing ``st.*`` exception.
+    """
 
 
 class CacheReplayClosureError(StreamlitAPIException):

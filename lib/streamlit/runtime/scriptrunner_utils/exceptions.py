@@ -20,15 +20,27 @@ from streamlit.util import repr_
 # For example, having it inherit from Exception might make st.rerun not
 # work in a try/except block.
 class ScriptControlException(BaseException):  # NOSONAR
-    """Base exception for ScriptRunner."""
+    """Internal ScriptRunner control-flow base.
+
+    Not an uncaught user-facing exception. Inherits from ``BaseException`` so
+    user ``except Exception`` blocks do not swallow ``st.stop`` / ``st.rerun``.
+    """
 
 
 class StopException(ScriptControlException):
-    """Silently stop the execution of the user's script."""
+    """Internal signal to stop the current script run.
+
+    Raised by ``st.stop``. Caught by ScriptRunner; not shown as an uncaught
+    exception in the app.
+    """
 
 
 class RerunException(ScriptControlException):
-    """Silently stop and rerun the user's script."""
+    """Internal signal to stop and rerun the current script.
+
+    Raised by ``st.rerun``. Caught by ScriptRunner; not shown as an uncaught
+    exception in the app.
+    """
 
     def __init__(self, rerun_data: RerunData) -> None:
         """Construct a RerunException.

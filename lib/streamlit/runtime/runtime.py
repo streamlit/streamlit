@@ -81,7 +81,11 @@ _LOGGER: Final = get_logger(__name__)
 
 
 class RuntimeStoppedError(Exception):
-    """Raised by operations on a Runtime instance that is stopped."""
+    """Internal signal that the Runtime is stopped.
+
+    Raised by Runtime methods that cannot run after shutdown. Caught by the
+    server; not an uncaught user-facing ``st.*`` exception.
+    """
 
 
 @dataclass(frozen=True)

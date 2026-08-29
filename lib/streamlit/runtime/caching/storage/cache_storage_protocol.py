@@ -62,16 +62,26 @@ from typing import Literal, Protocol
 
 
 class CacheStorageError(Exception):
-    """Base exception raised by the cache storage."""
+    """Internal cache-storage protocol base.
+
+    Implementors raise this for storage failures. Not an uncaught
+    user-facing ``st.*`` exception.
+    """
 
 
 class CacheStorageKeyNotFoundError(CacheStorageError):
-    """Raised when the key is not found in the cache storage."""
+    """Internal signal that a cache-storage key is missing.
+
+    Used as a miss by the cache layer. Not an uncaught user-facing
+    ``st.*`` exception.
+    """
 
 
 class InvalidCacheStorageContextError(CacheStorageError):
-    """Raised if the cache storage manager is not able to work with
-    provided CacheStorageContext.
+    """Internal signal that CacheStorageContext is incompatible.
+
+    Raised by a storage manager that cannot use the given context.
+    Not an uncaught user-facing ``st.*`` exception.
     """
 
 
