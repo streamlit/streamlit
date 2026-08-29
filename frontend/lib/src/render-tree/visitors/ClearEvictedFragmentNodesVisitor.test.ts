@@ -39,6 +39,16 @@ function elementNode(body: string, fragmentId?: string): ElementNode {
   )
 }
 
+function toastNode(fragmentId?: string): ElementNode {
+  return new ElementNode(
+    new Element({ toast: { body: "Toast survives eviction" } }),
+    ForwardMsgMetadata.create(),
+    SCRIPT_RUN_ID,
+    FAKE_SCRIPT_HASH,
+    fragmentId
+  )
+}
+
 function blockNode(
   children: (BlockNode | ElementNode)[],
   fragmentId?: string
@@ -52,11 +62,24 @@ function blockNode(
   )
 }
 
+/** True for the index-preserving stand-in the visitor substitutes. */
+function isPlaceholder(node: unknown): boolean {
+  return (
+    node instanceof BlockNode &&
+    node.children.length === 0 &&
+    !node.deltaBlock.allowEmpty
+  )
+}
+
 describe("ClearEvictedFragmentNodesVisitor", () => {
-  it("removes an element node belonging to an evicted fragment", () => {
+  it("replaces an evicted fragment's element with a placeholder", () => {
     const visitor = new ClearEvictedFragmentNodesVisitor(new Set(["nested"]))
 
-    expect(elementNode("gone", "nested").accept(visitor)).toBeUndefined()
+    const result = elementNode("gone", "nested").accept(visitor)
+
+    // An empty block with allowEmpty unset renders nothing, so the stale content
+    // disappears while the index survives.
+    expect(isPlaceholder(result)).toBe(true)
   })
 
   it("keeps element nodes of other fragments and of no fragment", () => {
@@ -70,58 +93,50 @@ describe("ClearEvictedFragmentNodesVisitor", () => {
   })
 
   it("preserves a toast emitted by an evicted fragment (issue #7740)", () => {
-    // A fragment's toast carries that fragment's id. If the eviction lands in
-    // the same batch as the toast delta, pruning the node here would drop the
-    // notification before the Toast component registers it with the queue.
+    // A fragment's toast carries that fragment's id. Replacing the node here
+    // would drop the notification before the Toast component registers it with
+    // the queue.
     const visitor = new ClearEvictedFragmentNodesVisitor(new Set(["nested"]))
-    const toast = new ElementNode(
-      new Element({ toast: { body: "Toast survives eviction" } }),
-      ForwardMsgMetadata.create(),
-      SCRIPT_RUN_ID,
-      FAKE_SCRIPT_HASH,
-      "nested"
-    )
+    const toast = toastNode("nested")
 
     expect(toast.accept(visitor)).toBe(toast)
   })
 
-  it("keeps an evicted fragment's toast while removing its other elements", () => {
+  it("keeps an evicted fragment's toast while replacing its other elements", () => {
     const visitor = new ClearEvictedFragmentNodesVisitor(new Set(["nested"]))
-    const toast = new ElementNode(
-      new Element({ toast: { body: "Toast survives eviction" } }),
-      ForwardMsgMetadata.create(),
-      SCRIPT_RUN_ID,
-      FAKE_SCRIPT_HASH,
-      "nested"
-    )
+    const toast = toastNode("nested")
     const parent = blockNode([toast, elementNode("gone", "nested")], "outer")
 
     const result = parent.accept(visitor) as BlockNode
 
-    expect(result.children).toEqual([toast])
+    expect(result.children[0]).toBe(toast)
+    expect(isPlaceholder(result.children[1])).toBe(true)
   })
 
-  it("removes a block belonging to an evicted fragment, with its subtree", () => {
+  it("replaces a block of an evicted fragment, dropping its subtree", () => {
     const visitor = new ClearEvictedFragmentNodesVisitor(new Set(["nested"]))
     const nestedBlock = blockNode([elementNode("inner")], "nested")
 
-    expect(nestedBlock.accept(visitor)).toBeUndefined()
+    expect(isPlaceholder(nestedBlock.accept(visitor))).toBe(true)
   })
 
-  it("removes an evicted child from a surviving parent block", () => {
+  it("preserves sibling indices when replacing an evicted child", () => {
+    // The point of substituting rather than removing: deltas address nodes by
+    // absolute path, and `addBlock` inherits children instead of resetting them,
+    // so compacting would leave every later sibling permanently shifted.
     const visitor = new ClearEvictedFragmentNodesVisitor(new Set(["nested"]))
     const kept = elementNode("kept", "outer")
     const parent = blockNode(
-      [kept, blockNode([elementNode("inner", "nested")], "nested")],
+      [blockNode([elementNode("inner", "nested")], "nested"), kept],
       "outer"
     )
 
     const result = parent.accept(visitor) as BlockNode
 
-    expect(result).not.toBe(parent)
-    expect(result.children).toHaveLength(1)
-    expect(result.children[0]).toBe(kept)
-    // The surviving parent keeps its fragmentId and scriptRunId.
+    expect(result.children).toHaveLength(2)
+    expect(isPlaceholder(result.children[0])).toBe(true)
+    // Still at index 1, not shifted down to 0.
+    expect(result.children[1]).toBe(kept)
     expect(result.fragmentId).toBe("outer")
     expect(result.scriptRunId).toBe(SCRIPT_RUN_ID)
   })
@@ -134,16 +149,28 @@ describe("ClearEvictedFragmentNodesVisitor", () => {
     expect(parent.accept(visitor)).toBe(parent)
   })
 
+  it("replaces nodes nested several blocks deep", () => {
+    const visitor = new ClearEvictedFragmentNodesVisitor(new Set(["nested"]))
+    const parent = blockNode([
+      blockNode([blockNode([elementNode("deep", "nested")], "nested")]),
+    ])
+
+    const result = parent.accept(visitor) as BlockNode
+    const middle = result.children[0] as BlockNode
+
+    expect(middle.children).toHaveLength(1)
+    expect(isPlaceholder(middle.children[0])).toBe(true)
+  })
+
   describe("transient nodes", () => {
     it("returns the identical node when nothing in its subtree is evicted", () => {
       const visitor = new ClearEvictedFragmentNodesVisitor(new Set(["absent"]))
       const transient = new TransientNode(
         SCRIPT_RUN_ID,
         elementNode("anchor", "outer"),
-        [elementNode("toast", "outer")]
+        [elementNode("transient", "outer")]
       )
 
-      // Referential stability: reconstructing would re-render this subtree.
       expect(transient.accept(visitor)).toBe(transient)
     })
 
@@ -151,33 +178,48 @@ describe("ClearEvictedFragmentNodesVisitor", () => {
       const visitor = new ClearEvictedFragmentNodesVisitor(new Set(["nested"]))
       const anchor = elementNode("anchor", "outer")
       const transient = new TransientNode(SCRIPT_RUN_ID, anchor, [
-        elementNode("toast", "nested"),
+        elementNode("transient", "nested"),
       ])
 
       expect(transient.accept(visitor)).toBe(anchor)
     })
 
-    it("removes the whole node when anchor and transients are evicted", () => {
+    it("replaces the node when it has no anchor and all transients are evicted", () => {
+      // `addTransient` places a TransientNode at an absolute delta path with no
+      // anchor, so removing it here would compact the parent and shift every
+      // later sibling.
+      const visitor = new ClearEvictedFragmentNodesVisitor(new Set(["nested"]))
+      const transient = new TransientNode(SCRIPT_RUN_ID, undefined, [
+        elementNode("transient", "nested"),
+      ])
+
+      expect(isPlaceholder(transient.accept(visitor))).toBe(true)
+    })
+
+    it("replaces an evicted anchor rather than dropping it", () => {
       const visitor = new ClearEvictedFragmentNodesVisitor(new Set(["nested"]))
       const transient = new TransientNode(
         SCRIPT_RUN_ID,
         elementNode("anchor", "nested"),
-        [elementNode("toast", "nested")]
+        [elementNode("transient", "outer")]
       )
 
-      expect(transient.accept(visitor)).toBeUndefined()
+      const result = transient.accept(visitor) as TransientNode
+
+      expect(result).toBeInstanceOf(TransientNode)
+      expect(isPlaceholder(result.anchor)).toBe(true)
     })
-  })
 
-  it("removes nodes nested several blocks deep", () => {
-    const visitor = new ClearEvictedFragmentNodesVisitor(new Set(["nested"]))
-    const parent = blockNode([
-      blockNode([blockNode([elementNode("deep", "nested")], "nested")]),
-    ])
+    it("keeps a transient toast belonging to an evicted fragment", () => {
+      const visitor = new ClearEvictedFragmentNodesVisitor(new Set(["nested"]))
+      const toast = toastNode("nested")
+      const transient = new TransientNode(
+        SCRIPT_RUN_ID,
+        elementNode("anchor", "outer"),
+        [toast]
+      )
 
-    const result = parent.accept(visitor) as BlockNode
-
-    expect(result.children).toHaveLength(1)
-    expect((result.children[0] as BlockNode).children).toHaveLength(0)
+      expect(transient.accept(visitor)).toBe(transient)
+    })
   })
 })

@@ -56,6 +56,10 @@ def test_nested_fragment_run_every_can_hide_without_crash(app: Page):
 
     expect(app.get_by_test_id("stException")).to_have_count(0)
 
+    # The sibling written after the nested fragment must still be there exactly
+    # once: clearing the nested fragment must not shift or duplicate it.
+    expect(app.get_by_text("after nested auto fragment")).to_have_count(1)
+
     # Standalone auto fragment keeps ticking; no frontend exception across ticks.
     for _ in range(3):
         expect(standalone_fragment.get_by_test_id("stMarkdown").first).not_to_have_text(

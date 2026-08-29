@@ -388,11 +388,12 @@ export class AppRoot {
   }
 
   /**
-   * Remove nodes belonging to fragments the server has evicted.
+   * Clear nodes belonging to fragments the server has evicted, replacing them
+   * with empty blocks so sibling indices stay valid.
    *
-   * Enforces the invariant that an evicted fragment owns no nodes in the element
-   * tree; see `ClearEvictedFragmentNodesVisitor` for why `clearStaleNodes`
-   * cannot guarantee this.
+   * Enforces the invariant that an evicted fragment renders nothing; see
+   * `ClearEvictedFragmentNodesVisitor` for why `clearStaleNodes` cannot
+   * guarantee this and why the nodes are substituted rather than removed.
    */
   public clearEvictedFragmentNodes(
     evictedFragmentIds: ReadonlySet<string>

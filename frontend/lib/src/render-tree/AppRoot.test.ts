@@ -221,6 +221,85 @@ describe("AppRoot", () => {
     })
   })
 
+  describe("AppRoot.clearEvictedFragmentNodes", () => {
+    const RUN = "run_1"
+
+    function fragmentTextDelta(body: string, fragmentId: string): DeltaProto {
+      return makeProto(DeltaProto, {
+        newElement: { text: { body } },
+        fragmentId,
+      })
+    }
+
+    it("returns the same instance when nothing is evicted", () => {
+      const root = AppRoot.empty(FAKE_SCRIPT_HASH, false).applyDelta(
+        RUN,
+        fragmentTextDelta("kept", "fragB"),
+        forwardMsgMetadata([0, 0])
+      )
+
+      expect(root.clearEvictedFragmentNodes(new Set(["absent"]))).toBe(root)
+    })
+
+    it("returns the same instance for an empty eviction set", () => {
+      const root = AppRoot.empty(FAKE_SCRIPT_HASH, false)
+
+      expect(root.clearEvictedFragmentNodes(new Set())).toBe(root)
+    })
+
+    it("keeps a later delta addressing a surviving sibling's original path", () => {
+      // The reason evicted nodes are replaced rather than removed. Removing
+      // would compact `children`, so this second delta would append a duplicate
+      // instead of overwriting the survivor.
+      let root = AppRoot.empty(FAKE_SCRIPT_HASH, false)
+      root = root.applyDelta(
+        RUN,
+        fragmentTextDelta("evicted", "fragA"),
+        forwardMsgMetadata([0, 0])
+      )
+      root = root.applyDelta(
+        RUN,
+        fragmentTextDelta("live", "fragB"),
+        forwardMsgMetadata([0, 1])
+      )
+
+      root = root.clearEvictedFragmentNodes(new Set(["fragA"]))
+
+      // fragB reruns on its own and rewrites its original absolute path.
+      root = root.applyDelta(
+        RUN,
+        fragmentTextDelta("live v2", "fragB"),
+        forwardMsgMetadata([0, 1])
+      )
+
+      expect(root.main.children).toHaveLength(2)
+      expect(root.main.children[1]).toBeTextNode("live v2")
+      // The survivor must not have been duplicated by an index shift.
+      const bodies = root.main.children.map(child =>
+        child instanceof ElementNode ? child.element.text?.body : "<block>"
+      )
+      expect(bodies).toEqual(["<block>", "live v2"])
+    })
+
+    it("preserves the app logo", () => {
+      const logo = makeProto(LogoProto, { image: "https://example.com/l.png" })
+      const root = AppRoot.empty(FAKE_SCRIPT_HASH, false)
+        .appRootWithLogo(logo, {
+          activeScriptHash: FAKE_SCRIPT_HASH,
+          scriptRunId: RUN,
+        })
+        .applyDelta(
+          RUN,
+          fragmentTextDelta("evicted", "fragA"),
+          forwardMsgMetadata([0, 0])
+        )
+
+      const cleared = root.clearEvictedFragmentNodes(new Set(["fragA"]))
+
+      expect(cleared.logo).toEqual(logo)
+    })
+  })
+
   describe("AppRoot.applyDelta", () => {
     it("handles 'newElement' deltas", () => {
       const delta = makeProto(DeltaProto, {

@@ -14,18 +14,29 @@
  * limitations under the License.
  */
 
+import { Block as BlockProto } from "@streamlit/protobuf"
+
 import { AppNode, BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
 
 import { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
 /**
- * Removes nodes whose `fragmentId` the server has evicted.
+ * Replaces nodes of server-evicted fragments with empty blocks that render
+ * nothing.
  *
- * Evicted ids arrive in `stopAutoRerun` (every evicted fragment, not only those
- * with a `run_every` timer). `ClearStaleNodeVisitor` cannot cover this: it only
- * prunes during a successful ancestor run, and `FINISHED_EARLY_FOR_RERUN` skips
- * that cleanup. Later runs are scoped to other fragments, so the evicted
- * subtree would stay on screen until a full rerun.
+ * - Evicted ids arrive in `stopAutoRerun` — every evicted fragment, not only
+ *   those with a `run_every` timer.
+ * - `ClearStaleNodeVisitor` cannot cover this: it prunes only during a
+ *   successful ancestor run, and `FINISHED_EARLY_FOR_RERUN` skips that cleanup.
+ *   Later runs are scoped to other fragments, so the subtree would linger.
+ * - Replace, never remove: deltas address nodes by absolute path. Removing
+ *   compacts the parent's `children`, and `addBlock` inherits children rather
+ *   than resetting them, so every later sibling keeps a shifted index and a
+ *   fragment that reruns writes to the wrong slot.
+ * - Placeholders don't accumulate: they carry no `fragmentId`, so a repeat
+ *   eviction matches nothing and the tree is returned unchanged. A returning
+ *   fragment overwrites the slot, and a later full run prunes them via their
+ *   stale `scriptRunId`.
  */
 export class ClearEvictedFragmentNodesVisitor implements AppNodeVisitor<
   AppNode | undefined
@@ -40,28 +51,58 @@ export class ClearEvictedFragmentNodesVisitor implements AppNodeVisitor<
     return !!fragmentId && this.evictedFragmentIds.has(fragmentId)
   }
 
+  /**
+   * Whether this element should be replaced.
+   *
+   * Toasts are fire-and-forget: the frontend toast queue owns their lifetime,
+   * not the element tree. Replacing a toast node before the `Toast` component
+   * registers it silently drops the notification (issue #7740); keeping it is
+   * safe because the node renders nothing itself.
+   * `ClearStaleNodeVisitor.visitElementNode` makes the same exception. Note
+   * `st.toast` always writes to the event container, so a toast is never inside
+   * a fragment-owned block that `visitBlockNode` replaces wholesale.
+   */
+  private shouldReplace(node: ElementNode): boolean {
+    return node.element.type !== "toast" && this.isEvicted(node.fragmentId)
+  }
+
+  /**
+   * An index-preserving stand-in that renders nothing.
+   *
+   * Deliberately omits `fragmentId`, so a repeat eviction leaves the tree
+   * untouched, and leaves `deltaBlock.type` unset, so `AppRoot.addBlock` does
+   * not treat a returning block as the same type and inherit these (empty)
+   * children.
+   */
+  private makePlaceholder(
+    activeScriptHash: string,
+    scriptRunId: string
+  ): BlockNode {
+    return new BlockNode(activeScriptHash, [], new BlockProto({}), scriptRunId)
+  }
+
   visitBlockNode(node: BlockNode): AppNode | undefined {
-    // Drop the subtree: descendants belong to this fragment, or to nested
-    // fragments the server also reports as evicted.
+    // Replace the whole subtree: its descendants belong to this fragment, or to
+    // nested fragments the server also reports as evicted.
     if (this.isEvicted(node.fragmentId)) {
-      return undefined
+      return this.makePlaceholder(node.activeScriptHash, node.scriptRunId)
     }
 
     const newChildren: AppNode[] = []
     let childrenChanged = false
 
     node.children.forEach(child => {
-      const filteredChild = child.accept(this)
-      if (filteredChild !== child) {
+      const newChild = child.accept(this)
+      if (newChild !== child) {
         childrenChanged = true
       }
-      if (filteredChild !== undefined) {
-        newChildren.push(filteredChild)
+      if (newChild !== undefined) {
+        newChildren.push(newChild)
       }
     })
 
-    // Performance optimization: if nothing was removed, keep the same node so
-    // React does not re-render this subtree.
+    // Performance optimization: if nothing changed, keep the same node so React
+    // does not re-render this subtree.
     if (!childrenChanged) {
       return node
     }
@@ -77,31 +118,26 @@ export class ClearEvictedFragmentNodesVisitor implements AppNodeVisitor<
   }
 
   visitElementNode(node: ElementNode): AppNode | undefined {
-    // Toasts are fire-and-forget: the frontend toast queue owns their lifetime,
-    // not the element tree. A toast emitted from a fragment carries that
-    // fragment's id, so an eviction applied in the same batch as the toast delta
-    // would remove the node before the Toast component registers it with the
-    // queue, silently dropping the notification (issue #7740). The node renders
-    // nothing on its own, so keeping it is safe. `ClearStaleNodeVisitor` makes
-    // the same exception.
-    if (node.element.type === "toast") {
-      return node
-    }
-
-    return this.isEvicted(node.fragmentId) ? undefined : node
+    return this.shouldReplace(node)
+      ? this.makePlaceholder(node.activeScriptHash, node.scriptRunId)
+      : node
   }
 
   visitTransientNode(node: TransientNode): AppNode | undefined {
     const anchorNode = node.anchor?.accept(this)
-    const transientNodes = node.updateTransientNodes(
-      element => element.accept(this) as ElementNode | undefined
+    // Transient *elements* are dropped rather than replaced: they are addressed
+    // as a set within this node, not by their own absolute path. The node
+    // itself does occupy an absolute path, so it is replaced below rather than
+    // removed.
+    const transientNodes = node.updateTransientNodes(element =>
+      this.shouldReplace(element) ? undefined : element
     )
 
     // Keep the same node when nothing in this subtree was evicted; a fresh node
     // would re-render it. `updateTransientNodes` either keeps an element
     // identically or drops it, so an unchanged length means nothing was
-    // removed. This must precede the collapse cases below, which would
-    // otherwise swap an untouched node for its anchor.
+    // removed. This must precede the cases below, which would otherwise swap an
+    // untouched node for its anchor.
     if (
       anchorNode === node.anchor &&
       transientNodes.length === node.transientNodes.length
@@ -109,8 +145,17 @@ export class ClearEvictedFragmentNodesVisitor implements AppNodeVisitor<
       return node
     }
 
+    // Everything here was evicted. `addTransient` places this node at an
+    // absolute delta path (often with no anchor yet), so returning `undefined`
+    // would compact the parent and shift every later sibling.
     if (!anchorNode && transientNodes.length === 0) {
-      return undefined
+      // Reaching here means the identity check above did not fire, so at least
+      // one transient element existed and was dropped; take its script hash.
+      const [firstTransient] = node.transientNodes
+      return this.makePlaceholder(
+        firstTransient.activeScriptHash,
+        node.scriptRunId
+      )
     }
 
     if (transientNodes.length === 0) {

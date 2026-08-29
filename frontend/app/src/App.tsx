@@ -1359,17 +1359,29 @@ export class App extends PureComponent<Props, State> {
     })
 
     const evictedFragmentIds = new Set(stopAutoRerun.fragmentIds)
+
+    // The updater form is required here: ForwardMsgs are dispatched in batches,
+    // so reading `this.state.elements` directly could apply the prune to a stale
+    // tree and clobber deltas from the same batch. Returning null when nothing
+    // matched skips both the re-render and the widget scan below, which matters
+    // because this handler fires once per evicting fragment run - about once a
+    // second under `run_every`.
+    let didPrune = false
     this.setState(
-      prevState => ({
-        elements:
-          prevState.elements.clearEvictedFragmentNodes(evictedFragmentIds),
-      }),
+      prevState => {
+        const nextElements =
+          prevState.elements.clearEvictedFragmentNodes(evictedFragmentIds)
+        didPrune = nextElements !== prevState.elements
+        return didPrune ? { elements: nextElements } : null
+      },
       () => {
-        // Drop widget state for the removed nodes, as every other pruning path
+        // Drop widget state for the cleared nodes, as every other pruning path
         // does. Without this, an evicted fragment's widget values keep being
         // sent on later reruns, and a fragment that comes back initializes its
         // widgets from the retained value instead of its default.
-        this.removeInactiveWidgetState()
+        if (didPrune) {
+          this.removeInactiveWidgetState()
+        }
       }
     )
   }

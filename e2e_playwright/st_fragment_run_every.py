@@ -49,5 +49,10 @@ def outer_nested_demo():
 
         middle()
 
+    # Deliberately after the conditional: this makes the nested fragment a
+    # non-final child, so clearing it would be observable if it ever shifted
+    # this sibling's delta path.
+    st.write("after nested auto fragment")
+
 
 outer_nested_demo()
