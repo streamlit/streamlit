@@ -32,7 +32,7 @@ from streamlit.delta_generator_singletons import context_dg_stack
 from streamlit.errors import (
     FragmentHandledException,
     FragmentStorageKeyError,
-    StreamlitAPIException,
+    StreamlitInvalidLayoutContextError,
 )
 from streamlit.proto.Block_pb2 import Block
 from streamlit.proto.RootContainer_pb2 import RootContainer
@@ -2177,10 +2177,10 @@ class ParallelFragmentAPIRestrictionsTest(unittest.TestCase):
     """Tests for API restrictions in parallel fragment workers."""
 
     def test_check_not_parallel_worker_raises_when_flag_is_true(self) -> None:
-        """_check_not_parallel_worker raises StreamlitAPIException when is_parallel_worker=True."""
+        """_check_not_parallel_worker raises StreamlitInvalidLayoutContextError when is_parallel_worker=True."""
         ThreadState.initialize(is_parallel_worker=True)
         try:
-            with pytest.raises(StreamlitAPIException) as exc_info:
+            with pytest.raises(StreamlitInvalidLayoutContextError) as exc_info:
                 _check_not_parallel_worker("st.test_api")
 
             assert "st.test_api" in str(exc_info.value)
@@ -2236,7 +2236,7 @@ class ParallelFragmentAPIRestrictionsTest(unittest.TestCase):
 
         with ThreadState.scoped(fragment_id="inner"):
             assert ThreadState.get().is_parallel_worker is True
-            with pytest.raises(StreamlitAPIException):
+            with pytest.raises(StreamlitInvalidLayoutContextError):
                 _check_not_parallel_worker("@st.dialog")
 
         assert ThreadState.get().is_parallel_worker is True

@@ -151,10 +151,26 @@ class TestPaginationValidation(DeltaGeneratorTestCase):
             st.pagination(10, default="1")
         assert e.value.exec_kwargs["parameter"] == "default"
 
+    def test_num_pages_must_be_int(self):
+        """Non-int num_pages raises StreamlitInvalidParameterTypeError."""
+        with pytest.raises(StreamlitInvalidParameterTypeError) as e:
+            st.pagination("5")
+        assert e.value.exec_kwargs["parameter"] == "num_pages"
+
+        with pytest.raises(StreamlitInvalidParameterTypeError) as e:
+            st.pagination(True)
+        assert e.value.exec_kwargs["parameter"] == "num_pages"
+
     def test_max_visible_pages_negative(self):
         """Negative max_visible_pages raises StreamlitValueError."""
         with pytest.raises(StreamlitValueError) as e:
             st.pagination(10, max_visible_pages=-1)
+        assert e.value.exec_kwargs["parameter"] == "max_visible_pages"
+
+    def test_max_visible_pages_must_be_int(self):
+        """Non-int max_visible_pages raises StreamlitInvalidParameterTypeError."""
+        with pytest.raises(StreamlitInvalidParameterTypeError) as e:
+            st.pagination(10, max_visible_pages="5")
         assert e.value.exec_kwargs["parameter"] == "max_visible_pages"
 
 

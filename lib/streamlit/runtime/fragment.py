@@ -27,7 +27,7 @@ from streamlit.error_util import handle_user_script_exception
 from streamlit.errors import (
     FragmentHandledException,
     FragmentStorageKeyError,
-    StreamlitAPIException,
+    StreamlitInvalidLayoutContextError,
 )
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -56,14 +56,14 @@ _LOGGER: Final = get_logger(__name__)
 
 
 def _check_not_parallel_worker(api_name: str) -> None:
-    """Raise StreamlitAPIException if called from a parallel fragment worker."""
+    """Raise if called from a parallel fragment worker on initial load."""
     try:
         ts = ThreadState.get()
     except RuntimeError:
         return
 
     if ts.is_parallel_worker:
-        raise StreamlitAPIException(
+        raise StreamlitInvalidLayoutContextError(
             f"`{api_name}` cannot be called from a parallel fragment during "
             f"the initial page load, because parallel fragments run "
             f"concurrently on separate threads where `{api_name}` is not "

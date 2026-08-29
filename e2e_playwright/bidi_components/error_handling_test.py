@@ -24,7 +24,8 @@ def test_error_handling_messages(app: Page) -> None:
 
     expect(
         app.get_by_text(
-            "streamlit.errors.StreamlitAPIException: css parameter must be a string or None. "
-            "Pass a string path or glob."
+            "streamlit.errors.StreamlitInvalidParameterTypeError: Invalid `css` type. "
+            "Expected one of: str, None."
         )
     ).to_be_visible()
+    expect(app.get_by_text("Pass a string path or glob.")).to_be_visible()

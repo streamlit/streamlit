@@ -620,7 +620,10 @@ class StreamlitStreamTest(unittest.TestCase):
     def test_with_wrong_input(self):
         """Test st.write_stream with string or dataframe input generates exception."""
 
-        with pytest.raises(StreamlitInvalidParameterTypeError):
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError,
+            match=r"Expected one of: generator, stream-like object",
+        ):
             st.write_stream("Hello World")
 
         with pytest.raises(StreamlitInvalidParameterTypeError):

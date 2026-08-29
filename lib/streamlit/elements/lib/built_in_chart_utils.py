@@ -1252,7 +1252,7 @@ def _get_size_encoding(
             return alt.SizeValue(100)
         raise StreamlitValueError(
             "size",
-            ["a number"],
+            ["a column name", "a number"],
             detail=f"Got {size_value!r}.",
         )
 

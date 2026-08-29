@@ -200,7 +200,13 @@ class SQLConnection(BaseConnection["Engine"]):
         else:
             for p in _REQUIRED_CONNECTION_PARAMS:
                 if p not in conn_params:
-                    raise StreamlitMissingRequiredParameterError(p)
+                    raise StreamlitMissingRequiredParameterError(
+                        p,
+                        detail=(
+                            "Set this SQL DB connection parameter in `secrets.toml` "
+                            "or pass it as a kwarg to `st.connection`."
+                        ),
+                    )
 
             drivername = conn_params["dialect"] + (
                 f"+{conn_params['driver']}" if "driver" in conn_params else ""

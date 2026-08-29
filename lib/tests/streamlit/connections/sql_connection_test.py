@@ -115,6 +115,8 @@ class SQLConnectionTest(unittest.TestCase):
                 SQLConnection("my_sql_connection")
 
             assert e.value.exec_kwargs["parameter"] == missing_param
+            assert "secrets.toml" in str(e.value)
+            assert "st.connection" in str(e.value)
 
     @patch(
         "streamlit.connections.sql_connection.SQLConnection._secrets",

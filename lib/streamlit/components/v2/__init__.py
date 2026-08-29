@@ -81,7 +81,7 @@ def _register_component(
             raise StreamlitInvalidParameterTypeError(
                 _param_name,
                 type(_param_value).__name__,
-                ["str"],
+                ["str", "None"],
                 detail="Pass a string path or glob.",
             )
 

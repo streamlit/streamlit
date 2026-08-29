@@ -177,7 +177,7 @@ class WriteMixin:
             raise StreamlitInvalidParameterTypeError(
                 "stream",
                 type(stream).__name__,
-                ["generator", "iterable"],
+                ["generator", "stream-like object"],
                 detail="Please use `st.write` instead for this data type.",
             )
 

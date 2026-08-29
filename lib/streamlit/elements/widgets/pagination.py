@@ -256,12 +256,15 @@ class PaginationMixin:
 
         key = to_key(key)
 
-        # Validate num_pages
-        if (
-            not isinstance(num_pages, int)
-            or isinstance(num_pages, bool)
-            or num_pages < 1
-        ):
+        # Validate num_pages. bool is a subclass of int, so reject it as a type
+        # error before checking the value range.
+        if isinstance(num_pages, bool) or not isinstance(num_pages, int):
+            raise StreamlitInvalidParameterTypeError(
+                "num_pages",
+                type(num_pages).__name__,
+                ["int"],
+            )
+        if num_pages < 1:
             raise StreamlitValueError(
                 "num_pages",
                 ["a positive integer"],
@@ -278,12 +281,18 @@ class PaginationMixin:
         if not 1 <= default <= num_pages:
             raise StreamlitValueOutOfRangeError("default", default, 1, num_pages)
 
-        # Validate max_visible_pages
+        # Validate max_visible_pages. bool is a subclass of int, so reject it as
+        # a type error before checking the value range.
         if max_visible_pages is not None and (
-            not isinstance(max_visible_pages, int)
-            or isinstance(max_visible_pages, bool)
-            or max_visible_pages < 0
+            isinstance(max_visible_pages, bool)
+            or not isinstance(max_visible_pages, int)
         ):
+            raise StreamlitInvalidParameterTypeError(
+                "max_visible_pages",
+                type(max_visible_pages).__name__,
+                ["int", "None"],
+            )
+        if max_visible_pages is not None and max_visible_pages < 0:
             raise StreamlitValueError(
                 "max_visible_pages",
                 ["a non-negative integer", "None"],

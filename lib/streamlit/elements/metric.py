@@ -492,18 +492,16 @@ def _parse_delta_arrow(delta_arrow: DeltaArrow) -> DeltaArrow:
 
 
 def _parse_metric_number(value: AnyNumber, parameter: str) -> str:
-    """Re-raise ``from_number`` TypeError as StreamlitInvalidParameterTypeError.
-
-    That keeps metric ``value`` / ``delta`` validation on a Streamlit type
-    instead of leaking the helper's native ``TypeError``.
-    """
+    """Render ``value`` for display, reporting bad types as a Streamlit error."""
     try:
         return from_number(value)
     except TypeError as ex:
+        # from_number is a generic helper and raises a native TypeError, which
+        # would bypass Streamlit's user-facing error types.
         raise StreamlitInvalidParameterTypeError(
             parameter,
             type(value).__name__,
-            ["int", "float", "Decimal", "numpy number"],
+            ["a number"],
         ) from ex
 
 

@@ -259,7 +259,7 @@ def _make_multiindex_pandas(num_rows: int) -> pd.DataFrame:
 def test_resolve_multiindex_columns_lazy_true_raises(num_rows: int) -> None:
     """``lazy=True`` rejects MultiIndex columns regardless of input size."""
     df = _make_multiindex_pandas(num_rows)
-    with pytest.raises(StreamlitIncompatibleParametersError, match="multi-level"):
+    with pytest.raises(StreamlitAPIException, match="multi-level"):
         resolve_lazy_source(df, True, is_selection_activated=False)
 
 
@@ -273,7 +273,7 @@ def test_resolve_multiindex_columns_pyarrow_lazy_true_raises() -> None:
     """``lazy=True`` rejects Arrow tables carrying MultiIndex metadata."""
     df = _make_multiindex_pandas(FORCED_LAZY_MIN_ROWS + 1)
     table = pa.Table.from_pandas(df)
-    with pytest.raises(StreamlitIncompatibleParametersError, match="multi-level"):
+    with pytest.raises(StreamlitAPIException, match="multi-level"):
         resolve_lazy_source(table, True, is_selection_activated=False)
 
 
@@ -316,7 +316,7 @@ def test_resolve_small_generator_returns_converted_eager_fallback() -> None:
 def test_resolve_styler_lazy_true_raises() -> None:
     """``lazy=True`` raises for a pandas Styler."""
     styler = pd.DataFrame({"a": [1, 2, 3]}).style
-    with pytest.raises(StreamlitIncompatibleParametersError, match="Styler"):
+    with pytest.raises(StreamlitAPIException, match="Styler"):
         resolve_lazy_source(styler, True, is_selection_activated=False)
 
 

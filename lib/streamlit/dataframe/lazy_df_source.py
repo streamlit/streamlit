@@ -326,14 +326,11 @@ def _has_multi_level_columns(data: object) -> bool:
 def _validate_lazy_columns(data: object) -> None:
     """Raise when ``data`` has column headers unsupported by lazy loading."""
     if _has_multi_level_columns(data):
-        raise StreamlitIncompatibleParametersError(
-            "lazy=True",
-            "MultiIndex columns",
-            explanation=(
-                "`lazy=True` is not supported for dataframes with multi-level "
-                "(`MultiIndex`) column headers. Flatten the column headers or set "
-                "`lazy=False`."
-            ),
+        raise StreamlitAPIException(
+            "`lazy=True` is not supported for dataframes with multi-level "
+            "(`MultiIndex`) column headers. Flatten the column headers or set "
+            "`lazy=False`.",
+            error_id="lazy-multiindex-columns",
         )
 
 
@@ -392,10 +389,11 @@ def resolve_lazy_source(
     Raises
     ------
     StreamlitIncompatibleParametersError
-        If ``lazy=True`` is requested with an incompatible input or option
-        (for example ``pandas.Styler``, MultiIndex columns, or ``on_select``).
+        If ``lazy=True`` is requested with an incompatible option such as
+        ``on_select``.
     StreamlitAPIException
-        If ``lazy=True`` is requested for an object Streamlit cannot serve lazily.
+        If ``lazy=True`` is requested for an object Streamlit cannot serve
+        lazily, including ``pandas.Styler`` and MultiIndex columns.
     """
     if data is None:
         # An empty dataframe is always rendered eagerly.
@@ -407,14 +405,11 @@ def resolve_lazy_source(
     is_styler = dataframe_util.is_pandas_styler(data)
     if is_styler:
         if lazy is True:
-            raise StreamlitIncompatibleParametersError(
-                "lazy=True",
-                "pandas.Styler",
-                explanation=(
-                    "`lazy=True` is not supported for `pandas.Styler` objects. "
-                    "Styler output is tied to the fully materialized table. Remove "
-                    "`lazy=True` or pass the underlying dataframe instead."
-                ),
+            raise StreamlitAPIException(
+                "`lazy=True` is not supported for `pandas.Styler` objects. "
+                "Styler output is tied to the fully materialized table. Remove "
+                "`lazy=True` or pass the underlying dataframe instead.",
+                error_id="lazy-styler-not-supported",
             )
         return None
 

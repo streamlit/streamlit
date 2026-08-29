@@ -324,11 +324,10 @@ class BidiComponentMixin:
 
         Raises
         ------
-        ValueError
-            If the component name is not found in the registry.
         StreamlitAPIException
-            If the component does not have the required JavaScript or HTML
-            content, or if the provided data cannot be serialized.
+            If the component name is not found in the registry, if the
+            component does not have the required JavaScript or HTML content,
+            or if the provided data cannot be serialized.
 
         """
         check_cache_replay_rules()

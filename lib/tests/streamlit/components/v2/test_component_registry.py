@@ -31,7 +31,10 @@ from streamlit.components.v2.component_registry import (
     BidiComponentRegistry,
 )
 from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
-from streamlit.errors import StreamlitAPIException, StreamlitComponentRegistryError
+from streamlit.errors import (
+    StreamlitComponentRegistryError,
+    StreamlitInvalidParameterTypeError,
+)
 
 
 def _mk_file(path: os.PathLike[str] | str, content: bytes | str = b"x") -> str:
@@ -479,23 +482,23 @@ def test_public_api_path_object_rejection() -> None:
     """Verify the public API rejects non-string path-like objects."""
     from pathlib import Path
 
-    with pytest.raises(StreamlitAPIException) as exc_info:
+    with pytest.raises(StreamlitInvalidParameterTypeError) as exc_info:
         component("test", js=Path("test.js"))
     msg = str(exc_info.value)
-    assert "string or None" in msg
+    assert "Expected one of: str, None" in msg
     assert "string path or glob" in msg
 
-    with pytest.raises(StreamlitAPIException) as exc_info:
+    with pytest.raises(StreamlitInvalidParameterTypeError) as exc_info:
         component("test", css=Path("test.css"))
     msg = str(exc_info.value)
-    assert "string or None" in msg
+    assert "Expected one of: str, None" in msg
     assert "string path or glob" in msg
 
     # Still raise for other invalid types
-    with pytest.raises(StreamlitAPIException):
+    with pytest.raises(StreamlitInvalidParameterTypeError):
         component("test", js=123)  # Integer instead of string/Path
 
-    with pytest.raises(StreamlitAPIException):
+    with pytest.raises(StreamlitInvalidParameterTypeError):
         component("test", css=["invalid", "list"])  # List instead of string/Path
 
 

@@ -269,8 +269,9 @@ def test_get_size_encoding_scatter(
 
 def test_get_size_encoding_invalid_size_value_raises() -> None:
     """Non-numeric size_value should raise StreamlitValueError."""
-    with pytest.raises(StreamlitValueError, match=r"Invalid `size` value"):
+    with pytest.raises(StreamlitValueError, match=r"a column name, a number") as exc:
         chart_utils._get_size_encoding(chart_utils.ChartType.SCATTER, None, "huge", {})
+    assert "huge" in str(exc.value)
 
 
 def test_get_size_encoding_returns_none_for_non_scatter() -> None:
