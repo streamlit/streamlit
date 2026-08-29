@@ -2799,6 +2799,46 @@ describe("DateTimeInput widget", () => {
       )
     })
 
+    it("commits the same datetime again after Enter-submitting it", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      props.element.formId = "form"
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      // Mock only the gate — the real submitForm has to run so the clear fires.
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<DateTimeInput {...props} />)
+
+      const typeAndEnter = async (): Promise<void> => {
+        const field = screen.getByTestId("stDateTimeInputField")
+        await user.click(within(field).getAllByRole("spinbutton")[0])
+        await user.keyboard("20251119")
+        await user.keyboard("1200")
+        await user.keyboard("{Enter}")
+      }
+
+      await typeAndEnter()
+      spy.mockClear()
+
+      // The clear ends the interaction, so re-entering the value just submitted
+      // has to reach widget state again. Nothing else resets the dedup memory on
+      // this path: the clear overwrites the pending value before `value` becomes
+      // the datetime, and the popover stays open across an Enter submit.
+      await typeAndEnter()
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T12:00"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+    })
+
     it("merges a lone popover hour as the top of that hour", async () => {
       const user = userEvent.setup()
       const props = emptyProps()
