@@ -39,7 +39,7 @@ from e2e_playwright.shared.app_utils import (
     tab_until_focused,
 )
 
-NUM_SLIDER_WIDGETS = 39
+NUM_SLIDER_WIDGETS = 40
 
 
 def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -736,3 +736,22 @@ def test_slider_on_change_ignore(app: Page):
     wait_for_app_loaded(app)
     expect(get_element_by_key(app, "ignore_slider")).to_contain_text("30")
     expect_prefixed_markdown(app, "Ignore slider value:", "30")
+
+
+def test_slider_swaps_reversed_min_max(app: Page):
+    """Reversed min/max are swapped so the thumb can travel the full range."""
+    slider = get_slider(app, "Reversed bounds slider")
+    slider.scroll_into_view_if_needed()
+    expect(slider).to_be_visible()
+    expect(app.get_by_text("must not be equal")).not_to_be_visible()
+
+    slider_role = slider.get_by_role("slider")
+    expect(slider_role).to_have_attribute("min", "1")
+    expect(slider_role).to_have_attribute("max", "10")
+    expect(slider_role).not_to_have_attribute("max", "5")
+
+    expect_prefixed_markdown(app, "Reversed bounds slider value:", "5")
+
+    slider_role.press("ArrowRight")
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Reversed bounds slider value:", "6")

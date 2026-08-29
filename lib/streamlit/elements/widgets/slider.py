@@ -1097,8 +1097,8 @@ class SliderMixin:
             )
 
         # Ensure that min <= value(s) <= max, adjusting the bounds as necessary.
-        min_value = min(min_value, max_value)
-        max_value = max(min_value, max_value)
+        # Swap min and max when the caller passed them reversed.
+        min_value, max_value = min(min_value, max_value), max(min_value, max_value)
         if len(prepared_value) == 1:
             min_value = min(prepared_value[0], min_value)
             max_value = max(prepared_value[0], max_value)
