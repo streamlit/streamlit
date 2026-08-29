@@ -596,3 +596,30 @@ def test_switch_page_does_not_match_callable_url_path_slug(tmp_path: Path) -> No
     assert at.text[0].value == "home page"
     with pytest.raises(ValueError, match="navigation page"):
         at.switch_page("settings.py")
+
+
+def test_switch_page_keeps_navigation_registry_after_failed_run(
+    tmp_path: Path,
+) -> None:
+    """A run that fails before st.navigation must not erase the last registry."""
+    (tmp_path / "orphan.py").write_text(
+        'import streamlit as st\nst.text("orphan page")\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "if st.session_state.get('fail'):\n"
+        "    raise RuntimeError('boom')\n"
+        "def home():\n"
+        "    st.text('home page')\n"
+        "pg = st.navigation([st.Page(home, title='Home')])\n"
+        "pg.run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    assert at.text[0].value == "home page"
+    at.session_state["fail"] = True
+    at.run()
+    assert at.exception
+    with pytest.raises(ValueError, match="navigation page"):
+        at.switch_page("orphan.py")
