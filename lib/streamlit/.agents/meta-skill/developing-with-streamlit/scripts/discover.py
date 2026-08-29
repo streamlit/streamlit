@@ -48,25 +48,27 @@ import time
 from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, NoReturn
+from typing import TYPE_CHECKING, Final, Literal, NoReturn
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterator, Sequence
 
 # Tests patch this instead of ``os.name`` so pathlib keeps the host flavor.
 _IS_WINDOWS = os.name == "nt"
-_MAX_WALK_DEPTH = 20  # Same cap as skills._MAX_REPO_ROOT_WALK_DEPTH.
-_GLOBAL_BUDGET_S = 60.0
-_DIRECT_TIMEOUT_S = 10.0
-_MANAGER_TIMEOUT_S = 30.0
-_SKILL_REL = Path(".agents") / "skills" / "developing-with-streamlit" / "SKILL.md"
-_DOCS_URL = "https://docs.streamlit.io/llms-full.txt"
-_SENTINEL = "STREAMLIT_PKG="
-_INSPECTED_STATUSES = frozenset({"no_streamlit", "no_usable_skill", "layout_changed"})
+_MAX_WALK_DEPTH: Final = 20  # Same cap as skills._MAX_REPO_ROOT_WALK_DEPTH.
+_GLOBAL_BUDGET_S: Final = 60.0
+_DIRECT_TIMEOUT_S: Final = 10.0
+_MANAGER_TIMEOUT_S: Final = 30.0
+_SKILL_REL: Final = (
+    Path(".agents") / "skills" / "developing-with-streamlit" / "SKILL.md"
+)
+_DOCS_URL: Final = "https://docs.streamlit.io/llms-full.txt"
+_SENTINEL: Final = "STREAMLIT_PKG="
 
-# 3.10-safe child snippet: never ``import streamlit``. Sanitize ``sys.path``
-# instead of using ``python -P`` (3.11+ only). Parent parses the last sentinel.
-_PROBE_SNIPPET = """\
+# Child process: locate Streamlit without importing it (works on 3.10).
+# - Drop cwd from sys.path; do not use python -P (3.11+ only).
+# - Parent keeps the last STREAMLIT_PKG= line.
+_PROBE_SNIPPET: Final = """\
 import importlib.util
 import pathlib
 import sys
@@ -94,7 +96,7 @@ if ok:
 """
 
 
-class Outcome(IntEnum):
+class _Outcome(IntEnum):
     """CLI exit codes."""
 
     SUCCESS = 0
@@ -107,47 +109,38 @@ class Outcome(IntEnum):
     PROBE_FAILED = 7
 
 
-_ERROR_NAME: dict[Outcome, str] = {
-    Outcome.NO_STREAMLIT: "NO_STREAMLIT",
-    Outcome.NO_USABLE_SKILL: "NO_USABLE_SKILL",
-    Outcome.NO_PROJECT_PYTHON: "NO_PROJECT_PYTHON",
-    Outcome.SKILLS_LAYOUT_CHANGED: "SKILLS_LAYOUT_CHANGED",
-    Outcome.INVALID_ARGS: "INVALID_ARGS",
-    Outcome.INTERNAL: "INTERNAL",
-    Outcome.PROBE_FAILED: "PROBE_FAILED",
-}
-
-_ERROR_MESSAGE: dict[Outcome, str] = {
-    Outcome.NO_STREAMLIT: (
+_ERROR_MESSAGE: Final[dict[_Outcome, str]] = {
+    _Outcome.NO_STREAMLIT: (
         "Streamlit is not installed in the inspected Python environment."
     ),
-    Outcome.NO_USABLE_SKILL: (
+    _Outcome.NO_USABLE_SKILL: (
         "Found Streamlit, but no usable bundled skill. "
         "Upgrade or reinstall Streamlit, or use the docs."
     ),
-    Outcome.NO_PROJECT_PYTHON: "No Python interpreter was found to inspect.",
-    Outcome.SKILLS_LAYOUT_CHANGED: (
+    _Outcome.NO_PROJECT_PYTHON: "No Python interpreter was found to inspect.",
+    _Outcome.SKILLS_LAYOUT_CHANGED: (
         "Streamlit's bundled skills directory exists, but the expected "
         "developing-with-streamlit/SKILL.md is missing from the documented "
         "sub-path. Upstream Streamlit likely reorganized the skill layout."
     ),
-    Outcome.INVALID_ARGS: "Invalid arguments.",
-    Outcome.INTERNAL: "Unexpected error while discovering the bundled skill.",
-    Outcome.PROBE_FAILED: (
+    _Outcome.INVALID_ARGS: "Invalid arguments.",
+    _Outcome.INTERNAL: "Unexpected error while discovering the bundled skill.",
+    _Outcome.PROBE_FAILED: (
         "Could not inspect any interpreter (timeout, stub, or unreadable "
         "output). This does not mean Streamlit is not installed."
     ),
 }
 
-_STATUS_TO_OUTCOME: dict[str, Outcome] = {
-    "no_streamlit": Outcome.NO_STREAMLIT,
-    "no_usable_skill": Outcome.NO_USABLE_SKILL,
-    "layout_changed": Outcome.SKILLS_LAYOUT_CHANGED,
+_STATUS_TO_OUTCOME: Final[dict[str, _Outcome]] = {
+    "no_streamlit": _Outcome.NO_STREAMLIT,
+    "no_usable_skill": _Outcome.NO_USABLE_SKILL,
+    "layout_changed": _Outcome.SKILLS_LAYOUT_CHANGED,
 }
+_INSPECTED_STATUSES: Final = frozenset(_STATUS_TO_OUTCOME)
 
 
 @dataclass(frozen=True)
-class Candidate:
+class _Candidate:
     """One interpreter (or manager wrapper) to inspect, in probe order."""
 
     tag: str
@@ -157,7 +150,7 @@ class Candidate:
 
 
 @dataclass
-class ProbeBudget:
+class _ProbeBudget:
     """Wall-clock budget that charges subprocess time only."""
 
     remaining: float = _GLOBAL_BUDGET_S
@@ -171,19 +164,14 @@ class ProbeBudget:
         """Subtract elapsed subprocess time from the remaining budget."""
         self.remaining = max(0.0, self.remaining - elapsed)
 
-    def exhausted(self) -> bool:
-        """Return True when no subprocess time remains."""
-        return self.remaining <= 0.0
-
 
 @dataclass
-class Attempt:
+class _Attempt:
     """One candidate's recorded outcome for the attempt log."""
 
     tag: str
     display: str
     status: str
-    detail: str = ""
 
 
 class _DiscoverArgumentParser(argparse.ArgumentParser):
@@ -192,11 +180,11 @@ class _DiscoverArgumentParser(argparse.ArgumentParser):
     def error(self, message: str) -> NoReturn:
         print(f"ERROR[INVALID_ARGS]: {message}", file=sys.stderr)
         print(_DOCS_URL, file=sys.stderr)
-        raise SystemExit(int(Outcome.INVALID_ARGS))
+        raise SystemExit(int(_Outcome.INVALID_ARGS))
 
 
 def _reconfigure_stdio() -> None:
-    """Reconfigure this process's stdout/stderr to UTF-8 without replacing."""
+    """Set stdout/stderr encoding to UTF-8; skip streams that cannot be reconfigured."""
     for stream in (sys.stdout, sys.stderr):
         reconfigure = getattr(stream, "reconfigure", None)
         if reconfigure is None:
@@ -208,7 +196,7 @@ def _reconfigure_stdio() -> None:
 
 
 def _maybe_msys_path(raw: str) -> str:
-    """Convert a light MSYS path (``/c/foo``) to ``C:/foo`` on Windows."""
+    """Convert a light MSYS path (``/c/foo``) to a Windows drive path."""
     if not _IS_WINDOWS:
         return raw
     if (
@@ -228,6 +216,25 @@ def _expand_user_path(raw: str) -> str:
     return _maybe_msys_path(os.path.expandvars(os.path.expanduser(raw)))
 
 
+def _safe_resolve(path: Path) -> Path:
+    """Resolve ``path`` when the filesystem allows it; otherwise keep it as-is."""
+    try:
+        return path.resolve()
+    except OSError:
+        return path
+
+
+def _iter_ancestors(start: Path) -> Iterator[Path]:
+    """Yield ``start`` then each parent, up to ``_MAX_WALK_DEPTH`` levels."""
+    current = _safe_resolve(start)
+    for _ in range(_MAX_WALK_DEPTH):
+        yield current
+        parent = current.parent
+        if parent == current:
+            return
+        current = parent
+
+
 def find_venv_python(venv_root: Path) -> Path | None:
     """Return the venv's Python executable, cross-platform.
 
@@ -242,50 +249,28 @@ def find_venv_python(venv_root: Path) -> Path | None:
 
 
 def find_git_root(start: Path) -> Path | None:
-    """Walk up from ``start`` looking for a ``.git`` directory or file.
+    """Return the nearest git root at or above ``start``, if within the walk cap.
 
-    Capped at ``_MAX_WALK_DEPTH`` ancestors (same as ``skills.py``). Handles
-    the worktree case where ``.git`` is a file pointing at the real repo dir.
+    Matches ``skills.py``: at most ``_MAX_WALK_DEPTH`` ancestors, and ``.git``
+    may be a directory or a file (worktrees).
     """
-    current = start
-    try:
-        current = start.resolve()
-    except OSError:
-        current = start
-    for _ in range(_MAX_WALK_DEPTH):
-        if (current / ".git").exists():
-            return current
-        parent = current.parent
-        if parent == current:
-            return None
-        current = parent
-    return None
+    return next(
+        (path for path in _iter_ancestors(start) if (path / ".git").exists()),
+        None,
+    )
 
 
 def _find_lockfile(start: Path, name: str) -> Path | None:
-    """Return the first ``name`` found from ``start`` up to the walk cap."""
-    current = start
-    try:
-        current = start.resolve()
-    except OSError:
-        current = start
-    for _ in range(_MAX_WALK_DEPTH):
-        candidate = current / name
-        if candidate.is_file():
-            return candidate
-        parent = current.parent
-        if parent == current:
-            return None
-        current = parent
-    return None
+    """Return the nearest ``name`` file at or above ``start``, if within the walk cap."""
+    return next(
+        (path / name for path in _iter_ancestors(start) if (path / name).is_file()),
+        None,
+    )
 
 
 def _prefix_from_python(executable: Path) -> Path | None:
     """Infer an environment prefix from a Python executable path."""
-    try:
-        exe = executable.resolve()
-    except OSError:
-        exe = executable
+    exe = _safe_resolve(executable)
     parent = exe.parent
     if _IS_WINDOWS:
         if parent.name.lower() == "scripts":
@@ -336,18 +321,21 @@ def _filesystem_lookup(prefix: Path) -> Path | None:
     return with_skill[0] if with_skill else dirs[0]
 
 
-def _classify_package(pkg: Path) -> Path | Outcome:
-    """Classify a Streamlit package dir as usable skill, layout change, or not."""
+def _classify_package(pkg: Path) -> tuple[str, Path | None]:
+    """Return ``(status, skill_path)`` for a Streamlit package directory.
+
+    Status is ``usable``, ``layout_changed``, or ``no_usable_skill``.
+    """
     skill = pkg / _SKILL_REL
     if skill.is_file():
         try:
-            return skill.resolve()
+            return "usable", skill.resolve()
         except OSError:
-            return skill
+            return "usable", skill
     agents = pkg / ".agents" / "skills"
     if agents.is_dir():
-        return Outcome.SKILLS_LAYOUT_CHANGED
-    return Outcome.NO_USABLE_SKILL
+        return "layout_changed", None
+    return "no_usable_skill", None
 
 
 def _is_usable_package_dir(pkg: Path) -> bool:
@@ -383,16 +371,7 @@ def _probe_env() -> dict[str, str]:
     return env
 
 
-def _outcome_from_classify(classified: Path | Outcome) -> tuple[str, Path | None]:
-    """Convert a package classification into an attempt status and optional path."""
-    if isinstance(classified, Path):
-        return "usable", classified
-    if classified is Outcome.SKILLS_LAYOUT_CHANGED:
-        return "layout_changed", None
-    return "no_usable_skill", None
-
-
-def _direct_executable(candidate: Candidate) -> Path | None:
+def _direct_executable(candidate: _Candidate) -> Path | None:
     """Return the filesystem path of a direct interpreter candidate, if any."""
     if candidate.kind != "direct" or not candidate.argv:
         return None
@@ -403,11 +382,11 @@ def _direct_executable(candidate: Candidate) -> Path | None:
     return Path(found) if found else None
 
 
-def _iter_candidates(project_dir: Path, python_flag: Path | None) -> list[Candidate]:
+def _iter_candidates(project_dir: Path, python_flag: Path | None) -> list[_Candidate]:
     """Build the ordered candidate list. ``--python`` is exclusive."""
     if python_flag is not None:
         return [
-            Candidate(
+            _Candidate(
                 tag="python-flag",
                 argv=[str(python_flag)],
                 kind="direct",
@@ -415,14 +394,11 @@ def _iter_candidates(project_dir: Path, python_flag: Path | None) -> list[Candid
             )
         ]
 
-    out: list[Candidate] = []
+    out: list[_Candidate] = []
     seen_exes: set[Path] = set()
 
     def _remember(exe: Path) -> Path | None:
-        try:
-            resolved = exe.resolve()
-        except OSError:
-            resolved = exe
+        resolved = _safe_resolve(exe)
         if resolved in seen_exes:
             return None
         seen_exes.add(resolved)
@@ -431,7 +407,7 @@ def _iter_candidates(project_dir: Path, python_flag: Path | None) -> list[Candid
     def add_path(tag: str, exe: Path, prefix: Path | None) -> None:
         if _remember(exe) is None:
             return
-        out.append(Candidate(tag=tag, argv=[str(exe)], kind="direct", prefix=prefix))
+        out.append(_Candidate(tag=tag, argv=[str(exe)], kind="direct", prefix=prefix))
 
     def add_venv(tag: str, root: Path) -> None:
         python = find_venv_python(root)
@@ -480,11 +456,11 @@ def _iter_candidates(project_dir: Path, python_flag: Path | None) -> list[Candid
     )
     for tag, lock_name, argv in managers:
         if shutil.which(argv[0]) and _find_lockfile(project_dir, lock_name):
-            out.append(Candidate(tag=tag, argv=argv, kind="manager", prefix=None))
+            out.append(_Candidate(tag=tag, argv=argv, kind="manager", prefix=None))
 
     if _IS_WINDOWS and shutil.which("py"):
         out.append(
-            Candidate(tag="py-launcher", argv=["py", "-3"], kind="direct", prefix=None)
+            _Candidate(tag="py-launcher", argv=["py", "-3"], kind="direct", prefix=None)
         )
 
     names = ("python", "python3") if _IS_WINDOWS else ("python3", "python")
@@ -498,9 +474,9 @@ def _iter_candidates(project_dir: Path, python_flag: Path | None) -> list[Candid
 
 
 def _subprocess_probe(
-    candidate: Candidate,
+    candidate: _Candidate,
     project_dir: Path,
-    budget: ProbeBudget,
+    budget: _ProbeBudget,
 ) -> tuple[Path | None, str]:
     """Run the find_spec probe. Returns ``(package_dir, status)``."""
     timeout = budget.timeout_for(candidate.kind)
@@ -520,7 +496,7 @@ def _subprocess_probe(
         )
     except subprocess.TimeoutExpired:
         return None, "probe_failed"
-    except (FileNotFoundError, PermissionError, OSError, ValueError, UnicodeError):
+    except (OSError, ValueError, UnicodeError):
         return None, "probe_failed"
     finally:
         budget.charge(time.monotonic() - started)
@@ -536,33 +512,30 @@ def _subprocess_probe(
 
 
 def _evaluate_candidate(
-    candidate: Candidate,
+    candidate: _Candidate,
     project_dir: Path,
-    budget: ProbeBudget,
-) -> tuple[Attempt, Path | None]:
-    """Filesystem lookup, then subprocess if needed."""
+    budget: _ProbeBudget,
+) -> tuple[_Attempt, Path | None]:
+    """Try a filesystem lookup first, then the subprocess probe if needed."""
     display = " ".join(candidate.argv)
     exe = _direct_executable(candidate)
     if exe is not None and _is_windows_store_alias(exe):
-        return Attempt(candidate.tag, display, "skipped_stub"), None
+        return _Attempt(candidate.tag, display, "skipped_stub"), None
 
     if candidate.prefix is not None:
         pkg = _filesystem_lookup(candidate.prefix)
         if pkg is not None:
-            status, skill = _outcome_from_classify(_classify_package(pkg))
-            return Attempt(candidate.tag, display, status), skill
-
-    if budget.exhausted() or budget.timeout_for(candidate.kind) <= 0:
-        return Attempt(candidate.tag, display, "not_tried"), None
+            status, skill = _classify_package(pkg)
+            return _Attempt(candidate.tag, display, status), skill
 
     pkg, probe_status = _subprocess_probe(candidate, project_dir, budget)
     if probe_status != "ok" or pkg is None:
-        return Attempt(candidate.tag, display, probe_status), None
-    status, skill = _outcome_from_classify(_classify_package(pkg))
-    return Attempt(candidate.tag, display, status), skill
+        return _Attempt(candidate.tag, display, probe_status), None
+    status, skill = _classify_package(pkg)
+    return _Attempt(candidate.tag, display, status), skill
 
 
-def _install_advice(project_dir: Path, attempts: Sequence[Attempt]) -> str:
+def _install_advice(project_dir: Path, attempts: Sequence[_Attempt]) -> str:
     """Return quoted install advice. Must not be run unless the user asked."""
     header = (
         "If the user asked you to install Streamlit, you may run the command "
@@ -596,19 +569,17 @@ def _install_advice(project_dir: Path, attempts: Sequence[Attempt]) -> str:
 
 
 def _print_failure(
-    outcome: Outcome, attempts: Sequence[Attempt], project_dir: Path
+    outcome: _Outcome, attempts: Sequence[_Attempt], project_dir: Path
 ) -> int:
     """Print the error block and return the exit code."""
-    name = _ERROR_NAME[outcome]
-    print(f"ERROR[{name}]: {_ERROR_MESSAGE[outcome]}", file=sys.stderr)
+    print(f"ERROR[{outcome.name}]: {_ERROR_MESSAGE[outcome]}", file=sys.stderr)
     print(file=sys.stderr)
     print("Attempts:", file=sys.stderr)
     if not attempts:
         print("  (none)", file=sys.stderr)
     for attempt in attempts:
-        extra = f" ({attempt.detail})" if attempt.detail else ""
         print(
-            f"  {attempt.tag} [{attempt.display}]: {attempt.status}{extra}",
+            f"  {attempt.tag} [{attempt.display}]: {attempt.status}",
             file=sys.stderr,
         )
     print(file=sys.stderr)
@@ -638,10 +609,7 @@ def _resolve_project_dir(raw: str | None) -> Path:
             file=sys.stderr,
         )
         return Path.cwd()
-    try:
-        return path.resolve()
-    except OSError:
-        return path
+    return _safe_resolve(path)
 
 
 def _resolve_python_flag(raw: str) -> Path:
@@ -658,18 +626,20 @@ def _resolve_python_flag(raw: str) -> Path:
         file=sys.stderr,
     )
     print(_DOCS_URL, file=sys.stderr)
-    raise SystemExit(int(Outcome.INVALID_ARGS))
+    raise SystemExit(int(_Outcome.INVALID_ARGS))
 
 
 def _discover(project_dir: Path, python_flag: Path | None, verbose: bool) -> int:
     """Run per-candidate discovery and print the skill path or an error block."""
     candidates = _iter_candidates(project_dir, python_flag)
     if not candidates:
-        return _print_failure(Outcome.NO_PROJECT_PYTHON, [], project_dir)
+        return _print_failure(_Outcome.NO_PROJECT_PYTHON, [], project_dir)
 
-    budget = ProbeBudget()
-    attempts: list[Attempt] = []
-    first_inspected: Attempt | None = None
+    budget = _ProbeBudget()
+    attempts: list[_Attempt] = []
+    # Final error follows the first candidate that was actually inspected.
+    # A later layout_changed/no_usable_skill must not hide an earlier no_streamlit.
+    first_inspected: _Attempt | None = None
 
     for candidate in candidates:
         attempt, skill = _evaluate_candidate(candidate, project_dir, budget)
@@ -681,13 +651,13 @@ def _discover(project_dir: Path, python_flag: Path | None, verbose: bool) -> int
                     f"discovered via: {attempt.tag} {attempt.display}",
                     file=sys.stderr,
                 )
-            return int(Outcome.SUCCESS)
+            return int(_Outcome.SUCCESS)
         if attempt.status in _INSPECTED_STATUSES and first_inspected is None:
             first_inspected = attempt
 
     if first_inspected is None:
         any_started = any(attempt.status != "not_tried" for attempt in attempts)
-        code = Outcome.PROBE_FAILED if any_started else Outcome.NO_PROJECT_PYTHON
+        code = _Outcome.PROBE_FAILED if any_started else _Outcome.NO_PROJECT_PYTHON
         return _print_failure(code, attempts, project_dir)
     return _print_failure(
         _STATUS_TO_OUTCOME[first_inspected.status], attempts, project_dir
@@ -734,11 +704,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         if isinstance(exc.code, int):
             return exc.code
-        return int(Outcome.INVALID_ARGS)
+        return int(_Outcome.INVALID_ARGS)
     except Exception as exc:
         print(f"ERROR[INTERNAL]: {exc}", file=sys.stderr)
         print(_DOCS_URL, file=sys.stderr)
-        return int(Outcome.INTERNAL)
+        return int(_Outcome.INTERNAL)
 
 
 if __name__ == "__main__":

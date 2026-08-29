@@ -3447,8 +3447,8 @@ class TestVendoredMetaSkillDiscovery:
                 "vendored meta-skill or bundled content not present in this install"
             )
 
-        # ``sys.executable`` is a candidate (this test interpreter has Streamlit).
-        # Drop inherited VIRTUAL_ENV / CONDA_PREFIX so those tags cannot mask it.
+        # Drop inherited VIRTUAL_ENV / CONDA_PREFIX so they cannot outrank
+        # this test interpreter, which has Streamlit and is itself a candidate.
         env = os.environ.copy()
         env.pop("VIRTUAL_ENV", None)
         env.pop("CONDA_PREFIX", None)

@@ -40,7 +40,9 @@ Changes to these high-fan-out internals can affect every command, message, sessi
 
 ## Embedded agent skills
 
-User-facing skills ship under `lib/streamlit/.agents/skills/` (for example, `developing-with-streamlit`). Keep them current as features land; follow `lib/streamlit/.agents/skills/AGENTS.md`.
+User-facing content skills ship under `lib/streamlit/.agents/skills/` (for example, `developing-with-streamlit`). Keep them current as features land; follow `lib/streamlit/.agents/skills/AGENTS.md`.
+
+The version-agnostic global meta-skill lives separately under `lib/streamlit/.agents/meta-skill/`. Tests for its discovery script are in `lib/tests/streamlit/web/meta_skill_discover_test.py`.
 
 ## Unit Tests
 

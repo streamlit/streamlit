@@ -21,7 +21,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 import pytest
 
@@ -30,7 +30,7 @@ import streamlit
 if TYPE_CHECKING:
     from types import ModuleType
 
-_DISCOVER_PY = (
+_DISCOVER_PY: Final = (
     Path(streamlit.__file__).resolve().parent
     / ".agents"
     / "meta-skill"
@@ -38,8 +38,9 @@ _DISCOVER_PY = (
     / "scripts"
     / "discover.py"
 )
-_DOCS_URL = "https://docs.streamlit.io/llms-full.txt"
-_SKILL_REL = Path(".agents") / "skills" / "developing-with-streamlit" / "SKILL.md"
+_SKILL_REL: Final = (
+    Path(".agents") / "skills" / "developing-with-streamlit" / "SKILL.md"
+)
 
 
 @pytest.fixture
@@ -60,15 +61,44 @@ def isolated_env(
     monkeypatch: pytest.MonkeyPatch, discover_mod: ModuleType, tmp_path: Path
 ) -> None:
     """Hide inherited interpreters so tests control the candidate list."""
+    _hide_inherited_interpreters(monkeypatch, discover_mod, tmp_path)
+    # Planted fixtures use POSIX ``bin/python`` layouts. Force that lookup
+    # so these helper tests also pass on the Windows CI job.
+    monkeypatch.setattr(discover_mod, "_IS_WINDOWS", False)
+
+
+def _hide_inherited_interpreters(
+    monkeypatch: pytest.MonkeyPatch, discover_mod: ModuleType, tmp_path: Path
+) -> None:
+    """Drop VIRTUAL_ENV, CONDA_PREFIX, sys.executable, and PATH lookups."""
     monkeypatch.delenv("VIRTUAL_ENV", raising=False)
     monkeypatch.delenv("CONDA_PREFIX", raising=False)
     monkeypatch.setattr(
         discover_mod.sys, "executable", str(tmp_path / "no-such-python")
     )
     monkeypatch.setattr(discover_mod.shutil, "which", lambda _name: None)
-    # Planted fixtures use POSIX ``bin/python`` layouts. Force that lookup
-    # so these helper tests also pass on the Windows CI job.
-    monkeypatch.setattr(discover_mod, "_IS_WINDOWS", False)
+
+
+def _subprocess_reports_no_streamlit(
+    *_args: object, **_kwargs: object
+) -> subprocess.CompletedProcess[str]:
+    """Fake ``subprocess.run``: exit 0 with empty stdout (no STREAMLIT_PKG line)."""
+    return subprocess.CompletedProcess(["python"], 0, stdout="", stderr="")
+
+
+def _run_discover(*cli_args: str) -> subprocess.CompletedProcess[str]:
+    """Run discover.py as a subprocess, ignoring inherited venv env vars."""
+    env = os.environ.copy()
+    env.pop("VIRTUAL_ENV", None)
+    env.pop("CONDA_PREFIX", None)
+    return subprocess.run(
+        [sys.executable, str(_DISCOVER_PY), *cli_args],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+        env=env,
+    )
 
 
 def _touch_exe(path: Path) -> Path:
@@ -260,19 +290,16 @@ def test_layout_changed_does_not_outrank_earlier_no_streamlit(
     (pkg / ".agents" / "skills").mkdir(parents=True)
     monkeypatch.setenv("VIRTUAL_ENV", str(later))
 
-    def _fake_run(
-        *_args: object, **_kwargs: object
-    ) -> subprocess.CompletedProcess[str]:
-        return subprocess.CompletedProcess(["python"], 0, stdout="", stderr="")
-
-    monkeypatch.setattr(discover_mod.subprocess, "run", _fake_run)
+    monkeypatch.setattr(
+        discover_mod.subprocess, "run", _subprocess_reports_no_streamlit
+    )
 
     code = discover_mod.main(["--project-dir", str(project)])
     captured = capsys.readouterr()
     assert code == 1
     assert captured.err.startswith("ERROR[NO_STREAMLIT]:")
     assert "ERROR[SKILLS_LAYOUT_CHANGED]" not in captured.err
-    assert _DOCS_URL in captured.err
+    assert discover_mod._DOCS_URL in captured.err
 
 
 def test_lone_streamlit_py_is_rejected(
@@ -323,12 +350,12 @@ def test_store_alias_skipped_only_for_windowsapps_dir(
     assert discover_mod._is_windows_store_alias(trick) is False
 
 
-def test_conda_python_exe_on_windows(
+def test_windows_find_venv_python_root_then_scripts(
     tmp_path: Path,
     discover_mod: ModuleType,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Windows conda prefixes expose ``python.exe`` next to the root."""
+    """Windows: conda-style ``python.exe`` at the prefix, else ``Scripts/python.exe``."""
     monkeypatch.setattr(discover_mod, "_IS_WINDOWS", True)
     prefix = tmp_path / "conda"
     root_exe = _touch_exe(prefix / "python.exe")
@@ -393,12 +420,9 @@ def test_python_flag_exclusive_ignores_project_venv(
     _plant_posix_venv(project / ".venv")
     chosen = _touch_exe(tmp_path / "chosen" / "bin" / "python")
 
-    def _fake_run(
-        *_args: object, **_kwargs: object
-    ) -> subprocess.CompletedProcess[str]:
-        return subprocess.CompletedProcess(["python"], 0, stdout="", stderr="")
-
-    monkeypatch.setattr(discover_mod.subprocess, "run", _fake_run)
+    monkeypatch.setattr(
+        discover_mod.subprocess, "run", _subprocess_reports_no_streamlit
+    )
 
     code = discover_mod.main(["--project-dir", str(project), "--python", str(chosen)])
     captured = capsys.readouterr()
@@ -418,7 +442,7 @@ def test_bad_python_flag_is_invalid_args(
     captured = capsys.readouterr()
     assert code == 5
     assert captured.err.startswith("ERROR[INVALID_ARGS]:")
-    assert _DOCS_URL in captured.err
+    assert discover_mod._DOCS_URL in captured.err
 
 
 def test_unknown_flag_is_invalid_args(
@@ -429,7 +453,7 @@ def test_unknown_flag_is_invalid_args(
     captured = capsys.readouterr()
     assert code == 5
     assert captured.err.startswith("ERROR[INVALID_ARGS]:")
-    assert _DOCS_URL in captured.err
+    assert discover_mod._DOCS_URL in captured.err
 
 
 def test_budget_marks_remaining_candidates_not_tried(
@@ -439,7 +463,7 @@ def test_budget_marks_remaining_candidates_not_tried(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """After the subprocess budget is exhausted, later candidates are ``not tried``."""
+    """After the subprocess budget is exhausted, later candidates are ``not_tried``."""
     project = tmp_path / "proj"
     project.mkdir()
     _touch_exe(project / ".venv" / "bin" / "python")
@@ -447,13 +471,10 @@ def test_budget_marks_remaining_candidates_not_tried(
     _touch_exe(later / "bin" / "python")
     monkeypatch.setenv("VIRTUAL_ENV", str(later))
 
-    def _fake_run(
-        *_args: object, **_kwargs: object
-    ) -> subprocess.CompletedProcess[str]:
-        return subprocess.CompletedProcess(["python"], 0, stdout="", stderr="")
-
     times = iter([0.0, 60.0])
-    monkeypatch.setattr(discover_mod.subprocess, "run", _fake_run)
+    monkeypatch.setattr(
+        discover_mod.subprocess, "run", _subprocess_reports_no_streamlit
+    )
     monkeypatch.setattr(discover_mod.time, "monotonic", lambda: next(times))
 
     code = discover_mod.main(["--project-dir", str(project)])
@@ -484,7 +505,7 @@ def test_probe_failed_when_nothing_inspected(
     assert code == 7
     assert captured.err.startswith("ERROR[PROBE_FAILED]:")
     assert "ERROR[NO_STREAMLIT]" not in captured.err
-    assert _DOCS_URL in captured.err
+    assert discover_mod._DOCS_URL in captured.err
 
 
 def test_skip_py_launcher_when_missing(
@@ -493,13 +514,8 @@ def test_skip_py_launcher_when_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Windows ``py -3`` is omitted when ``py`` is not on PATH."""
+    _hide_inherited_interpreters(monkeypatch, discover_mod, tmp_path)
     monkeypatch.setattr(discover_mod, "_IS_WINDOWS", True)
-    monkeypatch.delenv("VIRTUAL_ENV", raising=False)
-    monkeypatch.delenv("CONDA_PREFIX", raising=False)
-    monkeypatch.setattr(
-        discover_mod.sys, "executable", str(tmp_path / "no-such-python")
-    )
-    monkeypatch.setattr(discover_mod.shutil, "which", lambda _name: None)
     project = tmp_path / "proj"
     project.mkdir()
     tags = [c.tag for c in discover_mod._iter_candidates(project, python_flag=None)]
@@ -507,26 +523,19 @@ def test_skip_py_launcher_when_missing(
 
 
 @pytest.mark.parametrize(
-    ("is_windows", "expected_first"),
-    [
-        (True, "python"),
-        (False, "python3"),
-    ],
+    "is_windows",
+    [True, False],
+    ids=["windows", "posix"],
 )
 def test_system_interpreter_order(
     tmp_path: Path,
     discover_mod: ModuleType,
     monkeypatch: pytest.MonkeyPatch,
     is_windows: bool,
-    expected_first: str,
 ) -> None:
     """Windows prefers ``python`` then ``python3``; POSIX the reverse."""
+    _hide_inherited_interpreters(monkeypatch, discover_mod, tmp_path)
     monkeypatch.setattr(discover_mod, "_IS_WINDOWS", is_windows)
-    monkeypatch.delenv("VIRTUAL_ENV", raising=False)
-    monkeypatch.delenv("CONDA_PREFIX", raising=False)
-    monkeypatch.setattr(
-        discover_mod.sys, "executable", str(tmp_path / "no-such-python")
-    )
     python = _touch_exe(tmp_path / "python")
     python3 = _touch_exe(tmp_path / "python3")
     which_map = {"python": str(python), "python3": str(python3)}
@@ -538,9 +547,8 @@ def test_system_interpreter_order(
         for c in discover_mod._iter_candidates(project, python_flag=None)
         if c.tag == "system"
     ]
-    assert [Path(c.argv[0]).name for c in system] == (
-        ["python", "python3"] if expected_first == "python" else ["python3", "python"]
-    )
+    expected = ["python", "python3"] if is_windows else ["python3", "python"]
+    assert [Path(c.argv[0]).name for c in system] == expected
 
 
 def test_uv_argv_includes_no_sync(
@@ -620,12 +628,9 @@ def test_install_advice_prefers_uv_and_is_quoted(
     _touch_exe(project / ".venv" / "bin" / "python")
     (project / "uv.lock").write_text("", encoding="utf-8")
 
-    def _fake_run(
-        *_args: object, **_kwargs: object
-    ) -> subprocess.CompletedProcess[str]:
-        return subprocess.CompletedProcess(["python"], 0, stdout="", stderr="")
-
-    monkeypatch.setattr(discover_mod.subprocess, "run", _fake_run)
+    monkeypatch.setattr(
+        discover_mod.subprocess, "run", _subprocess_reports_no_streamlit
+    )
 
     code = discover_mod.main(["--project-dir", str(project)])
     captured = capsys.readouterr()
@@ -633,7 +638,7 @@ def test_install_advice_prefers_uv_and_is_quoted(
     assert "uv add streamlit" in captured.err
     assert "source " not in captured.err
     assert "activate" not in captured.err
-    assert captured.err.strip().endswith(_DOCS_URL)
+    assert captured.err.strip().endswith(discover_mod._DOCS_URL)
     assert captured.err.startswith("ERROR[NO_STREAMLIT]:")
 
 
@@ -678,7 +683,8 @@ def test_windows_filesystem_lookup_layout(
     pkg = prefix / "Lib" / "site-packages" / "streamlit"
     skill = _plant_skill(pkg)
     assert discover_mod._filesystem_lookup(prefix) == pkg
-    classified = discover_mod._classify_package(pkg)
+    status, classified = discover_mod._classify_package(pkg)
+    assert status == "usable"
     assert classified == skill.resolve()
 
 
@@ -695,48 +701,28 @@ def test_no_project_python_when_nothing_started(
     captured = capsys.readouterr()
     assert code == 3
     assert captured.err.startswith("ERROR[NO_PROJECT_PYTHON]:")
-    assert _DOCS_URL in captured.err
+    assert discover_mod._DOCS_URL in captured.err
 
 
-def test_fake_venv_e2e_discovers_planted_skill(tmp_path: Path) -> None:
+def test_subprocess_run_against_planted_venv_skill(tmp_path: Path) -> None:
     """End-to-end: a real project ``.venv`` with a planted skill is discovered."""
     project = tmp_path / "proj"
     project.mkdir()
     venv = _create_venv(project / ".venv")
     skill = _plant_skill(_venv_site_packages(venv) / "streamlit", content="# e2e\n")
-    env = os.environ.copy()
-    env.pop("VIRTUAL_ENV", None)
-    env.pop("CONDA_PREFIX", None)
-    result = subprocess.run(
-        [sys.executable, str(_DISCOVER_PY), "--project-dir", str(project), "--verbose"],
-        capture_output=True,
-        text=True,
-        timeout=60,
-        check=False,
-        env=env,
-    )
+    result = _run_discover("--project-dir", str(project), "--verbose")
     assert result.returncode == 0, result.stderr
     assert result.stdout.splitlines() == [str(skill.resolve())]
     assert "discovered via: venv-local" in result.stderr
 
 
-def test_fake_venv_e2e_project_path_with_space(tmp_path: Path) -> None:
+def test_subprocess_run_against_project_path_with_space(tmp_path: Path) -> None:
     """Discovery works when the project directory contains a space."""
     project = tmp_path / "my project"
     project.mkdir()
     venv = _create_venv(project / ".venv")
     skill = _plant_skill(_venv_site_packages(venv) / "streamlit")
-    env = os.environ.copy()
-    env.pop("VIRTUAL_ENV", None)
-    env.pop("CONDA_PREFIX", None)
-    result = subprocess.run(
-        [sys.executable, str(_DISCOVER_PY), "--project-dir", str(project)],
-        capture_output=True,
-        text=True,
-        timeout=60,
-        check=False,
-        env=env,
-    )
+    result = _run_discover("--project-dir", str(project))
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == str(skill.resolve())
 
@@ -754,17 +740,7 @@ def test_pth_hits_via_subprocess_not_filesystem(tmp_path: Path) -> None:
     )
     assert not (site_packages / "streamlit").exists()
 
-    env = os.environ.copy()
-    env.pop("VIRTUAL_ENV", None)
-    env.pop("CONDA_PREFIX", None)
-    result = subprocess.run(
-        [sys.executable, str(_DISCOVER_PY), "--project-dir", str(project), "--verbose"],
-        capture_output=True,
-        text=True,
-        timeout=60,
-        check=False,
-        env=env,
-    )
+    result = _run_discover("--project-dir", str(project), "--verbose")
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == str(skill.resolve())
     assert "venv-local" in result.stderr
@@ -780,17 +756,7 @@ def test_windows_filesystem_layout_smoke(tmp_path: Path) -> None:
     assert python.is_file()
     lib_pkg = venv / "Lib" / "site-packages" / "streamlit"
     skill = _plant_skill(lib_pkg)
-    env = os.environ.copy()
-    env.pop("VIRTUAL_ENV", None)
-    env.pop("CONDA_PREFIX", None)
-    result = subprocess.run(
-        [sys.executable, str(_DISCOVER_PY), "--project-dir", str(project), "--verbose"],
-        capture_output=True,
-        text=True,
-        timeout=60,
-        check=False,
-        env=env,
-    )
+    result = _run_discover("--project-dir", str(project), "--verbose")
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == str(skill.resolve())
     assert "venv-local" in result.stderr
@@ -808,17 +774,7 @@ def test_windows_pth_subprocess_smoke(tmp_path: Path) -> None:
     (site_packages / "discover_editable.pth").write_text(
         str(ext.resolve()) + "\n", encoding="utf-8"
     )
-    env = os.environ.copy()
-    env.pop("VIRTUAL_ENV", None)
-    env.pop("CONDA_PREFIX", None)
-    result = subprocess.run(
-        [sys.executable, str(_DISCOVER_PY), "--project-dir", str(project), "--verbose"],
-        capture_output=True,
-        text=True,
-        timeout=60,
-        check=False,
-        env=env,
-    )
+    result = _run_discover("--project-dir", str(project), "--verbose")
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == str(skill.resolve())
     python = venv / "Scripts" / "python.exe"

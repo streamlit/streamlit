@@ -138,7 +138,7 @@ Subagents run autonomously in a fresh context, which optimizes for context size 
 
 ### Bundled user-facing skills
 
-Streamlit ships user-facing skills with the library under `lib/streamlit/.agents/skills/` (for example, `developing-with-streamlit`). When adding or editing those skills, follow [`lib/streamlit/.agents/skills/AGENTS.md`](./lib/streamlit/.agents/skills/AGENTS.md).
+Streamlit ships user-facing content skills under `lib/streamlit/.agents/skills/` (for example, `developing-with-streamlit`). When adding or editing those skills, follow [`lib/streamlit/.agents/skills/AGENTS.md`](./lib/streamlit/.agents/skills/AGENTS.md). The version-agnostic global meta-skill lives separately under `lib/streamlit/.agents/meta-skill/`.
 
 ## Style Guide
 

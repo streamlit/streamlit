@@ -47,6 +47,7 @@ jobs:
 
       - name: Install pytest and editable Streamlit
         run: |
+          # lib/pyproject.toml expects README.md beside it; the file lives at repo root.
           Copy-Item README.md lib/README.md
           python -m pip install pytest
           python -m pip install -e lib

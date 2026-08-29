@@ -29,7 +29,7 @@ python "${CLAUDE_SKILL_DIR}/scripts/discover.py" --project-dir "${CLAUDE_PROJECT
 - Exit 0: stdout is one path — the bundled `SKILL.md`. **Read** that path; it points into `references/`.
 - Non-zero: follow [Manual discovery](#manual-discovery). Do not install or change packages unless the user asked.
 
-`<SKILL_DIR>` is the directory containing this file. Passing `--project-dir` matters because the script resolves `.venv` / `venv`, lockfiles, and environment prefixes relative to it.
+`${CLAUDE_SKILL_DIR}` is this skill's directory (the folder that contains this file). Passing `--project-dir` matters because the script resolves `.venv` / `venv`, lockfiles, and environment prefixes relative to it.
 
 ## Manual discovery
 
