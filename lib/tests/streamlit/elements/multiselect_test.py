@@ -322,8 +322,10 @@ class Multiselectbox(DeltaGeneratorTestCase):
     def test_label_visibility_wrong_value(self):
         with pytest.raises(StreamlitValueError) as e:
             st.multiselect("the label", ("m", "f"), label_visibility="wrong_value")
-        assert "Invalid `label_visibility` value" in str(e.value)
-        assert "Got 'wrong_value'." in str(e.value)
+        assert (
+            str(e.value)
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
+        )
 
     def test_max_selections(self):
         st.multiselect("the label", ("m", "f"), max_selections=2)

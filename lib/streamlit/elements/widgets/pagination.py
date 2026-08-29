@@ -27,8 +27,8 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
+    StreamlitAPIException,
     StreamlitInvalidParameterTypeError,
-    StreamlitValueError,
     StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.Pagination_pb2 import Pagination as PaginationProto
@@ -256,19 +256,15 @@ class PaginationMixin:
 
         key = to_key(key)
 
-        # Validate num_pages. bool is a subclass of int, so reject it as a type
-        # error before checking the value range.
-        if isinstance(num_pages, bool) or not isinstance(num_pages, int):
-            raise StreamlitInvalidParameterTypeError(
-                "num_pages",
-                type(num_pages).__name__,
-                ["int"],
-            )
-        if num_pages < 1:
-            raise StreamlitValueError(
-                "num_pages",
-                ["a positive integer"],
-                detail=f"Got {num_pages}.",
+        # Validate num_pages
+        if (
+            not isinstance(num_pages, int)
+            or isinstance(num_pages, bool)
+            or num_pages < 1
+        ):
+            raise StreamlitAPIException(
+                f"`num_pages` must be an integer of at least 1. Got {num_pages}.",
+                error_id="pagination-invalid-num-pages",
             )
 
         # bool is a subclass of int, so True would otherwise be treated as page 1.
@@ -281,22 +277,16 @@ class PaginationMixin:
         if not 1 <= default <= num_pages:
             raise StreamlitValueOutOfRangeError("default", default, 1, num_pages)
 
-        # Validate max_visible_pages. bool is a subclass of int, so reject it as
-        # a type error before checking the value range.
+        # Validate max_visible_pages
         if max_visible_pages is not None and (
-            isinstance(max_visible_pages, bool)
-            or not isinstance(max_visible_pages, int)
+            not isinstance(max_visible_pages, int)
+            or isinstance(max_visible_pages, bool)
+            or max_visible_pages < 0
         ):
-            raise StreamlitInvalidParameterTypeError(
-                "max_visible_pages",
-                type(max_visible_pages).__name__,
-                ["int", "None"],
-            )
-        if max_visible_pages is not None and max_visible_pages < 0:
-            raise StreamlitValueError(
-                "max_visible_pages",
-                ["a non-negative integer", "None"],
-                detail=f"Got {max_visible_pages}.",
+            raise StreamlitAPIException(
+                f"`max_visible_pages` must be a non-negative integer or None. "
+                f"Got {max_visible_pages}.",
+                error_id="pagination-invalid-max-visible-pages",
             )
 
         check_widget_policies(self.dg, key, on_change, default_value=default)

@@ -255,8 +255,10 @@ class ChatTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitValueError) as ex:
             st.chat_input(accept_file="invalid")
 
-        assert "Invalid `accept_file` value" in str(ex.value)
-        assert "Got 'invalid'." in str(ex.value)
+        assert (
+            str(ex.value)
+            == "Invalid `accept_file` value. Supported values: True, False, 'multiple', 'directory'."
+        )
 
     def test_file_type(self):
         """Test that it can be called using string(s) for type parameter."""

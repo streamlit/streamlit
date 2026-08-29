@@ -147,8 +147,10 @@ hello
     def test_label_visibility_wrong_value(self):
         with pytest.raises(StreamlitValueError) as e:
             st.checkbox("the label", label_visibility="wrong_value")
-        assert "Invalid `label_visibility` value" in str(e.value)
-        assert "Got 'wrong_value'." in str(e.value)
+        assert (
+            str(e.value)
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
+        )
 
     def test_empty_label_warning(self):
         """Test that a warning is logged if st.checkbox was called with empty label."""

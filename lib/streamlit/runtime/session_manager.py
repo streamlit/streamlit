@@ -33,11 +33,7 @@ if TYPE_CHECKING:
 
 
 class SessionClientDisconnectedError(Exception):
-    """Internal signal that the session's client is disconnected.
-
-    Raised by writes to a closed WebSocket. Caught by the runtime; not an
-    uncaught user-facing ``st.*`` exception.
-    """
+    """Raised by operations on a disconnected SessionClient."""
 
 
 @runtime_checkable
@@ -124,10 +120,10 @@ class SessionInfo:
 
 
 class SessionStorageError(Exception):
-    """Internal SessionStorage protocol error.
+    """Exception class for errors raised by SessionStorage.
 
-    Implementors raise this (often wrapping an I/O error) for storage
-    failures. It is not an uncaught user-facing ``st.*`` exception.
+    The original error that causes a SessionStorageError to be (re)raised will generally
+    be an I/O error specific to the concrete SessionStorage implementation.
     """
 
 

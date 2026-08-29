@@ -54,11 +54,10 @@ if TYPE_CHECKING:
 
 
 class DataframeSourceError(Exception):
-    """Internal signal that a lazy dataframe chunk request cannot be served.
+    """Raised when a lazy dataframe chunk request cannot be served.
 
-    Caught by the chunk handler and returned as a handled frontend error,
-    not an uncaught exception overlay. The message must stay free of
-    sensitive connection details.
+    The message is safe to surface to the frontend (it does not include
+    sensitive connection details).
     """
 
 

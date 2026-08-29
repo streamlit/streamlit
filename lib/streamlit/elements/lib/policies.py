@@ -152,7 +152,6 @@ def validate_label_visibility(label_visibility: str | None) -> None:
         raise errors.StreamlitValueError(
             "label_visibility",
             ["'visible'", "'hidden'", "'collapsed'"],
-            detail=f"Got {label_visibility!r}.",
         )
 
 

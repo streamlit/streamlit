@@ -995,7 +995,6 @@ class ChatMixin:
             raise StreamlitValueError(
                 "accept_file",
                 ["True", "False", "'multiple'", "'directory'"],
-                detail=f"Got {accept_file!r}.",
             )
 
         if submit_mode not in {"submit", "disable", "stop"}:
