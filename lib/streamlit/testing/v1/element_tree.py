@@ -216,8 +216,8 @@ class UnknownElement(Element):
                 state = self.root.session_state
                 if state is not None:
                     return state[proto_id]
-            except (KeyError, ValueError, AttributeError, TypeError):
-                # Missing or unreadable widget state is expected for
+            except (KeyError, ValueError):
+                # Missing widget state or a non-widget id is expected for
                 # unimplemented elements; fall back to a proto field.
                 pass
         return _unknown_element_content(self.proto)
@@ -300,8 +300,9 @@ class ElementList(Generic[El_co]):
     def __call__(self, key: str) -> El_co:
         """Return the first element in this collection with the given user key.
 
-        Unlike ``get_by_key``, this keeps first-match behavior so existing
-        typed lookups such as ``at.button("x")`` stay compatible.
+        The same key can appear on different element types, so this returns the
+        first match in this collection. Use ``get_by_key`` when an ambiguous
+        key should raise.
         """
         for e in self._list:
             if getattr(e, "key", None) == key:
@@ -361,9 +362,9 @@ class BlockList:
     def __call__(self, key: str) -> Block:
         """Return the first block in this collection with the given user key.
 
-        Unlike ``get_by_key``, this keeps first-match behavior so typed
-        lookups such as ``at.container("x")`` stay compatible with
-        ``at.button("x")``.
+        The same key can appear on different block types, so this returns the
+        first match in this collection. Use ``get_by_key`` when an ambiguous
+        key should raise.
         """
         for e in self._list:
             if e.key == key:
@@ -1724,9 +1725,7 @@ class Slider(Widget, Generic[SliderValueT]):
         self, v: SliderValueT | Sequence[SliderValueT]
     ) -> Slider[SliderValueT]:
         """Set the (single) value of the slider."""
-        self._assert_can_interact()
-        self._value = v
-        return self
+        return cast("Slider[SliderValueT]", super().set_value(v))
 
     @property
     def _widget_state(self) -> WidgetState:
@@ -2077,6 +2076,7 @@ class Block:
     children: dict[int, Node]
     proto: Any = field(repr=False)
     root: ElementTree = field(repr=False)
+    _block_id: str = field(repr=False, default="", init=False)
 
     def __init__(
         self,
@@ -2112,11 +2112,13 @@ class Block:
     def key(self) -> str | None:
         """User key for this block, if the corresponding command set one."""
         proto = self.proto
-        block_id = getattr(self, "_block_id", None) or (
+        block_id = self._block_id or (
             getattr(proto, "id", None) if proto is not None else None
         )
         if block_id:
             return user_key_from_element_id(block_id)
+        if self.type == "form" and proto is not None:
+            return cast("str", proto.form.form_id)
         return None
 
     def get_by_key(self, key: str) -> Node:
@@ -2200,9 +2202,7 @@ class Block:
     def container(self) -> BlockList:
         """``st.container`` blocks, including horizontal/flex containers.
 
-        The implicit row wrapper created by ``st.columns`` is excluded so
-        index lookups such as ``at.container[0]`` stay aligned with
-        user-created containers.
+        The implicit row wrapper created by ``st.columns`` is excluded.
         """
         return BlockList(
             [
@@ -2211,6 +2211,8 @@ class Block:
                 if isinstance(e, Block)
                 and e is not self
                 and e.type in {"container", "flex_container"}
+                # st.columns currently emits a flex-container whose direct
+                # children are Column blocks; that wrapper is not st.container.
                 and not any(isinstance(child, Column) for child in e.children.values())
             ]
         )
@@ -2470,7 +2472,6 @@ class ChatMessage(Block):
         self.type = "chat_message"
         self.name = proto.name
         self.avatar = proto.avatar
-        self._block_id = ""
 
 
 @dataclass(repr=False)
@@ -2505,7 +2506,6 @@ class Column(Block):
         self.type = "column"
         self.weight = proto.weight
         self.gap = self._GAP_SIZE_TO_STRING.get(proto.gap_config.gap_size)
-        self._block_id = ""
 
 
 @dataclass(repr=False)
@@ -2524,7 +2524,6 @@ class Expander(Block):
         self.type = "expander"
         self.icon = proto.icon
         self.label = proto.label
-        self._block_id = ""
 
 
 @dataclass(repr=False)
@@ -2541,7 +2540,6 @@ class Status(Block):
         self.type = "status"
         self.icon = proto.icon
         self.label = proto.label
-        self._block_id = ""
 
     @property
     def state(self) -> str:
@@ -2573,7 +2571,6 @@ class Tab(Block):
         self.root = root
         self.type = "tab"
         self.label = proto.label
-        self._block_id = ""
 
 
 Node: TypeAlias = Element | Block
@@ -2616,6 +2613,7 @@ class ElementTree(Block):
         self.children = {}
         self.root = self
         self.type = "root"
+        self._block_id = ""
 
     @property
     def main(self) -> Block:

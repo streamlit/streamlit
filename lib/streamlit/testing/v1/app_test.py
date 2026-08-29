@@ -33,6 +33,7 @@ from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.secrets import Secrets
+from streamlit.runtime.state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
 from streamlit.runtime.state.common import TESTING_KEY
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import SessionState
@@ -100,6 +101,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Sequence
 
     from streamlit.proto.WidgetStates_pb2 import WidgetStates
+    from streamlit.source_util import PageHash, PageInfo
 
 TMP_DIR = tempfile.TemporaryDirectory()
 
@@ -185,7 +187,7 @@ class AppTest:
         self._page_hash = ""
         # Pages registered by the most recent run, used to resolve switch_page()
         # against st.navigation hashes (which follow url_path, not filename).
-        self._registered_pages: dict[str, Any] = {}
+        self._registered_pages: dict[PageHash, PageInfo] = {}
         # Cache the discovered component manager so installed CCv2 components are
         # only scanned once per AppTest instance instead of on every rerun.
         self._bidi_component_manager: BidiComponentManager | None = None
@@ -420,7 +422,7 @@ class AppTest:
             new_pages = pages_manager.get_pages()
             if (
                 any("url_pathname" in info for info in new_pages.values())
-                or not self.exception
+                or self.session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY]
             ):
                 self._registered_pages = new_pages
         # Last event is SHUTDOWN, so the corresponding data includes query string
@@ -485,10 +487,11 @@ class AppTest:
         main script supplied to ``AppTest.from_file()`` remains the path root
         after switching pages.
 
-        Call ``run()`` at least once before switching so ``st.navigation``
-        pages can be resolved by registered script path. Switching before the
-        first run hashes the filename slug, which misses a custom
-        ``url_path``.
+        Call ``run()`` at least once before switching pages. Before the first
+        run, Streamlit identifies the page by its filename, which does not
+        match a page that ``st.navigation`` registers with a custom
+        ``url_path``. If page registration depends on Session State, call
+        ``run()`` after updating the state and before switching pages.
 
         Parameters
         ----------
@@ -543,10 +546,18 @@ class AppTest:
             if (script_path := info.get("script_path"))
             and Path(str(script_path)).resolve() == target
         ]
-        if len(path_matches) == 1:
-            return path_matches[0]
-        if len(path_matches) > 1:
-            raise ValueError(f"Multiple navigation pages use script {page_path_str!r}.")
+        if path_matches:
+            # A file can be registered under multiple URL paths. Prefer the
+            # page whose URL matches the filename, then registration order.
+            return next(
+                (
+                    page_hash
+                    for page_hash in path_matches
+                    if self._registered_pages[page_hash].get("url_pathname")
+                    == page_name
+                ),
+                path_matches[0],
+            )
 
         # st.navigation registers url_pathname even for callable-only pages.
         # Do not fall back to a filename-slug hash: that can collide with a
@@ -565,6 +576,8 @@ class AppTest:
             raise ValueError(
                 f"Could not find a navigation page for {page_path_str!r}. "
                 "AppTest.switch_page() matches registered script paths. "
+                "If page registration depends on Session State, call "
+                "AppTest.run() after updating the state and before switching. "
                 f"Known pages: {known_pages}."
             )
         return filename_hash
@@ -758,13 +771,14 @@ class AppTest:
 
     @property
     def container(self) -> BlockList:
-        """Sequence of ``st.container`` blocks.
+        """Sequence of all ``st.container`` blocks, including horizontal containers.
+
+        The implicit row that ``st.columns`` creates is not included.
 
         Returns
         -------
         BlockList
-            Sequence of ``st.container`` / flex-container blocks. Individual
-            blocks can be accessed by index or user key. For example,
+            Individual blocks can be accessed by index or key. For example,
             ``at.container[0]`` or ``at.container(key="filters")``.
         """
         return self._tree.container
@@ -1328,9 +1342,11 @@ class AppTest:
         return self._tree.get(element_type)
 
     def get_by_key(self, key: str) -> Node:
-        """Return the unique current node with this user key.
+        """Return the element, widget, or container with the given key.
 
-        Works for widgets, keyed display elements, and keyed containers.
+        Use this method when the key is unique across the app and the element
+        type does not matter. To disambiguate a key reused across types, use a
+        typed collection such as ``at.text_input(key="x")``.
 
         Parameters
         ----------

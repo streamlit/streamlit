@@ -2035,6 +2035,39 @@ def test_container_key_and_get_by_key() -> None:
         at.container("missing")
 
 
+def test_form_key_and_get_by_key() -> None:
+    """Forms expose their form ID as a user key."""
+
+    def script():
+        import streamlit as st
+
+        with st.form("form-key"):
+            st.text_input("Name")
+            st.form_submit_button("Submit")
+
+    at = AppTest.from_function(script).run()
+    form = at.get_by_key("form-key")
+    assert form.type == "form"
+    assert form.key == "form-key"
+
+
+def test_get_by_key_rejects_ambiguous_key() -> None:
+    """A form ID can match a widget key, so get_by_key must reject the clash."""
+
+    def script():
+        import streamlit as st
+
+        with st.form("shared"):
+            st.text_input("Query", key="shared")
+            st.form_submit_button("Submit")
+
+    at = AppTest.from_function(script).run()
+    assert at.get("form")[0].key == "shared"
+    assert at.text_input("shared").key == "shared"
+    with pytest.raises(AppTestError, match="Multiple elements"):
+        at.get_by_key("shared")
+
+
 def test_container_excludes_columns_row() -> None:
     """st.columns emits a flex_container row that must not appear in at.container."""
 
@@ -2096,3 +2129,28 @@ def test_disabled_widget_rejects_update() -> None:
         at.button("k_btn").click()
     at = at.run()
     assert at.text_input("k_text").value == "initial"
+
+
+@pytest.mark.parametrize(
+    ("widget_type", "method_name", "args"),
+    [
+        ("file_uploader", "set_value", (("test.txt", b"data", "text/plain"),)),
+        ("file_uploader", "upload", ("test.txt", b"data")),
+        ("file_uploader", "clear", ()),
+        ("slider", "set_value", (7,)),
+    ],
+)
+def test_disabled_widget_specialized_interactions_reject_updates(
+    widget_type: str,
+    method_name: str,
+    args: tuple[object, ...],
+) -> None:
+    """Specialized widget methods enforce the disabled interaction guard."""
+    at = AppTest.from_string(
+        "import streamlit as st\n"
+        "st.file_uploader('File', disabled=True, key='file')\n"
+        "st.slider('Number', 0, 10, disabled=True, key='slider')\n"
+    ).run()
+    widget = getattr(at, widget_type)[0]
+    with pytest.raises(AppTestError, match="disabled"):
+        getattr(widget, method_name)(*args)
