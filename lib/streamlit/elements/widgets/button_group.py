@@ -1346,7 +1346,7 @@ class ButtonGroupMixin:
             and len(default) > 1
         ):
             raise StreamlitAPIException(
-                "The default argument to `st.pills` must be a single value when "
+                f"The default argument to `st.{style}` must be a single value when "
                 "`selection_mode='single'`.",
                 error_id="button-group-single-select-multiple-defaults",
             )

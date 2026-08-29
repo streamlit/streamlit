@@ -127,7 +127,7 @@ def _handle_string_or_path_data(data_or_path: str | Path) -> bytes:
             raise StreamlitValueError(
                 "subtitles",
                 list(SUBTITLE_ALLOWED_FORMATS),
-                detail=f"Incorrect subtitle format {file_extension}.",
+                detail=f"Got {file_extension}.",
             )
         with open(data_or_path, "rb") as file:
             content = file.read()

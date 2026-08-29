@@ -264,10 +264,8 @@ class SliderTest(DeltaGeneratorTestCase):
             st.select_slider(
                 "the label", options=["red", "orange"], label_visibility="wrong_value"
             )
-        assert (
-            str(e.value)
-            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
-        )
+        assert "Invalid `label_visibility` value" in str(e.value)
+        assert "Got 'wrong_value'." in str(e.value)
 
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""

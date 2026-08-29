@@ -405,10 +405,8 @@ class NumberInputTest(DeltaGeneratorTestCase):
     def test_label_visibility_wrong_value(self):
         with pytest.raises(StreamlitValueError) as e:
             st.number_input("the label", label_visibility="wrong_value")  # type: ignore[call-arg]
-        assert (
-            str(e.value)
-            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
-        )
+        assert "Invalid `label_visibility` value" in str(e.value)
+        assert "Got 'wrong_value'." in str(e.value)
 
     def test_width_config_default(self):
         """Test that default width is 'stretch'."""

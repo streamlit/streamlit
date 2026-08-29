@@ -218,7 +218,7 @@ def test_handle_string_or_path_data_with_disallowed_extension_raises(
     bad_file = tmp_path / "subtitles.txt"
     bad_file.write_text("some subtitle content", encoding="utf-8")
 
-    with pytest.raises(StreamlitValueError, match="Incorrect subtitle format"):
+    with pytest.raises(StreamlitValueError, match=r"Got \.txt\."):
         _handle_string_or_path_data(str(bad_file))
 
 

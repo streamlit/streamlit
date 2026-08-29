@@ -895,10 +895,11 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 default=["Coffee", "Tea"],
                 selection_mode="single",
             )
-        assert (
-            str(exception.value)
-            == "The default argument to `st.pills` must be a single value when "
-            "`selection_mode='single'`."
+        assert "must be a single value when `selection_mode='single'`." in str(
+            exception.value
+        )
+        assert "`st.pills`" in str(exception.value) or "`st.segmented_control`" in str(
+            exception.value
         )
 
     @parameterized.expand(

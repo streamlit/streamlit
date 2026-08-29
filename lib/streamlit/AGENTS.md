@@ -210,7 +210,7 @@ validation. Optional-dependency import failures may stay native
   - `StreamlitPageNotFoundError` (missing page path, `st.Page` file, `switch_page`,
     `page_link`)
   - `StreamlitDataframeConversionError` (value cannot be converted to a
-    DataFrame or Arrow table)
+    DataFrame, Arrow table, Series, or single-column list)
 
 Reserve bare `StreamlitAPIException` for one-off cases that no shared type
 covers and that users are expected to hit uncommonly (serialization failures

@@ -44,7 +44,9 @@ def test_get_label_visibility_proto_value(input_value: str, expected: int) -> No
 
 def test_get_label_visibility_proto_value_invalid() -> None:
     """Verify invalid label visibility raises StreamlitValueError."""
-    with pytest.raises(StreamlitValueError, match="Invalid `label_visibility` value"):
+    with pytest.raises(
+        StreamlitValueError, match=r"Invalid `label_visibility` value.*Got 'invalid'\."
+    ):
         utils.get_label_visibility_proto_value("invalid")  # type: ignore[arg-type]
 
 
@@ -66,7 +68,9 @@ def test_get_chat_input_accept_file_proto_value(
 
 def test_get_chat_input_accept_file_proto_value_invalid() -> None:
     """Verify invalid accept_file value raises StreamlitValueError."""
-    with pytest.raises(StreamlitValueError, match="Invalid `accept_file` value"):
+    with pytest.raises(
+        StreamlitValueError, match=r"Invalid `accept_file` value.*Got 'invalid'\."
+    ):
         utils.get_chat_input_accept_file_proto_value("invalid")  # type: ignore[arg-type]
 
 

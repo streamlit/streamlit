@@ -47,7 +47,11 @@ from streamlit.elements.vega_charts import (
     _reset_counter_pattern,
     _stabilize_vega_json_spec,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.type_util import is_altair_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -1422,13 +1426,15 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
 
     def test_no_args(self):
         """Test that an error is raised when called with no args."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitMissingRequiredParameterError) as exc:
             st.vega_lite_chart()
+        assert exc.value.exec_kwargs["parameter"] == "spec"
 
     def test_none_args(self):
         """Test that an error is raised when called with args set to None."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitMissingRequiredParameterError) as exc:
             st.vega_lite_chart(None, None)
+        assert exc.value.exec_kwargs["parameter"] == "spec"
 
     def test_spec_but_no_data(self):
         """Test that it can be called with only data set to None."""

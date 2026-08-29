@@ -83,7 +83,9 @@ def get_label_visibility_proto_value(
         return LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED
 
     raise StreamlitValueError(
-        "label_visibility", ["'visible'", "'hidden'", "'collapsed'"]
+        "label_visibility",
+        ["'visible'", "'hidden'", "'collapsed'"],
+        detail=f"Got {label_visibility_string!r}.",
     )
 
 
@@ -102,7 +104,9 @@ def get_chat_input_accept_file_proto_value(
         return ChatInput.AcceptFile.DIRECTORY
 
     raise StreamlitValueError(
-        "accept_file", ["True", "False", "'multiple'", "'directory'"]
+        "accept_file",
+        ["True", "False", "'multiple'", "'directory'"],
+        detail=f"Got {accept_file_value!r}.",
     )
 
 

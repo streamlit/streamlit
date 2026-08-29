@@ -56,7 +56,7 @@ _LOGGER: Final = get_logger(__name__)
 
 
 def _check_not_parallel_worker(api_name: str) -> None:
-    """Raise if called from a parallel fragment worker on initial load."""
+    """Raise StreamlitInvalidLayoutContextError if called from a parallel fragment worker on initial load."""
     try:
         ts = ThreadState.get()
     except RuntimeError:

@@ -106,7 +106,7 @@ class PyplotTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitMissingRequiredParameterError) as exc_info:
             st.pyplot(None)  # type: ignore[arg-type]
 
-        assert "requires a Matplotlib figure" in str(exc_info.value)
+        assert "The `fig` parameter is required." in str(exc_info.value)
         assert "st.pyplot(fig)" in str(exc_info.value)
 
     @parameterized.expand([(True, "use_stretch"), (False, "use_content")])

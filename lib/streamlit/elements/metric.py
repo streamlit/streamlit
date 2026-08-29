@@ -492,7 +492,7 @@ def _parse_delta_arrow(delta_arrow: DeltaArrow) -> DeltaArrow:
 
 
 def _parse_metric_number(value: AnyNumber, parameter: str) -> str:
-    """Render ``value`` for display, reporting bad types as a Streamlit error."""
+    """Render ``value`` for display. Invalid types raise StreamlitInvalidParameterTypeError."""
     try:
         return from_number(value)
     except TypeError as ex:

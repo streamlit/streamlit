@@ -68,10 +68,8 @@ class AudioInputTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitValueError) as e:
             st.audio_input("the label", label_visibility="wrong_value")
 
-        assert (
-            str(e.value)
-            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
-        )
+        assert "Invalid `label_visibility` value" in str(e.value)
+        assert "Got 'wrong_value'." in str(e.value)
 
     def test_width_config_stretch(self):
         """Test width config with 'stretch' value."""

@@ -399,8 +399,7 @@ def _normalize_selection_mode(
     if len(row_modes) > 1:
         mode_uses = [f"selection_mode='{mode}'" for mode in sorted(row_modes)]
         raise StreamlitIncompatibleParametersError(
-            mode_uses[0],
-            *mode_uses[1:],
+            *mode_uses,
             explanation="Only one row selection mode can be specified.",
         )
 

@@ -164,10 +164,7 @@ class PdfMixin:
                 "data",
                 type(data).__name__,
                 ["str", "Path", "bytes", "file-like object"],
-                detail=(
-                    "Please provide a file path (str or Path), URL (str), bytes data, "
-                    "or file-like object (such as BytesIO or UploadedFile)."
-                ),
+                detail="A str can be a file path or a URL.",
             )
 
         # Convert to component-compatible format

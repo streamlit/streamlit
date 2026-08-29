@@ -14,6 +14,8 @@
 
 from playwright.sync_api import Page, expect
 
+from e2e_playwright.shared.app_utils import expect_exception
+
 
 def test_error_handling_messages(app: Page) -> None:
     expect(
@@ -22,10 +24,7 @@ def test_error_handling_messages(app: Page) -> None:
         )
     ).to_be_visible()
 
-    expect(
-        app.get_by_text(
-            "streamlit.errors.StreamlitInvalidParameterTypeError: Invalid `css` type. "
-            "Expected one of: str, None."
-        )
-    ).to_be_visible()
-    expect(app.get_by_text("Pass a string path or glob.")).to_be_visible()
+    # Markdown-rendered messages drop literal backticks (`css` becomes <code>).
+    # The provided-type clause is omitted because it is PosixPath vs WindowsPath.
+    expect_exception(app, "Invalid css type. Expected one of: str, None.")
+    expect_exception(app, "Pass a string path or glob.")

@@ -654,9 +654,9 @@ def marshall_video(
                     subtitle_coordinates, subtitle_data, label
                 )
             except (TypeError, ValueError, StreamlitAPIException) as original_err:
-                # Wrap with the track label so a multi-track dict names which
-                # subtitle failed. Inner helpers now raise Streamlit types, so
-                # catch those as well as leftover native errors.
+                # Include the track label so a multi-track dict names which
+                # subtitle failed. Subtitle helpers raise Streamlit types;
+                # lower-level parsing can still raise native TypeError/ValueError.
                 raise StreamlitAPIException(
                     f"Failed to process the provided subtitle {label!r}: "
                     f"{original_err}",
