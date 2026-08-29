@@ -48,27 +48,32 @@ def verify_sidebar_state(page: Page, expected_state: str) -> None:
 def create_sidebar_monitor_script() -> str:
     """Create JavaScript to monitor sidebar state changes during page load.
 
-    Exposes two globals to the test:
+    Exposes to the test:
 
     - ``window.__sidebarStates``: the log of observed ``aria-expanded`` changes.
-    - ``window.__resetSidebarStates()``: empties that log.
+    - ``window.__lastSidebarState``: the last observed value, tracked outside
+      the log.
+    - ``window.__resetSidebarStates()``: empties the log and restarts the
+      timestamp baseline, deliberately keeping ``window.__lastSidebarState``.
 
-    The last observed value is tracked in ``window.__lastSidebarState``, which
-    deliberately lives outside the log: resetting the log must not make the next
-    observation of an unchanged sidebar look like a fresh state change.
+    Keeping the last observed value across a reset is what stops an unrelated
+    DOM mutation after the reset from looking like a fresh state change.
     """
     return """
     window.__sidebarStates = [];
     window.__monitorStarted = Date.now();
     window.__lastSidebarState = null;
 
+    // Must NOT reset window.__lastSidebarState: dropping the baseline is
+    // exactly what made an unrelated DOM mutation after the reset look like a
+    // sidebar state change.
     window.__resetSidebarStates = function() {
         window.__sidebarStates = [];
         window.__monitorStarted = Date.now();
     };
 
-    // Record a state only when it differs from the last observed one, so that
-    // repeated observations of an unchanged sidebar are not logged as changes.
+    // Skip unchanged aria-expanded values so unrelated DOM mutations are not
+    // logged as sidebar state changes.
     const recordState = (ariaExpanded, method) => {
         if (window.__lastSidebarState === ariaExpanded) {
             return;
@@ -328,10 +333,21 @@ def test_sidebar_stability_after_initial_load(page: Page, app_base_url: str):
     # Verify initial state
     verify_sidebar_state(page, "collapsed")
 
-    # Clear previous state tracking and monitor for additional changes
+    # Clear the event log and monitor for additional changes.
     page.evaluate("window.__resetSidebarStates()")
 
-    # Wait a bit more and verify state hasn't changed
+    # An unrelated DOM change must not be recorded as a sidebar state change.
+    # Asserting it explicitly keeps that regression covered: the wait below
+    # observes no mutation at all on a quiet page, so on its own it would not
+    # exercise this path.
+    page.evaluate("document.body.appendChild(document.createElement('div'))")
+    assert page.evaluate("window.__sidebarStates") == [], (
+        "an unrelated DOM mutation was recorded as a sidebar state change"
+    )
+
+    # Wait a bit more and verify state hasn't changed. A fixed wait is
+    # intentional here: the assertion is that nothing happens during a window,
+    # which `expect` cannot express.
     page.wait_for_timeout(1000)
     verify_sidebar_state(page, "collapsed")
 
