@@ -56,6 +56,14 @@ if TYPE_CHECKING:
     assert_type(st.context.is_embedded, bool | None)
     assert_type(st.context["is_embedded"], bool | None)
 
+    def _dynamic_context_key() -> str:
+        return "timezone"
+
+    assert_type(
+        st.context[_dynamic_context_key()],
+        StreamlitHeaders | StreamlitCookies | StreamlitTheme | str | int | bool | None,
+    )
+
     # =====================================================================
     # StreamlitTheme: attribute and bracket access
     # =====================================================================

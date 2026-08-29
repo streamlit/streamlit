@@ -28,8 +28,8 @@ from streamlit.util import AttributeDictionary
 if TYPE_CHECKING:
     from streamlit.runtime.session_manager import ClientContext
 
-# Public property names on ``st.context``. Used for key notation and
-# membership so ``__getitem__`` is not treated as a sequence protocol.
+# Public property names for key notation and membership. Keep in sync with
+# ContextProxy properties so bracket access does not drift from attribute access.
 _CONTEXT_KEYS: Final = frozenset(
     {
         "headers",
@@ -160,13 +160,17 @@ class ContextProxy:
     You can access any ``st.context`` property via attribute or key notation.
     For example, use ``st.context.timezone`` or ``st.context["timezone"]``.
 
+    ``st.context`` is not a dictionary: it does not support ``.get()``,
+    ``.keys()``, or iteration.
+
     ``st.context.headers`` and ``st.context.cookies`` each return a dictionary
     of named values.
 
     """
 
-    # Property bag, not a sequence. Without this, ``__getitem__`` would make
-    # ``in`` and ``iter()`` probe integer keys.
+    # ``__getitem__`` alone would make ``st.context`` satisfy the legacy
+    # sequence-iteration protocol. Setting ``__iter__`` to ``None`` keeps
+    # ``iter(st.context)`` a ``TypeError`` instead of probing integer keys.
     __iter__ = None
 
     @property
@@ -492,13 +496,20 @@ class ContextProxy:
     def __getitem__(self, key: Literal["is_embedded"]) -> bool | None: ...
 
     @overload
-    def __getitem__(self, key: str) -> Any: ...
+    def __getitem__(
+        self, key: str
+    ) -> (
+        StreamlitHeaders | StreamlitCookies | StreamlitTheme | str | int | bool | None
+    ): ...
 
     def __getitem__(self, key: str) -> Any:
-        # Only public properties are valid keys. ``getattr`` still runs each
-        # property so metrics and the theme-read gate stay in effect.
+        # Only public properties are valid keys. ``getattr`` runs the property
+        # getter so ``gather_metrics`` still records the access.
         if key not in _CONTEXT_KEYS:
-            raise KeyError(f'st.context has no key "{key}".')
+            raise KeyError(
+                f'st.context has no key "{key}". '
+                f"Valid keys are: {', '.join(sorted(_CONTEXT_KEYS))}."
+            )
         return getattr(self, key)
 
     def __contains__(self, key: object) -> bool:

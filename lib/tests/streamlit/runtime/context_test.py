@@ -23,6 +23,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.runtime.context import (
     _CONTEXT_KEYS,
+    ContextProxy,
     StreamlitCookies,
     StreamlitHeaders,
     StreamlitTheme,
@@ -135,6 +136,15 @@ class StContextTest(unittest.TestCase):
         mock_add_path.assert_called_once_with(
             "https://example.com/", mock_ctx.pages_manager
         )
+
+    def test_context_keys_match_public_properties(self) -> None:
+        """Allowlist must stay in sync with ContextProxy public properties."""
+        public_properties = {
+            name
+            for name, value in vars(ContextProxy).items()
+            if isinstance(value, property) and not name.startswith("_")
+        }
+        assert public_properties == _CONTEXT_KEYS
 
     @parameterized.expand([(key,) for key in sorted(_CONTEXT_KEYS)])
     @patch(

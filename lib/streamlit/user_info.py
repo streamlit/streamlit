@@ -497,12 +497,6 @@ class TokensProxy(Mapping[str, str]):
     def __init__(self, tokens: dict[str, str]) -> None:
         self._tokens = tokens
 
-    @overload
-    def __getitem__(self, key: Literal["id", "access"]) -> str: ...
-
-    @overload
-    def __getitem__(self, key: str) -> str: ...
-
     def __getitem__(self, key: str) -> str:
         return self._tokens[key]
 
@@ -666,7 +660,8 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
 
     """
 
-    # Narrows ``.is_logged_in`` to ``bool``. Other claims keep the open Mapping types.
+    # Narrow the documented is_logged_in field; provider-specific claims retain
+    # the mapping's general value type.
     is_logged_in: bool
 
     @overload
