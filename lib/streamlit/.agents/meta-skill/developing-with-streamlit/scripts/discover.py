@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shlex
 import shutil
 import subprocess  # noqa: S404 - used only to probe the project's own interpreter.
 import sys
@@ -172,6 +173,7 @@ class _Attempt:
     tag: str
     display: str
     status: str
+    argv: list[str]
 
 
 class _DiscoverArgumentParser(argparse.ArgumentParser):
@@ -192,6 +194,7 @@ def _reconfigure_stdio() -> None:
         try:
             reconfigure(encoding="utf-8")
         except (OSError, ValueError):
+            # Closed or redirected streams cannot be reconfigured.
             pass
 
 
@@ -220,6 +223,18 @@ def _safe_resolve(path: Path) -> Path:
     """Resolve ``path`` when the filesystem allows it; otherwise keep it as-is."""
     try:
         return path.resolve()
+    except OSError:
+        return path
+
+
+def _absolute_no_follow(path: Path) -> Path:
+    """Return an absolute path without following symlinks.
+
+    ``Path.resolve()`` collapses a venv ``bin/python`` symlink to the base
+    interpreter. Prefix inference and candidate dedup must keep the venv path.
+    """
+    try:
+        return Path(os.path.abspath(path))
     except OSError:
         return path
 
@@ -269,8 +284,12 @@ def _find_lockfile(start: Path, name: str) -> Path | None:
 
 
 def _prefix_from_python(executable: Path) -> Path | None:
-    """Infer an environment prefix from a Python executable path."""
-    exe = _safe_resolve(executable)
+    """Infer an environment prefix from a Python executable path.
+
+    Does not follow symlinks, so a venv ``bin/python`` is not collapsed to
+    the base interpreter (and that interpreter's site-packages).
+    """
+    exe = _absolute_no_follow(executable)
     parent = exe.parent
     if _IS_WINDOWS:
         if parent.name.lower() == "scripts":
@@ -312,9 +331,9 @@ def _filesystem_lookup(prefix: Path) -> Path | None:
     """
     if _IS_WINDOWS:
         pkg = prefix / "Lib" / "site-packages" / "streamlit"
-        return pkg if pkg.is_dir() else None
+        return pkg if (pkg / "__init__.py").is_file() else None
     hits = sorted(prefix.glob("lib/python*/site-packages/streamlit"))
-    dirs = [hit for hit in hits if hit.is_dir()]
+    dirs = [hit for hit in hits if (hit / "__init__.py").is_file()]
     if not dirs:
         return None
     with_skill = [hit for hit in dirs if (hit / _SKILL_REL).is_file()]
@@ -397,15 +416,15 @@ def _iter_candidates(project_dir: Path, python_flag: Path | None) -> list[_Candi
     out: list[_Candidate] = []
     seen_exes: set[Path] = set()
 
-    def _remember(exe: Path) -> Path | None:
-        resolved = _safe_resolve(exe)
-        if resolved in seen_exes:
-            return None
-        seen_exes.add(resolved)
-        return resolved
+    def _remember(exe: Path) -> bool:
+        key = _absolute_no_follow(exe)
+        if key in seen_exes:
+            return False
+        seen_exes.add(key)
+        return True
 
     def add_path(tag: str, exe: Path, prefix: Path | None) -> None:
-        if _remember(exe) is None:
+        if not _remember(exe):
             return
         out.append(_Candidate(tag=tag, argv=[str(exe)], kind="direct", prefix=prefix))
 
@@ -492,6 +511,7 @@ def _subprocess_probe(
             cwd=project_dir,
             timeout=timeout,
             check=False,
+            stdin=subprocess.DEVNULL,
             env=_probe_env(),
         )
     except subprocess.TimeoutExpired:
@@ -518,21 +538,42 @@ def _evaluate_candidate(
 ) -> tuple[_Attempt, Path | None]:
     """Try a filesystem lookup first, then the subprocess probe if needed."""
     display = " ".join(candidate.argv)
+
+    def recorded(
+        status: str, skill: Path | None = None
+    ) -> tuple[_Attempt, Path | None]:
+        return _Attempt(candidate.tag, display, status, candidate.argv), skill
+
     exe = _direct_executable(candidate)
     if exe is not None and _is_windows_store_alias(exe):
-        return _Attempt(candidate.tag, display, "skipped_stub"), None
+        return recorded("skipped_stub")
 
     if candidate.prefix is not None:
         pkg = _filesystem_lookup(candidate.prefix)
         if pkg is not None:
             status, skill = _classify_package(pkg)
-            return _Attempt(candidate.tag, display, status), skill
+            # Only a usable SKILL.md skips the subprocess for this candidate.
+            if status == "usable" and skill is not None:
+                return recorded(status, skill)
 
     pkg, probe_status = _subprocess_probe(candidate, project_dir, budget)
     if probe_status != "ok" or pkg is None:
-        return _Attempt(candidate.tag, display, probe_status), None
+        return recorded(probe_status)
     status, skill = _classify_package(pkg)
-    return _Attempt(candidate.tag, display, status), skill
+    return recorded(status, skill)
+
+
+def _quote_argv(parts: Sequence[str]) -> str:
+    """Return a copy-pasteable command line for ``parts``."""
+    if not _IS_WINDOWS:
+        return " ".join(shlex.quote(part) for part in parts)
+    quoted: list[str] = []
+    for part in parts:
+        if " " in part or "\t" in part:
+            quoted.append(f'"{part}"')
+        else:
+            quoted.append(part)
+    return " ".join(quoted)
 
 
 def _install_advice(project_dir: Path, attempts: Sequence[_Attempt]) -> str:
@@ -541,14 +582,31 @@ def _install_advice(project_dir: Path, attempts: Sequence[_Attempt]) -> str:
         "If the user asked you to install Streamlit, you may run the command "
         "below. Do not change dependencies unless the user asked."
     )
+    first = next(
+        (a for a in attempts if a.status not in {"not_tried", "skipped_stub"}),
+        None,
+    )
+    upgrade = first is not None and first.status == "no_usable_skill"
+    if upgrade:
+        header += (
+            " Streamlit is present but has no usable bundled skill; "
+            "upgrade or reinstall it."
+        )
     if _find_lockfile(project_dir, "uv.lock") is not None:
-        command = "uv add streamlit\n    # or: uv pip install streamlit"
+        command = (
+            "uv add --upgrade streamlit\n    # or: uv pip install --upgrade streamlit"
+            if upgrade
+            else "uv add streamlit\n    # or: uv pip install streamlit"
+        )
     else:
-        tag = next((a.tag for a in attempts if a.status != "not_tried"), "")
-        display = next((a.display for a in attempts if a.tag == tag), "")
+        tag = first.tag if first is not None else ""
+        python = first.argv[0] if first is not None and first.argv else "python"
+        pip = [python, "-m", "pip", "install"]
+        if upgrade:
+            pip.append("--upgrade")
+        pip.append("streamlit")
         if tag in {"virtual-env", "venv-local", "venv-parent", "venv-git-root"}:
-            python = display.split()[0] if display else "python"
-            command = f"{python} -m pip install streamlit"
+            command = _quote_argv(pip)
         elif tag == "conda":
             command = "conda install -c conda-forge streamlit"
         elif tag == "pipenv":
@@ -561,7 +619,7 @@ def _install_advice(project_dir: Path, attempts: Sequence[_Attempt]) -> str:
             command = "uv add streamlit"
         else:
             command = (
-                "python -m pip install streamlit\n"
+                f"{_quote_argv(pip)}\n"
                 "    # better: create a project venv first "
                 "(`uv venv` or `python -m venv .venv`)"
             )

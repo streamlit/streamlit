@@ -54,4 +54,6 @@ jobs:
 
       - name: Run meta-skill discovery tests
         run: |
-          python -m pytest -c lib/pyproject.toml lib/tests/streamlit/web/meta_skill_discover_test.py -o addopts= -q
+          # -o addopts= drops pytest-cov from lib/pyproject.toml (not installed here).
+          # --noconftest skips lib/tests/conftest.py (imports Streamlit, needs protobufs).
+          python -m pytest -c lib/pyproject.toml lib/tests/streamlit/web/meta_skill_discover_test.py -o addopts= --noconftest -q

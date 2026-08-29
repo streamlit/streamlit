@@ -25,13 +25,14 @@ from typing import TYPE_CHECKING, Final
 
 import pytest
 
-import streamlit
-
 if TYPE_CHECKING:
     from types import ModuleType
 
+# Locate files from this test module so Windows CI can run without importing
+# Streamlit (generated protobufs are not present in that job).
+_LIB_STREAMLIT: Final = Path(__file__).resolve().parents[3] / "streamlit"
 _DISCOVER_PY: Final = (
-    Path(streamlit.__file__).resolve().parent
+    _LIB_STREAMLIT
     / ".agents"
     / "meta-skill"
     / "developing-with-streamlit"
@@ -106,6 +107,16 @@ def _touch_exe(path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("", encoding="utf-8")
     return path
+
+
+def _symlink_or_skip(link: Path, target: Path) -> Path:
+    """Create ``link`` -> ``target``, or skip when the host cannot symlink."""
+    link.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        link.symlink_to(target)
+    except OSError as exc:
+        pytest.skip(f"cannot create symlink: {exc}")
+    return link
 
 
 def _plant_skill(pkg: Path, content: str = "# skill\n") -> Path:
@@ -229,6 +240,64 @@ def test_python_flag_is_exclusive(
     assert candidates[0].argv == [str(chosen)]
 
 
+def test_prefix_from_python_does_not_follow_venv_symlink(
+    tmp_path: Path, discover_mod: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A venv ``bin/python`` symlink must keep the venv prefix, not the base install."""
+    monkeypatch.setattr(discover_mod, "_IS_WINDOWS", False)
+    base_py = _touch_exe(tmp_path / "usr" / "bin" / "python")
+    venv_py = _symlink_or_skip(tmp_path / "venv" / "bin" / "python", base_py)
+    assert discover_mod._prefix_from_python(venv_py) == tmp_path / "venv"
+
+
+def test_python_flag_symlink_does_not_use_base_install_skill(
+    tmp_path: Path,
+    discover_mod: ModuleType,
+    isolated_env: None,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """``--python`` on a venv symlink must not short-circuit to the base install skill."""
+    base_py = _touch_exe(tmp_path / "usr" / "bin" / "python")
+    _plant_skill(
+        _posix_site_packages(tmp_path / "usr") / "streamlit", content="# base\n"
+    )
+    venv = tmp_path / "venv"
+    venv_py = _symlink_or_skip(venv / "bin" / "python", base_py)
+    venv_skill = _plant_skill(
+        _posix_site_packages(venv) / "streamlit", content="# venv\n"
+    )
+
+    code = discover_mod.main(["--python", str(venv_py)])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert captured.out.strip() == str(venv_skill.resolve())
+
+
+def test_distinct_venv_python_symlinks_are_not_deduped(
+    tmp_path: Path,
+    discover_mod: ModuleType,
+    isolated_env: None,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Two venvs that share a resolved interpreter must both be inspected."""
+    target = _touch_exe(tmp_path / "cpython" / "bin" / "python")
+    project = tmp_path / "proj"
+    project.mkdir()
+    _symlink_or_skip(project / ".venv" / "bin" / "python", target)
+    local_pkg = _posix_site_packages(project / ".venv") / "streamlit"
+    local_pkg.mkdir(parents=True)
+    (local_pkg / "__init__.py").write_text("", encoding="utf-8")
+
+    parent_venv = tmp_path / ".venv"
+    _symlink_or_skip(parent_venv / "bin" / "python", target)
+    parent_skill = _plant_skill(_posix_site_packages(parent_venv) / "streamlit")
+
+    code = discover_mod.main(["--project-dir", str(project)])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert captured.out.strip() == str(parent_skill.resolve())
+
+
 def test_project_venv_beats_virtual_env(
     tmp_path: Path,
     discover_mod: ModuleType,
@@ -313,7 +382,7 @@ def test_lone_streamlit_py_is_rejected(
 
 def test_in_tree_streamlit_package_is_accepted(discover_mod: ModuleType) -> None:
     """The in-tree ``lib/streamlit`` package (editable checkout) is accepted."""
-    pkg = Path(streamlit.__file__).resolve().parent
+    pkg = _LIB_STREAMLIT
     assert pkg.name == "streamlit"
     assert discover_mod._is_usable_package_dir(pkg) is True
 
@@ -642,6 +711,29 @@ def test_install_advice_prefers_uv_and_is_quoted(
     assert captured.err.startswith("ERROR[NO_STREAMLIT]:")
 
 
+def test_install_advice_quotes_venv_python_with_space(
+    tmp_path: Path,
+    discover_mod: ModuleType,
+    isolated_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Install advice quotes a venv interpreter whose path contains a space."""
+    project = tmp_path / "my project"
+    project.mkdir()
+    python = _touch_exe(project / ".venv" / "bin" / "python")
+
+    monkeypatch.setattr(
+        discover_mod.subprocess, "run", _subprocess_reports_no_streamlit
+    )
+
+    code = discover_mod.main(["--project-dir", str(project)])
+    captured = capsys.readouterr()
+    assert code == 1
+    quoted = discover_mod.shlex.quote(str(python))
+    assert f"{quoted} -m pip install streamlit" in captured.err
+
+
 def test_success_stdout_is_one_line_verbose_on_stderr(
     tmp_path: Path,
     discover_mod: ModuleType,
@@ -686,6 +778,19 @@ def test_windows_filesystem_lookup_layout(
     status, classified = discover_mod._classify_package(pkg)
     assert status == "usable"
     assert classified == skill.resolve()
+
+
+def test_filesystem_lookup_requires_init_py(
+    tmp_path: Path, discover_mod: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A ``streamlit`` directory without ``__init__.py`` is a filesystem miss."""
+    monkeypatch.setattr(discover_mod, "_IS_WINDOWS", False)
+    prefix = tmp_path / "venv"
+    pkg = _posix_site_packages(prefix) / "streamlit"
+    pkg.mkdir(parents=True)
+    assert discover_mod._filesystem_lookup(prefix) is None
+    (pkg / "__init__.py").write_text("", encoding="utf-8")
+    assert discover_mod._filesystem_lookup(prefix) == pkg
 
 
 def test_no_project_python_when_nothing_started(
@@ -744,6 +849,32 @@ def test_pth_hits_via_subprocess_not_filesystem(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == str(skill.resolve())
     assert "venv-local" in result.stderr
+
+
+def test_unusable_filesystem_hit_falls_through_to_subprocess(
+    tmp_path: Path,
+    discover_mod: ModuleType,
+    isolated_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A skill-less site-packages tree must still run the interpreter probe."""
+    project = tmp_path / "proj"
+    project.mkdir()
+    _plant_posix_venv(project / ".venv", with_skill=False)
+    real_pkg = tmp_path / "real" / "streamlit"
+    skill = _plant_skill(real_pkg)
+
+    def fake_run(*_args: object, **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(
+            ["python"], 0, stdout=f"STREAMLIT_PKG={real_pkg}\n", stderr=""
+        )
+
+    monkeypatch.setattr(discover_mod.subprocess, "run", fake_run)
+    code = discover_mod.main(["--project-dir", str(project)])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert captured.out.strip() == str(skill.resolve())
 
 
 @pytest.mark.skipif(os.name != "nt", reason="Windows venv layout smoke")
