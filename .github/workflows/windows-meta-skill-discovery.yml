@@ -29,6 +29,7 @@ permissions:
 jobs:
   meta-skill-discover:
     runs-on: windows-latest
+    timeout-minutes: 15
 
     defaults:
       run:

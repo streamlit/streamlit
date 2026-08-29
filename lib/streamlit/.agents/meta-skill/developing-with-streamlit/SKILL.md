@@ -11,7 +11,7 @@ Streamlit (>=1.57) ships detailed reference documentation for building Streamlit
 
 ## Usage
 
-Run the discovery script with the user's project directory. Quote paths. If `${CLAUDE_PROJECT_DIR}` is left unexpanded (shown as a literal), the script warns and uses the project cwd.
+Run the discovery script with the user's project directory. Quote paths. If `${CLAUDE_PROJECT_DIR}` is left unexpanded (shown as a literal), the script warns and uses the current working directory.
 
 Windows (try first):
 
@@ -49,7 +49,7 @@ POSIX:
 ".venv/bin/python" -c "import importlib.util, pathlib, sys; sys.path=[p for p in sys.path if p and pathlib.Path(p).resolve()!=pathlib.Path('.').resolve()]; s=importlib.util.find_spec('streamlit'); p=(pathlib.Path(s.origin).resolve().parent/'.agents'/'skills'/'developing-with-streamlit'/'SKILL.md') if (s and s.origin and s.submodule_search_locations and pathlib.Path(s.origin).name=='__init__.py') else None; print(p if p is not None and p.is_file() else '')"
 ```
 
-Empty print / missing venv → step 2. `py -3` only if the venv interpreter is missing. Optional: `"<that-python>" -m pip show streamlit` and append `/streamlit/.agents/skills/developing-with-streamlit/SKILL.md` to `Location:`.
+If the command prints nothing, or the venv interpreter does not exist, continue to step 2. Use `py -3` only when the venv interpreter is missing. Optional: `"<that-python>" -m pip show streamlit` and append `/streamlit/.agents/skills/developing-with-streamlit/SKILL.md` to `Location:`.
 
 ### 2. Glob (project and parent only)
 

@@ -435,11 +435,15 @@ def _iter_candidates(project_dir: Path, python_flag: Path | None) -> list[_Candi
         add_path(tag, python, root)
 
     def add_venv_pair(tag: str, base: Path) -> None:
+        # ``.venv`` is conventionally a virtualenv. ``venv/`` is a common
+        # project folder name, so require PEP 405's pyvenv.cfg.
         add_venv(tag, base / ".venv")
         venv_dir = base / "venv"
         if (venv_dir / "pyvenv.cfg").is_file():
             add_venv(tag, venv_dir)
 
+    # Project venvs come first: agent shells often point $VIRTUAL_ENV at
+    # the agent's own environment, not the app's.
     add_venv_pair("venv-local", project_dir)
     parent = project_dir.parent
     if parent != project_dir:
@@ -536,7 +540,13 @@ def _evaluate_candidate(
     project_dir: Path,
     budget: _ProbeBudget,
 ) -> tuple[_Attempt, Path | None]:
-    """Try a filesystem lookup first, then the subprocess probe if needed."""
+    """Return an attempt log entry and a skill path if this candidate is usable.
+
+    Filesystem lookup runs first. Only a usable ``SKILL.md`` short-circuits the
+    subprocess. If the filesystem already classified the package and the probe
+    then fails, keep that filesystem status so a timeout does not hide
+    ``no_usable_skill`` / ``layout_changed``.
+    """
     display = " ".join(candidate.argv)
 
     def recorded(
@@ -548,6 +558,7 @@ def _evaluate_candidate(
     if exe is not None and _is_windows_store_alias(exe):
         return recorded("skipped_stub")
 
+    fs_status: str | None = None
     if candidate.prefix is not None:
         pkg = _filesystem_lookup(candidate.prefix)
         if pkg is not None:
@@ -555,9 +566,12 @@ def _evaluate_candidate(
             # Only a usable SKILL.md skips the subprocess for this candidate.
             if status == "usable" and skill is not None:
                 return recorded(status, skill)
+            fs_status = status
 
     pkg, probe_status = _subprocess_probe(candidate, project_dir, budget)
     if probe_status != "ok" or pkg is None:
+        if fs_status is not None and probe_status == "probe_failed":
+            return recorded(fs_status)
         return recorded(probe_status)
     status, skill = _classify_package(pkg)
     return recorded(status, skill)
@@ -577,14 +591,17 @@ def _quote_argv(parts: Sequence[str]) -> str:
 
 
 def _install_advice(project_dir: Path, attempts: Sequence[_Attempt]) -> str:
-    """Return quoted install advice. Must not be run unless the user asked."""
+    """Return install advice, quoted for the agent to show rather than execute."""
     header = (
         "If the user asked you to install Streamlit, you may run the command "
         "below. Do not change dependencies unless the user asked."
     )
     first = next(
-        (a for a in attempts if a.status not in {"not_tried", "skipped_stub"}),
-        None,
+        (a for a in attempts if a.status in _INSPECTED_STATUSES),
+        next(
+            (a for a in attempts if a.status not in {"not_tried", "skipped_stub"}),
+            None,
+        ),
     )
     upgrade = first is not None and first.status == "no_usable_skill"
     if upgrade:
@@ -675,7 +692,9 @@ def _resolve_python_flag(raw: str) -> Path:
     expanded = _expand_user_path(raw)
     path = Path(expanded)
     if path.is_file():
-        return path
+        # Absolutize against the invoker's cwd. The probe later runs with
+        # cwd=project_dir, so a relative argv[0] would select a different file.
+        return _absolute_no_follow(path)
     found = shutil.which(expanded)
     if found:
         return Path(found)

@@ -45,14 +45,14 @@ _SKILL_REL: Final = (
 
 
 @pytest.fixture
-def discover_mod() -> ModuleType:
+def discover_mod(monkeypatch: pytest.MonkeyPatch) -> ModuleType:
     """Load ``discover.py`` as a module so helpers can be unit-tested."""
     spec = importlib.util.spec_from_file_location("meta_skill_discover", _DISCOVER_PY)
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     # Dataclasses look up the module in sys.modules during class creation.
-    sys.modules[spec.name] = module
+    monkeypatch.setitem(sys.modules, spec.name, module)
     spec.loader.exec_module(module)
     return module
 
@@ -103,7 +103,11 @@ def _run_discover(*cli_args: str) -> subprocess.CompletedProcess[str]:
 
 
 def _touch_exe(path: Path) -> Path:
-    """Create an empty placeholder executable file."""
+    """Create an empty placeholder file (not a venv symlink; not ``X_OK``).
+
+    Production lookup checks ``is_file()``, not the executable bit. Dedicated
+    symlink tests cover real POSIX ``bin/python`` links.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("", encoding="utf-8")
     return path
@@ -500,6 +504,44 @@ def test_python_flag_exclusive_ignores_project_venv(
     assert "python-flag" in captured.err
 
 
+def test_relative_python_flag_uses_invocation_cwd_not_project_dir(
+    tmp_path: Path,
+    discover_mod: ModuleType,
+    isolated_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Relative ``--python`` is resolved against cwd, not ``--project-dir``."""
+    invoker = tmp_path / "invoker"
+    other = tmp_path / "other-project"
+    invoker.mkdir()
+    other.mkdir()
+    invoker_py = _touch_exe(invoker / ".venv" / "bin" / "python")
+    other_py = _touch_exe(other / ".venv" / "bin" / "python")
+
+    seen: list[list[str]] = []
+
+    def fake_run(
+        argv: list[str], *_args: object, **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        seen.append(list(argv))
+        return _subprocess_reports_no_streamlit()
+
+    monkeypatch.chdir(invoker)
+    monkeypatch.setattr(discover_mod.subprocess, "run", fake_run)
+
+    code = discover_mod.main(
+        ["--python", ".venv/bin/python", "--project-dir", str(other)]
+    )
+    captured = capsys.readouterr()
+    assert code == 1
+    assert captured.err.startswith("ERROR[NO_STREAMLIT]:")
+    assert seen
+    assert Path(seen[0][0]) == discover_mod._absolute_no_follow(invoker_py)
+    assert Path(seen[0][0]) != discover_mod._absolute_no_follow(other_py)
+    assert Path(seen[0][0]).is_absolute()
+
+
 def test_bad_python_flag_is_invalid_args(
     tmp_path: Path,
     discover_mod: ModuleType,
@@ -684,6 +726,27 @@ def test_duplicate_git_root_venv_is_skipped(
     assert tags == ["venv-local"]
 
 
+def test_install_advice_follows_first_inspected_attempt(
+    tmp_path: Path, discover_mod: ModuleType
+) -> None:
+    """Upgrade advice must follow the first inspected attempt, not the first probe."""
+    project = tmp_path / "proj"
+    project.mkdir()
+    attempts = [
+        discover_mod._Attempt(
+            "venv-local", "/bad/python", "probe_failed", ["/bad/python"]
+        ),
+        discover_mod._Attempt(
+            "virtual-env", "/good/python", "no_usable_skill", ["/good/python"]
+        ),
+    ]
+    advice = discover_mod._install_advice(project, attempts)
+    assert "upgrade or reinstall" in advice
+    assert "--upgrade" in advice
+    assert "/good/python" in advice
+    assert "/bad/python" not in advice
+
+
 def test_install_advice_prefers_uv_and_is_quoted(
     tmp_path: Path,
     discover_mod: ModuleType,
@@ -849,6 +912,30 @@ def test_pth_hits_via_subprocess_not_filesystem(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == str(skill.resolve())
     assert "venv-local" in result.stderr
+
+
+def test_filesystem_no_usable_skill_kept_when_probe_fails(
+    tmp_path: Path,
+    discover_mod: ModuleType,
+    isolated_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A filesystem ``no_usable_skill`` must outrank a later probe timeout."""
+    project = tmp_path / "proj"
+    project.mkdir()
+    _plant_posix_venv(project / ".venv", with_skill=False)
+
+    def _boom(*_args: object, **_kwargs: object) -> None:
+        raise subprocess.TimeoutExpired(cmd="python", timeout=10)
+
+    monkeypatch.setattr(discover_mod.subprocess, "run", _boom)
+
+    code = discover_mod.main(["--project-dir", str(project)])
+    captured = capsys.readouterr()
+    assert code == 2
+    assert captured.err.startswith("ERROR[NO_USABLE_SKILL]:")
+    assert "ERROR[PROBE_FAILED]" not in captured.err
 
 
 def test_unusable_filesystem_hit_falls_through_to_subprocess(
