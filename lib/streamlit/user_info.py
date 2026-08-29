@@ -21,8 +21,10 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Final,
+    Literal,
     NoReturn,
     cast,
+    overload,
 )
 
 from streamlit import config, logger, runtime
@@ -488,8 +490,18 @@ class TokensProxy(Mapping[str, str]):
             # Use the tokens for API verification
     """
 
+    # Documented token names so ``.id`` and ``.access`` type-check as ``str``.
+    id: str
+    access: str
+
     def __init__(self, tokens: dict[str, str]) -> None:
         self._tokens = tokens
+
+    @overload
+    def __getitem__(self, key: Literal["id", "access"]) -> str: ...
+
+    @overload
+    def __getitem__(self, key: str) -> str: ...
 
     def __getitem__(self, key: str) -> str:
         return self._tokens[key]
@@ -653,6 +665,18 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
         }
 
     """
+
+    # Narrows ``.is_logged_in`` to ``bool``. Other claims keep the open Mapping types.
+    is_logged_in: bool
+
+    @overload
+    def __getitem__(self, key: Literal["is_logged_in"]) -> bool: ...
+
+    @overload
+    def __getitem__(self, key: Literal["tokens"]) -> TokensProxy: ...
+
+    @overload
+    def __getitem__(self, key: str) -> str | bool | TokensProxy | None: ...
 
     def __getitem__(self, key: str) -> str | bool | TokensProxy | None:
         if key == "tokens":

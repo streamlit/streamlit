@@ -22,6 +22,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.runtime.context import (
+    _CONTEXT_KEYS,
     StreamlitCookies,
     StreamlitHeaders,
     StreamlitTheme,
@@ -134,6 +135,43 @@ class StContextTest(unittest.TestCase):
         mock_add_path.assert_called_once_with(
             "https://example.com/", mock_ctx.pages_manager
         )
+
+    @parameterized.expand([(key,) for key in sorted(_CONTEXT_KEYS)])
+    @patch(
+        "streamlit.runtime.context._get_client_context", MagicMock(return_value=None)
+    )
+    def test_getitem_matches_attribute(self, property_name: str) -> None:
+        """Bracket access returns the same value as attribute access."""
+        attr_value = getattr(st.context, property_name)
+        item_value = st.context[property_name]
+        if property_name in {"headers", "cookies"}:
+            assert item_value.to_dict() == attr_value.to_dict()
+        else:
+            assert item_value == attr_value
+
+    def test_getitem_unknown_key(self) -> None:
+        """Unknown keys raise KeyError."""
+        with pytest.raises(KeyError, match=r'st.context has no key "not_a_property"'):
+            st.context["not_a_property"]
+
+    def test_contains_known_and_unknown_keys(self) -> None:
+        """Membership uses the public property allowlist."""
+        assert "timezone" in st.context
+        assert "theme" in st.context
+        assert "not_a_property" not in st.context
+
+    @patch("streamlit.runtime.context.get_script_run_ctx")
+    def test_contains_does_not_read_properties(
+        self, mock_get_script_run_ctx: MagicMock
+    ) -> None:
+        """Membership must not trigger property getters such as theme."""
+        assert "theme" in st.context
+        mock_get_script_run_ctx.assert_not_called()
+
+    def test_context_is_not_iterable(self) -> None:
+        """st.context is a property bag, not a sequence."""
+        with pytest.raises(TypeError):
+            iter(st.context)
 
     @parameterized.expand(
         [

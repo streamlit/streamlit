@@ -17,7 +17,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator, Mapping
 from functools import lru_cache
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, overload
 
 from streamlit import runtime
 from streamlit.runtime.context_util import maybe_add_page_path, maybe_trim_page_path
@@ -27,6 +27,22 @@ from streamlit.util import AttributeDictionary
 
 if TYPE_CHECKING:
     from streamlit.runtime.session_manager import ClientContext
+
+# Public property names on ``st.context``. Used for key notation and
+# membership so ``__getitem__`` is not treated as a sequence protocol.
+_CONTEXT_KEYS: Final = frozenset(
+    {
+        "headers",
+        "cookies",
+        "theme",
+        "timezone",
+        "timezone_offset",
+        "locale",
+        "url",
+        "ip_address",
+        "is_embedded",
+    }
+)
 
 
 def _get_client_context() -> ClientContext | None:
@@ -135,15 +151,23 @@ class StreamlitCookies(Mapping[str, str]):
 
 
 class ContextProxy:
-    """An interface to access user session context.
+    """A read-only interface to user session context.
 
-    ``st.context`` provides a read-only interface to access headers and cookies
-    for the current user session.
+    ``st.context`` exposes session context for the current user, including
+    headers, cookies, theme, timezone, locale, URL, IP address, and whether
+    the app is embedded.
 
-    Each property (``st.context.headers`` and ``st.context.cookies``) returns
-    a dictionary of named values.
+    You can access any ``st.context`` property via attribute or key notation.
+    For example, use ``st.context.timezone`` or ``st.context["timezone"]``.
+
+    ``st.context.headers`` and ``st.context.cookies`` each return a dictionary
+    of named values.
 
     """
+
+    # Property bag, not a sequence. Without this, ``__getitem__`` would make
+    # ``in`` and ``iter()`` probe integer keys.
+    __iter__ = None
 
     @property
     @gather_metrics("context.headers")
@@ -439,3 +463,43 @@ class ContextProxy:
         if ctx is None or ctx.context_info is None:
             return None
         return ctx.context_info.is_embedded
+
+    @overload
+    def __getitem__(self, key: Literal["headers"]) -> StreamlitHeaders: ...
+
+    @overload
+    def __getitem__(self, key: Literal["cookies"]) -> StreamlitCookies: ...
+
+    @overload
+    def __getitem__(self, key: Literal["theme"]) -> StreamlitTheme: ...
+
+    @overload
+    def __getitem__(self, key: Literal["timezone"]) -> str | None: ...
+
+    @overload
+    def __getitem__(self, key: Literal["timezone_offset"]) -> int | None: ...
+
+    @overload
+    def __getitem__(self, key: Literal["locale"]) -> str | None: ...
+
+    @overload
+    def __getitem__(self, key: Literal["url"]) -> str | None: ...
+
+    @overload
+    def __getitem__(self, key: Literal["ip_address"]) -> str | None: ...
+
+    @overload
+    def __getitem__(self, key: Literal["is_embedded"]) -> bool | None: ...
+
+    @overload
+    def __getitem__(self, key: str) -> Any: ...
+
+    def __getitem__(self, key: str) -> Any:
+        # Only public properties are valid keys. ``getattr`` still runs each
+        # property so metrics and the theme-read gate stay in effect.
+        if key not in _CONTEXT_KEYS:
+            raise KeyError(f'st.context has no key "{key}".')
+        return getattr(self, key)
+
+    def __contains__(self, key: object) -> bool:
+        return key in _CONTEXT_KEYS
