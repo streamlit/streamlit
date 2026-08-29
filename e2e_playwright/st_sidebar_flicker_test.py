@@ -64,9 +64,8 @@ def create_sidebar_monitor_script() -> str:
     window.__monitorStarted = Date.now();
     window.__lastSidebarState = null;
 
-    // Must NOT reset window.__lastSidebarState: dropping the baseline is
-    // exactly what made an unrelated DOM mutation after the reset look like a
-    // sidebar state change.
+    // Do not clear window.__lastSidebarState. Reset only empties the log, so
+    // that an unchanged sidebar is not treated as a new state change.
     window.__resetSidebarStates = function() {
         window.__sidebarStates = [];
         window.__monitorStarted = Date.now();
@@ -368,3 +367,17 @@ def test_sidebar_stability_after_initial_load(page: Page, app_base_url: str):
     sidebar = page.get_by_test_id("stSidebar")
     expect(sidebar).to_be_attached()
     expect(sidebar).to_have_attribute("aria-expanded", "false")
+
+    # Last: prove the monitor is not blind after a reset. A monitor that logged
+    # nothing would satisfy every assertion above, so assert that a real change
+    # still gets recorded. Mutating the sidebar is safe here because the checks
+    # above have already run.
+    page.evaluate(
+        "document.querySelector('[data-testid=\"stSidebar\"]')"
+        ".setAttribute('aria-expanded', 'true')"
+    )
+    recorded = page.evaluate("window.__sidebarStates")
+    assert recorded, "a real sidebar state change was not recorded at all"
+    assert recorded[-1]["ariaExpanded"] == "true", (
+        f"a real sidebar state change was not recorded: {recorded}"
+    )
