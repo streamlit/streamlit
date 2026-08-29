@@ -4881,9 +4881,10 @@ class DisabledWidgetAppTest(unittest.TestCase):
         at = AppTest.from_function(script).run()
         assert at.checkbox[0].value is False
 
-        # Simulate the frontend sending a value for the disabled widget, as a
-        # stale UI or a forged BackMsg would.
-        at.checkbox[0].set_value(True).run()
+        # Bypass AppTest's disabled-widget guard so we can send a forged
+        # frontend value and assert the server still discards it.
+        at.checkbox[0]._value = True
+        at.run()
 
         assert at.checkbox[0].value is False
         assert "callback_ran" not in at.session_state
@@ -4921,8 +4922,10 @@ class DisabledWidgetAppTest(unittest.TestCase):
 
         at = AppTest.from_function(script).run()
 
-        # Simulate the frontend reporting a click for the disabled button.
-        at.button[0].click().run()
+        # Bypass AppTest's disabled-widget guard so we can send a forged
+        # frontend click and assert the server still discards it.
+        at.button[0]._value = True
+        at.run()
 
         assert at.button[0].value is False
         assert "clicked" not in at.session_state
