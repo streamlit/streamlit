@@ -28,6 +28,7 @@ import {
   createDateTimeErrorMessage,
   dateTimesEqual,
   formatCalendarDateTime,
+  getSegmentState,
   getTypedDateFromDom,
   getTypedTimeFromDom,
   isoToCalendarDateTime,
@@ -405,6 +406,51 @@ const renderSegments = (
     .join("")
   return el
 }
+
+describe("getSegmentState", () => {
+  it("reports a fully cleared field", () => {
+    expect(
+      getSegmentState(renderSegments({ year: null, month: null, day: null }))
+    ).toMatchObject({ isPartiallyTyped: false, isFullyCleared: true })
+  })
+
+  it("reports a partially typed field", () => {
+    expect(
+      getSegmentState(renderSegments({ year: 2025, month: null, day: null }))
+    ).toMatchObject({ isPartiallyTyped: true, isFullyCleared: false })
+  })
+
+  it("reports a fully typed field as neither", () => {
+    expect(
+      getSegmentState(renderSegments({ year: 2025, month: 11, day: 19 }))
+    ).toMatchObject({ isPartiallyTyped: false, isFullyCleared: false })
+  })
+
+  it("counts segments on iOS, where they render as textboxes", () => {
+    // Matching on `role="spinbutton"` found nothing here, so `totalSegments` was 0
+    // and `isFullyCleared` could never be true — clearing every segment could not
+    // commit null on iOS.
+    const el = document.createElement("div")
+    el.innerHTML =
+      '<div role="textbox" data-type="hour" data-placeholder="true">––</div>' +
+      '<div role="textbox" data-type="literal">:</div>' +
+      '<div role="textbox" data-type="minute" data-placeholder="true">––</div>'
+    expect(getSegmentState(el)).toMatchObject({
+      totalSegments: 2,
+      placeholderCount: 2,
+      isFullyCleared: true,
+    })
+  })
+
+  it("does not count the literal separators between segments", () => {
+    const el = document.createElement("div")
+    el.innerHTML =
+      '<div role="spinbutton" data-type="hour" aria-valuenow="9">09</div>' +
+      '<div data-type="literal">:</div>' +
+      '<div role="spinbutton" data-type="minute" aria-valuenow="45">45</div>'
+    expect(getSegmentState(el)).toMatchObject({ totalSegments: 2 })
+  })
+})
 
 describe("getTypedTimeFromDom", () => {
   it("returns null for a missing container", () => {

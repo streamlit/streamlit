@@ -67,6 +67,7 @@ import {
   getTypedDateFromDom,
   getTypedTimeFromDom,
   parsePastedDateTime,
+  SEGMENT_SELECTOR,
   validateDateTime,
 } from "./dateTimeInputUtils"
 import {
@@ -88,10 +89,6 @@ import {
   StyledTrailingIcons,
   StyledVisuallyHidden,
 } from "./styled-components"
-
-/** Editable segments. Matched on `data-type` rather than `role`, which React Aria
- * replaces with `textbox` on iOS. Literals are the separators between segments. */
-const SEGMENT_SELECTOR = '[data-type]:not([data-type="literal"])'
 
 interface SingleDateTimeInputProps {
   value: CalendarDateTime | null
@@ -160,13 +157,14 @@ function SingleDateTimeInput({
   const activeOriginRef = useRef<HTMLElement | null>(null)
   const popoverRef = useRef<HTMLDivElement | null>(null)
 
-  // Three React Aria constraints shape the state below, referred to by name:
-  // - WITHHELD ONCHANGE: `DateField` and `TimeField` report no value until every
-  //   one of their segments is filled, so a partial entry reaches no handler.
-  // - RE-SEED: a controlled `value` resets the field's segment display state, and
-  //   an unchanged `value` leaves whatever the user typed in place.
-  // - IOS ROLES: segments render as textboxes rather than spinbuttons there, so
-  //   `role`-based queries find nothing and `aria-valuenow` is dropped.
+  // Three React Aria constraints shape the state below:
+  // - `DateField` and `TimeField` report no value until every one of their segments
+  //   is filled, so a partial entry reaches no handler. This is why what commits is
+  //   re-read from the rendered segments rather than taken from `onChange`.
+  // - A controlled `value` resets the field's segment display state, while an
+  //   unchanged `value` leaves whatever the user typed in place.
+  // - On iOS, segments render as textboxes rather than spinbuttons, so `role`-based
+  //   queries find nothing and `aria-valuenow` is dropped.
 
   // --- Two-layer state ---
   const [displayValue, setDisplayValue] = useState<CalendarDateTime | null>(
@@ -181,15 +179,21 @@ function SingleDateTimeInput({
 
   // Resolves conflicting visible times by preferring the control that received
   // focus most recently, falling back to the other when that one is empty. Focus
-  // rather than edit, so merely tabbing through flips it — harmless, because an
-  // untouched control reads as null and the fallback applies.
+  // rather than edit, so tabbing onto a control also selects it; an empty control
+  // still falls back to the other, so tabbing onto an unused TimeField does not
+  // change what commits.
+  //
+  // Known limitation: React Aria advances focus from `day` to `hour` as a date is
+  // typed, so typing the date last reselects the inline control. If an abandoned
+  // inline draft is still in those segments, it outranks a newer popover time.
   const lastTimeSourceRef = useRef<"inline" | "popover">("inline")
   // A complete time set in the popover before any date exists — without holding it
-  // here, RE-SEED would blank the segments as the user finished typing.
+  // here, React Aria would reset the field's typed-but-incomplete segments and
+  // blank them as the user finished typing.
   //
-  // Display buffer only: `resolveGivenTime` never reads it, since WITHHELD ONCHANGE
-  // means a partial popover time never lands here. What commits is re-read from
-  // the rendered segments.
+  // Display buffer only: `resolveGivenTime` never reads it, because a partial
+  // popover time never lands here — the field withholds `onChange` until every
+  // segment is filled. What commits is re-read from the rendered segments.
   const [pendingTime, setPendingTime] = useState<Time | null>(null)
 
   const [prevValue, setPrevValue] = useState(value)
@@ -218,6 +222,12 @@ function SingleDateTimeInput({
     // `prevValue !== value` never fires — and the popover stays open, so the
     // open-effect reset does not run either.
     lastCommittedRef.current = undefined
+    // Reading the DOM during render is safe here specifically because this write
+    // sits inside the same condition that advances `prevResetKey`. A render that
+    // never commits leaves that state update behind too, so the condition is still
+    // true on the retry and the flag is recomputed against live focus rather than
+    // surviving as a stale `true`. A double-invoked render computes the same value
+    // twice, since focus cannot move between two synchronous passes.
     shouldRestoreFocusRef.current = !!triggerRef.current?.contains(
       document.activeElement
     )
@@ -264,7 +274,7 @@ function SingleDateTimeInput({
 
   /** The datetime the two controls describe between them when the field itself
    * holds no value: a complete date read from the inline segments, plus a time
-   * from whichever control the user last touched. Null unless both halves are
+   * from whichever control the user focused most recently. Null unless both halves are
    * present — a date alone gives nothing to commit, and defaulting its time
    * would be inventing one. */
   const completeFromVisibleParts = useCallback((): CalendarDateTime | null => {
@@ -280,10 +290,14 @@ function SingleDateTimeInput({
     )
   }, [resolveGivenTime])
 
-  /** Validate and commit the pending value, or revert to the last committed
-   * value. Returns true if the field holds a valid (committed or unchanged)
-   * value, false if it was reverted. Calls both onChange (React state) and
-   * formCommit (sync WM write) to prevent the form-submit race. */
+  /** Validate and commit the pending value, or revert to the last committed value.
+   * When the field itself has no value, first try to complete one from the visible
+   * date and time halves. Returns true if the field holds a valid (committed or
+   * unchanged) value, false if it was reverted. Calls both onChange (React state)
+   * and formCommit (sync WM write) to prevent the form-submit race.
+   *
+   * @param popoverStaysOpen - When true, keeps a popover time that is still on
+   * screen (Enter commits without dismissing). */
   const commitOrRevert = useCallback(
     ({ popoverStaysOpen = false } = {}): boolean => {
       if (!triggerRef.current) return false
@@ -297,11 +311,11 @@ function SingleDateTimeInput({
       // placeholder. Complete the value from what is on screen instead of
       // discarding halves the user can see.
       //
-      // Keyed off the field having no value rather than off `isPartiallyTyped`,
-      // for two reasons: clearing one segment of an existing value also reads as
-      // partially typed, and that is an edit in progress rather than two halves to
-      // combine; and `getSegmentState` matches nothing under IOS ROLES, where the
-      // readers still work.
+      // Keyed off the field having no value rather than off `isPartiallyTyped`:
+      // - Clearing one segment of an existing value also reads as partially typed,
+      //   and that is an edit in progress, not two halves to combine.
+      // - `getSegmentState` matches nothing on iOS, where React Aria renders
+      //   segments as textboxes, while the readers below still work.
       //
       // Read before `setPendingTime(null)` below, so the merge never depends on
       // React batching that clear: flushing it would blank the popover's segments.
@@ -567,7 +581,8 @@ function SingleDateTimeInput({
       current: CalendarDateTime | null
     ): void => {
       if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return
-      // No date yet: nothing to snap against, so React Aria's default ±1 applies.
+      // No committed date yet, and this snaps a `CalendarDateTime`, so React Aria's
+      // default ±1 applies until a date exists.
       if (!current) return
       const target = e.target as HTMLElement
       const segmentType = target.getAttribute("data-type")
@@ -785,8 +800,8 @@ function SingleDateTimeInput({
               // Remount on form clear. React Aria keeps its own display state
               // for segments the user has typed but not completed, and with
               // `value` already null there is no prop change to re-seed it — so a
-              // time typed before `clear_on_submit` would stay on screen, and now
-              // that dismissal completes a value from what is visible, it would
+              // time typed before `clear_on_submit` would stay on screen, and
+              // because dismissal completes a value from what is visible, it would
               // also commit.
               key={formResetKey}
               aria-label={label}
@@ -895,9 +910,10 @@ function SingleDateTimeInput({
                 <I18nProvider locale="en-US">
                   <StyledPopoverTimeField
                     // Remount on form clear, like the inline field. Segments the
-                    // user typed but did not complete are RE-SEEDed only when the
-                    // controlled value changes, so this does not depend on
-                    // `popoverTimeValue` happening to differ across the clear.
+                    // React Aria only resets typed-but-incomplete segments when the
+                    // controlled value changes, and `popoverTimeValue` can be
+                    // unchanged across a clear, so this does not depend on those
+                    // two happening to differ.
                     key={formResetKey}
                     aria-labelledby={`${id}-time-label`}
                     aria-describedby={error ? errorId : undefined}

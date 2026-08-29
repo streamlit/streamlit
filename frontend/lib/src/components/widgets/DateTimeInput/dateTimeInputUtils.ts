@@ -215,15 +215,15 @@ export interface SegmentState {
   isFullyCleared: boolean
 }
 
-/** Query spinbutton segments in a container to determine their placeholder state.
- *
- * Matches on `role`, which React Aria replaces with `textbox` on iOS, so this
- * finds no segments there. `readSegment` below matches `data-type` instead,
- * which is emitted on every platform. */
+/** Editable segments. Matched on `data-type` rather than `role`, which React Aria
+ * replaces with `textbox` on iOS. Literals are the separators between segments. */
+export const SEGMENT_SELECTOR = '[data-type]:not([data-type="literal"])'
+
+/** Query the editable segments in a container to determine their placeholder state. */
 export function getSegmentState(container: HTMLElement): SegmentState {
-  const segments = container.querySelectorAll('[role="spinbutton"]')
+  const segments = container.querySelectorAll(SEGMENT_SELECTOR)
   const placeholders = container.querySelectorAll(
-    '[role="spinbutton"][data-placeholder="true"]'
+    `${SEGMENT_SELECTOR}[data-placeholder="true"]`
   )
   const totalSegments = segments.length
   const placeholderCount = placeholders.length
@@ -284,7 +284,7 @@ function readSegment(
  * `DateField` and `TimeField` both withhold `onChange` until every one of their
  * segments is filled, so a time entered while its partner segments are still
  * placeholders reaches no handler — the rendered segments are its only record.
- * An unfilled half of the pair counts as 0, so a lone hour survives.
+ * An unfilled half of the pair counts as 0, so a lone hour or minute survives.
  *
  * Assumes a 24-hour cycle and no seconds segment: with `hourCycle={12}` the hour
  * reports 1–12 and needs the `dayPeriod` segment to disambiguate, and a `second`

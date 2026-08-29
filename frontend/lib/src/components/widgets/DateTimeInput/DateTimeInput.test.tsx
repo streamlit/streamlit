@@ -1982,9 +1982,9 @@ describe("DateTimeInput widget", () => {
   })
 
   describe("Time given before a date", () => {
-    /** Empty widget, so the date segments stay placeholders. min/max are pinned to
-     * November 2025 so the calendar clamps to a deterministic month rather than
-     * opening on today's, which is what makes the /November 19/ locator reliable. */
+    /** Pins the empty calendar to November 2025 so the `/November 19/` locator is
+     * deterministic rather than dependent on today's date. The widget starts empty,
+     * so its date segments stay placeholders. */
     const emptyProps = (): Props =>
       getProps({
         default: [],
@@ -2645,7 +2645,7 @@ describe("DateTimeInput widget", () => {
       })
     })
 
-    it("prefers the popover draft over an inline one when dismissed together", async () => {
+    it("prefers the popover time over an inline draft when both are on screen at dismissal", async () => {
       const user = userEvent.setup()
       const props = emptyProps()
       const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
