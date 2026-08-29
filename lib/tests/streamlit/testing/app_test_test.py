@@ -571,3 +571,28 @@ def test_switch_page_rejects_unregistered_file_in_callable_navigation(
     assert at.text[0].value == "home page"
     with pytest.raises(ValueError, match="navigation page"):
         at.switch_page("orphan.py")
+
+
+def test_switch_page_does_not_match_callable_url_path_slug(tmp_path: Path) -> None:
+    """A file slug must not steal a callable page that hashes the same url_path."""
+    (tmp_path / "settings.py").write_text(
+        'import streamlit as st\nst.text("file settings")\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "def home():\n"
+        "    st.text('home page')\n"
+        "def settings():\n"
+        "    st.text('callable settings')\n"
+        "pg = st.navigation([\n"
+        "    st.Page(home, title='Home'),\n"
+        "    st.Page(settings, title='Settings'),\n"
+        "])\n"
+        "pg.run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    assert at.text[0].value == "home page"
+    with pytest.raises(ValueError, match="navigation page"):
+        at.switch_page("settings.py")

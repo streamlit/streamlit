@@ -475,6 +475,11 @@ class AppTest:
         main script supplied to ``AppTest.from_file()`` remains the path root
         after switching pages.
 
+        Call ``run()`` at least once before switching so ``st.navigation``
+        pages can be resolved by registered script path. Switching before the
+        first run hashes the filename slug, which misses a custom
+        ``url_path``.
+
         Parameters
         ----------
         page_path: str
@@ -490,7 +495,8 @@ class AppTest:
         ------
         ValueError
             If ``page_path`` does not point to a file relative to the main
-            script.
+            script, or if ``st.navigation`` is active and the file is not a
+            registered page.
 
         Examples
         --------
@@ -531,12 +537,11 @@ class AppTest:
             return path_matches[0]
         if len(path_matches) > 1:
             raise ValueError(f"Multiple navigation pages use script {page_path_str!r}.")
-        if filename_hash in self._registered_pages:
-            return filename_hash
 
         # st.navigation registers url_pathname even for callable-only pages.
-        # Fail instead of silently opening the default page when the requested
-        # file is not in that registry (https://github.com/streamlit/streamlit/issues/16611).
+        # Do not fall back to a filename-slug hash: that can collide with a
+        # callable page or a custom url_path and silently open the wrong page
+        # (https://github.com/streamlit/streamlit/issues/16611).
         has_navigation_registry = any(
             "url_pathname" in info for info in self._registered_pages.values()
         )

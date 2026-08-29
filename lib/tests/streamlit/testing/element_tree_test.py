@@ -2014,6 +2014,38 @@ def test_container_key_and_get_by_key() -> None:
         at.container("missing")
 
 
+def test_container_excludes_columns_row() -> None:
+    """st.columns emits a flex_container row that must not appear in at.container."""
+
+    def script():
+        import streamlit as st
+
+        with st.container(key="filters"):
+            st.text("inside")
+        left, right = st.columns(2)
+        left.text("left")
+        right.text("right")
+
+    at = AppTest.from_function(script).run()
+    assert len(at.container) == 1
+    assert at.container[0].key == "filters"
+    assert len(at.columns) == 2
+
+
+def test_expander_key_and_get_by_key() -> None:
+    """Keyed expanders expose .key even though the tree stores the sub-proto."""
+
+    def script():
+        import streamlit as st
+
+        with st.expander("Details", key="details"):
+            st.text("hidden")
+
+    at = AppTest.from_function(script).run()
+    assert at.expander[0].key == "details"
+    assert at.get_by_key("details").label == "Details"
+
+
 def test_disabled_widget_rejects_update() -> None:
     """Disabled widgets reject forged interactions.
 

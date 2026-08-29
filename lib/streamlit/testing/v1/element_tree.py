@@ -292,7 +292,11 @@ class ElementList(Generic[El_co]):
         return hash(tuple(self._list))
 
     def __call__(self, key: str) -> El_co:
-        """Return the unique element in this collection with the given user key."""
+        """Return the first element in this collection with the given user key.
+
+        Unlike ``get_by_key``, this keeps first-match behavior so existing
+        typed lookups such as ``at.button("x")`` stay compatible.
+        """
         for e in self._list:
             if getattr(e, "key", None) == key:
                 return e
@@ -2056,6 +2060,7 @@ class Block:
         else:
             self.type = "unknown"
         self.root = root
+        self._block_id = getattr(proto, "id", "") or "" if proto is not None else ""
 
     def __len__(self) -> int:
         return len(self.children)
@@ -2072,9 +2077,9 @@ class Block:
     def key(self) -> str | None:
         """User key for this block, if the corresponding command set one."""
         proto = self.proto
-        if proto is None:
-            return None
-        block_id = getattr(proto, "id", None)
+        block_id = getattr(self, "_block_id", None) or (
+            getattr(proto, "id", None) if proto is not None else None
+        )
         if block_id:
             return user_key_from_element_id(block_id)
         return None
@@ -2158,7 +2163,12 @@ class Block:
 
     @property
     def container(self) -> BlockList:
-        """``st.container`` / flex-container blocks."""
+        """``st.container`` blocks, including horizontal/flex containers.
+
+        The implicit row wrapper created by ``st.columns`` is excluded so
+        index lookups such as ``at.container[0]`` stay aligned with
+        user-created containers.
+        """
         return BlockList(
             [
                 e
@@ -2166,6 +2176,7 @@ class Block:
                 if isinstance(e, Block)
                 and e is not self
                 and e.type in {"container", "flex_container"}
+                and not any(isinstance(child, Column) for child in e.children.values())
             ]
         )
 
@@ -2401,6 +2412,7 @@ class SpecialBlock(Block):
         else:
             self.type = "unknown"
         self.root = root
+        self._block_id = getattr(proto, "id", "") or "" if proto is not None else ""
 
 
 @dataclass(repr=False)
@@ -2423,6 +2435,7 @@ class ChatMessage(Block):
         self.type = "chat_message"
         self.name = proto.name
         self.avatar = proto.avatar
+        self._block_id = ""
 
 
 @dataclass(repr=False)
@@ -2457,6 +2470,7 @@ class Column(Block):
         self.type = "column"
         self.weight = proto.weight
         self.gap = self._GAP_SIZE_TO_STRING.get(proto.gap_config.gap_size)
+        self._block_id = ""
 
 
 @dataclass(repr=False)
@@ -2475,6 +2489,7 @@ class Expander(Block):
         self.type = "expander"
         self.icon = proto.icon
         self.label = proto.label
+        self._block_id = ""
 
 
 @dataclass(repr=False)
@@ -2491,6 +2506,7 @@ class Status(Block):
         self.type = "status"
         self.icon = proto.icon
         self.label = proto.label
+        self._block_id = ""
 
     @property
     def state(self) -> str:
@@ -2522,6 +2538,7 @@ class Tab(Block):
         self.root = root
         self.type = "tab"
         self.label = proto.label
+        self._block_id = ""
 
 
 Node: TypeAlias = Element | Block
@@ -2751,6 +2768,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Tab(block.tab, root=root)
             else:
                 new_node = Block(proto=block, root=root)
+            new_node._block_id = block.id or ""
         elif delta.WhichOneof("type") == "new_transient":
             # new_transient (e.g. spinner) - skip these in the element tree
             continue
