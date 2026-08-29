@@ -23,6 +23,7 @@ import {
 import { BlockNode } from "~lib/render-tree/BlockNode"
 import { ElementNode } from "~lib/render-tree/ElementNode"
 import { FAKE_SCRIPT_HASH } from "~lib/render-tree/test-utils"
+import { TransientNode } from "~lib/render-tree/TransientNode"
 
 import { ClearEvictedFragmentNodesVisitor } from "./ClearEvictedFragmentNodesVisitor"
 
@@ -99,6 +100,41 @@ describe("ClearEvictedFragmentNodesVisitor", () => {
 
     // Referential stability matters: a new node would re-render the subtree.
     expect(parent.accept(visitor)).toBe(parent)
+  })
+
+  describe("transient nodes", () => {
+    it("returns the identical node when nothing in its subtree is evicted", () => {
+      const visitor = new ClearEvictedFragmentNodesVisitor(new Set(["absent"]))
+      const transient = new TransientNode(
+        SCRIPT_RUN_ID,
+        elementNode("anchor", "outer"),
+        [elementNode("toast", "outer")]
+      )
+
+      // Referential stability: reconstructing would re-render this subtree.
+      expect(transient.accept(visitor)).toBe(transient)
+    })
+
+    it("drops an evicted transient element but keeps the anchor", () => {
+      const visitor = new ClearEvictedFragmentNodesVisitor(new Set(["nested"]))
+      const anchor = elementNode("anchor", "outer")
+      const transient = new TransientNode(SCRIPT_RUN_ID, anchor, [
+        elementNode("toast", "nested"),
+      ])
+
+      expect(transient.accept(visitor)).toBe(anchor)
+    })
+
+    it("removes the whole node when anchor and transients are evicted", () => {
+      const visitor = new ClearEvictedFragmentNodesVisitor(new Set(["nested"]))
+      const transient = new TransientNode(
+        SCRIPT_RUN_ID,
+        elementNode("anchor", "nested"),
+        [elementNode("toast", "nested")]
+      )
+
+      expect(transient.accept(visitor)).toBeUndefined()
+    })
   })
 
   it("removes nodes nested several blocks deep", () => {

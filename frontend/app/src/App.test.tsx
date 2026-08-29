@@ -4127,6 +4127,12 @@ describe("App", () => {
       })
       expect(screen.getByText("from surviving fragment")).toBeInTheDocument()
 
+      // Pruning must be paired with widget-state cleanup, as it is on every
+      // other pruning path. Otherwise an evicted fragment's widget values keep
+      // being sent, and a fragment that returns reuses the retained value.
+      const widgetMgr = getStoredValue<WidgetStateManager>(WidgetStateManager)
+      const removeInactive = vi.spyOn(widgetMgr, "removeInactive")
+
       // The server evicts fragmentA. Its elements must go even though no
       // successful run follows to trigger the usual stale-node cleanup.
       act(() => {
@@ -4140,6 +4146,7 @@ describe("App", () => {
       })
       // An unrelated fragment's elements must survive.
       expect(screen.getByText("from surviving fragment")).toBeInTheDocument()
+      expect(removeInactive).toHaveBeenCalled()
     })
   })
 

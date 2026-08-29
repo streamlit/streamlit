@@ -99,6 +99,19 @@ export class ClearEvictedFragmentNodesVisitor implements AppNodeVisitor<
       element => element.accept(this) as ElementNode | undefined
     )
 
+    // Performance optimization: nothing in this subtree was evicted, so keep
+    // the same node. `updateTransientNodes` always allocates a fresh array, so
+    // this has to compare contents rather than the array reference. Checked
+    // before the collapse cases below, which would otherwise replace an
+    // untouched TransientNode with its anchor.
+    if (
+      anchorNode === node.anchor &&
+      transientNodes.length === node.transientNodes.length &&
+      transientNodes.every((element, i) => element === node.transientNodes[i])
+    ) {
+      return node
+    }
+
     if (!anchorNode && transientNodes.length === 0) {
       return undefined
     }

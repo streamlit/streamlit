@@ -1363,10 +1363,19 @@ export class App extends PureComponent<Props, State> {
     })
 
     const evictedFragmentIds = new Set(stopAutoRerun.fragmentIds)
-    this.setState(prevState => ({
-      elements:
-        prevState.elements.clearEvictedFragmentNodes(evictedFragmentIds),
-    }))
+    this.setState(
+      prevState => ({
+        elements:
+          prevState.elements.clearEvictedFragmentNodes(evictedFragmentIds),
+      }),
+      () => {
+        // Drop widget state for the removed nodes, as every other pruning path
+        // does. Without this, an evicted fragment's widget values keep being
+        // sent on later reruns, and a fragment that comes back initializes its
+        // widgets from the retained value instead of its default.
+        this.removeInactiveWidgetState()
+      }
+    )
   }
 
   /**
