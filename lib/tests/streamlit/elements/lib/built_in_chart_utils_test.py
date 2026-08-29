@@ -24,11 +24,6 @@ import pandas as pd
 import pytest
 
 from streamlit.elements.lib import built_in_chart_utils as chart_utils
-from streamlit.elements.lib.built_in_chart_utils import (
-    StreamlitColorLengthError,
-    StreamlitColumnNotFoundError,
-    StreamlitInvalidColorError,
-)
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidParameterTypeError,
@@ -112,8 +107,9 @@ def test_parse_x_column_with_none_returns_none() -> None:
 def test_parse_x_column_raises_for_unknown_column() -> None:
     """``_parse_x_column`` raises when the column is not in the DataFrame."""
     df = pd.DataFrame({"a": [1]})
-    with pytest.raises(StreamlitColumnNotFoundError):
+    with pytest.raises(StreamlitAPIException, match="does not have a column") as exc:
         chart_utils._parse_x_column(df, "missing")
+    assert exc.value.error_id == "chart-column-not-found"
 
 
 def test_parse_x_column_raises_for_invalid_type() -> None:
@@ -142,8 +138,9 @@ def test_parse_sort_column_strips_minus_prefix() -> None:
 def test_parse_sort_column_raises_when_missing() -> None:
     """A sort column not in the DataFrame raises."""
     df = pd.DataFrame({"name": [1]})
-    with pytest.raises(StreamlitColumnNotFoundError):
+    with pytest.raises(StreamlitAPIException, match="does not have a column") as exc:
         chart_utils._parse_sort_column(df, "missing")
+    assert exc.value.error_id == "chart-column-not-found"
 
 
 @pytest.mark.parametrize(
@@ -185,10 +182,11 @@ def test_parse_y_columns(
 
 
 def test_parse_y_columns_raises_for_unknown() -> None:
-    """An unknown y column raises ``StreamlitColumnNotFoundError``."""
+    """An unknown y column raises a tagged StreamlitAPIException."""
     df = pd.DataFrame({"a": [1]})
-    with pytest.raises(StreamlitColumnNotFoundError):
+    with pytest.raises(StreamlitAPIException, match="does not have a column") as exc:
         chart_utils._parse_y_columns(df, "missing", None)
+    assert exc.value.error_id == "chart-column-not-found"
 
 
 def test_drop_unused_columns_dedupes_and_filters_none() -> None:
@@ -447,7 +445,7 @@ def test_get_color_encoding_single_color_yields_color_value(color_value: Any) ->
 def test_get_color_encoding_builtin_name_with_multiple_y_raises() -> None:
     """A single color string with multiple y columns raises a length error."""
     df = pd.DataFrame({"y1": [1], "y2": [2]})
-    with pytest.raises(StreamlitColorLengthError):
+    with pytest.raises(StreamlitAPIException, match="must have the same") as exc:
         chart_utils._get_color_encoding(
             df=df,
             color_value="primary",
@@ -456,12 +454,13 @@ def test_get_color_encoding_builtin_name_with_multiple_y_raises() -> None:
             color_from_user="primary",
             alias_to_original={},
         )
+    assert exc.value.error_id == "chart-color-length-mismatch"
 
 
 def test_get_color_encoding_invalid_color_raises() -> None:
-    """Non-color, non-iterable color values raise StreamlitInvalidColorError."""
+    """Non-color, non-iterable color values raise a tagged StreamlitAPIException."""
     df = pd.DataFrame({"y1": [1]})
-    with pytest.raises(StreamlitInvalidColorError):
+    with pytest.raises(StreamlitAPIException, match="valid color argument") as exc:
         chart_utils._get_color_encoding(
             df=df,
             color_value=123,
@@ -470,3 +469,4 @@ def test_get_color_encoding_invalid_color_raises() -> None:
             color_from_user=123,
             alias_to_original={},
         )
+    assert exc.value.error_id == "chart-invalid-color"

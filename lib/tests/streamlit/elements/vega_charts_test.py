@@ -35,10 +35,7 @@ from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
     convert_arrow_table_to_arrow_bytes,
 )
-from streamlit.elements.lib.built_in_chart_utils import (
-    _PROTECTION_SUFFIX,
-    StreamlitColumnNotFoundError,
-)
+from streamlit.elements.lib.built_in_chart_utils import _PROTECTION_SUFFIX
 from streamlit.elements.vega_charts import (
     VegaLiteState,
     VegaLiteStateSerde,
@@ -2702,11 +2699,17 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             }
         )
 
-        with pytest.raises(StreamlitColumnNotFoundError):
+        with pytest.raises(
+            StreamlitAPIException, match="does not have a column"
+        ) as exc:
             st.bar_chart(df, x="A", y="B", sort="nonexistent_column")
+        assert exc.value.error_id == "chart-column-not-found"
 
-        with pytest.raises(StreamlitColumnNotFoundError):
+        with pytest.raises(
+            StreamlitAPIException, match="does not have a column"
+        ) as exc:
             st.bar_chart(df, x="A", y="B", sort="-nonexistent_column")
+        assert exc.value.error_id == "chart-column-not-found"
 
     def test_bar_chart_single_column_with_dot_in_name_renders(self):
         """Regression test for #7714: a single column whose name contains '.'
