@@ -285,12 +285,21 @@ class SliderTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("date", date(2024, 1, 10), date(2024, 1, 1), date(2024, 1, 5)),
+            (
+                "date",
+                date(2024, 1, 10),
+                date(2024, 1, 1),
+                date(2024, 1, 5),
+                date(2024, 1, 1),
+                date(2024, 1, 10),
+            ),
             (
                 "datetime",
                 datetime(2024, 1, 10),
                 datetime(2024, 1, 1),
                 datetime(2024, 1, 5),
+                datetime(2024, 1, 1),
+                datetime(2024, 1, 10),
             ),
         ]
     )
@@ -300,6 +309,8 @@ class SliderTest(DeltaGeneratorTestCase):
         min_value: date | datetime,
         max_value: date | datetime,
         value: date | datetime,
+        expected_min: date | datetime,
+        expected_max: date | datetime,
     ) -> None:
         """Reversed date and datetime bounds are swapped; the value is unchanged."""
         ret = st.slider(
@@ -310,15 +321,16 @@ class SliderTest(DeltaGeneratorTestCase):
         )
 
         def to_micros(v: date | datetime) -> int:
+            # Check datetime first; date is a parent type, and
+            # _date_to_datetime would drop the time.
             return _datetime_to_micros(
                 v if isinstance(v, datetime) else _date_to_datetime(v)
             )
 
-        lo, hi = min(min_value, max_value), max(min_value, max_value)
         c = self.get_delta_from_queue().new_element.slider
         assert ret == value
-        assert c.min == to_micros(lo)
-        assert c.max == to_micros(hi)
+        assert c.min == to_micros(expected_min)
+        assert c.max == to_micros(expected_max)
         assert c.step == _delta_to_micros(timedelta(days=1))
 
     def test_value_out_of_bounds(self):

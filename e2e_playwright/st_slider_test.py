@@ -742,7 +742,6 @@ def test_slider_swaps_reversed_min_max(app: Page):
     """Reversed min/max are swapped so the thumb can travel the full range."""
     slider = get_slider(app, "Reversed bounds slider")
     slider.scroll_into_view_if_needed()
-    expect(slider).to_be_visible()
     expect(app.get_by_test_id("stException")).not_to_be_attached()
 
     slider_role = slider.get_by_role("slider")

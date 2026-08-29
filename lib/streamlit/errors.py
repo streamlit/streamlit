@@ -338,8 +338,9 @@ class StreamlitValueAboveMaxError(LocalizableStreamlitException):
 class StreamlitInvalidMinMaxError(LocalizableStreamlitException):
     """Raised when ``min_value`` is greater than ``max_value``.
 
-    ``st.slider`` also raises this for equal bounds. ``st.date_input`` and
-    ``st.datetime_input`` treat equal bounds as a valid single-day /
+    ``st.slider`` swaps reversed bounds and raises this only for equal
+    bounds. ``st.date_input`` and ``st.datetime_input`` still reject
+    reversed bounds, and treat equal bounds as a valid single-day /
     single-instant range.
     """
 
