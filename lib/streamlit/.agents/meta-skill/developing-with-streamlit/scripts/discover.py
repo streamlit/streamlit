@@ -22,7 +22,9 @@ Usage::
 
 When ``--project-dir`` is given, the script resolves project virtualenvs and
 lockfiles relative to that path. Unexpanded ``${...}`` placeholders and missing
-paths warn and fall back to the current working directory.
+paths warn and fall back to the current working directory. When it is omitted,
+``CLAUDE_PROJECT_DIR`` then ``CURSOR_PROJECT_DIR`` are used if they name an
+existing directory (so a shell whose cwd is this skill still finds the app).
 
 Exit codes:
     0 - success; prints the absolute path to the bundled SKILL.md on stdout.
@@ -35,6 +37,12 @@ Exit codes:
     7 - ``ERROR[PROBE_FAILED]``: candidates were attempted but none were inspected.
 
 On non-zero exit, a human-readable ``ERROR[CODE]`` block is printed on stderr.
+
+Compatibility: stdlib-only. Agents run this file with the project or agent
+interpreter, so it must work on every Python version Streamlit currently
+supports (see ``requires-python`` in ``lib/pyproject.toml``). Do not add
+syntax, stdlib APIs, or interpreter flags newer than that floor — for
+example ``python -P`` is 3.11+ and must not be used on the probe child.
 """
 
 from __future__ import annotations
@@ -65,9 +73,13 @@ _SKILL_REL: Final = (
 )
 _DOCS_URL: Final = "https://docs.streamlit.io/llms-full.txt"
 _SENTINEL: Final = "STREAMLIT_PKG="
+# Workspace dirs published by coding agents. Used when ``--project-dir`` is
+# omitted so a shell whose cwd is this skill still finds the user's app.
+_PROJECT_DIR_ENV_VARS: Final = ("CLAUDE_PROJECT_DIR", "CURSOR_PROJECT_DIR")
 
-# Child process: locate Streamlit without importing it (works on 3.10).
-# - Drop cwd from sys.path; do not use python -P (3.11+ only).
+# Child process: locate Streamlit without importing it.
+# Keep this snippet valid on every Python Streamlit currently supports.
+# - Drop cwd from sys.path; do not use python -P (newer than Streamlit's floor).
 # - Parent keeps the last STREAMLIT_PKG= line.
 _PROBE_SNIPPET: Final = """\
 import importlib.util
@@ -664,27 +676,73 @@ def _print_failure(
     return int(outcome)
 
 
-def _resolve_project_dir(raw: str | None) -> Path:
-    """Resolve ``--project-dir``, warning and using cwd when it is unusable."""
-    if raw is None:
-        return Path.cwd()
+def _meta_skill_dir() -> Path:
+    """Return the directory that contains this skill's ``SKILL.md``."""
+    return Path(__file__).resolve().parent.parent
+
+
+def _usable_dir(raw: str) -> Path | None:
+    """Return ``raw`` as a directory after ``~`` / env expansion, or ``None``."""
     expanded = _expand_user_path(raw)
     if "${" in expanded:
-        print(
-            f"WARNING: --project-dir still contains unexpanded variables: {raw!r}; "
-            "using current working directory",
-            file=sys.stderr,
-        )
-        return Path.cwd()
+        return None
     path = Path(expanded)
     if not path.is_dir():
-        print(
-            f"WARNING: --project-dir is not an existing directory: {path}; "
-            "using current working directory",
-            file=sys.stderr,
-        )
-        return Path.cwd()
+        return None
     return _safe_resolve(path)
+
+
+def _env_project_dir() -> Path | None:
+    """Return a harness workspace directory when one is set and exists."""
+    for name in _PROJECT_DIR_ENV_VARS:
+        raw = os.environ.get(name)
+        if not raw:
+            continue
+        found = _usable_dir(raw)
+        if found is not None:
+            return found
+    return None
+
+
+def _fallback_project_dir() -> Path:
+    """Prefer an agent workspace env var; otherwise cwd.
+
+    Agent Skills hosts often run with cwd equal to this skill directory.
+    Warn in that case so the agent passes ``--project-dir`` next.
+    """
+    env_dir = _env_project_dir()
+    if env_dir is not None:
+        return env_dir
+    cwd = Path.cwd()
+    try:
+        if _safe_resolve(cwd) == _meta_skill_dir():
+            print(
+                "WARNING: current working directory is this skill's directory; "
+                "pass --project-dir as the user's Streamlit app",
+                file=sys.stderr,
+            )
+    except OSError:
+        pass
+    return cwd
+
+
+def _resolve_project_dir(raw: str | None) -> Path:
+    """Resolve ``--project-dir``, warning and using a fallback when it is unusable."""
+    if raw is None:
+        return _fallback_project_dir()
+    found = _usable_dir(raw)
+    if found is not None:
+        return found
+    reason = (
+        f"still contains unexpanded variables: {raw!r}"
+        if "${" in _expand_user_path(raw)
+        else f"is not an existing directory: {_expand_user_path(raw)}"
+    )
+    print(
+        f"WARNING: --project-dir {reason}; using the default project directory",
+        file=sys.stderr,
+    )
+    return _fallback_project_dir()
 
 
 def _resolve_python_flag(raw: str) -> Path:
@@ -750,9 +808,11 @@ def _run(argv: Sequence[str] | None) -> int:
         "--project-dir",
         default=None,
         help=(
-            "Path to the user's project directory. Defaults to cwd. "
-            "Expands ~ and environment variables. Unexpanded ${...} or a "
-            "missing path warns and uses cwd."
+            "Path to the user's project directory. Defaults to "
+            "CLAUDE_PROJECT_DIR or CURSOR_PROJECT_DIR when set to an "
+            "existing directory, otherwise cwd. Expands ~ and environment "
+            "variables. Unexpanded ${...} or a missing path warns and uses "
+            "that same fallback."
         ),
     )
     parser.add_argument(

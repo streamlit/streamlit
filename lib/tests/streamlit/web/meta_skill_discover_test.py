@@ -42,6 +42,17 @@ _DISCOVER_PY: Final = (
 _SKILL_REL: Final = (
     Path(".agents") / "skills" / "developing-with-streamlit" / "SKILL.md"
 )
+_META_SKILL_MD: Final = _DISCOVER_PY.parent.parent / "SKILL.md"
+
+
+def test_skill_md_documents_cross_agent_launch() -> None:
+    """The meta-skill must be invokable without Claude-only substitutions."""
+    text = _META_SKILL_MD.read_text(encoding="utf-8")
+    assert "Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/discover.py *)" in text
+    assert "Bash(python3 scripts/discover.py *)" in text
+    assert "CURSOR_PROJECT_DIR" in text
+    assert "Cursor" in text
+    assert "Codex" in text
 
 
 @pytest.fixture
@@ -74,6 +85,8 @@ def _hide_inherited_interpreters(
     """Drop VIRTUAL_ENV, CONDA_PREFIX, sys.executable, and PATH lookups."""
     monkeypatch.delenv("VIRTUAL_ENV", raising=False)
     monkeypatch.delenv("CONDA_PREFIX", raising=False)
+    monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+    monkeypatch.delenv("CURSOR_PROJECT_DIR", raising=False)
     monkeypatch.setattr(
         discover_mod.sys, "executable", str(tmp_path / "no-such-python")
     )
@@ -92,6 +105,8 @@ def _run_discover(*cli_args: str) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env.pop("VIRTUAL_ENV", None)
     env.pop("CONDA_PREFIX", None)
+    env.pop("CLAUDE_PROJECT_DIR", None)
+    env.pop("CURSOR_PROJECT_DIR", None)
     return subprocess.run(
         [sys.executable, str(_DISCOVER_PY), *cli_args],
         capture_output=True,
@@ -478,6 +493,93 @@ def test_missing_project_dir_warns_and_uses_cwd(
     assert code == 0
     assert "WARNING:" in captured.err
     assert captured.out.strip() == str(skill.resolve())
+
+
+def test_omitted_project_dir_uses_cursor_project_env(
+    tmp_path: Path,
+    discover_mod: ModuleType,
+    isolated_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Cursor's workspace env var is used when ``--project-dir`` is omitted."""
+    project = tmp_path / "app"
+    project.mkdir()
+    skill = _plant_posix_venv(project / ".venv")
+    cwd = tmp_path / "not-the-app"
+    cwd.mkdir()
+    monkeypatch.chdir(cwd)
+    monkeypatch.setenv("CURSOR_PROJECT_DIR", str(project))
+
+    code = discover_mod.main([])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert captured.out.strip() == str(skill.resolve())
+
+
+def test_omitted_project_dir_prefers_claude_over_cursor_env(
+    tmp_path: Path,
+    discover_mod: ModuleType,
+    isolated_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """``CLAUDE_PROJECT_DIR`` outranks ``CURSOR_PROJECT_DIR``."""
+    claude_proj = tmp_path / "claude-app"
+    claude_proj.mkdir()
+    claude_skill = _plant_posix_venv(claude_proj / ".venv")
+    cursor_proj = tmp_path / "cursor-app"
+    cursor_proj.mkdir()
+    _plant_posix_venv(cursor_proj / ".venv")
+    monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(claude_proj))
+    monkeypatch.setenv("CURSOR_PROJECT_DIR", str(cursor_proj))
+
+    code = discover_mod.main([])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert captured.out.strip() == str(claude_skill.resolve())
+
+
+def test_explicit_project_dir_overrides_agent_env(
+    tmp_path: Path,
+    discover_mod: ModuleType,
+    isolated_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """``--project-dir`` wins over harness workspace env vars."""
+    env_proj = tmp_path / "env-app"
+    env_proj.mkdir()
+    _plant_posix_venv(env_proj / ".venv")
+    cli_proj = tmp_path / "cli-app"
+    cli_proj.mkdir()
+    cli_skill = _plant_posix_venv(cli_proj / ".venv")
+    monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(env_proj))
+    monkeypatch.setenv("CURSOR_PROJECT_DIR", str(env_proj))
+
+    code = discover_mod.main(["--project-dir", str(cli_proj)])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert captured.out.strip() == str(cli_skill.resolve())
+
+
+def test_cwd_is_skill_dir_warns_when_no_project_env(
+    tmp_path: Path,
+    discover_mod: ModuleType,
+    isolated_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Warn when cwd is this skill so the agent passes ``--project-dir``."""
+    skill_dir = tmp_path / "developing-with-streamlit"
+    skill_dir.mkdir()
+    monkeypatch.setattr(discover_mod, "_meta_skill_dir", lambda: skill_dir.resolve())
+    monkeypatch.chdir(skill_dir)
+
+    code = discover_mod.main([])
+    captured = capsys.readouterr()
+    assert code != 0
+    assert "this skill's directory" in captured.err
 
 
 def test_python_flag_exclusive_ignores_project_venv(

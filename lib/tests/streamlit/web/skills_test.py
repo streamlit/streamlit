@@ -3452,6 +3452,8 @@ class TestVendoredMetaSkillDiscovery:
         env = os.environ.copy()
         env.pop("VIRTUAL_ENV", None)
         env.pop("CONDA_PREFIX", None)
+        env.pop("CLAUDE_PROJECT_DIR", None)
+        env.pop("CURSOR_PROJECT_DIR", None)
         result = subprocess.run(
             [sys.executable, str(discover_py), "--project-dir", str(tmp_path)],
             capture_output=True,

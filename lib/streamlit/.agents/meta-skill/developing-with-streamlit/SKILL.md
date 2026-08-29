@@ -2,7 +2,7 @@
 name: developing-with-streamlit
 description: "Use for ALL Streamlit tasks: creating, editing, debugging, beautifying, styling, theming, optimizing, or deploying Streamlit apps. Also custom components, st.components.v2, HTML/JS/CSS work. Discovers and loads version-matched reference docs from the user's installed Streamlit (>=1.57). Triggers: streamlit, st., dashboard, app.py, beautify, style, CSS, color, background, theme, button, widget styling, custom component, st.components, CCv2, session state, performance, cache, fragment, slow rerun, deploy."
 license: Apache-2.0
-allowed-tools: Read Glob Bash(py -3 ${CLAUDE_SKILL_DIR}/scripts/discover.py *) Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/discover.py *) Bash(python ${CLAUDE_SKILL_DIR}/scripts/discover.py *)
+allowed-tools: Read Glob Bash(py -3 ${CLAUDE_SKILL_DIR}/scripts/discover.py *) Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/discover.py *) Bash(python ${CLAUDE_SKILL_DIR}/scripts/discover.py *) Bash(py -3 scripts/discover.py *) Bash(python3 scripts/discover.py *) Bash(python scripts/discover.py *)
 ---
 
 # Developing with Streamlit
@@ -11,7 +11,11 @@ Streamlit (>=1.57) ships detailed reference documentation for building Streamlit
 
 ## Usage
 
-Run the discovery script with the user's project directory. Quote paths. If `${CLAUDE_PROJECT_DIR}` is left unexpanded (shown as a literal), the script warns and uses the current working directory.
+`scripts/discover.py` lives in **this skill directory** (the folder that contains this file), not in the user's project. Quote paths. Pass `--project-dir` as the user's Streamlit app (workspace root).
+
+If a `${...}` placeholder is left unexpanded or the path is missing, the script warns and falls back: `CLAUDE_PROJECT_DIR` or `CURSOR_PROJECT_DIR` when that variable names an existing directory, otherwise cwd. Omitting `--project-dir` uses that same fallback.
+
+Do not run `scripts/discover.py` relative to the project cwd. Substitute this skill's absolute directory for `${CLAUDE_SKILL_DIR}` when the host does not expand it (Cursor, Codex, Copilot, Gemini, and other Agent Skills hosts). Relative `scripts/discover.py` is correct only when the process cwd is this skill directory.
 
 Windows (try first):
 
@@ -28,8 +32,6 @@ python "${CLAUDE_SKILL_DIR}/scripts/discover.py" --project-dir "${CLAUDE_PROJECT
 
 - Exit 0: stdout is one path — the bundled `SKILL.md`. **Read** that path; it points into `references/`.
 - Non-zero: follow [Manual discovery](#manual-discovery). Do not install or change packages unless the user asked.
-
-`${CLAUDE_SKILL_DIR}` is this skill's directory (the folder that contains this file). Passing `--project-dir` matters because the script resolves `.venv` / `venv`, lockfiles, and environment prefixes relative to it.
 
 ## Manual discovery
 
