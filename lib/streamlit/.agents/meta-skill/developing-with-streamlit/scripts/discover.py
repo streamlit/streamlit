@@ -722,6 +722,7 @@ def _fallback_project_dir() -> Path:
                 file=sys.stderr,
             )
     except OSError:
+        # `__file__` may be unreadable; skip the cwd warning and keep cwd.
         pass
     return cwd
 
