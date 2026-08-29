@@ -1345,10 +1345,10 @@ class ButtonGroupMixin:
             and isinstance(default, Sequence)
             and len(default) > 1
         ):
-            # add more commands to the error message
             raise StreamlitAPIException(
                 "The default argument to `st.pills` must be a single value when "
-                "`selection_mode='single'`."
+                "`selection_mode='single'`.",
+                error_id="button-group-single-select-multiple-defaults",
             )
 
         if style not in {"pills", "segmented_control"}:

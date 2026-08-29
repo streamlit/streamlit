@@ -282,9 +282,9 @@ def test_marshall_av_media_raw_io_read_returns_none() -> None:
 
 @pytest.mark.parametrize("invalid_data", [42, 3.14, object()])
 def test_marshall_av_media_invalid_binary_type_raises(invalid_data: object) -> None:
-    """Unsupported data types should raise RuntimeError."""
+    """Unsupported data types should raise StreamlitInvalidParameterTypeError."""
     proto = VideoProto()
-    with pytest.raises(RuntimeError, match="Invalid binary data format"):
+    with pytest.raises(StreamlitInvalidParameterTypeError, match="Invalid `data` type"):
         _marshall_av_media("coord", proto, invalid_data, "video/mp4")  # type: ignore[arg-type]
 
 

@@ -25,7 +25,11 @@ from streamlit.elements.lib.utils import (
     LabelVisibility,
     get_label_visibility_proto_value,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import (
@@ -487,12 +491,28 @@ def _parse_delta_arrow(delta_arrow: DeltaArrow) -> DeltaArrow:
     return delta_arrow
 
 
+def _parse_metric_number(value: AnyNumber, parameter: str) -> str:
+    """Re-raise ``from_number`` TypeError as StreamlitInvalidParameterTypeError.
+
+    That keeps metric ``value`` / ``delta`` validation on a Streamlit type
+    instead of leaking the helper's native ``TypeError``.
+    """
+    try:
+        return from_number(value)
+    except TypeError as ex:
+        raise StreamlitInvalidParameterTypeError(
+            parameter,
+            type(value).__name__,
+            ["int", "float", "Decimal", "numpy number"],
+        ) from ex
+
+
 def _parse_value(value: Value) -> str:
     if value is None:
         return "—"
     if isinstance(value, str):
         return value
-    return from_number(value)
+    return _parse_metric_number(value, "value")
 
 
 def _parse_delta(delta: Delta) -> str:
@@ -500,7 +520,7 @@ def _parse_delta(delta: Delta) -> str:
         return ""
     if isinstance(delta, str):
         return dedent(delta)
-    return from_number(delta)
+    return _parse_metric_number(delta, "delta")
 
 
 def _determine_delta_color_and_direction(

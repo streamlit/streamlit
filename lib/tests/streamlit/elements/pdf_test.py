@@ -25,6 +25,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
     StreamlitMissingRequiredParameterError,
 )
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -228,7 +229,8 @@ class PdfTest(DeltaGeneratorTestCase):
         unsupported_data = {"not": "supported"}
 
         with pytest.raises(
-            StreamlitAPIException, match="Unsupported data type for PDF"
+            StreamlitInvalidParameterTypeError,
+            match=r"Invalid `data` type",
         ):
             st.pdf(unsupported_data)
 

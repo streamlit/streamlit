@@ -36,7 +36,7 @@ from typing import (
 )
 
 from streamlit import dataframe_util, type_util
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import (
     is_mem_address_str,
@@ -174,10 +174,11 @@ class WriteMixin:
         # Just apply some basic checks for common iterable types that should
         # not be passed in here.
         if isinstance(stream, str) or dataframe_util.is_dataframe_like(stream):
-            raise StreamlitAPIException(
-                "`st.write_stream` expects a generator or stream-like object as input "
-                f"not {type(stream)}. Please use `st.write` instead for "
-                "this data type."
+            raise StreamlitInvalidParameterTypeError(
+                "stream",
+                type(stream).__name__,
+                ["generator", "iterable"],
+                detail="Please use `st.write` instead for this data type.",
             )
 
         cursor_str = cursor or ""

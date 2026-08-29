@@ -26,7 +26,10 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+)
 from streamlit.web.server.server import MEDIA_ENDPOINT
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -99,8 +102,8 @@ class PyplotTest(DeltaGeneratorTestCase):
             st.pyplot()  # type: ignore[call-arg]
 
     def test_st_pyplot_rejects_none_fig(self):
-        """Passing fig=None raises a migration-oriented API exception."""
-        with pytest.raises(StreamlitAPIException) as exc_info:
+        """Passing fig=None raises StreamlitMissingRequiredParameterError."""
+        with pytest.raises(StreamlitMissingRequiredParameterError) as exc_info:
             st.pyplot(None)  # type: ignore[arg-type]
 
         assert "requires a Matplotlib figure" in str(exc_info.value)

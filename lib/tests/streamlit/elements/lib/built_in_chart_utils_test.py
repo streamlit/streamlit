@@ -29,7 +29,11 @@ from streamlit.elements.lib.built_in_chart_utils import (
     StreamlitColumnNotFoundError,
     StreamlitInvalidColorError,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 
 
 @pytest.mark.parametrize(
@@ -113,10 +117,13 @@ def test_parse_x_column_raises_for_unknown_column() -> None:
 
 
 def test_parse_x_column_raises_for_invalid_type() -> None:
-    """``_parse_x_column`` raises StreamlitAPIException for non-str inputs."""
+    """``_parse_x_column`` raises StreamlitInvalidParameterTypeError for non-str inputs."""
     df = pd.DataFrame({"a": [1]})
-    with pytest.raises(StreamlitAPIException, match="x parameter"):
+    with pytest.raises(
+        StreamlitInvalidParameterTypeError, match=r"Invalid `x` type"
+    ) as exc:
         chart_utils._parse_x_column(df, 123)  # type: ignore[arg-type]
+    assert exc.value.exec_kwargs["expected_types"] == "str, None"
 
 
 @pytest.mark.parametrize("sort_from_user", [True, False])
@@ -261,8 +268,8 @@ def test_get_size_encoding_scatter(
 
 
 def test_get_size_encoding_invalid_size_value_raises() -> None:
-    """Non-numeric size_value should raise StreamlitAPIException."""
-    with pytest.raises(StreamlitAPIException, match="valid size"):
+    """Non-numeric size_value should raise StreamlitValueError."""
+    with pytest.raises(StreamlitValueError, match=r"Invalid `size` value"):
         chart_utils._get_size_encoding(chart_utils.ChartType.SCATTER, None, "huge", {})
 
 

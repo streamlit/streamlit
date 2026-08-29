@@ -27,8 +27,8 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
-    StreamlitAPIException,
     StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
     StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.Pagination_pb2 import Pagination as PaginationProto
@@ -262,8 +262,10 @@ class PaginationMixin:
             or isinstance(num_pages, bool)
             or num_pages < 1
         ):
-            raise StreamlitAPIException(
-                f"`num_pages` must be an integer of at least 1. Got {num_pages}."
+            raise StreamlitValueError(
+                "num_pages",
+                ["a positive integer"],
+                detail=f"Got {num_pages}.",
             )
 
         # bool is a subclass of int, so True would otherwise be treated as page 1.
@@ -282,9 +284,10 @@ class PaginationMixin:
             or isinstance(max_visible_pages, bool)
             or max_visible_pages < 0
         ):
-            raise StreamlitAPIException(
-                f"`max_visible_pages` must be a non-negative integer or None. "
-                f"Got {max_visible_pages}."
+            raise StreamlitValueError(
+                "max_visible_pages",
+                ["a non-negative integer", "None"],
+                detail=f"Got {max_visible_pages}.",
             )
 
         check_widget_policies(self.dg, key, on_change, default_value=default)

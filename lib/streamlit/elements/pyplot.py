@@ -25,7 +25,7 @@ from streamlit.deprecation_util import (
 )
 from streamlit.elements.lib.image_utils import marshall_images
 from streamlit.elements.lib.layout_utils import create_layout_config
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitMissingRequiredParameterError
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -179,7 +179,10 @@ class PyplotMixin:
         """
 
         if fig is None:
-            raise StreamlitAPIException(_FIG_REQUIRED)
+            raise StreamlitMissingRequiredParameterError(
+                "fig",
+                detail=_FIG_REQUIRED.strip(),
+            )
 
         if use_container_width is not None:
             show_deprecation_warning(

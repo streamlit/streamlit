@@ -23,7 +23,7 @@ from streamlit.elements.lib.layout_utils import (
     create_layout_config,
     validate_wrap,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitIncompatibleParametersError
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text, to_help_str, validate_icon_or_emoji
@@ -36,18 +36,19 @@ if TYPE_CHECKING:
 
 MARKDOWN_HORIZONTAL_RULE_EXPRESSION: Final = "---"
 
-_WRAP_FALSE_WITH_HTML_ERROR: Final = (
-    "`wrap=False` cannot be used with `unsafe_allow_html=True`. "
-    "One-line markdown cannot ellipsize raw HTML. Pass `wrap=True` "
-    "to render HTML, or omit `unsafe_allow_html` to truncate."
-)
-
 
 def _validate_markdown_wrap(*, wrap: bool, unsafe_allow_html: bool) -> None:
     """Reject invalid wrap values and the wrap=False + HTML combination."""
     validate_wrap(wrap)
     if wrap is False and unsafe_allow_html:
-        raise StreamlitAPIException(_WRAP_FALSE_WITH_HTML_ERROR)
+        raise StreamlitIncompatibleParametersError(
+            "wrap=False",
+            "unsafe_allow_html=True",
+            explanation=(
+                "One-line markdown cannot ellipsize raw HTML. Pass `wrap=True` "
+                "to render HTML, or omit `unsafe_allow_html` to truncate."
+            ),
+        )
 
 
 class MarkdownMixin:

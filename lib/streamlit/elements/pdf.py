@@ -22,6 +22,7 @@ from streamlit import url_util
 from streamlit.elements.lib.layout_utils import validate_height
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
     StreamlitMissingRequiredParameterError,
 )
 from streamlit.runtime.metrics_util import gather_metrics
@@ -159,11 +160,14 @@ class PdfMixin:
             # Handle other file-like objects
             file_param = data.read()
         else:
-            # Provide a more helpful error message
-            raise StreamlitAPIException(
-                f"Unsupported data type for PDF: {type(data).__name__}. "
-                f"Please provide a file path (str or Path), URL (str), bytes data, "
-                f"or file-like object (such as BytesIO or UploadedFile)."
+            raise StreamlitInvalidParameterTypeError(
+                "data",
+                type(data).__name__,
+                ["str", "Path", "bytes", "file-like object"],
+                detail=(
+                    "Please provide a file path (str or Path), URL (str), bytes data, "
+                    "or file-like object (such as BytesIO or UploadedFile)."
+                ),
             )
 
         # Convert to component-compatible format

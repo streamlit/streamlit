@@ -20,6 +20,7 @@ from collections import ChainMap, UserDict
 from typing import TYPE_CHECKING, Any, cast
 
 from streamlit.elements.lib.layout_utils import create_layout_config
+from streamlit.errors import StreamlitInvalidParameterTypeError
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.type_util import (
@@ -152,9 +153,10 @@ class JsonMixin:
             json_proto.expanded = True
             json_proto.max_expand_depth = expanded
         else:
-            raise TypeError(
-                f"The type {type(expanded)} of `expanded` is not supported"
-                ", must be bool or int."
+            raise StreamlitInvalidParameterTypeError(
+                "expanded",
+                type(expanded).__name__,
+                ["bool", "int"],
             )
 
         layout_config = create_layout_config(width=width)

@@ -397,19 +397,23 @@ def _normalize_selection_mode(
     # Ensure at most one row selection mode is specified.
     row_modes = selection_mode_set & _ROW_SELECTION_MODES
     if len(row_modes) > 1:
-        raise StreamlitAPIException(
-            "Only one row selection mode can be specified. "
-            f"Found: {', '.join(f'`{m}`' for m in sorted(row_modes))}."
+        mode_uses = [f"selection_mode='{mode}'" for mode in sorted(row_modes)]
+        raise StreamlitIncompatibleParametersError(
+            mode_uses[0],
+            *mode_uses[1:],
+            explanation="Only one row selection mode can be specified.",
         )
 
     if selection_mode_set.issuperset({"single-column", "multi-column"}):
-        raise StreamlitAPIException(
-            "Only one of `single-column` or `multi-column` can be selected as selection mode."
+        raise StreamlitIncompatibleParametersError(
+            "selection_mode='single-column'",
+            "selection_mode='multi-column'",
         )
 
     if selection_mode_set.issuperset({"single-cell", "multi-cell"}):
-        raise StreamlitAPIException(
-            "Only one of `single-cell` or `multi-cell` can be selected as selection mode."
+        raise StreamlitIncompatibleParametersError(
+            "selection_mode='single-cell'",
+            "selection_mode='multi-cell'",
         )
 
     return selection_mode_set

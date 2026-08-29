@@ -70,7 +70,8 @@ def _check_not_parallel_worker(api_name: str) -> None:
             f"safe.\n\n"
             f"To fix this, gate the call behind a widget interaction "
             f"(e.g., `if st.button(...):`) so it runs during a sequential "
-            f"fragment rerun instead."
+            f"fragment rerun instead.",
+            error_id="parallel-fragment-unsafe-api-on-initial-load",
         )
 
 

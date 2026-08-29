@@ -22,7 +22,10 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.connections import SQLConnection
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+)
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.secrets import AttrDict
 from tests.testutil import create_mock_script_run_ctx
@@ -108,10 +111,10 @@ class SQLConnectionTest(unittest.TestCase):
             "streamlit.connections.sql_connection.SQLConnection._secrets",
             PropertyMock(return_value=AttrDict(secrets)),
         ):
-            with pytest.raises(StreamlitAPIException) as e:
+            with pytest.raises(StreamlitMissingRequiredParameterError) as e:
                 SQLConnection("my_sql_connection")
 
-            assert str(e.value) == f"Missing SQL DB connection param: {missing_param}"
+            assert e.value.exec_kwargs["parameter"] == missing_param
 
     @patch(
         "streamlit.connections.sql_connection.SQLConnection._secrets",

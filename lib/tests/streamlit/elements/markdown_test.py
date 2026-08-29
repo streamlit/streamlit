@@ -18,7 +18,11 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitValueError,
+)
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.caching import cached_message_replay
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -112,7 +116,9 @@ class StMarkdownAPITest(DeltaGeneratorTestCase):
 
     def test_st_markdown_wrap_false_rejects_unsafe_html(self):
         """wrap=False cannot be combined with unsafe_allow_html=True."""
-        with pytest.raises(StreamlitAPIException, match="unsafe_allow_html"):
+        with pytest.raises(
+            StreamlitIncompatibleParametersError, match="unsafe_allow_html"
+        ):
             st.markdown("<b>html</b>", wrap=False, unsafe_allow_html=True)
 
         st.markdown("<b>html</b>", wrap=True, unsafe_allow_html=True)
@@ -263,7 +269,9 @@ class StCaptionAPITest(DeltaGeneratorTestCase):
 
     def test_st_caption_wrap_false_rejects_unsafe_html(self):
         """wrap=False cannot be combined with unsafe_allow_html=True."""
-        with pytest.raises(StreamlitAPIException, match="unsafe_allow_html"):
+        with pytest.raises(
+            StreamlitIncompatibleParametersError, match="unsafe_allow_html"
+        ):
             st.caption("<b>html</b>", wrap=False, unsafe_allow_html=True)
 
         st.caption("<b>html</b>", wrap=True, unsafe_allow_html=True)

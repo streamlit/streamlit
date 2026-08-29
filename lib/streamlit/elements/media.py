@@ -493,7 +493,11 @@ def _marshall_av_media(
     elif type_util.is_type(data, "numpy.ndarray"):
         data_or_filename = data.tobytes()
     else:
-        raise RuntimeError(f"Invalid binary data format: {type(data)}")
+        raise StreamlitInvalidParameterTypeError(
+            "data",
+            type(data).__name__,
+            ["str", "bytes", "Path", "BytesIO", "file-like", "ndarray"],
+        )
 
     if runtime.exists():
         file_url = runtime.get_instance().media_file_mgr.add(
@@ -649,9 +653,12 @@ def marshall_video(
                 sub.url = process_subtitle_data(
                     subtitle_coordinates, subtitle_data, label
                 )
-            except (TypeError, ValueError) as original_err:
+            except (TypeError, ValueError, StreamlitAPIException) as original_err:
+                # Name the track so a dict of subtitles identifies which label
+                # failed.
                 raise StreamlitAPIException(
-                    f"Failed to process the provided subtitle: {label}",
+                    f"Failed to process the provided subtitle {label!r}: "
+                    f"{original_err}",
                     error_id="video-failed-processing-subtitle",
                 ) from original_err
 

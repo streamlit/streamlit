@@ -122,14 +122,11 @@ class TestPaginationValidation(DeltaGeneratorTestCase):
     """Tests for st.pagination input validation."""
 
     def test_num_pages_must_be_positive(self):
-        """Test that num_pages must be >= 1."""
-        with pytest.raises(StreamlitAPIException) as e:
-            st.pagination(0)
-        assert "`num_pages` must be an integer of at least 1" in str(e.value)
-
-        with pytest.raises(StreamlitAPIException) as e:
-            st.pagination(-5)
-        assert "`num_pages` must be an integer of at least 1" in str(e.value)
+        """num_pages below 1 raises StreamlitValueError."""
+        for num_pages in (0, -5):
+            with pytest.raises(StreamlitValueError) as e:
+                st.pagination(num_pages)
+            assert e.value.exec_kwargs["parameter"] == "num_pages"
 
     def test_default_must_be_in_range(self):
         """Values outside [1, num_pages] raise StreamlitValueOutOfRangeError."""
@@ -155,12 +152,10 @@ class TestPaginationValidation(DeltaGeneratorTestCase):
         assert e.value.exec_kwargs["parameter"] == "default"
 
     def test_max_visible_pages_negative(self):
-        """Test that negative max_visible_pages raises exception."""
-        with pytest.raises(StreamlitAPIException) as e:
+        """Negative max_visible_pages raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as e:
             st.pagination(10, max_visible_pages=-1)
-        assert "`max_visible_pages` must be a non-negative integer or None" in str(
-            e.value
-        )
+        assert e.value.exec_kwargs["parameter"] == "max_visible_pages"
 
 
 class TestPaginationWidthConfig(DeltaGeneratorTestCase):

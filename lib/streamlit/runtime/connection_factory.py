@@ -88,7 +88,8 @@ def _create_connection(
 
     if not issubclass(connection_class, BaseConnection):
         raise StreamlitAPIException(
-            f"{connection_class} is not a subclass of BaseConnection!"
+            f"{connection_class} is not a subclass of BaseConnection!",
+            error_id="connection-not-base-connection-subclass",
         )
 
     # We modify our helper function's `__qualname__` here to work around default

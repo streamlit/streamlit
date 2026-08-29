@@ -27,6 +27,11 @@ from streamlit.elements.lib.subtitle_utils import (
     _srt_to_vtt,
     process_subtitle_data,
 )
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 SRT_DATA_EN = """
@@ -124,19 +129,19 @@ class SubtitleUtilsTest(DeltaGeneratorTestCase):
         assert media_file.mimetype == "text/vtt"
 
     def test_srt_to_vtt_with_invalid_type_raises_error(self):
-        """Test _srt_to_vtt raises TypeError for invalid input type."""
-        with pytest.raises(TypeError) as exc:
+        """Test _srt_to_vtt raises StreamlitInvalidParameterTypeError for invalid input type."""
+        with pytest.raises(StreamlitInvalidParameterTypeError) as exc:
             _srt_to_vtt(12345)  # type: ignore[arg-type]
 
-        assert "Input must be a string or a bytes stream" in str(exc.value)
+        assert exc.value.exec_kwargs["parameter"] == "subtitles"
 
     def test_srt_to_vtt_with_invalid_utf8_bytes(self):
-        """Test _srt_to_vtt raises ValueError for non-UTF-8 bytes."""
+        """Test _srt_to_vtt raises StreamlitAPIException for non-UTF-8 bytes."""
         # Invalid UTF-8 byte sequence
         invalid_bytes = b"\x80\x81\x82"
 
         with pytest.raises(
-            ValueError, match="Could not decode the input stream as UTF-8"
+            StreamlitAPIException, match="Could not decode the input stream as UTF-8"
         ):
             _srt_to_vtt(invalid_bytes)
 
@@ -184,11 +189,11 @@ class SubtitleUtilsTest(DeltaGeneratorTestCase):
         assert media_file.mimetype == "text/vtt"
 
     def test_process_subtitle_data_with_invalid_type_raises_error(self):
-        """Test process_subtitle_data raises TypeError for invalid input type."""
-        with pytest.raises(TypeError) as exc:
+        """Test process_subtitle_data raises StreamlitInvalidParameterTypeError for invalid input type."""
+        with pytest.raises(StreamlitInvalidParameterTypeError) as exc:
             process_subtitle_data("[0, 0]", 12345, "Test")  # type: ignore[arg-type]
 
-        assert "Invalid binary data format for subtitle" in str(exc.value)
+        assert exc.value.exec_kwargs["parameter"] == "subtitles"
 
 
 def test_is_srt_with_invalid_utf8_bytes_returns_false() -> None:
@@ -213,7 +218,7 @@ def test_handle_string_or_path_data_with_disallowed_extension_raises(
     bad_file = tmp_path / "subtitles.txt"
     bad_file.write_text("some subtitle content", encoding="utf-8")
 
-    with pytest.raises(ValueError, match="Incorrect subtitle format"):
+    with pytest.raises(StreamlitValueError, match="Incorrect subtitle format"):
         _handle_string_or_path_data(str(bad_file))
 
 
@@ -227,7 +232,7 @@ def test_handle_string_or_path_data_with_missing_path_raises(tmp_path: Path) -> 
     """
     missing_path = tmp_path / "does_not_exist.vtt"
 
-    with pytest.raises(ValueError, match="does not exist"):
+    with pytest.raises(StreamlitAPIException, match="does not exist"):
         _handle_string_or_path_data(missing_path)
 
 

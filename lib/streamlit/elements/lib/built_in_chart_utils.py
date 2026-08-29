@@ -29,7 +29,12 @@ from streamlit.elements.lib.color_util import (
     is_hex_color_like,
     to_css_color,
 )
-from streamlit.errors import Error, StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    Error,
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Sequence
@@ -770,10 +775,11 @@ def _parse_x_column(df: pd.DataFrame, x_from_user: str | None) -> str | None:
 
         return x_from_user
 
-    raise StreamlitAPIException(
-        "x parameter should be a column name (str) or None to use the "
-        f" dataframe's index. Value given: {x_from_user} "
-        f"(type {type(x_from_user)})"
+    raise StreamlitInvalidParameterTypeError(
+        "x",
+        type(x_from_user).__name__,
+        ["str", "None"],
+        detail="Pass a column name or None to use the dataframe's index.",
     )
 
 
@@ -1244,8 +1250,10 @@ def _get_size_encoding(
             return alt.SizeValue(size_value)
         if size_value is None:
             return alt.SizeValue(100)
-        raise StreamlitAPIException(
-            f"This does not look like a valid size: {size_value!r}"
+        raise StreamlitValueError(
+            "size",
+            ["a number"],
+            detail=f"Got {size_value!r}.",
         )
 
     if (
