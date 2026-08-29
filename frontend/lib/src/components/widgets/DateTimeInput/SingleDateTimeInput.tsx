@@ -89,8 +89,8 @@ import {
   StyledVisuallyHidden,
 } from "./styled-components"
 
-/** Editable segments, matched on `data-type` rather than `role` so IOS ROLES does
- * not hide them. Literals are the separators between segments. */
+/** Editable segments. Matched on `data-type` rather than `role`, which React Aria
+ * replaces with `textbox` on iOS. Literals are the separators between segments. */
 const SEGMENT_SELECTOR = '[data-type]:not([data-type="literal"])'
 
 interface SingleDateTimeInputProps {
@@ -226,13 +226,12 @@ function SingleDateTimeInput({
   const displayValueRef = useRef(displayValue)
   displayValueRef.current = displayValue
 
-  /** The time to merge into a date the user selects: the buffered display
-   * value's if the field already holds one, otherwise whichever of the two time
-   * controls they focused most recently, falling back to the other if that one
-   * is empty. Null when they have given no time at all — what that means is the
-   * caller's choice: `handleCalendarChange` substitutes midnight, because picking
-   * a day is an affirmative selection, while `completeFromVisibleParts` declines
-   * to complete at all, because dismissing a field is not.
+  /** The time to merge into a date the user selects: the field's own if it has
+   * one, otherwise whichever time control they focused most recently, falling back
+   * to the other if that one is empty. Null when no time was given at all, and
+   * callers decide what that means — `handleCalendarChange` uses midnight because
+   * picking a day is an affirmative selection, `completeFromVisibleParts` declines
+   * to complete because dismissing a field is not.
    *
    * Both controls are read from their rendered segments, because neither reports
    * a partial time through `onChange`. Reading them here rather than tracking
