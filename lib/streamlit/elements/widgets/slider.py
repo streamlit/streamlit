@@ -1039,10 +1039,12 @@ class SliderMixin:
             max_value = defaults[data_type]["max_value"]
         if step is None:
             step = defaults[data_type]["step"]
+            # Use the absolute span so reversed date/datetime bounds still get
+            # a one-day step when the range is a day or more.
             if data_type in {
                 SliderProto.DATETIME,
                 SliderProto.DATE,
-            } and max_value - min_value < timedelta(days=1):
+            } and abs(max_value - min_value) < timedelta(days=1):
                 step = timedelta(minutes=15)
         if format is None:
             format = cast("str", defaults[data_type]["format"])  # noqa: A001
@@ -1098,7 +1100,8 @@ class SliderMixin:
 
         # Ensure that min <= value(s) <= max, adjusting the bounds as necessary.
         # Swap min and max when the caller passed them reversed.
-        min_value, max_value = min(min_value, max_value), max(min_value, max_value)
+        if min_value > max_value:
+            min_value, max_value = max_value, min_value
         if len(prepared_value) == 1:
             min_value = min(prepared_value[0], min_value)
             max_value = max(prepared_value[0], max_value)

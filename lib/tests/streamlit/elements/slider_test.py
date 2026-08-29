@@ -31,6 +31,9 @@ from streamlit.elements.widgets.slider import (
     _MAX_SAFE_DAY,
     _MIN_SAFE_DAY,
     SliderSerde,
+    _date_to_datetime,
+    _datetime_to_micros,
+    _delta_to_micros,
 )
 from streamlit.errors import (
     StreamlitAPIException,
@@ -230,16 +233,23 @@ class SliderTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("omitted", None, 10),
-            ("at_swapped_min", 1, 1),
-            ("inside", 5, 5),
-            ("at_swapped_max", 10, 10),
+            ("omitted", None, 10, 1, 10),
+            ("at_swapped_min", 1, 1, 1, 10),
+            ("inside", 5, 5, 1, 10),
+            ("at_swapped_max", 10, 10, 1, 10),
+            ("below_swapped_min", 0, 0, 0, 10),
+            ("above_swapped_max", 20, 20, 1, 20),
         ]
     )
     def test_reversed_int_bounds(
-        self, _name: str, value: int | None, expected_return: int
+        self,
+        _name: str,
+        value: int | None,
+        expected_return: int,
+        expected_min: int,
+        expected_max: int,
     ) -> None:
-        """Reversed int min/max are swapped so the proto range is [1, 10]."""
+        """Reversed int min/max are swapped; out-of-range values widen the proto range."""
         if value is None:
             ret = st.slider("the label", 10, 1)
         else:
@@ -248,8 +258,8 @@ class SliderTest(DeltaGeneratorTestCase):
         assert ret == expected_return
 
         c = self.get_delta_from_queue().new_element.slider
-        assert c.min == 1
-        assert c.max == 10
+        assert c.min == expected_min
+        assert c.max == expected_max
         assert c.default == [expected_return]
 
     def test_reversed_float_bounds(self) -> None:
@@ -299,9 +309,17 @@ class SliderTest(DeltaGeneratorTestCase):
             value=value,
         )
 
+        def to_micros(v: date | datetime) -> int:
+            return _datetime_to_micros(
+                v if isinstance(v, datetime) else _date_to_datetime(v)
+            )
+
+        lo, hi = min(min_value, max_value), max(min_value, max_value)
         c = self.get_delta_from_queue().new_element.slider
         assert ret == value
-        assert c.min < c.max
+        assert c.min == to_micros(lo)
+        assert c.max == to_micros(hi)
+        assert c.step == _delta_to_micros(timedelta(days=1))
 
     def test_value_out_of_bounds(self):
         # Max int
