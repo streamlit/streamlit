@@ -490,7 +490,8 @@ class TokensProxy(Mapping[str, str]):
             # Use the tokens for API verification
     """
 
-    # Documented token names so ``.id`` and ``.access`` type-check as ``str``.
+    # Declare the documented token names so IDEs autocomplete ``.id`` and
+    # ``.access``; any other name still resolves through ``__getattr__``.
     id: str
     access: str
 

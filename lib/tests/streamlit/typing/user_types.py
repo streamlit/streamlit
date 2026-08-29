@@ -55,7 +55,7 @@ if TYPE_CHECKING:
     assert_type(st.user.tokens["refresh"], str)
 
     # =====================================================================
-    # Provider-specific OIDC claims stay on the open Mapping types
+    # Provider-specific OIDC claims keep the mapping's general value type.
     # =====================================================================
 
     assert_type(st.user.email, str | bool | TokensProxy | None)

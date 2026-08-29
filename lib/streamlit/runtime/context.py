@@ -154,14 +154,16 @@ class ContextProxy:
     """A read-only interface to user session context.
 
     ``st.context`` exposes session context for the current user, including
-    headers, cookies, theme, timezone, locale, URL, IP address, and whether
-    the app is embedded.
+    headers, cookies, theme, timezone, timezone offset, locale, URL, IP
+    address, and whether the app is embedded.
 
     You can access any ``st.context`` property via attribute or key notation.
     For example, use ``st.context.timezone`` or ``st.context["timezone"]``.
 
     ``st.context`` is not a dictionary: it does not support ``.get()``,
-    ``.keys()``, or iteration.
+    ``.keys()``, or iteration. Membership (``"timezone" in st.context``)
+    is supported and checks whether the name is a public property; it
+    does not read property values.
 
     ``st.context.headers`` and ``st.context.cookies`` each return a dictionary
     of named values.
