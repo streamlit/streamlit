@@ -370,6 +370,16 @@ def test_form_clear_empties_the_segments_and_keeps_focus(app: Page):
     expect_markdown(app, "Form submitted value: 2025-12-24 12:00:00")
     expect(form_field.get_by_role("spinbutton").first).to_be_focused()
 
+    # Re-entering the value that was just submitted has to reach widget state
+    # again: the clear ends the interaction, so the commit-dedup memory must not
+    # carry over. If it did, Enter would submit with the cleared value and the
+    # display below would flip to None.
+    type_date(form_field, "2025", "12", "24", "12", "00", commit=False)
+    form_field.get_by_role("spinbutton").last.press("Enter")
+    wait_for_app_run(app)
+
+    expect_markdown(app, "Form submitted value: 2025-12-24 12:00:00")
+
 
 def test_fragment_reruns(app: Page):
     """Test that datetime input works correctly inside a fragment."""
