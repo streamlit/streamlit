@@ -12,7 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.testing.v1.app_test import AppTest
-from streamlit.testing.v1.errors import AppTestError
+"""AppTest errors.
 
-__all__ = ["AppTest", "AppTestError"]
+Kept in a dedicated module so ``AppTestError`` can inherit from the builtin
+``Exception`` without colliding with the ``Exception`` element class in
+``element_tree``.
+"""
+
+from __future__ import annotations
+
+
+class AppTestError(Exception):
+    """Raised when an AppTest query or interaction is invalid.
+
+    AppTest can run apps that contain unimplemented or browser-only elements.
+    This error is reserved for an explicit test action that a browser user
+    could not perform, such as updating a disabled widget.
+    """

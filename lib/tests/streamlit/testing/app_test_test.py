@@ -20,6 +20,7 @@ import pytest
 
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.testing.v1 import AppTest
+from streamlit.util import calc_hash
 
 
 def test_smoke():
@@ -451,3 +452,280 @@ def test_removed_widget_does_not_persist_on_rerun() -> None:
     at = at.text_input(key="question_2").set_value("bbbbbb").run()
     assert len(at.text_input) == 1
     assert at.text_input(key="question_2").value == "bbbbbb"
+
+
+def test_sidebar_widgets_removed_when_not_rendered() -> None:
+    """Widgets omitted on a rerun must leave the sidebar tree.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/9814
+    """
+
+    def script():
+        import streamlit as st
+
+        st.session_state.setdefault("logged_in", False)
+        if st.session_state.logged_in:
+            if st.sidebar.button("Logout"):
+                st.session_state.logged_in = False
+                st.rerun()
+        elif st.button("Login"):
+            st.session_state.logged_in = True
+            st.rerun()
+
+    at = AppTest.from_function(script).run()
+    assert len(at.sidebar.button) == 0
+    assert len(at.button) == 1
+
+    at = at.button[0].click().run()
+    assert (len(at.button), len(at.sidebar.button)) == (1, 1)
+
+    at = at.sidebar.button[0].click().run()
+    assert (len(at.button), len(at.sidebar.button)) == (1, 0)
+
+
+def test_run_tolerates_unimplemented_elements() -> None:
+    """Apps that use unimplemented commands must still run and stay inspectable."""
+
+    def script():
+        import streamlit as st
+
+        st.progress(40, text="halfway")
+        st.html("<b>hi</b>")
+        st.balloons()
+        st.page_link("https://example.com", label="Example")
+        st.title("still works")
+
+    at = AppTest.from_function(script).run()
+    assert not at.exception
+    assert at.title[0].value == "still works"
+    assert len(at.get("progress")) == 1
+    assert at.get("progress")[0].value == 40
+    assert at.get("html")[0].value == "<b>hi</b>"
+    assert at.get("page_link")[0].value == "Example"
+
+
+def test_unimplemented_id_bearing_element_exposes_key_and_value() -> None:
+    """Unknown elements with IDs expose their key and Session State value."""
+
+    def script():
+        import streamlit as st
+
+        st.plotly_chart(
+            {"data": [{"x": [1], "y": [2], "type": "scatter"}]},
+            key="chart",
+            on_select="rerun",
+        )
+
+    at = AppTest.from_function(script).run()
+    chart = at.get("plotly_chart")[0]
+    assert chart.key == "chart"
+    assert chart.value == {
+        "selection": {"points": [], "point_indices": [], "box": [], "lasso": []}
+    }
+
+
+def test_switch_page_respects_custom_url_path(tmp_path: Path) -> None:
+    """switch_page must use the navigation page hash, not the filename slug.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/16611
+    """
+    (tmp_path / "home.py").write_text(
+        'import streamlit as st\nst.text("home page")\n', encoding="utf-8"
+    )
+    (tmp_path / "other.py").write_text(
+        'import streamlit as st\nst.text("other page")\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "pg = st.navigation([\n"
+        "    st.Page('home.py', title='Home'),\n"
+        "    st.Page('other.py', title='Other', url_path='custom'),\n"
+        "])\n"
+        "pg.run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    assert at.text[0].value == "home page"
+
+    at.switch_page("other.py").run()
+    assert not at.exception
+    assert at.text[0].value == "other page"
+
+
+def test_switch_page_prefers_filename_url_for_duplicate_script(
+    tmp_path: Path,
+) -> None:
+    """A file registered twice resolves to the URL matching its filename."""
+    (tmp_path / "home.py").write_text(
+        'import streamlit as st\nst.text("home page")\n', encoding="utf-8"
+    )
+    (tmp_path / "shared.py").write_text(
+        'import streamlit as st\nst.text("shared page")\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "pg = st.navigation([\n"
+        "    st.Page('home.py', title='Home'),\n"
+        "    st.Page('shared.py', title='Alternate', url_path='alternate'),\n"
+        "    st.Page('shared.py', title='Shared', url_path='shared'),\n"
+        "])\n"
+        "pg.run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    at.switch_page("shared.py")
+    assert at._page_hash == calc_hash("shared")
+    at.run()
+    assert at.text[0].value == "shared page"
+
+
+def test_switch_page_unknown_navigation_page_raises(tmp_path: Path) -> None:
+    """Unknown navigation files must raise instead of opening the default page."""
+    (tmp_path / "home.py").write_text(
+        'import streamlit as st\nst.text("home page")\n', encoding="utf-8"
+    )
+    (tmp_path / "orphan.py").write_text(
+        'import streamlit as st\nst.text("orphan page")\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "pg = st.navigation([st.Page('home.py', title='Home')])\n"
+        "pg.run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    with pytest.raises(ValueError, match="after updating the state"):
+        at.switch_page("orphan.py")
+
+
+def test_switch_page_rejects_unregistered_file_in_callable_navigation(
+    tmp_path: Path,
+) -> None:
+    """Callable-only navigation must not silently open the default page."""
+    (tmp_path / "orphan.py").write_text(
+        'import streamlit as st\nst.text("orphan page")\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "def home():\n"
+        "    st.text('home page')\n"
+        "pg = st.navigation([st.Page(home, title='Home')])\n"
+        "pg.run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    assert at.text[0].value == "home page"
+    with pytest.raises(ValueError, match="navigation page"):
+        at.switch_page("orphan.py")
+
+
+def test_switch_page_does_not_match_callable_url_path_slug(tmp_path: Path) -> None:
+    """A file slug must not steal a callable page that hashes the same url_path."""
+    (tmp_path / "settings.py").write_text(
+        'import streamlit as st\nst.text("file settings")\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "def home():\n"
+        "    st.text('home page')\n"
+        "def settings():\n"
+        "    st.text('callable settings')\n"
+        "pg = st.navigation([\n"
+        "    st.Page(home, title='Home'),\n"
+        "    st.Page(settings, title='Settings'),\n"
+        "])\n"
+        "pg.run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    assert at.text[0].value == "home page"
+    with pytest.raises(ValueError, match="navigation page"):
+        at.switch_page("settings.py")
+
+
+def test_switch_page_keeps_navigation_registry_after_failed_run(
+    tmp_path: Path,
+) -> None:
+    """A run that fails before st.navigation must not erase the last registry."""
+    (tmp_path / "orphan.py").write_text(
+        'import streamlit as st\nst.text("orphan page")\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "if st.session_state.get('fail'):\n"
+        "    raise RuntimeError('boom')\n"
+        "def home():\n"
+        "    st.text('home page')\n"
+        "pg = st.navigation([st.Page(home, title='Home')])\n"
+        "pg.run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    assert at.text[0].value == "home page"
+    at.session_state["fail"] = True
+    at.run()
+    assert at.exception
+    with pytest.raises(ValueError, match="navigation page"):
+        at.switch_page("orphan.py")
+
+
+def test_switch_page_drops_registry_when_navigation_is_skipped(
+    tmp_path: Path,
+) -> None:
+    """A successful run that skips st.navigation must not keep the old pages."""
+    (tmp_path / "orphan.py").write_text(
+        'import streamlit as st\nst.text("orphan page")\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "if st.session_state.get('plain'):\n"
+        "    st.text('plain page')\n"
+        "else:\n"
+        "    def home():\n"
+        "        st.text('home page')\n"
+        "    pg = st.navigation([st.Page(home, title='Home')])\n"
+        "    pg.run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    assert at.text[0].value == "home page"
+    at.session_state["plain"] = True
+    at.run()
+    assert at.text[0].value == "plain page"
+    at.switch_page("orphan.py")
+    assert at._page_hash == calc_hash("orphan")
+
+
+def test_switch_page_drops_registry_after_rendered_exception(
+    tmp_path: Path,
+) -> None:
+    """A successful st.exception run must not keep the old navigation pages."""
+    (tmp_path / "orphan.py").write_text(
+        'import streamlit as st\nst.text("orphan page")\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "if st.session_state.get('show_exception'):\n"
+        "    st.exception(RuntimeError('displayed'))\n"
+        "else:\n"
+        "    def home():\n"
+        "        st.text('home page')\n"
+        "    pg = st.navigation([st.Page(home, title='Home')])\n"
+        "    pg.run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    assert at.text[0].value == "home page"
+    at.session_state["show_exception"] = True
+    at.run()
+    assert at.exception[0].message == "displayed"
+    at.switch_page("orphan.py")
+    assert at._page_hash == calc_hash("orphan")

@@ -33,12 +33,14 @@ from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.secrets import Secrets
+from streamlit.runtime.state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
 from streamlit.runtime.state.common import TESTING_KEY
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import SessionState
 from streamlit.source_util import page_icon_and_name
 from streamlit.testing.v1.element_tree import (
     Block,
+    BlockList,
     Button,
     ButtonGroup,
     Caption,
@@ -99,6 +101,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Sequence
 
     from streamlit.proto.WidgetStates_pb2 import WidgetStates
+    from streamlit.source_util import PageHash, PageInfo
 
 TMP_DIR = tempfile.TemporaryDirectory()
 
@@ -182,6 +185,9 @@ class AppTest:
         self.args = args
         self.kwargs = kwargs
         self._page_hash = ""
+        # Pages registered by the most recent run, used to resolve switch_page()
+        # against st.navigation hashes (which follow url_path, not filename).
+        self._registered_pages: dict[PageHash, PageInfo] = {}
         # Cache the discovered component manager so installed CCv2 components are
         # only scanned once per AppTest instance instead of on every rerun.
         self._bidi_component_manager: BidiComponentManager | None = None
@@ -408,6 +414,17 @@ class AppTest:
                 widget_state, self.query_params, timeout, self._page_hash
             )
             self._tree._runner = self
+            # A failed run that never reaches st.navigation leaves a
+            # main-page-only fallback. Keep the last navigation registry in
+            # that case so switch_page() does not silently hash the filename.
+            # A successful run that no longer calls st.navigation must drop
+            # the stale map.
+            new_pages = pages_manager.get_pages()
+            if (
+                any("url_pathname" in info for info in new_pages.values())
+                or self.session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY]
+            ):
+                self._registered_pages = new_pages
         # Last event is SHUTDOWN, so the corresponding data includes query string
         query_string = script_runner.event_data[-1]["client_state"].query_string
         self.query_params = parse.parse_qs(query_string)
@@ -470,6 +487,12 @@ class AppTest:
         main script supplied to ``AppTest.from_file()`` remains the path root
         after switching pages.
 
+        Call ``run()`` at least once before switching pages. Before the first
+        run, Streamlit identifies the page by its filename, which does not
+        match a page that ``st.navigation`` registers with a custom
+        ``url_path``. If page registration depends on Session State, call
+        ``run()`` after updating the state and before switching pages.
+
         Parameters
         ----------
         page_path: str
@@ -485,7 +508,8 @@ class AppTest:
         ------
         ValueError
             If ``page_path`` does not point to a file relative to the main
-            script.
+            script, or if ``st.navigation`` is active and the file is not a
+            registered page.
 
         Examples
         --------
@@ -502,9 +526,61 @@ class AppTest:
                 f"{str(full_page_path.resolve())!r}."
             )
         page_path_str = str(full_page_path.resolve())
-        _, page_name = page_icon_and_name(Path(page_path_str))
-        self._page_hash = calc_hash(page_name)
+        self._page_hash = self._resolve_page_hash(page_path_str)
         return self
+
+    def _resolve_page_hash(self, page_path_str: str) -> str:
+        """Map a page file to the script hash a real session would use.
+
+        ``st.Page`` hashes ``url_path``, which may differ from the filename.
+        After the first run, match the resolved script path against pages
+        registered by ``st.navigation`` or a ``pages/`` directory.
+        """
+        _, page_name = page_icon_and_name(Path(page_path_str))
+        filename_hash = calc_hash(page_name)
+        target = Path(page_path_str).resolve()
+
+        path_matches = [
+            page_hash
+            for page_hash, info in self._registered_pages.items()
+            if (script_path := info.get("script_path"))
+            and Path(str(script_path)).resolve() == target
+        ]
+        if path_matches:
+            # A file can be registered under multiple URL paths. Prefer the
+            # page whose URL matches the filename, then registration order.
+            return next(
+                (
+                    page_hash
+                    for page_hash in path_matches
+                    if self._registered_pages[page_hash].get("url_pathname")
+                    == page_name
+                ),
+                path_matches[0],
+            )
+
+        # st.navigation registers url_pathname even for callable-only pages.
+        # Do not fall back to a filename-slug hash: that can collide with a
+        # callable page or a custom url_path and silently open the wrong page
+        # (https://github.com/streamlit/streamlit/issues/16611).
+        has_navigation_registry = any(
+            "url_pathname" in info for info in self._registered_pages.values()
+        )
+        if has_navigation_registry:
+            known_pages = [
+                str(info["script_path"])
+                if info.get("script_path")
+                else str(info.get("url_pathname") or info.get("page_name") or page_hash)
+                for page_hash, info in self._registered_pages.items()
+            ]
+            raise ValueError(
+                f"Could not find a navigation page for {page_path_str!r}. "
+                "AppTest.switch_page() matches registered script paths. "
+                "If page registration depends on Session State, call "
+                "AppTest.run() after updating the state and before switching. "
+                f"Known pages: {known_pages}."
+            )
+        return filename_hash
 
     @property
     def main(self) -> Block:
@@ -692,6 +768,20 @@ class AppTest:
             is an extension of the Block class.
         """
         return self._tree.columns
+
+    @property
+    def container(self) -> BlockList:
+        """Sequence of all ``st.container`` blocks, including horizontal containers.
+
+        The implicit row that ``st.columns`` creates is not included.
+
+        Returns
+        -------
+        BlockList
+            Individual blocks can be accessed by index or key. For example,
+            ``at.container[0]`` or ``at.container(key="filters")``.
+        """
+        return self._tree.container
 
     @property
     def dataframe(self) -> ElementList[Dataframe]:
@@ -1250,6 +1340,32 @@ class AppTest:
             the ``st.slider`` widget with a given key.
         """
         return self._tree.get(element_type)
+
+    def get_by_key(self, key: str) -> Node:
+        """Return the element, widget, or container with the given key.
+
+        Use this method when the key is unique across the app and the element
+        type does not matter. To disambiguate a key reused across types, use a
+        typed collection such as ``at.text_input(key="x")``.
+
+        Parameters
+        ----------
+        key : str
+            The user-provided ``key`` of the element or container.
+
+        Returns
+        -------
+        Element or Block
+            The matching node.
+
+        Raises
+        ------
+        KeyError
+            If no current node has this key.
+        AppTestError
+            If more than one current node has this key.
+        """
+        return self._tree.get_by_key(key)
 
     def __repr__(self) -> str:
         return repr_(self)
