@@ -640,7 +640,9 @@ describe("NumberColumn", () => {
   it("rejects duration edits outside the pandas Timedelta range", () => {
     const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE)
     expect(mockColumn.validateInput!(9_223_372_036)).toBe(true)
+    expect(mockColumn.validateInput!(9_223_372_036.854_776)).toBe(false)
     expect(mockColumn.validateInput!(9_223_372_037)).toBe(false)
+    expect(mockColumn.validateInput!(-9_223_372_036.854_776)).toBe(false)
     expect(mockColumn.validateInput!(-9_223_372_037)).toBe(false)
   })
 

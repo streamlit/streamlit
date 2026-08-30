@@ -77,7 +77,8 @@ export interface NumberColumnParams {
    * decimals of the display value.
    *
    * Duration formats treat the value as seconds on any number column:
-   * - `duration`: approximate humanize (e.g. `a few seconds`, `a day`)
+   * - `duration`: approximate human-readable duration (for example,
+   *   `a few seconds` or `a day`)
    * - `clock`: elapsed-time clock (e.g. `00:00:01`)
    * - `localized` on a timedelta column: locale-aware duration
    *
@@ -97,7 +98,7 @@ export interface NumberColumnParams {
 }
 
 /**
- * A column types that supports optimized rendering and editing for numbers.
+ * A column type that supports optimized rendering and editing for numbers.
  * This supports float, integer, unsigned integer, and duration types.
  *
  * Duration values must already be in seconds (converted in getCellFromArrow)
@@ -170,10 +171,8 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
       return false
     }
 
-    // Pandas Timedelta is stored as int64 nanoseconds (~±292 years).
-    // Larger second counts pass JS number checks but become missing
-    // values when the data editor reconstructs a Timedelta.
-    if (isDuration && Math.abs(cellData) > PANDAS_TIMEDELTA_MAX_SECONDS) {
+    // Values at or beyond this second count cannot be stored as a pandas Timedelta.
+    if (isDuration && Math.abs(cellData) >= PANDAS_TIMEDELTA_MAX_SECONDS) {
       return false
     }
 
@@ -283,8 +282,8 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
 
       let copyData = ""
       if (notNullOrUndefined(cellData)) {
-        // Keep the raw second count so copy/paste round-trips through
-        // toSafeNumber. displayData already shows the formatted duration.
+        // Copy the raw number, not the formatted display, so paste
+        // round-trips through toSafeNumber.
         copyData = toSafeString(cellData)
       }
 

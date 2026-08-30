@@ -607,11 +607,9 @@ def NumberColumn(
           Timedelta / duration columns use an approximate humanized duration
           (e.g. "a few seconds", "2 hours", "a day").
         - ``"plain"``: Show the full number without any formatting (e.g. "1234.567").
-        - ``"localized"``:
-          - Number columns: Show the number in the default locale format
-            (e.g. "1,234.567").
-          - Timedelta / duration columns: Show a locale-aware duration
-            (e.g. "5 seconds", "1 day, 1 hour").
+        - ``"localized"``: Show the number in the default locale format
+          (e.g. "1,234.567"). On timedelta / duration columns, show a
+          locale-aware duration instead (e.g. "5 seconds", "1 day, 1 hour").
         - ``"percent"``: Show the number as a percentage (e.g. "123456.70%").
         - ``"dollar"``: Show the number as a dollar amount (e.g. "$1,234.57").
         - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").

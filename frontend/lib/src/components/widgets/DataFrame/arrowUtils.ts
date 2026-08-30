@@ -78,6 +78,9 @@ import {
   TimeColumn,
 } from "./columns"
 
+/** Column kinds that represent a clock time of day, not an elapsed duration. */
+const CLOCK_COLUMN_KINDS = new Set(["time", "date", "datetime"])
+
 /**
  * Extracts a CSS property value from a given CSS style string by using a regex.
  *
@@ -324,9 +327,9 @@ export function initIndexFromArrow(
   let isEditable = true
 
   if (isRangeIndexType(arrowType) || isDurationType(arrowType)) {
-    // Range indexes are not meaningful to edit. Duration indexes stay
-    // read-only unless column_config sets disabled=False (same as data
-    // columns).
+    // Range indexes are generated, so editing them is not meaningful.
+    // Duration indexes stay read-only: TimedeltaIndex is not a supported
+    // data_editor index type.
     isEditable = false
   }
 
@@ -466,8 +469,9 @@ export function getCellFromArrow(
         : null
     )
   } else if (
-    ["time", "date", "datetime"].includes(column.kind) &&
-    isDurationType(arrowCell.contentType)
+    CLOCK_COLUMN_KINDS.has(column.kind) &&
+    isDurationType(arrowCell.contentType) &&
+    notNullOrUndefined(arrowCell.content)
   ) {
     // Duration values are elapsed time, not a clock time. Applying a
     // time/date/datetime column would display them incorrectly
@@ -481,10 +485,10 @@ export function getCellFromArrow(
     cellTemplate = getErrorCell(
       "Unsupported type",
       `${publicColumnName} does not support timedelta/duration values. ` +
-        "Use a number column instead."
+        "Use st.column_config.NumberColumn instead."
     )
   } else if (
-    ["time", "date", "datetime"].includes(column.kind) &&
+    CLOCK_COLUMN_KINDS.has(column.kind) &&
     notNullOrUndefined(arrowCell.content) &&
     (typeof arrowCell.content === "number" ||
       typeof arrowCell.content === "bigint")
@@ -520,15 +524,23 @@ export function getCellFromArrow(
     (typeof arrowCell.content === "number" ||
       typeof arrowCell.content === "bigint")
   ) {
-    // Convert Arrow duration ticks (ns/us/ms/s) to seconds before handing
-    // the value to NumberColumn. Nanosecond ticks overflow JS safe integers
-    // after ~104 days; seconds stay exact for any practical timedelta.
-    cellTemplate = column.getCell(
-      convertTimestampToSeconds(
-        arrowCell.content,
-        arrowCell.field?.type?.unit ?? TimeUnit.NANOSECOND
+    // Convert Arrow duration ticks to seconds for numeric columns so
+    // sorting stays numeric without overflowing JS safe integers.
+    // Other column kinds keep Arrow's formatted duration string.
+    // Sub-second nanoseconds can round together on very large values
+    // because the result is a JS number; second-level sort is the v1.
+    if (column.kind === "number" || column.kind === "progress") {
+      cellTemplate = column.getCell(
+        convertTimestampToSeconds(
+          arrowCell.content,
+          arrowCell.field?.type?.unit ?? TimeUnit.NANOSECOND
+        )
       )
-    )
+    } else {
+      cellTemplate = column.getCell(
+        formatArrowCell(arrowCell.content, arrowCell.contentType)
+      )
+    }
   } else {
     cellTemplate = column.getCell(arrowCell.content)
   }

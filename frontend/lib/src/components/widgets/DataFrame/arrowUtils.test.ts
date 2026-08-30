@@ -17,6 +17,7 @@ import {
   type CustomCell,
   GridCellKind,
   NumberCell,
+  TextCell,
 } from "@glideapps/glide-data-grid"
 import {
   Binary,
@@ -70,6 +71,7 @@ import {
   ErrorCell,
   getTextCell,
   isErrorCell,
+  isMissingValueCell,
   ListColumn,
   NumberColumn,
   ObjectColumn,
@@ -898,6 +900,60 @@ describe("getCellFromArrow", () => {
 
     expect(isErrorCell(cell)).toEqual(true)
     expect((cell as ErrorCell).errorDetails).toContain("TimeColumn")
+    expect((cell as ErrorCell).errorDetails).toContain(
+      "st.column_config.NumberColumn"
+    )
+  })
+
+  it("treats a missing duration as empty when a time column is applied", () => {
+    const durationType = durationArrowType(
+      TimeUnit.MICROSECOND,
+      "timedelta64[us]"
+    )
+    const timeColumn = TimeColumn({
+      ...DURATION_COLUMN_PROPS,
+      arrowType: durationType,
+    })
+    const cell = getCellFromArrow(
+      timeColumn,
+      {
+        type: DataFrameCellType.DATA,
+        content: null,
+        contentType: durationType,
+        field: durationType.arrowField,
+      },
+      undefined,
+      undefined
+    )
+
+    expect(isErrorCell(cell)).toEqual(false)
+    expect(isMissingValueCell(cell)).toEqual(true)
+  })
+
+  it("keeps formatted duration text when a text column is applied", () => {
+    const durationType = durationArrowType(
+      TimeUnit.MICROSECOND,
+      "timedelta64[us]"
+    )
+    const textColumn = TextColumn({
+      ...DURATION_COLUMN_PROPS,
+      arrowType: durationType,
+    })
+    const cell = getCellFromArrow(
+      textColumn,
+      {
+        type: DataFrameCellType.DATA,
+        content: BigInt(7_200_000_000), // 2 hours in microseconds
+        contentType: durationType,
+        field: durationType.arrowField,
+      },
+      undefined,
+      undefined
+    )
+
+    expect(isErrorCell(cell)).toEqual(false)
+    expect((cell as TextCell).data).not.toEqual("7200")
+    expect((cell as TextCell).data).toMatch(/hour/i)
   })
 
   it("applies display content overwrite to time cells", () => {

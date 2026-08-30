@@ -313,6 +313,7 @@ function formatDatetime(date: number | Date, field?: Field): string {
   return datetime.format("YYYY-MM-DD HH:mm:ss")
 }
 
+/** Calendar units passed to `Intl.DurationFormat`. */
 type DurationParts = {
   days?: number
   hours?: number
@@ -322,16 +323,19 @@ type DurationParts = {
 
 type DurationFormatter = { format: (duration: DurationParts) => string }
 
+/** Constructor for `Intl.DurationFormat` when the runtime supports it. */
 type DurationFormatCtor = new (
   locales?: string | readonly string[],
   options?: { style?: "long" | "short" | "narrow" | "digital" }
 ) => DurationFormatter
 
+/** Return `Intl.DurationFormat` when the runtime provides it. */
 function getDurationFormatCtor(): DurationFormatCtor | undefined {
   return (Intl as typeof Intl & { DurationFormat?: DurationFormatCtor })
     .DurationFormat
 }
 
+/** Split a non-negative second count into days/hours/minutes/seconds. */
 function toDurationParts(absSeconds: number): DurationParts {
   const days = Math.floor(absSeconds / 86400)
   const hours = Math.floor((absSeconds % 86400) / 3600)
@@ -357,6 +361,7 @@ function toDurationParts(absSeconds: number): DurationParts {
 
 const durationFormatters = new Map<string, DurationFormatter>()
 
+/** Cached `Intl.DurationFormat` instance for the given locale list. */
 function getDurationFormatter(
   DurationFormat: DurationFormatCtor,
   locales: string | readonly string[] | undefined
@@ -372,6 +377,7 @@ function getDurationFormatter(
   return formatter
 }
 
+/** Format duration parts with a cached `Intl.DurationFormat`. */
 function formatDurationParts(
   DurationFormat: DurationFormatCtor,
   locales: string | readonly string[] | undefined,
@@ -380,6 +386,7 @@ function formatDurationParts(
   return getDurationFormatter(DurationFormat, locales).format(parts)
 }
 
+/** Exact locale-aware duration, or undefined if `Intl.DurationFormat` is missing. */
 function formatDurationWithIntl(absSeconds: number): string | undefined {
   const DurationFormat = getDurationFormatCtor()
   if (!DurationFormat) {
