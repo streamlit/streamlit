@@ -152,7 +152,17 @@ The verdict section contains a bold keyword indicating the result:
 
 Do not start another iteration after an `APPROVED` verdict, even if `fixing-pr` pushed follow-up CI fixes. Those commits are covered by CI but not by the AI review.
 
-### 12. Post agent metrics
+### 12. Final AI review
+
+After the review loop, apply the `ai-final-review` label once:
+
+```bash
+gh pr edit --add-label "ai-final-review"
+```
+
+Run `/fixing-pr` once so it can wait for CI and address comments. Do this final review a single time, independent of the AI verdict. Do not re-apply `ai-final-review`. After `/fixing-pr`, commit and push all remaining changes.
+
+### 13. Post agent metrics
 
 Post the agent metrics to the PR body:
 
