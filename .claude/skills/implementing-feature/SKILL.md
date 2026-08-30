@@ -61,7 +61,7 @@ Parse the argument as a spec folder path, raw document URL, GitHub issue URL, or
 Papercuts are small enhancements that do not need a product spec or decision. List candidates, skip claimed or already-targeted issues, then take the first remaining:
 
 ```bash
-gh issue list --repo streamlit/streamlit --search "is:issue state:open label:papercut label:type:enhancement -label:upstream -linked:pr sort:reactions-+1-desc no:assignee" --limit 200 --json number,title,url
+gh issue list --repo streamlit/streamlit --search "is:issue state:open label:papercut label:type:enhancement -label:upstream sort:reactions-+1-desc no:assignee" --limit 200 --json number,title,url
 ```
 
 Keep a skip list of issue IDs rejected in this run. Walk the full result list in order (already sorted by +1 reactions descending); raise `--limit` or paginate if you exhaust a page without an eligible issue. Do not start a new search after a rejection.

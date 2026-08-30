@@ -154,16 +154,15 @@ Do not start another iteration after an `APPROVED` verdict, even if `fixing-pr` 
 
 ### 12. Final AI review
 
-After the review loop, apply the `ai-final-review` label once:
+After the review loop, apply the `ai-final-review` label once. Capture the latest `ai-pr-review.yml` run ID **before** applying the label, then poll until a different run ID appears (the label is consumed on trigger). Do not start `/fixing-pr` until then — listing recent runs is not enough, because it includes runs that already existed:
 
 ```bash
+PREV=$(gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml --limit 1 --json databaseId --jq '.[0].databaseId')
+
 gh pr edit --add-label "ai-final-review"
-```
 
-Wait until a new `ai-pr-review.yml` run exists for this branch after the label was applied (the label is consumed on trigger). Do not start `/fixing-pr` until then — polling `in_progress`/`queued` too early can miss the run:
-
-```bash
-gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml --limit 5
+# Poll until databaseId differs from $PREV (and status is queued or in_progress):
+gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml --limit 1 --json databaseId,status
 ```
 
 Run `/fixing-pr` once so it can wait for CI and address comments. Run this final review exactly once, whether the step 11 loop exited with an `APPROVED` verdict or ran out of iterations. Do not retry this pass or re-apply `ai-final-review`. After `/fixing-pr`, commit and push all remaining changes. Those leftover commits are covered by CI but not by this one-shot review (same as step 11).
