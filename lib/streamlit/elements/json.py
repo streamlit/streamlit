@@ -141,8 +141,9 @@ class JsonMixin:
                 # Serialize body to string and try to interpret sets as lists
                 body = json.dumps(body, default=_ensure_serialization)
             except TypeError as err:
-                # Keys were omitted, so keep the in-app warning and also log it
-                # with a stack trace.
+                # Incomplete JSON still gets an in-app warning; also log it
+                # with a stack trace so CLI and agent users can find the call
+                # site.
                 warning_message = (
                     "Warning: this data structure was not fully serializable as "
                     f"JSON due to one or more unexpected keys.  (Error was: {err})"

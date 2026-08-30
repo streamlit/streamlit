@@ -842,8 +842,8 @@ class CachedFunc(Generic[P, R]):
         """Warn that display output won't replay on hits in background mode."""
         from streamlit import exception
 
-        # Log the warning with a stack trace and show it via st.exception, same
-        # as the cached-widget warning.
+        # Mirrors the cached-widget warning: st.exception surfaces it in the
+        # app, the log surfaces it in the console.
         warning = CachedStFunctionInBackgroundModeWarning(
             self._info.cache_type, self._info.func
         )

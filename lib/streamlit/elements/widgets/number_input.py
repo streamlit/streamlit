@@ -686,8 +686,8 @@ class NumberInputMixin:
         # Use default format depending on value type if format was not provided:
         number_format = ("%d" if int_value else "%0.2f") if format is None else format
 
-        # Log a type/format mismatch instead of drawing an in-app warning; the
-        # widget still works.
+        # A type/format mismatch only affects how the value is displayed, so it
+        # is reported to the developer via the console rather than the app.
         if number_format in {"%d", "%u", "%i"} and float_value:
             _LOGGER.warning(
                 "NumberInput value has type float, but format %s displays as integer.",

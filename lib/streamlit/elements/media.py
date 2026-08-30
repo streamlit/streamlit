@@ -213,8 +213,8 @@ class MediaMixin:
                 detail="Must be specified when `data` is a numpy array.",
             )
         if not is_data_numpy_array and sample_rate is not None:
-            # `sample_rate` does nothing for non-NumPy data; log it instead of
-            # drawing an in-app warning.
+            # `sample_rate` only applies to NumPy data, so it is dropped here
+            # and surfaced to the developer via the console.
             _LOGGER.warning(
                 "`sample_rate` will be ignored since data is not a numpy array.",
                 stack_info=True,

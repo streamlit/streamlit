@@ -219,6 +219,10 @@ class MultiDecorated:
         assert warning_el.format == AlertProto.WARNING
         assert "Unable to display code. missing.py" in warning_el.body
         assert self.get_delta_from_queue(1).new_element.markdown.body == "Hello"
+        assert not any(
+            delta.new_element.WhichOneof("type") == "code"
+            for delta in self.get_all_deltas_from_queue()
+        )
 
     def test_echo_propagates_file_not_found_from_block(self):
         """FileNotFoundError raised inside the echoed block is not swallowed."""

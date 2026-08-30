@@ -47,7 +47,7 @@ class StJsonAPITest(DeltaGeneratorTestCase):
         )
         assert el.width_config.use_stretch is True
 
-    def test_st_json_unserializable_keys_warns_and_logs(self):
+    def test_st_json_warns_and_logs_for_unserializable_keys(self):
         """Non-JSON keys are omitted, logged, and shown as a warning."""
         n = np.array([1, 2, 3, 4, 5])
         data = {n[0]: "this key will not render as JSON", "array": n}
@@ -58,6 +58,7 @@ class StJsonAPITest(DeltaGeneratorTestCase):
         assert logs.records[0].stack_info is not None
 
         json_el = self.get_delta_from_queue().new_element
+        # Warning is enqueued first; JSON is last.
         warning_el = self.get_delta_from_queue(-2).new_element
         assert json_el.json.body == '{"array": "array([1, 2, 3, 4, 5])"}'
         assert "not fully serializable as JSON" in warning_el.alert.body

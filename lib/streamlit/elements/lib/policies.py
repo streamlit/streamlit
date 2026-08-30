@@ -121,8 +121,8 @@ def check_cache_replay_rules() -> None:
     if in_cached_function.get():
         from streamlit import exception
 
-        # Log the warning with a stack trace, and pass it to st.exception so
-        # the app still shows it at the widget call.
+        # st.exception renders the warning at the widget call site; the log
+        # makes it visible to CLI users and agents.
         warning = CachedWidgetWarning()
         _LOGGER.warning("%s", warning, stack_info=True)
         exception(warning)

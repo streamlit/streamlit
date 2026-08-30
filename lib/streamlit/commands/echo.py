@@ -110,8 +110,8 @@ def echo(
         error_message = f"Unable to display code. {err}"
         _LOGGER.warning("%s", error_message, stack_info=True)
 
-    # Run the echoed block even when the source file is missing, so echo
-    # never skips the user's code.
+    # Execute the echoed block even when the source file is missing, so a
+    # missing file does not skip the user's code.
     yield
 
     if code_string is not None:
