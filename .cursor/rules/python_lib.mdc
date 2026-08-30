@@ -30,11 +30,15 @@ from streamlit.logger import get_logger
 _LOGGER: Final = get_logger(__name__)
 ```
 
-Always log diagnostics that help someone developing an app: API misuse,
-ignored parameters, degraded output, missing optional features, and unexpected
-fallbacks. Agents and CLI users only see the console; in-app
-`st.warning` / `st.error` / `st.exception` from library code are invisible to
-them unless they are also logged.
+Log diagnostics that a developer or coding agent needs to see: important API
+misuse, ignored parameters that change behavior, degraded or incomplete
+output, and unexpected fallbacks. Agents and CLI users only see the console;
+in-app `st.warning` / `st.error` / `st.exception` from library code are
+invisible to them unless they are also logged.
+
+Do not over-log. Console noise hides real issues. The library may handle
+potentially non-ideal API usage silently when it is not important enough to
+surface.
 
 Use `stack_info=True` when the user call site matters. Prefer
 `_LOGGER.warning("%s", message, stack_info=True)` when `message` may contain
@@ -46,9 +50,12 @@ uncaught-exception handler; do not double-log those.
 Do not use `st.warning`, `st.error`, or `st.exception` from library internals
 as the only signal. If you show one of those, also log the same message.
 
-- **Log only** when the command still works and the issue is a developer nit
-  (ignored parameter, format string that does not match the value type, empty
-  widget label).
+- **Stay silent** when a quirk can be handled without it mattering to the
+  developer or agent (benign coercion, unused optional kwargs that never
+  applied, other smart fallbacks).
+- **Log only** when the command still works but a developer or agent should
+  know (ignored `sample_rate` on non-numpy audio, number-input format that
+  does not match the value type).
 - **Log and show UI** when the app is actually misbehaving or data is
   incomplete (widget inside a cached function, display commands in
   `refresh_mode="background"`, JSON keys dropped, `st.echo` cannot read the
@@ -178,9 +185,10 @@ validation. Optional-dependency import failures may stay native
 (`st.connection` `ModuleNotFoundError`, `st.pyplot` matplotlib `ImportError`).
 
 Non-fatal library diagnostics (ignored parameters, degraded output, cached
-widget misuse) should not be raised. Log them, and add in-app
-`st.warning` / `st.error` / `st.exception` only when the app is actually
-wrong or data is incomplete — see Logging.
+widget misuse) should not be raised. Log them only when they are important
+for the developer or coding agent to see; otherwise handle them silently.
+Add in-app `st.warning` / `st.error` / `st.exception` only when the app is
+actually wrong or data is incomplete — see Logging.
 
 - `StreamlitAPIException`: base for malformed user interaction with the Streamlit
   API. Prefer a more specific subclass when one fits. When a bare
