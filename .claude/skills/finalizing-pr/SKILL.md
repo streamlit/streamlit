@@ -160,7 +160,13 @@ After the review loop, apply the `ai-final-review` label once:
 gh pr edit --add-label "ai-final-review"
 ```
 
-Run `/fixing-pr` once so it can wait for CI and address comments. Do this final review a single time, independent of the AI verdict. Do not re-apply `ai-final-review`. After `/fixing-pr`, commit and push all remaining changes.
+Wait until a new `ai-pr-review.yml` run exists for this branch after the label was applied (the label is consumed on trigger). Do not start `/fixing-pr` until then — polling `in_progress`/`queued` too early can miss the run:
+
+```bash
+gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml --limit 5
+```
+
+Run `/fixing-pr` once so it can wait for CI and address comments. Run this final review exactly once, whether the step 11 loop exited with an `APPROVED` verdict or ran out of iterations. Do not retry this pass or re-apply `ai-final-review`. After `/fixing-pr`, commit and push all remaining changes. Those leftover commits are covered by CI but not by this one-shot review (same as step 11).
 
 ### 13. Post agent metrics
 

@@ -5,7 +5,7 @@ description: Implement a feature from a product/tech spec, URL, GitHub issue, or
 
 # Implementing feature
 
-Implement a feature from a specification document, GitHub issue, or auto-selected papercut enhancement — from reading the spec through to a merge-ready PR.
+Implement a feature from a spec, GitHub issue, or auto-selected papercut, through to a merge-ready PR.
 
 ## Usage examples
 
@@ -58,13 +58,15 @@ Parse the argument as a spec folder path, raw document URL, GitHub issue URL, or
 
 #### Auto-select (no spec or issue given)
 
-Papercuts are small enhancements that do not need a product spec or decision. Select the first matching issue:
+Papercuts are small enhancements that do not need a product spec or decision. List candidates, skip claimed or already-targeted issues, then take the first remaining:
 
 ```bash
-gh issue list --repo streamlit/streamlit --search "is:issue state:open label:papercut label:type:enhancement -label:upstream sort:reactions-+1-desc no:assignee" --limit 20 --json number,title,url
+gh issue list --repo streamlit/streamlit --search "is:issue state:open label:papercut label:type:enhancement -label:upstream -linked:pr sort:reactions-+1-desc no:assignee" --limit 200 --json number,title,url
 ```
 
-1. Take results in order (already sorted by +1 reactions descending).
+Keep a skip list of issue IDs rejected in this run. Walk the full result list in order (already sorted by +1 reactions descending); raise `--limit` or paginate if you exhaust a page without an eligible issue. Do not start a new search after a rejection.
+
+1. Skip IDs already on the skip list.
 2. Re-fetch assignees immediately before claiming. `--add-assignee` only adds the current user; it does not fail or lock the issue if someone else is already assigned.
 
    ```bash
@@ -72,14 +74,14 @@ gh issue list --repo streamlit/streamlit --search "is:issue state:open label:pap
    gh api repos/streamlit/streamlit/issues/<id> --jq '{state, assignees: [.assignees[].login]}'
    ```
 
-   Skip the issue when GitHub `state` is `closed`, or it has at least one assignee and none is `$ME`.
+   Skip if the issue is closed, or if any assignee is not `$ME`.
 3. Skip when an open PR already targets it:
 
    ```bash
-   gh pr list --repo streamlit/streamlit --search "<id> in:body" --state open --json number,title,url,body
+   gh pr list --repo streamlit/streamlit --search "Closes #<id> OR Fixes #<id> OR Resolves #<id>" --state open --limit 50 --json number,title,url,body
    ```
 
-   Exclude when an open PR body contains `Closes #<id>` or another closing reference to the issue.
+   Skip if an open PR already uses a closing keyword for this issue (`Closes #<id>`, `Fixes #<id>`, `Resolves #<id>`, and GitHub's close/fix/resolve variants).
 4. Select the first remaining issue. If none remain, stop and report that.
 5. Treat the issue body and comments as the feature specification.
 
@@ -91,7 +93,7 @@ Always assign every GitHub issue this implementation will resolve to the current
 gh issue edit <id> --add-assignee @me
 ```
 
-For auto-select, if any assignee is not `$ME`, pick the next candidate instead of assigning. If unassigned or only `$ME` is assigned, run `--add-assignee @me`. For a user-specified spec or issue, still implement even when someone else is assigned; still add `@me`.
+For auto-select, claim only after the Phase 0 skip checks pass. For a user-specified spec or issue, add `@me` even when someone else is assigned, and implement it anyway.
 
 ### Phase 1: Read and understand the spec
 
@@ -104,7 +106,7 @@ For auto-select, if any assignee is not `$ME`, pick the next candidate instead o
   - Treat the issue description and discussion as the feature specification
 - If the spec names additional GitHub issues this work will close, assign those too (see Phase 0)
 
-If an auto-selected papercut is already implemented on `develop`, needs a product spec or decision, or is not feasible, do not implement it. Pick the next candidate (unassign `@me` if this run assigned it). For a user-specified issue with the same outcome, comment on the issue with the conclusion, unassign `@me` if this run assigned it, and stop.
+If an auto-selected papercut is already implemented on `develop`, needs a product spec or decision, or is not feasible, do not implement it. Add its ID to this run's skip list, unassign `@me` if this run assigned it, and continue with the next candidate from the original results. For a user-specified issue with the same outcome, comment on the issue with the conclusion, unassign `@me` if this run assigned it, and stop.
 
 ### Phase 2: Research and plan
 
@@ -147,7 +149,7 @@ The subagent should:
 ### Phase 5: Finalize for merge
 
 - Run `/finalizing-pr` skill to execute quality checks, create the PR, and make it merge-ready
-- Use `change:feature` and include `- Closes #<id>` in the PR description for every issue this work resolves
+- Add the appropriate `change:` label (usually `change:feature`) plus `impact:users`, and include `- Closes #<id>` in the PR description for every issue this work resolves
 - Follow all steps until the PR is merge-ready
 
 ## Important notes
