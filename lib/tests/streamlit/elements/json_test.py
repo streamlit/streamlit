@@ -20,6 +20,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.json import _LOGGER
 from streamlit.errors import (
     StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
@@ -46,20 +47,20 @@ class StJsonAPITest(DeltaGeneratorTestCase):
         )
         assert el.width_config.use_stretch is True
 
-        # Test that an object containing non-json-friendly keys can still
-        # be displayed.  Resultant json body will be missing those keys.
-
+    def test_st_json_unserializable_keys_warns_and_logs(self):
+        """Non-JSON keys are omitted, logged, and shown as a warning."""
         n = np.array([1, 2, 3, 4, 5])
         data = {n[0]: "this key will not render as JSON", "array": n}
-        st.json(data)
+        with self.assertLogs(_LOGGER) as logs:
+            st.json(data)
 
-        el = self.get_delta_from_queue().new_element
-        assert el.json.body == '{"array": "array([1, 2, 3, 4, 5])"}'
-        assert (
-            el.width_config.WhichOneof("width_spec")
-            == WidthConfigFields.USE_STRETCH.value
-        )
-        assert el.width_config.use_stretch is True
+        assert "not fully serializable as JSON" in logs.records[0].getMessage()
+        assert logs.records[0].stack_info is not None
+
+        json_el = self.get_delta_from_queue().new_element
+        warning_el = self.get_delta_from_queue(-2).new_element
+        assert json_el.json.body == '{"array": "array([1, 2, 3, 4, 5])"}'
+        assert "not fully serializable as JSON" in warning_el.alert.body
 
     def test_expanded_param(self):
         """Test expanded parameter for `st.json`"""

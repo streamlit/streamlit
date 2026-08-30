@@ -21,7 +21,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.lib.js_number import JSNumber
-from streamlit.elements.widgets.number_input import NumberInputSerde
+from streamlit.elements.widgets.number_input import _LOGGER, NumberInputSerde
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidWidthError,
@@ -29,7 +29,6 @@ from streamlit.errors import (
     StreamlitValueAboveMaxError,
     StreamlitValueError,
 )
-from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.WidgetStates_pb2 import WidgetState
@@ -219,25 +218,39 @@ class NumberInputTest(DeltaGeneratorTestCase):
             c = self.get_delta_from_queue().new_element.number_input
             assert c.format == "%" + char
 
-    def test_warns_on_float_type_with_int_format(self):
-        st.number_input("the label", value=5.0, format="%d")
+    def test_logs_warning_on_float_type_with_int_format(self):
+        """Integer format with a float value logs a warning and still uses that format."""
+        with self.assertLogs(_LOGGER) as logs:
+            st.number_input("the label", value=5.0, format="%d")
 
-        c = self.get_delta_from_queue(-2).new_element.alert
-        assert c.format == AlertProto.WARNING
         assert (
-            c.body
-            == "Warning: NumberInput value below has type float, but format %d displays as integer."
+            "NumberInput value has type float, but format %d displays as integer."
+            in logs.records[0].getMessage()
         )
+        assert logs.records[0].stack_info is not None
+        assert not any(
+            delta.new_element.WhichOneof("type") == "alert"
+            for delta in self.get_all_deltas_from_queue()
+        )
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.format == "%d"
 
-    def test_warns_on_int_type_with_float_format(self):
-        st.number_input("the label", value=5, format="%0.2f")
+    def test_logs_warning_on_int_type_with_float_format(self):
+        """Float format with an int value logs a warning and still uses that format."""
+        with self.assertLogs(_LOGGER) as logs:
+            st.number_input("the label", value=5, format="%0.2f")
 
-        c = self.get_delta_from_queue(-2).new_element.alert
-        assert c.format == AlertProto.WARNING
         assert (
-            c.body
-            == "Warning: NumberInput value below has type int so is displayed as int despite format string %0.2f."
+            "NumberInput value has type int so is displayed as int despite "
+            "format string %0.2f." in logs.records[0].getMessage()
         )
+        assert logs.records[0].stack_info is not None
+        assert not any(
+            delta.new_element.WhichOneof("type") == "alert"
+            for delta in self.get_all_deltas_from_queue()
+        )
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.format == "%0.2f"
 
     def test_error_on_unsupported_formatters(self):
         UNSUPPORTED = "pAn"

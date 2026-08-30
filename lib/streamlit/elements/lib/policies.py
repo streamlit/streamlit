@@ -121,9 +121,11 @@ def check_cache_replay_rules() -> None:
     if in_cached_function.get():
         from streamlit import exception
 
-        # We use an exception here to show a proper stack trace
-        # that indicates to the user where the issue is.
-        exception(CachedWidgetWarning())
+        # Log the warning with a stack trace, and pass it to st.exception so
+        # the app still shows it at the widget call.
+        warning = CachedWidgetWarning()
+        _LOGGER.warning("%s", warning, stack_info=True)
+        exception(warning)
 
 
 def check_widget_policies(
