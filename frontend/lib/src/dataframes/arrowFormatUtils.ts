@@ -178,7 +178,7 @@ interface PandasInterval {
  * @param unit The unit of the timestamp. 0 is seconds, 1 is milliseconds, 2 is microseconds, 3 is nanoseconds.
  * @returns The timestamp in seconds.
  */
-function convertTimestampToSeconds(
+export function convertTimestampToSeconds(
   timestamp: number | bigint,
   unit: TimeUnit
 ): number {
@@ -310,6 +310,115 @@ function formatDatetime(date: number | Date, field?: Field): string {
   return datetime.format("YYYY-MM-DD HH:mm:ss")
 }
 
+type DurationParts = {
+  days?: number
+  hours?: number
+  minutes?: number
+  seconds?: number
+}
+
+type DurationFormatCtor = new (
+  locales?: string | readonly string[],
+  options?: { style?: "long" | "short" | "narrow" | "digital" }
+) => { format: (duration: DurationParts) => string }
+
+function getDurationFormatCtor(): DurationFormatCtor | undefined {
+  return (Intl as typeof Intl & { DurationFormat?: DurationFormatCtor })
+    .DurationFormat
+}
+
+function toDurationParts(absSeconds: number): DurationParts {
+  const days = Math.floor(absSeconds / 86400)
+  const hours = Math.floor((absSeconds % 86400) / 3600)
+  const minutes = Math.floor((absSeconds % 3600) / 60)
+  const seconds = Math.floor(absSeconds % 60)
+  const parts: DurationParts = {}
+  if (days) {
+    parts.days = days
+  }
+  if (hours) {
+    parts.hours = hours
+  }
+  if (minutes) {
+    parts.minutes = minutes
+  }
+  // Include seconds when there are no larger units so 0s formats as
+  // "0 seconds" instead of an empty string.
+  if (seconds || Object.keys(parts).length === 0) {
+    parts.seconds = seconds
+  }
+  return parts
+}
+
+function formatDurationParts(
+  DurationFormat: DurationFormatCtor,
+  locales: string | readonly string[] | undefined,
+  parts: DurationParts
+): string {
+  const formatted = new DurationFormat(locales, { style: "long" }).format(
+    parts
+  )
+  // Some implementations format `{ seconds: 0 }` as an empty string.
+  return (
+    formatted ||
+    new DurationFormat(locales, { style: "long" }).format({ seconds: 0 })
+  )
+}
+
+function formatDurationWithIntl(absSeconds: number): string | undefined {
+  const DurationFormat = getDurationFormatCtor()
+  if (!DurationFormat) {
+    return undefined
+  }
+
+  const parts = toDurationParts(absSeconds)
+  const locales =
+    typeof navigator !== "undefined" ? navigator.languages : undefined
+  try {
+    return formatDurationParts(DurationFormat, locales, parts)
+  } catch (error) {
+    if (error instanceof RangeError) {
+      return formatDurationParts(DurationFormat, undefined, parts)
+    }
+    return undefined
+  }
+}
+
+/**
+ * Formats a duration that is already expressed in seconds.
+ *
+ * Uses moment's approximate humanize (e.g. "a few seconds", "a day",
+ * "3 months"). Negative values keep a leading minus.
+ */
+export function formatDurationFromSeconds(seconds: number): string {
+  if (!Number.isFinite(seconds)) {
+    return String(seconds)
+  }
+
+  const formatted = moment.duration(Math.abs(seconds), "seconds").humanize()
+  return seconds < 0 ? `-${formatted}` : formatted
+}
+
+/**
+ * Formats a duration in seconds with `Intl.DurationFormat` when available.
+ *
+ * This is exact and locale-aware (e.g. "5 seconds", "1 day, 1 hour") rather
+ * than approximate. Falls back to {@link formatDurationFromSeconds} when
+ * `Intl.DurationFormat` is missing.
+ */
+export function formatLocalizedDurationFromSeconds(seconds: number): string {
+  if (!Number.isFinite(seconds)) {
+    return String(seconds)
+  }
+
+  const abs = Math.abs(seconds)
+  const formatted = formatDurationWithIntl(abs)
+  if (formatted) {
+    return seconds < 0 ? `-${formatted}` : formatted
+  }
+  return formatDurationFromSeconds(seconds)
+}
+
 /**
  * Formats a duration value based on the unit information in the field.
  *
@@ -319,17 +428,14 @@ function formatDatetime(date: number | Date, field?: Field): string {
  */
 function formatDuration(duration: number | bigint, field?: Field): string {
   // unit: 0 is seconds, 1 is milliseconds, 2 is microseconds, 3 is nanoseconds.
-  return moment
-    .duration(
-      convertTimestampToSeconds(
-        duration,
-        // The default is NANOSECOND because that is the default unit for duration in pandas.
-        // Though we believe that actually always a unit is populated by arrow.
-        field?.type?.unit ?? TimeUnit.NANOSECOND
-      ),
-      "seconds"
+  return formatDurationFromSeconds(
+    convertTimestampToSeconds(
+      duration,
+      // The default is NANOSECOND because that is the default unit for duration in pandas.
+      // Though we believe that actually always a unit is populated by arrow.
+      field?.type?.unit ?? TimeUnit.NANOSECOND
     )
-    .humanize()
+  )
 }
 
 /**

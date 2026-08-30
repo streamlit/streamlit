@@ -50,6 +50,8 @@ import { UINT64 } from "~lib/mocks/arrow/types/uint64"
 import {
   convertTimeToDate,
   format,
+  formatDurationFromSeconds,
+  formatLocalizedDurationFromSeconds,
   formatPeriodFromFreq,
 } from "./arrowFormatUtils"
 import { DataFrameCellType } from "./arrowTypeUtils"
@@ -359,6 +361,22 @@ describe("format", () => {
     ).toEqual("a day")
   })
 
+  it("negative timedelta keeps a leading minus", () => {
+    expect(
+      format(BigInt(-3 * 86_400_000_000_000), {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("td", new Int64(), true),
+        pandasType: {
+          field_name: "td",
+          name: "td",
+          pandas_type: "object",
+          numpy_type: "timedelta64[ns]",
+          metadata: null,
+        },
+      })
+    ).toMatch(/^-/)
+  })
+
   it("decimal with scale 0 returns integer string", () => {
     const builder = new DecimalBuilder({
       type: new Decimal(0, 10),
@@ -583,5 +601,33 @@ describe("convertTimeToDate", () => {
       unit ? new Field("test", new Timestamp(unit), true, null) : undefined
     )
     expect(result.toISOString()).toBe(expected)
+  })
+})
+
+describe("formatDurationFromSeconds", () => {
+  it("humanizes a positive duration", () => {
+    expect(formatDurationFromSeconds(5)).toEqual("a few seconds")
+    expect(formatDurationFromSeconds(7200)).toMatch(/hour/i)
+  })
+
+  it("prefixes a minus for negative durations", () => {
+    expect(formatDurationFromSeconds(-7200)).toMatch(/^-/)
+  })
+})
+
+describe("formatLocalizedDurationFromSeconds", () => {
+  it("formats an exact locale duration when Intl.DurationFormat exists", () => {
+    const hasIntlDurationFormat =
+      typeof (Intl as { DurationFormat?: unknown }).DurationFormat ===
+      "function"
+    if (!hasIntlDurationFormat) {
+      return
+    }
+    expect(formatLocalizedDurationFromSeconds(5)).toMatch(/5/)
+    expect(formatLocalizedDurationFromSeconds(7200)).toMatch(/hour/i)
+  })
+
+  it("prefixes a minus for negative durations", () => {
+    expect(formatLocalizedDurationFromSeconds(-7200)).toMatch(/^-/)
   })
 })

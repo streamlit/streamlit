@@ -159,9 +159,24 @@ class DataEditorUtilTest(unittest.TestCase):
                 datetime.date(2021, 1, 1),
             ),
             (
-                100000,
+                7200,
                 ColumnDataKind.TIMEDELTA,
-                pd.Timedelta(100000),
+                pd.Timedelta(hours=2),
+            ),
+            (
+                1.5,
+                ColumnDataKind.TIMEDELTA,
+                pd.Timedelta(seconds=1.5),
+            ),
+            (
+                -7200,
+                ColumnDataKind.TIMEDELTA,
+                pd.Timedelta(hours=-2),
+            ),
+            (
+                "2 hours",
+                ColumnDataKind.TIMEDELTA,
+                pd.Timedelta(hours=2),
             ),
             (
                 [1, 2, 3],

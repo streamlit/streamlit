@@ -545,23 +545,88 @@ describe("NumberColumn", () => {
     })
   })
 
-  it("uses arrow formatting for duration types", () => {
-    // Without a custom format, duration types render with arrow's humanized
-    // formatting (left-aligned) instead of plain number formatting.
+  it("uses humanized duration formatting by default", () => {
+    // Duration cells receive seconds (converted from Arrow ticks in
+    // getCellFromArrow). Without a custom format they render a humanized
+    // duration, left-aligned, and store the second count for numeric sorting.
     const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE)
-    const cell = mockColumn.getCell(60_000_000_000)
+    const cell = mockColumn.getCell(60)
     expect(cell.contentAlign).toEqual("left")
-    // Use regex to avoid coupling to moment.js's exact humanize output.
+    expect((cell as NumberCell).data).toEqual(60)
+    // Use regex to avoid coupling to the exact locale duration string.
     expect((cell as NumberCell).displayData).toMatch(/minute/i)
+    expect((cell as NumberCell).copyData).toMatch(/minute/i)
   })
 
-  it("uses configured number format instead of arrow formatting when format is set", () => {
-    // With a custom format, the right-aligned numeric formatting takes over.
-    const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE, {
-      format: "%.0f ns",
-    })
-    const cell = mockColumn.getCell(60_000_000_000)
-    expect(cell.contentAlign).toEqual("right")
-    expect((cell as NumberCell).displayData).toEqual("60000000000 ns")
+  it("keeps a minus sign for negative durations", () => {
+    const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE)
+    const cell = mockColumn.getCell(-3 * 24 * 60 * 60)
+    expect((cell as NumberCell).displayData).toMatch(/^-/)
   })
+
+  it("renders multi-day durations stored as seconds", () => {
+    // 200 days in nanoseconds would overflow Number.MAX_SAFE_INTEGER;
+    // storing seconds keeps the cell numeric and sortable.
+    const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE)
+    const twoHundredDays = 200 * 24 * 60 * 60
+    const cell = mockColumn.getCell(twoHundredDays)
+    expect(isErrorCell(cell)).toEqual(false)
+    expect((cell as NumberCell).data).toEqual(twoHundredDays)
+    expect((cell as NumberCell).displayData.length).toBeGreaterThan(0)
+  })
+
+  it("applies numeric formats to duration values in seconds", () => {
+    const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE, {
+      format: "%.0f s",
+    })
+    const cell = mockColumn.getCell(60)
+    expect(cell.contentAlign).toEqual("right")
+    expect((cell as NumberCell).displayData).toEqual("60 s")
+  })
+
+  it("applies the localized duration format on duration columns", () => {
+    const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE, {
+      format: "localized",
+    })
+    const twoHours = mockColumn.getCell(7200)
+    expect(twoHours.contentAlign).toEqual("left")
+    expect((twoHours as NumberCell).displayData).toMatch(/hour/i)
+
+    const fiveSeconds = mockColumn.getCell(5)
+    expect((fiveSeconds as NumberCell).displayData).toMatch(
+      /5 seconds|a few seconds/i
+    )
+  })
+
+  it.each([MOCK_DURATION_ARROW_TYPE, MOCK_FLOAT_ARROW_TYPE])(
+    "humanizes values as a duration when format is duration",
+    arrowType => {
+      const mockColumn = getNumberColumn(arrowType, {
+        format: "duration",
+      })
+      const fewSeconds = mockColumn.getCell(5)
+      expect(fewSeconds.contentAlign).toEqual("left")
+      expect((fewSeconds as NumberCell).displayData).toEqual("a few seconds")
+
+      const twoHours = mockColumn.getCell(7200)
+      expect((twoHours as NumberCell).displayData).toMatch(/hour/i)
+      expect((twoHours as NumberCell).copyData).toMatch(/hour/i)
+    }
+  )
+
+  it.each([MOCK_DURATION_ARROW_TYPE, MOCK_FLOAT_ARROW_TYPE])(
+    "formats values as an elapsed-time clock when format is clock",
+    arrowType => {
+      const mockColumn = getNumberColumn(arrowType, { format: "clock" })
+      const oneSecond = mockColumn.getCell(1)
+      expect(oneSecond.contentAlign).toEqual("left")
+      expect((oneSecond as NumberCell).displayData).toEqual("00:00:01")
+
+      const twoHours = mockColumn.getCell(7200)
+      expect((twoHours as NumberCell).displayData).toEqual("02:00:00")
+
+      const fourteenDays = mockColumn.getCell(14 * 24 * 60 * 60)
+      expect((fourteenDays as NumberCell).displayData).toEqual("336:00:00")
+    }
+  )
 })

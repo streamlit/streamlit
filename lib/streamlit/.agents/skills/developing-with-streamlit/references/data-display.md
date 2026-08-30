@@ -121,11 +121,11 @@ st.dataframe(
 - `ListColumn` → Display lists/arrays
 - `MarkdownColumn` → Raw Markdown text with a rendered detail overlay
 - `MultiselectColumn` → Multi-value selection or colored badges in read-only dataframes
-- `NumberColumn` → Numbers with formatting
+- `NumberColumn` → Numbers and timedelta/duration values with formatting
 - `ProgressColumn` → Progress bars
 - `SelectboxColumn` → Editable dropdown
 - `TextColumn` → Text with formatting
-- `TimeColumn` → Time only (no date)
+- `TimeColumn` → Clock time of day (not elapsed duration)
 - `VideoColumn` → Video playback
 
 ## Markdown in dataframe cells
@@ -260,6 +260,8 @@ st.dataframe(
 ```
 
 **Percentage formatting:** Use `NumberColumn(format="percent")` for 0-1 values, or `format="%.2f%%"` for already-multiplied values.
+
+**Durations:** Use `NumberColumn` for `timedelta` values, not `TimeColumn`. Timedelta columns stay read-only unless `disabled=False`. Edits are a second count, not a duration string.
 
 ## Editing data with st.data_editor
 

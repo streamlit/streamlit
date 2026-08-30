@@ -26,10 +26,11 @@ import {
   DatePickerType,
   MultiSelectCellType,
 } from "@glideapps/glide-data-grid-cells"
-import { Field, Null } from "apache-arrow"
+import { Field, Null, TimeUnit } from "apache-arrow"
 import moment from "moment"
 
 import {
+  convertTimestampToSeconds,
   convertTimeToDate,
   format as formatArrowCell,
 } from "~lib/dataframes/arrowFormatUtils"
@@ -42,6 +43,7 @@ import {
   isDatetimeType,
   isDateType,
   isDecimalType,
+  isDurationType,
   isEmptyType,
   isListType,
   isNumericType,
@@ -63,6 +65,7 @@ import {
   DateColumn,
   DateTimeColumn,
   DateTimeColumnParams,
+  getErrorCell,
   isErrorCell,
   LinkColumnParams,
   ListColumn,
@@ -212,7 +215,7 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
   if (isBooleanType(arrowType)) {
     return CheckboxColumn
   }
-  if (isNumericType(arrowType)) {
+  if (isNumericType(arrowType) || isDurationType(arrowType)) {
     return NumberColumn
   }
   if (isCategoricalType(arrowType)) {
@@ -320,8 +323,10 @@ export function initIndexFromArrow(
 
   let isEditable = true
 
-  if (isRangeIndexType(arrowType)) {
-    // Range indices are not editable
+  if (isRangeIndexType(arrowType) || isDurationType(arrowType)) {
+    // Range indexes are not meaningful to edit. Duration indexes stay
+    // read-only unless column_config sets disabled=False (same as data
+    // columns).
     isEditable = false
   }
 
@@ -367,7 +372,10 @@ export function initColumnFromArrow(
     id: `_column-${title}-${columnPosition}`,
     indexNumber: columnPosition,
     name: title,
-    isEditable: true,
+    // Duration columns stay read-only by default: the editor is a raw
+    // second count next to a humanized display. Values are stored as
+    // seconds so they stay in JavaScript's safe integer range.
+    isEditable: !isDurationType(arrowType),
     title,
     arrowType,
     group,
@@ -460,6 +468,18 @@ export function getCellFromArrow(
     )
   } else if (
     ["time", "date", "datetime"].includes(column.kind) &&
+    isDurationType(arrowCell.contentType)
+  ) {
+    // Duration values are elapsed time, not a clock time. Applying a
+    // time/date/datetime column would display them incorrectly
+    // (e.g. 1s → 00:16:40).
+    cellTemplate = getErrorCell(
+      "Unsupported type",
+      `${column.kind} columns do not support timedelta/duration values. ` +
+        "Use a number column instead."
+    )
+  } else if (
+    ["time", "date", "datetime"].includes(column.kind) &&
     notNullOrUndefined(arrowCell.content) &&
     (typeof arrowCell.content === "number" ||
       typeof arrowCell.content === "bigint")
@@ -489,6 +509,21 @@ export function getCellFromArrow(
       ? null
       : formatArrowCell(arrowCell.content, arrowCell.contentType)
     cellTemplate = column.getCell(decimalStr)
+  } else if (
+    isDurationType(arrowCell.contentType) &&
+    notNullOrUndefined(arrowCell.content) &&
+    (typeof arrowCell.content === "number" ||
+      typeof arrowCell.content === "bigint")
+  ) {
+    // Convert Arrow duration ticks (ns/us/ms/s) to seconds before handing
+    // the value to NumberColumn. Nanosecond ticks overflow JS safe integers
+    // after ~104 days; seconds stay exact for any practical timedelta.
+    cellTemplate = column.getCell(
+      convertTimestampToSeconds(
+        arrowCell.content,
+        arrowCell.field?.type?.unit ?? TimeUnit.NANOSECOND
+      )
+    )
   } else {
     cellTemplate = column.getCell(arrowCell.content)
   }

@@ -343,6 +343,10 @@ def _parse_value(
             return Decimal(str(value))
 
         if column_data_kind == ColumnDataKind.TIMEDELTA:
+            # Numeric edits arrive as seconds (NumberColumn's stored unit).
+            # pd.Timedelta(int) would treat the number as nanoseconds.
+            if isinstance(value, (int, float)):
+                return pd.Timedelta(seconds=value)
             return pd.Timedelta(value)
 
         if column_data_kind in {
@@ -894,10 +898,10 @@ class DataEditorMixin:
                   ``memoryview``, ``dict``, ``set``, ``frozenset``,
                   ``fractions.Fraction``, ``pandas.Interval``, and
                   ``pandas.Period``.
-                - To prevent overflow in JavaScript, columns containing
-                  ``datetime.timedelta`` and ``pandas.Timedelta`` values will
-                  default to uneditable, but this can be changed through column
-                  configuration.
+                - Timedelta columns stay read-only by default because the
+                  editor is a second count, not a duration widget. Set
+                  ``st.column_config.NumberColumn(disabled=False)`` to allow
+                  edits.
 
         width : "stretch", "content", or int
             The width of the data editor. This can be one of the following:

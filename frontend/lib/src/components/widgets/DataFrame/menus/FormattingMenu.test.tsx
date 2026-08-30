@@ -47,6 +47,8 @@ describe("DataFrame FormattingMenu", () => {
 
     // Check for presence of number-specific formats
     expect(screen.getByText("Automatic")).toBeInTheDocument()
+    expect(screen.getByText("Duration")).toBeInTheDocument()
+    expect(screen.getByText("Clock")).toBeInTheDocument()
     expect(screen.getByText("Dollar")).toBeInTheDocument()
     expect(screen.getByText("Euro")).toBeInTheDocument()
     expect(screen.getByText("Yen")).toBeInTheDocument()
@@ -71,6 +73,20 @@ describe("DataFrame FormattingMenu", () => {
     // Verify number formats are not present
     expect(screen.queryByText("Dollar")).not.toBeInTheDocument()
     expect(screen.queryByText("Scientific")).not.toBeInTheDocument()
+    expect(screen.queryByText("Duration")).not.toBeInTheDocument()
+    expect(screen.queryByText("Clock")).not.toBeInTheDocument()
+  })
+
+  it("does not offer duration or clock formats for progress columns", () => {
+    render(
+      <FormattingMenu {...defaultProps} columnKind="progress">
+        {defaultChildren}
+      </FormattingMenu>
+    )
+
+    expect(screen.getByText("Dollar")).toBeInTheDocument()
+    expect(screen.queryByText("Duration")).not.toBeInTheDocument()
+    expect(screen.queryByText("Clock")).not.toBeInTheDocument()
   })
 
   it("renders date format options when columnKind is date", () => {

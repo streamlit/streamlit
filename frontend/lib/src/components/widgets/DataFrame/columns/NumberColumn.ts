@@ -16,7 +16,11 @@
 
 import { GridCell, GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
 
-import { format as formatArrowCell } from "~lib/dataframes/arrowFormatUtils"
+import {
+  format as formatArrowCell,
+  formatDurationFromSeconds,
+  formatLocalizedDurationFromSeconds,
+} from "~lib/dataframes/arrowFormatUtils"
 import {
   isDurationType,
   isIntegerType,
@@ -37,6 +41,21 @@ import {
   truncateDecimals,
 } from "./utils"
 
+/**
+ * Formats a duration in seconds as a clock string (e.g. `00:00:01`,
+ * `02:00:00`, `336:00:00`). Hours are not wrapped at 24 so multi-day
+ * values stay a single elapsed-time reading.
+ */
+function formatDurationClock(seconds: number): string {
+  const sign = seconds < 0 ? "-" : ""
+  const abs = Math.abs(Math.trunc(seconds))
+  const hours = Math.floor(abs / 3600)
+  const minutes = Math.floor((abs % 3600) / 60)
+  const secs = abs % 60
+  const pad = (value: number): string => String(value).padStart(2, "0")
+  return `${sign}${pad(hours)}:${pad(minutes)}:${pad(secs)}`
+}
+
 export interface NumberColumnParams {
   /**
    * The minimum allowed value for editing. Is set to 0 for unsigned values.
@@ -50,6 +69,14 @@ export interface NumberColumnParams {
    * A formatting syntax (e.g. sprintf) to format the display value.
    * This can be used for adding prefix or suffix, or changing the number of
    * decimals of the display value.
+   *
+   * Duration formats treat the value as seconds on any number column:
+   * - `duration`: approximate humanize (e.g. `a few seconds`, `a day`)
+   * - `clock`: elapsed-time clock (e.g. `00:00:01`)
+   * - `localized` on a timedelta column: locale-aware duration
+   *
+   * Timedelta columns default to `duration`. Other named and printf formats
+   * apply to the value in seconds.
    */
   readonly format?: string
   /**
@@ -64,7 +91,10 @@ export interface NumberColumnParams {
 
 /**
  * A column types that supports optimized rendering and editing for numbers.
- * This supports float, integer, and unsigned integer types.
+ * This supports float, integer, unsigned integer, and duration types.
+ *
+ * Duration values must already be in seconds (converted in getCellFromArrow)
+ * so they stay within JavaScript's safe integer range.
  */
 function NumberColumn(props: BaseColumnProps): BaseColumn {
   const parameters = mergeColumnParameters<NumberColumnParams>(
@@ -79,11 +109,18 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     props.columnTypeOptions
   )
 
-  // If no custom format is provided & the column type is duration or period,
-  // instruct the column to use the arrow formatting for the display value.
+  const isDuration = isDurationType(props.arrowType)
+  const useDurationClock = parameters.format === "clock"
+  const useDurationLocalized = isDuration && parameters.format === "localized"
+  // Empty format (Automatic) is falsy, so duration columns keep humanize.
+  const useDurationHumanize =
+    parameters.format === "duration" || (isDuration && !parameters.format)
+  const useDurationDisplay =
+    useDurationClock || useDurationLocalized || useDurationHumanize
+
+  // Period columns without a custom format use Arrow's period formatter.
   const useArrowFormatting =
-    !parameters.format &&
-    (isDurationType(props.arrowType) || isPeriodType(props.arrowType))
+    !parameters.format && isPeriodType(props.arrowType)
 
   const allowNegative =
     isNullOrUndefined(parameters.min_value) || parameters.min_value < 0
@@ -100,7 +137,8 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     readonly: !props.isEditable,
     allowOverlay: true,
     contentAlign:
-      props.contentAlignment ?? (useArrowFormatting ? "left" : "right"),
+      props.contentAlignment ??
+      (useArrowFormatting || useDurationDisplay ? "left" : "right"),
     // The text in pinned columns should be faded.
     style: props.isPinned ? "faded" : "normal",
     allowNegative,
@@ -158,7 +196,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     ...props,
     kind: "number",
     sortMode: "smart",
-    typeIcon: ":material/tag:",
+    typeIcon: isDuration ? ":material/timelapse:" : ":material/tag:",
     validateInput,
     getCell(data?: unknown, validate?: boolean): GridCell {
       if (validate === true) {
@@ -201,8 +239,13 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
         }
 
         try {
-          if (useArrowFormatting) {
-            // Use arrow formatting for some selected types (see above)
+          if (useDurationClock) {
+            displayData = formatDurationClock(cellData)
+          } else if (useDurationLocalized) {
+            displayData = formatLocalizedDurationFromSeconds(cellData)
+          } else if (useDurationHumanize) {
+            displayData = formatDurationFromSeconds(cellData)
+          } else if (useArrowFormatting) {
             displayData = formatArrowCell(cellData, props.arrowType)
           } else {
             displayData = formatNumber(
@@ -223,13 +266,19 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
         }
       }
 
+      let copyData = ""
+      if (notNullOrUndefined(cellData)) {
+        // Duration formats copy the formatted display (e.g. "2 hours" /
+        // "00:02:00") instead of the raw second count.
+        copyData = useDurationDisplay ? displayData : toSafeString(cellData)
+      }
+
       return {
         ...cellTemplate,
         data: cellData,
         displayData,
         isMissingValue: isNullOrUndefined(cellData),
-        // We want to enforce the raw number without formatting when its copied:
-        copyData: isNullOrUndefined(cellData) ? "" : toSafeString(cellData),
+        copyData,
       } as NumberCell
     },
     getCellValue(cell: NumberCell): number | null {
