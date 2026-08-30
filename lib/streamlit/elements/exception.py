@@ -37,6 +37,10 @@ if TYPE_CHECKING:
 # Installed Streamlit package root. UI traces hide frames under this directory.
 _STREAMLIT_PACKAGE_DIR: Final = Path(__file__).resolve().parent.parent
 
+# Match CPython's ExceptionGroup formatting bounds (traceback.py).
+_EXCEPTION_GROUP_MAX_DEPTH: Final = 10
+_EXCEPTION_GROUP_MAX_WIDTH: Final = 15
+
 _LOGGER: Final = get_logger(__name__)
 
 # When client.showErrorDetails is False, we show a generic warning in the
@@ -141,6 +145,10 @@ def marshall(
 
     is_markdown_exception = isinstance(exception, MarkdownFormattedException)
 
+    show_message, show_trace, show_type = _error_detail_visibility(
+        apply_show_error_details
+    )
+
     # Some exceptions (like UserHashError) have an alternate_name attribute so
     # we can pretend to the user that the exception is called something else.
     if getattr(exception, "alternate_name", None) is not None:
@@ -148,9 +156,13 @@ def marshall(
     else:
         exception_proto.type = type(exception).__name__
 
-    stack_trace = _get_stack_trace_str_list(exception)
-
-    exception_proto.stack_trace.extend(stack_trace)
+    # Cause/context rows include type+message; honor show_message so stacktrace
+    # mode cannot leak an inner exception message through stack_trace.
+    stack_trace = _get_stack_trace_str_list(
+        exception, include_exception_message=show_message
+    )
+    if show_trace:
+        exception_proto.stack_trace.extend(stack_trace)
     exception_proto.is_warning = isinstance(exception, Warning)
 
     # Flag exceptions Streamlit itself raised (subclasses of streamlit.errors.Error)
@@ -205,28 +217,6 @@ Traceback:
         )
 
     if apply_show_error_details:
-        show_error_details = config.get_option("client.showErrorDetails")
-
-        show_message = (
-            show_error_details == config.ShowErrorDetailsConfigOptions.FULL
-            or config.ShowErrorDetailsConfigOptions.is_true_variation(
-                show_error_details
-            )
-        )
-        # False is a legacy config option still in-use in community cloud. It is equivalent
-        # to "stacktrace".
-        show_trace = (
-            show_message
-            or show_error_details == config.ShowErrorDetailsConfigOptions.STACKTRACE
-            or config.ShowErrorDetailsConfigOptions.is_false_variation(
-                show_error_details
-            )
-        )
-        show_type = (
-            show_trace
-            or show_error_details == config.ShowErrorDetailsConfigOptions.TYPE
-        )
-
         if not show_message:
             exception_proto.message = _GENERIC_UNCAUGHT_EXCEPTION_TEXT
         if not show_type:
@@ -239,8 +229,34 @@ Traceback:
         else:
             type_str = str(type(exception))
             exception_proto.type = type_str.replace("<class '", "").replace("'>", "")
-        if not show_trace:
-            exception_proto.ClearField("stack_trace")
+
+
+def _error_detail_visibility(
+    apply_show_error_details: bool,
+) -> tuple[bool, bool, bool]:
+    """Return ``(show_message, show_trace, show_type)`` for browser exceptions.
+
+    ``st.exception()`` does not apply ``client.showErrorDetails``, so all three
+    stay True. Uncaught exceptions honor the config, including the legacy
+    ``False`` value still used by Community Cloud (equivalent to ``stacktrace``).
+    """
+    if not apply_show_error_details:
+        return True, True, True
+
+    show_error_details = config.get_option("client.showErrorDetails")
+    show_message = (
+        show_error_details == config.ShowErrorDetailsConfigOptions.FULL
+        or config.ShowErrorDetailsConfigOptions.is_true_variation(show_error_details)
+    )
+    show_trace = (
+        show_message
+        or show_error_details == config.ShowErrorDetailsConfigOptions.STACKTRACE
+        or config.ShowErrorDetailsConfigOptions.is_false_variation(show_error_details)
+    )
+    show_type = (
+        show_trace or show_error_details == config.ShowErrorDetailsConfigOptions.TYPE
+    )
+    return show_message, show_trace, show_type
 
 
 def _format_syntax_error_message(exception: SyntaxError) -> str:
@@ -272,7 +288,9 @@ def _format_syntax_error_message(exception: SyntaxError) -> str:
     return str(exception)
 
 
-def _get_stack_trace_str_list(exception: BaseException) -> list[str]:
+def _get_stack_trace_str_list(
+    exception: BaseException, *, include_exception_message: bool = True
+) -> list[str]:
     """Get the user-facing stack trace for the given exception.
 
     - Drop frames under the Streamlit package directory so runtime, cache, and
@@ -281,15 +299,17 @@ def _get_stack_trace_str_list(exception: BaseException) -> list[str]:
       internals so Streamlit-only failures stay diagnosable.
     - Include chained exceptions (``raise X from Y`` / implicit ``__context__``).
       The frontend header only shows the outermost type and message, so each
-      cause's type and message are appended to its frames.
+      cause's type (and message, when ``include_exception_message``) is appended
+      to its frames.
     """
     if isinstance(exception, StreamlitAPIWarning):
-        frames = _filter_streamlit_frames(exception.tacked_on_stack)
+        frames = _filter_frames_with_fallback(exception.tacked_on_stack)
         return [item.strip() for item in traceback.format_list(frames)]
 
     return _format_traceback_rows(
         _user_facing_traceback_exception(exception),
         include_exception_line=False,
+        include_exception_message=include_exception_message,
     )
 
 
@@ -302,7 +322,7 @@ def _is_under_dir(filename: str, directory: Path) -> bool:
         return False
 
 
-def _filter_streamlit_frames(
+def _filter_frames_with_fallback(
     extracted_tb: traceback.StackSummary,
 ) -> list[traceback.FrameSummary]:
     """Drop Streamlit-internal frames, unless that would leave an empty traceback.
@@ -310,6 +330,9 @@ def _filter_streamlit_frames(
     A frame is internal if it lives under the Streamlit package directory.
     That stays correct when Streamlit is installed in a project-local venv
     (``.venv``), where package files sit under the user's app folder.
+
+    Unlike ``_drop_streamlit_frames``, this never returns an empty list: a
+    Streamlit-only stack is kept so internals stay diagnosable.
     """
     return _drop_streamlit_frames(extracted_tb) or list(extracted_tb)
 
@@ -372,24 +395,61 @@ def _filter_traceback_exception(tbe: traceback.TracebackException) -> None:
         _filter_traceback_exception(sub)
 
 
+def _format_exception_only_rows(
+    tbe: traceback.TracebackException, *, include_message: bool
+) -> list[str]:
+    """Format the exception-only trailer for a cause, context, or group child.
+
+    When ``include_message`` is False (``client.showErrorDetails`` is
+    ``stacktrace`` or legacy ``False``), emit only the type so inner messages
+    cannot bypass header redaction via ``stack_trace``.
+    """
+    if include_message:
+        return [
+            line.rstrip("\n") for line in tbe.format_exception_only() if line.strip()
+        ]
+    # 3.13+ deprecates ``exc_type`` in favor of ``exc_type_str``.
+    type_name = getattr(tbe, "exc_type_str", None) or tbe.exc_type.__name__
+    return [type_name]
+
+
 def _format_traceback_rows(
-    tbe: traceback.TracebackException, *, include_exception_line: bool
+    tbe: traceback.TracebackException,
+    *,
+    include_exception_line: bool,
+    include_exception_message: bool,
+    _group_depth: int = _EXCEPTION_GROUP_MAX_DEPTH,
+    _group_width: int = _EXCEPTION_GROUP_MAX_WIDTH,
 ) -> list[str]:
     """Format traceback rows for the exception proto.
 
-    ``include_exception_line`` is True for causes and contexts so their type
-    and message are not lost: the frontend header only shows the outermost
-    exception.
+    ``include_exception_line`` is True for causes, contexts, and group children
+    so their type (and message, when allowed) are not lost: the frontend header
+    only shows the outermost exception.
     """
     rows: list[str] = []
     if tbe.__cause__ is not None:
-        rows.extend(_format_traceback_rows(tbe.__cause__, include_exception_line=True))
+        rows.extend(
+            _format_traceback_rows(
+                tbe.__cause__,
+                include_exception_line=True,
+                include_exception_message=include_exception_message,
+                _group_depth=_group_depth,
+                _group_width=_group_width,
+            )
+        )
         rows.append(
             "The above exception was the direct cause of the following exception:"
         )
     elif tbe.__context__ is not None and not tbe.__suppress_context__:
         rows.extend(
-            _format_traceback_rows(tbe.__context__, include_exception_line=True)
+            _format_traceback_rows(
+                tbe.__context__,
+                include_exception_line=True,
+                include_exception_message=include_exception_message,
+                _group_depth=_group_depth,
+                _group_width=_group_width,
+            )
         )
         rows.append(
             "During handling of the above exception, another exception occurred:"
@@ -398,6 +458,27 @@ def _format_traceback_rows(
     rows.extend(item.strip() for item in tbe.stack.format())
     if include_exception_line:
         rows.extend(
-            line.rstrip("\n") for line in tbe.format_exception_only() if line.strip()
+            _format_exception_only_rows(tbe, include_message=include_exception_message)
         )
+
+    children = getattr(tbe, "exceptions", None) or ()
+    if children:
+        if _group_depth <= 1:
+            rows.append(f"... ({len(children)} ExceptionGroup child(ren) truncated)")
+        else:
+            shown = children[:_group_width]
+            for i, child in enumerate(shown, start=1):
+                rows.append(f"+---------------- {i} ----------------")
+                rows.extend(
+                    _format_traceback_rows(
+                        child,
+                        include_exception_line=True,
+                        include_exception_message=include_exception_message,
+                        _group_depth=_group_depth - 1,
+                        _group_width=_group_width,
+                    )
+                )
+            omitted = len(children) - len(shown)
+            if omitted:
+                rows.append(f"... and {omitted} more exception(s)")
     return rows
