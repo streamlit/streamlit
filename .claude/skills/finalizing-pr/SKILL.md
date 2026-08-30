@@ -154,18 +154,25 @@ Do not start another iteration after an `APPROVED` verdict, even if `fixing-pr` 
 
 ### 12. Final AI review
 
-After the review loop, apply the `ai-final-review` label once. Capture the latest `ai-pr-review.yml` run ID **before** applying the label, then poll until a different run ID appears (the label is consumed on trigger). Do not start `/fixing-pr` until then — listing recent runs is not enough, because it includes runs that already existed:
+After the review loop, apply the `ai-final-review` label once. Capture the latest `ai-pr-review.yml` run ID **before** applying the label, then poll until a different run ID appears. The workflow removes the label in `ai-pr-post-review` after the review jobs finish, not at trigger time, so `--add-label` is a no-op if the label is already present. Force a fresh `labeled` event:
 
 ```bash
 PREV=$(gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml --limit 1 --json databaseId --jq '.[0].databaseId')
 
+gh pr edit --remove-label "ai-final-review" || true
 gh pr edit --add-label "ai-final-review"
-
-# Poll until databaseId differs from $PREV (and status is queued or in_progress):
-gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml --limit 1 --json databaseId,status
 ```
 
-Run `/fixing-pr` once so it can wait for CI and address comments. Run this final review exactly once, whether the step 11 loop exited with an `APPROVED` verdict or ran out of iterations. Do not retry this pass or re-apply `ai-final-review`. After `/fixing-pr`, commit and push all remaining changes. Those leftover commits are covered by CI but not by this one-shot review (same as step 11).
+Poll every ~15s for up to ~5 minutes until `databaseId` differs from `$PREV`. Any status is a valid signal (`/fixing-pr` already drains in-progress/queued runs). Treat the new run as the final review only if its jobs are not skipped (`ai-pr-review.yml` also starts on unrelated `labeled` events, with all jobs skipped). If no qualifying run appears, report that on the PR and continue rather than looping:
+
+```bash
+gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml --limit 1 --json databaseId,status,conclusion
+gh run view <id> --json jobs --jq '[.jobs[] | {name, status, conclusion}]'
+```
+
+Do not start `/fixing-pr` until a qualifying new run exists, or the poll times out. Listing recent runs is not enough, because it includes runs that already existed.
+
+Run `/fixing-pr` once so it can wait for CI and address comments. Run this final review exactly once, whether the step 11 loop exited with an `APPROVED` verdict or ran out of iterations. Do not retry this pass or re-apply `ai-final-review`. If the verdict is `CHANGES_REQUESTED`, `/fixing-pr` still addresses comments; then comment on the PR that a human must review and clear `do-not-merge` (this step forbids re-triggering, and `do-not-merge` is only cleared by a later `APPROVED` verdict). After `/fixing-pr`, commit and push all remaining changes. Those leftover commits are covered by CI but not by this one-shot review (same as step 11).
 
 ### 13. Post agent metrics
 
