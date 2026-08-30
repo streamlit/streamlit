@@ -14,9 +14,9 @@
 
 from __future__ import annotations
 
-import os
 import traceback
-from typing import TYPE_CHECKING, Final, TypeVar, cast
+from pathlib import Path
+from typing import TYPE_CHECKING, Final, cast
 
 from streamlit import config
 from streamlit.elements.lib.layout_utils import validate_width
@@ -29,13 +29,13 @@ from streamlit.logger import get_logger
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
+
+# Installed Streamlit package root. UI traces hide frames under this directory.
+_STREAMLIT_PACKAGE_DIR: Final = Path(__file__).resolve().parent.parent
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -273,118 +273,131 @@ def _format_syntax_error_message(exception: SyntaxError) -> str:
 
 
 def _get_stack_trace_str_list(exception: BaseException) -> list[str]:
-    """Get the stack trace for the given exception.
+    """Get the user-facing stack trace for the given exception.
 
-    Parameters
-    ----------
-    exception : BaseException
-        The exception to extract the traceback from
-
-    Returns
-    -------
-    tuple of two string lists
-        The exception traceback as two lists of strings. The first represents the part
-        of the stack trace the users don't typically want to see, containing internal
-        Streamlit code. The second is whatever comes after the Streamlit stack trace,
-        which is usually what the user wants.
-
+    - Drop frames under the Streamlit package directory so runtime, cache, and
+      widget internals do not clutter the traceback.
+    - If the whole exception chain would then have no frames, keep the original
+      internals so Streamlit-only failures stay diagnosable.
+    - Include chained exceptions (``raise X from Y`` / implicit ``__context__``).
+      The frontend header only shows the outermost type and message, so each
+      cause's type and message are appended to its frames.
     """
-    extracted_traceback: traceback.StackSummary | None = None
     if isinstance(exception, StreamlitAPIWarning):
-        extracted_traceback = exception.tacked_on_stack
-    elif hasattr(exception, "__traceback__"):
-        extracted_traceback = traceback.extract_tb(exception.__traceback__)
+        frames = _filter_streamlit_frames(exception.tacked_on_stack)
+        return [item.strip() for item in traceback.format_list(frames)]
 
-    # Format the extracted traceback and add it to the protobuf element.
-    if extracted_traceback is None:
-        trace_str_list = [
-            (
-                "Cannot extract the stack trace for this exception. "
-                "Try calling exception() within the `catch` block."
-            )
-        ]
-    else:
-        internal_frames, external_frames = _split_internal_streamlit_frames(
-            extracted_traceback
-        )
-
-        if external_frames:
-            trace_str_list = traceback.format_list(external_frames)
-        else:
-            trace_str_list = traceback.format_list(internal_frames)
-
-        trace_str_list = [item.strip() for item in trace_str_list]
-
-    return trace_str_list
-
-
-def _is_in_package(file: str, package_path: str) -> bool:
-    """True if the given file is part of package_path."""
-    try:
-        common_prefix = os.path.commonprefix([os.path.realpath(file), package_path])  # noqa: RUF071
-    except ValueError:
-        # Raised if paths are on different drives.
-        return False
-
-    return common_prefix == package_path
-
-
-def _split_internal_streamlit_frames(
-    extracted_tb: traceback.StackSummary,
-) -> tuple[list[traceback.FrameSummary], list[traceback.FrameSummary]]:
-    """Split the traceback into a Streamlit-internal part and an external part.
-
-    The internal part is everything up to (but excluding) the first frame belonging to
-    the user's code. The external part is everything else.
-
-    So if the stack looks like this:
-
-        1. Streamlit frame
-        2. Pandas frame
-        3. Altair frame
-        4. Streamlit frame
-        5. User frame
-        6. User frame
-        7. Streamlit frame
-        8. Matplotlib frame
-
-    ...then this should return 1-4 as the internal traceback and 5-8 as the external.
-
-    (Note that something like the example above is extremely unlikely to happen since
-    it's not like Altair is calling Streamlit code, but you get the idea.)
-    """
-
-    ctx = get_script_run_ctx()
-
-    if not ctx:
-        return [], list(extracted_tb)
-
-    package_path = os.path.join(os.path.realpath(str(ctx.main_script_parent)), "")
-
-    return _split_list(
-        extracted_tb,
-        split_point=lambda tb: _is_in_package(tb.filename, package_path),
+    return _format_traceback_rows(
+        _user_facing_traceback_exception(exception),
+        include_exception_line=False,
     )
 
 
-T = TypeVar("T")
+def _is_under_dir(filename: str, directory: Path) -> bool:
+    """True if ``filename`` resolves to a path inside ``directory``."""
+    try:
+        return Path(filename).resolve().is_relative_to(directory)
+    except (OSError, ValueError):
+        # Keep the frame rather than hide one we cannot classify.
+        return False
 
 
-def _split_list(
-    orig_list: list[T], split_point: Callable[[T], bool]
-) -> tuple[list[T], list[T]]:
-    before: list[T] = []
-    after: list[T] = []
+def _filter_streamlit_frames(
+    extracted_tb: traceback.StackSummary,
+) -> list[traceback.FrameSummary]:
+    """Drop Streamlit-internal frames, unless that would leave an empty traceback.
 
-    saw_split_point = False
+    A frame is internal if it lives under the Streamlit package directory.
+    That stays correct when Streamlit is installed in a project-local venv
+    (``.venv``), where package files sit under the user's app folder.
+    """
+    return _drop_streamlit_frames(extracted_tb) or list(extracted_tb)
 
-    for item in orig_list:
-        if not saw_split_point and split_point(item):
-            saw_split_point = True
 
-        if saw_split_point:
-            after.append(item)
-        else:
-            before.append(item)
+def _drop_streamlit_frames(
+    extracted_tb: traceback.StackSummary,
+) -> list[traceback.FrameSummary]:
+    """Drop Streamlit-internal frames. May return an empty list."""
+    return [
+        frame
+        for frame in extracted_tb
+        if not _is_under_dir(frame.filename, _STREAMLIT_PACKAGE_DIR)
+    ]
 
-    return before, after
+
+def _user_facing_traceback_exception(
+    exception: BaseException,
+) -> traceback.TracebackException:
+    """Build a TracebackException with Streamlit frames removed from the whole chain.
+
+    The "keep internals if nothing remains" fallback applies to the chain, not
+    each stack. A Streamlit-only ``__cause__`` / ``__context__`` (for example
+    ``FileNotFoundError`` raised inside ``image_utils``) must not bring those
+    frames back just because that one stack had no user code.
+    """
+    filtered = traceback.TracebackException.from_exception(exception)
+    _filter_traceback_exception(filtered)
+    if _traceback_has_frames(filtered):
+        return filtered
+    return traceback.TracebackException.from_exception(exception)
+
+
+def _traceback_has_frames(tbe: traceback.TracebackException) -> bool:
+    """True if any stack in this exception's chain still has frames."""
+    if tbe.stack:
+        return True
+    if tbe.__cause__ is not None and _traceback_has_frames(tbe.__cause__):
+        return True
+    if (
+        tbe.__context__ is not None
+        and not tbe.__suppress_context__
+        and _traceback_has_frames(tbe.__context__)
+    ):
+        return True
+    # ExceptionGroup children exist on 3.11+ TracebackException as ``exceptions``.
+    return any(
+        _traceback_has_frames(sub) for sub in getattr(tbe, "exceptions", None) or ()
+    )
+
+
+def _filter_traceback_exception(tbe: traceback.TracebackException) -> None:
+    """Remove Streamlit frames from this exception and every exception it chains to."""
+    tbe.stack[:] = _drop_streamlit_frames(tbe.stack)
+    if tbe.__cause__ is not None:
+        _filter_traceback_exception(tbe.__cause__)
+    if tbe.__context__ is not None:
+        _filter_traceback_exception(tbe.__context__)
+    # ExceptionGroup children exist on 3.11+ TracebackException as ``exceptions``.
+    for sub in getattr(tbe, "exceptions", None) or ():
+        _filter_traceback_exception(sub)
+
+
+def _format_traceback_rows(
+    tbe: traceback.TracebackException, *, include_exception_line: bool
+) -> list[str]:
+    """Format traceback rows for the exception proto.
+
+    ``include_exception_line`` is True for causes and contexts so their type
+    and message are not lost: the frontend header only shows the outermost
+    exception.
+    """
+    rows: list[str] = []
+    if tbe.__cause__ is not None:
+        rows.extend(_format_traceback_rows(tbe.__cause__, include_exception_line=True))
+        rows.append(
+            "The above exception was the direct cause of the following exception:"
+        )
+    elif tbe.__context__ is not None and not tbe.__suppress_context__:
+        rows.extend(
+            _format_traceback_rows(tbe.__context__, include_exception_line=True)
+        )
+        rows.append(
+            "During handling of the above exception, another exception occurred:"
+        )
+
+    rows.extend(item.strip() for item in tbe.stack.format())
+    if include_exception_line:
+        rows.extend(
+            line.rstrip("\n") for line in tbe.format_exception_only() if line.strip()
+        )
+    return rows
