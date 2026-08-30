@@ -34,7 +34,11 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
 
-# Installed Streamlit package root. UI traces hide frames under this directory.
+# Installed Streamlit package root. UI traces hide frames under this directory,
+# including bundled demos such as ``streamlit hello`` (``hello/*.py``). A
+# Streamlit-only hello error falls back to the unfiltered stack; a third-party
+# failure from hello keeps those library frames but drops the demo call site.
+# Exempting ``hello/`` or the running script would special-case demos.
 _STREAMLIT_PACKAGE_DIR: Final = Path(__file__).resolve().parent.parent
 
 # Match CPython's ExceptionGroup formatting bounds (traceback.py).
@@ -156,13 +160,14 @@ def marshall(
     else:
         exception_proto.type = type(exception).__name__
 
-    # Cause/context rows include type+message; honor show_message so stacktrace
-    # mode cannot leak an inner exception message through stack_trace.
-    stack_trace = _get_stack_trace_str_list(
-        exception, include_exception_message=show_message
-    )
     if show_trace:
-        exception_proto.stack_trace.extend(stack_trace)
+        # Cause/context rows include type+message; honor show_message so
+        # stacktrace mode cannot leak an inner exception message through
+        # stack_trace. Skip construction entirely when the trace is hidden
+        # (``type`` / ``none``) so redacted deployments do not pay for it.
+        exception_proto.stack_trace.extend(
+            _get_stack_trace_str_list(exception, include_exception_message=show_message)
+        )
     exception_proto.is_warning = isinstance(exception, Warning)
 
     # Flag exceptions Streamlit itself raised (subclasses of streamlit.errors.Error)
@@ -295,8 +300,10 @@ def _get_stack_trace_str_list(
 
     - Drop frames under the Streamlit package directory so runtime, cache, and
       widget internals do not clutter the traceback.
-    - If the whole exception chain would then have no frames, keep the original
-      internals so Streamlit-only failures stay diagnosable.
+    - If the whole exception chain would then have no frames outside the
+      Streamlit package, keep the original internals so Streamlit-only
+      failures stay diagnosable. Third-party or stdlib frames count as
+      user-facing evidence and skip that fallback.
     - Include chained exceptions (``raise X from Y`` / implicit ``__context__``).
       The frontend header only shows the outermost type and message, so each
       cause's type (and message, when ``include_exception_message``) is appended
@@ -317,8 +324,10 @@ def _is_under_dir(filename: str, directory: Path) -> bool:
     """True if ``filename`` resolves to a path inside ``directory``."""
     try:
         return Path(filename).resolve().is_relative_to(directory)
-    except (OSError, ValueError):
+    except (OSError, ValueError, RuntimeError):
         # Keep the frame rather than hide one we cannot classify.
+        # RuntimeError covers 3.10-3.12 pathlib turning symlink-loop ELOOP
+        # into RuntimeError instead of OSError.
         return False
 
 
@@ -354,9 +363,13 @@ def _user_facing_traceback_exception(
     """Build a TracebackException with Streamlit frames removed from the whole chain.
 
     The "keep internals if nothing remains" fallback applies to the chain, not
-    each stack. A Streamlit-only ``__cause__`` / ``__context__`` (for example
-    ``FileNotFoundError`` raised inside ``image_utils``) must not bring those
-    frames back just because that one stack had no user code.
+    each stack, and only when the filtered chain has no frames outside the
+    Streamlit package. Third-party or stdlib frames count as user-facing
+    evidence and skip the fallback — reconstructing "app vs library" would
+    reopen the app-folder heuristic this module removes. A Streamlit-only
+    ``__cause__`` / ``__context__`` (for example ``FileNotFoundError`` raised
+    inside ``image_utils``) must not bring those frames back just because that
+    one stack had no user code.
     """
     filtered = traceback.TracebackException.from_exception(exception)
     _filter_traceback_exception(filtered)
@@ -366,12 +379,18 @@ def _user_facing_traceback_exception(
 
 
 def _traceback_has_frames(tbe: traceback.TracebackException) -> bool:
-    """True if any stack in this exception's chain still has frames."""
+    """True if any stack that ``_format_traceback_rows`` would emit still has frames.
+
+    Walk ``__cause__`` in preference to ``__context__``, matching the
+    formatter, so a frameless cause cannot let a hidden context skip the
+    all-internal fallback.
+    """
     if tbe.stack:
         return True
-    if tbe.__cause__ is not None and _traceback_has_frames(tbe.__cause__):
-        return True
-    if (
+    if tbe.__cause__ is not None:
+        if _traceback_has_frames(tbe.__cause__):
+            return True
+    elif (
         tbe.__context__ is not None
         and not tbe.__suppress_context__
         and _traceback_has_frames(tbe.__context__)
@@ -408,9 +427,11 @@ def _format_exception_only_rows(
         return [
             line.rstrip("\n") for line in tbe.format_exception_only() if line.strip()
         ]
-    # 3.13+ deprecates ``exc_type`` in favor of ``exc_type_str``.
+    # 3.13+ ``exc_type_str`` is module-qualified for non-builtins; older
+    # ``exc_type.__name__`` is bare. Always emit the last dotted segment so
+    # redacted traces do not differ by interpreter version.
     type_name = getattr(tbe, "exc_type_str", None) or tbe.exc_type.__name__
-    return [type_name]
+    return [type_name.rpartition(".")[2]]
 
 
 def _format_traceback_rows(
@@ -421,15 +442,18 @@ def _format_traceback_rows(
     _group_depth: int = _EXCEPTION_GROUP_MAX_DEPTH,
     _group_width: int = _EXCEPTION_GROUP_MAX_WIDTH,
 ) -> list[str]:
-    """Format traceback rows for the exception proto.
+    """Build traceback rows for chained exceptions without repeating the
+    outermost type and message rendered by the frontend header.
 
-    ``include_exception_line`` is True for causes, contexts, and group children
-    so their type (and message, when allowed) are not lost: the frontend header
-    only shows the outermost exception.
+    ``include_exception_line`` appends the exception's own ``Type: message``
+    line after its frames. Causes, contexts, and group children need it
+    because the frontend header shows only the outermost exception.
     """
     rows: list[str] = []
+    chain_prefix: list[str] = []
+    separator: str | None = None
     if tbe.__cause__ is not None:
-        rows.extend(
+        chain_prefix.extend(
             _format_traceback_rows(
                 tbe.__cause__,
                 include_exception_line=True,
@@ -438,11 +462,11 @@ def _format_traceback_rows(
                 _group_width=_group_width,
             )
         )
-        rows.append(
+        separator = (
             "The above exception was the direct cause of the following exception:"
         )
     elif tbe.__context__ is not None and not tbe.__suppress_context__:
-        rows.extend(
+        chain_prefix.extend(
             _format_traceback_rows(
                 tbe.__context__,
                 include_exception_line=True,
@@ -451,15 +475,22 @@ def _format_traceback_rows(
                 _group_width=_group_width,
             )
         )
-        rows.append(
+        separator = (
             "During handling of the above exception, another exception occurred:"
         )
 
-    rows.extend(item.strip() for item in tbe.stack.format())
+    own_rows = [item.strip() for item in tbe.stack.format()]
     if include_exception_line:
-        rows.extend(
+        own_rows.extend(
             _format_exception_only_rows(tbe, include_message=include_exception_message)
         )
+
+    rows.extend(chain_prefix)
+    # Skip a dangling "following exception" sentence when this stack
+    # contributes no frames and no exception line.
+    if chain_prefix and own_rows and separator is not None:
+        rows.append(separator)
+    rows.extend(own_rows)
 
     children = getattr(tbe, "exceptions", None) or ()
     if children:

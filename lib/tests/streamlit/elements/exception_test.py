@@ -523,7 +523,9 @@ def test_streamlit_only_context_keeps_message_not_frames() -> None:
 
     joined = "\n".join(rows)
     streamlit_pkg = os.path.join(os.path.realpath(_STREAMLIT_PACKAGE_DIR), "")
-    assert "does not exist" in joined
+    assert any(
+        "FileNotFoundError:" in row and "does not exist" in row for row in rows
+    ), rows
     assert 'st.image("does not exist")' in joined
     assert streamlit_pkg not in joined
 
@@ -591,10 +593,42 @@ def test_filter_keeps_user_file_outside_the_package_dir() -> None:
     assert [f.filename for f in filtered] == [str(user_file)]
 
 
-def test_is_under_dir_returns_false_on_resolve_error() -> None:
-    """Unresolvable frame paths are treated as not inside the package."""
-    with patch.object(Path, "resolve", side_effect=OSError("boom")):
+@pytest.mark.parametrize("error", [OSError("boom"), RuntimeError("symlink loop")])
+def test_is_under_dir_returns_false_on_resolve_error(error: Exception) -> None:
+    """Unresolvable frame paths (including 3.10-3.12 symlink loops) are kept."""
+    with patch.object(Path, "resolve", side_effect=error):
         assert _is_under_dir("whatever.py", _STREAMLIT_PACKAGE_DIR) is False
+
+
+def test_traceback_has_frames_follows_cause_else_context() -> None:
+    """A frameless cause must not let a hidden context skip the fallback."""
+    user_file = Path("/tmp/user_app.py").resolve()
+    tbe = traceback.TracebackException.from_exception(RuntimeError("outer"))
+    cause = traceback.TracebackException.from_exception(ValueError("cause"))
+    context = traceback.TracebackException.from_exception(TypeError("context"))
+    tbe.stack[:] = _stack()
+    cause.stack[:] = _stack()
+    context.stack[:] = _stack(_frame(user_file, 3, "fn"))
+    tbe.__cause__ = cause
+    tbe.__context__ = context
+    tbe.__suppress_context__ = False
+    assert _traceback_has_frames(tbe) is False
+
+
+def test_format_skips_separator_when_outer_stack_is_empty() -> None:
+    """Do not emit a dangling 'following exception' sentence with no frames after it."""
+    user_file = Path("/tmp/user_app.py").resolve()
+    tbe = traceback.TracebackException.from_exception(RuntimeError("outer"))
+    cause = traceback.TracebackException.from_exception(ValueError("root"))
+    tbe.stack[:] = _stack()
+    cause.stack[:] = _stack(_frame(user_file, 3, "fn", "raise ValueError('root')"))
+    tbe.__cause__ = cause
+    rows = _format_traceback_rows(
+        tbe, include_exception_line=False, include_exception_message=True
+    )
+    joined = "\n".join(rows)
+    assert "direct cause" not in joined
+    assert any("ValueError" in row for row in rows)
 
 
 def _chained_secret_error() -> RuntimeError:
