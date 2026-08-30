@@ -198,15 +198,18 @@ export function convertTimestampToSeconds(
     return Number(timestamp)
   }
 
-  // Do the calculation based on bigints, if the value
-  // is a bigint and not safe for usage as number.
-  // This might lose some precision since it doesn't keep
-  // fractional parts.
+  // Do the calculation based on bigints if the value is a
+  // bigint outside JavaScript's safe integer range. Recombine
+  // the integer quotient with the remainder so sub-second
+  // precision is kept after the ticks overflow that range.
   if (
     typeof timestamp === "bigint" &&
     !Number.isSafeInteger(Number(timestamp))
   ) {
-    return Number(timestamp / BigInt(unitAdjustment))
+    const unitAdjustmentBigInt = BigInt(unitAdjustment)
+    const wholeUnits = timestamp / unitAdjustmentBigInt
+    const remainder = timestamp % unitAdjustmentBigInt
+    return Number(wholeUnits) + Number(remainder) / unitAdjustment
   }
 
   return Number(timestamp) / unitAdjustment
@@ -317,10 +320,12 @@ type DurationParts = {
   seconds?: number
 }
 
+type DurationFormatter = { format: (duration: DurationParts) => string }
+
 type DurationFormatCtor = new (
   locales?: string | readonly string[],
   options?: { style?: "long" | "short" | "narrow" | "digital" }
-) => { format: (duration: DurationParts) => string }
+) => DurationFormatter
 
 function getDurationFormatCtor(): DurationFormatCtor | undefined {
   return (Intl as typeof Intl & { DurationFormat?: DurationFormatCtor })
@@ -350,19 +355,29 @@ function toDurationParts(absSeconds: number): DurationParts {
   return parts
 }
 
+const durationFormatters = new Map<string, DurationFormatter>()
+
+function getDurationFormatter(
+  DurationFormat: DurationFormatCtor,
+  locales: string | readonly string[] | undefined
+): DurationFormatter {
+  const cacheKey = isNullOrUndefined(locales) ? "" : String(locales)
+  const cached = durationFormatters.get(cacheKey)
+  if (cached) {
+    return cached
+  }
+
+  const formatter = new DurationFormat(locales, { style: "long" })
+  durationFormatters.set(cacheKey, formatter)
+  return formatter
+}
+
 function formatDurationParts(
   DurationFormat: DurationFormatCtor,
   locales: string | readonly string[] | undefined,
   parts: DurationParts
 ): string {
-  const formatted = new DurationFormat(locales, { style: "long" }).format(
-    parts
-  )
-  // Some implementations format `{ seconds: 0 }` as an empty string.
-  return (
-    formatted ||
-    new DurationFormat(locales, { style: "long" }).format({ seconds: 0 })
-  )
+  return getDurationFormatter(DurationFormat, locales).format(parts)
 }
 
 function formatDurationWithIntl(absSeconds: number): string | undefined {

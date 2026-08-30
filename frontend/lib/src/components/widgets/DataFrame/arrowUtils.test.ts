@@ -67,6 +67,7 @@ import {
   ColumnCreator,
   DateColumn,
   DateTimeColumn,
+  ErrorCell,
   getTextCell,
   isErrorCell,
   ListColumn,
@@ -847,6 +848,33 @@ describe("getCellFromArrow", () => {
     expect((cell as NumberCell).data).toEqual(200 * 24 * 60 * 60)
   })
 
+  it("keeps sub-second precision for overflowing nanosecond duration ticks", () => {
+    const durationType = durationArrowType(
+      TimeUnit.NANOSECOND,
+      "timedelta64[ns]"
+    )
+    const durationColumn = NumberColumn({
+      ...DURATION_COLUMN_PROPS,
+      arrowType: durationType,
+    })
+    const twoHundredDaysNs = BigInt(200 * 24 * 60 * 60) * BigInt(1_000_000_000)
+    const remainderNs = BigInt(250_000_000)
+    const cell = getCellFromArrow(
+      durationColumn,
+      {
+        type: DataFrameCellType.DATA,
+        content: twoHundredDaysNs + remainderNs,
+        contentType: durationType,
+        field: durationType.arrowField,
+      },
+      undefined,
+      undefined
+    )
+
+    expect(isErrorCell(cell)).toEqual(false)
+    expect((cell as NumberCell).data).toEqual(200 * 24 * 60 * 60 + 0.25)
+  })
+
   it("returns an error cell when a time column is applied to duration values", () => {
     const durationType = durationArrowType(
       TimeUnit.MICROSECOND,
@@ -869,6 +897,7 @@ describe("getCellFromArrow", () => {
     )
 
     expect(isErrorCell(cell)).toEqual(true)
+    expect((cell as ErrorCell).errorDetails).toContain("TimeColumn")
   })
 
   it("applies display content overwrite to time cells", () => {

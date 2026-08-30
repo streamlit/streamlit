@@ -372,9 +372,8 @@ export function initColumnFromArrow(
     id: `_column-${title}-${columnPosition}`,
     indexNumber: columnPosition,
     name: title,
-    // Duration columns stay read-only by default: the editor is a raw
-    // second count next to a humanized display. Values are stored as
-    // seconds so they stay in JavaScript's safe integer range.
+    // Duration columns stay read-only by default because the editor is a
+    // raw second count next to a humanized display.
     isEditable: !isDurationType(arrowType),
     title,
     arrowType,
@@ -473,9 +472,15 @@ export function getCellFromArrow(
     // Duration values are elapsed time, not a clock time. Applying a
     // time/date/datetime column would display them incorrectly
     // (e.g. 1s → 00:16:40).
+    const publicColumnName =
+      column.kind === "datetime"
+        ? "DatetimeColumn"
+        : column.kind === "date"
+          ? "DateColumn"
+          : "TimeColumn"
     cellTemplate = getErrorCell(
       "Unsupported type",
-      `${column.kind} columns do not support timedelta/duration values. ` +
+      `${publicColumnName} does not support timedelta/duration values. ` +
         "Use a number column instead."
     )
   } else if (

@@ -48,6 +48,7 @@ import { TIMEDELTA } from "~lib/mocks/arrow/types/timedelta"
 import { UINT64 } from "~lib/mocks/arrow/types/uint64"
 
 import {
+  convertTimestampToSeconds,
   convertTimeToDate,
   format,
   formatDurationFromSeconds,
@@ -615,19 +616,56 @@ describe("formatDurationFromSeconds", () => {
   })
 })
 
-describe("formatLocalizedDurationFromSeconds", () => {
-  it("formats an exact locale duration when Intl.DurationFormat exists", () => {
-    const hasIntlDurationFormat =
-      typeof (Intl as { DurationFormat?: unknown }).DurationFormat ===
-      "function"
-    if (!hasIntlDurationFormat) {
-      return
-    }
-    expect(formatLocalizedDurationFromSeconds(5)).toMatch(/5/)
-    expect(formatLocalizedDurationFromSeconds(7200)).toMatch(/hour/i)
+describe("convertTimestampToSeconds", () => {
+  it("keeps sub-second remainder for nanosecond bigints outside the safe integer range", () => {
+    // 200 days + 250ms in nanoseconds overflows Number.MAX_SAFE_INTEGER.
+    const twoHundredDaysNs = BigInt(200 * 24 * 60 * 60) * BigInt(1_000_000_000)
+    const remainderNs = BigInt(250_000_000)
+    expect(
+      convertTimestampToSeconds(
+        twoHundredDaysNs + remainderNs,
+        TimeUnit.NANOSECOND
+      )
+    ).toBe(200 * 24 * 60 * 60 + 0.25)
   })
+
+  it("keeps a negative sub-second remainder for overflowing nanosecond bigints", () => {
+    const twoHundredDaysNs = BigInt(200 * 24 * 60 * 60) * BigInt(1_000_000_000)
+    const remainderNs = BigInt(250_000_000)
+    expect(
+      convertTimestampToSeconds(
+        -(twoHundredDaysNs + remainderNs),
+        TimeUnit.NANOSECOND
+      )
+    ).toBe(-(200 * 24 * 60 * 60 + 0.25))
+  })
+})
+
+const HAS_INTL_DURATION_FORMAT =
+  typeof (Intl as { DurationFormat?: unknown }).DurationFormat === "function"
+
+describe("formatLocalizedDurationFromSeconds", () => {
+  it.skipIf(!HAS_INTL_DURATION_FORMAT)(
+    "formats an exact locale duration",
+    () => {
+      expect(formatLocalizedDurationFromSeconds(5)).toMatch(/5/)
+      expect(formatLocalizedDurationFromSeconds(7200)).toMatch(/hour/i)
+    }
+  )
 
   it("prefixes a minus for negative durations", () => {
     expect(formatLocalizedDurationFromSeconds(-7200)).toMatch(/^-/)
+  })
+
+  it("falls back to moment humanize when Intl.DurationFormat is missing", () => {
+    const intlObject = Intl as unknown as { DurationFormat?: unknown }
+    const original = intlObject.DurationFormat
+    intlObject.DurationFormat = undefined
+    try {
+      expect(formatLocalizedDurationFromSeconds(5)).toEqual("a few seconds")
+      expect(formatLocalizedDurationFromSeconds(7200)).toMatch(/hour/i)
+    } finally {
+      intlObject.DurationFormat = original
+    }
   })
 })

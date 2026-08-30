@@ -51,7 +51,7 @@ NumberFormat: TypeAlias = Literal[
     "bytes",
 ]
 
-_NumberColumnFormat: TypeAlias = NumberFormat | Literal["duration", "clock"]
+NumberColumnFormat: TypeAlias = NumberFormat | Literal["duration", "clock"]
 
 DateTimeFormat: TypeAlias = Literal[
     "localized",
@@ -138,7 +138,7 @@ def _validate_chart_color(maybe_color: str) -> None:
 
 class NumberColumnConfig(TypedDict):
     type: Literal["number"]
-    format: NotRequired[str | _NumberColumnFormat | None]
+    format: NotRequired[str | NumberColumnFormat | None]
     min_value: NotRequired[int | float | None]
     max_value: NotRequired[int | float | None]
     step: NotRequired[int | float | None]
@@ -527,7 +527,7 @@ def NumberColumn(
     pinned: bool | None = None,
     alignment: ContentAlignment | None = None,
     default: int | float | None = None,
-    format: str | _NumberColumnFormat | None = None,
+    format: str | NumberColumnFormat | None = None,
     min_value: int | float | None = None,
     max_value: int | float | None = None,
     step: int | float | None = None,

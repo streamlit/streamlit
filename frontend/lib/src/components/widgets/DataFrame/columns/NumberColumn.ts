@@ -41,19 +41,25 @@ import {
   truncateDecimals,
 } from "./utils"
 
+// Pandas Timedelta is stored as int64 nanoseconds (~±292 years).
+const PANDAS_TIMEDELTA_MAX_SECONDS = 2 ** 63 / 1e9
+
 /**
  * Formats a duration in seconds as a clock string (e.g. `00:00:01`,
  * `02:00:00`, `336:00:00`). Hours are not wrapped at 24 so multi-day
  * values stay a single elapsed-time reading.
  */
 function formatDurationClock(seconds: number): string {
+  if (!Number.isFinite(seconds)) {
+    return String(seconds)
+  }
   const sign = seconds < 0 ? "-" : ""
-  const abs = Math.abs(Math.trunc(seconds))
-  const hours = Math.floor(abs / 3600)
-  const minutes = Math.floor((abs % 3600) / 60)
-  const secs = abs % 60
+  const absSeconds = Math.abs(Math.trunc(seconds))
+  const hours = Math.floor(absSeconds / 3600)
+  const minutes = Math.floor((absSeconds % 3600) / 60)
+  const remainingSeconds = absSeconds % 60
   const pad = (value: number): string => String(value).padStart(2, "0")
-  return `${sign}${pad(hours)}:${pad(minutes)}:${pad(secs)}`
+  return `${sign}${pad(hours)}:${pad(minutes)}:${pad(remainingSeconds)}`
 }
 
 export interface NumberColumnParams {
@@ -75,8 +81,9 @@ export interface NumberColumnParams {
    * - `clock`: elapsed-time clock (e.g. `00:00:01`)
    * - `localized` on a timedelta column: locale-aware duration
    *
-   * Timedelta columns default to `duration`. Other named and printf formats
-   * apply to the value in seconds.
+   * `clock` and `localized` display whole seconds; sub-second remainders
+   * are not shown. Timedelta columns default to `duration`. Other named
+   * and printf formats apply to the value in seconds.
    */
   readonly format?: string
   /**
@@ -112,7 +119,8 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
   const isDuration = isDurationType(props.arrowType)
   const useDurationClock = parameters.format === "clock"
   const useDurationLocalized = isDuration && parameters.format === "localized"
-  // Empty format (Automatic) is falsy, so duration columns keep humanize.
+  // The "Automatic" menu entry sends an empty format string, so a duration
+  // column with no explicit format falls back to the humanized display.
   const useDurationHumanize =
     parameters.format === "duration" || (isDuration && !parameters.format)
   const useDurationDisplay =
@@ -159,6 +167,13 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     }
 
     if (Number.isNaN(cellData)) {
+      return false
+    }
+
+    // Pandas Timedelta is stored as int64 nanoseconds (~±292 years).
+    // Larger second counts pass JS number checks but become missing
+    // values when the data editor reconstructs a Timedelta.
+    if (isDuration && Math.abs(cellData) > PANDAS_TIMEDELTA_MAX_SECONDS) {
       return false
     }
 
@@ -268,9 +283,9 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
 
       let copyData = ""
       if (notNullOrUndefined(cellData)) {
-        // Duration formats copy the formatted display (e.g. "2 hours" /
-        // "00:02:00") instead of the raw second count.
-        copyData = useDurationDisplay ? displayData : toSafeString(cellData)
+        // Keep the raw second count so copy/paste round-trips through
+        // toSafeNumber. displayData already shows the formatted duration.
+        copyData = toSafeString(cellData)
       }
 
       return {

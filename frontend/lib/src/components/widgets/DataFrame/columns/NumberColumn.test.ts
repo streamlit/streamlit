@@ -555,7 +555,7 @@ describe("NumberColumn", () => {
     expect((cell as NumberCell).data).toEqual(60)
     // Use regex to avoid coupling to the exact locale duration string.
     expect((cell as NumberCell).displayData).toMatch(/minute/i)
-    expect((cell as NumberCell).copyData).toMatch(/minute/i)
+    expect((cell as NumberCell).copyData).toEqual("60")
   })
 
   it("keeps a minus sign for negative durations", () => {
@@ -610,7 +610,7 @@ describe("NumberColumn", () => {
 
       const twoHours = mockColumn.getCell(7200)
       expect((twoHours as NumberCell).displayData).toMatch(/hour/i)
-      expect((twoHours as NumberCell).copyData).toMatch(/hour/i)
+      expect((twoHours as NumberCell).copyData).toEqual("7200")
     }
   )
 
@@ -629,4 +629,31 @@ describe("NumberColumn", () => {
       expect((fourteenDays as NumberCell).displayData).toEqual("336:00:00")
     }
   )
+
+  it("keeps copyData as the raw second count for duration formats", () => {
+    const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE)
+    const cell = mockColumn.getCell(7200)
+    expect((cell as NumberCell).copyData).toEqual("7200")
+    expect(mockColumn.validateInput!(cell.copyData)).toBe(true)
+  })
+
+  it("rejects duration edits outside the pandas Timedelta range", () => {
+    const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE)
+    expect(mockColumn.validateInput!(9_223_372_036)).toBe(true)
+    expect(mockColumn.validateInput!(9_223_372_037)).toBe(false)
+    expect(mockColumn.validateInput!(-9_223_372_037)).toBe(false)
+  })
+
+  it("renders non-finite clock values as their string form", () => {
+    const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
+      format: "clock",
+    })
+    expect(isErrorCell(mockColumn.getCell(Number.NaN))).toEqual(true)
+    expect(
+      (mockColumn.getCell(Number.POSITIVE_INFINITY) as NumberCell).displayData
+    ).toEqual("Infinity")
+    expect(
+      (mockColumn.getCell(Number.NEGATIVE_INFINITY) as NumberCell).displayData
+    ).toEqual("-Infinity")
+  })
 })
