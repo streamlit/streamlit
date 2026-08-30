@@ -46,16 +46,6 @@ const NUMBER_FORMATS: { format: string; label: string; icon: string }[] = [
     icon: ":material/translate:",
   },
   {
-    format: "duration",
-    label: "Duration",
-    icon: ":material/timelapse:",
-  },
-  {
-    format: "clock",
-    label: "Clock",
-    icon: ":material/schedule:",
-  },
-  {
     format: "plain",
     label: "Plain",
     icon: ":material/speed_1_75:",
@@ -94,6 +84,16 @@ const NUMBER_FORMATS: { format: string; label: string; icon: string }[] = [
     format: "accounting",
     label: "Accounting",
     icon: ":material/finance_chip:",
+  },
+  {
+    format: "duration",
+    label: "Duration",
+    icon: ":material/timelapse:",
+  },
+  {
+    format: "clock",
+    label: "Clock",
+    icon: ":material/schedule:",
   },
 ]
 

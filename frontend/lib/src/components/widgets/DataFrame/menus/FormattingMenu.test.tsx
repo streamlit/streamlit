@@ -55,6 +55,22 @@ describe("DataFrame FormattingMenu", () => {
     expect(screen.getByText("Percent")).toBeInTheDocument()
     expect(screen.getByText("Scientific")).toBeInTheDocument()
     expect(screen.getByText("Accounting")).toBeInTheDocument()
+
+    const menuItems = screen.getAllByRole("menuitem")
+    expect(menuItems.map(item => item.textContent)).toEqual([
+      "Automatic",
+      "Localized",
+      "Plain",
+      "Compact",
+      "Dollar",
+      "Euro",
+      "Yen",
+      "Percent",
+      "Scientific",
+      "Accounting",
+      "Duration",
+      "Clock",
+    ])
   })
 
   it("renders datetime format options when columnKind is datetime", () => {

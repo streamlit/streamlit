@@ -770,7 +770,7 @@ st.dataframe(
             "bytes": [0.0123123, -1234.567, 12, 0],
             "duration": [5, 7200, 14 * 24 * 60 * 60, 0],
             "clock": [5, 7200, 14 * 24 * 60 * 60, 0],
-            "custom format": [0.0123123, -1234.567, 12, 0],
+            "custom": [0.0123123, -1234.567, 12, 0],
         }
     ),
     column_config={
@@ -787,7 +787,7 @@ st.dataframe(
         "bytes": st.column_config.NumberColumn(format="bytes"),
         "duration": st.column_config.NumberColumn(format="duration"),
         "clock": st.column_config.NumberColumn(format="clock"),
-        "custom format": st.column_config.NumberColumn(format="%,.2f"),
+        "custom": st.column_config.NumberColumn(format="%,.2f"),
     },
     hide_index=True,
     width="content",
@@ -828,7 +828,7 @@ st.dataframe(
                 datetime.time(15, 45, 30),
                 datetime.time(12, 0, 0),
             ],
-            "custom format": [
+            "custom": [
                 datetime.datetime(2022, 4, 6, 9, 30, 0),
                 datetime.datetime(2024, 1, 1, 15, 45, 30),
                 datetime.datetime(2019, 8, 9, 12, 0, 0),
@@ -838,9 +838,7 @@ st.dataframe(
     column_config={
         "localized": st.column_config.DatetimeColumn(format="localized"),
         "calendar": st.column_config.DatetimeColumn(format="calendar"),
-        "custom format": st.column_config.DatetimeColumn(
-            format="MMM DD, YYYY - hh:mm A"
-        ),
+        "custom": st.column_config.DatetimeColumn(format="MMM DD, YYYY - hh:mm A"),
         "localized date": st.column_config.DateColumn(format="localized"),
         "localized time": st.column_config.TimeColumn(format="localized"),
         "iso8601": st.column_config.DatetimeColumn(format="iso8601"),
