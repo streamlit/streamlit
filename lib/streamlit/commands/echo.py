@@ -106,12 +106,12 @@ def echo(
         lines_to_display = source_lines[echo_block_start_line:echo_block_end_line]
 
         code_string = textwrap.dedent("".join(lines_to_display))
-    except FileNotFoundError as err:
+    except OSError as err:
         error_message = f"Unable to display code. {err}"
         _LOGGER.warning("%s", error_message, stack_info=True)
 
-    # Execute the echoed block even when the source file is missing, so a
-    # missing file does not skip the user's code.
+    # Run the echoed block even when the source could not be read, so a
+    # missing or unreadable file does not skip the user's code.
     yield
 
     if code_string is not None:

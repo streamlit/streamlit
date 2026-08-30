@@ -145,11 +145,11 @@ class JsonMixin:
                 # with a stack trace so CLI and agent users can find the call
                 # site.
                 warning_message = (
-                    "Warning: this data structure was not fully serializable as "
+                    "this data structure was not fully serializable as "
                     f"JSON due to one or more unexpected keys.  (Error was: {err})"
                 )
                 _LOGGER.warning("%s", warning_message, stack_info=True)
-                self.dg.warning(warning_message)
+                self.dg.warning(f"Warning: {warning_message}")
                 body = json.dumps(body, skipkeys=True, default=_ensure_serialization)
 
         json_proto = JsonProto()

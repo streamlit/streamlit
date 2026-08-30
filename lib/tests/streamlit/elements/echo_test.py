@@ -200,24 +200,30 @@ class MultiDecorated:
         element = self.get_delta_from_queue(0).new_element
         assert echo_str == element.code.code_text
 
-    def test_echo_missing_source_file_warns_and_logs(self):
-        """If the source file can't be read, echo still runs the block, shows a
+    @parameterized.expand(
+        [
+            (FileNotFoundError, "missing.py"),
+            (PermissionError, "denied.py"),
+        ]
+    )
+    def test_echo_unreadable_source_file_warns_and_logs(self, error_cls, err_text):
+        """If the source file cannot be opened, echo still runs the block, shows a
         warning, and logs it with a stack trace.
         """
         with patch(
             "streamlit.source_util.open_python_file",
-            side_effect=FileNotFoundError("missing.py"),
+            side_effect=error_cls(err_text),
         ):
             with self.assertLogs(_LOGGER) as logs:
                 with st.echo():
                     st.write("Hello")
 
-        assert "Unable to display code. missing.py" in logs.records[0].getMessage()
+        assert f"Unable to display code. {err_text}" in logs.records[0].getMessage()
         assert logs.records[0].stack_info is not None
 
         warning_el = self.get_delta_from_queue(0).new_element.alert
         assert warning_el.format == AlertProto.WARNING
-        assert "Unable to display code. missing.py" in warning_el.body
+        assert f"Unable to display code. {err_text}" in warning_el.body
         assert self.get_delta_from_queue(1).new_element.markdown.body == "Hello"
         assert not any(
             delta.new_element.WhichOneof("type") == "code"

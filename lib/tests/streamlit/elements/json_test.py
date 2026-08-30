@@ -54,13 +54,16 @@ class StJsonAPITest(DeltaGeneratorTestCase):
         with self.assertLogs(_LOGGER) as logs:
             st.json(data)
 
-        assert "not fully serializable as JSON" in logs.records[0].getMessage()
+        log_message = logs.records[0].getMessage()
+        assert "not fully serializable as JSON" in log_message
+        assert not log_message.startswith("Warning:")
         assert logs.records[0].stack_info is not None
 
         json_el = self.get_delta_from_queue().new_element
         # Warning is enqueued first; JSON is last.
         warning_el = self.get_delta_from_queue(-2).new_element
         assert json_el.json.body == '{"array": "array([1, 2, 3, 4, 5])"}'
+        assert warning_el.alert.body.startswith("Warning:")
         assert "not fully serializable as JSON" in warning_el.alert.body
 
     def test_expanded_param(self):

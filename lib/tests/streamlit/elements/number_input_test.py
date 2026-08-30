@@ -224,7 +224,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
             st.number_input("the label", value=5.0, format="%d")
 
         assert (
-            "NumberInput value has type float, but format %d displays as integer."
+            "st.number_input value has type float, but format %d displays as integer."
             in logs.records[0].getMessage()
         )
         assert logs.records[0].stack_info is not None
@@ -241,7 +241,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
             st.number_input("the label", value=5, format="%0.2f")
 
         assert (
-            "NumberInput value has type int so is displayed as int despite "
+            "st.number_input value has type int so is displayed as int despite "
             "format string %0.2f." in logs.records[0].getMessage()
         )
         assert logs.records[0].stack_info is not None

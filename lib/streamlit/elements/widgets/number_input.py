@@ -690,13 +690,13 @@ class NumberInputMixin:
         # is reported to the developer via the console rather than the app.
         if number_format in {"%d", "%u", "%i"} and float_value:
             _LOGGER.warning(
-                "NumberInput value has type float, but format %s displays as integer.",
+                "st.number_input value has type float, but format %s displays as integer.",
                 number_format,
                 stack_info=True,
             )
         elif number_format[-1] == "f" and int_value:
             _LOGGER.warning(
-                "NumberInput value has type int so is displayed as int despite "
+                "st.number_input value has type int so is displayed as int despite "
                 "format string %s.",
                 number_format,
                 stack_info=True,
