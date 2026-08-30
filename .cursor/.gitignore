@@ -10,6 +10,12 @@
 !commands/
 commands/*
 !commands/pr-create.md
+!commands/triage/
+!commands/bug-fix/
+
+# Ignore local copies of commands
+commands/triage.local/
+commands/bug-fix.local/
 
 # Allow specific rules
 !rules/
