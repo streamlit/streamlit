@@ -157,7 +157,7 @@ Use for: live metrics, refresh buttons, interactive charts that don't affect glo
 
 ### Keyed reruns — target a fragment from a callback
 
-Give a fragment a stable name with `@st.fragment(key=...)` so a widget callback can rerun it with `st.rerun("<key>")` instead of rerunning the full app or the current fragment.
+Use this when a widget *outside* a fragment should trigger only that fragment's rerun — not a full-app rerun. Give the fragment a stable name with `@st.fragment(key=...)` and call `st.rerun("<key>")` from the widget's callback.
 
 ```python
 @st.fragment(key="charts")
