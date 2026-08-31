@@ -122,6 +122,8 @@ st.button("Add 5", on_click=increment, args=(5,))
 
 Access a widget's value in its own callback via `st.session_state.key`, not the return variable.
 
+Calling `st.rerun()` or `st.switch_page()` inside a callback works as expected — it schedules a rerun after all callbacks for the current interaction have completed. The interaction's default full-app rerun is replaced by the callback-requested one.
+
 ## Initialization patterns
 
 Initialize all state at the top of your app for clarity:
