@@ -160,6 +160,12 @@ def test_st_rerun_list_with_reserved_name_raises(reserved: str) -> None:
         rerun([reserved])
 
 
+def test_st_rerun_list_with_empty_string_raises() -> None:
+    """st.rerun(["charts", ""]) raises StreamlitValueError for empty string items."""
+    with pytest.raises(StreamlitValueError, match="empty string"):
+        rerun(["charts", ""])
+
+
 @patch("streamlit.commands.execution_control.get_script_run_ctx")
 def test_st_rerun_list_with_int_items_normalizes(
     patched_get_script_run_ctx: MagicMock,

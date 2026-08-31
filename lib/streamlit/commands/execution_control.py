@@ -294,6 +294,12 @@ def rerun(  # type: ignore[misc]
                     type(name).__name__,
                     ["str", "int"],
                 )
+            elif name == "":
+                raise StreamlitValueError(
+                    "scope list items",
+                    ["non-empty strings or ints"],
+                    detail="Found an empty string in the list.",
+                )
             else:
                 normalized.append(name)
         for name in normalized:

@@ -122,7 +122,6 @@ class FragmentStorage(Protocol):
         *,
         parent_fragment_id: str | None = None,
         target_key: str | None = None,
-        definition_id: str | None = None,
     ) -> None:
         """Store a fragment definition.
 
@@ -268,10 +267,6 @@ class MemoryFragmentStorage(FragmentStorage):
         # Uses dict[str, None] for O(1) membership checks with stable insertion order.
         self._ids_by_target_key: dict[str, dict[str, None]] = {}
         self._target_key_by_id: dict[str, str] = {}
-        # Durable mapping from user key to fragment definition id.  Survives
-        # fragment-only reruns so a partial rerun cannot steal a key owned by a
-        # non-re-executing fragment with a different definition.
-        self._definition_id_by_key: dict[str, str] = {}
 
     def _iter_ancestor_ids(self, fragment_id: str) -> Iterator[str]:
         """Yield ancestors from the immediate parent outward.
@@ -312,7 +307,6 @@ class MemoryFragmentStorage(FragmentStorage):
             del ids[fragment_id]
             if not ids:
                 del self._ids_by_target_key[target_key]
-                self._definition_id_by_key.pop(target_key, None)
 
     def _remove(self, fragment_id: str, *, evict_wrappers: bool = True) -> None:
         del self._fragments[fragment_id]
@@ -348,14 +342,8 @@ class MemoryFragmentStorage(FragmentStorage):
         *,
         parent_fragment_id: str | None = None,
         target_key: str | None = None,
-        definition_id: str | None = None,
     ) -> None:
         with self._lock:
-            if target_key is not None and definition_id is not None:
-                existing = self._definition_id_by_key.get(target_key)
-                if existing is not None and existing != definition_id:
-                    raise StreamlitDuplicateElementKey(target_key)
-                self._definition_id_by_key[target_key] = definition_id
             self._registration_sequence += 1
             self._fragments[key] = fragment
             self._parent_by_id[key] = parent_fragment_id
@@ -615,6 +603,8 @@ def _fragment(
                 f"{non_optional_func.__module__}."
                 f"{get_object_name(non_optional_func)}{additional_hash_info}"
             )
+            if not ctx.shared.register_fragment_user_key(key, fragment_definition_id):
+                raise StreamlitDuplicateElementKey(key)
 
         # We intentionally want to capture the active script hash here to ensure
         # that the fragment is associated with the correct script running.
@@ -742,7 +732,6 @@ def _fragment(
             wrapped_fragment,
             parent_fragment_id=parent_fragment_id_at_def,
             target_key=key,
-            definition_id=fragment_definition_id,
         )
 
         if run_every:
