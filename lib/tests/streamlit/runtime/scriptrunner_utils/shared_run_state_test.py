@@ -46,6 +46,28 @@ def test_reset_clears_all_fields() -> None:
     assert shared.command_count_for("markdown") == 0
 
 
+def test_clear_widget_registrations_at_delta_path() -> None:
+    """``clear_widget_registrations_at_delta_path`` clears only matching paths."""
+    shared = SharedRunState()
+    for widget_id, user_key, delta_path in [
+        ("nested_auto", None, (0, 1, 0)),
+        ("nested_keyed", "nested", (0, 1, 1)),
+        ("sibling", "sibling", (0, 2, 0)),
+    ]:
+        shared.widget_ids_this_run.check_and_add(widget_id)
+        if user_key is not None:
+            shared.widget_user_keys_this_run.check_and_add(user_key)
+        shared.track_element_id_delta_path(widget_id, user_key, delta_path)
+
+    shared.clear_widget_registrations_at_delta_path((0, 1))
+
+    assert "nested_auto" not in shared.widget_ids_this_run
+    assert "nested_keyed" not in shared.widget_ids_this_run
+    assert "nested" not in shared.widget_user_keys_this_run
+    assert "sibling" in shared.widget_ids_this_run
+    assert "sibling" in shared.widget_user_keys_this_run
+
+
 def test_track_command_appends_and_counts() -> None:
     """``track_command()`` records commands in the list and counter."""
     shared = SharedRunState()

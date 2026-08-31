@@ -52,6 +52,11 @@ class ThreadSafeSet(Generic[T]):
         with self._lock:
             self._data.clear()
 
+    def difference_update(self, values: set[T]) -> None:
+        """Remove all values that exist in the provided set."""
+        with self._lock:
+            self._data.difference_update(values)
+
     def snapshot(self) -> frozenset[T]:
         """Return an immutable copy for read-only consumers."""
         with self._lock:
