@@ -852,28 +852,22 @@ def test_main_run_handles_none_flag_options() -> None:
     assert flag_opts == {}
 
 
-def test_init_command_runs_app_when_user_confirms() -> None:
+def test_init_command_runs_app_when_user_confirms(tmp_path: Path) -> None:
     """``streamlit init`` invokes ``_main_run`` when the user confirms 'Run the app now?'."""
     runner = CliRunner()
-    with (
-        runner.isolated_filesystem(),
-        patch("streamlit.web.cli._main_run") as mock_main_run,
-    ):
-        result = runner.invoke(cli.main, ["init"], input="y\n")
+    with patch("streamlit.web.cli._main_run") as mock_main_run:
+        result = runner.invoke(cli.main, ["init", str(tmp_path)], input="y\n")
 
     assert result.exit_code == 0
     mock_main_run.assert_called_once()
     assert "streamlit_app.py" in mock_main_run.call_args.args[0]
 
 
-def test_init_command_raises_click_exception_on_oserror() -> None:
+def test_init_command_raises_click_exception_on_oserror(tmp_path: Path) -> None:
     """``streamlit init <dir>`` surfaces ``OSError`` as a Click exception."""
     runner = CliRunner()
-    with (
-        runner.isolated_filesystem(),
-        patch("pathlib.Path.mkdir", side_effect=OSError("disk full")),
-    ):
-        result = runner.invoke(cli.main, ["init", "some-dir"])
+    with patch("pathlib.Path.mkdir", side_effect=OSError("disk full")):
+        result = runner.invoke(cli.main, ["init", str(tmp_path / "some-dir")])
 
     assert result.exit_code != 0
     assert "Failed to create directory" in result.output

@@ -426,7 +426,7 @@ class AppSession:
         # this exception ForwardMsg *must* also be enqueued in a callback,
         # so that it will be enqueued *after* the various ForwardMsgs that
         # _on_scriptrunner_event sends.
-        self._event_loop.call_soon_threadsafe(
+        self._call_soon_on_event_loop(
             lambda: self._enqueue_forward_msg(self._create_exception_message(e))
         )
 
@@ -624,7 +624,7 @@ class AppSession:
         We forward the event on to _handle_scriptrunner_event_on_event_loop,
         which will be called on the main thread.
         """
-        self._event_loop.call_soon_threadsafe(
+        self._call_soon_on_event_loop(
             lambda: self._handle_scriptrunner_event_on_event_loop(
                 sender,
                 event,
@@ -636,6 +636,20 @@ class AppSession:
                 pages,
             )
         )
+
+    def _call_soon_on_event_loop(self, callback: Callable[[], None]) -> None:
+        """Schedule ``callback`` on the session event loop.
+
+        ScriptRunner events can arrive after the loop is closed (process
+        shutdown or test teardown). Drop them instead of raising
+        ``RuntimeError: Event loop is closed``.
+        """
+        try:
+            self._event_loop.call_soon_threadsafe(callback)
+        except RuntimeError:
+            if not self._event_loop.is_closed():
+                raise
+            _LOGGER.debug("Dropped event-loop callback", exc_info=True)
 
     def _handle_scriptrunner_event_on_event_loop(
         self,

@@ -19,6 +19,7 @@ import os
 import sqlite3
 import unittest
 from collections.abc import Iterator, Mapping
+from contextlib import closing
 from datetime import date
 from decimal import Decimal
 from typing import Any
@@ -747,28 +748,27 @@ class DataframeUtilTest(unittest.TestCase):
     def test_verify_sqlite3_integration(self):
         """Verify that sqlite3 cursor can be used as a data source."""
 
-        con = sqlite3.connect("file::memory:", uri=True)
-        cur = con.cursor()
-        cur.execute("CREATE TABLE movie(title, year, score)")
-        cur.execute("""
-            INSERT INTO movie VALUES
-                ('Monty Python and the Holy Grail', 1975, 8.2),
-                ('And Now for Something Completely Different', 1971, 7.5)
-        """)
-        con.commit()
-        db_cursor = cur.execute("SELECT * FROM movie")
-        assert dataframe_util.is_dbapi_cursor(db_cursor) is True
-        assert (
-            dataframe_util.determine_data_format(db_cursor)
-            is dataframe_util.DataFormat.DBAPI_CURSOR
-        )
-        converted_df = dataframe_util.convert_anything_to_pandas_df(db_cursor)
-        assert isinstance(
-            converted_df,
-            pd.DataFrame,
-        )
-        assert converted_df.shape == (2, 3)
-        con.close()
+        with closing(sqlite3.connect("file::memory:", uri=True)) as con:
+            cur = con.cursor()
+            cur.execute("CREATE TABLE movie(title, year, score)")
+            cur.execute("""
+                INSERT INTO movie VALUES
+                    ('Monty Python and the Holy Grail', 1975, 8.2),
+                    ('And Now for Something Completely Different', 1971, 7.5)
+            """)
+            con.commit()
+            db_cursor = cur.execute("SELECT * FROM movie")
+            assert dataframe_util.is_dbapi_cursor(db_cursor) is True
+            assert (
+                dataframe_util.determine_data_format(db_cursor)
+                is dataframe_util.DataFormat.DBAPI_CURSOR
+            )
+            converted_df = dataframe_util.convert_anything_to_pandas_df(db_cursor)
+            assert isinstance(
+                converted_df,
+                pd.DataFrame,
+            )
+            assert converted_df.shape == (2, 3)
 
     @pytest.mark.require_integration
     def test_verify_duckdb_db_api_integration(self):
@@ -1273,7 +1273,7 @@ def test_convert_duckdb_relation_row_cap_triggers_caption() -> None:
 
 def test_convert_dbapi_cursor_row_cap_triggers_caption() -> None:
     """DB-API cursors that return a full fetchmany batch may show a row-limit caption."""
-    with sqlite3.connect("file::memory:", uri=True) as con:
+    with closing(sqlite3.connect("file::memory:", uri=True)) as con:
         cur = con.cursor()
         cur.execute("CREATE TABLE t(x INTEGER)")
         cur.executemany("INSERT INTO t VALUES (?)", [(i,) for i in range(6)])
