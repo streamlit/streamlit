@@ -647,7 +647,9 @@ class AppSession:
         try:
             self._event_loop.call_soon_threadsafe(callback)
         except RuntimeError:
-            _LOGGER.debug("Dropped event-loop callback; event loop is closed")
+            if not self._event_loop.is_closed():
+                raise
+            _LOGGER.debug("Dropped event-loop callback", exc_info=True)
 
     def _handle_scriptrunner_event_on_event_loop(
         self,

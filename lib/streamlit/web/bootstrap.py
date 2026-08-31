@@ -95,8 +95,9 @@ def _try_install_uvloop() -> None:
     """Install uvloop as the process event-loop policy if that API exists.
 
     Used on Python 3.10 (no ``asyncio.Runner``) and as a fallback when
-    ``uvloop.new_event_loop`` is missing. ``install()`` is deprecated from
-    Python 3.12 and removed in 3.16; those versions take the Runner path.
+    ``uvloop.new_event_loop`` is missing. ``install()`` relies on the asyncio
+    policy APIs, which are deprecated from Python 3.14 and removed in 3.16.
+    Python 3.11+ takes the Runner path instead.
     """
     if env_util.IS_WINDOWS:
         return
@@ -135,10 +136,20 @@ def _run_server_loop(main: Coroutine[Any, Any, None]) -> None:
     # implementation. getattr keeps this importable on 3.10.
     runner_cls = getattr(asyncio, "Runner", None)
     if loop_factory is not None and runner_cls is not None:
-        _LOGGER.debug("Starting new uvloop event loop for server")
-        with runner_cls(loop_factory=loop_factory) as runner:
-            runner.run(main)
-        return
+        try:
+            # Create the loop before Runner.run so a factory failure can
+            # fall back without wrapping the server coroutine itself.
+            loop = loop_factory()
+        except Exception:
+            _LOGGER.warning(
+                "Failed to create uvloop event loop. Falling back to default loop.",
+                exc_info=True,
+            )
+        else:
+            _LOGGER.debug("Starting new uvloop event loop for server")
+            with runner_cls(loop_factory=lambda: loop) as runner:
+                runner.run(main)
+            return
 
     _try_install_uvloop()
     _LOGGER.debug("Starting new event loop for server")
