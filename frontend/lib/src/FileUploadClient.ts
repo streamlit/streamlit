@@ -18,7 +18,7 @@ import type { AxiosProgressEvent } from "axios"
 import { isEqual } from "lodash-es"
 import { getLogger } from "loglevel"
 
-import { IFileURLs, IFileURLsResponse } from "@streamlit/protobuf"
+import { type FileURLs, type FileURLsResponse } from "@streamlit/protobuf"
 import { generateUuid } from "@streamlit/utils"
 
 import { SessionInfo } from "./SessionInfo"
@@ -77,7 +77,7 @@ export class FileUploadClient {
    */
   private readonly pendingFileURLsRequests = new Map<
     string,
-    PromiseWithResolvers<IFileURLs[]>
+    PromiseWithResolvers<FileURLs.$Properties[]>
   >()
 
   public constructor(props: Props) {
@@ -138,15 +138,14 @@ export class FileUploadClient {
    *
    * @param files: An array of files.
    *
-   * @return a Promise<FileURLsResponse.IFileURLs[]> resolving to a list of
-   * URLs for uploading and deleting the given files.
+   * @return a Promise<FileURLs.$Properties[]> of upload and delete URLs for the given files.
    */
-  public fetchFileURLs(files: File[]): Promise<IFileURLs[]> {
+  public fetchFileURLs(files: File[]): Promise<FileURLs.$Properties[]> {
     if (!this.requestFileURLs) {
       return Promise.resolve([])
     }
 
-    const resolver = Promise.withResolvers<IFileURLs[]>()
+    const resolver = Promise.withResolvers<FileURLs.$Properties[]>()
 
     const requestId = generateUuid()
     this.pendingFileURLsRequests.set(requestId, resolver)
@@ -162,7 +161,7 @@ export class FileUploadClient {
    * @param resp: the FileURLsResponse corresponding to a call to
    * this.requestFileURLs.
    */
-  public onFileURLsResponse(resp: IFileURLsResponse): void {
+  public onFileURLsResponse(resp: FileURLsResponse.$Properties): void {
     const id = resp.responseId as string
     const resolver = this.pendingFileURLsRequests.get(id)
     if (resolver) {

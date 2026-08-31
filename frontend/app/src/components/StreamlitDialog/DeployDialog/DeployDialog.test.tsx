@@ -27,13 +27,13 @@ import {
 } from "@streamlit/app/src/urls"
 import { mockSessionInfo } from "@streamlit/lib"
 import { render } from "@streamlit/lib/testing"
-import { GitInfo, IGitInfo } from "@streamlit/protobuf"
+import { GitInfo } from "@streamlit/protobuf"
 
 import { DeployDialog, DeployDialogProps } from "./DeployDialog"
 
 const { GitStates } = GitInfo
 
-const validGitInfo: IGitInfo = {
+const validGitInfo: GitInfo.$Properties = {
   repository: "my-repo",
   branch: "main",
   module: "streamlit_app.py",

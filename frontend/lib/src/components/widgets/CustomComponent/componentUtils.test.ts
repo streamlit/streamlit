@@ -21,7 +21,7 @@ import { Mock } from "vitest"
 import {
   ArrowDataframe,
   ComponentInstance as ComponentInstanceProto,
-  type ISpecialArg,
+  type SpecialArg,
 } from "@streamlit/protobuf"
 
 import { mockTheme } from "~lib/mocks/mockTheme"
@@ -81,15 +81,15 @@ describe("test componentUtils", () => {
       iframeMessageHandler(ComponentMessageType.COMPONENT_READY, {
         apiVersion: CUSTOM_COMPONENT_API_VERSION,
       })
-      expect(componentReadyCallback).toBeCalledTimes(1)
+      expect(componentReadyCallback).toHaveBeenCalledTimes(1)
     })
 
     it("should call componentErrorCallback when iframeMessageHandler receives message with wrong API version", () => {
       iframeMessageHandler(ComponentMessageType.COMPONENT_READY, {
         apiVersion: CUSTOM_COMPONENT_API_VERSION + 1,
       })
-      expect(componentReadyCallback).toBeCalledTimes(0)
-      expect(setComponentError).toBeCalledTimes(1)
+      expect(componentReadyCallback).toHaveBeenCalledTimes(0)
+      expect(setComponentError).toHaveBeenCalledTimes(1)
     })
 
     it("should call frameHeightCallback when iframeMessageHandler receives SET_FRAME_HEIGHT message", () => {
@@ -105,8 +105,8 @@ describe("test componentUtils", () => {
         height: height,
       })
 
-      expect(frameHeightCallback).toBeCalledTimes(1)
-      expect(frameHeightCallback).toBeCalledWith(height)
+      expect(frameHeightCallback).toHaveBeenCalledTimes(1)
+      expect(frameHeightCallback).toHaveBeenCalledWith(height)
     })
 
     it("should call widgetManager when iframeMessageHandler receives SET_COMPONENT_VALUE message", () => {
@@ -124,7 +124,7 @@ describe("test componentUtils", () => {
         dataType: "json",
       })
 
-      expect(widgetMgr.setJsonValue).toBeCalledTimes(1)
+      expect(widgetMgr.setJsonValue).toHaveBeenCalledTimes(1)
       expect(widgetMgr.setJsonValue).toHaveBeenCalledWith(
         element.id,
         jsonValue,
@@ -139,13 +139,13 @@ describe("test componentUtils", () => {
         dataType: "dataframe",
       })
 
-      expect(widgetMgr.setArrowValue).toBeCalledTimes(1)
+      expect(widgetMgr.setArrowValue).toHaveBeenCalledTimes(1)
       expect(widgetMgr.setArrowValue).toHaveBeenCalledWith(
         element.id,
         dataframeValue,
         { formId: element.formId, fragmentId: undefined, fromUser: true }
       )
-      expect(widgetMgr.setJsonValue).not.toBeCalled()
+      expect(widgetMgr.setJsonValue).not.toHaveBeenCalled()
     })
 
     it("should call widgetManager.setBytesValue when SET_COMPONENT_VALUE has bytes dataType", () => {
@@ -155,13 +155,13 @@ describe("test componentUtils", () => {
         dataType: "bytes",
       })
 
-      expect(widgetMgr.setBytesValue).toBeCalledTimes(1)
+      expect(widgetMgr.setBytesValue).toHaveBeenCalledTimes(1)
       expect(widgetMgr.setBytesValue).toHaveBeenCalledWith(
         element.id,
         bytesValue,
         { formId: element.formId, fragmentId: undefined, fromUser: true }
       )
-      expect(widgetMgr.setJsonValue).not.toBeCalled()
+      expect(widgetMgr.setJsonValue).not.toHaveBeenCalled()
     })
 
     it("should ignore SET_COMPONENT_VALUE messages with undefined value", () => {
@@ -170,9 +170,9 @@ describe("test componentUtils", () => {
         dataType: "json",
       })
 
-      expect(widgetMgr.setJsonValue).not.toBeCalled()
-      expect(widgetMgr.setArrowValue).not.toBeCalled()
-      expect(widgetMgr.setBytesValue).not.toBeCalled()
+      expect(widgetMgr.setJsonValue).not.toHaveBeenCalled()
+      expect(widgetMgr.setArrowValue).not.toHaveBeenCalled()
+      expect(widgetMgr.setBytesValue).not.toHaveBeenCalled()
     })
 
     it("should not throw or call callbacks when ref.current is null", () => {
@@ -183,12 +183,12 @@ describe("test componentUtils", () => {
           apiVersion: CUSTOM_COMPONENT_API_VERSION,
         })
       ).not.toThrow()
-      expect(componentReadyCallback).not.toBeCalled()
-      expect(frameHeightCallback).not.toBeCalled()
-      expect(setComponentError).not.toBeCalled()
-      expect(widgetMgr.setJsonValue).not.toBeCalled()
-      expect(widgetMgr.setArrowValue).not.toBeCalled()
-      expect(widgetMgr.setBytesValue).not.toBeCalled()
+      expect(componentReadyCallback).not.toHaveBeenCalled()
+      expect(frameHeightCallback).not.toHaveBeenCalled()
+      expect(setComponentError).not.toHaveBeenCalled()
+      expect(widgetMgr.setJsonValue).not.toHaveBeenCalled()
+      expect(widgetMgr.setArrowValue).not.toHaveBeenCalled()
+      expect(widgetMgr.setBytesValue).not.toHaveBeenCalled()
     })
 
     it("should ignore unrecognized message types", () => {
@@ -196,10 +196,10 @@ describe("test componentUtils", () => {
         foo: "bar",
       } as unknown as IframeMessage)
 
-      expect(widgetMgr.setJsonValue).not.toBeCalled()
-      expect(componentReadyCallback).not.toBeCalled()
-      expect(frameHeightCallback).not.toBeCalled()
-      expect(setComponentError).not.toBeCalled()
+      expect(widgetMgr.setJsonValue).not.toHaveBeenCalled()
+      expect(componentReadyCallback).not.toHaveBeenCalled()
+      expect(frameHeightCallback).not.toHaveBeenCalled()
+      expect(setComponentError).not.toHaveBeenCalled()
     })
   })
 
@@ -224,7 +224,7 @@ describe("test componentUtils", () => {
         mockTheme.emotion,
         mockIframe
       )
-      expect(handleAction).toBeCalledTimes(1)
+      expect(handleAction).toHaveBeenCalledTimes(1)
       expect(handleAction).toHaveBeenCalledWith(
         {
           type: StreamlitMessageType.RENDER,
@@ -246,7 +246,7 @@ describe("test componentUtils", () => {
 
       const mockIframe = undefined
       sendRenderMessage({}, [], false, mockTheme.emotion, mockIframe)
-      expect(handleAction).toBeCalledTimes(0)
+      expect(handleAction).toHaveBeenCalledTimes(0)
     })
 
     it("should not send message when iframe's content window is undefined", () => {
@@ -256,7 +256,7 @@ describe("test componentUtils", () => {
         contentWindow: undefined,
       } as unknown as HTMLIFrameElement
       sendRenderMessage({}, [], false, mockTheme.emotion, mockIframe)
-      expect(handleAction).toBeCalledTimes(0)
+      expect(handleAction).toHaveBeenCalledTimes(0)
     })
   })
 
@@ -279,7 +279,7 @@ describe("test componentUtils", () => {
           value: "bytes",
           bytes: someBytes,
         },
-      ] satisfies ISpecialArg[]
+      ] satisfies SpecialArg.$Properties[]
 
       const [newArgs, dataframeArgs] = parseArgs(
         JSON.stringify(args),
@@ -301,11 +301,9 @@ describe("test componentUtils", () => {
           key: "some-dataframe",
           value: "some-unknown-type",
         },
-      ] as unknown as ISpecialArg[]
+      ] as unknown as SpecialArg.$Properties[]
 
-      expect(() => parseArgs(JSON.stringify(args), specialArgs)).toThrowError(
-        Error
-      )
+      expect(() => parseArgs(JSON.stringify(args), specialArgs)).toThrow(Error)
     })
   })
 })

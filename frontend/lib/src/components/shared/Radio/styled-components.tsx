@@ -61,7 +61,11 @@ export const StyledRadioGroup = styled(RARadioGroup, {
  * This element is intentionally a plain block container. Layout (circle + text
  * alignment) is handled by the children so that the caption can live outside
  * the circle/text row without requiring any manual offset calculations.
+ *
+ * Radio is deprecated in favor of RadioField + RadioButton. Keep the current
+ * composition until that migration is done as its own a11y/DOM change.
  */
+// eslint-disable-next-line @typescript-eslint/no-deprecated
 export const StyledRadioItem = styled(RARadio)(({ theme }) => ({
   display: "block",
   cursor: "pointer",

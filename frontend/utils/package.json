@@ -21,7 +21,7 @@
     "buildWatch": "env DEV_WATCH=1 vite build --watch",
     "test": "vitest run",
     "testWatch": "vitest",
-    "lint": "yarn run -T eslint --cache --max-warnings 0 src",
+    "lint": "yarn run -T eslint --cache --max-warnings 0 --format ../eslint-github-formatter.mjs src",
     "lint:fix": "yarn run -T eslint --cache --max-warnings 0 --fix src",
     "typecheck": "yarn run typecheck:all",
     "format": "yarn run -T oxfmt --config ../.oxfmtrc.json './src/**/*.{js,ts,jsx,tsx}'",

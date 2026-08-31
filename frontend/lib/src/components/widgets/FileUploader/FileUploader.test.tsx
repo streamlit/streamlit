@@ -27,7 +27,6 @@ import {
   FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
   FileURLs as FileURLsProto,
-  IFileURLs,
   LabelVisibility as LabelVisibilityProto,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
@@ -81,7 +80,7 @@ const dropFiles = (dropzone: HTMLElement, files: File[]): void => {
 }
 
 const buildFileUploaderStateProto = (
-  fileUrlsArray: IFileURLs[]
+  fileUrlsArray: FileURLsProto.$Properties[]
 ): FileUploaderStateProto =>
   new FileUploaderStateProto({
     uploadedFileInfo: fileUrlsArray.map(

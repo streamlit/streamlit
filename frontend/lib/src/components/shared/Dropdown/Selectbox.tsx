@@ -290,7 +290,7 @@ const Selectbox: FC<Props> = ({
   // Enter). Checked by handleInputKeyDown to avoid double-committing.
   const racHandledEnterRef = useRef(false)
 
-  // Tracks whether the dropdown is open. RAC can fire deferred onSelectionChange
+  // Tracks whether the dropdown is open. RAC can fire deferred onChange
   // callbacks after the dropdown closes; those are discarded via this ref.
   const isOpenRef = useRef(false)
 
@@ -350,7 +350,7 @@ const Selectbox: FC<Props> = ({
     [theme.sizes.dropdownItemHeight]
   )
 
-  // Controlled selectedKey so RAC always knows the committed item and doesn't
+  // Controlled value so RAC always knows the committed item and doesn't
   // revert the input to "" on blur before handleBlur can restore it.
   const localSelectedKey = useMemo<string | null>(() => {
     if (isNullOrUndefined(value)) return null
@@ -380,8 +380,8 @@ const Selectbox: FC<Props> = ({
    * Does NOT close the dropdown — callers on the manual paths (keydown,
    * clear button) close explicitly; RAC-triggered paths (option click,
    * arrow-nav + Enter) let RAC close the dropdown naturally after
-   * onSelectionChange returns. Calling state.close() inside
-   * onSelectionChange causes RAC to fire onInputChange with the old
+   * onChange returns. Calling state.close() inside
+   * onChange causes RAC to fire onInputChange with the old
    * committed label, overwriting our setInputValue update.
    */
   const commitSelection = useCallback(
@@ -399,7 +399,7 @@ const Selectbox: FC<Props> = ({
   const handleSelectionChange = useCallback(
     (key: Key | null): void => {
       // Discard callbacks when the dropdown is closed. RAC fires
-      // onSelectionChange(currentKey) on close and via deferred pointerup
+      // onChange(currentKey) on close and via deferred pointerup
       // listeners — both arrive after the real selection is already handled.
       // Genuine selections always fire BEFORE onOpenChange(false), so this
       // guard correctly lets them through.
@@ -609,9 +609,9 @@ const Selectbox: FC<Props> = ({
       </WidgetLabel>
       <I18nProvider locale="en-US">
         <ComboBox
-          selectedKey={localSelectedKey}
+          value={localSelectedKey}
           inputValue={inputValue}
-          onSelectionChange={handleSelectionChange}
+          onChange={handleSelectionChange}
           onInputChange={handleInputChange}
           onOpenChange={handleOpenChange}
           isDisabled={selectDisabled}

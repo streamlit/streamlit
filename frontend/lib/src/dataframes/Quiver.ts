@@ -18,7 +18,7 @@
 
 import { Field, Vector } from "apache-arrow"
 
-import { ArrowData, IArrowData } from "@streamlit/protobuf"
+import { ArrowData } from "@streamlit/protobuf"
 
 import { hashString } from "~lib/util/utils"
 
@@ -140,7 +140,7 @@ export class Quiver {
   /** Number of bytes in the Arrow IPC bytes. */
   private readonly _num_bytes: number
 
-  constructor(arrowData: IArrowData) {
+  constructor(arrowData: ArrowData.$Properties) {
     const {
       pandasIndexData,
       columnNames,

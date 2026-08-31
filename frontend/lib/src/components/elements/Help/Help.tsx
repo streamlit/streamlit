@@ -16,7 +16,10 @@
 
 import { memo, ReactElement } from "react"
 
-import { Help as HelpProto, IMember } from "@streamlit/protobuf"
+import {
+  Help as HelpProto,
+  type Member as MemberProto,
+} from "@streamlit/protobuf"
 
 import {
   StyledDocContainer,
@@ -37,7 +40,7 @@ export interface HelpProps {
 }
 
 interface MemberProps {
-  member: IMember
+  member: MemberProto.$Properties
 }
 
 /** Renders a single member row in the members table. */

@@ -19,8 +19,8 @@ import { userEvent } from "@testing-library/user-event"
 
 import {
   ChatInput as ChatInputProto,
+  type ChatInputValue,
   FileURLs as FileURLsProto,
-  IChatInputValue,
 } from "@streamlit/protobuf"
 
 import type { WaveformController } from "~lib/components/audio/core/types"
@@ -83,7 +83,7 @@ const getProps = (
   ...widgetProps,
 })
 
-const mockChatInputValue = (text: string): IChatInputValue => {
+const mockChatInputValue = (text: string): ChatInputValue.$Properties => {
   return {
     data: text,
     fileUploaderState: {

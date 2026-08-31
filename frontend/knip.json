@@ -21,7 +21,7 @@
   ],
   "workspaces": {
     ".": {
-      "entry": ["vitest.setup.ts"]
+      "entry": ["vitest.setup.ts", "eslint-github-formatter.mjs"]
     }
   }
 }

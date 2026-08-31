@@ -18,9 +18,9 @@ import { ReactElement } from "react"
 
 import { css, Global } from "@emotion/react"
 
-import { IFontFace } from "@streamlit/protobuf"
+import { type FontFace } from "@streamlit/protobuf"
 
-interface BackwardCompatibleFontFace extends IFontFace {
+interface BackwardCompatibleFontFace extends FontFace.$Properties {
   // Legacy custom-theme payloads may still send deprecated weight.
   weight?: string | number
 }

@@ -19,6 +19,7 @@ import {
   CSSProperties,
   type FC,
   type HTMLProps,
+  type JSX,
   lazy,
   memo,
   type ReactElement,

@@ -29,7 +29,7 @@ import { flushSync } from "react-dom"
 
 import {
   ComponentInstance as ComponentInstanceProto,
-  ISpecialArg,
+  type SpecialArg,
 } from "@streamlit/protobuf"
 import { StreamlitConfig } from "@streamlit/utils"
 
@@ -137,7 +137,7 @@ function getWarnMessage(componentName: string, url?: string): string {
 
 function tryParseArgs(
   jsonArgs: string,
-  specialArgs: ISpecialArg[],
+  specialArgs: SpecialArg.$Properties[],
   setComponentError: (e: Error) => void,
   componentError?: Error
 ): [newArgs: Args, dataframeArgs: DataframeArg[]] {
@@ -454,6 +454,9 @@ function ComponentInstance(props: Props): ReactElement {
         width={width}
         // for undefined height we set the height to 0 to avoid inconsistent behavior
         height={frameHeight ?? 0}
+        // Keep the deprecated scrolling attribute: CSS overflow on the iframe
+        // does not reliably disable inner-document scrolling.
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         scrolling="no"
         sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
         title={componentName}

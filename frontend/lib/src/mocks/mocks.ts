@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { IAppPage } from "@streamlit/protobuf"
+import { type AppPage } from "@streamlit/protobuf"
 
 import { SessionInfo, Props as SessionInfoProps } from "~lib/SessionInfo"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
@@ -65,7 +65,11 @@ export function mockEndpoints(
     buildAppPageURL: vi
       .fn()
       .mockImplementation(
-        (_pageLinkBaseURL: string, page: IAppPage, pageIndex: number) => {
+        (
+          _pageLinkBaseURL: string,
+          page: AppPage.$Properties,
+          pageIndex: number
+        ) => {
           return `http://mock/app/page/${page.pageName}.${pageIndex}`
         }
       ),

@@ -53,6 +53,7 @@ export const WidgetLabelHelpIcon = memo(function WidgetLabelHelpIcon({
   containerWidth,
 }: WidgetLabelHelpIconProps): ReactElement {
   return (
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- This component is the public replacement for StyledWidgetLabelHelp.
     <StyledWidgetLabelHelp>
       <TooltipIcon
         content={content}

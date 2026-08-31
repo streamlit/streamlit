@@ -130,8 +130,13 @@ function HeaderPickerSelect({
   return (
     <StyledCalendarHeaderSelect
       aria-label={ariaLabel}
-      selectedKey={value}
-      onSelectionChange={onChange}
+      value={value}
+      onChange={key => {
+        // RAC Select.onChange can pass Key[] for multi-select; this picker is single-select.
+        if (!Array.isArray(key)) {
+          onChange(key)
+        }
+      }}
       isOpen={isOpen}
       onOpenChange={setIsOpen}
     >

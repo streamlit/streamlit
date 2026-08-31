@@ -52,7 +52,7 @@ export interface Props {
   element: FeedbackProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
-  widthConfig: streamlit.IWidthConfig | undefined | null
+  widthConfig: streamlit.WidthConfig.$Properties | undefined | null
 }
 
 interface FeedbackOption {

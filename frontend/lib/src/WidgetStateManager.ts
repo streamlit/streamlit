@@ -21,11 +21,10 @@ import queryString from "query-string"
 import { Signal, SignalConnection } from "typed-signals"
 
 import {
+  type ArrowTable,
   ChatInputValue,
   DoubleArray,
-  IArrowTable,
-  IChatInputValue,
-  IFileUploaderState,
+  type FileUploaderState,
   SInt64Array,
   StringArray,
   StringTriggerValue,
@@ -496,7 +495,7 @@ export class WidgetStateManager {
    */
   public setChatInputValue(
     elementId: string,
-    value: IChatInputValue,
+    value: ChatInputValue.$Properties,
     update: WidgetUpdate
   ): void {
     // 1. Store the value in a temporary WidgetState proto.
@@ -819,7 +818,7 @@ export class WidgetStateManager {
 
   public setArrowValue(
     elementId: string,
-    value: IArrowTable,
+    value: ArrowTable.$Properties,
     update: WidgetUpdate
   ): void {
     const widget = { id: elementId, formId: update.formId }
@@ -827,7 +826,9 @@ export class WidgetStateManager {
     this.onWidgetValueChanged(update)
   }
 
-  public getArrowValue(widget: WidgetInfo): IArrowTable | undefined {
+  public getArrowValue(
+    widget: WidgetInfo
+  ): ArrowTable.$Properties | undefined {
     const state = this.getWidgetState(widget)
     if (
       notNullOrUndefined(state) &&
@@ -861,7 +862,7 @@ export class WidgetStateManager {
 
   public setFileUploaderStateValue(
     elementId: string,
-    value: IFileUploaderState,
+    value: FileUploaderState.$Properties,
     update: WidgetUpdate
   ): void {
     const widget = { id: elementId, formId: update.formId }
@@ -871,13 +872,13 @@ export class WidgetStateManager {
 
   public getFileUploaderStateValue(
     widget: WidgetInfo
-  ): IFileUploaderState | undefined {
+  ): FileUploaderState.$Properties | undefined {
     const state = this.getWidgetState(widget)
     if (
       notNullOrUndefined(state) &&
       state.value === "fileUploaderStateValue"
     ) {
-      return state.fileUploaderStateValue as IFileUploaderState
+      return state.fileUploaderStateValue as FileUploaderState.$Properties
     }
 
     return undefined
