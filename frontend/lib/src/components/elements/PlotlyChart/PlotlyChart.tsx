@@ -388,7 +388,7 @@ export function PlotlyChart({
             ...prevFigure.layout,
             // selections is not part of the plotly typing:
             selections: [],
-          } as PlotlyFigureType["layout"],
+          },
         }
       })
     },
