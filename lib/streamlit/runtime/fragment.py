@@ -356,7 +356,8 @@ class MemoryFragmentStorage(FragmentStorage):
         if not names:
             raise StreamlitAPIException(
                 "st.rerun() was called with an empty scope. "
-                "Pass a fragment key, a list of keys, 'app', or 'fragment'."
+                "Pass a fragment key, a list of keys, 'app', or 'fragment'.",
+                error_id="rerun-empty-scope",
             )
         with self._lock:
             resolved: dict[str, None] = {}
@@ -366,7 +367,8 @@ class MemoryFragmentStorage(FragmentStorage):
                     raise StreamlitAPIException(
                         f"No fragment found for target '{name}'. Pass the same "
                         f"`key` you set on `@st.fragment(key=...)`, and make sure "
-                        f"that fragment has rendered at least once."
+                        f"that fragment has rendered at least once.",
+                        error_id="rerun-unknown-fragment-key",
                     )
                 for fragment_id in ids:
                     resolved[fragment_id] = None
@@ -565,7 +567,8 @@ def _fragment(
         raise StreamlitAPIException(
             f"`{key}` is a reserved name and cannot be used as a fragment key, "
             "because `st.rerun(scope=...)` reads it as a rerun level. Choose a "
-            "different key for `@st.fragment(key=...)`."
+            "different key for `@st.fragment(key=...)`.",
+            error_id="fragment-reserved-key",
         )
 
     if func is None:

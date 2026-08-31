@@ -118,7 +118,8 @@ def _new_fragment_id_queue(
                 "widget callback (e.g. `on_change` / `on_click`). Calling it "
                 "from the main script body or a fragment body would abort the "
                 "current run. If you meant to rerun the whole app or the "
-                "current fragment, use `scope='app'` or `scope='fragment'`."
+                "current fragment, use `scope='app'` or `scope='fragment'`.",
+                error_id="rerun-keyed-outside-callback",
             )
         return ctx.fragment_storage.resolve_target(scope)
 
