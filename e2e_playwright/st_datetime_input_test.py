@@ -232,6 +232,79 @@ def test_clearable_datetime_input(app: Page):
     expect_markdown(app, "Value 8: None")
 
 
+def test_keeps_time_given_before_a_date(app: Page):
+    """A time given before any date survives the calendar date selection.
+
+    The field reports no value until every segment is filled, so a time entered
+    while the date segments are still empty has to be read back out of the
+    field's segment state when a date completes the value — otherwise it silently
+    becomes midnight. Covers all three entry points: the inline segments, the
+    popover TimeField, and a date typed inline with the time given only in the
+    popover — the last dismissed by an outside click, which runs the commit path
+    twice.
+    """
+    datetime_input = get_datetime_input(app, "Datetime input 8 (empty)")
+    datetime_field = datetime_input.get_by_test_id("stDateTimeInputField")
+    calendar = app.get_by_test_id("stDateTimeInputCalendar")
+    # Segments follow the default YYYY/MM/DD format: year, month, day, hour, minute.
+    segments = datetime_field.get_by_role("spinbutton")
+
+    # --- Time typed into the inline field, with the date left empty ---
+    segments.nth(3).press_sequentially("03")
+    segments.nth(4).press_sequentially("24")
+    expect(calendar).to_be_visible()
+
+    # Any in-month day works: the assertions pin only the preserved time, so
+    # they must not depend on which month an empty widget opens on.
+    calendar.get_by_role("button", name=re.compile(r"\b15, ")).click()
+    app.get_by_text("Value 8:").click()
+    expect(calendar).not_to_be_visible()
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Value 8:", re.compile(r"\d{4}-\d{2}-\d{2} 03:24:00"))
+
+    datetime_input.get_by_test_id("stDateTimeInputClearButton").click()
+    wait_for_app_run(app)
+    expect_markdown(app, "Value 8: None")
+
+    # --- Time set in the popover TimeField, with no value committed yet ---
+    segments.first.click()
+    expect(calendar).to_be_visible()
+
+    popover_segments = app.get_by_test_id("stDateTimeInputPopoverTime").get_by_role(
+        "spinbutton"
+    )
+    popover_segments.first.press_sequentially("09")
+    popover_segments.last.press_sequentially("45")
+
+    calendar.get_by_role("button", name=re.compile(r"\b15, ")).click()
+    app.get_by_text("Value 8:").click()
+    expect(calendar).not_to_be_visible()
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Value 8:", re.compile(r"\d{4}-\d{2}-\d{2} 09:45:00"))
+
+    datetime_input.get_by_test_id("stDateTimeInputClearButton").click()
+    wait_for_app_run(app)
+    expect_markdown(app, "Value 8: None")
+
+    # --- Date typed inline, time set only in the popover, no calendar click ---
+    # Neither control reports a value in this state, so dismissal has to combine
+    # what is on screen. Worth covering here rather than only in unit tests: a
+    # real outside click commits on pointerdown and then fires blur, running the
+    # commit path twice, which jsdom does not reproduce.
+    segments.first.click()
+    expect(calendar).to_be_visible()
+    popover_segments.first.press_sequentially("07")
+    popover_segments.last.press_sequentially("30")
+    segments.nth(0).press_sequentially("2026")
+    segments.nth(1).press_sequentially("01")
+    segments.nth(2).press_sequentially("15")
+
+    app.get_by_text("Value 8:").click()
+    expect(calendar).not_to_be_visible()
+    wait_for_app_run(app)
+    expect_markdown(app, "Value 8: 2026-01-15 07:30:00")
+
+
 def test_callback_invoked(app: Page):
     datetime_field = get_datetime_input(
         app, "Datetime input 6 (with callback)"
@@ -254,6 +327,57 @@ def test_form_submission_resets_value(app: Page):
     # Click submit button to submit the form (no rerun until form submit in st.form)
     app.get_by_role("button", name="Submit datetime form").click()
     wait_for_app_run(app)
+    expect_markdown(app, "Form submitted value: 2025-12-24 12:00:00")
+
+
+def test_form_clear_empties_the_segments_and_keeps_focus(app: Page):
+    """A cleared form empties the field's segments, not just its value.
+
+    React Aria keeps display state for segments typed but not completed, so a
+    partial time could survive `clear_on_submit` and be committed with a later
+    date. Clearing remounts the field, which costs the focused segment — checked
+    here rather than only in unit tests, since focus and remount timing are
+    browser behavior.
+    """
+    form_field = get_datetime_input(app, "Datetime input 13 (form)").get_by_test_id(
+        "stDateTimeInputField"
+    )
+    segments = form_field.get_by_role("spinbutton")
+
+    # A time with no date: the field reports no value, so only the segments hold it.
+    segments.nth(3).press_sequentially("03")
+    segments.nth(4).press_sequentially("24")
+    expect(segments.nth(3)).to_have_text("03")
+
+    app.get_by_role("button", name="Submit datetime form").click()
+    wait_for_app_run(app)
+
+    # The time must not survive the clear, on screen or in the committed value.
+    expect(form_field.get_by_role("spinbutton").nth(3)).to_have_attribute(
+        "data-placeholder", "true"
+    )
+    expect_markdown(app, "Form submitted value: None")
+
+    # Submitting by button leaves focus on the button, so nothing is restored.
+    expect(form_field.get_by_role("spinbutton").first).not_to_be_focused()
+
+    # Enter-to-submit is the case where focus is in the field when the clear
+    # arrives, and the remount would otherwise drop the user to the page body.
+    type_date(form_field, "2025", "12", "24", "12", "00", commit=False)
+    form_field.get_by_role("spinbutton").last.press("Enter")
+    wait_for_app_run(app)
+
+    expect_markdown(app, "Form submitted value: 2025-12-24 12:00:00")
+    expect(form_field.get_by_role("spinbutton").first).to_be_focused()
+
+    # Re-entering the value that was just submitted has to reach widget state
+    # again: the clear ends the interaction, so the commit-dedup memory must not
+    # carry over. If it did, Enter would submit with the cleared value and the
+    # display below would flip to None.
+    type_date(form_field, "2025", "12", "24", "12", "00", commit=False)
+    form_field.get_by_role("spinbutton").last.press("Enter")
+    wait_for_app_run(app)
+
     expect_markdown(app, "Form submitted value: 2025-12-24 12:00:00")
 
 
