@@ -155,6 +155,34 @@ auto_refresh_metrics()
 
 Use for: live metrics, refresh buttons, interactive charts that don't affect global state.
 
+### Keyed reruns — target a fragment from a callback
+
+Give a fragment a stable name with `@st.fragment(key=...)` so a widget callback can rerun it with `st.rerun("<key>")` instead of rerunning the full app or the current fragment.
+
+```python
+@st.fragment(key="charts")
+def charts():
+    st.line_chart(st.session_state.data)
+
+
+charts()
+# Button lives outside the fragment; clicking it reruns only "charts".
+st.button("Refresh charts", on_click=lambda: st.rerun("charts"))
+```
+
+To rerun multiple fragments at once, pass a list:
+
+```python
+st.button("Refresh all", on_click=lambda: st.rerun(["charts", "table"]))
+```
+
+**Constraints and gotchas:**
+
+- `st.rerun("<key>")` is **only valid inside a widget callback** (`on_change`, `on_click`, etc.). Calling it from the main script body or a fragment body raises an error.
+- The named fragment must have been rendered during the current run. An unknown key raises an error.
+- Keys `"app"` and `"fragment"` are reserved and cannot be used as fragment keys.
+- If another callback in the same interaction calls plain `st.rerun()` (or returns normally triggering a full-app rerun), keyed reruns **escalate to a full-app rerun**.
+
 ### Parallel fragments
 
 Use `parallel=True` to run independent fragments concurrently during full app reruns. Each parallel fragment is dispatched to a thread pool, so multiple slow operations overlap instead of running sequentially.
