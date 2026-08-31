@@ -217,7 +217,7 @@ describe("Selectbox widget", () => {
 
   it("selects an option via arrow-nav + Enter (racHandledEnterRef path)", async () => {
     // Exercises the most complex keyboard path: ArrowDown navigates to "b"
-    // which RAC commits via onSelectionChange (setting racHandledEnterRef),
+    // which RAC commits via onChange (setting racHandledEnterRef),
     // then Enter fires our bubble-phase handler which must NOT double-commit.
     const user = userEvent.setup()
     render(<Selectbox {...props} />)
@@ -225,7 +225,7 @@ describe("Selectbox widget", () => {
 
     await user.click(input)
     // With initial value "a" (index 0), ArrowDown navigates to "b" (index 1).
-    // RAC fires onSelectionChange("1") which commits "b" and sets racHandledEnterRef.
+    // RAC fires onChange("1") which commits "b" and sets racHandledEnterRef.
     // Press Enter immediately after — our handler sees racHandledEnterRef=true
     // and skips, so onChange is called exactly once total (not twice).
     await user.keyboard("{ArrowDown}{Enter}")
@@ -696,7 +696,7 @@ describe("Selectbox widget", () => {
 
   it("committedValueRef blur regression: selecting then tabbing shows selected value", async () => {
     // Validates that the committedValueRef pattern prevents the input from
-    // reverting to the stale propValue when onBlur fires after onSelectionChange.
+    // reverting to the stale propValue when onBlur fires after onChange.
     const user = userEvent.setup()
     render(<Selectbox {...props} />)
 

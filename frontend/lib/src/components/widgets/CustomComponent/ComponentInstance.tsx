@@ -434,6 +434,8 @@ function ComponentInstance(props: Props): ReactElement {
   // Without this, there is a potential for a scrollbar to
   // appear for a brief moment after an iframe's content gets bigger,
   // and before it sends the "setFrameHeight" message back to Streamlit.
+  // CSS overflow on the iframe does not reliably disable inner-document
+  // scrolling, so the deprecated scrolling attribute stays.
   //
   // We may ultimately want to give components control over the "scrolling"
   // property.
@@ -454,8 +456,6 @@ function ComponentInstance(props: Props): ReactElement {
         width={width}
         // for undefined height we set the height to 0 to avoid inconsistent behavior
         height={frameHeight ?? 0}
-        // Keep the deprecated scrolling attribute: CSS overflow on the iframe
-        // does not reliably disable inner-document scrolling.
         // eslint-disable-next-line @typescript-eslint/no-deprecated
         scrolling="no"
         sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}

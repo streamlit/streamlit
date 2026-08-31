@@ -15,11 +15,11 @@
  */
 
 import { render } from "@streamlit/lib/testing"
-import { type FontFace } from "@streamlit/protobuf"
+import { type FontFace as FontFaceProto } from "@streamlit/protobuf"
 
 import FontFaceDeclaration from "./FontFaceDeclaration"
 
-type TestFontFace = FontFace.$Properties & { weight?: string | number }
+type TestFontFace = FontFaceProto.$Properties & { weight?: string | number }
 
 /** Collect Emotion/global style sheet text injected into the document. */
 function getInjectedStyleText(): string {

@@ -32,7 +32,10 @@ import {
   setCachedThemeSelection,
   ThemeConfig,
 } from "@streamlit/lib"
-import { CustomThemeConfig, type FontFace } from "@streamlit/protobuf"
+import {
+  CustomThemeConfig,
+  type FontFace as FontFaceProto,
+} from "@streamlit/protobuf"
 
 export type FontSources = Record<string, string>
 
@@ -80,7 +83,7 @@ export function useThemeManager(): [
 ] {
   const defaultTheme = getDefaultTheme()
   const [theme, setTheme] = useState<ThemeConfig>(defaultTheme)
-  const [fontFaces, setFontFaces] = useState<FontFace.$Properties[]>(
+  const [fontFaces, setFontFaces] = useState<FontFaceProto.$Properties[]>(
     defaultTheme.themeInput?.fontFaces ?? []
   )
   const [fontSources, setFontSources] = useState<FontSources | null>(null)

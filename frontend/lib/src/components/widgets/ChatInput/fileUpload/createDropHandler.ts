@@ -165,9 +165,10 @@ export const createDropHandler =
       .then((fileURLsArray: FileURLsProto.$Properties[]) => {
         zip(fileURLsArray, acceptedFiles).forEach(
           ([fileURLs, acceptedFile]) => {
-            if (fileURLs && acceptedFile) {
-              uploadFile(fileURLs, acceptedFile)
-            }
+            uploadFile(
+              fileURLs as FileURLsProto.$Properties,
+              acceptedFile as File
+            )
           }
         )
       })
