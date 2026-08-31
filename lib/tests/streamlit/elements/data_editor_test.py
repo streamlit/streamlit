@@ -449,6 +449,26 @@ class DataEditorUtilTest(unittest.TestCase):
         else:
             assert df.iat[2, 0] == pd.Timedelta(seconds=90.5)
 
+    def test_apply_row_additions_does_not_coerce_omitted_bool(self):
+        """Duration dtype restore must not recast omitted bool cells to False."""
+        df = pd.DataFrame(
+            {
+                "duration": pd.Series(
+                    [pd.Timedelta(seconds=5)], dtype="timedelta64[s]"
+                ),
+                "flag": pd.Series([True], dtype="bool"),
+            }
+        )
+        _apply_row_additions(
+            df,
+            [{"duration": 90}],
+            determine_dataframe_schema(df, _get_arrow_schema(df)),
+        )
+
+        assert len(df) == 2
+        assert df.iat[1, 0] == pd.Timedelta(seconds=90)
+        assert df.iat[1, 1] is not False
+
     def test_apply_row_additions(self):
         """Test applying row additions to a DataFrame."""
         df = pd.DataFrame(

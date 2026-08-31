@@ -522,10 +522,17 @@ def _assign_row_values(
     """
     import warnings
 
+    import pandas as pd
+
     # .loc assignment can widen duration units (timedelta64[s] → [us]) or
-    # object-ify a column when a value is None. Remember dtypes so we can
-    # restore them after the write.
-    original_dtypes = {col: df[col].dtype for col in df.columns}
+    # object-ify a duration column when a value is None. Only restore
+    # timedelta dtypes — recasting bool/int columns would coerce omitted
+    # empty cells (None) into False/failed restores.
+    original_timedelta_dtypes = {
+        col: df[col].dtype
+        for col in df.columns
+        if pd.api.types.is_timedelta64_dtype(df[col].dtype)
+    }
 
     # Suppress pandas FutureWarning about dtype inference during concatenation.
     # When assigning to a new row via .loc[], pandas internally performs concat
@@ -540,7 +547,7 @@ def _assign_row_values(
         )
         df.loc[row_label] = dict(zip(df.columns, row_values, strict=True))
 
-    for col, dtype in original_dtypes.items():
+    for col, dtype in original_timedelta_dtypes.items():
         if df[col].dtype == dtype:
             continue
         try:
