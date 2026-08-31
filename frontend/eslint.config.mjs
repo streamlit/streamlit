@@ -334,7 +334,7 @@ export default defineConfig([
       "@typescript-eslint/prefer-readonly": "warn",
       // Ensure return await is used in try/catch for proper error stack traces
       "@typescript-eslint/return-await": ["error", "in-try-catch"],
-      // Treat @deprecated API usage as errors so CI annotations catch new drift
+      // Treat @deprecated API usage as errors
       "@typescript-eslint/no-deprecated": "error",
       // Permit for-of loops
       "no-restricted-syntax": [
