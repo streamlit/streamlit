@@ -202,7 +202,7 @@ function FormattingMenu({
   children,
 }: FormattingMenuProps): ReactElement {
   const formats = (COLUMN_KIND_FORMAT_MAPPING[columnKind] || []).map(option =>
-    isDuration && option.format === "compact"
+    isDuration && columnKind === "number" && option.format === "compact"
       ? { ...option, label: "Clock", icon: ":material/schedule:" }
       : option
   )
