@@ -625,6 +625,25 @@ describe("formatDurationClockFromSeconds", () => {
     )
     expect(formatDurationClockFromSeconds(-7200)).toEqual("-02:00:00")
   })
+
+  it("includes fractional seconds up to the requested precision", () => {
+    expect(formatDurationClockFromSeconds(1.5, 3)).toEqual("00:00:01.5")
+    expect(formatDurationClockFromSeconds(1.00025, 6)).toEqual(
+      "00:00:01.00025"
+    )
+    expect(formatDurationClockFromSeconds(0.000000125, 9)).toEqual(
+      "00:00:00.000000125"
+    )
+    expect(formatDurationClockFromSeconds(-0.5, 3)).toEqual("-00:00:00.5")
+  })
+
+  it("omits fractional seconds for whole values", () => {
+    expect(formatDurationClockFromSeconds(1, 9)).toEqual("00:00:01")
+  })
+
+  it("does not round unsupported fractions into whole seconds", () => {
+    expect(formatDurationClockFromSeconds(1.5, 0)).toEqual("00:00:01")
+  })
 })
 
 describe("convertTimestampToSeconds", () => {
@@ -661,6 +680,13 @@ describe("formatLocalizedDurationFromSeconds", () => {
     () => {
       expect(formatLocalizedDurationFromSeconds(5)).toEqual("5 sec")
       expect(formatLocalizedDurationFromSeconds(7200)).toEqual("2 hr")
+      expect(formatLocalizedDurationFromSeconds(1.5, 3)).toEqual(
+        "1 sec, 500 ms"
+      )
+      expect(formatLocalizedDurationFromSeconds(0.00025, 6)).toEqual("250 μs")
+      expect(formatLocalizedDurationFromSeconds(0.000000125, 9)).toEqual(
+        "125 ns"
+      )
     }
   )
 
@@ -675,6 +701,7 @@ describe("formatLocalizedDurationFromSeconds", () => {
     try {
       expect(formatLocalizedDurationFromSeconds(5)).toEqual("00:00:05")
       expect(formatLocalizedDurationFromSeconds(7200)).toEqual("02:00:00")
+      expect(formatLocalizedDurationFromSeconds(1.5, 3)).toEqual("00:00:01.5")
     } finally {
       intlObject.DurationFormat = original
     }

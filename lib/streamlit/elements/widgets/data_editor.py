@@ -414,9 +414,20 @@ def _apply_cell_edits(
                 )
             else:
                 col_pos = df.columns.get_loc(col_name)
-                df.iat[row_pos, col_pos] = _parse_value(  # type: ignore
-                    value, dataframe_schema[col_name]
-                )
+                try:
+                    df.iat[row_pos, col_pos] = _parse_value(  # type: ignore
+                        value, dataframe_schema[col_name]
+                    )
+                except (TypeError, ValueError) as ex:
+                    # Widget state is client-controlled. A value with finer
+                    # precision than the underlying duration dtype (for
+                    # example, 1.5 seconds for duration[s]) must not crash the
+                    # app if it bypasses frontend validation.
+                    _LOGGER.warning(
+                        "Failed to apply edit to column %s. Edit ignored.",
+                        col_name,
+                        exc_info=ex,
+                    )
 
 
 def _parse_added_row(

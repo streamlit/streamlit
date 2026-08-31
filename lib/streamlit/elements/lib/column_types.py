@@ -605,7 +605,7 @@ def NumberColumn(
         - ``"plain"``: Show the full number without any formatting (e.g. "1234.567").
         - ``"localized"``: Show the number in the default locale format
           (e.g. "1,234.567"). On timedelta / duration columns, show a
-          locale-aware duration instead (e.g. "5 sec", "1 day, 1 hr").
+          locale-aware duration instead (e.g. "5 sec", "1 sec, 500 ms").
         - ``"percent"``: Show the number as a percentage (e.g. "123456.70%").
         - ``"dollar"``: Show the number as a dollar amount (e.g. "$1,234.57").
         - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
@@ -614,7 +614,7 @@ def NumberColumn(
         - ``"bytes"``: Show the number in a byte format (e.g. "1.2KB").
         - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
           On timedelta / duration columns, show an elapsed-time clock instead
-          (e.g. "00:00:01", "336:00:00"). Hours are not wrapped at 24.
+          (e.g. "00:00:01.5", "336:00:00"). Hours are not wrapped at 24.
         - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").
         - ``"engineering"``: Show the number in engineering notation (e.g. "1.235E3").
         - ``"duration"``: Treat the value as seconds and show an approximate

@@ -15,6 +15,7 @@
  */
 
 import { GridCell, GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
+import { TimeUnit } from "apache-arrow"
 
 import {
   format as formatArrowCell,
@@ -45,6 +46,32 @@ import {
 // Pandas Timedelta is stored as int64 nanoseconds (~±292 years).
 const PANDAS_TIMEDELTA_MAX_SECONDS = 2 ** 63 / 1e9
 
+/** Number of decimal second places represented by an Arrow duration unit. */
+function getDurationFractionalSecondDigits(unit?: TimeUnit): number {
+  switch (unit) {
+    case TimeUnit.SECOND:
+      return 0
+    case TimeUnit.MILLISECOND:
+      return 3
+    case TimeUnit.MICROSECOND:
+      return 6
+    case TimeUnit.NANOSECOND:
+    default:
+      return 9
+  }
+}
+
+/** True when a second count can be represented by the Arrow duration unit. */
+function hasDurationPrecision(
+  seconds: number,
+  fractionalSecondDigits: number
+): boolean {
+  const scaledSeconds = seconds * 10 ** fractionalSecondDigits
+  const nearestTick = Math.round(scaledSeconds)
+  const tolerance = Number.EPSILON * Math.max(1, Math.abs(scaledSeconds)) * 4
+  return Math.abs(scaledSeconds - nearestTick) <= tolerance
+}
+
 export interface NumberColumnParams {
   /**
    * The minimum allowed value for editing. Is set to 0 for unsigned values.
@@ -65,9 +92,9 @@ export interface NumberColumnParams {
    * - `compact` on a timedelta column: elapsed-time clock (e.g. `00:00:01`)
    * - `localized` on a timedelta column: locale-aware duration
    *
-   * `compact` and `localized` display whole seconds; sub-second remainders
-   * are not shown. Timedelta columns default to `duration`. Other named
-   * and printf formats apply to the value in seconds.
+   * `compact` and `localized` include sub-second parts when present. Timedelta
+   * columns default to `duration`. Other named and printf formats apply to the
+   * value in seconds.
    */
   readonly format?: string
   /**
@@ -88,6 +115,10 @@ export interface NumberColumnParams {
  * so they stay within JavaScript's safe integer range.
  */
 function NumberColumn(props: BaseColumnProps): BaseColumn {
+  const isDuration = isDurationType(props.arrowType)
+  const durationFractionalSecondDigits = getDurationFractionalSecondDigits(
+    props.arrowType.arrowField.type.unit
+  )
   const parameters = mergeColumnParameters<NumberColumnParams>(
     // Default parameters:
     {
@@ -100,7 +131,6 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     props.columnTypeOptions
   )
 
-  const isDuration = isDurationType(props.arrowType)
   const useDurationClock = isDuration && parameters.format === "compact"
   const useDurationLocalized = isDuration && parameters.format === "localized"
   // The "Automatic" menu entry sends an empty format string, so a duration
@@ -154,6 +184,13 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
 
     // Values at or beyond this second count cannot be stored as a pandas Timedelta.
     if (isDuration && Math.abs(cellData) >= PANDAS_TIMEDELTA_MAX_SECONDS) {
+      return false
+    }
+
+    if (
+      isDuration &&
+      !hasDurationPrecision(cellData, durationFractionalSecondDigits)
+    ) {
       return false
     }
 
@@ -235,9 +272,15 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
 
         try {
           if (useDurationClock) {
-            displayData = formatDurationClockFromSeconds(cellData)
+            displayData = formatDurationClockFromSeconds(
+              cellData,
+              durationFractionalSecondDigits
+            )
           } else if (useDurationLocalized) {
-            displayData = formatLocalizedDurationFromSeconds(cellData)
+            displayData = formatLocalizedDurationFromSeconds(
+              cellData,
+              durationFractionalSecondDigits
+            )
           } else if (useDurationHumanize) {
             displayData = formatDurationFromSeconds(cellData)
           } else if (useArrowFormatting) {

@@ -823,6 +823,33 @@ describe("getCellFromArrow", () => {
     expect((cell as NumberCell).displayData).toMatch(/hour/i)
   })
 
+  it("formats fractional duration ticks using their Arrow unit precision", () => {
+    const durationType = durationArrowType(
+      TimeUnit.MILLISECOND,
+      "timedelta64[ms]"
+    )
+    const durationColumn = NumberColumn({
+      ...DURATION_COLUMN_PROPS,
+      arrowType: durationType,
+      columnTypeOptions: { format: "compact" },
+    })
+    const cell = getCellFromArrow(
+      durationColumn,
+      {
+        type: DataFrameCellType.DATA,
+        content: BigInt(1250),
+        contentType: durationType,
+        field: durationType.arrowField,
+      },
+      undefined,
+      undefined
+    )
+
+    expect(isErrorCell(cell)).toEqual(false)
+    expect((cell as NumberCell).data).toEqual(1.25)
+    expect((cell as NumberCell).displayData).toEqual("00:00:01.25")
+  })
+
   it("converts nanosecond duration ticks that overflow JS safe integers", () => {
     const durationType = durationArrowType(
       TimeUnit.NANOSECOND,

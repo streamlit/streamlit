@@ -409,6 +409,19 @@ class DataEditorUtilTest(unittest.TestCase):
         assert df.iat[0, 2] == ["a", "b"]
         assert isinstance(df.iat[0, 2], list)
 
+    def test_apply_cell_edits_ignores_incompatible_timedelta_precision(self):
+        """A client-provided edit finer than the duration dtype is ignored."""
+        df = pd.DataFrame(
+            {"duration": pd.Series([pd.Timedelta(seconds=5)], dtype="timedelta64[s]")}
+        )
+        dataframe_schema = determine_dataframe_schema(df, _get_arrow_schema(df))
+
+        _apply_cell_edits(df, {0: {"duration": 90}}, dataframe_schema)
+        assert df.iat[0, 0] == pd.Timedelta(seconds=90)
+
+        _apply_cell_edits(df, {0: {"duration": 90.5}}, dataframe_schema)
+        assert df.iat[0, 0] == pd.Timedelta(seconds=90)
+
     def test_apply_row_additions(self):
         """Test applying row additions to a DataFrame."""
         df = pd.DataFrame(

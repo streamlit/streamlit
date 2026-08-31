@@ -319,6 +319,9 @@ type DurationParts = {
   hours?: number
   minutes?: number
   seconds?: number
+  milliseconds?: number
+  microseconds?: number
+  nanoseconds?: number
 }
 
 type DurationFormatter = { format: (duration: DurationParts) => string }
@@ -335,12 +338,54 @@ function getDurationFormatCtor(): DurationFormatCtor | undefined {
     .DurationFormat
 }
 
-/** Split a non-negative second count into days/hours/minutes/seconds. */
-function toDurationParts(absSeconds: number): DurationParts {
-  const days = Math.floor(absSeconds / 86400)
-  const hours = Math.floor((absSeconds % 86400) / 3600)
-  const minutes = Math.floor((absSeconds % 3600) / 60)
-  const seconds = Math.floor(absSeconds % 60)
+type SplitDurationSeconds = {
+  wholeSeconds: number
+  fractionalTicks: number
+  fractionalSecondDigits: number
+}
+
+/** Split non-negative seconds at the requested sub-second precision. */
+function splitDurationSeconds(
+  absSeconds: number,
+  fractionalSecondDigits: number
+): SplitDurationSeconds {
+  const safeFractionalSecondDigits = Math.min(
+    9,
+    Math.max(0, Math.trunc(fractionalSecondDigits))
+  )
+  const fractionalScale = 10 ** safeFractionalSecondDigits
+  let wholeSeconds = Math.floor(absSeconds)
+  let fractionalTicks =
+    safeFractionalSecondDigits === 0
+      ? 0
+      : Math.round((absSeconds - wholeSeconds) * fractionalScale)
+
+  // Floating-point conversion can round a value up to the next whole second.
+  if (fractionalTicks === fractionalScale) {
+    wholeSeconds += 1
+    fractionalTicks = 0
+  }
+
+  return {
+    wholeSeconds,
+    fractionalTicks,
+    fractionalSecondDigits: safeFractionalSecondDigits,
+  }
+}
+
+/** Split a non-negative second count into localized duration parts. */
+function toDurationParts(
+  absSeconds: number,
+  fractionalSecondDigits: number
+): DurationParts {
+  const { wholeSeconds, fractionalTicks } = splitDurationSeconds(
+    absSeconds,
+    fractionalSecondDigits
+  )
+  const days = Math.floor(wholeSeconds / 86400)
+  const hours = Math.floor((wholeSeconds % 86400) / 3600)
+  const minutes = Math.floor((wholeSeconds % 3600) / 60)
+  const seconds = wholeSeconds % 60
   const parts: DurationParts = {}
   if (days) {
     parts.days = days
@@ -351,10 +396,32 @@ function toDurationParts(absSeconds: number): DurationParts {
   if (minutes) {
     parts.minutes = minutes
   }
-  // Include seconds when there are no larger units so 0s formats as
-  // "0 seconds" instead of an empty string.
-  if (seconds || Object.keys(parts).length === 0) {
+  if (seconds) {
     parts.seconds = seconds
+  }
+
+  if (fractionalTicks) {
+    const fractionalNanoseconds =
+      fractionalTicks * 10 ** (9 - fractionalSecondDigits)
+    const milliseconds = Math.floor(fractionalNanoseconds / 1_000_000)
+    const microseconds = Math.floor(
+      (fractionalNanoseconds % 1_000_000) / 1_000
+    )
+    const nanoseconds = fractionalNanoseconds % 1_000
+    if (milliseconds) {
+      parts.milliseconds = milliseconds
+    }
+    if (microseconds) {
+      parts.microseconds = microseconds
+    }
+    if (nanoseconds) {
+      parts.nanoseconds = nanoseconds
+    }
+  }
+
+  // Ensure a zero duration has a part for Intl.DurationFormat to render.
+  if (Object.keys(parts).length === 0) {
+    parts.seconds = 0
   }
   return parts
 }
@@ -387,13 +454,16 @@ function formatDurationParts(
 }
 
 /** Exact locale-aware duration, or undefined if `Intl.DurationFormat` is missing. */
-function formatDurationWithIntl(absSeconds: number): string | undefined {
+function formatDurationWithIntl(
+  absSeconds: number,
+  fractionalSecondDigits: number
+): string | undefined {
   const DurationFormat = getDurationFormatCtor()
   if (!DurationFormat) {
     return undefined
   }
 
-  const parts = toDurationParts(absSeconds)
+  const parts = toDurationParts(absSeconds, fractionalSecondDigits)
   const locales =
     typeof navigator !== "undefined" ? navigator.languages : undefined
   try {
@@ -425,40 +495,54 @@ export function formatDurationFromSeconds(seconds: number): string {
  * Formats a duration in seconds as an elapsed-time clock.
  *
  * Hours are not wrapped at 24 so multi-day values stay a single elapsed-time
- * reading (e.g. `336:00:00` for 14 days).
+ * reading (e.g. `336:00:00` for 14 days). Fractional seconds are included
+ * when present (e.g. `00:00:01.5`).
  */
-export function formatDurationClockFromSeconds(seconds: number): string {
+export function formatDurationClockFromSeconds(
+  seconds: number,
+  fractionalSecondDigits = 9
+): string {
   if (!Number.isFinite(seconds)) {
     return String(seconds)
   }
 
   const sign = seconds < 0 ? "-" : ""
-  const absSeconds = Math.abs(Math.trunc(seconds))
-  const hours = Math.floor(absSeconds / 3600)
-  const minutes = Math.floor((absSeconds % 3600) / 60)
-  const remainingSeconds = absSeconds % 60
+  const {
+    wholeSeconds,
+    fractionalTicks,
+    fractionalSecondDigits: digits,
+  } = splitDurationSeconds(Math.abs(seconds), fractionalSecondDigits)
+  const hours = Math.floor(wholeSeconds / 3600)
+  const minutes = Math.floor((wholeSeconds % 3600) / 60)
+  const remainingSeconds = wholeSeconds % 60
   const pad = (value: number): string => String(value).padStart(2, "0")
-  return `${sign}${pad(hours)}:${pad(minutes)}:${pad(remainingSeconds)}`
+  const fractionalPart = fractionalTicks
+    ? `.${String(fractionalTicks).padStart(digits, "0").replace(/0+$/, "")}`
+    : ""
+  return `${sign}${pad(hours)}:${pad(minutes)}:${pad(remainingSeconds)}${fractionalPart}`
 }
 
 /**
  * Formats a duration in seconds with `Intl.DurationFormat` when available.
  *
- * This is exact and locale-aware (e.g. "5 sec", "1 day, 1 hr") rather than
+ * This is exact and locale-aware (e.g. "5 sec", "1 sec, 500 ms") rather than
  * approximate. Falls back to {@link formatDurationClockFromSeconds} when
  * `Intl.DurationFormat` is missing.
  */
-export function formatLocalizedDurationFromSeconds(seconds: number): string {
+export function formatLocalizedDurationFromSeconds(
+  seconds: number,
+  fractionalSecondDigits = 9
+): string {
   if (!Number.isFinite(seconds)) {
     return String(seconds)
   }
 
   const abs = Math.abs(seconds)
-  const formatted = formatDurationWithIntl(abs)
+  const formatted = formatDurationWithIntl(abs, fractionalSecondDigits)
   if (formatted) {
     return seconds < 0 ? `-${formatted}` : formatted
   }
-  return formatDurationClockFromSeconds(seconds)
+  return formatDurationClockFromSeconds(seconds, fractionalSecondDigits)
 }
 
 /**

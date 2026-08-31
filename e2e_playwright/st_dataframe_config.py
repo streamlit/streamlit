@@ -769,7 +769,9 @@ st.dataframe(
             "accounting": [0.0123123, -1234.567, 12, 0],
             "bytes": [0.0123123, -1234.567, 12, 0],
             "duration": [5, 7200, 14 * 24 * 60 * 60, 0],
-            "compact (td)": pd.to_timedelta([5, 7200, 14 * 24 * 60 * 60, 0], unit="s"),
+            "compact (td)": pd.to_timedelta(
+                [5.25, 7200, 14 * 24 * 60 * 60, 0], unit="s"
+            ),
             "custom": [0.0123123, -1234.567, 12, 0],
         }
     ),

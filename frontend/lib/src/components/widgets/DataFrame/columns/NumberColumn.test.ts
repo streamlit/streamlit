@@ -17,10 +17,12 @@
 
 import { GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
 import {
+  Duration,
   DurationNanosecond,
   Field,
   Float64,
   Int64,
+  TimeUnit,
   Uint64,
 } from "apache-arrow"
 
@@ -79,6 +81,17 @@ const MOCK_DURATION_ARROW_TYPE: ArrowType = {
     numpy_type: "timedelta64[ns]",
     metadata: null,
   },
+}
+
+function getDurationArrowType(unit: TimeUnit, numpyType: string): ArrowType {
+  return {
+    ...MOCK_DURATION_ARROW_TYPE,
+    arrowField: new Field("duration_column", new Duration(unit), true),
+    pandasType: {
+      ...MOCK_DURATION_ARROW_TYPE.pandasType!,
+      numpy_type: numpyType,
+    },
+  }
 }
 
 const NUMBER_COLUMN_TEMPLATE: Partial<BaseColumnProps> = {
@@ -594,6 +607,11 @@ describe("NumberColumn", () => {
 
     const fiveSeconds = mockColumn.getCell(5)
     expect((fiveSeconds as NumberCell).displayData).toMatch(/5 sec|00:00:05/i)
+
+    const fractionalSecond = mockColumn.getCell(1.5)
+    expect((fractionalSecond as NumberCell).displayData).toMatch(
+      /1 sec, 500 ms|00:00:01.5/i
+    )
   })
 
   it.each([MOCK_DURATION_ARROW_TYPE, MOCK_FLOAT_ARROW_TYPE])(
@@ -625,7 +643,32 @@ describe("NumberColumn", () => {
 
     const fourteenDays = mockColumn.getCell(14 * 24 * 60 * 60)
     expect((fourteenDays as NumberCell).displayData).toEqual("336:00:00")
+
+    const fractionalSecond = mockColumn.getCell(1.00025)
+    expect((fractionalSecond as NumberCell).displayData).toEqual(
+      "00:00:01.00025"
+    )
+
+    const negativeFraction = mockColumn.getCell(-0.5)
+    expect((negativeFraction as NumberCell).displayData).toEqual("-00:00:00.5")
   })
+
+  it.each([
+    [TimeUnit.SECOND, "timedelta64[s]", 90, true],
+    [TimeUnit.SECOND, "timedelta64[s]", 90.5, false],
+    [TimeUnit.MILLISECOND, "timedelta64[ms]", 90.5, true],
+    [TimeUnit.MILLISECOND, "timedelta64[ms]", 90.0005, false],
+    [TimeUnit.MICROSECOND, "timedelta64[us]", 90.0005, true],
+    [TimeUnit.MICROSECOND, "timedelta64[us]", 90.0000005, false],
+    [TimeUnit.NANOSECOND, "timedelta64[ns]", 90.0000005, true],
+    [TimeUnit.NANOSECOND, "timedelta64[ns]", 90.0000000005, false],
+  ])(
+    "validates %s duration precision for %p seconds",
+    (unit, numpyType, seconds, expected) => {
+      const mockColumn = getNumberColumn(getDurationArrowType(unit, numpyType))
+      expect(mockColumn.validateInput!(seconds)).toEqual(expected)
+    }
+  )
 
   it("keeps copyData as the raw second count for duration formats", () => {
     const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE)
