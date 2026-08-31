@@ -12,7 +12,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "testWatch": "vitest",
-    "lint": "yarn run -T eslint --cache --max-warnings 0 --format ../eslint-github-formatter.mjs src",
+    "lint": "yarn run -T eslint --cache --max-warnings 0 src",
     "lint:fix": "yarn run -T eslint --cache --max-warnings 0 --fix src",
     "typecheck": "yarn run typecheck:all",
     "lighthouse:run": "node ./performance/lighthouse/run.mjs",

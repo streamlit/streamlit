@@ -540,7 +540,6 @@ export default defineConfig([
   // Globally ignored file/directory patterns
   globalIgnores([
     "eslint.config.mjs",
-    "eslint-github-formatter.mjs",
     "app/eslint.config.mjs",
     "vitest.config.mts",
     "vitest.setup.ts",
