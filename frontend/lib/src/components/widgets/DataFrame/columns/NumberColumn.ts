@@ -76,13 +76,13 @@ export interface NumberColumnParams {
    * This can be used for adding prefix or suffix, or changing the number of
    * decimals of the display value.
    *
-   * Duration formats treat the value as seconds on any number column:
+   * Duration formats treat values as seconds:
    * - `duration`: approximate human-readable duration (for example,
-   *   `a few seconds` or `a day`)
-   * - `clock`: elapsed-time clock (e.g. `00:00:01`)
+   *   `a few seconds` or `a day`) on any number column
+   * - `compact` on a timedelta column: elapsed-time clock (e.g. `00:00:01`)
    * - `localized` on a timedelta column: locale-aware duration
    *
-   * `clock` and `localized` display whole seconds; sub-second remainders
+   * `compact` and `localized` display whole seconds; sub-second remainders
    * are not shown. Timedelta columns default to `duration`. Other named
    * and printf formats apply to the value in seconds.
    */
@@ -118,14 +118,12 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
   )
 
   const isDuration = isDurationType(props.arrowType)
-  const useDurationClock = parameters.format === "clock"
+  const useDurationClock = isDuration && parameters.format === "compact"
   const useDurationLocalized = isDuration && parameters.format === "localized"
   // The "Automatic" menu entry sends an empty format string, so a duration
   // column with no explicit format falls back to the humanized display.
   const useDurationHumanize =
     parameters.format === "duration" || (isDuration && !parameters.format)
-  const useDurationDisplay =
-    useDurationClock || useDurationLocalized || useDurationHumanize
 
   // Period columns without a custom format use Arrow's period formatter.
   const useArrowFormatting =
@@ -147,7 +145,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     allowOverlay: true,
     contentAlign:
       props.contentAlignment ??
-      (useArrowFormatting || useDurationDisplay ? "left" : "right"),
+      (useArrowFormatting || useDurationHumanize ? "left" : "right"),
     // The text in pinned columns should be faded.
     style: props.isPinned ? "faded" : "normal",
     allowNegative,

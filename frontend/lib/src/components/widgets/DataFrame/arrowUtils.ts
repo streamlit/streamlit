@@ -375,9 +375,7 @@ export function initColumnFromArrow(
     id: `_column-${title}-${columnPosition}`,
     indexNumber: columnPosition,
     name: title,
-    // Duration columns stay read-only by default because the editor is a
-    // raw second count next to a humanized display.
-    isEditable: !isDurationType(arrowType),
+    isEditable: true,
     title,
     arrowType,
     group,

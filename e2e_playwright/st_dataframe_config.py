@@ -769,7 +769,9 @@ st.dataframe(
             "accounting": [0.0123123, -1234.567, 12, 0],
             "bytes": [0.0123123, -1234.567, 12, 0],
             "duration": [5, 7200, 14 * 24 * 60 * 60, 0],
-            "clock": [5, 7200, 14 * 24 * 60 * 60, 0],
+            "compact timedelta": pd.to_timedelta(
+                [5, 7200, 14 * 24 * 60 * 60, 0], unit="s"
+            ),
             "custom": [0.0123123, -1234.567, 12, 0],
         }
     ),
@@ -786,7 +788,7 @@ st.dataframe(
         "accounting": st.column_config.NumberColumn(format="accounting"),
         "bytes": st.column_config.NumberColumn(format="bytes"),
         "duration": st.column_config.NumberColumn(format="duration"),
-        "clock": st.column_config.NumberColumn(format="clock"),
+        "compact timedelta": st.column_config.NumberColumn(format="compact"),
         "custom": st.column_config.NumberColumn(format="%,.2f"),
     },
     hide_index=True,

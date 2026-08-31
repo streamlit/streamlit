@@ -125,7 +125,7 @@ st.dataframe(
 - `ProgressColumn` → Progress bars
 - `SelectboxColumn` → Editable dropdown
 - `TextColumn` → Text with formatting
-- `TimeColumn` → Clock time of day (not elapsed duration)
+- `TimeColumn` → Clock time of day without a date (not elapsed duration)
 - `VideoColumn` → Video playback
 
 ## Markdown in dataframe cells
@@ -261,7 +261,7 @@ st.dataframe(
 
 **Percentage formatting:** Use `NumberColumn(format="percent")` for 0-1 values, or `format="%.2f%%"` for already-multiplied values.
 
-**Durations:** Use `NumberColumn` for `timedelta` values, not `TimeColumn`. Timedelta columns stay read-only unless `disabled=False`. Edits are a second count, not a duration string.
+**Durations:** Use `NumberColumn` for `timedelta` values, not `TimeColumn`. Timedelta values are edited as a number of seconds, not a duration string. Use `format="compact"` for an elapsed-time clock like `02:00:00`.
 
 ## Editing data with st.data_editor
 

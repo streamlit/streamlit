@@ -530,10 +530,10 @@ describe("initColumnFromArrow", () => {
     })
   })
 
-  it("marks duration columns as not editable", () => {
+  it("marks duration columns as editable", () => {
     const data = new Quiver({ data: TIMEDELTA })
     const column = initColumnFromArrow(data, 1)
-    expect(column.isEditable).toEqual(false)
+    expect(column.isEditable).toEqual(true)
     expect(getColumnTypeFromArrow(column.arrowType)).toEqual(NumberColumn)
   })
 

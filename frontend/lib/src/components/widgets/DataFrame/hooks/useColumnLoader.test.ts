@@ -190,7 +190,7 @@ describe("applyColumnConfig", () => {
     expect(column2.isIndex).toBe(false)
   })
 
-  it("makes a duration column editable only when disabled is false", () => {
+  it("allows disabling a duration column", () => {
     const durationColumn = NumberColumn({
       id: "td",
       name: "td",
@@ -207,14 +207,18 @@ describe("applyColumnConfig", () => {
           metadata: null,
         },
       },
-      isEditable: false,
+      isEditable: true,
       isHidden: false,
       isIndex: false,
       isPinned: false,
       isStretched: false,
     })
 
-    expect(applyColumnConfig(durationColumn, new Map()).isEditable).toBe(false)
+    expect(applyColumnConfig(durationColumn, new Map()).isEditable).toBe(true)
+    expect(
+      applyColumnConfig(durationColumn, new Map([["td", { disabled: true }]]))
+        .isEditable
+    ).toBe(false)
     expect(
       applyColumnConfig(durationColumn, new Map([["td", { disabled: false }]]))
         .isEditable

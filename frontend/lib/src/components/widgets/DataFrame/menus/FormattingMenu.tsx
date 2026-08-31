@@ -90,17 +90,12 @@ const NUMBER_FORMATS: { format: string; label: string; icon: string }[] = [
     label: "Duration",
     icon: ":material/timelapse:",
   },
-  {
-    format: "clock",
-    label: "Clock",
-    icon: ":material/schedule:",
-  },
 ]
 
-// Progress columns share numeric formats but not duration/clock, which
-// interpret the value as seconds.
+// Progress columns share numeric formats except for duration, which
+// interprets the value as seconds. Compact retains its numeric meaning.
 const PROGRESS_FORMATS = NUMBER_FORMATS.filter(
-  option => option.format !== "duration" && option.format !== "clock"
+  option => option.format !== "duration"
 )
 
 /**

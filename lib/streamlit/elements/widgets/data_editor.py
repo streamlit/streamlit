@@ -898,10 +898,7 @@ class DataEditorMixin:
                   ``memoryview``, ``dict``, ``set``, ``frozenset``,
                   ``fractions.Fraction``, ``pandas.Interval``, and
                   ``pandas.Period``.
-                - Timedelta columns stay read-only by default because the
-                  editor is a second count, not a duration widget. Set
-                  ``st.column_config.NumberColumn(disabled=False)`` to allow
-                  edits.
+                - Timedelta values are edited as a number of seconds.
 
         width : "stretch", "content", or int
             The width of the data editor. This can be one of the following:

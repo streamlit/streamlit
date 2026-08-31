@@ -589,7 +589,7 @@ describe("NumberColumn", () => {
       format: "localized",
     })
     const twoHours = mockColumn.getCell(7200)
-    expect(twoHours.contentAlign).toEqual("left")
+    expect(twoHours.contentAlign).toEqual("right")
     expect((twoHours as NumberCell).displayData).toMatch(/hour/i)
 
     const fiveSeconds = mockColumn.getCell(5)
@@ -614,21 +614,20 @@ describe("NumberColumn", () => {
     }
   )
 
-  it.each([MOCK_DURATION_ARROW_TYPE, MOCK_FLOAT_ARROW_TYPE])(
-    "formats values as an elapsed-time clock when format is clock",
-    arrowType => {
-      const mockColumn = getNumberColumn(arrowType, { format: "clock" })
-      const oneSecond = mockColumn.getCell(1)
-      expect(oneSecond.contentAlign).toEqual("left")
-      expect((oneSecond as NumberCell).displayData).toEqual("00:00:01")
+  it("formats duration values as an elapsed-time clock when format is compact", () => {
+    const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE, {
+      format: "compact",
+    })
+    const oneSecond = mockColumn.getCell(1)
+    expect(oneSecond.contentAlign).toEqual("right")
+    expect((oneSecond as NumberCell).displayData).toEqual("00:00:01")
 
-      const twoHours = mockColumn.getCell(7200)
-      expect((twoHours as NumberCell).displayData).toEqual("02:00:00")
+    const twoHours = mockColumn.getCell(7200)
+    expect((twoHours as NumberCell).displayData).toEqual("02:00:00")
 
-      const fourteenDays = mockColumn.getCell(14 * 24 * 60 * 60)
-      expect((fourteenDays as NumberCell).displayData).toEqual("336:00:00")
-    }
-  )
+    const fourteenDays = mockColumn.getCell(14 * 24 * 60 * 60)
+    expect((fourteenDays as NumberCell).displayData).toEqual("336:00:00")
+  })
 
   it("keeps copyData as the raw second count for duration formats", () => {
     const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE)
@@ -646,9 +645,9 @@ describe("NumberColumn", () => {
     expect(mockColumn.validateInput!(-9_223_372_037)).toBe(false)
   })
 
-  it("renders non-finite clock values as their string form", () => {
-    const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
-      format: "clock",
+  it("renders non-finite compact duration values as their string form", () => {
+    const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE, {
+      format: "compact",
     })
     expect(isErrorCell(mockColumn.getCell(Number.NaN))).toEqual(true)
     expect(

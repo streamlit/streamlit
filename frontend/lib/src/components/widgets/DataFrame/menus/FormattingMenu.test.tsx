@@ -48,7 +48,6 @@ describe("DataFrame FormattingMenu", () => {
     // Check for presence of number-specific formats
     expect(screen.getByText("Automatic")).toBeInTheDocument()
     expect(screen.getByText("Duration")).toBeInTheDocument()
-    expect(screen.getByText("Clock")).toBeInTheDocument()
     expect(screen.getByText("Dollar")).toBeInTheDocument()
     expect(screen.getByText("Euro")).toBeInTheDocument()
     expect(screen.getByText("Yen")).toBeInTheDocument()
@@ -58,8 +57,7 @@ describe("DataFrame FormattingMenu", () => {
 
     const menuItems = screen.getAllByRole("menuitem")
     expect(menuItems[0]).toHaveTextContent("Automatic")
-    expect(menuItems.at(-2)).toHaveTextContent("Duration")
-    expect(menuItems.at(-1)).toHaveTextContent("Clock")
+    expect(menuItems.at(-1)).toHaveTextContent("Duration")
   })
 
   it("renders datetime format options when columnKind is datetime", () => {
@@ -79,10 +77,9 @@ describe("DataFrame FormattingMenu", () => {
     expect(screen.queryByText("Dollar")).not.toBeInTheDocument()
     expect(screen.queryByText("Scientific")).not.toBeInTheDocument()
     expect(screen.queryByText("Duration")).not.toBeInTheDocument()
-    expect(screen.queryByText("Clock")).not.toBeInTheDocument()
   })
 
-  it("does not offer duration or clock formats for progress columns", () => {
+  it("does not offer duration format for progress columns", () => {
     render(
       <FormattingMenu {...defaultProps} columnKind="progress">
         {defaultChildren}
@@ -90,8 +87,8 @@ describe("DataFrame FormattingMenu", () => {
     )
 
     expect(screen.getByText("Dollar")).toBeInTheDocument()
+    expect(screen.getByText("Compact")).toBeInTheDocument()
     expect(screen.queryByText("Duration")).not.toBeInTheDocument()
-    expect(screen.queryByText("Clock")).not.toBeInTheDocument()
   })
 
   it("renders date format options when columnKind is date", () => {
