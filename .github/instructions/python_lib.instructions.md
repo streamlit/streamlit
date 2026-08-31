@@ -52,8 +52,8 @@ as the only signal. If you show one of those, also log the same message.
   developer or agent (benign coercion, unused optional kwargs that never
   applied, other smart fallbacks).
 - **Log only** when the command still works but a developer or agent should
-  know (ignored `sample_rate` on non-numpy audio, number-input format that
-  does not match the value type).
+  know (explicitly provided `sample_rate` on non-numpy audio, number-input
+  format that does not match the value type).
 - **Log and show UI** when the app is actually misbehaving or data is
   incomplete (widget inside a cached function, display commands in
   `refresh_mode="background"`, JSON keys dropped, `st.echo` cannot read the
