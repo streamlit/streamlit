@@ -74,9 +74,9 @@ gh pr view --json number,title,url
 
 **Required labels:**
 
-| Category | Options |
-|----------|---------|
-| Impact | `impact:users` (affects user behavior) OR `impact:internal` (no user behavior change) |
+| Category    | Options                                                                                                            |
+| ----------- | ------------------------------------------------------------------------------------------------------------------ |
+| Impact      | `impact:users` (affects user behavior) OR `impact:internal` (no user behavior change)                              |
 | Change type | `change:feature`, `change:bugfix`, `change:chore`, `change:refactor`, `change:docs`, `change:spec`, `change:other` |
 
 Note: PRs labeled `change:spec` (for spec/design documents only) are exempt from Impact label requirements.
@@ -147,12 +147,26 @@ gh api --paginate "repos/streamlit/streamlit/pulls/${PR_NUM}/reviews" \
 ```
 
 The verdict section contains a bold keyword indicating the result:
+
 - **`**APPROVED**`** → exit loop, PR is ready
 - **`**CHANGES_REQUESTED**`** → continue iterating, address the feedback
 
 Do not start another iteration after an `APPROVED` verdict, even if `fixing-pr` pushed follow-up CI fixes. Those commits are covered by CI but not by the AI review.
 
-### 12. Post agent metrics
+### 12. Final AI review
+
+After the review loop, apply `ai-final-review` once. Wait until a `queued` or `in_progress` `ai-pr-review.yml` run shows up for this branch, then start `/fixing-pr` — it returns immediately if nothing is queued yet:
+
+```bash
+gh pr edit --add-label "ai-final-review"
+
+gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml --status queued
+gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml --status in_progress
+```
+
+Run `/fixing-pr` once so it can wait for CI and address comments. Do this exactly once, whether step 11 was approved or ran out of iterations. Do not re-apply `ai-final-review`. After `/fixing-pr`, commit and push remaining changes.
+
+### 13. Post agent metrics
 
 Post the agent metrics to the PR body:
 
