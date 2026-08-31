@@ -379,64 +379,6 @@ def _parse_value(
     return value
 
 
-_TIMEDELTA_UNIT_NS: Final[dict[str, int]] = {
-    "s": 1_000_000_000,
-    "ms": 1_000_000,
-    "us": 1_000,
-    "ns": 1,
-}
-
-
-def _timedelta_dtype_unit(dtype: Any) -> str | None:
-    """Return the numpy timedelta unit (``s``, ``ms``, ``us``, ``ns``) or None."""
-    import numpy as np
-    import pandas as pd
-
-    if not pd.api.types.is_timedelta64_dtype(dtype):
-        return None
-
-    dtype_str = str(np.dtype(dtype).str)
-    if "[" not in dtype_str:
-        return None
-    return dtype_str.split("[", 1)[1].rstrip("]")
-
-
-def _value_fits_column_dtype(value: Any, dtype: Any) -> bool:
-    """Return True if ``value`` can be stored in ``dtype`` without losing precision.
-
-    pandas 1.x stores timedeltas as nanoseconds, so fractional seconds always
-    fit. pandas 2+ can keep coarser units such as ``timedelta64[s]``. Assigning
-    a finer value then either raises or silently upcasts the column. Widget
-    state is client-controlled, so reject those values instead.
-    """
-    import numpy as np
-    import pandas as pd
-
-    if value is None:
-        return True
-
-    unit = _timedelta_dtype_unit(dtype)
-    if unit is None or unit not in _TIMEDELTA_UNIT_NS:
-        return True
-
-    try:
-        td = value if isinstance(value, pd.Timedelta) else pd.Timedelta(value)
-    except (TypeError, ValueError, OverflowError):
-        return False
-
-    ns = int(np.asarray(td, dtype="timedelta64[ns]").astype(np.int64))
-    return ns % _TIMEDELTA_UNIT_NS[unit] == 0
-
-
-def _log_ignored_edit(col_name: str, exc: BaseException | None = None) -> None:
-    """Log that a client-provided edit was dropped instead of crashing."""
-    _LOGGER.warning(
-        "Failed to apply edit to column %s. Edit ignored.",
-        col_name,
-        exc_info=exc,
-    )
-
-
 def _apply_cell_edits(
     df: pd.DataFrame,
     edited_rows: Mapping[
@@ -472,18 +414,20 @@ def _apply_cell_edits(
                 )
             else:
                 col_pos = df.columns.get_loc(col_name)
-                parsed = _parse_value(value, dataframe_schema[col_name])
-                # Widget state is client-controlled. A value with finer
-                # precision than the underlying duration dtype (for example,
-                # 1.5 seconds for duration[s]) must not crash the app or
-                # upcast the column if it bypasses frontend validation.
-                if not _value_fits_column_dtype(parsed, df[col_name].dtype):
-                    _log_ignored_edit(col_name)
-                    continue
                 try:
-                    df.iat[row_pos, col_pos] = parsed  # type: ignore
+                    df.iat[row_pos, col_pos] = _parse_value(  # type: ignore
+                        value, dataframe_schema[col_name]
+                    )
                 except (TypeError, ValueError) as ex:
-                    _log_ignored_edit(col_name, ex)
+                    # Widget state is client-controlled. pandas 2+ may raise
+                    # when a duration is finer than the column unit (e.g. 1.5s
+                    # into timedelta64[s]). Ignore the edit rather than crash.
+                    # Older pandas may accept or upcast instead; that's OK.
+                    _LOGGER.warning(
+                        "Failed to apply edit to column %s. Edit ignored.",
+                        col_name,
+                        exc_info=ex,
+                    )
 
 
 def _parse_added_row(
@@ -501,11 +445,7 @@ def _parse_added_row(
             index_value = _parse_value(value, dataframe_schema[INDEX_IDENTIFIER])
         else:
             col_pos = cast("int", df.columns.get_loc(col_name))
-            parsed = _parse_value(value, dataframe_schema[col_name])
-            if not _value_fits_column_dtype(parsed, df[col_name].dtype):
-                _log_ignored_edit(col_name)
-                parsed = None
-            new_row[col_pos] = parsed
+            new_row[col_pos] = _parse_value(value, dataframe_schema[col_name])
 
     return index_value, new_row
 
@@ -514,54 +454,36 @@ def _assign_row_values(
     df: pd.DataFrame,
     row_label: Any,
     row_values: list[Any],
-) -> None:
-    """Assign values to a dataframe row via a mapping.
+) -> bool:
+    """Assign a row via a mapping. Return False if pandas rejects the values.
 
-    This avoids numpy attempting to coerce nested sequences (e.g. lists) into
-    multi-dimensional arrays when a column legitimately stores list values.
+    Using a mapping avoids numpy coercing nested sequences (e.g. lists) into
+    multi-dimensional arrays. Widget state is client-controlled: a duration
+    finer than the column unit can raise or silently upcast. Catch the raise
+    so we don't crash; we don't try to undo an upcast.
     """
     import warnings
-
-    import pandas as pd
-
-    # .loc assignment can widen duration units (timedelta64[s] → [us]) or
-    # object-ify a duration column when a value is None. Only restore
-    # timedelta dtypes — recasting bool/int columns would coerce omitted
-    # empty cells (None) into False/failed restores.
-    original_timedelta_dtypes = {
-        col: df[col].dtype
-        for col in df.columns
-        if pd.api.types.is_timedelta64_dtype(df[col].dtype)
-    }
 
     # Suppress pandas FutureWarning about dtype inference during concatenation.
     # When assigning to a new row via .loc[], pandas internally performs concat
     # and warns (in pandas 2.1-2.x) about changing how it handles empty/NA columns.
     # The warning is not actionable by users and was removed in pandas 3.x.
     # See: https://github.com/streamlit/streamlit/issues/14321
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            message="The behavior of DataFrame concatenation with empty or all-NA entries is deprecated",
-            category=FutureWarning,
+    try:
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="The behavior of DataFrame concatenation with empty or all-NA entries is deprecated",
+                category=FutureWarning,
+            )
+            df.loc[row_label] = dict(zip(df.columns, row_values, strict=True))
+    except (TypeError, ValueError) as ex:
+        _LOGGER.warning(
+            "Failed to add row. Row addition skipped.",
+            exc_info=ex,
         )
-        df.loc[row_label] = dict(zip(df.columns, row_values, strict=True))
-
-    for col, dtype in original_timedelta_dtypes.items():
-        if df[col].dtype == dtype:
-            continue
-        try:
-            df[col] = df[col].astype(dtype)
-        except (TypeError, ValueError) as ex:
-            df.loc[row_label, col] = None
-            try:
-                df[col] = df[col].astype(dtype)
-            except (TypeError, ValueError):
-                _LOGGER.warning(
-                    "Failed to restore column %s dtype after row add.",
-                    col,
-                    exc_info=ex,
-                )
+        return False
+    return True
 
 
 def _apply_row_additions(
@@ -625,28 +547,14 @@ def _apply_row_additions(
                 )
                 continue
 
-            try:
-                _assign_row_values(df, index_value, new_row)
-            except (TypeError, ValueError) as ex:
-                _LOGGER.warning(
-                    "Failed to add row. Row addition skipped.",
-                    exc_info=ex,
-                )
+            _assign_row_values(df, index_value, new_row)
             continue
 
         if index_stop is not None and index_step is not None:
             # Case 2: Range or integer index that can be auto incremented.
             # Add row using the next value in the sequence
-            try:
-                _assign_row_values(df, index_stop, new_row)
-            except (TypeError, ValueError) as ex:
-                _LOGGER.warning(
-                    "Failed to add row. Row addition skipped.",
-                    exc_info=ex,
-                )
-                continue
-            # Increment to the next range index value
-            index_stop += index_step
+            if _assign_row_values(df, index_stop, new_row):
+                index_stop += index_step
             continue
 
         # Row cannot be added -> skip it and log a warning.
