@@ -414,13 +414,40 @@ class DataEditorUtilTest(unittest.TestCase):
         df = pd.DataFrame(
             {"duration": pd.Series([pd.Timedelta(seconds=5)], dtype="timedelta64[s]")}
         )
+        original_dtype = df["duration"].dtype
         dataframe_schema = determine_dataframe_schema(df, _get_arrow_schema(df))
 
         _apply_cell_edits(df, {0: {"duration": 90}}, dataframe_schema)
         assert df.iat[0, 0] == pd.Timedelta(seconds=90)
 
         _apply_cell_edits(df, {0: {"duration": 90.5}}, dataframe_schema)
-        assert df.iat[0, 0] == pd.Timedelta(seconds=90)
+        # pandas 1.x stores timedeltas as ns, so 90.5s is representable.
+        # pandas 2+ keeps timedelta64[s] and the finer edit must be ignored.
+        if np.dtype(original_dtype).str.endswith("[s]"):
+            assert df.iat[0, 0] == pd.Timedelta(seconds=90)
+            assert df["duration"].dtype == original_dtype
+        else:
+            assert df.iat[0, 0] == pd.Timedelta(seconds=90.5)
+
+    def test_apply_row_additions_ignores_incompatible_timedelta_precision(self):
+        """A client-provided row add finer than the duration dtype is ignored."""
+        df = pd.DataFrame(
+            {"duration": pd.Series([pd.Timedelta(seconds=5)], dtype="timedelta64[s]")}
+        )
+        original_dtype = df["duration"].dtype
+        dataframe_schema = determine_dataframe_schema(df, _get_arrow_schema(df))
+
+        _apply_row_additions(df, [{"duration": 90}], dataframe_schema)
+        assert len(df) == 2
+        assert df.iat[1, 0] == pd.Timedelta(seconds=90)
+
+        _apply_row_additions(df, [{"duration": 90.5}], dataframe_schema)
+        assert len(df) == 3
+        if np.dtype(original_dtype).str.endswith("[s]"):
+            assert pd.isna(df.iat[2, 0])
+            assert df["duration"].dtype == original_dtype
+        else:
+            assert df.iat[2, 0] == pd.Timedelta(seconds=90.5)
 
     def test_apply_row_additions(self):
         """Test applying row additions to a DataFrame."""
