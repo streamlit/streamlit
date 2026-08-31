@@ -372,7 +372,7 @@ function getDurationFormatter(
     return cached
   }
 
-  const formatter = new DurationFormat(locales, { style: "long" })
+  const formatter = new DurationFormat(locales, { style: "short" })
   durationFormatters.set(cacheKey, formatter)
   return formatter
 }
@@ -422,10 +422,30 @@ export function formatDurationFromSeconds(seconds: number): string {
 }
 
 /**
+ * Formats a duration in seconds as an elapsed-time clock.
+ *
+ * Hours are not wrapped at 24 so multi-day values stay a single elapsed-time
+ * reading (e.g. `336:00:00` for 14 days).
+ */
+export function formatDurationClockFromSeconds(seconds: number): string {
+  if (!Number.isFinite(seconds)) {
+    return String(seconds)
+  }
+
+  const sign = seconds < 0 ? "-" : ""
+  const absSeconds = Math.abs(Math.trunc(seconds))
+  const hours = Math.floor(absSeconds / 3600)
+  const minutes = Math.floor((absSeconds % 3600) / 60)
+  const remainingSeconds = absSeconds % 60
+  const pad = (value: number): string => String(value).padStart(2, "0")
+  return `${sign}${pad(hours)}:${pad(minutes)}:${pad(remainingSeconds)}`
+}
+
+/**
  * Formats a duration in seconds with `Intl.DurationFormat` when available.
  *
- * This is exact and locale-aware (e.g. "5 seconds", "1 day, 1 hour") rather
- * than approximate. Falls back to {@link formatDurationFromSeconds} when
+ * This is exact and locale-aware (e.g. "5 sec", "1 day, 1 hr") rather than
+ * approximate. Falls back to {@link formatDurationClockFromSeconds} when
  * `Intl.DurationFormat` is missing.
  */
 export function formatLocalizedDurationFromSeconds(seconds: number): string {
@@ -438,7 +458,7 @@ export function formatLocalizedDurationFromSeconds(seconds: number): string {
   if (formatted) {
     return seconds < 0 ? `-${formatted}` : formatted
   }
-  return formatDurationFromSeconds(seconds)
+  return formatDurationClockFromSeconds(seconds)
 }
 
 /**

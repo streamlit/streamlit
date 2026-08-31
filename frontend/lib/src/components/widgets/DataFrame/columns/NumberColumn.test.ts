@@ -590,12 +590,10 @@ describe("NumberColumn", () => {
     })
     const twoHours = mockColumn.getCell(7200)
     expect(twoHours.contentAlign).toEqual("right")
-    expect((twoHours as NumberCell).displayData).toMatch(/hour/i)
+    expect((twoHours as NumberCell).displayData).toMatch(/2 hr|02:00:00/i)
 
     const fiveSeconds = mockColumn.getCell(5)
-    expect((fiveSeconds as NumberCell).displayData).toMatch(
-      /5 seconds|a few seconds/i
-    )
+    expect((fiveSeconds as NumberCell).displayData).toMatch(/5 sec|00:00:05/i)
   })
 
   it.each([MOCK_DURATION_ARROW_TYPE, MOCK_FLOAT_ARROW_TYPE])(

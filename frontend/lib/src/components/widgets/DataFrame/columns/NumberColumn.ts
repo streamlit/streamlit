@@ -18,6 +18,7 @@ import { GridCell, GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
 
 import {
   format as formatArrowCell,
+  formatDurationClockFromSeconds,
   formatDurationFromSeconds,
   formatLocalizedDurationFromSeconds,
 } from "~lib/dataframes/arrowFormatUtils"
@@ -43,24 +44,6 @@ import {
 
 // Pandas Timedelta is stored as int64 nanoseconds (~±292 years).
 const PANDAS_TIMEDELTA_MAX_SECONDS = 2 ** 63 / 1e9
-
-/**
- * Formats a duration in seconds as a clock string (e.g. `00:00:01`,
- * `02:00:00`, `336:00:00`). Hours are not wrapped at 24 so multi-day
- * values stay a single elapsed-time reading.
- */
-function formatDurationClock(seconds: number): string {
-  if (!Number.isFinite(seconds)) {
-    return String(seconds)
-  }
-  const sign = seconds < 0 ? "-" : ""
-  const absSeconds = Math.abs(Math.trunc(seconds))
-  const hours = Math.floor(absSeconds / 3600)
-  const minutes = Math.floor((absSeconds % 3600) / 60)
-  const remainingSeconds = absSeconds % 60
-  const pad = (value: number): string => String(value).padStart(2, "0")
-  return `${sign}${pad(hours)}:${pad(minutes)}:${pad(remainingSeconds)}`
-}
 
 export interface NumberColumnParams {
   /**
@@ -252,7 +235,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
 
         try {
           if (useDurationClock) {
-            displayData = formatDurationClock(cellData)
+            displayData = formatDurationClockFromSeconds(cellData)
           } else if (useDurationLocalized) {
             displayData = formatLocalizedDurationFromSeconds(cellData)
           } else if (useDurationHumanize) {

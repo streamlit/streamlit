@@ -51,6 +51,7 @@ import {
   convertTimestampToSeconds,
   convertTimeToDate,
   format,
+  formatDurationClockFromSeconds,
   formatDurationFromSeconds,
   formatLocalizedDurationFromSeconds,
   formatPeriodFromFreq,
@@ -616,6 +617,16 @@ describe("formatDurationFromSeconds", () => {
   })
 })
 
+describe("formatDurationClockFromSeconds", () => {
+  it("formats a duration as an elapsed-time clock", () => {
+    expect(formatDurationClockFromSeconds(5)).toEqual("00:00:05")
+    expect(formatDurationClockFromSeconds(14 * 24 * 60 * 60)).toEqual(
+      "336:00:00"
+    )
+    expect(formatDurationClockFromSeconds(-7200)).toEqual("-02:00:00")
+  })
+})
+
 describe("convertTimestampToSeconds", () => {
   it("keeps sub-second remainder for nanosecond bigints outside the safe integer range", () => {
     // 200 days + 250ms in nanoseconds overflows Number.MAX_SAFE_INTEGER.
@@ -646,10 +657,10 @@ const HAS_INTL_DURATION_FORMAT =
 
 describe("formatLocalizedDurationFromSeconds", () => {
   it.skipIf(!HAS_INTL_DURATION_FORMAT)(
-    "formats an exact locale duration",
+    "formats an exact locale duration using short units",
     () => {
-      expect(formatLocalizedDurationFromSeconds(5)).toMatch(/5/)
-      expect(formatLocalizedDurationFromSeconds(7200)).toMatch(/hour/i)
+      expect(formatLocalizedDurationFromSeconds(5)).toEqual("5 sec")
+      expect(formatLocalizedDurationFromSeconds(7200)).toEqual("2 hr")
     }
   )
 
@@ -657,13 +668,13 @@ describe("formatLocalizedDurationFromSeconds", () => {
     expect(formatLocalizedDurationFromSeconds(-7200)).toMatch(/^-/)
   })
 
-  it("falls back to moment humanize when Intl.DurationFormat is missing", () => {
+  it("falls back to the elapsed-time clock when Intl.DurationFormat is missing", () => {
     const intlObject = Intl as unknown as { DurationFormat?: unknown }
     const original = intlObject.DurationFormat
     intlObject.DurationFormat = undefined
     try {
-      expect(formatLocalizedDurationFromSeconds(5)).toEqual("a few seconds")
-      expect(formatLocalizedDurationFromSeconds(7200)).toMatch(/hour/i)
+      expect(formatLocalizedDurationFromSeconds(5)).toEqual("00:00:05")
+      expect(formatLocalizedDurationFromSeconds(7200)).toEqual("02:00:00")
     } finally {
       intlObject.DurationFormat = original
     }
