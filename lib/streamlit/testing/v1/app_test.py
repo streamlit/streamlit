@@ -28,6 +28,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
 from streamlit.runtime.dataframe_source_manager import DataframeSourceManager
+from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.pages_manager import PagesManager
@@ -191,6 +192,10 @@ class AppTest:
         # Cache the discovered component manager so installed CCv2 components are
         # only scanned once per AppTest instance instead of on every rerun.
         self._bidi_component_manager: BidiComponentManager | None = None
+        # Persisted across runs so fragment keys registered in one run are
+        # still resolvable by callbacks that fire before the script body
+        # re-registers them in the next run.
+        self._fragment_storage = MemoryFragmentStorage()
 
         tree = ElementTree()
         tree._runner = self
@@ -404,6 +409,7 @@ class AppTest:
             pages_manager,
             args=self.args,
             kwargs=self.kwargs,
+            fragment_storage=self._fragment_storage,
         )
 
         # Register any files from FileUploader widgets with the file manager
