@@ -193,17 +193,23 @@ export function supportsStatistics(columnKind: string): boolean {
 }
 
 /**
- * Convert a Quiver cell to the numeric value shown in the table.
+ * Convert a Quiver cell to the value used for statistics.
  *
  * Duration cells store Arrow ticks; NumberColumn displays seconds, so
- * statistics must use the same conversion.
+ * numeric statistics use the same conversion.
  */
-function toStatisticsValue(cell: {
-  content: unknown
-  contentType?: ArrowType
-  field?: { type?: { unit?: TimeUnit } }
-}): unknown {
+function toStatisticsValue(
+  cell: {
+    content: unknown
+    contentType?: ArrowType
+    field?: { type?: { unit?: TimeUnit } }
+  },
+  convertDurationToSeconds: boolean
+): unknown {
+  // Only numeric stats use the NumberColumn second-count. Other kinds
+  // (text/date/datetime on a timedelta) skip this conversion.
   if (
+    convertDurationToSeconds &&
     isDurationType(cell.contentType) &&
     (typeof cell.content === "number" || typeof cell.content === "bigint")
   ) {
@@ -225,7 +231,8 @@ function toStatisticsValue(cell: {
  */
 function extractColumnValues(
   data: Quiver,
-  columnIndex: number
+  columnIndex: number,
+  convertDurationToSeconds = false
 ): { values: unknown[]; isSampled: boolean } | null {
   try {
     const { numDataRows } = data.dimensions
@@ -246,12 +253,12 @@ function extractColumnValues(
         i += step
       ) {
         const cell = data.getCell(i, columnIndex)
-        values.push(toStatisticsValue(cell))
+        values.push(toStatisticsValue(cell, convertDurationToSeconds))
       }
     } else {
       for (let i = 0; i < numDataRows; i++) {
         const cell = data.getCell(i, columnIndex)
-        values.push(toStatisticsValue(cell))
+        values.push(toStatisticsValue(cell, convertDurationToSeconds))
       }
     }
 
@@ -657,7 +664,20 @@ export function computeStatistics(
   const statsType = getStatisticsType(columnKind)
   if (!statsType) return null
 
-  const result = extractColumnValues(data, columnIndex)
+  // Duration ticks are seconds only for numeric columns. Text/date/datetime
+  // on a timedelta have no meaningful stats view.
+  if (statsType !== "numeric" && data.dimensions.numDataRows > 0) {
+    const firstCell = data.getCell(0, columnIndex)
+    if (isDurationType(firstCell.contentType)) {
+      return null
+    }
+  }
+
+  const result = extractColumnValues(
+    data,
+    columnIndex,
+    statsType === "numeric"
+  )
   // If extraction failed (malformed data), return null to show "No data" state
   if (!result) return null
 

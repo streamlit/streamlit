@@ -527,6 +527,19 @@ describe("statisticsUtils", () => {
         })
       }
     )
+
+    it("skips stats for duration data on non-numeric column kinds", () => {
+      const contentType = durationArrowType(TimeUnit.NANOSECOND)
+      const data = makeMockQuiver(
+        (row: number) => BigInt((row + 1) * 1_000_000_000),
+        3,
+        false,
+        { contentType, field: contentType.arrowField }
+      )
+
+      expect(computeStatistics("text", data, 0)).toBeNull()
+      expect(computeStatistics("datetime", data, 0)).toBeNull()
+    })
   })
 
   describe("formatNumber", () => {

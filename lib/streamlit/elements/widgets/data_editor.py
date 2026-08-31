@@ -419,10 +419,11 @@ def _apply_cell_edits(
                         value, dataframe_schema[col_name]
                     )
                 except (TypeError, ValueError) as ex:
-                    # Widget state is client-controlled. pandas 2+ may raise
-                    # when a duration is finer than the column unit (e.g. 1.5s
-                    # into timedelta64[s]). Ignore the edit rather than crash.
-                    # Older pandas may accept or upcast instead; that's OK.
+                    # Widget state is client-controlled. Ignore assignment
+                    # failures for any dtype so a crafted BackMsg cannot crash
+                    # the run. Duration columns are the usual trigger (pandas
+                    # 2+ raises on a value finer than the unit); older pandas
+                    # may accept or upcast instead, which is OK.
                     _LOGGER.warning(
                         "Failed to apply edit to column %s. Edit ignored.",
                         col_name,

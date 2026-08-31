@@ -681,6 +681,25 @@ describe("NumberColumn", () => {
     expect(mockColumn.validateInput!(cell.copyData)).toBe(true)
   })
 
+  it("revalidates duration precision after max_value correction", () => {
+    const mockColumn = getNumberColumn(
+      getDurationArrowType(TimeUnit.SECOND, "timedelta64[s]"),
+      { max_value: 90.5 }
+    )
+    // 100 clamps to 90.5, which timedelta64[s] cannot store.
+    expect(mockColumn.validateInput!(100)).toBe(false)
+    expect(mockColumn.validateInput!(90)).toBe(true)
+  })
+
+  it("rejects a max_value correction that is finer than the duration unit", () => {
+    const mockColumn = getNumberColumn(
+      getDurationArrowType(TimeUnit.SECOND, "timedelta64[s]"),
+      { max_value: 90.5 }
+    )
+    expect(mockColumn.validateInput!(100)).toBe(false)
+    expect(mockColumn.validateInput!(90)).toBe(true)
+  })
+
   it("rejects duration edits outside the pandas Timedelta range", () => {
     const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE)
     expect(mockColumn.validateInput!(9_223_372_036)).toBe(true)

@@ -830,7 +830,7 @@ st.dataframe(
                 datetime.time(15, 45, 30),
                 datetime.time(12, 0, 0),
             ],
-            "custom": [
+            "custom format": [
                 datetime.datetime(2022, 4, 6, 9, 30, 0),
                 datetime.datetime(2024, 1, 1, 15, 45, 30),
                 datetime.datetime(2019, 8, 9, 12, 0, 0),
@@ -840,7 +840,9 @@ st.dataframe(
     column_config={
         "localized": st.column_config.DatetimeColumn(format="localized"),
         "calendar": st.column_config.DatetimeColumn(format="calendar"),
-        "custom": st.column_config.DatetimeColumn(format="MMM DD, YYYY - hh:mm A"),
+        "custom format": st.column_config.DatetimeColumn(
+            format="MMM DD, YYYY - hh:mm A"
+        ),
         "localized date": st.column_config.DateColumn(format="localized"),
         "localized time": st.column_config.TimeColumn(format="localized"),
         "iso8601": st.column_config.DatetimeColumn(format="iso8601"),

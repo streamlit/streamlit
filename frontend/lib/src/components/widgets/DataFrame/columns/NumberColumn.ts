@@ -71,8 +71,8 @@ function hasDurationPrecision(
   if (!Number.isFinite(scaledSeconds)) {
     return false
   }
-  // Round-trip through integer ticks. A relative EPSILON grows with magnitude
-  // and can accept leftover microseconds on coarse units near the pandas range.
+  // A second count is representable only if scaling it to integer ticks and
+  // back is lossless, so a value finer than the column's unit is rejected.
   return Math.round(scaledSeconds) / scale === seconds
 }
 
@@ -186,18 +186,6 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
       return false
     }
 
-    // Values at or beyond this second count cannot be stored as a pandas Timedelta.
-    if (isDuration && Math.abs(cellData) >= PANDAS_TIMEDELTA_MAX_SECONDS) {
-      return false
-    }
-
-    if (
-      isDuration &&
-      !hasDurationPrecision(cellData, durationFractionalSecondDigits)
-    ) {
-      return false
-    }
-
     // A flag to indicate whether the value has been auto-corrected.
     // This is used to decide if we should return the corrected value or true.
     // But we still run all other validations on the corrected value below.
@@ -219,6 +207,19 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     ) {
       // Only return false, since correcting it negatively impacts
       // the user experience.
+      return false
+    }
+
+    // Duration checks run after clamping so a corrected max_value that is
+    // finer than the column unit (e.g. 90.5s on timedelta64[s]) is rejected.
+    if (isDuration && Math.abs(cellData) >= PANDAS_TIMEDELTA_MAX_SECONDS) {
+      return false
+    }
+
+    if (
+      isDuration &&
+      !hasDurationPrecision(cellData, durationFractionalSecondDigits)
+    ) {
       return false
     }
 
