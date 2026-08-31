@@ -67,7 +67,11 @@ class LocalScriptRunner(ScriptRunner):
             script_cache=ScriptCache(),
             initial_rerun_data=RerunData(),
             user_info={"email": "test@example.com"},
-            fragment_storage=fragment_storage if fragment_storage is not None else MemoryFragmentStorage(),
+            fragment_storage=(
+                fragment_storage
+                if fragment_storage is not None
+                else MemoryFragmentStorage()
+            ),
             pages_manager=pages_manager,
         )
 
