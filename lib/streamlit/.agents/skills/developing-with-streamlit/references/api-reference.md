@@ -71,7 +71,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.file_uploader` | Display a file uploader widget. It returns uploaded file objects and can support multiple files and type filtering. |
 | `st.form` | Create a form that batches elements together with a "Submit" button. Use it when several inputs should update the app together instead of on every widget change. Every form must contain at least one `st.form_submit_button`, otherwise it's non-functional. |
 | `st.form_submit_button` | Display a form submit button. It must be used inside `st.form` and triggers the form's batched submission. A form needs at least one submit button to be functional. |
-| `st.fragment` | Decorator to turn a function into a fragment which can rerun independently of the full app. Use it to reduce rerun cost for isolated interactive sections or run independent, slow sections in parallel during full app reruns. Accepts an optional `key` parameter to name the fragment so it can be targeted by `st.rerun("<key>")` from a widget callback. |
+| `st.fragment` | Decorator to turn a function into a fragment which can rerun independently of the full app. Use it to reduce rerun cost for isolated interactive sections or run independent, slow sections in parallel during full app reruns. |
 | `st.get_option` | Return the current value of a given Streamlit configuration option. Use it for runtime-aware behavior that depends on configured settings. |
 | `st.graphviz_chart` | Display a graph using the dagre-d3 library. Use it for directed graphs, diagrams, and node-edge visualizations. |
 | `st.header` | Display text in header formatting. Use it for major sections below the page title. |
@@ -105,7 +105,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.pydeck_chart` | Draw a chart using the PyDeck library. Use it for deck.gl-powered maps and geospatial visualizations. |
 | `st.pyplot` | Display a matplotlib.pyplot figure. Use it for existing Matplotlib visualizations or libraries that produce Matplotlib figures. |
 | `st.radio` | Display a radio button widget. Use it when users should choose exactly one option from a small visible set. |
-| `st.rerun` | Rerun the app or current fragment immediately. Use it to force a rerun after state changes or navigation-like actions. Accepts `scope="app"` (default, full-app rerun), `scope="fragment"` (rerun current fragment, only valid during a fragment rerun), or a fragment key string/list (rerun named fragment(s); only valid from a widget callback). |
+| `st.rerun` | Rerun the app or current fragment immediately. Use it to force a rerun after state changes or navigation-like actions. |
 | `st.scatter_chart` | Display a scatterplot chart. Use it for relationships between numeric variables, optionally with size and color encodings. |
 | `st.segmented_control` | Display a segmented control widget. Use it for compact mutually exclusive choices, especially mode or view switching. |
 | `st.select_slider` | Display a slider widget to select items from a list. Use it when options are ordered but not necessarily numeric. |
