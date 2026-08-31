@@ -166,8 +166,6 @@ const COLUMN_KIND_FORMAT_MAPPING: Record<
 export interface FormattingMenuProps {
   // The kind of the column to format.
   columnKind: string
-  // True when the column holds timedelta / Arrow duration values.
-  isDuration?: boolean
   // Whether the menu is open.
   isOpen: boolean
   // A callback when the open state changes (fired by hover interactions).
@@ -185,7 +183,6 @@ export interface FormattingMenuProps {
  * It allows to change the format of a column from the data grid UI.
  *
  * @param columnKind - The kind of the column to format.
- * @param isDuration - Whether the column holds timedelta / Arrow duration values.
  * @param isOpen - Whether the menu is open.
  * @param onOpenChange - Called when hover interactions change the open state.
  * @param onChangeFormat - The function to call when the format changes.
@@ -194,18 +191,13 @@ export interface FormattingMenuProps {
  */
 function FormattingMenu({
   columnKind,
-  isDuration = false,
   isOpen,
   onOpenChange,
   onChangeFormat,
   onCloseMenu,
   children,
 }: FormattingMenuProps): ReactElement {
-  const formats = (COLUMN_KIND_FORMAT_MAPPING[columnKind] || []).map(option =>
-    isDuration && columnKind === "number" && option.format === "compact"
-      ? { ...option, label: "Clock", icon: ":material/schedule:" }
-      : option
-  )
+  const formats = COLUMN_KIND_FORMAT_MAPPING[columnKind] || []
 
   const { floatingStyles, setAnchorRef, setFloatingRef } = useHoverSubmenu({
     isOpen,

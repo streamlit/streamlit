@@ -26,7 +26,6 @@ import {
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameOverlayPortal } from "~lib/components/widgets/DataFrame/DataFrameOverlayPortal"
-import { isDurationType } from "~lib/dataframes/arrowTypeUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
@@ -305,7 +304,6 @@ function ColumnMenu({
             {onChangeFormat && (
               <FormattingMenu
                 columnKind={column.kind}
-                isDuration={isDurationType(column.arrowType)}
                 isOpen={formatMenuOpen}
                 onOpenChange={handleFormatOpenChange}
                 onChangeFormat={onChangeFormat}
