@@ -17,7 +17,7 @@ from __future__ import annotations
 import math
 import numbers
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal, TypeAlias, cast, overload
+from typing import TYPE_CHECKING, Final, Literal, TypeAlias, cast, overload
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
@@ -43,6 +43,7 @@ from streamlit.errors import (
     StreamlitValueAboveMaxError,
     StreamlitValueBelowMinError,
 )
+from streamlit.logger import get_logger
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -59,6 +60,8 @@ from streamlit.string_util import to_help_str, validate_icon_or_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+
+_LOGGER: Final = get_logger(__name__)
 
 Number: TypeAlias = int | float
 
@@ -683,20 +686,20 @@ class NumberInputMixin:
         # Use default format depending on value type if format was not provided:
         number_format = ("%d" if int_value else "%0.2f") if format is None else format
 
-        # Warn user if they format an int type as a float or vice versa.
+        # A type/format mismatch only affects how the value is displayed, so it
+        # is reported to the developer via the console rather than the app.
         if number_format in {"%d", "%u", "%i"} and float_value:
-            import streamlit as st
-
-            st.warning(
-                "Warning: NumberInput value below has type float,"
-                f" but format {number_format} displays as integer."
+            _LOGGER.warning(
+                "st.number_input value has type float, but format %s displays as integer.",
+                number_format,
+                stack_info=True,
             )
         elif number_format[-1] == "f" and int_value:
-            import streamlit as st
-
-            st.warning(
-                "Warning: NumberInput value below has type int so is"
-                f" displayed as int despite format string {number_format}."
+            _LOGGER.warning(
+                "st.number_input value has type int so is displayed as int despite "
+                "format string %s.",
+                number_format,
+                stack_info=True,
             )
 
         if step is None:

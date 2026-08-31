@@ -31,6 +31,7 @@ from streamlit.errors import (
     StreamlitInvalidParameterTypeError,
     StreamlitMissingRequiredParameterError,
 )
+from streamlit.logger import get_logger
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
@@ -44,6 +45,8 @@ if TYPE_CHECKING:
     from numpy import typing as npt
 
     from streamlit.delta_generator import DeltaGenerator
+
+_LOGGER: Final = get_logger(__name__)
 
 
 MediaData: TypeAlias = Union[
@@ -210,9 +213,11 @@ class MediaMixin:
                 detail="Must be specified when `data` is a numpy array.",
             )
         if not is_data_numpy_array and sample_rate is not None:
-            self.dg.warning(
-                "Warning: `sample_rate` will be ignored since data is not a numpy "
-                "array."
+            # `sample_rate` only applies to NumPy data, so it is dropped here
+            # and surfaced to the developer via the console.
+            _LOGGER.warning(
+                "`sample_rate` will be ignored since data is not a numpy array.",
+                stack_info=True,
             )
         coordinates = self.dg._get_delta_path_str()
         marshall_audio(

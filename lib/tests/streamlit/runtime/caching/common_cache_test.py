@@ -42,7 +42,7 @@ from streamlit.runtime.caching.cache_errors import (
     CachedStFunctionInBackgroundModeWarning,
     CacheReplayClosureError,
 )
-from streamlit.runtime.caching.cache_utils import CachedResult
+from streamlit.runtime.caching.cache_utils import _LOGGER, CachedResult
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
@@ -1570,7 +1570,8 @@ class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
 
         with patch.object(st, "exception") as mock_exception:
             timer_patch.return_value = 0
-            assert foo() == 1
+            with self.assertLogs(_LOGGER) as logs:
+                assert foo() == 1
             # Display output renders live during the actual miss.
             assert self._text_deltas() == ["hello"]
             # A warning is emitted about background-mode display commands.
@@ -1579,6 +1580,8 @@ class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
                 mock_exception.call_args[0][0],
                 CachedStFunctionInBackgroundModeWarning,
             )
+            assert 'refresh_mode="background"' in logs.records[0].getMessage()
+            assert logs.records[0].stack_info is not None
 
             mock_exception.reset_mock()
             self.clear_queue()

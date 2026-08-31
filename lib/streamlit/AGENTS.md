@@ -14,14 +14,46 @@ not applicable to scripts and e2e tests.
 
 ## Logging
 
-If something needs to be logged, please use our logger - that returns a default
-Python logger - with an appropriate logging level:
+Use our logger (a standard Python logger) with an appropriate level:
 
 ```python
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
 ```
+
+Log diagnostics that a developer or coding agent needs to see: important API
+misuse, ignored parameters that change behavior, degraded or incomplete
+output, and unexpected fallbacks. Agents and CLI users only see the console;
+in-app `st.warning` / `st.error` / `st.exception` from library code are
+invisible to them unless they are also logged.
+
+Do not over-log. Console noise hides real issues. The library may handle
+potentially non-ideal API usage silently when it is not important enough to
+surface.
+
+Use `stack_info=True` when the user call site matters. Prefer
+`_LOGGER.warning("%s", message, stack_info=True)` when `message` may contain
+`%`. Raised `StreamlitAPIException` subclasses are already logged by the
+uncaught-exception handler; do not double-log those.
+
+### In-app UI vs console-only
+
+Do not use `st.warning`, `st.error`, or `st.exception` from library internals
+as the only signal. If you show one of those, also log the same message.
+
+- **Stay silent** when a quirk can be handled without it mattering to the
+  developer or agent (benign coercion, unused optional kwargs that never
+  applied, other smart fallbacks).
+- **Log only** when the command still works but a developer or agent should
+  know (explicitly provided `sample_rate` on non-numpy audio, number-input
+  format that does not match the value type).
+- **Log and show UI** when the app is actually misbehaving or data is
+  incomplete (widget inside a cached function, display commands in
+  `refresh_mode="background"`, JSON keys dropped, `st.echo` cannot read the
+  source file). Use `st.exception(StreamlitAPIWarning)` when the in-app stack
+  should point at user code.
+- **Deprecations:** use `show_deprecation_warning()`, which already logs.
 
 ## Metrics
 
@@ -143,6 +175,12 @@ generic `StreamlitAPIException` with a one-off message. Do not raise native
 `ValueError`, `TypeError`, or `RuntimeError` for user-facing `st.*`
 validation. Optional-dependency import failures may stay native
 (`st.connection` `ModuleNotFoundError`, `st.pyplot` matplotlib `ImportError`).
+
+Non-fatal library diagnostics (ignored parameters, degraded output, cached
+widget misuse) should not be raised. Log them only when they are important
+for the developer or coding agent to see; otherwise handle them silently.
+Add in-app `st.warning` / `st.error` / `st.exception` only when the app is
+actually wrong or data is incomplete — see Logging.
 
 - `StreamlitAPIException`: base for malformed user interaction with the Streamlit
   API. Prefer a more specific subclass when one fits. When a bare
