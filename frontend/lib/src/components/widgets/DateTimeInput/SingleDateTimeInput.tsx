@@ -909,11 +909,10 @@ function SingleDateTimeInput({
                 </StyledPopoverTimeLabel>
                 <I18nProvider locale="en-US">
                   <StyledPopoverTimeField
-                    // Remount on form clear, like the inline field. Segments the
-                    // React Aria only resets typed-but-incomplete segments when the
-                    // controlled value changes, and `popoverTimeValue` can be
-                    // unchanged across a clear, so this does not depend on those
-                    // two happening to differ.
+                    // Remount on form clear, like the inline field. React Aria only
+                    // resets typed-but-incomplete segments when the controlled value
+                    // changes, and `popoverTimeValue` can be unchanged across a clear,
+                    // so this does not depend on those two happening to differ.
                     key={formResetKey}
                     aria-labelledby={`${id}-time-label`}
                     aria-describedby={error ? errorId : undefined}

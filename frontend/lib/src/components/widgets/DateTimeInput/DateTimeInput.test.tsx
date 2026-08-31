@@ -16,6 +16,7 @@
 
 import { act, screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import type { MockInstance } from "vitest"
 
 import {
   DateTimeInput as DateTimeInputProto,
@@ -1993,9 +1994,24 @@ describe("DateTimeInput widget", () => {
         format: "YYYY/MM/DD",
       })
 
-    it("keeps a time typed inline when a date is then picked in the calendar", async () => {
+    /** Puts the widget in a form whose submit clears it. */
+    const inAForm = (props: Props): void => {
+      props.element.formId = "form"
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+    }
+
+    /** Renders an empty widget alongside an outside target to dismiss into, with
+     * the commit spy already cleared of anything the mount itself recorded. */
+    const renderEmpty = (
+      configure?: (props: Props) => void
+    ): {
+      user: ReturnType<typeof userEvent.setup>
+      props: Props
+      spy: MockInstance<WidgetStateManager["setStringArrayValue"]>
+    } => {
       const user = userEvent.setup()
       const props = emptyProps()
+      configure?.(props)
       const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
       render(
         <div>
@@ -2004,6 +2020,26 @@ describe("DateTimeInput widget", () => {
         </div>
       )
       spy.mockClear()
+      return { user, props, spy }
+    }
+
+    /** Asserts the widget committed exactly `iso` to widget state. */
+    const expectCommitted = async (
+      spy: MockInstance<WidgetStateManager["setStringArrayValue"]>,
+      props: Props,
+      iso: string
+    ): Promise<void> => {
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(props.element.id, [iso], {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+      })
+    }
+
+    it("keeps a time typed inline when a date is then picked in the calendar", async () => {
+      const { user, props, spy } = renderEmpty()
 
       // Type only the time; the date segments stay empty.
       const segments = screen.getAllByRole("spinbutton")
@@ -2017,17 +2053,7 @@ describe("DateTimeInput widget", () => {
       await user.click(screen.getByRole("button", { name: /November 19/ }))
       await user.click(screen.getByTestId("outside"))
 
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalledWith(
-          props.element.id,
-          ["2025-11-19T03:24"],
-          {
-            formId: props.element.formId,
-            fragmentId: undefined,
-            fromUser: true,
-          }
-        )
-      })
+      await expectCommitted(spy, props, "2025-11-19T03:24")
       // The typed time must not be discarded in favour of midnight.
       expect(spy).not.toHaveBeenCalledWith(
         props.element.id,
@@ -2036,17 +2062,9 @@ describe("DateTimeInput widget", () => {
       )
     })
 
+    // eslint-disable-next-line vitest/expect-expect -- asserts via expectCommitted
     it("keeps an hour typed inline without a minute", async () => {
-      const user = userEvent.setup()
-      const props = emptyProps()
-      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(
-        <div>
-          <DateTimeInput {...props} />
-          <button data-testid="outside">outside</button>
-        </div>
-      )
-      spy.mockClear()
+      const { user, props, spy } = renderEmpty()
 
       const segments = screen.getAllByRole("spinbutton")
       await user.click(segments[3])
@@ -2056,17 +2074,7 @@ describe("DateTimeInput widget", () => {
       await user.click(screen.getByRole("button", { name: /November 19/ }))
       await user.click(screen.getByTestId("outside"))
 
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalledWith(
-          props.element.id,
-          ["2025-11-19T07:00"],
-          {
-            formId: props.element.formId,
-            fragmentId: undefined,
-            fromUser: true,
-          }
-        )
-      })
+      await expectCommitted(spy, props, "2025-11-19T07:00")
     })
 
     it("keeps the popover TimeField interactive while the widget is empty", async () => {
@@ -2089,17 +2097,9 @@ describe("DateTimeInput widget", () => {
       })
     })
 
+    // eslint-disable-next-line vitest/expect-expect -- asserts via expectCommitted
     it("applies a time set in the popover when a date is picked afterwards", async () => {
-      const user = userEvent.setup()
-      const props = emptyProps()
-      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(
-        <div>
-          <DateTimeInput {...props} />
-          <button data-testid="outside">outside</button>
-        </div>
-      )
-      spy.mockClear()
+      const { user, props, spy } = renderEmpty()
 
       await user.click(screen.getAllByRole("spinbutton")[0])
       await screen.findByTestId("stDateTimeInputCalendar")
@@ -2116,30 +2116,11 @@ describe("DateTimeInput widget", () => {
       await user.click(screen.getByRole("button", { name: /November 19/ }))
       await user.click(screen.getByTestId("outside"))
 
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalledWith(
-          props.element.id,
-          ["2025-11-19T09:45"],
-          {
-            formId: props.element.formId,
-            fragmentId: undefined,
-            fromUser: true,
-          }
-        )
-      })
+      await expectCommitted(spy, props, "2025-11-19T09:45")
     })
 
     it("does not commit a time on its own without a date", async () => {
-      const user = userEvent.setup()
-      const props = emptyProps()
-      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(
-        <div>
-          <DateTimeInput {...props} />
-          <button data-testid="outside">outside</button>
-        </div>
-      )
-      spy.mockClear()
+      const { user, spy } = renderEmpty()
 
       const segments = screen.getAllByRole("spinbutton")
       await user.click(segments[3])
@@ -2156,17 +2137,9 @@ describe("DateTimeInput widget", () => {
       expect(spy).not.toHaveBeenCalled()
     })
 
+    // eslint-disable-next-line vitest/expect-expect -- asserts via expectCommitted
     it("keeps a partial time set in the popover, without a minute", async () => {
-      const user = userEvent.setup()
-      const props = emptyProps()
-      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(
-        <div>
-          <DateTimeInput {...props} />
-          <button data-testid="outside">outside</button>
-        </div>
-      )
-      spy.mockClear()
+      const { user, props, spy } = renderEmpty()
 
       await user.click(screen.getAllByRole("spinbutton")[0])
       await screen.findByTestId("stDateTimeInputCalendar")
@@ -2180,30 +2153,11 @@ describe("DateTimeInput widget", () => {
       await user.click(screen.getByRole("button", { name: /November 19/ }))
       await user.click(screen.getByTestId("outside"))
 
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalledWith(
-          props.element.id,
-          ["2025-11-19T09:00"],
-          {
-            formId: props.element.formId,
-            fragmentId: undefined,
-            fromUser: true,
-          }
-        )
-      })
+      await expectCommitted(spy, props, "2025-11-19T09:00")
     })
 
     it("prefers the time control the user focused most recently", async () => {
-      const user = userEvent.setup()
-      const props = emptyProps()
-      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(
-        <div>
-          <DateTimeInput {...props} />
-          <button data-testid="outside">outside</button>
-        </div>
-      )
-      spy.mockClear()
+      const { user, props, spy } = renderEmpty()
 
       // Type inline first, then override in the popover. Both hold a time at
       // once and both are on screen, so the control focused most recently wins.
@@ -2222,17 +2176,7 @@ describe("DateTimeInput widget", () => {
       await user.click(screen.getByRole("button", { name: /November 19/ }))
       await user.click(screen.getByTestId("outside"))
 
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalledWith(
-          props.element.id,
-          ["2025-11-19T09:45"],
-          {
-            formId: props.element.formId,
-            fragmentId: undefined,
-            fromUser: true,
-          }
-        )
-      })
+      await expectCommitted(spy, props, "2025-11-19T09:45")
       // The earlier inline time must not win just because it was typed first.
       expect(spy).not.toHaveBeenCalledWith(
         props.element.id,
@@ -2277,16 +2221,7 @@ describe("DateTimeInput widget", () => {
     })
 
     it("forgets a popover time the user clears again", async () => {
-      const user = userEvent.setup()
-      const props = emptyProps()
-      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(
-        <div>
-          <DateTimeInput {...props} />
-          <button data-testid="outside">outside</button>
-        </div>
-      )
-      spy.mockClear()
+      const { user, props, spy } = renderEmpty()
 
       await user.click(screen.getAllByRole("spinbutton")[0])
       await screen.findByTestId("stDateTimeInputCalendar")
@@ -2307,17 +2242,7 @@ describe("DateTimeInput widget", () => {
       await user.click(screen.getByRole("button", { name: /November 19/ }))
       await user.click(screen.getByTestId("outside"))
 
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalledWith(
-          props.element.id,
-          ["2025-11-19T00:00"],
-          {
-            formId: props.element.formId,
-            fragmentId: undefined,
-            fromUser: true,
-          }
-        )
-      })
+      await expectCommitted(spy, props, "2025-11-19T00:00")
       expect(spy).not.toHaveBeenCalledWith(
         props.element.id,
         ["2025-11-19T09:45"],
@@ -2326,16 +2251,7 @@ describe("DateTimeInput widget", () => {
     })
 
     it("forgets a dismissed popover time, on screen and on commit", async () => {
-      const user = userEvent.setup()
-      const props = emptyProps()
-      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(
-        <div>
-          <DateTimeInput {...props} />
-          <button data-testid="outside">outside</button>
-        </div>
-      )
-      spy.mockClear()
+      const { user, props, spy } = renderEmpty()
 
       await user.click(screen.getAllByRole("spinbutton")[0])
       await screen.findByTestId("stDateTimeInputCalendar")
@@ -2368,17 +2284,7 @@ describe("DateTimeInput widget", () => {
       // where nothing on screen would explain the time.
       await user.click(screen.getByRole("button", { name: /November 19/ }))
       await user.click(screen.getByTestId("outside"))
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalledWith(
-          props.element.id,
-          ["2025-11-19T00:00"],
-          {
-            formId: props.element.formId,
-            fragmentId: undefined,
-            fromUser: true,
-          }
-        )
-      })
+      await expectCommitted(spy, props, "2025-11-19T00:00")
       expect(spy).not.toHaveBeenCalledWith(
         props.element.id,
         ["2025-11-19T09:45"],
@@ -2386,17 +2292,9 @@ describe("DateTimeInput widget", () => {
       )
     })
 
+    // eslint-disable-next-line vitest/expect-expect -- asserts via expectCommitted
     it("completes a date typed inline with a time given in the popover", async () => {
-      const user = userEvent.setup()
-      const props = emptyProps()
-      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(
-        <div>
-          <DateTimeInput {...props} />
-          <button data-testid="outside">outside</button>
-        </div>
-      )
-      spy.mockClear()
+      const { user, props, spy } = renderEmpty()
 
       // Time in the popover...
       await user.click(screen.getAllByRole("spinbutton")[0])
@@ -2416,17 +2314,7 @@ describe("DateTimeInput widget", () => {
       // Both halves are on screen, so dismissal must combine rather than
       // discard them.
       await user.click(screen.getByTestId("outside"))
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalledWith(
-          props.element.id,
-          ["2025-11-19T09:45"],
-          {
-            formId: props.element.formId,
-            fragmentId: undefined,
-            fromUser: true,
-          }
-        )
-      })
+      await expectCommitted(spy, props, "2025-11-19T09:45")
     })
 
     it("still reverts when one segment of an existing value is cleared", async () => {
@@ -2473,16 +2361,7 @@ describe("DateTimeInput widget", () => {
     })
 
     it("shows the merged value in the field when committing inside a form", async () => {
-      const user = userEvent.setup()
-      const props = emptyProps()
-      props.element.formId = "form"
-      props.widgetMgr.setFormSubmitBehaviors("form", true)
-      render(
-        <div>
-          <DateTimeInput {...props} />
-          <button data-testid="outside">outside</button>
-        </div>
-      )
+      const { user } = renderEmpty(inAForm)
 
       await user.click(screen.getAllByRole("spinbutton")[0])
       await screen.findByTestId("stDateTimeInputCalendar")
@@ -2549,16 +2428,7 @@ describe("DateTimeInput widget", () => {
     })
 
     it("keeps a popover time when Enter leaves the popover open", async () => {
-      const user = userEvent.setup()
-      const props = emptyProps()
-      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(
-        <div>
-          <DateTimeInput {...props} />
-          <button data-testid="outside">outside</button>
-        </div>
-      )
-      spy.mockClear()
+      const { user, props, spy } = renderEmpty()
 
       await user.click(screen.getAllByRole("spinbutton")[0])
       await screen.findByTestId("stDateTimeInputCalendar")
@@ -2582,17 +2452,7 @@ describe("DateTimeInput widget", () => {
       await user.click(screen.getByRole("button", { name: /November 19/ }))
       await user.click(screen.getByTestId("outside"))
 
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalledWith(
-          props.element.id,
-          ["2025-11-19T09:45"],
-          {
-            formId: props.element.formId,
-            fragmentId: undefined,
-            fromUser: true,
-          }
-        )
-      })
+      await expectCommitted(spy, props, "2025-11-19T09:45")
       expect(spy).not.toHaveBeenCalledWith(
         props.element.id,
         ["2025-11-19T00:00"],
@@ -2600,17 +2460,9 @@ describe("DateTimeInput widget", () => {
       )
     })
 
+    // eslint-disable-next-line vitest/expect-expect -- asserts via expectCommitted
     it("completes the value when Tab leaves the field, not just on dismissal", async () => {
-      const user = userEvent.setup()
-      const props = emptyProps()
-      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(
-        <div>
-          <DateTimeInput {...props} />
-          <button data-testid="outside">outside</button>
-        </div>
-      )
-      spy.mockClear()
+      const { user, props, spy } = renderEmpty()
 
       await user.click(screen.getAllByRole("spinbutton")[0])
       await screen.findByTestId("stDateTimeInputCalendar")
@@ -2632,30 +2484,11 @@ describe("DateTimeInput widget", () => {
       await user.click(inline[inline.length - 1])
       await user.tab()
 
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalledWith(
-          props.element.id,
-          ["2025-11-19T09:45"],
-          {
-            formId: props.element.formId,
-            fragmentId: undefined,
-            fromUser: true,
-          }
-        )
-      })
+      await expectCommitted(spy, props, "2025-11-19T09:45")
     })
 
     it("prefers the popover time over an inline draft when both are on screen at dismissal", async () => {
-      const user = userEvent.setup()
-      const props = emptyProps()
-      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(
-        <div>
-          <DateTimeInput {...props} />
-          <button data-testid="outside">outside</button>
-        </div>
-      )
-      spy.mockClear()
+      const { user, props, spy } = renderEmpty()
 
       // A complete date plus an hour inline, so the field still reports nothing
       // and holds an 03:00 draft of its own.
@@ -2675,17 +2508,7 @@ describe("DateTimeInput widget", () => {
 
       await user.click(screen.getByTestId("outside"))
 
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalledWith(
-          props.element.id,
-          ["2025-11-19T09:45"],
-          {
-            formId: props.element.formId,
-            fragmentId: undefined,
-            fromUser: true,
-          }
-        )
-      })
+      await expectCommitted(spy, props, "2025-11-19T09:45")
       // The inline draft must not win, and must not commit as a second value.
       expect(spy).not.toHaveBeenCalledWith(
         props.element.id,
@@ -2696,17 +2519,7 @@ describe("DateTimeInput widget", () => {
     })
 
     it("commits the same value again after a form clear", async () => {
-      const user = userEvent.setup()
-      const props = emptyProps()
-      props.element.formId = "form"
-      props.widgetMgr.setFormSubmitBehaviors("form", true)
-      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(
-        <div>
-          <DateTimeInput {...props} />
-          <button data-testid="outside">outside</button>
-        </div>
-      )
+      const { user, props, spy } = renderEmpty(inAForm)
 
       const enterSameValue = async (): Promise<void> => {
         const field = screen.getByTestId("stDateTimeInputField")
@@ -2730,31 +2543,11 @@ describe("DateTimeInput widget", () => {
       // Re-entering the value that was just submitted has to reach widget state
       // again — the dedup memory must not outlive the clear.
       await enterSameValue()
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalledWith(
-          props.element.id,
-          ["2025-11-19T12:00"],
-          {
-            formId: props.element.formId,
-            fragmentId: undefined,
-            fromUser: true,
-          }
-        )
-      })
+      await expectCommitted(spy, props, "2025-11-19T12:00")
     })
 
     it("forgets an incomplete popover time across a form clear", async () => {
-      const user = userEvent.setup()
-      const props = emptyProps()
-      props.element.formId = "form"
-      props.widgetMgr.setFormSubmitBehaviors("form", true)
-      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(
-        <div>
-          <DateTimeInput {...props} />
-          <button data-testid="outside">outside</button>
-        </div>
-      )
+      const { user, props, spy } = renderEmpty(inAForm)
 
       // A complete value inline, which populates the popover time field...
       const inlineField = screen.getByTestId("stDateTimeInputField")
@@ -2781,17 +2574,7 @@ describe("DateTimeInput widget", () => {
       await user.click(screen.getByRole("button", { name: /November 19/ }))
       await user.click(screen.getByTestId("outside"))
 
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalledWith(
-          props.element.id,
-          ["2025-11-19T00:00"],
-          {
-            formId: props.element.formId,
-            fragmentId: undefined,
-            fromUser: true,
-          }
-        )
-      })
+      await expectCommitted(spy, props, "2025-11-19T00:00")
       expect(spy).not.toHaveBeenCalledWith(
         props.element.id,
         ["2025-11-19T12:00"],
@@ -2799,6 +2582,7 @@ describe("DateTimeInput widget", () => {
       )
     })
 
+    // eslint-disable-next-line vitest/expect-expect -- asserts via expectCommitted
     it("commits the same datetime again after Enter-submitting it", async () => {
       const user = userEvent.setup()
       const props = emptyProps()
@@ -2826,30 +2610,12 @@ describe("DateTimeInput widget", () => {
       // the datetime, and the popover stays open across an Enter submit.
       await typeAndEnter()
 
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalledWith(
-          props.element.id,
-          ["2025-11-19T12:00"],
-          {
-            formId: props.element.formId,
-            fragmentId: undefined,
-            fromUser: true,
-          }
-        )
-      })
+      await expectCommitted(spy, props, "2025-11-19T12:00")
     })
 
+    // eslint-disable-next-line vitest/expect-expect -- asserts via expectCommitted
     it("merges a lone popover hour as the top of that hour", async () => {
-      const user = userEvent.setup()
-      const props = emptyProps()
-      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(
-        <div>
-          <DateTimeInput {...props} />
-          <button data-testid="outside">outside</button>
-        </div>
-      )
-      spy.mockClear()
+      const { user, props, spy } = renderEmpty()
 
       await user.click(screen.getAllByRole("spinbutton")[0])
       await screen.findByTestId("stDateTimeInputCalendar")
@@ -2868,30 +2634,11 @@ describe("DateTimeInput widget", () => {
       // A half-given time is still a time the user typed, so it commits with the
       // minute at zero — the same rule the calendar path uses. Only a time given
       // nowhere at all reverts.
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalledWith(
-          props.element.id,
-          ["2025-11-19T09:00"],
-          {
-            formId: props.element.formId,
-            fragmentId: undefined,
-            fromUser: true,
-          }
-        )
-      })
+      await expectCommitted(spy, props, "2025-11-19T09:00")
     })
 
     it("reverts a date typed inline when no time was given anywhere", async () => {
-      const user = userEvent.setup()
-      const props = emptyProps()
-      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(
-        <div>
-          <DateTimeInput {...props} />
-          <button data-testid="outside">outside</button>
-        </div>
-      )
-      spy.mockClear()
+      const { user, spy } = renderEmpty()
 
       // A date with no time is still incomplete — midnight would be a guess.
       const inlineField = screen.getByTestId("stDateTimeInputField")
@@ -2908,16 +2655,7 @@ describe("DateTimeInput widget", () => {
     })
 
     it("keeps an inline time that is still on screen after dismissal", async () => {
-      const user = userEvent.setup()
-      const props = emptyProps()
-      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(
-        <div>
-          <DateTimeInput {...props} />
-          <button data-testid="outside">outside</button>
-        </div>
-      )
-      spy.mockClear()
+      const { user, props, spy } = renderEmpty()
 
       // Unlike the popover field, the inline segments do not unmount on
       // dismissal, so the time stays visible — and a later date pick commits it.
@@ -2937,30 +2675,10 @@ describe("DateTimeInput widget", () => {
       await user.click(screen.getByRole("button", { name: /November 19/ }))
       await user.click(screen.getByTestId("outside"))
 
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalledWith(
-          props.element.id,
-          ["2025-11-19T03:24"],
-          {
-            formId: props.element.formId,
-            fragmentId: undefined,
-            fromUser: true,
-          }
-        )
-      })
+      await expectCommitted(spy, props, "2025-11-19T03:24")
     })
     it("forgets an inline time typed before a form clear", async () => {
-      const user = userEvent.setup()
-      const props = emptyProps()
-      props.element.formId = "form"
-      props.widgetMgr.setFormSubmitBehaviors("form", true)
-      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(
-        <div>
-          <DateTimeInput {...props} />
-          <button data-testid="outside">outside</button>
-        </div>
-      )
+      const { user, props, spy } = renderEmpty(inAForm)
 
       const inlineField = screen.getByTestId("stDateTimeInputField")
       await user.click(within(inlineField).getAllByRole("spinbutton")[3])
@@ -2985,17 +2703,7 @@ describe("DateTimeInput widget", () => {
       await user.click(screen.getByRole("button", { name: /November 19/ }))
       await user.click(screen.getByTestId("outside"))
 
-      await waitFor(() => {
-        expect(spy).toHaveBeenCalledWith(
-          props.element.id,
-          ["2025-11-19T00:00"],
-          {
-            formId: props.element.formId,
-            fragmentId: undefined,
-            fromUser: true,
-          }
-        )
-      })
+      await expectCommitted(spy, props, "2025-11-19T00:00")
       expect(spy).not.toHaveBeenCalledWith(
         props.element.id,
         ["2025-11-19T03:24"],
@@ -3036,18 +2744,7 @@ describe("DateTimeInput widget", () => {
     })
 
     it("drops a pending popover time when the form is reset", async () => {
-      const user = userEvent.setup()
-      const props = emptyProps()
-      props.element.formId = "form"
-      props.widgetMgr.setFormSubmitBehaviors("form", true)
-      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(
-        <div>
-          <DateTimeInput {...props} />
-          <button data-testid="outside">outside</button>
-        </div>
-      )
-      spy.mockClear()
+      const { user, props, spy } = renderEmpty(inAForm)
 
       await user.click(screen.getAllByRole("spinbutton")[0])
       await screen.findByTestId("stDateTimeInputCalendar")
