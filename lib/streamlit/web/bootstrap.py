@@ -129,7 +129,8 @@ def _run_server_loop(main: Coroutine[Any, Any, None]) -> None:
     ``uvloop.install()`` / event-loop policy APIs.
 
     Fallback (Python 3.10, or uvloop too old for ``new_event_loop``):
-    ``uvloop.install()`` when present, then ``asyncio.run()``.
+    ``uvloop.install()`` when present, then ``asyncio.run()``. If creating
+    the uvloop loop fails, skip ``install()`` and use the stdlib loop.
     """
     loop_factory = _get_uvloop_loop_factory()
     # Runner was added in 3.11 and is the supported way to pick a loop
@@ -141,6 +142,8 @@ def _run_server_loop(main: Coroutine[Any, Any, None]) -> None:
             # fall back without wrapping the server coroutine itself.
             loop = loop_factory()
         except Exception:
+            # Don't call install() here: that would retry the same uvloop
+            # implementation that just failed to create a loop.
             _LOGGER.warning(
                 "Failed to create uvloop event loop. Falling back to default loop.",
                 exc_info=True,
@@ -150,8 +153,9 @@ def _run_server_loop(main: Coroutine[Any, Any, None]) -> None:
             with runner_cls(loop_factory=lambda: loop) as runner:
                 runner.run(main)
             return
+    else:
+        _try_install_uvloop()
 
-    _try_install_uvloop()
     _LOGGER.debug("Starting new event loop for server")
     asyncio.run(main)
 

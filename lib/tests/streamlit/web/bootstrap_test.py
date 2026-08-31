@@ -668,7 +668,7 @@ class BootstrapUvloopTest(TestCase):
             bootstrap._run_server_loop(coro)
 
         mock_runner_cls.assert_not_called()
-        mock_install.assert_called_once()
+        mock_install.assert_not_called()
         mock_run.assert_called_once_with(coro)
         mock_warning.assert_called_once()
 
