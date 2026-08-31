@@ -656,8 +656,12 @@ describe("NumberColumn", () => {
   it.each([
     [TimeUnit.SECOND, "timedelta64[s]", 90, true],
     [TimeUnit.SECOND, "timedelta64[s]", 90.5, false],
+    [TimeUnit.SECOND, "timedelta64[s]", 9_223_372_036, true],
+    [TimeUnit.SECOND, "timedelta64[s]", 9_223_372_036.000_008, false],
     [TimeUnit.MILLISECOND, "timedelta64[ms]", 90.5, true],
     [TimeUnit.MILLISECOND, "timedelta64[ms]", 90.0005, false],
+    [TimeUnit.MILLISECOND, "timedelta64[ms]", 9_223_372_036, true],
+    [TimeUnit.MILLISECOND, "timedelta64[ms]", 9_223_372_036.000_008, false],
     [TimeUnit.MICROSECOND, "timedelta64[us]", 90.0005, true],
     [TimeUnit.MICROSECOND, "timedelta64[us]", 90.0000005, false],
     [TimeUnit.NANOSECOND, "timedelta64[ns]", 90.0000005, true],

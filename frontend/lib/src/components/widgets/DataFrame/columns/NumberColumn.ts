@@ -66,10 +66,14 @@ function hasDurationPrecision(
   seconds: number,
   fractionalSecondDigits: number
 ): boolean {
-  const scaledSeconds = seconds * 10 ** fractionalSecondDigits
-  const nearestTick = Math.round(scaledSeconds)
-  const tolerance = Number.EPSILON * Math.max(1, Math.abs(scaledSeconds)) * 4
-  return Math.abs(scaledSeconds - nearestTick) <= tolerance
+  const scale = 10 ** fractionalSecondDigits
+  const scaledSeconds = seconds * scale
+  if (!Number.isFinite(scaledSeconds)) {
+    return false
+  }
+  // Round-trip through integer ticks. A relative EPSILON grows with magnitude
+  // and can accept leftover microseconds on coarse units near the pandas range.
+  return Math.round(scaledSeconds) / scale === seconds
 }
 
 export interface NumberColumnParams {

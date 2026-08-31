@@ -91,6 +91,21 @@ describe("DataFrame FormattingMenu", () => {
     expect(screen.queryByText("Duration")).not.toBeInTheDocument()
   })
 
+  it("labels compact as Clock on duration columns and still applies compact format", async () => {
+    render(
+      <FormattingMenu {...defaultProps} isDuration>
+        {defaultChildren}
+      </FormattingMenu>
+    )
+
+    expect(screen.getByText("Clock")).toBeInTheDocument()
+    expect(screen.queryByText("Compact")).not.toBeInTheDocument()
+    expect(screen.getByText("Duration")).toBeInTheDocument()
+
+    await userEvent.click(screen.getByText("Clock"))
+    expect(defaultProps.onChangeFormat).toHaveBeenCalledWith("compact")
+  })
+
   it("renders date format options when columnKind is date", () => {
     render(
       <FormattingMenu {...defaultProps} columnKind="date">

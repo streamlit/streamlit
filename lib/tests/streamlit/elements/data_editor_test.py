@@ -179,6 +179,11 @@ class DataEditorUtilTest(unittest.TestCase):
                 pd.Timedelta(hours=2),
             ),
             (
+                float("inf"),
+                ColumnDataKind.TIMEDELTA,
+                None,
+            ),
+            (
                 [1, 2, 3],
                 ColumnDataKind.LIST,
                 [1, 2, 3],

@@ -368,7 +368,7 @@ def _parse_value(
             if column_data_kind == ColumnDataKind.TIME:
                 return datetime_value.time()
 
-    except (ValueError, pd.errors.ParserError, TypeError) as ex:
+    except (ValueError, pd.errors.ParserError, TypeError, OverflowError) as ex:
         _LOGGER.warning(
             "Failed to parse value %s as %s.",
             value,

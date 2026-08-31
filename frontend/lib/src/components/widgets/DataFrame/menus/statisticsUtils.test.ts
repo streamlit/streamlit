@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
+import { Duration, Field, TimeUnit } from "apache-arrow"
 import { describe, expect, it } from "vitest"
 
+import { ArrowType, DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
 
 import {
@@ -41,12 +43,13 @@ import {
 
 /**
  * Builds a minimal Quiver-like mock for `computeStatistics`, which only relies
- * on `dimensions.numDataRows` and `getCell(row, col).content`.
+ * on `dimensions.numDataRows` and `getCell(row, col)`.
  */
 function makeMockQuiver(
   contentFn: (row: number) => unknown,
   numDataRows = 5,
-  throwOnGetCell = false
+  throwOnGetCell = false,
+  cellMeta?: { contentType?: ArrowType; field?: Field }
 ): Quiver {
   return {
     dimensions: { numDataRows },
@@ -54,9 +57,24 @@ function makeMockQuiver(
       if (throwOnGetCell) {
         throw new Error("malformed Arrow buffer")
       }
-      return { content: contentFn(row) }
+      return { content: contentFn(row), ...cellMeta }
     },
   } as unknown as Quiver
+}
+
+function durationArrowType(unit: TimeUnit): ArrowType {
+  const arrowField = new Field("duration", new Duration(unit), true)
+  return {
+    type: DataFrameCellType.DATA,
+    arrowField,
+    pandasType: {
+      field_name: "duration",
+      name: "duration",
+      pandas_type: "timedelta",
+      numpy_type: "timedelta64[ns]",
+      metadata: null,
+    },
+  }
 }
 
 describe("statisticsUtils", () => {
@@ -482,6 +500,33 @@ describe("statisticsUtils", () => {
       const data = makeMockQuiver(row => row, 5, true)
       expect(computeStatistics("number", data, 0)).toBeNull()
     })
+
+    it.each([
+      [
+        "nanosecond",
+        TimeUnit.NANOSECOND,
+        (row: number) => BigInt((row + 1) * 1_000_000_000),
+      ],
+      ["millisecond", TimeUnit.MILLISECOND, (row: number) => (row + 1) * 1000],
+    ])(
+      "converts %s duration ticks to seconds before numeric stats",
+      (_label, unit, contentFn) => {
+        const contentType = durationArrowType(unit)
+        const data = makeMockQuiver(contentFn, 3, false, {
+          contentType,
+          field: contentType.arrowField,
+        })
+        const stats = computeStatistics("number", data, 0)
+
+        expect(stats?.type).toBe("numeric")
+        expect(stats).toMatchObject({
+          sum: 6,
+          min: 1,
+          max: 3,
+          mean: 2,
+        })
+      }
+    )
   })
 
   describe("formatNumber", () => {

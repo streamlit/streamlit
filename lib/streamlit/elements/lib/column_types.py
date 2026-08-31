@@ -595,7 +595,8 @@ def NumberColumn(
 
     default : int, float, or None
         Specifies the default value in this column when a new row is added by
-        the user. This defaults to ``None``.
+        the user. This defaults to ``None``. On timedelta / duration columns,
+        this is a number of seconds.
 
     format :  str, "plain", "localized", "percent", "dollar", "euro", "yen", "accounting", "compact", "scientific", "engineering", "duration", or None
         A format string controlling how numbers are displayed.
@@ -606,6 +607,8 @@ def NumberColumn(
         - ``"localized"``: Show the number in the default locale format
           (e.g. "1,234.567"). On timedelta / duration columns, show a
           locale-aware duration instead (e.g. "5 sec", "1 sec, 500 ms").
+          Browsers without ``Intl.DurationFormat`` fall back to the
+          elapsed-time clock (the same display as ``format="compact"``).
         - ``"percent"``: Show the number as a percentage (e.g. "123456.70%").
         - ``"dollar"``: Show the number as a dollar amount (e.g. "$1,234.57").
         - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
@@ -638,11 +641,13 @@ def NumberColumn(
 
     min_value : int, float, or None
         The minimum value that can be entered. If this is ``None`` (default),
-        there will be no minimum.
+        there will be no minimum. On timedelta / duration columns, this is a
+        number of seconds.
 
     max_value : int, float, or None
         The maximum value that can be entered. If this is ``None`` (default),
-        there will be no maximum.
+        there will be no maximum. On timedelta / duration columns, this is a
+        number of seconds.
 
     step : int, float, or None
         The precision of numbers that can be entered. If this ``None``
@@ -653,7 +658,8 @@ def NumberColumn(
 
         If ``format`` is a predefined format like ``"dollar"``, ``step``
         overrides the display precision. If ``format`` is a printf-style format
-        string, ``step`` will not change the display precision.
+        string, ``step`` will not change the display precision. On timedelta /
+        duration columns, this is a number of seconds.
 
     Examples
     --------
