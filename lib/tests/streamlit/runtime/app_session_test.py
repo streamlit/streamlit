@@ -1176,6 +1176,25 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
 
         handle_event_spy.assert_called_once()
 
+    def test_on_scriptrunner_event_when_event_loop_closed(self):
+        """A late ScriptRunner event after the loop is closed is dropped."""
+        loop = asyncio.new_event_loop()
+        loop.close()
+        session = _create_test_session(loop)
+
+        session._on_scriptrunner_event(
+            sender=MagicMock(),
+            event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+        )
+
+    def test_handle_backmsg_exception_when_event_loop_closed(self):
+        """A late backmsg exception after the loop is closed is dropped."""
+        loop = asyncio.new_event_loop()
+        loop.close()
+        session = _create_test_session(loop)
+
+        session.handle_backmsg_exception(RuntimeError("late exception"))
+
     async def test_event_handler_asserts_if_called_off_event_loop(self):
         """AppSession._handle_scriptrunner_event_on_event_loop will assert
         if it's called from another event loop (or no event loop).

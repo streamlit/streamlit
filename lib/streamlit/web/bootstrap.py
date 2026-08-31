@@ -19,12 +19,15 @@ import mimetypes
 import os
 import signal
 import sys
-from typing import Any, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 from streamlit import cli_util, config, env_util, file_util, net_util, secrets
 from streamlit.logger import get_logger
 from streamlit.watcher import report_watchdog_availability, watch_file
 from streamlit.web.server import Server, server_address_is_unix_socket, server_util
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Coroutine
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -70,27 +73,52 @@ def _fix_sys_path(main_script_path: str) -> None:
     sys.path.insert(0, os.path.dirname(main_script_path))
 
 
-def _maybe_install_uvloop(running_in_event_loop: bool) -> None:
-    """Install uvloop as the default event loop policy if available."""
+def _get_uvloop_loop_factory() -> Callable[[], asyncio.AbstractEventLoop] | None:
+    """Return uvloop's event-loop factory, or None if it cannot be used.
 
-    if running_in_event_loop:
-        return
-
+    ``uvloop.install()`` and event-loop policies are deprecated (removed in
+    Python 3.16). Prefer passing this factory to ``asyncio.Runner`` /
+    ``asyncio.run(..., loop_factory=...)``.
+    """
     if env_util.IS_WINDOWS:
-        return
+        return None
 
     try:
         import uvloop
     except ModuleNotFoundError:
+        return None
+
+    return uvloop.new_event_loop
+
+
+def _run_server_loop(main: Coroutine[Any, Any, None]) -> None:
+    """Run ``main`` on a new event loop, using uvloop when available.
+
+    On Python 3.11+ this uses ``asyncio.Runner(loop_factory=...)`` so we never
+    call the deprecated ``uvloop.install()`` / event-loop policy APIs. Python
+    3.10 still uses ``install()`` because ``asyncio.Runner`` was added in 3.11.
+    """
+    loop_factory = _get_uvloop_loop_factory()
+    if loop_factory is not None and sys.version_info >= (3, 11):
+        _LOGGER.debug("Starting new uvloop event loop for server")
+        with asyncio.Runner(loop_factory=loop_factory) as runner:
+            runner.run(main)
         return
 
-    try:
-        uvloop.install()
-        _LOGGER.debug("uvloop installed as default event loop policy.")
-    except Exception:
-        _LOGGER.warning(
-            "Failed to install uvloop. Falling back to default loop.", exc_info=True
-        )
+    if loop_factory is not None:
+        try:
+            import uvloop
+
+            uvloop.install()
+            _LOGGER.debug("uvloop installed as default event loop policy.")
+        except Exception:
+            _LOGGER.warning(
+                "Failed to install uvloop. Falling back to default loop.",
+                exc_info=True,
+            )
+
+    _LOGGER.debug("Starting new event loop for server")
+    asyncio.run(main)
 
 
 def _fix_sys_argv(main_script_path: str, args: list[str]) -> None:
@@ -470,8 +498,5 @@ def run(
         # This prevents the task from being garbage collected
         server._bootstrap_task = task
     else:
-        _maybe_install_uvloop(running_in_event_loop)
-        # No running event loop, so we can use asyncio.run
-        # This is the normal case when running streamlit from the command line
-        _LOGGER.debug("Starting new event loop for server")
-        asyncio.run(main())
+        # No running event loop. This is the normal CLI case.
+        _run_server_loop(main())

@@ -580,50 +580,73 @@ class BootstrapRunTest(IsolatedAsyncioTestCase):
 
 
 class BootstrapUvloopTest(TestCase):
-    def test_installs_uvloop_when_available(self):
-        """uvloop is installed as the default policy when present."""
+    def test_returns_uvloop_factory_when_available(self):
+        """uvloop's new_event_loop is used as the asyncio loop factory."""
         fake_uvloop = types.ModuleType("uvloop")
-        fake_uvloop.install = Mock()
+        fake_uvloop.new_event_loop = Mock(name="new_event_loop")
 
         with (
             patch.object(bootstrap.env_util, "IS_WINDOWS", False),
             patch.dict("sys.modules", {"uvloop": fake_uvloop}),
         ):
-            bootstrap._maybe_install_uvloop(running_in_event_loop=False)
+            factory = bootstrap._get_uvloop_loop_factory()
 
-        fake_uvloop.install.assert_called_once()
+        assert factory is fake_uvloop.new_event_loop
 
-    def test_skips_install_when_loop_running(self):
-        """uvloop installation is skipped if a loop is already running."""
+    def test_returns_none_on_windows(self):
+        """uvloop is not used on Windows."""
         fake_uvloop = types.ModuleType("uvloop")
-        fake_uvloop.install = Mock()
-
-        with (
-            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
-            patch.dict("sys.modules", {"uvloop": fake_uvloop}),
-        ):
-            bootstrap._maybe_install_uvloop(running_in_event_loop=True)
-
-        fake_uvloop.install.assert_not_called()
-
-    def test_skips_install_on_windows(self):
-        """uvloop installation is skipped on Windows."""
-        fake_uvloop = types.ModuleType("uvloop")
-        fake_uvloop.install = Mock()
+        fake_uvloop.new_event_loop = Mock()
 
         with (
             patch.object(bootstrap.env_util, "IS_WINDOWS", True),
             patch.dict("sys.modules", {"uvloop": fake_uvloop}),
         ):
-            bootstrap._maybe_install_uvloop(running_in_event_loop=False)
+            assert bootstrap._get_uvloop_loop_factory() is None
 
-        fake_uvloop.install.assert_not_called()
-
-    def test_handles_missing_uvloop(self):
+    def test_returns_none_when_uvloop_missing(self):
         """Missing uvloop does not raise."""
-        with patch.object(bootstrap.env_util, "IS_WINDOWS", False):
-            with patch.dict("sys.modules", {"uvloop": None}):
-                bootstrap._maybe_install_uvloop(running_in_event_loop=False)
+        with (
+            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
+            patch.dict("sys.modules", {"uvloop": None}),
+        ):
+            assert bootstrap._get_uvloop_loop_factory() is None
+
+    def test_run_server_loop_uses_runner_loop_factory(self):
+        """Python 3.11+ runs the server with asyncio.Runner(loop_factory=...)."""
+        if sys.version_info < (3, 11):
+            self.skipTest("asyncio.Runner requires Python 3.11+")
+
+        fake_factory = Mock(name="uvloop_factory")
+        mock_runner = Mock()
+        mock_runner.__enter__ = Mock(return_value=mock_runner)
+        mock_runner.__exit__ = Mock(return_value=False)
+        coro = Mock(name="main_coro")
+
+        with (
+            patch.object(
+                bootstrap, "_get_uvloop_loop_factory", return_value=fake_factory
+            ),
+            patch(
+                "streamlit.web.bootstrap.asyncio.Runner", return_value=mock_runner
+            ) as mock_runner_cls,
+        ):
+            bootstrap._run_server_loop(coro)
+
+        mock_runner_cls.assert_called_once_with(loop_factory=fake_factory)
+        mock_runner.run.assert_called_once_with(coro)
+
+    def test_run_server_loop_falls_back_to_asyncio_run(self):
+        """Without uvloop, the server uses the stdlib event loop."""
+        coro = Mock(name="main_coro")
+
+        with (
+            patch.object(bootstrap, "_get_uvloop_loop_factory", return_value=None),
+            patch("streamlit.web.bootstrap.asyncio.run") as mock_run,
+        ):
+            bootstrap._run_server_loop(coro)
+
+        mock_run.assert_called_once_with(coro)
 
 
 class BootstrapAsgiTest(IsolatedAsyncioTestCase):
