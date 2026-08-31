@@ -76,9 +76,8 @@ def _fix_sys_path(main_script_path: str) -> None:
 def _get_uvloop_loop_factory() -> Callable[[], asyncio.AbstractEventLoop] | None:
     """Return uvloop's event-loop factory, or None if it cannot be used.
 
-    ``uvloop.install()`` and event-loop policies are deprecated (removed in
-    Python 3.16). Prefer passing this factory to ``asyncio.Runner`` /
-    ``asyncio.run(..., loop_factory=...)``.
+    ``new_event_loop`` exists on our minimum uvloop (0.15.2). We still look it
+    up with ``getattr`` so an unexpected older build falls back to ``install()``.
     """
     if env_util.IS_WINDOWS:
         return None
@@ -88,35 +87,60 @@ def _get_uvloop_loop_factory() -> Callable[[], asyncio.AbstractEventLoop] | None
     except ModuleNotFoundError:
         return None
 
-    return uvloop.new_event_loop
+    factory = getattr(uvloop, "new_event_loop", None)
+    return factory if callable(factory) else None
+
+
+def _try_install_uvloop() -> None:
+    """Install uvloop as the process event-loop policy if that API exists.
+
+    Used on Python 3.10 (no ``asyncio.Runner``) and as a fallback when
+    ``uvloop.new_event_loop`` is missing. ``install()`` is deprecated from
+    Python 3.12 and removed in 3.16; those versions take the Runner path.
+    """
+    if env_util.IS_WINDOWS:
+        return
+
+    try:
+        import uvloop
+    except ModuleNotFoundError:
+        return
+
+    install = getattr(uvloop, "install", None)
+    if not callable(install):
+        return
+
+    try:
+        install()
+        _LOGGER.debug("uvloop installed as default event loop policy.")
+    except Exception:
+        _LOGGER.warning(
+            "Failed to install uvloop. Falling back to default loop.",
+            exc_info=True,
+        )
 
 
 def _run_server_loop(main: Coroutine[Any, Any, None]) -> None:
     """Run ``main`` on a new event loop, using uvloop when available.
 
-    On Python 3.11+ this uses ``asyncio.Runner(loop_factory=...)`` so we never
-    call the deprecated ``uvloop.install()`` / event-loop policy APIs. Python
-    3.10 still uses ``install()`` because ``asyncio.Runner`` was added in 3.11.
+    Preferred path (Python 3.11+ and uvloop with ``new_event_loop``):
+    ``asyncio.Runner(loop_factory=...)``. That avoids the deprecated
+    ``uvloop.install()`` / event-loop policy APIs.
+
+    Fallback (Python 3.10, or uvloop too old for ``new_event_loop``):
+    ``uvloop.install()`` when present, then ``asyncio.run()``.
     """
     loop_factory = _get_uvloop_loop_factory()
-    if loop_factory is not None and sys.version_info >= (3, 11):
+    # Runner was added in 3.11 and is the supported way to pick a loop
+    # implementation. getattr keeps this importable on 3.10.
+    runner_cls = getattr(asyncio, "Runner", None)
+    if loop_factory is not None and runner_cls is not None:
         _LOGGER.debug("Starting new uvloop event loop for server")
-        with asyncio.Runner(loop_factory=loop_factory) as runner:
+        with runner_cls(loop_factory=loop_factory) as runner:
             runner.run(main)
         return
 
-    if loop_factory is not None:
-        try:
-            import uvloop
-
-            uvloop.install()
-            _LOGGER.debug("uvloop installed as default event loop policy.")
-        except Exception:
-            _LOGGER.warning(
-                "Failed to install uvloop. Falling back to default loop.",
-                exc_info=True,
-            )
-
+    _try_install_uvloop()
     _LOGGER.debug("Starting new event loop for server")
     asyncio.run(main)
 
