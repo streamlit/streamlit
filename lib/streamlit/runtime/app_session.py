@@ -611,9 +611,14 @@ class AppSession:
 
     def _create_scriptrunner(self, initial_rerun_data: RerunData) -> None:
         """Create and run a new ScriptRunner with the given RerunData."""
-        # Defensive recreate: if user code called loop.close() mid-session,
-        # replace the loop so the new ScriptRunner gets a working one.
+        # Defensive recovery: if the session loop closed mid-session, replace it
+        # so the new ScriptRunner gets a working one.
         if self._script_event_loop.is_closed():
+            _LOGGER.warning(
+                "The session-owned script event loop is closed. AppSession is "
+                "creating a replacement; objects bound to the previous loop may no "
+                "longer work. Code using the session-owned loop must not close it."
+            )
             self._script_event_loop = asyncio.new_event_loop()
 
         self._scriptrunner = ScriptRunner(

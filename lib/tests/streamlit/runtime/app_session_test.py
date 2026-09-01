@@ -401,6 +401,35 @@ class AppSessionTest(unittest.TestCase):
         )
         scriptrunner.start.assert_called_once()
 
+    @patch("streamlit.runtime.app_session.ScriptRunner")
+    def test_closed_script_event_loop_is_replaced_with_warning(
+        self, mock_scriptrunner: MagicMock
+    ):
+        """A closed session loop is replaced and its invalidation is diagnosed."""
+        session = _create_test_session()
+        closed_loop = session._script_event_loop
+        closed_loop.close()
+        assert closed_loop.is_closed()
+
+        try:
+            with self.assertLogs(
+                "streamlit.runtime.app_session", level="WARNING"
+            ) as logs:
+                session._create_scriptrunner(initial_rerun_data=RerunData())
+
+            replacement_loop = session._script_event_loop
+            assert replacement_loop is not closed_loop
+            assert not replacement_loop.is_closed()
+            assert mock_scriptrunner.call_args.kwargs["event_loop"] is replacement_loop
+
+            warning = " ".join(logs.output)
+            assert "creating a replacement" in warning
+            assert "objects bound to the previous loop may no longer work" in warning
+            assert "must not close it" in warning
+        finally:
+            if not session._script_event_loop.is_closed():
+                session._script_event_loop.close()
+
     def test_script_event_loop_created_on_init(self):
         """AppSession creates a non-running event loop for the script thread."""
         session = _create_test_session()
