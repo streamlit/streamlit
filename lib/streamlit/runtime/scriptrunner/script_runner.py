@@ -97,8 +97,9 @@ class ScriptRunnerEvent(Enum):
     # by the user.
     FRAGMENT_STOPPED_WITH_SUCCESS = "FRAGMENT_STOPPED_WITH_SUCCESS"
 
-    # Script execution has unwound, the event loop is detached, and the script
-    # thread is about to exit.
+    # Terminal event: The ScriptRunner will process no more requests. Script
+    # execution has unwound or setup failed, the runner's event loop is detached,
+    # and its script thread is about to exit.
     SHUTDOWN = "SHUTDOWN"
 
     # "Data" events. These are emitted when the ScriptRunner's script has
