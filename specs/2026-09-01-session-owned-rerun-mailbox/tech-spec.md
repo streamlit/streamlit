@@ -460,36 +460,37 @@ current runner can absorb the update or a new generation is needed.
 Before (today):
 
 ```python
-        if self._scriptrunner is not None:
-            if (
-                bool(config.get_option("runner.fastReruns"))
-                and not rerun_data.fragment_id
-            ):
-                self._scriptrunner.request_stop()
-                self._scriptrunner = None
-            else:
-                success = self._scriptrunner.request_rerun(rerun_data)
-                if success:
-                    return
-        self._create_scriptrunner(rerun_data)
+def request_rerun(self, client_state: ClientState | None = None) -> None:
+    ...
+    if self._scriptrunner is not None:
+        if bool(config.get_option("runner.fastReruns")) and not rerun_data.fragment_id:
+            self._scriptrunner.request_stop()
+            self._scriptrunner = None
+        else:
+            success = self._scriptrunner.request_rerun(rerun_data)
+            if success:
+                return
+    self._create_scriptrunner(rerun_data)
 ```
 
 After (proposed):
 
 ```python
-        # Assign this interaction its session-scoped sequence position and fold it
-        # into the pending batch. The coordinator decides, under fastReruns, whether
-        # the current runner can keep going or must be superseded by a new generation.
-        decision = self._coordinator.accept(rerun_data)
-        if decision.kind == AcceptDecision.ABSORBED:
-            # The current runner has been handed the updated batch and stays alive.
-            return
-        if decision.kind == AcceptDecision.SUPERSEDE:
-            # fastReruns full-app path: retire the current runner's lease and start a
-            # fresh runner on the new generation. The old runner may keep executing
-            # until its next yield point but can no longer mutate SessionState.
-            self._retire_current_runner()
-        self._create_scriptrunner_from_coordinator()
+def request_rerun(self, client_state: ClientState | None = None) -> None:
+    ...
+    # Assign this interaction its session-scoped sequence position and fold it
+    # into the pending batch. The coordinator decides, under fastReruns, whether
+    # the current runner can keep going or must be superseded by a new generation.
+    decision = self._coordinator.accept(rerun_data)
+    if decision.kind == AcceptDecision.ABSORBED:
+        # The current runner has been handed the updated batch and stays alive.
+        return
+    if decision.kind == AcceptDecision.SUPERSEDE:
+        # fastReruns full-app path: retire the current runner's lease and start a
+        # fresh runner on the new generation. The old runner may keep executing
+        # until its next yield point but can no longer mutate SessionState.
+        self._retire_current_runner()
+    self._create_scriptrunner_from_coordinator()
 ```
 
 The `fastReruns` config still selects between `ABSORBED` (send to the live runner) and
@@ -512,36 +513,36 @@ semantics:
    Before (today):
 
 ```python
-    def on_script_will_rerun(
-        self,
-        latest_widget_states: WidgetStatesProto,
-        *,
-        suppress_callbacks: bool = False,
-    ) -> None:
-        self._yield_callback()
-        with self._lock:
-            self._state.on_script_will_rerun(
-                latest_widget_states, suppress_callbacks=suppress_callbacks
-            )
+def on_script_will_rerun(
+    self,
+    latest_widget_states: WidgetStatesProto,
+    *,
+    suppress_callbacks: bool = False,
+) -> None:
+    self._yield_callback()
+    with self._lock:
+        self._state.on_script_will_rerun(
+            latest_widget_states, suppress_callbacks=suppress_callbacks
+        )
 ```
 
    After (proposed):
 
 ```python
-    def on_script_will_rerun(
-        self,
-        latest_widget_states: WidgetStatesProto,
-        *,
-        suppress_callbacks: bool = False,
-    ) -> None:
-        # Yield first so a superseded runner observes STOP before touching state.
-        self._yield_callback()
-        # Only the runner holding the live lease may install widget states and run
-        # callbacks. A superseded runner returns without mutating shared state.
-        with self._lease.acquire_or_stop():
-            self._state.on_script_will_rerun(
-                latest_widget_states, suppress_callbacks=suppress_callbacks
-            )
+def on_script_will_rerun(
+    self,
+    latest_widget_states: WidgetStatesProto,
+    *,
+    suppress_callbacks: bool = False,
+) -> None:
+    # Yield first so a superseded runner observes STOP before touching state.
+    self._yield_callback()
+    # Only the runner holding the live lease may install widget states and run
+    # callbacks. A superseded runner returns without mutating shared state.
+    with self._lease.acquire_or_stop():
+        self._state.on_script_will_rerun(
+            latest_widget_states, suppress_callbacks=suppress_callbacks
+        )
 ```
 
 3. **Events are still filtered by identity.** `AppSession` already ignores events from a
