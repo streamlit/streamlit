@@ -46,6 +46,7 @@ class LocalScriptRunner(ScriptRunner):
         pages_manager: PagesManager,
         args: Any = None,
         kwargs: Any = None,
+        fragment_storage: MemoryFragmentStorage | None = None,
     ) -> None:
         """Initializes the ScriptRunner for the given script_path."""
 
@@ -66,7 +67,11 @@ class LocalScriptRunner(ScriptRunner):
             script_cache=ScriptCache(),
             initial_rerun_data=RerunData(),
             user_info={"email": "test@example.com"},
-            fragment_storage=MemoryFragmentStorage(),
+            fragment_storage=(
+                fragment_storage
+                if fragment_storage is not None
+                else MemoryFragmentStorage()
+            ),
             pages_manager=pages_manager,
         )
 

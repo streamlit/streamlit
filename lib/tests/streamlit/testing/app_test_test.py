@@ -729,3 +729,38 @@ def test_switch_page_drops_registry_after_rendered_exception(
     assert at.exception[0].message == "displayed"
     at.switch_page("orphan.py")
     assert at._page_hash == calc_hash("orphan")
+
+
+def test_keyed_fragment_rerun_button_before_fragment() -> None:
+    """Fragment key registered in a previous run is resolvable when a callback fires
+    before the fragment re-registers itself in the current run.
+
+    This is the critical ordering: the button appears before the fragment in the
+    script, so the button's ``on_click`` callback fires (via ``on_script_will_rerun``)
+    before the fragment has had a chance to register its key in the fresh run.
+    Without persisting ``MemoryFragmentStorage`` across ``AppTest.run()`` calls,
+    ``st.rerun("key")`` would raise "No fragment found for target 'key'".
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        # Button is BEFORE the fragment: its on_click fires before the fragment
+        # registers, so the key must be found in the storage from the prior run.
+        st.button("Refresh fragment", on_click=lambda: st.rerun("counter"))
+
+        @st.fragment(key="counter")
+        def counter_fragment() -> None:
+            n = st.session_state.get("frag_count", 0)
+            st.session_state["frag_count"] = n + 1
+            st.text(f"fragment ran {n + 1} time(s)")
+
+        counter_fragment()
+
+    at = AppTest.from_function(script).run()
+    assert not at.exception
+    assert at.text[0].value == "fragment ran 1 time(s)"
+
+    at.button[0].click().run()
+    assert not at.exception, at.exception
+    assert at.text[0].value == "fragment ran 2 time(s)"
