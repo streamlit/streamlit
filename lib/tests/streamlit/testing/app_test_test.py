@@ -20,7 +20,7 @@ from pathlib import Path
 import pytest
 
 from streamlit.runtime.pages_manager import PagesManager
-from streamlit.testing.v1 import AppTest, local_script_runner
+from streamlit.testing.v1 import AppTest
 from streamlit.util import calc_hash
 
 
@@ -57,9 +57,7 @@ def test_each_run_closes_its_local_script_runner_event_loop(
         created_loops.append(loop)
         return loop
 
-    monkeypatch.setattr(
-        local_script_runner.asyncio, "new_event_loop", track_new_event_loop
-    )
+    monkeypatch.setattr(asyncio, "new_event_loop", track_new_event_loop)
 
     at = AppTest.from_string("import asyncio; asyncio.get_event_loop()")
     at.run()
