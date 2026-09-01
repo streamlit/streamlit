@@ -708,7 +708,7 @@ def test_body_level_rerun_resets_triggers() -> None:
     assert at.session_state["body_runs"] == 5
 
 
-def test_fragment_rerun_keeps_widget_values() -> None:
+def test_st_rerun_inside_fragment_keeps_widget_values() -> None:
     """A widget after st.rerun() inside a fragment must keep its value.
 
     Same incomplete ``widget_ids_this_run`` as the body-level case; the
@@ -733,6 +733,30 @@ def test_fragment_rerun_keeps_widget_values() -> None:
     at.button[0].click().run()
     assert at.text_input(key="t").value == "bar"
     assert at.session_state["t"] == "bar"
+
+
+def test_follow_up_completed_run_drops_unrendered_widgets() -> None:
+    """A widget hidden on the follow-up completed run is still dropped.
+
+    The interrupted ``st.rerun()`` defers stale cleanup; the next run that
+    completes must still remove widgets that were not re-registered.
+    """
+
+    def script():
+        import streamlit as st
+
+        if not st.session_state.get("hide"):
+            st.text_input("hidden", key="hidden")
+            if st.button("Rerun"):
+                st.session_state["hide"] = True
+                st.rerun()
+
+    at = AppTest.from_function(script).run()
+    at.text_input(key="hidden").input("keep?").run()
+    assert at.session_state["hidden"] == "keep?"
+
+    at.button[0].click().run()
+    assert "hidden" not in at.session_state
 
 
 def test_callback_rerun_does_not_abort_other_callbacks() -> None:

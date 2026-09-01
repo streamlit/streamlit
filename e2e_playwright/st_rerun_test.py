@@ -170,15 +170,10 @@ def test_body_level_st_rerun_preserves_widget_values(app: Page):
     ).to_be_checked()
     expect(get_toggle(app, "Toggle after rerun").locator("input")).to_be_checked()
 
-    # Count is stable once the rerun finishes. Radio/toggle clicks and
-    # st.rerun() also increment it, so this does not assert an exact value.
-    count_markdown = app.get_by_test_id("stMarkdownContainer").filter(
-        has_text="app run count:"
-    )
-    count_after_first = count_markdown.inner_text()
-    wait_for_app_run(app)
-    expect(count_markdown).to_have_text(count_after_first)
+    # 4 initial + 3 radios + 1 toggle + 2 for click-and-rerun. Use an
+    # auto-waiting count so we do not snapshot the interrupted run.
+    expect_prefixed_markdown(app, "app run count:", "10", exact_match=True)
 
     click_button(app, "body-level rerun")
-    expect(count_markdown).not_to_have_text(count_after_first)
+    expect_prefixed_markdown(app, "app run count:", "12", exact_match=True)
     _expect_body_level_rerun_widget_writes(app)
