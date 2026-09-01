@@ -1731,8 +1731,9 @@ class ScriptRunnerTest(unittest.TestCase):
         self._assert_no_exceptions(scriptrunner)
         captured = scriptrunner._session_state["captured_loops"]
         assert isinstance(captured[0], asyncio.AbstractEventLoop)
-        # The loop is only installed, never run.
+        # The installed loop is initially idle and can run library async work.
         assert scriptrunner._session_state["loop_running"] is False
+        assert scriptrunner._session_state["sync_library_result"] == 42
 
     def test_closed_caller_loop_fails_without_replacement(self):
         """ScriptRunner does not replace a closed caller-owned loop."""

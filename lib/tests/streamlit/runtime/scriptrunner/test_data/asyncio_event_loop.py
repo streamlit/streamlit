@@ -14,10 +14,11 @@
 
 """Exercises the persistent script-thread event loop.
 
-Records the current event loop at the start of each run, then calls
-``asyncio.run()``. Calls ``st.rerun()`` once so the script runs twice in a
-single start/join cycle: the second run captures the loop *after* the first
-run's ``asyncio.run()`` unset the thread's current loop, proving the loop is
+Models a synchronous library that captures the current event loop and drives
+an async operation with ``run_until_complete()``, then calls ``asyncio.run()``.
+Calls ``st.rerun()`` once so the script runs twice in a single start/join
+cycle: the second run captures the loop *after* the first run's
+``asyncio.run()`` unset the thread's current loop, proving the loop is
 re-asserted at the start of every run.
 """
 
@@ -25,14 +26,24 @@ import asyncio
 
 import streamlit as st
 
-captured_loops = st.session_state.setdefault("captured_loops", [])
-captured_loops.append(asyncio.get_event_loop())
-st.session_state["loop_running"] = asyncio.get_event_loop().is_running()
-
 
 async def _double(value: int) -> int:
     return value * 2
 
+
+class _SyncLibraryClient:
+    def __init__(self) -> None:
+        self.event_loop = asyncio.get_event_loop()
+
+    def double(self, value: int) -> int:
+        return self.event_loop.run_until_complete(_double(value))
+
+
+client = _SyncLibraryClient()
+captured_loops = st.session_state.setdefault("captured_loops", [])
+captured_loops.append(client.event_loop)
+st.session_state["loop_running"] = client.event_loop.is_running()
+st.session_state["sync_library_result"] = client.double(21)
 
 st.session_state["asyncio_run_result"] = asyncio.run(_double(21))
 
