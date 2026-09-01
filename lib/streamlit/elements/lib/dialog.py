@@ -20,7 +20,7 @@ from typing_extensions import Self
 
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.elements.lib.utils import compute_and_register_element_id
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitInvalidLayoutContextError, StreamlitValueError
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -63,7 +63,7 @@ def _assert_first_dialog_to_be_opened(should_open: bool) -> None:
 
     Raises
     ------
-    StreamlitAPIException
+    StreamlitInvalidLayoutContextError
         Raised when a dialog has already been opened in the current script run.
     """
     script_run_ctx = get_script_run_ctx()
@@ -72,7 +72,7 @@ def _assert_first_dialog_to_be_opened(should_open: bool) -> None:
     # this might need to change.
     if should_open and script_run_ctx:
         if script_run_ctx.has_dialog_opened:
-            raise StreamlitAPIException(
+            raise StreamlitInvalidLayoutContextError(
                 "Only one dialog is allowed to be opened at the same time. "
                 "Please make sure to not call a dialog-decorated function more than once in a script run."
             )
@@ -92,9 +92,8 @@ class Dialog(DeltaGenerator):
     ) -> Dialog:
         # Validation for on_dismiss parameter
         if on_dismiss not in {"ignore", "rerun"} and not callable(on_dismiss):
-            raise StreamlitAPIException(
-                f"You have passed {on_dismiss} to `on_dismiss`. But only 'ignore', "
-                "'rerun', or a callable is supported."
+            raise StreamlitValueError(
+                "on_dismiss", ["'ignore'", "'rerun'", "a callback function"]
             )
 
         block_proto = BlockProto()
@@ -147,15 +146,14 @@ class Dialog(DeltaGenerator):
                 value_type="trigger_value",
             )
 
-        # We store the delta path here, because in _update we enqueue a new proto
-        # message to update the open status. Without this, the dialog content is gone
-        # when the _update message is sent
-        delta_path: list[int] = (
-            parent._active_dg._cursor.delta_path if parent._active_dg._cursor else []
-        )
         dialog = cast("Dialog", parent._block(block_proto=block_proto, dg_type=Dialog))
 
-        dialog._delta_path = delta_path
+        # `_update` re-sends the block proto at this path. Use the path `_block()` wrote
+        # to, not the parent cursor, so the update targets the block even if a wrapper
+        # sits between them. Dialogs land top level in the event container, which never
+        # gets a wrapper, so this is a no-op today and stays correct if that changes.
+        # Same idiom as StatusContainer. See issue #16281.
+        dialog._delta_path = dialog._block_delta_path
         dialog._current_proto = block_proto
 
         return dialog
@@ -198,7 +196,7 @@ class Dialog(DeltaGenerator):
     def close(self) -> None:
         self._update(False)
 
-    def __enter__(self) -> Self:  # type: ignore[override]
+    def __enter__(self) -> Self:  # type: ignore[override]  # ty: ignore[invalid-method-override]
         # This is a little dubious: we're returning a different type than
         # our superclass' `__enter__` function. Maybe DeltaGenerator.__enter__
         # should always return `self`?
@@ -207,8 +205,8 @@ class Dialog(DeltaGenerator):
 
     def __exit__(
         self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
+        typ: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
     ) -> Literal[False]:
-        return super().__exit__(exc_type, exc_val, exc_tb)
+        return super().__exit__(typ, exc, tb)

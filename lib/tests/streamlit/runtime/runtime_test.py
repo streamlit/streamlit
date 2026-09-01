@@ -44,6 +44,7 @@ from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_session_storage import MemorySessionStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.runtime import AsyncObjects, RuntimeStoppedError
+from streamlit.runtime.session_manager import ActiveSessionInfo
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 from streamlit.watcher import event_based_path_watcher
 from tests.streamlit.message_mocks import (
@@ -267,6 +268,39 @@ class RuntimeTest(RuntimeTestCase):
             patched_disconnect_session.assert_called_once_with(session_id)
             patched_on_session_disconnected.assert_called_once()
 
+    async def test_disconnect_session_with_matching_client_disconnects(self):
+        """Passing the session's current client should still disconnect it."""
+        await self.runtime.start()
+
+        client = MockSessionClient()
+        session_id = self.runtime.connect_session(client=client, user_info=MagicMock())
+
+        with patch.object(
+            self.runtime._session_mgr, "disconnect_session", new=MagicMock()
+        ) as patched_disconnect_session:
+            self.runtime.disconnect_session(session_id, client=client)
+            patched_disconnect_session.assert_called_once_with(session_id)
+
+    async def test_disconnect_session_with_stale_client_is_noop(self):
+        """A stale websocket should not disconnect a session after reconnect."""
+        await self.runtime.start()
+
+        old_client = MockSessionClient()
+        session_id = self.runtime.connect_session(
+            client=old_client, user_info=MagicMock()
+        )
+        session_info = self.runtime._session_mgr.get_active_session_info(session_id)
+        assert session_info is not None
+        session_info.client = MockSessionClient()
+
+        with patch.object(
+            self.runtime._session_mgr, "disconnect_session", new=MagicMock()
+        ) as patched_disconnect_session:
+            self.runtime.disconnect_session(session_id, client=old_client)
+            patched_disconnect_session.assert_not_called()
+
+        assert self.runtime.is_active_session(session_id)
+
     async def test_close_session_closes_appsession(self):
         await self.runtime.start()
 
@@ -392,6 +426,39 @@ class RuntimeTest(RuntimeTestCase):
         app_session = session_info.session
         app_session.handle_backmsg.assert_called_once_with(back_msg)
 
+    @patch("streamlit.runtime.app_session.AppSession.handle_backmsg", new=MagicMock())
+    async def test_handle_backmsg_with_matching_client_is_delivered(self):
+        """A BackMsg from the session's current client should still be delivered."""
+        await self.runtime.start()
+
+        client = MockSessionClient()
+        session_id = self.runtime.connect_session(client=client, user_info=MagicMock())
+
+        back_msg = MagicMock()
+        self.runtime.handle_backmsg(session_id, back_msg, client=client)
+
+        session_info = self.runtime._session_mgr.get_active_session_info(session_id)
+        assert session_info is not None
+        session_info.session.handle_backmsg.assert_called_once_with(back_msg)
+
+    async def test_handle_backmsg_with_stale_client_is_noop(self):
+        """A stale websocket should not deliver BackMsgs after reconnect."""
+        await self.runtime.start()
+
+        old_client = MockSessionClient()
+        session_id = self.runtime.connect_session(
+            client=old_client, user_info=MagicMock()
+        )
+        session_info = self.runtime._session_mgr.get_active_session_info(session_id)
+        assert session_info is not None
+        session_info.client = MockSessionClient()
+
+        with patch(
+            "streamlit.runtime.app_session.AppSession.handle_backmsg"
+        ) as patched_handle_backmsg:
+            self.runtime.handle_backmsg(session_id, MagicMock(), client=old_client)
+            patched_handle_backmsg.assert_not_called()
+
     async def test_handle_backmsg_invalid_session(self):
         """A BackMsg for an invalid session should get dropped without an error."""
         await self.runtime.start()
@@ -417,6 +484,26 @@ class RuntimeTest(RuntimeTestCase):
         assert session_info is not None
         app_session = session_info.session
         app_session.handle_backmsg_exception.assert_called_once_with(exception)
+
+    async def test_handle_backmsg_exception_with_stale_client_is_noop(self):
+        """A stale websocket should not deliver BackMsg exceptions after reconnect."""
+        await self.runtime.start()
+
+        old_client = MockSessionClient()
+        session_id = self.runtime.connect_session(
+            client=old_client, user_info=MagicMock()
+        )
+        session_info = self.runtime._session_mgr.get_active_session_info(session_id)
+        assert session_info is not None
+        session_info.client = MockSessionClient()
+
+        with patch(
+            "streamlit.runtime.app_session.AppSession.handle_backmsg_exception"
+        ) as patched_handle_backmsg_exception:
+            self.runtime.handle_backmsg_deserialization_exception(
+                session_id, MagicMock(), client=old_client
+            )
+            patched_handle_backmsg_exception.assert_not_called()
 
     async def test_handle_backmsg_exception_invalid_session(self):
         """A BackMsg exception for an invalid session should get dropped without an
@@ -469,6 +556,54 @@ class RuntimeTest(RuntimeTestCase):
         # Assert that our error was raised, and that our session was disconnected.
         raise_disconnected_error.assert_called_once()
         assert not self.runtime.is_active_session(session_id)
+
+    async def test_flush_loop_stale_client_error_keeps_reconnected_session(self):
+        """A stale client error during the flush loop must not disconnect a
+        session that has been reconnected to a new client.
+
+        Regression test for a reconnect-while-flushing race: the outbound flush
+        loop can still hold the pre-reconnect ``ActiveSessionInfo`` (old client)
+        when a reconnect swaps in a new client for the same session id. A
+        ``SessionClientDisconnectedError`` from the old client must be routed
+        through the client-aware disconnect guard so the freshly reconnected
+        session is preserved.
+        """
+        await self.runtime.start()
+
+        old_client = MockSessionClient()
+        session_id = self.runtime.connect_session(
+            client=old_client, user_info=MagicMock()
+        )
+
+        session_info = self.runtime._session_mgr.get_active_session_info(session_id)
+        assert session_info is not None
+        session = session_info.session
+
+        # The flush loop still holds the pre-reconnect session info (old client),
+        # while the session manager has swapped in a new client for the same id
+        # (as a reconnect would do after the disconnect+restore handoff).
+        new_client = MockSessionClient()
+        session_info.client = new_client
+        stale_session_info = ActiveSessionInfo(old_client, session)
+
+        raise_disconnected_error = MagicMock(side_effect=SessionClientDisconnectedError)
+        old_client.write_forward_msg = raise_disconnected_error
+
+        with patch.object(
+            self.runtime._session_mgr,
+            "list_active_sessions",
+            return_value=[stale_session_info],
+        ):
+            self.enqueue_forward_msg(session_id, create_dataframe_msg([1, 2, 3]))
+            await self.tick_runtime_loop()
+
+        # The stale client raised, but the reconnected session stays active and
+        # remains bound to the new client instead of being torn down.
+        raise_disconnected_error.assert_called_once()
+        assert self.runtime.is_active_session(session_id)
+        reconnected_info = self.runtime._session_mgr.get_active_session_info(session_id)
+        assert reconnected_info is not None
+        assert reconnected_info.client is new_client
 
     async def test_stable_number_of_async_tasks(self):
         """Test that the number of async tasks remains stable.

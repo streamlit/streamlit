@@ -51,6 +51,10 @@ import {
   SidebarConfigContextProps,
 } from "./components/core/SidebarConfigContext"
 import {
+  SkillsInstallContext,
+  SkillsInstallContextProps,
+} from "./components/core/SkillsInstallContext"
+import {
   ThemeContext,
   ThemeContextProps,
 } from "./components/core/ThemeContext"
@@ -67,6 +71,7 @@ import { createFormsData } from "./WidgetStateManager"
 const flexContextValue = {
   direction: Direction.VERTICAL,
   isInHorizontalLayout: false,
+  isDirectlyInColumn: false,
   isInRoot: false,
   isInContentWidthContainer: false,
 }
@@ -77,6 +82,7 @@ const defaultLibConfigContextValue = {
   enforceDownloadInNewTab: undefined,
   resourceCrossOriginMode: undefined,
   showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
+  disableDataExport: false,
 }
 
 const defaultSidebarConfigContextValue = {
@@ -209,6 +215,7 @@ export interface RenderWithContextsOptions {
   formsContext?: Partial<FormsContextProps>
   scriptRunContext?: Partial<ScriptRunContextProps>
   backendOperationContext?: Partial<BackendOperationContextProps>
+  skillsInstallContext?: Partial<SkillsInstallContextProps>
 }
 
 /**
@@ -263,6 +270,7 @@ export const renderWithContexts = (
     enforceDownloadInNewTab: undefined,
     resourceCrossOriginMode: undefined,
     showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
+    disableDataExport: false,
     ...options.libConfigContext,
   }
 
@@ -332,6 +340,28 @@ export const renderWithContexts = (
     ...options.backendOperationContext,
   }
 
+  // Shared single callout slot so the dedup behavior (first eligible
+  // ExceptionElement wins) matches production when several are rendered.
+  let skillsCalloutOwner: symbol | null = null
+  let currentSkillsInstallContextProps: SkillsInstallContextProps = {
+    enabled: false,
+    onInstall: () => Promise.resolve(undefined),
+    onShown: vi.fn(),
+    claimCallout: (token: symbol): boolean => {
+      if (skillsCalloutOwner === null || skillsCalloutOwner === token) {
+        skillsCalloutOwner = token
+        return true
+      }
+      return false
+    },
+    releaseCallout: (token: symbol): void => {
+      if (skillsCalloutOwner === token) {
+        skillsCalloutOwner = null
+      }
+    },
+    ...options.skillsInstallContext,
+  }
+
   const Wrapper: FC<PropsWithChildren> = ({ children }) => {
     // Create ref for app root if needed
     const appRootRef = useRef<HTMLDivElement>(null)
@@ -375,7 +405,11 @@ export const renderWithContexts = (
                           <FormsContext.Provider
                             value={currentFormsContextProps}
                           >
-                            {content}
+                            <SkillsInstallContext.Provider
+                              value={currentSkillsInstallContextProps}
+                            >
+                              {content}
+                            </SkillsInstallContext.Provider>
                           </FormsContext.Provider>
                         </BackendOperationContext.Provider>
                       </ScriptRunContext.Provider>
@@ -459,6 +493,12 @@ export const renderWithContexts = (
         currentScriptRunContextProps = {
           ...currentScriptRunContextProps,
           ...newOptions.scriptRunContext,
+        }
+      }
+      if (newOptions?.skillsInstallContext) {
+        currentSkillsInstallContextProps = {
+          ...currentSkillsInstallContextProps,
+          ...newOptions.skillsInstallContext,
         }
       }
       // Use the original rerender with the wrapper

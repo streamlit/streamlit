@@ -33,6 +33,8 @@ from streamlit.errors import (
     FragmentHandledException,
     FragmentStorageKeyError,
     StreamlitAPIException,
+    StreamlitDuplicateElementKey,
+    StreamlitInvalidLayoutContextError,
 )
 from streamlit.proto.Block_pb2 import Block
 from streamlit.proto.RootContainer_pb2 import RootContainer
@@ -52,7 +54,10 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
 )
-from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ScriptRunContext,
+    ThreadState,
+)
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 from tests.conftest import enable_mpa_v2_mode
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -271,6 +276,25 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         assert not self._storage.contains("inner")
         assert not self._storage.contains("leaf")
 
+    def test_clear_stale_descendants_returns_removed_ids(self):
+        """Removed descendant ids are returned so callers can react (e.g. cancel
+        auto-rerun timers)."""
+        self._set_fragment_chain("outer", "inner", "leaf")
+
+        removed = self._storage.clear_stale_descendants("outer", frozenset({"outer"}))
+
+        assert set(removed) == {"inner", "leaf"}
+
+    def test_clear_stale_descendants_returns_empty_when_nothing_removed(self):
+        """When no descendant is evicted, an empty list is returned."""
+        self._set_fragment_chain("outer", "inner")
+
+        removed = self._storage.clear_stale_descendants(
+            "outer", frozenset({"outer", "inner"})
+        )
+
+        assert removed == []
+
     def test_clear_stale_descendants_keeps_reregistered_child(self):
         """Descendants re-registered during this run are preserved."""
         self._set_fragment_chain("outer", "inner")
@@ -370,6 +394,22 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 
         assert self._storage.ids_registered_after(snapshot) == frozenset({"some_key"})
 
+    def test_has_ancestor_in_finds_transitive_ancestor(self):
+        """Any ancestor along the chain counts, not just the immediate parent."""
+        self._set_fragment_chain("outer", "middle", "inner")
+
+        assert self._storage.has_ancestor_in("inner", {"outer"})
+        assert self._storage.has_ancestor_in("inner", {"middle"})
+        assert self._storage.has_ancestor_in("middle", {"outer"})
+
+    def test_has_ancestor_in_excludes_self_and_descendants(self):
+        """A fragment is not its own ancestor, and descendants don't count."""
+        self._set_fragment_chain("outer", "inner")
+
+        assert not self._storage.has_ancestor_in("inner", {"inner"})
+        assert not self._storage.has_ancestor_in("outer", {"inner"})
+        assert not self._storage.has_ancestor_in("inner", set())
+
     def test_order_fragment_ids_empty_input_returns_empty_list(self):
         """An empty input list yields an empty ordering."""
         assert self._storage.order_fragment_ids([]) == []
@@ -446,6 +486,74 @@ class MemoryFragmentStorageTest(unittest.TestCase):
     def test_contains(self):
         assert self._storage.contains("some_key")
         assert not self._storage.contains("some_other_key")
+
+    def test_resolve_target_returns_ids_for_named_fragment(self):
+        """resolve_target with a single name returns the registered fragment id."""
+        self._storage.register("frag_a", "fragment_a", target_key="charts")
+
+        result = self._storage.resolve_target("charts")
+
+        assert result == ["frag_a"]
+
+    def test_resolve_target_multiple_call_sites(self):
+        """One key registered at multiple call sites resolves to all ids."""
+        self._storage.register("frag_a", "fragment_a", target_key="charts")
+        self._storage.register("frag_b", "fragment_b", target_key="charts")
+
+        result = self._storage.resolve_target("charts")
+
+        assert result == ["frag_a", "frag_b"]
+
+    def test_resolve_target_list_of_names(self):
+        """A list of keys resolves to the union in stable order with deduplication."""
+        self._storage.register("frag_a", "fragment_a", target_key="charts")
+        self._storage.register("frag_b", "fragment_b", target_key="table")
+
+        result = self._storage.resolve_target(["charts", "table"])
+
+        assert result == ["frag_a", "frag_b"]
+
+    def test_resolve_target_deduplicates_overlapping_keys(self):
+        """resolve_target(['a', 'a']) returns each fragment id only once."""
+        self._storage.register("frag_a", "fragment_a", target_key="charts")
+
+        result = self._storage.resolve_target(["charts", "charts"])
+
+        assert result == ["frag_a"]
+
+    def test_resolve_target_unknown_name_raises(self):
+        """Resolving a name with no registered fragment raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException, match="No fragment found for target"):
+            self._storage.resolve_target("unknown")
+
+    def test_remove_prunes_target_key_index(self):
+        """Removing a fragment drops it from the name index."""
+        self._storage.register("frag_a", "fragment_a", target_key="charts")
+
+        self._storage.delete("frag_a")
+
+        with pytest.raises(StreamlitAPIException):
+            self._storage.resolve_target("charts")
+
+    def test_clear_prunes_target_key_index(self):
+        """clear() drops all fragments from the name index."""
+        self._storage.register("frag_a", "fragment_a", target_key="charts")
+
+        self._storage.clear()
+
+        with pytest.raises(StreamlitAPIException):
+            self._storage.resolve_target("charts")
+
+    def test_reregister_with_new_key_repoints_index(self):
+        """Re-registering the same fragment id under a new key detaches the old name."""
+        self._storage.register("frag_a", "fragment_a", target_key="old_name")
+
+        # Re-register with a different key.
+        self._storage.register("frag_a", "fragment_a", target_key="new_name")
+
+        assert self._storage.resolve_target("new_name") == ["frag_a"]
+        with pytest.raises(StreamlitAPIException):
+            self._storage.resolve_target("old_name")
 
 
 def test_has_lock() -> None:
@@ -853,7 +961,13 @@ class FragmentTest(unittest.TestCase):
         self, patched_get_script_run_ctx
     ):
         ctx = MagicMock()
-        ctx.fragment_ids_this_run = ["my_fragment_id"]
+        # Populated below with the fragment's actual id once available. The
+        # snapshot-restore branch runs only when the currently executing
+        # fragment is a top-level fragment being rerun (its id appears in
+        # ``fragment_ids_this_run``); nested fragments called via ``wrap`` from
+        # an already-rerunning parent skip the restore to avoid detaching
+        # their writes from the enclosing scope's cursor state. See #12514.
+        ctx.fragment_ids_this_run = []
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
 
@@ -886,7 +1000,13 @@ class FragmentTest(unittest.TestCase):
 
             call_count += 1
 
+        # Initial registration: acts like a full app run (no restore).
         my_fragment()
+
+        # Register the fragment id so that subsequent standalone invocations
+        # of ``saved_fragment`` are treated as top-level fragment reruns.
+        fragment_id = next(iter(ctx.fragment_storage._fragments.keys()))
+        ctx.fragment_ids_this_run = [fragment_id]
 
         # Reach inside our MemoryFragmentStorage internals to pull out our saved
         # fragment.
@@ -1076,7 +1196,16 @@ class FragmentTest(unittest.TestCase):
         """Test that the internal function can be called with an
         additional hash info parameter."""
         ctx = MagicMock()
+        # Emulate a full app run so wrapped_fragment doesn't try to restore
+        # dg_stack/cursor snapshots between calls (see #12514 fix).
+        ctx.fragment_ids_this_run = []
         patched_get_script_run_ctx.return_value = ctx
+
+        # Pin the top DG's delta path to a deterministic value so that
+        # ``fragment_id`` is a function only of the function identity and
+        # ``additional_hash_info`` argument — not of MagicMock repr ids that
+        # can shift between calls when garbage collection reuses addresses.
+        context_dg_stack.get()[-1]._cursor.delta_path = [0, 0]
 
         def my_function():
             return ThreadState.get().fragment_id
@@ -1475,6 +1604,7 @@ def test_fragment_decorator_handles_pep649_annotations() -> None:
         ("registration_sequence", (), {}),
         ("ids_registered_after", (0,), {}),
         ("order_fragment_ids", ([],), {}),
+        ("has_ancestor_in", ("frag", set()), {}),
         ("delete", ("key",), {}),
         ("contains", ("key",), {}),
         ("register_outside_wrapper", ("frag", "container", object()), {}),
@@ -2117,10 +2247,10 @@ class ParallelFragmentAPIRestrictionsTest(unittest.TestCase):
     """Tests for API restrictions in parallel fragment workers."""
 
     def test_check_not_parallel_worker_raises_when_flag_is_true(self) -> None:
-        """_check_not_parallel_worker raises StreamlitAPIException when is_parallel_worker=True."""
+        """_check_not_parallel_worker raises StreamlitInvalidLayoutContextError when is_parallel_worker=True."""
         ThreadState.initialize(is_parallel_worker=True)
         try:
-            with pytest.raises(StreamlitAPIException) as exc_info:
+            with pytest.raises(StreamlitInvalidLayoutContextError) as exc_info:
                 _check_not_parallel_worker("st.test_api")
 
             assert "st.test_api" in str(exc_info.value)
@@ -2176,7 +2306,237 @@ class ParallelFragmentAPIRestrictionsTest(unittest.TestCase):
 
         with ThreadState.scoped(fragment_id="inner"):
             assert ThreadState.get().is_parallel_worker is True
-            with pytest.raises(StreamlitAPIException):
+            with pytest.raises(StreamlitInvalidLayoutContextError):
                 _check_not_parallel_worker("@st.dialog")
 
         assert ThreadState.get().is_parallel_worker is True
+
+
+class NestedFragmentContainerRerunTest(DeltaGeneratorTestCase):
+    """Regression tests for #12514: fragments inside a container disappearing
+    on rerender when the parent fragment is rerun.
+    """
+
+    @staticmethod
+    def _lookup_parent_fragment_id(
+        ctx: ScriptRunContext, child_fragment_ids: list[str]
+    ) -> str:
+        """Return the id of the only registered fragment that has no parent.
+
+        The nested ``b`` fragments are registered with ``a`` as their parent, so
+        ``a`` is the sole entry in the storage's parent map pointing at ``None``.
+        """
+        parent_ids = [
+            fid
+            for fid, parent_id in ctx.fragment_storage._parent_by_id.items()
+            if parent_id is None
+        ]
+        assert len(parent_ids) == 1, (
+            f"Expected exactly one top-level fragment, got {parent_ids!r}."
+        )
+        assert parent_ids[0] not in child_fragment_ids, (
+            "The top-level fragment id must be distinct from its children's ids."
+        )
+        return parent_ids[0]
+
+    def test_sibling_nested_fragments_get_distinct_ids_on_parent_rerun(
+        self,
+    ) -> None:
+        """Sibling nested fragments written to the same container via
+        separate ``with container:`` blocks must get distinct fragment ids
+        on a parent fragment rerun.
+
+        Before the fix, the inner fragment's ``wrapped_fragment`` unconditionally
+        replaced ``context_dg_stack`` with deep copies whenever
+        ``ctx.fragment_ids_this_run`` was truthy. During a parent's rerun the
+        inner fragment is called via ``wrap`` from the parent's execution, so
+        the deep-copy substitution detached the inner's writes from the
+        enclosing container's cursor. The container's cursor never advanced
+        between sibling ``with container: b(i)`` calls, so both siblings
+        computed identical fragment ids and overwrote each other's deltas.
+        """
+        recorded_fragment_ids: list[str] = []
+
+        @fragment
+        def b(i: int) -> None:
+            recorded_fragment_ids.append(ThreadState.get().fragment_id or "")
+
+        @fragment
+        def a() -> None:
+            container = st.container()
+            with container:
+                b(1)
+            with container:
+                b(2)
+
+        # Initial full app run — registers a, b(1), b(2) with distinct ids.
+        a()
+
+        # Sanity check: on the initial run, b(1) and b(2) get distinct ids.
+        assert len(recorded_fragment_ids) == 2
+        assert recorded_fragment_ids[0] != recorded_fragment_ids[1], (
+            "Even during the initial run, sibling nested fragments should have "
+            "distinct fragment ids."
+        )
+
+        initial_run_ids = recorded_fragment_ids.copy()
+        recorded_fragment_ids.clear()
+
+        # Simulate a fragment rerun of ``a``: look up a's registered
+        # wrapped_fragment and invoke it directly, mirroring what
+        # ScriptRunner does when processing a fragment rerun.
+        ctx = self.script_run_ctx
+        a_fragment_id = self._lookup_parent_fragment_id(ctx, initial_run_ids)
+        ctx.fragment_ids_this_run = [a_fragment_id]
+
+        wrapped_a = ctx.fragment_storage.lookup(a_fragment_id)
+        wrapped_a()
+
+        assert len(recorded_fragment_ids) == 2, (
+            "Both nested fragments should re-execute during a rerun of the parent."
+        )
+        assert recorded_fragment_ids[0] != recorded_fragment_ids[1], (
+            "Sibling nested fragments must get distinct fragment ids on a "
+            "parent fragment rerun; got a collision at "
+            f"{recorded_fragment_ids[0]!r}."
+        )
+        # The recomputed ids should match the ids assigned during the
+        # initial run — deterministic identity across reruns is what makes
+        # fragment storage/lookup work.
+        assert recorded_fragment_ids == initial_run_ids
+
+    def test_sibling_nested_fragments_keep_distinct_ids_when_parent_and_children_queued(
+        self,
+    ) -> None:
+        """A coalesced queue holding both the parent and its nested children must
+        still produce distinct sibling ids.
+
+        ``order_fragment_ids`` runs queued ancestors before queued descendants,
+        so the parent executes first and invokes its children inline via
+        ``wrap`` while their ids are *still* in ``fragment_ids_this_run``. Queue
+        membership alone therefore can't distinguish a ScriptRunner-driven
+        top-level replay from an inline nested call; without the additional
+        ``ThreadState.get().fragment_id is None`` guard the children would
+        restore their declaration-time snapshots mid-parent-run and collide
+        exactly as in #12514.
+        """
+        recorded_fragment_ids: list[str] = []
+
+        @fragment
+        def b(i: int) -> None:
+            recorded_fragment_ids.append(ThreadState.get().fragment_id or "")
+
+        @fragment
+        def a() -> None:
+            container = st.container()
+            with container:
+                b(1)
+            with container:
+                b(2)
+
+        # Initial full app run — registers a, b(1), b(2) with distinct ids.
+        a()
+        assert len(recorded_fragment_ids) == 2
+        initial_run_ids = recorded_fragment_ids.copy()
+        recorded_fragment_ids.clear()
+
+        ctx = self.script_run_ctx
+        a_fragment_id = self._lookup_parent_fragment_id(ctx, initial_run_ids)
+
+        # Queue the parent *and* both children, ancestors first — the ordering
+        # ScriptRunner applies via ``order_fragment_ids``.
+        ctx.fragment_ids_this_run = [a_fragment_id, *initial_run_ids]
+
+        # ScriptRunner invokes the parent first; the children are reached inline
+        # from the parent's body rather than by a second direct invocation.
+        ctx.fragment_storage.lookup(a_fragment_id)()
+
+        assert len(recorded_fragment_ids) == 2, (
+            "Both nested fragments should re-execute during the parent's rerun."
+        )
+        assert recorded_fragment_ids[0] != recorded_fragment_ids[1], (
+            "Sibling nested fragments must keep distinct ids when the parent and "
+            "children are queued together; got a collision at "
+            f"{recorded_fragment_ids[0]!r}."
+        )
+        assert recorded_fragment_ids == initial_run_ids
+
+
+@pytest.mark.parametrize("reserved_key", ["app", "fragment"])
+def test_fragment_reserved_key_raises(reserved_key: str) -> None:
+    """@st.fragment(key=<reserved>) raises StreamlitAPIException immediately."""
+    with pytest.raises(StreamlitAPIException, match="reserved name"):
+        fragment(key=reserved_key)
+
+
+def test_fragment_duplicate_key_different_definitions_raises() -> None:
+    """Two different fragment definitions sharing a key raise StreamlitDuplicateElementKey."""
+
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_storage = MemoryFragmentStorage()
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.shared = SharedRunState()
+    mock_ctx.cursors = {}
+
+    ThreadState.initialize()
+
+    @fragment(key="shared_key")
+    def fragment_alpha() -> None:
+        pass
+
+    @fragment(key="shared_key")
+    def fragment_beta() -> None:
+        pass
+
+    with patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx):
+        fragment_alpha()
+        with pytest.raises(StreamlitDuplicateElementKey):
+            fragment_beta()
+
+
+def test_fragment_same_definition_multiple_call_sites_no_collision() -> None:
+    """Calling the same keyed fragment from two call sites does not raise."""
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_storage = MemoryFragmentStorage()
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.shared = SharedRunState()
+    mock_ctx.cursors = {}
+
+    ThreadState.initialize()
+
+    @fragment(key="multi_site")
+    def my_fragment() -> None:
+        pass
+
+    with patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx):
+        my_fragment()
+        # Second call site of the same definition — must not raise.
+        my_fragment()
+
+
+def test_shared_run_state_reset_clears_fragment_user_keys() -> None:
+    """reset() frees previously-claimed fragment user keys for the next run."""
+    shared = SharedRunState()
+
+    assert shared.register_fragment_user_key("my_key", "definition_a") is True
+    assert shared.register_fragment_user_key("my_key", "definition_b") is False
+
+    shared.reset()
+
+    assert shared.register_fragment_user_key("my_key", "definition_b") is True
+
+
+def test_fragment_different_definitions_same_key_collide() -> None:
+    """Two different fragment definitions using the same key in one run collide:
+    register_fragment_user_key returns False for the second definition_id.
+    """
+    shared = SharedRunState()
+
+    assert (
+        shared.register_fragment_user_key("shared_key", "mymodule.fragment_alpha")
+        is True
+    )
+    assert (
+        shared.register_fragment_user_key("shared_key", "mymodule.fragment_beta")
+        is False
+    )

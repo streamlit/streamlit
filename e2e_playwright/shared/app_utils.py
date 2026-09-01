@@ -21,7 +21,7 @@ from typing import Literal, Protocol, cast
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Frame, FrameLocator, Locator, Page, expect
 
-from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
+from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run, wait_until
 
 # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
 COMMAND_KEY = "Meta" if platform.system() == "Darwin" else "Control"  # ty: ignore[unresolved-attribute]
@@ -97,6 +97,46 @@ def get_time_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Loc
     element = locator.get_by_test_id("stTimeInput").filter(has_text=label)
     expect(element).to_be_visible()
     return element
+
+
+def type_time(
+    time_display: Locator, hour: str, minute: str, second: str | None = None
+) -> None:
+    """Type a time into a TimeInput's spinbutton segments.
+
+    Uses press_sequentially (key events per character) rather than fill() to
+    exercise the real keystroke handling path through React Aria's digit
+    buffering logic.
+
+    After typing, blurs the last segment so the widget commits the value
+    to the backend (commit is deferred to blur, matching st.number_input
+    semantics).
+
+    Parameters
+    ----------
+    time_display : Locator
+        The stTimeInputTimeDisplay locator containing the spinbuttons.
+
+    hour : str
+        Two-digit hour string (e.g. "08").
+
+    minute : str
+        Two-digit minute string (e.g. "45").
+
+    second : str or None
+        Two-digit second string (e.g. "30"). Only applicable when the widget
+        has sub-minute step (seconds granularity). If None, the seconds segment
+        is not interacted with.
+    """
+    spinbuttons = time_display.get_by_role("spinbutton")
+    spinbuttons.first.press_sequentially(hour)
+    spinbuttons.nth(1).press_sequentially(minute)
+    if second is not None:
+        spinbuttons.nth(2).press_sequentially(second)
+        spinbuttons.nth(2).blur()
+    else:
+        spinbuttons.nth(1).blur()
+    # Blur triggers the deferred commit to the backend.
 
 
 def get_datetime_input(
@@ -335,6 +375,44 @@ def get_date_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Loc
     element = locator.get_by_test_id("stDateInput").filter(has=label_locator)
     expect(element).to_be_visible()
     return element
+
+
+def type_date(date_input_field: Locator, *parts: str, commit: bool = True) -> None:
+    """Type digits into a DateInput's segments and optionally commit.
+
+    For React Aria segmented ``st.date_input`` fields (single and range),
+    values are typed segment-by-segment into ``role="spinbutton"`` segments
+    rather than a single free-text ``<input>``.
+
+    Segment edits are buffered locally until the popover closes (the
+    commit-on-close pattern). By default this helper closes the popover via
+    Escape after typing so the value is committed to widget state — matching
+    ``type_time``'s blur-to-commit behavior. Pass ``commit=False`` to keep
+    the popover open (e.g. for error-state tests that inspect UI before commit).
+
+    Parameters
+    ----------
+    date_input_field : Locator
+        The ``stDateInputField`` locator (the segmented field container).
+
+    *parts : str
+        Digit strings for each segment, in the same left-to-right order the
+        segments are rendered in (which follows the widget's ``format``).
+        Pass 3 parts for a single-date field, 6 for a range field (start +
+        end segments), e.g.
+        ``type_date(field, "1970", "01", "02")`` for a `YYYY/MM/DD` field.
+
+    commit : bool
+        If True (default), press Escape after typing to close the popover and
+        commit the buffered value to widget state. Set to False when you need
+        the popover to remain open (e.g. to test real-time error feedback
+        during editing).
+    """
+    spinbuttons = date_input_field.get_by_role("spinbutton")
+    for i, part in enumerate(parts):
+        spinbuttons.nth(i).press_sequentially(part)
+    if commit:
+        date_input_field.page.keyboard.press("Escape")
 
 
 def get_slider(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
@@ -1031,6 +1109,35 @@ def expect_help_tooltip(
     expect(tooltip_content).not_to_be_attached()
 
 
+def expect_label_truncated(element: Locator) -> None:
+    """Expect the markdown label inside ``element`` to be ellipsized.
+
+    Verifies the rendered label is actually clipped (its content is wider than the
+    space available for it), rather than only checking that a ``wrap``/``title``
+    attribute was set. Use this together with a fixed width narrower than the
+    label so the truncation is deterministic.
+
+    Parameters
+    ----------
+    element : Locator
+        A locator whose subtree contains a single label markdown or caption
+        container (e.g. a button, popover trigger, or ``st.caption``).
+    """
+    # Ellipsis is applied on the markdown/caption container (and may also be
+    # on nested paragraphs). Measure the container so this stays valid when
+    # wrap=False flattens leftover block remnants into inline siblings.
+    label = element.locator(
+        '[data-testid="stMarkdownContainer"], [data-testid="stCaptionContainer"]'
+    ).first
+    expect(label).to_be_visible()
+    # Retry until layout is stable — a one-shot evaluate can race with flex
+    # sizing even after the label is visible.
+    wait_until(
+        element.page,
+        lambda: label.evaluate("el => el.scrollWidth > el.clientWidth"),
+    )
+
+
 def reset_hovering(locator: LocatorContext) -> None:
     """Reset the hovering of the app.
 
@@ -1431,6 +1538,102 @@ def get_button_group(app: Page, key: str) -> Locator:
     return get_element_by_key(app, key).get_by_test_id("stButtonGroup").first
 
 
+def get_button_group_options(app: Page, key: str) -> Locator:
+    """Get the option list inside a button group (pills / segmented control).
+
+    This is the horizontal scrollport when ``wrap`` is false.
+
+    Parameters
+    ----------
+    app : Page
+        The page to search for the button group.
+
+    key : str
+        The key of the button group.
+
+    Returns
+    -------
+    Locator
+        The option list (``group`` or ``radiogroup`` role).
+    """
+    button_group = get_button_group(app, key)
+    return (
+        button_group.get_by_role("group")
+        .or_(button_group.get_by_role("radiogroup"))
+        .first
+    )
+
+
+def expect_button_group_overflows(options: Locator) -> None:
+    """Wait until the option list has local horizontal overflow and an edge fade.
+
+    The fade attributes (``data-can-scroll-start`` / ``data-can-scroll-end``)
+    prove the group itself is the scrollport, not the page.
+
+    Parameters
+    ----------
+    options : Locator
+        The option list from :func:`get_button_group_options`.
+    """
+    wait_until(
+        options.page,
+        lambda: (
+            options.evaluate(
+                """el => {
+              if (el.scrollWidth <= el.clientWidth) return false
+              return (
+                el.hasAttribute("data-can-scroll-start")
+                || el.hasAttribute("data-can-scroll-end")
+              )
+            }"""
+            )
+            is True
+        ),
+    )
+
+
+def expect_selected_option_in_view(options: Locator) -> None:
+    """Wait until the selected option is fully visible in the option list.
+
+    When an edge is fading (``data-can-scroll-start`` / ``end``), honors
+    ``scroll-padding-inline`` so an option sitting in that fade is not
+    treated as in view. First/last options can sit flush with a non-fading
+    edge because max scroll cannot inset them.
+
+    Parameters
+    ----------
+    options : Locator
+        The option list from :func:`get_button_group_options`.
+    """
+    expect(options.locator("button[data-selected]").first).to_be_visible()
+    wait_until(
+        options.page,
+        lambda: (
+            options.evaluate(
+                """el => {
+              const selected = el.querySelector('[data-selected]');
+              if (!selected) return false;
+              const group = el.getBoundingClientRect();
+              const sel = selected.getBoundingClientRect();
+              const cs = getComputedStyle(el);
+              const padStart = el.hasAttribute('data-can-scroll-start')
+                ? parseFloat(cs.scrollPaddingInlineStart) || 0
+                : 0;
+              const padEnd = el.hasAttribute('data-can-scroll-end')
+                ? parseFloat(cs.scrollPaddingInlineEnd) || 0
+                : 0;
+              // ±1px absorbs sub-pixel rounding across browsers.
+              return (
+                sel.left >= group.left + padStart - 1 &&
+                sel.right <= group.right - padEnd + 1
+              );
+            }"""
+            )
+            is True
+        ),
+    )
+
+
 def get_feedback(app: Page, key: str) -> Locator:
     """Get a feedback widget with the given key.
 
@@ -1547,3 +1750,24 @@ def wait_for_images_loaded(locator: Locator, timeout: int = 5000) -> None:
         }""",
         timeout=timeout,
     )
+
+
+def open_json_path_tooltip(page: Page, json_element: Locator) -> Locator:
+    """Click a JSON string value and wait for the path tooltip.
+
+    react-json-view puts a collapse-toggle on ``.string-value`` and the
+    path-select handler on the parent ``.variable-value``. On webkit, the
+    child re-render can swallow the bubbled click so the tooltip never
+    opens. If that happens, click the parent to fire ``onSelect`` directly.
+    """
+    string_value = json_element.locator(".string-value").first
+    expect(string_value).to_be_visible()
+    string_value.click()
+
+    tooltip = page.get_by_test_id("stJsonPathTooltip")
+    try:
+        expect(tooltip).to_be_visible(timeout=1000)
+    except AssertionError:
+        json_element.locator(".variable-value").first.evaluate("el => el.click()")
+        expect(tooltip).to_be_visible()
+    return tooltip

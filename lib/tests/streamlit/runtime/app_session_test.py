@@ -25,6 +25,7 @@ import pytest
 from parameterized import parameterized
 
 from streamlit import config
+from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -1175,6 +1176,46 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
 
         handle_event_spy.assert_called_once()
 
+    def test_on_scriptrunner_event_when_event_loop_closed(self):
+        """A late ScriptRunner event after the loop is closed is dropped."""
+        loop = asyncio.new_event_loop()
+        loop.close()
+        session = _create_test_session(loop)
+        handle_event = MagicMock()
+        session._handle_scriptrunner_event_on_event_loop = handle_event
+
+        session._on_scriptrunner_event(
+            sender=MagicMock(),
+            event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+        )
+
+        handle_event.assert_not_called()
+
+    def test_handle_backmsg_exception_when_event_loop_closed(self):
+        """A late backmsg exception after the loop is closed is dropped."""
+        loop = asyncio.new_event_loop()
+        loop.close()
+        session = _create_test_session(loop)
+        handle_event = MagicMock()
+        enqueue = MagicMock()
+        session._handle_scriptrunner_event_on_event_loop = handle_event
+        session._enqueue_forward_msg = enqueue
+
+        session.handle_backmsg_exception(RuntimeError("late exception"))
+
+        handle_event.assert_not_called()
+        enqueue.assert_not_called()
+
+    def test_call_soon_on_event_loop_reraises_when_loop_open(self):
+        """Unexpected RuntimeError from call_soon_threadsafe is not swallowed."""
+        loop = MagicMock()
+        loop.is_closed.return_value = False
+        loop.call_soon_threadsafe.side_effect = RuntimeError("unexpected")
+        session = _create_test_session(loop)
+
+        with pytest.raises(RuntimeError, match="unexpected"):
+            session._call_soon_on_event_loop(lambda: None)
+
     async def test_event_handler_asserts_if_called_off_event_loop(self):
         """AppSession._handle_scriptrunner_event_on_event_loop will assert
         if it's called from another event loop (or no event loop).
@@ -1292,6 +1333,69 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
 
             handle_clear_cache_request.assert_called_once()
             handle_backmsg_exception.assert_called_once_with(error)
+
+    @parameterized.expand(
+        [
+            ("full", "boom", "RuntimeError", True),
+            (True, "boom", "RuntimeError", True),
+            ("true", "boom", "RuntimeError", True),
+            ("stacktrace", _GENERIC_UNCAUGHT_EXCEPTION_TEXT, "RuntimeError", True),
+            (False, _GENERIC_UNCAUGHT_EXCEPTION_TEXT, "RuntimeError", True),
+            ("type", _GENERIC_UNCAUGHT_EXCEPTION_TEXT, "RuntimeError", False),
+            ("none", _GENERIC_UNCAUGHT_EXCEPTION_TEXT, "", False),
+        ]
+    )
+    async def test_handle_backmsg_exception_redacts_per_show_error_details(
+        self,
+        show_error_details: str | bool,
+        expected_message: str,
+        expected_type: str,
+        expect_stack_trace: bool,
+    ):
+        """Test that client.showErrorDetails redacts the Exception ForwardMsg
+        that a BackMsg failure produces.
+        """
+        session = _create_test_session(asyncio.get_running_loop())
+
+        enqueued_msgs: list[ForwardMsg] = []
+        mock_queue = MagicMock(spec=ForwardMsgQueue)
+        mock_queue.enqueue = MagicMock(side_effect=enqueued_msgs.append)
+        session._browser_queue = mock_queue
+
+        with patch_config_options({"client.showErrorDetails": show_error_details}):
+            # Raise the error inside handle_backmsg. The traceback then contains
+            # Streamlit-internal frames, as it does in production.
+            with patch.object(
+                session,
+                "_handle_clear_cache_request",
+                side_effect=RuntimeError("boom"),
+            ):
+                msg = BackMsg()
+                msg.clear_cache = True
+                session.handle_backmsg(msg)
+
+            # An eventloop callback enqueues the Exception ForwardMsg.
+            await asyncio.sleep(0)
+
+        exception_msgs = [
+            msg
+            for msg in enqueued_msgs
+            if msg.WhichOneof("type") == "delta"
+            and msg.delta.new_element.WhichOneof("type") == "exception"
+        ]
+        assert len(exception_msgs) == 1
+        exception_proto = exception_msgs[0].delta.new_element.exception
+
+        assert exception_proto.message == expected_message
+        assert exception_proto.type == expected_type
+        assert bool(exception_proto.stack_trace) == expect_stack_trace
+
+        # No other field of the payload leaks the error.
+        serialized = exception_msgs[0].SerializeToString()
+        if expected_message != "boom":
+            assert b"boom" not in serialized
+        if not expect_stack_trace:
+            assert b"app_session.py" not in serialized
 
     @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner", MagicMock())
     async def test_handle_backmsg_handles_debug_ids(self):
@@ -1999,6 +2103,62 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.dark.body_font == "monospace"
 
     @patch("streamlit.runtime.app_session.config")
+    def test_can_specify_chart_colors_in_theme_sections(self, patched_config):
+        """Chart color options can be set on light, dark, and sidebar sections."""
+        light_colors = ["#111111", "#222222"]
+        dark_colors = ["#333333", "#444444"]
+        sidebar_colors = ["#555555", "#666666"]
+        sequential = [f"#{i:02x}0000" for i in range(10)]
+        diverging = [f"#00{i:02x}00" for i in range(10)]
+
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section(
+                {
+                    "light": {
+                        "chartCategoricalColors": light_colors,
+                        "chartSequentialColors": sequential,
+                        "chartDivergingColors": diverging,
+                    },
+                    "dark": {
+                        "chartCategoricalColors": dark_colors,
+                    },
+                    "sidebar": {
+                        "chartCategoricalColors": sidebar_colors,
+                    },
+                }
+            )
+        )
+
+        msg = ForwardMsg()
+        new_session_msg = msg.new_session
+        app_session._populate_theme_msg(
+            new_session_msg.custom_theme.light, "theme.light"
+        )
+        app_session._populate_theme_msg(new_session_msg.custom_theme.dark, "theme.dark")
+        app_session._populate_theme_msg(
+            new_session_msg.custom_theme.sidebar, "theme.sidebar"
+        )
+
+        assert list(new_session_msg.custom_theme.light.chart_categorical_colors) == (
+            light_colors
+        )
+        assert list(new_session_msg.custom_theme.light.chart_sequential_colors) == (
+            sequential
+        )
+        assert list(new_session_msg.custom_theme.light.chart_diverging_colors) == (
+            diverging
+        )
+        assert list(new_session_msg.custom_theme.dark.chart_categorical_colors) == (
+            dark_colors
+        )
+        assert list(new_session_msg.custom_theme.sidebar.chart_categorical_colors) == (
+            sidebar_colors
+        )
+        # Dark/sidebar did not set sequential/diverging; leave empty for frontend inheritance
+        assert not new_session_msg.custom_theme.dark.chart_sequential_colors
+        assert not new_session_msg.custom_theme.sidebar.chart_diverging_colors
+
+    @patch("streamlit.runtime.app_session.config")
     def test_can_specify_light_sidebar_theme_options(self, patched_config):
         """Test that theme.light.sidebar section options are populated correctly."""
         patched_config.get_options_for_section.side_effect = (
@@ -2118,6 +2278,9 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
     @patch("streamlit.runtime.app_session.config")
     def test_new_theme_sections_support_all_color_options(self, patched_config):
         """Test that new theme sections support all color palette options."""
+        chart_categorical = ["#111111", "#222222", "#333333"]
+        chart_sequential = [f"#{i:02x}0000" for i in range(10)]
+        chart_diverging = [f"#00{i:02x}00" for i in range(10)]
         color_overrides = {
             "redColor": "#ff0000",
             "orangeColor": "#ffa500",
@@ -2140,6 +2303,9 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             "greenTextColor": "#00ff00",
             "violetTextColor": "#8a2be2",
             "grayTextColor": "#808080",
+            "chartCategoricalColors": chart_categorical,
+            "chartSequentialColors": chart_sequential,
+            "chartDivergingColors": chart_diverging,
         }
 
         patched_config.get_options_for_section.side_effect = (
@@ -2194,6 +2360,9 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                 assert theme_obj.green_text_color == "#00ff00"
                 assert theme_obj.violet_text_color == "#8a2be2"
                 assert theme_obj.gray_text_color == "#808080"
+                assert list(theme_obj.chart_categorical_colors) == chart_categorical
+                assert list(theme_obj.chart_sequential_colors) == chart_sequential
+                assert list(theme_obj.chart_diverging_colors) == chart_diverging
 
     @patch("streamlit.runtime.app_session._LOGGER")
     @patch("streamlit.runtime.app_session.config")
@@ -2478,8 +2647,8 @@ def test_create_new_session_message_recommends_skills_install() -> None:
 
     with (
         patch(
-            "streamlit.web.skills.should_show_skills_nudge", return_value=True
-        ) as mock_should_show,
+            "streamlit.web.skills.nudge_suppression_reason", return_value=""
+        ) as mock_reason,
         patch(
             "streamlit.runtime.backend_operation_handler.connection_locality",
             return_value="loopback",
@@ -2489,8 +2658,8 @@ def test_create_new_session_message_recommends_skills_install() -> None:
 
     assert msg.new_session.initialize.recommend_skills_install is True
     # No suppression telemetry when the nudge is actually recommended.
-    assert msg.new_session.initialize.skills_nudge_suppressed_locality == ""
-    mock_should_show.assert_called_once_with("/fake")
+    assert msg.new_session.initialize.skills_nudge_suppressed_reason == ""
+    mock_reason.assert_called_once_with("/fake")
 
 
 def test_create_new_session_message_skips_skills_install_when_not_recommended() -> None:
@@ -2498,11 +2667,14 @@ def test_create_new_session_message_skips_skills_install_when_not_recommended() 
     frontend does not show the nudge."""
     session = _create_test_session()
 
-    with patch("streamlit.web.skills.should_show_skills_nudge", return_value=False):
+    with patch(
+        "streamlit.web.skills.nudge_suppression_reason", return_value="installed"
+    ):
         msg = session._create_new_session_message(page_script_hash="")
 
     assert msg.new_session.initialize.recommend_skills_install is False
-    assert msg.new_session.initialize.skills_nudge_suppressed_locality == ""
+    # "installed" is an uninteresting reason, so it is not reported.
+    assert msg.new_session.initialize.skills_nudge_suppressed_reason == ""
 
 
 def test_create_new_session_message_suppresses_nudge_on_non_loopback() -> None:
@@ -2512,7 +2684,7 @@ def test_create_new_session_message_suppresses_nudge_on_non_loopback() -> None:
     session = _create_test_session()
 
     with (
-        patch("streamlit.web.skills.should_show_skills_nudge", return_value=True),
+        patch("streamlit.web.skills.nudge_suppression_reason", return_value=""),
         patch(
             "streamlit.runtime.backend_operation_handler.connection_locality",
             return_value="private",
@@ -2521,7 +2693,45 @@ def test_create_new_session_message_suppresses_nudge_on_non_loopback() -> None:
         msg = session._create_new_session_message(page_script_hash="")
 
     assert msg.new_session.initialize.recommend_skills_install is False
-    assert msg.new_session.initialize.skills_nudge_suppressed_locality == "private"
+    assert (
+        msg.new_session.initialize.skills_nudge_suppressed_reason
+        == "non_loopback_private"
+    )
+
+
+@pytest.mark.parametrize("reason", ["conflict", "check_failed"])
+def test_create_new_session_message_reports_informative_suppression(
+    reason: str,
+) -> None:
+    """A withheld nudge that tells us something actionable is reported, so
+    suppression is measurable rather than silent. ``conflict`` shares the
+    install-failure reason name for the same cause, so "we withheld the nudge"
+    and "we nudged and the install conflicted anyway" compare in one query."""
+    session = _create_test_session()
+
+    with patch("streamlit.web.skills.nudge_suppression_reason", return_value=reason):
+        msg = session._create_new_session_message(page_script_hash="")
+
+    assert msg.new_session.initialize.recommend_skills_install is False
+    assert msg.new_session.initialize.skills_nudge_suppressed_reason == reason
+
+
+@pytest.mark.parametrize(
+    "reason", ["headless", "welcome_hidden", "dismissed", "no_agent", "installed"]
+)
+def test_create_new_session_message_drops_high_volume_suppression(
+    reason: str,
+) -> None:
+    """The uninteresting reasons are deliberately NOT reported. ``headless``
+    especially: it fires for every deployed app, so reporting it would swamp the
+    metric with sessions that were never nudge candidates."""
+    session = _create_test_session()
+
+    with patch("streamlit.web.skills.nudge_suppression_reason", return_value=reason):
+        msg = session._create_new_session_message(page_script_hash="")
+
+    assert msg.new_session.initialize.recommend_skills_install is False
+    assert msg.new_session.initialize.skills_nudge_suppressed_reason == ""
 
 
 def test_create_new_session_message_recomputes_skills_recommendation() -> None:
@@ -2537,9 +2747,9 @@ def test_create_new_session_message_recomputes_skills_recommendation() -> None:
 
     with (
         patch(
-            "streamlit.web.skills.should_show_skills_nudge",
-            side_effect=[True, False],
-        ) as mock_should_show,
+            "streamlit.web.skills.nudge_suppression_reason",
+            side_effect=["", "installed"],
+        ) as mock_reason,
         patch(
             "streamlit.runtime.backend_operation_handler.connection_locality",
             return_value="loopback",
@@ -2548,7 +2758,7 @@ def test_create_new_session_message_recomputes_skills_recommendation() -> None:
         first = session._create_new_session_message(page_script_hash="")
         second = session._create_new_session_message(page_script_hash="")
 
-    assert mock_should_show.call_count == 2
+    assert mock_reason.call_count == 2
     assert first.new_session.initialize.recommend_skills_install is True
     # The second NewSession reflects the updated detection (e.g. post-install),
     # not a stale memoized True.
@@ -2563,13 +2773,13 @@ def test_create_new_session_message_skips_skills_install_for_hello_app() -> None
     session = _create_test_session(is_hello=True)
 
     with patch(
-        "streamlit.web.skills.should_show_skills_nudge", return_value=True
-    ) as mock_should_show:
+        "streamlit.web.skills.nudge_suppression_reason", return_value=""
+    ) as mock_reason:
         msg = session._create_new_session_message(page_script_hash="")
 
     assert msg.new_session.initialize.recommend_skills_install is False
     # Short-circuited on is_hello before the (would-recommend) detection ran.
-    mock_should_show.assert_not_called()
+    mock_reason.assert_not_called()
 
 
 # ---- Tests for _handle_git_information_request ----
@@ -2851,3 +3061,109 @@ def test_populate_config_msg_sidebar_navigation(
         app_session._populate_config_msg(msg)
 
     assert msg.hide_sidebar_nav is expected_hide_sidebar_nav
+
+
+@pytest.mark.parametrize("disable_data_export", [True, False])
+def test_populate_config_msg_disable_data_export(disable_data_export: bool) -> None:
+    """disable_data_export mirrors client.disableDataExport."""
+    with patch_config_options({"client.disableDataExport": disable_data_export}):
+        msg = Config()
+        app_session._populate_config_msg(msg)
+
+    assert msg.disable_data_export is disable_data_export
+
+
+# ---- Tests for handle_backmsg dispatch and small handlers ----
+
+
+@pytest.mark.parametrize(
+    ("field", "handler_name"),
+    [
+        ("load_git_info", "_handle_git_information_request"),
+        ("set_run_on_save", "_handle_set_run_on_save_request"),
+        ("stop_script", "_handle_stop_script_request"),
+    ],
+)
+def test_handle_backmsg_dispatches_bool_requests(field: str, handler_name: str) -> None:
+    """Test that handle_backmsg routes each boolean BackMsg to its handler."""
+    session = _create_test_session()
+    msg = BackMsg()
+    setattr(msg, field, True)
+
+    with patch.object(session, handler_name) as handler:
+        session.handle_backmsg(msg)
+
+    handler.assert_called_once()
+
+
+def test_handle_backmsg_dispatches_file_urls_request() -> None:
+    """Test that handle_backmsg routes a file_urls_request to its handler."""
+    session = _create_test_session()
+    msg = BackMsg()
+    msg.file_urls_request.request_id = "some_request_id"
+
+    with patch.object(session, "_handle_file_urls_request") as handler:
+        session.handle_backmsg(msg)
+
+    handler.assert_called_once()
+
+
+def test_handle_backmsg_unknown_type_logs_warning() -> None:
+    """Test that an unrecognized BackMsg type logs a warning instead of raising."""
+    session = _create_test_session()
+
+    with patch.object(app_session, "_LOGGER") as patched_logger:
+        # An empty BackMsg has no oneof "type" set, so no handler matches.
+        session.handle_backmsg(BackMsg())
+
+    patched_logger.warning.assert_called_once()
+
+
+def test_handle_stop_script_request_forwards_to_scriptrunner() -> None:
+    """Test that _handle_stop_script_request delegates to request_script_stop."""
+    session = _create_test_session()
+
+    with patch.object(session, "request_script_stop") as request_stop:
+        session._handle_stop_script_request()
+
+    request_stop.assert_called_once()
+
+
+def test_request_rerun_after_shutdown_is_discarded() -> None:
+    """Test that a rerun request is ignored once shutdown has been requested."""
+    session = _create_test_session()
+    session._state = AppSessionState.SHUTDOWN_REQUESTED
+
+    with patch.object(session, "_create_scriptrunner") as create_scriptrunner:
+        session.request_rerun(None)
+
+    create_scriptrunner.assert_not_called()
+
+
+def test_clear_user_info_empties_user_info() -> None:
+    """Test that clear_user_info removes all stored user info."""
+    session = _create_test_session()
+    assert session._user_info != {}
+
+    session.clear_user_info()
+
+    assert session._user_info == {}
+
+
+def test_on_secrets_file_changed_triggers_source_change() -> None:
+    """Test that a secrets file change is handled like a source file change."""
+    session = _create_test_session()
+
+    with patch.object(session, "_on_source_file_changed") as on_source_changed:
+        session._on_secrets_file_changed(None)
+
+    on_source_changed.assert_called_once_with()
+
+
+def test_create_file_change_message_marks_script_changed() -> None:
+    """Test that _create_file_change_message flags a script change on disk."""
+    session = _create_test_session()
+
+    msg = session._create_file_change_message()
+
+    assert msg.session_event.script_changed_on_disk is True

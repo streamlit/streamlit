@@ -19,7 +19,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -95,6 +95,13 @@ class GraphvizTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.graphviz_chart
         assert "grenade" in c.spec
+
+    def test_unhandled_type_raises(self):
+        """Test that an unsupported figure type raises a typed exception."""
+        with pytest.raises(StreamlitInvalidParameterTypeError) as e:
+            st.graphviz_chart(123)  # type: ignore[arg-type]
+        assert "Invalid `figure_or_dot` type" in str(e.value)
+        assert "graphviz.Source" in str(e.value)
 
     @parameterized.expand(
         [

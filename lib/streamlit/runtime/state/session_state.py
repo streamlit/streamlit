@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import functools
 import json
 import pickle  # noqa: S403
 from collections.abc import (
@@ -36,8 +37,10 @@ from typing import (
 )
 
 from streamlit import config, util
-from streamlit.delta_generator_singletons import get_dg_singleton_instance
-from streamlit.errors import StreamlitAPIException, UnserializableSessionStateError
+from streamlit.errors import (
+    StreamlitWidgetAlreadyInstantiatedError,
+    UnserializableSessionStateError,
+)
 from streamlit.logger import get_logger
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
@@ -46,6 +49,8 @@ from streamlit.runtime.runtime_util import (
     get_max_widget_state_size_bytes,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    RunLocation,
+    ScriptRunContext,
     ThreadState,
     get_script_run_ctx,
 )
@@ -76,12 +81,22 @@ from streamlit.runtime.stats import (
 _LOGGER: Final = get_logger(__name__)
 
 if TYPE_CHECKING:
+    from streamlit.runtime.scriptrunner import RerunData
     from streamlit.runtime.session_manager import SessionManager
 
 
 STREAMLIT_INTERNAL_KEY_PREFIX: Final = "$$STREAMLIT_INTERNAL_KEY"
 SCRIPT_RUN_WITHOUT_ERRORS_KEY: Final = (
     f"{STREAMLIT_INTERNAL_KEY_PREFIX}_SCRIPT_RUN_WITHOUT_ERRORS"
+)
+
+_TRIGGER_PROTO_FIELDS: Final = frozenset(
+    {
+        "trigger_value",
+        "string_trigger_value",
+        "chat_input_value",
+        "json_trigger_value",
+    }
 )
 
 
@@ -188,12 +203,12 @@ class WStates(MutableMapping[str, Any]):
 
         if is_array_value_field_name(value_field_name):
             # Array types are messages with data in a `data` field
-            value = cast("Any", value).data
+            value = value.data
         elif value_field_name == "json_value":
             value = json.loads(cast("str", value))
         elif value_field_name == "string_trigger_value":
             # StringTriggerValue is a message with data in a `data` field
-            value = cast("Any", value).data
+            value = value.data
 
         deserialized = metadata.deserializer(value)
 
@@ -341,11 +356,10 @@ class WStates(MutableMapping[str, Any]):
         args = metadata.callback_args or ()
         kwargs = metadata.callback_kwargs or {}
 
-        ctx = get_script_run_ctx()
-        if ctx and metadata.fragment_id is not None:
-            with ThreadState.scoped(in_fragment_callback=True):
-                callback(*args, **kwargs)
-        else:
+        with ThreadState.scoped(
+            run_location=RunLocation.CALLBACK,
+            fragment_id=metadata.fragment_id,
+        ):
             callback(*args, **kwargs)
 
 
@@ -584,6 +598,48 @@ class PersistedWidgetTracker:
         self._pending_resets.discard(widget_id)
 
 
+def _interaction_default_is_app_wide(ctx: ScriptRunContext | None) -> bool:
+    """Whether the interaction's default rerun covers the whole app, not one fragment.
+
+    A fragment is running (``ctx.fragment_ids_this_run`` is non-empty) exactly when the
+    interacting widget lives inside it, and such a widget defaults to rerunning only
+    that fragment. With no context, assume app-wide.
+    """
+    return not (ctx and ctx.fragment_ids_this_run)
+
+
+def _navigation_is_pending(
+    pending_reruns: list[RerunData], ctx: ScriptRunContext | None
+) -> bool:
+    """Whether any pending request runs a page other than the one running now.
+
+    Only ``st.switch_page()`` builds such a request from a callback. With no context
+    there is no current page to compare against, so nothing counts as navigation.
+    """
+    return ctx is not None and any(
+        rerun_data.page_script_hash != ctx.page_script_hash
+        for rerun_data in pending_reruns
+    )
+
+
+@dataclass(slots=True)
+class _CallbackRerunVotes:
+    """What the callbacks of one interaction asked for, collected during dispatch.
+
+    ``SessionState._call_callbacks`` reads this once every callback has run, to queue
+    the requests and decide the interaction's rerun scope.
+    """
+
+    # A callback requested specific fragment targets (non-empty fragment_id_queue),
+    # whether via scope="fragment" or a keyed scope like scope="charts".
+    requested_targeted: bool = False
+    # A callback explicitly expects the interaction's default rerun: it returned
+    # normally or called plain st.rerun().
+    wants_interaction_default: bool = False
+    # Requests raised by st.rerun(), in call order, held until the last callback returns.
+    pending_reruns: list[RerunData] = field(default_factory=list)
+
+
 @dataclass(slots=True)
 class SessionState:
     """SessionState allows users to store values that persist between app
@@ -630,6 +686,16 @@ class SessionState:
     # rerun sequencing of a page transition.
     _persist_tracker: PersistedWidgetTracker = field(
         default_factory=PersistedWidgetTracker
+    )
+
+    # The widget_states proto for the current interaction.
+    # on_script_will_rerun stashes this so _request_full_app_rerun can forward
+    # the values (including triggers) in its follow-up rerun.  Without the
+    # stash the proto would be a local variable unreachable by the time the
+    # escalation fires.  Cleared after callbacks finish or when
+    # suppress_callbacks skips dispatch.
+    _current_interaction_widget_states: WidgetStatesProto | None = field(
+        default=None, repr=False
     )
 
     def __repr__(self) -> str:
@@ -787,7 +853,8 @@ class SessionState:
         """Set the value of the session_state entry with the given user_key.
 
         If the key corresponds to a widget or form that's been instantiated
-        during the current script run, raise a StreamlitAPIException instead.
+        during the current script run, raise a StreamlitWidgetAlreadyInstantiatedError
+        instead.
         """
         ctx = get_script_run_ctx()
 
@@ -797,10 +864,7 @@ class SessionState:
             form_ids = ctx.shared.form_ids_this_run
 
             if widget_id in widget_ids or user_key in form_ids:
-                raise StreamlitAPIException(
-                    f"`st.session_state.{user_key}` cannot be modified after the widget"
-                    f" with key `{user_key}` is instantiated."
-                )
+                raise StreamlitWidgetAlreadyInstantiatedError(user_key)
 
         self._new_session_state[user_key] = value
 
@@ -834,104 +898,225 @@ class SessionState:
         for state in widget_states.widgets:
             self._new_widget_state.set_widget_from_proto(state)
 
-    def on_script_will_rerun(self, latest_widget_states: WidgetStatesProto) -> None:
+    def on_script_will_rerun(
+        self,
+        latest_widget_states: WidgetStatesProto,
+        *,
+        suppress_callbacks: bool = False,
+    ) -> None:
         """Called by ScriptRunner before its script re-runs.
 
         Update widget data and call callbacks on widgets whose value changed
         between the previous and current script runs.
+
+        Parameters
+        ----------
+        suppress_callbacks
+            When True, apply widget values but skip callback dispatch.
+            Set on the full-app rerun queued by ``_request_full_app_rerun``
+            after callbacks have already run in this interaction.
         """
-        # Clear any triggers that weren't reset because the script was disconnected
         self._reset_triggers()
         self._compact_state()
         self.set_widgets_from_proto(latest_widget_states)
-        self._call_callbacks()
+        if suppress_callbacks:
+            return
+        self._current_interaction_widget_states = latest_widget_states
+        try:
+            self._call_callbacks()
+        finally:
+            self._current_interaction_widget_states = None
 
     def _call_callbacks(self) -> None:
-        """Call callbacks for widgets whose value changed or whose trigger fired."""
-        from streamlit.runtime.scriptrunner import RerunException
+        """Call callbacks for widgets whose value changed or whose trigger fired,
+        then queue the reruns they asked for.
+        """
+        votes = _CallbackRerunVotes()
+
+        # Skip callbacks for disabled widgets: a reported change can only come
+        # from a stale UI or a forged message. Callbacks run before widgets
+        # re-register, so the metadata read here is from the previous run. That
+        # is safe regardless of whether `disabled` is part of the widget id:
+        # for most widgets the id excludes `disabled` (so the id is stable and
+        # only the enabled<->disabled edges are ambiguous, an intentional
+        # trade-off), while for widgets that encode `disabled` in the id (e.g.
+        # st.popover) each id has a fixed `disabled` and is thus stable by
+        # construction. Either way, a disabled widget's forged change is
+        # suppressed.
+
+        # Changed widgets, split by which dispatch path (if any) will handle them.
+        changed_widget_ids_for_single_callback: list[str] = []
+
+        for wid in self._new_widget_state:
+            if not self._widget_changed(wid):
+                continue
+            metadata = self._new_widget_state.widget_metadata.get(wid)
+            if metadata is None or metadata.disabled:
+                continue
+            if metadata.callback is not None:
+                changed_widget_ids_for_single_callback.append(wid)
+            # Widgets with neither `callback` nor `callbacks` (e.g. form fields)
+            # are skipped: their values are already in session state and they do
+            # not influence rerun scope.  Widgets with `callbacks` are handled by
+            # Path 2 below.
 
         # Path 1: single callback.
-        changed_widget_ids_for_single_callback = [
-            wid
-            for wid in self._new_widget_state
-            if self._widget_changed(wid)
-            and (metadata := self._new_widget_state.widget_metadata.get(wid))
-            is not None
-            and metadata.callback is not None
-        ]
-
         for wid in changed_widget_ids_for_single_callback:
-            try:
-                self._new_widget_state.call_callback(wid)
-            except RerunException:  # noqa: PERF203
-                get_dg_singleton_instance().main_dg.warning(
-                    "Calling st.rerun() within a callback is a no-op."
-                )
+            self._run_callback_and_record_rerun(
+                votes,
+                functools.partial(self._new_widget_state.call_callback, wid),
+            )
 
         # Path 2: multiple callbacks.
         widget_ids_to_process = list(self._new_widget_state.states.keys())
 
         for wid in widget_ids_to_process:
             metadata = self._new_widget_state.widget_metadata.get(wid)
-            if not metadata or metadata.callbacks is None:
+            if metadata is None or metadata.callbacks is None or metadata.disabled:
                 continue
 
             args = metadata.callback_args or ()
             kwargs = metadata.callback_kwargs or {}
 
             # 1) Trigger dispatch: bool + JSON trigger aggregator
-            self._dispatch_trigger_callbacks(wid, metadata, args, kwargs)
+            self._dispatch_trigger_callbacks(votes, wid, metadata, args, kwargs)
 
             # 2) JSON value change dispatch
             if metadata.value_type == "json_value":
-                self._dispatch_json_change_callbacks(wid, metadata, args, kwargs)
+                self._dispatch_json_change_callbacks(votes, wid, metadata, args, kwargs)
+
+        ctx = get_script_run_ctx()
+
+        # Queue the callbacks' reruns only now that every callback has run. Queued
+        # mid-dispatch, the next callback's first st.* call would pick the request up
+        # at a yield point and raise; _run_callback_and_record_rerun cannot tell that
+        # from the callback's own st.rerun(), so it would swallow it and that callback
+        # would die.
+        #
+        # No try/finally: if a callback raised, the interaction errored and queueing a
+        # rerun anyway would clear the exception element on the next SCRIPT_STARTED.
+        if ctx and ctx.script_requests:
+            # Queue a navigating request last: request_rerun takes page_script_hash
+            # (and query_string) from the newest request, so an st.rerun() coalesced
+            # after an st.switch_page() would point the rerun back at the page the
+            # user asked to leave.
+            current_page = ctx.page_script_hash
+            for rerun_data in sorted(
+                votes.pending_reruns,
+                key=lambda data: data.page_script_hash != current_page,
+            ):
+                ctx.script_requests.request_rerun(rerun_data)
+
+        if (
+            votes.requested_targeted
+            and votes.wants_interaction_default
+            and _interaction_default_is_app_wide(ctx)
+            and not _navigation_is_pending(votes.pending_reruns, ctx)
+        ):
+            # An app-wide default trumps the targeted requests, so queue it explicitly:
+            # the callbacks that returned normally raised nothing, so no request in
+            # pending_reruns stands for them, and this run's body is about to be
+            # preempted before it can serve as their rerun.
+            #
+            # A pending navigation already reruns the whole app, so this request would
+            # add nothing but its own page — the one being navigated away from.
+            self._request_full_app_rerun()
 
     def _execute_widget_callback(
         self,
+        votes: _CallbackRerunVotes,
         callback_fn: WidgetCallback,
         cb_metadata: WidgetMetadata[Any],
         cb_args: WidgetArgs,
         cb_kwargs: dict[str, Any],
     ) -> None:
-        """Execute a widget callback with fragment-aware context.
+        """Run a widget callback with ``run_location=CALLBACK`` and the widget's ``fragment_id``."""
 
-        If the widget belongs to a fragment, temporarily marks the current
-        script context as being inside a fragment callback to adapt rerun
-        semantics. Attempts to call ``st.rerun()`` inside a widget callback are
-        converted to a user-visible warning and treated as a no-op.
+        def run() -> None:
+            with ThreadState.scoped(
+                run_location=RunLocation.CALLBACK,
+                fragment_id=cb_metadata.fragment_id,
+            ):
+                callback_fn(*cb_args, **cb_kwargs)
 
-        Parameters
-        ----------
-        callback_fn : WidgetCallback
-            The user-provided callback to execute.
-        cb_metadata : WidgetMetadata[Any]
-            Metadata of the widget associated with the callback.
-        cb_args : WidgetArgs
-            Positional arguments passed to the callback.
-        cb_kwargs : dict[str, Any]
-            Keyword arguments passed to the callback.
+        self._run_callback_and_record_rerun(votes, run)
+
+    def _run_callback_and_record_rerun(
+        self, votes: _CallbackRerunVotes, run: Callable[[], None]
+    ) -> None:
+        """Run one widget callback and record what it asked for on ``votes``.
+
+        ``st.rerun()`` interrupts the callback with a ``RerunException``. Every such
+        request lands in ``votes.pending_reruns``, which ``_call_callbacks`` queues once
+        the last callback has run (see the comment there for why it waits), and the
+        callback's rerun scope is recorded as:
+
+        - a targeted rerun (non-empty ``fragment_id_queue``) → ``requested_targeted``
+        - a plain ``st.rerun()``, or a normal return → ``wants_interaction_default``
         """
         from streamlit.runtime.scriptrunner import RerunException
 
-        ctx = get_script_run_ctx()
-        if ctx and cb_metadata.fragment_id is not None:
-            with ThreadState.scoped(in_fragment_callback=True):
-                try:
-                    callback_fn(*cb_args, **cb_kwargs)
-                except RerunException:
-                    get_dg_singleton_instance().main_dg.warning(
-                        "Calling st.rerun() within a callback is a no-op."
-                    )
+        try:
+            run()
+        except RerunException as e:
+            rerun_data = e.rerun_data
+            if rerun_data.fragment_id_queue:
+                votes.requested_targeted = True
+            else:
+                votes.wants_interaction_default = True
+            votes.pending_reruns.append(rerun_data)
         else:
-            try:
-                callback_fn(*cb_args, **cb_kwargs)
-            except RerunException:
-                get_dg_singleton_instance().main_dg.warning(
-                    "Calling st.rerun() within a callback is a no-op."
+            votes.wants_interaction_default = True
+
+    def _request_full_app_rerun(self) -> None:
+        """Queue a full-app rerun that replays trigger values without re-firing callbacks.
+
+        Called when a normally-returning callback's default vote coexists with
+        a targeted rerun in a main-script interaction. Only trigger widget
+        states are forwarded — non-trigger values already live in session state
+        from callback execution. Replaying the full proto would overwrite any
+        mutations callbacks made via ``st.session_state["key"] = new_value``.
+        """
+        from streamlit.runtime.scriptrunner import RerunData
+
+        ctx = get_script_run_ctx()
+        if ctx and ctx.script_requests:
+            trigger_only_states = self._filter_trigger_widget_states(
+                self._current_interaction_widget_states
+            )
+            ctx.script_requests.request_rerun(
+                RerunData(
+                    query_string=ctx.query_string,
+                    page_script_hash=ctx.page_script_hash,
+                    widget_states=trigger_only_states,
+                    suppress_callbacks=True,
+                    cached_message_hashes=ctx.cached_message_hashes,
+                    context_info=ctx.context_info,
                 )
+            )
+
+    def _filter_trigger_widget_states(
+        self, widget_states: WidgetStatesProto | None
+    ) -> WidgetStatesProto | None:
+        """Return a new WidgetStatesProto containing only trigger-type entries.
+
+        Trigger widgets have ephemeral values that reset after each run, so
+        they must be replayed for the script body to observe them. Non-trigger
+        values persist in session state and replaying them would overwrite
+        any callback mutations.
+        """
+        if widget_states is None:
+            return None
+
+        filtered = WidgetStatesProto()
+        for widget in widget_states.widgets:
+            if widget.WhichOneof("value") in _TRIGGER_PROTO_FIELDS:
+                filtered.widgets.append(widget)
+        return filtered if filtered.widgets else None
 
     def _dispatch_trigger_callbacks(
         self,
+        votes: _CallbackRerunVotes,
         wid: str,
         metadata: WidgetMetadata[Any],
         args: WidgetArgs,
@@ -946,6 +1131,8 @@ class SessionState:
 
         Parameters
         ----------
+        votes : _CallbackRerunVotes
+            Accumulator that each dispatched callback records its rerun request on.
         wid : str
             The widget ID.
         metadata : WidgetMetadata[Any]
@@ -992,10 +1179,13 @@ class SessionState:
                     if isinstance(event_name, str) and metadata.callbacks:
                         cb = metadata.callbacks.get(event_name)
                         if cb is not None:
-                            self._execute_widget_callback(cb, metadata, args, kwargs)
+                            self._execute_widget_callback(
+                                votes, cb, metadata, args, kwargs
+                            )
 
     def _dispatch_json_change_callbacks(
         self,
+        votes: _CallbackRerunVotes,
         wid: str,
         metadata: WidgetMetadata[Any],
         args: WidgetArgs,
@@ -1008,6 +1198,8 @@ class SessionState:
 
         Parameters
         ----------
+        votes : _CallbackRerunVotes
+            Accumulator that each dispatched callback records its rerun request on.
         wid : str
             The widget ID.
         metadata : WidgetMetadata[Any]
@@ -1048,7 +1240,7 @@ class SessionState:
             for key in changed_keys:
                 cb = metadata.callbacks.get(key)
                 if cb is not None:
-                    self._execute_widget_callback(cb, metadata, args, kwargs)
+                    self._execute_widget_callback(votes, cb, metadata, args, kwargs)
 
     def _widget_changed(self, widget_id: str) -> bool:
         """True if the given widget's value changed between the previous
@@ -1059,9 +1251,14 @@ class SessionState:
         changed: bool = new_value != old_value
         return changed
 
-    def on_script_finished(self, widget_ids_this_run: frozenset[str]) -> None:
-        """Called by ScriptRunner after its script finishes running.
-         Updates widgets to prepare for the next script run.
+    def on_script_finished(
+        self,
+        widget_ids_this_run: frozenset[str],
+        *,
+        remove_stale_widgets: bool = True,
+    ) -> None:
+        """Called by ScriptRunner when a script run ends, whether or not its body ran.
+        Updates widgets to prepare for the next script run.
 
         Parameters
         ----------
@@ -1069,34 +1266,33 @@ class SessionState:
             The IDs of the widgets that were accessed during the script
             run. Any widget state whose ID does *not* appear in this set
             is considered "stale" and will be removed.
+        remove_stale_widgets: bool
+            Whether to drop the stale widget state. Pass False when the run
+            never executed its body, since no widget re-registered and every
+            widget would look stale. The next run that renders cleans up
+            instead. Triggers still reset either way, so a fired callback's
+            event is never delivered twice.
         """
         self._reset_triggers()
-        self._remove_stale_widgets(widget_ids_this_run)
+        if remove_stale_widgets:
+            self._remove_stale_widgets(widget_ids_this_run)
 
     def _reset_triggers(self) -> None:
         """Set all trigger values in our state dictionary to False."""
         for state_id in self._new_widget_state:
             metadata = self._new_widget_state.widget_metadata.get(state_id)
-            if metadata is not None:
+            if metadata is not None and metadata.value_type in _TRIGGER_PROTO_FIELDS:
                 if metadata.value_type == "trigger_value":
                     self._new_widget_state[state_id] = Value(False)
-                elif metadata.value_type in {
-                    "string_trigger_value",
-                    "chat_input_value",
-                    "json_trigger_value",
-                }:
+                else:
                     self._new_widget_state[state_id] = Value(None)
 
         for state_id in self._old_state:
             metadata = self._new_widget_state.widget_metadata.get(state_id)
-            if metadata is not None:
+            if metadata is not None and metadata.value_type in _TRIGGER_PROTO_FIELDS:
                 if metadata.value_type == "trigger_value":
                     self._old_state[state_id] = False
-                elif metadata.value_type in {
-                    "string_trigger_value",
-                    "chat_input_value",
-                    "json_trigger_value",
-                }:
+                else:
                     self._old_state[state_id] = None
 
     def _remove_stale_widgets(self, active_widget_ids: frozenset[str]) -> None:
@@ -1260,10 +1456,11 @@ class SessionState:
 
         # Capture the stored wire value *before* swapping in this run's
         # serializer, so it reflects the value as it was actually stored (using
-        # the serializer it was stored with). For string widgets we expose this
-        # so callers can reconcile a stored value against freshly computed state
-        # without re-deriving it from the deserialized value.
+        # the serializer it was stored with). For string and string-array widgets
+        # we expose this so callers can reconcile a stored value against freshly
+        # computed state without re-deriving it from the deserialized value.
         incoming_serialized_value: str | None = None
+        incoming_serialized_values: list[str] | None = None
         if metadata.value_type == "string_value":
             stored_proto = self._new_widget_state.get_serialized(widget_id)
             if (
@@ -1271,6 +1468,13 @@ class SessionState:
                 and stored_proto.WhichOneof("value") == "string_value"
             ):
                 incoming_serialized_value = stored_proto.string_value
+        elif metadata.value_type == "string_array_value":
+            stored_proto = self._new_widget_state.get_serialized(widget_id)
+            if (
+                stored_proto is not None
+                and stored_proto.WhichOneof("value") == "string_array_value"
+            ):
+                incoming_serialized_values = list(stored_proto.string_array_value.data)
 
         self._set_widget_metadata(metadata)
         if user_key is not None:
@@ -1308,6 +1512,33 @@ class SessionState:
         elif metadata.persist_state is None and user_key is not None:
             # Widget stopped persisting — drop any stale tracking.
             self._persist_tracker.untrack(widget_id, user_key)
+
+        # Enforce `disabled` server-side. A disabled widget cannot be interacted
+        # with in the browser, so any value in widget state is a stale/forged
+        # frontend value and must be dropped, so resolution falls back to the
+        # widget's previous value (or its default on first registration).
+        # URL-seeded values are exempt: they populate widget state legitimately
+        # for bound widgets (url_value_seeded). A programmatic st.session_state
+        # assignment lives in _new_session_state and still wins during
+        # resolution, so dropping the forged widget-state entry never affects it
+        # while preventing the forged value from lingering there until compaction.
+        disabled_value_discarded = False
+        if (
+            metadata.disabled
+            and widget_id in self._new_widget_state
+            and not url_value_seeded
+        ):
+            del self._new_widget_state[widget_id]
+            # The captured wire label belongs to the dropped frontend value, so
+            # it must not leak to callers. Otherwise a caller like st.selectbox
+            # could reconcile options against this attacker-controlled label (see
+            # resolve_value_against_options) and hand back an option that differs
+            # from the value we resolve below.
+            incoming_serialized_value = None
+            if user_key is None or user_key not in self._new_session_state:
+                # No programmatic value is taking over resolution, so the discard
+                # itself changes the resolved value; flag the frontend to re-sync.
+                disabled_value_discarded = True
 
         if (
             widget_id not in self
@@ -1413,12 +1644,14 @@ class SessionState:
             or restored_bound_value
             or restored_persisted_value
             or dropped_page_scoped_value
+            or disabled_value_discarded
         )
 
         return RegisterWidgetResult(
             widget_value,
             widget_value_changed,
             incoming_serialized_value=incoming_serialized_value,
+            incoming_serialized_values=incoming_serialized_values,
         )
 
     def _handle_query_param_binding(
@@ -1445,8 +1678,11 @@ class SessionState:
             script_hash=script_hash,
         )
 
-        # Check priority rules - skip seeding if user/code has already set a value
-        if widget_id in self._new_widget_state:  # User interacted with widget
+        # Check priority rules - skip seeding if user/code has already set a value.
+        # A disabled widget is exempt: it cannot be interacted with, so any value in
+        # _new_widget_state is a stale/forged frontend value. Let URL seeding proceed;
+        # disabled enforcement in register_widget then discards the forged value.
+        if widget_id in self._new_widget_state and not metadata.disabled:
             return False
         is_initial_load = widget_id not in self._old_state
         if not is_initial_load and user_key in self._new_session_state:
@@ -1592,7 +1828,8 @@ class SessionState:
             return True
 
     def get_stats(
-        self, _family_names: Sequence[str] | None = None
+        self,
+        family_names: Sequence[str] | None = None,  # noqa: ARG002
     ) -> dict[str, list[CacheStat]]:
         if config.get_option("server.enableExpensiveMemoryStats"):
             from streamlit.runtime.stats import safe_sizeof
@@ -1668,7 +1905,8 @@ class SessionStateStatProvider(StatsProvider):
         return (CACHE_MEMORY_FAMILY,)
 
     def get_stats(
-        self, _family_names: Sequence[str] | None = None
+        self,
+        family_names: Sequence[str] | None = None,  # noqa: ARG002
     ) -> dict[str, list[CacheStat]]:
         stats: list[CacheStat] = []
         for session_info in self._session_mgr.list_active_sessions():

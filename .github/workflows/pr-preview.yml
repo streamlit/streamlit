@@ -27,7 +27,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
 
@@ -36,7 +36,7 @@ jobs:
       - if: ${{ env.AWS_ACCESS_KEY_ID != '' }}
         name: Create or update comment (Building)
         id: initial-comment
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.CORE_PREVIEWS_S3_KEY_ID }}
         with:
@@ -46,8 +46,7 @@ jobs:
                                     "| Name | Link |\n" +
                                     "| :----: | ---- |\n" +
                                     "| 📦 Wheel file | *Building...* |\n" +
-                                    "| 📦 \`@streamlit/component-v2-lib\` | *Building...* |\n" +
-                                    "| 🕹️ Preview app | *Building...* |";
+                                    "| 📦 \`@streamlit/component-v2-lib\` | *Building...* |";
 
             // Find an existing comment; if it exists, we will update it
             const { data: comments } = await github.rest.issues.listComments({
@@ -105,7 +104,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           submodules: "recursive"
@@ -122,12 +121,12 @@ jobs:
         run: |
           make frontend
       - name: Upload Bundle Stats JSON
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: bundle_analysis_json
           path: frontend/app/bundle-analysis.json
       - name: Upload Bundle Stats HTML
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: bundle_analysis_html
           path: frontend/app/bundle-analysis.html
@@ -144,13 +143,12 @@ jobs:
         shell: bash
 
     outputs:
-      enable-setup: ${{ steps.exports.outputs.enable-setup }}
-      preview-branch: ${{ steps.exports.outputs.preview-branch }}
+      wheel-uploaded: ${{ steps.exports.outputs.wheel-uploaded }}
       s3-url: ${{ steps.exports.outputs.s3-url }}
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           submodules: "recursive"
@@ -177,7 +175,7 @@ jobs:
             exit 1
           fi
       - name: Store Whl File
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: whl_file
           path: lib/dist/*.whl
@@ -218,12 +216,11 @@ jobs:
 
           cd ../..
           # env variables don't carry over between gh action jobs
-          echo "enable-setup=${{ env.AWS_ACCESS_KEY_ID != '' }}" >> $GITHUB_OUTPUT
-          echo "preview-branch=$PREVIEW_BRANCH" >> $GITHUB_OUTPUT
+          echo "wheel-uploaded=${{ env.AWS_ACCESS_KEY_ID != '' }}" >> $GITHUB_OUTPUT
           echo "s3-url=${S3_URL}" >> $GITHUB_OUTPUT
-      - if: steps.exports.outputs.enable-setup == 'true' && success() && github.repository == 'streamlit/streamlit' && github.event_name == 'pull_request'
+      - if: steps.exports.outputs.wheel-uploaded == 'true' && success() && github.repository == 'streamlit/streamlit' && github.event_name == 'pull_request'
         name: Set S3 URL as Github Status
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           S3_URL: ${{ steps.exports.outputs.s3-url }}
         with:
@@ -256,9 +253,22 @@ jobs:
       WHEEL_ARTIFACT_NAME: whl_file # Name of the wheel artifact
 
     steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Find latest develop wheel
+        id: get-latest-run
+        uses: ./.github/actions/find_latest_workflow_artifact
+        with:
+          workflow: pr-preview.yml
+          artifact_name: ${{ env.WHEEL_ARTIFACT_NAME }}
+
       - name: Compare wheel sizes
+        if: steps.get-latest-run.outputs.run_id != ''
         id: compare-sizes
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const threshold = parseFloat(process.env.SIZE_CHANGE_THRESHOLD);
@@ -285,36 +295,12 @@ jobs:
               const currentSize = currentWhlArtifact.size_in_bytes;
               console.log(`Current wheel size: ${currentSize} bytes (${(currentSize / 1024).toFixed(2)} KB)`);
 
-              // Get the latest successful workflow run on develop branch
-              const { data: runs } = await github.rest.actions.listWorkflowRuns({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                workflow_id: 'pr-preview.yml',
-                branch: 'develop',
-                status: 'success',
-                per_page: 1
-              });
-
-              if (runs.workflow_runs.length === 0) {
-                throw new Error('No successful workflow runs found on develop branch');
+              const developRunId = process.env.DEVELOP_RUN_ID;
+              const developSize = Number.parseInt(process.env.DEVELOP_ARTIFACT_SIZE, 10);
+              if (!Number.isFinite(developSize)) {
+                throw new Error(`Invalid develop wheel size: ${process.env.DEVELOP_ARTIFACT_SIZE}`);
               }
-
-              const latestRun = runs.workflow_runs[0];
-              console.log(`Latest successful run on develop: ${latestRun.id}`);
-
-              // Get artifacts for the develop run
-              const { data: developArtifacts } = await github.rest.actions.listWorkflowRunArtifacts({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                run_id: latestRun.id
-              });
-
-              const developWhlArtifact = developArtifacts.artifacts.find(artifact => artifact.name === wheelArtifactName);
-              if (!developWhlArtifact) {
-                throw new Error(`No ${wheelArtifactName} artifact found in the develop workflow run`);
-              }
-
-              const developSize = developWhlArtifact.size_in_bytes;
+              console.log(`Latest successful run on develop: ${developRunId}`);
               console.log(`Develop wheel size: ${developSize} bytes (${(developSize / 1024).toFixed(2)} KB)`);
 
               // Calculate percentage difference
@@ -344,12 +330,14 @@ jobs:
               throw error;
             }
         env:
+          DEVELOP_ARTIFACT_SIZE: ${{ steps.get-latest-run.outputs.artifact_size_in_bytes }}
+          DEVELOP_RUN_ID: ${{ steps.get-latest-run.outputs.run_id }}
           SIZE_CHANGE_THRESHOLD: ${{ env.SIZE_CHANGE_THRESHOLD }}
           WHEEL_ARTIFACT_NAME: ${{ env.WHEEL_ARTIFACT_NAME }}
 
       - name: Add PR comment for significant size change
-        if: success() && fromJSON(steps.compare-sizes.outputs.result).is_significant
-        uses: actions/github-script@v9
+        if: steps.compare-sizes.outputs.result != '' && fromJSON(steps.compare-sizes.outputs.result).is_significant
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const result = JSON.parse(process.env.COMPARE_RESULT);
@@ -427,35 +415,27 @@ jobs:
       BUNDLE_SIZE_CHANGE_PERCENTAGE_THRESHOLD: 0.5
 
     steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
       - name: Download current bundle analysis
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: bundle_analysis_json
           path: current_bundle
 
-      - name: Get latest develop run ID
+      - name: Find latest develop bundle analysis
         id: get-latest-run
-        uses: actions/github-script@v9
+        uses: ./.github/actions/find_latest_workflow_artifact
         with:
-          script: |
-            const { data: runs } = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'pr-preview.yml',
-              branch: 'develop',
-              status: 'success',
-              per_page: 1
-            });
-
-            if (runs.workflow_runs.length === 0) {
-              core.warning('No successful workflow runs found on develop branch');
-              return;
-            }
-
-            core.setOutput('run_id', runs.workflow_runs[0].id);
+          workflow: pr-preview.yml
+          artifact_name: bundle_analysis_json
 
       - name: Download develop bundle analysis
-        uses: actions/download-artifact@v8
+        if: steps.get-latest-run.outputs.run_id != ''
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         continue-on-error: true
         with:
           repository: streamlit/streamlit
@@ -465,7 +445,8 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Compare bundle sizes and comment
-        uses: actions/github-script@v9
+        if: steps.get-latest-run.outputs.run_id != ''
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const fs = require('fs');
@@ -630,7 +611,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 1
@@ -639,7 +620,7 @@ jobs:
         run: corepack enable
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: ".nvmrc"
           cache: "yarn"
@@ -666,78 +647,29 @@ jobs:
           echo "package-built=true" >> $GITHUB_OUTPUT
 
       - name: Store npm package
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: component-v2-lib-package
           path: frontend/component-v2-lib/*.tgz
           retention-days: 30
 
-  setup-preview:
-    runs-on: ubuntu-latest
-
-    needs: upload-whl
-    if: needs.upload-whl.outputs.enable-setup == 'true'
-
-    defaults:
-      run:
-        shell: bash
-
-    outputs:
-      deploy-url: ${{ steps.deploy-url.outputs.deploy-url }}
-
-    steps:
-      - name: Checkout Core Previews Repo
-        uses: actions/checkout@v7
-        with:
-          repository: streamlit/core-previews
-          # The default GITHUB_TOKEN is scoped only to the triggering streamlit/streamlit repo.
-          # Accessing streamlit/core-previews repo requires a separate auth token.
-          token: ${{ secrets.CORE_PREVIEWS_REPO_TOKEN }}
-          # Save the access token to the local git config, so
-          # later git commands can work.
-          persist-credentials: true
-      - name: Setup preview repo
-        env:
-          PREVIEW_BRANCH: ${{ needs.upload-whl.outputs.preview-branch }}
-          S3_URL: ${{ needs.upload-whl.outputs.s3-url }}
-        run: |
-          git config --global user.email "core+streamlitbot-github@streamlit.io"
-          git config --global user.name "Streamlit Bot"
-          git branch -D "$PREVIEW_BRANCH" &>/dev/null || true
-          git checkout -b "$PREVIEW_BRANCH"
-
-          echo "$S3_URL" >> requirements.txt
-
-          git add .
-          git commit -m "Prepare core preview: ${PREVIEW_BRANCH}"
-          git push -f origin ${PREVIEW_BRANCH}
-      - name: Ready to deploy!
-        id: deploy-url
-        env:
-          PREVIEW_BRANCH: ${{ needs.upload-whl.outputs.preview-branch }}
-        run: |
-          DEPLOY_URL="https://share.streamlit.io/deploy?repository=streamlit/core-previews&branch=${PREVIEW_BRANCH}&mainModule=E2E_Tester_🧪.py&subdomain=${PREVIEW_BRANCH}"
-          echo -e "${DEPLOY_URL}"
-          echo "deploy-url=${DEPLOY_URL}" >> $GITHUB_OUTPUT
-
   update-pr-comment:
     runs-on: ubuntu-latest
-    needs:
-      [initial-pr-comment, upload-whl, build-component-v2-lib, setup-preview]
+    needs: [initial-pr-comment, upload-whl, build-component-v2-lib]
     # Only run on PRs that are not from forks
-    if: needs.upload-whl.outputs.enable-setup == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    if: needs.upload-whl.outputs.wheel-uploaded == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
 
     permissions:
       pull-requests: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
 
       - name: Update comment (Ready)
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             // Find the existing comment
@@ -761,24 +693,19 @@ jobs:
             console.log('Found comment with ID:', commentId);
 
             const s3Url = '${{ needs.upload-whl.outputs.s3-url }}';
-            const deployUrl = '${{ needs.setup-preview.outputs.deploy-url }}';
-
-            const previewBranch = '${{ needs.upload-whl.outputs.preview-branch }}';
-            const viewUrl = `${previewBranch}.streamlit.app`;
 
             // Define the ready template once
             const componentPackageBuilt = '${{ needs.build-component-v2-lib.outputs.package-built }}';
             const workflowRunUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const componentRow = componentPackageBuilt === 'true' ?
-              `| 📦 \`@streamlit/component-v2-lib\` | [Download from artifacts](${workflowRunUrl}) |\n` :
-              `| 📦 \`@streamlit/component-v2-lib\` | *Build failed* |\n`;
+              `| 📦 \`@streamlit/component-v2-lib\` | [Download from artifacts](${workflowRunUrl}) |` :
+              `| 📦 \`@streamlit/component-v2-lib\` | *Build failed* |`;
 
             const readyTemplate = "### ✅ PR preview is ready!\n\n" +
                                  "| Name | Link |\n" +
                                  "| :----: | ---- |\n" +
                                  "| 📦 Wheel file | " + s3Url + " |\n" +
-                                 componentRow +
-                                 "| 🕹️ Preview app | [" + viewUrl + "](https://" + viewUrl + ") (☁️ Deploy [here](" + deployUrl + ") if not accessible)| ";
+                                 componentRow;
 
             await github.rest.issues.updateComment({
               owner: context.repo.owner,

@@ -14,19 +14,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, TypeAlias, cast
+from typing import Final, Literal, TypeAlias, cast
 
 from streamlit.errors import (
-    StreamlitInvalidColumnGapError,
     StreamlitInvalidHeightError,
-    StreamlitInvalidHorizontalAlignmentError,
-    StreamlitInvalidSizeError,
-    StreamlitInvalidTextAlignmentError,
-    StreamlitInvalidVerticalAlignmentError,
     StreamlitInvalidWidthError,
+    StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block
-from streamlit.proto.GapSize_pb2 import GapSize
+from streamlit.proto.GapSize_pb2 import GapConfig, GapSize
 from streamlit.proto.HeightConfig_pb2 import HeightConfig
 from streamlit.proto.TextAlignmentConfig_pb2 import TextAlignmentConfig
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
@@ -41,9 +37,9 @@ SpaceSize: TypeAlias = (
         "stretch", "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge"
     ]
 )
-Gap: TypeAlias = Literal[
-    "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge"
-]
+Gap: TypeAlias = (
+    int | Literal["xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge"]
+)
 HorizontalAlignment: TypeAlias = Literal["left", "center", "right", "distribute"]
 VerticalAlignment: TypeAlias = Literal["top", "center", "bottom", "distribute"]
 TextAlignment: TypeAlias = Literal["left", "center", "right", "justify"]
@@ -59,6 +55,22 @@ SIZE_TO_REM_MAPPING = {
     "large": 4.25,  # Height of large widget without label
     "xlarge": 6,  # Aligns with gap "xlarge" (96px)
     "xxlarge": 8,  # Aligns with gap "xxlarge" (128px)
+}
+_VALID_SPACE_SIZE_STRINGS: Final = ("stretch", *SIZE_TO_REM_MAPPING)
+_VALID_SPACE_SIZE_VALUES: Final = [
+    *[f"'{size}'" for size in _VALID_SPACE_SIZE_STRINGS],
+    "a positive integer",
+]
+
+# Shared by st.expander and st.status, which render through the same proto.
+ExpandableType: TypeAlias = Literal["default", "compact", "step"]
+
+EXPANDABLE_TYPE_TO_PROTO_MAPPING: Final[
+    dict[ExpandableType, Block.Expandable.Type.ValueType]
+] = {
+    "default": Block.Expandable.Type.DEFAULT,
+    "compact": Block.Expandable.Type.COMPACT,
+    "step": Block.Expandable.Type.STEP,
 }
 
 
@@ -234,27 +246,16 @@ def validate_space_size(size: SpaceSize) -> None:
 
     Raises
     ------
-    StreamlitInvalidSizeError
+    StreamlitValueError
         If the size value is invalid.
     """
-    if not isinstance(size, (int, str)):
-        raise StreamlitInvalidSizeError(size)
-
-    if isinstance(size, str):
-        valid_strings = [
-            "stretch",
-            "xxsmall",
-            "xsmall",
-            "small",
-            "medium",
-            "large",
-            "xlarge",
-            "xxlarge",
-        ]
-        if size not in valid_strings:
-            raise StreamlitInvalidSizeError(size)
-    elif isinstance(size, int) and size <= 0:
-        raise StreamlitInvalidSizeError(size)
+    is_valid_size = (isinstance(size, str) and size in _VALID_SPACE_SIZE_STRINGS) or (
+        isinstance(size, int) and size > 0
+    )
+    if not is_valid_size:
+        raise StreamlitValueError(
+            "size", _VALID_SPACE_SIZE_VALUES, detail=f"Got {size!r}."
+        )
 
 
 def get_width_config(width: Width | SpaceSize) -> WidthConfig:
@@ -283,42 +284,84 @@ def get_height_config(height: Height | SpaceSize) -> HeightConfig:
     return height_config
 
 
-def get_gap_size(gap: str | None, element_type: str) -> GapSize.ValueType:
-    """Convert a gap string or None to a GapSize proto value."""
-    gap_mapping = {
-        "xxsmall": GapSize.XXSMALL,
-        "xsmall": GapSize.XSMALL,
-        "small": GapSize.SMALL,
-        "medium": GapSize.MEDIUM,
-        "large": GapSize.LARGE,
-        "xlarge": GapSize.XLARGE,
-        "xxlarge": GapSize.XXLARGE,
-    }
+_GAP_STRING_MAPPING: dict[str, GapSize.ValueType] = {
+    "xxsmall": GapSize.XXSMALL,
+    "xsmall": GapSize.XSMALL,
+    "small": GapSize.SMALL,
+    "medium": GapSize.MEDIUM,
+    "large": GapSize.LARGE,
+    "xlarge": GapSize.XLARGE,
+    "xxlarge": GapSize.XXLARGE,
+}
+_VALID_GAP_VALUES: Final = [
+    *[f"'{size}'" for size in _GAP_STRING_MAPPING],
+    "None",
+    "a non-negative integer (pixels)",
+]
 
-    if isinstance(gap, str):
-        gap_size = gap.lower()
-        valid_sizes = gap_mapping.keys()
 
-        if gap_size in valid_sizes:
-            return gap_mapping[gap_size]
-    elif gap is None:
-        return GapSize.NONE
+def get_gap_config(gap: Gap | None) -> GapConfig:
+    """Convert a gap value to a ``GapConfig`` proto.
 
-    raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
+    ``gap`` may be one of the string enum values (``"xxsmall"``, ``"xsmall"``,
+    ``"small"``, ``"medium"``, ``"large"``, ``"xlarge"``, ``"xxlarge"``), a
+    non-negative integer specifying the gap in pixels, or ``None`` (no gap).
+
+    Parameters
+    ----------
+    gap : Gap or None
+        The gap value to convert.
+
+    Raises
+    ------
+    StreamlitValueError
+        If ``gap`` is not a valid gap value.
+    """
+    gap_config = GapConfig()
+
+    # ``bool`` is a subclass of ``int`` in Python, but should not be accepted
+    # as a pixel value.
+    if isinstance(gap, int) and not isinstance(gap, bool) and gap >= 0:
+        gap_config.pixel_gap = gap
+        return gap_config
+
+    if gap is None:
+        gap_config.gap_size = GapSize.NONE
+        return gap_config
+
+    if isinstance(gap, str) and gap.lower() in _GAP_STRING_MAPPING:
+        gap_config.gap_size = _GAP_STRING_MAPPING[gap.lower()]
+        return gap_config
+
+    raise StreamlitValueError("gap", _VALID_GAP_VALUES, detail=f"Got {gap!r}.")
+
+
+_VALID_HORIZONTAL_ALIGNMENTS: Final = ["left", "center", "right", "distribute"]
+_VALID_HORIZONTAL_ALIGNMENT_VALUES: Final = [
+    f"'{alignment}'" for alignment in _VALID_HORIZONTAL_ALIGNMENTS
+]
+_VALID_VERTICAL_ALIGNMENTS: Final = ["top", "center", "bottom", "distribute"]
+_VALID_VERTICAL_ALIGNMENT_VALUES: Final = [
+    f"'{alignment}'" for alignment in _VALID_VERTICAL_ALIGNMENTS
+]
 
 
 def validate_horizontal_alignment(horizontal_alignment: HorizontalAlignment) -> None:
-    valid_horizontal_alignments = ["left", "center", "right", "distribute"]
-    if horizontal_alignment not in valid_horizontal_alignments:
-        raise StreamlitInvalidHorizontalAlignmentError(
-            horizontal_alignment, "st.container"
+    if horizontal_alignment not in _VALID_HORIZONTAL_ALIGNMENTS:
+        raise StreamlitValueError(
+            "horizontal_alignment",
+            _VALID_HORIZONTAL_ALIGNMENT_VALUES,
+            detail=f"Got {horizontal_alignment!r}.",
         )
 
 
 def validate_vertical_alignment(vertical_alignment: VerticalAlignment) -> None:
-    valid_vertical_alignments = ["top", "center", "bottom", "distribute"]
-    if vertical_alignment not in valid_vertical_alignments:
-        raise StreamlitInvalidVerticalAlignmentError(vertical_alignment, "st.container")
+    if vertical_alignment not in _VALID_VERTICAL_ALIGNMENTS:
+        raise StreamlitValueError(
+            "vertical_alignment",
+            _VALID_VERTICAL_ALIGNMENT_VALUES,
+            detail=f"Got {vertical_alignment!r}.",
+        )
 
 
 def validate_text_alignment(text_alignment: TextAlignment) -> None:
@@ -331,12 +374,20 @@ def validate_text_alignment(text_alignment: TextAlignment) -> None:
 
     Raises
     ------
-    StreamlitInvalidTextAlignmentError
+    StreamlitValueError
         If the text_alignment value is invalid.
     """
     valid_alignments = ["left", "center", "right", "justify"]
     if text_alignment not in valid_alignments:
-        raise StreamlitInvalidTextAlignmentError(text_alignment)
+        raise StreamlitValueError(
+            "text_alignment", ["'left'", "'center'", "'right'", "'justify'"]
+        )
+
+
+def validate_wrap(wrap: bool) -> None:
+    """Validate a strictly boolean ``wrap``, i.e. one with no auto/``None`` mode."""
+    if not isinstance(wrap, bool):
+        raise StreamlitValueError("wrap", ["True", "False"])
 
 
 map_to_flex_terminology = {

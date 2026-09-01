@@ -21,14 +21,14 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.lib.js_number import JSNumber
-from streamlit.elements.widgets.number_input import NumberInputSerde
+from streamlit.elements.widgets.number_input import _LOGGER, NumberInputSerde
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidBindValueError,
     StreamlitInvalidWidthError,
+    StreamlitMixedNumericTypesError,
     StreamlitValueAboveMaxError,
+    StreamlitValueError,
 )
-from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.WidgetStates_pb2 import WidgetState
@@ -45,17 +45,19 @@ class NumberInputTest(DeltaGeneratorTestCase):
         st.number_input("Label", value=0)
         c = self.get_delta_from_queue().new_element.number_input
         assert c.data_type == NumberInput.INT
-        assert c.has_min
+        # No user-provided bounds, so has_min/has_max are False even though the
+        # proto still carries the safe-number sentinels for the input's attrs.
+        assert not c.has_min
         assert c.min == JSNumber.MIN_SAFE_INTEGER
-        assert c.has_max
+        assert not c.has_max
         assert c.max == JSNumber.MAX_SAFE_INTEGER
 
         st.number_input("Label", value=0.5)
         c = self.get_delta_from_queue().new_element.number_input
         assert c.data_type == NumberInput.FLOAT
-        assert c.has_min
+        assert not c.has_min
         assert c.min == JSNumber.MIN_NEGATIVE_VALUE
-        assert c.has_max
+        assert not c.has_max
         assert c.max == JSNumber.MAX_VALUE
 
     def test_min_value_zero_sets_default_value(self):
@@ -138,6 +140,26 @@ class NumberInputTest(DeltaGeneratorTestCase):
         assert c.label == "the label"
         assert c.default == 1
 
+    def test_mixed_numeric_types_raises(self):
+        """Mixing an int bound with a float bound raises a mixed-types error."""
+        with pytest.raises(StreamlitMixedNumericTypesError):
+            st.number_input("the label", min_value=1, max_value=2.0)
+
+    def test_default_value_is_int_zero_with_only_int_step(self):
+        """With only an int ``step`` (no value/min), the default value is int 0."""
+        st.number_input("the label", step=1)
+
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.default == 0
+        assert c.format == "%d"
+
+    def test_default_value_is_float_zero_with_only_float_step(self):
+        """With only a float ``step`` (no value/min), the default value is float 0.0."""
+        st.number_input("the label", step=1.0)
+
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.default == 0.0
+
     def test_value_between_range(self):
         st.number_input("the label", 0, 11, 10)
 
@@ -196,25 +218,39 @@ class NumberInputTest(DeltaGeneratorTestCase):
             c = self.get_delta_from_queue().new_element.number_input
             assert c.format == "%" + char
 
-    def test_warns_on_float_type_with_int_format(self):
-        st.number_input("the label", value=5.0, format="%d")
+    def test_logs_warning_on_float_type_with_int_format(self):
+        """Integer format with a float value logs a warning and still uses that format."""
+        with self.assertLogs(_LOGGER) as logs:
+            st.number_input("the label", value=5.0, format="%d")
 
-        c = self.get_delta_from_queue(-2).new_element.alert
-        assert c.format == AlertProto.WARNING
         assert (
-            c.body
-            == "Warning: NumberInput value below has type float, but format %d displays as integer."
+            "st.number_input value has type float, but format %d displays as integer."
+            in logs.records[0].getMessage()
         )
+        assert logs.records[0].stack_info is not None
+        assert not any(
+            delta.new_element.WhichOneof("type") == "alert"
+            for delta in self.get_all_deltas_from_queue()
+        )
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.format == "%d"
 
-    def test_warns_on_int_type_with_float_format(self):
-        st.number_input("the label", value=5, format="%0.2f")
+    def test_logs_warning_on_int_type_with_float_format(self):
+        """Float format with an int value logs a warning and still uses that format."""
+        with self.assertLogs(_LOGGER) as logs:
+            st.number_input("the label", value=5, format="%0.2f")
 
-        c = self.get_delta_from_queue(-2).new_element.alert
-        assert c.format == AlertProto.WARNING
         assert (
-            c.body
-            == "Warning: NumberInput value below has type int so is displayed as int despite format string %0.2f."
+            "st.number_input value has type int so is displayed as int despite "
+            "format string %0.2f." in logs.records[0].getMessage()
         )
+        assert logs.records[0].stack_info is not None
+        assert not any(
+            delta.new_element.WhichOneof("type") == "alert"
+            for delta in self.get_all_deltas_from_queue()
+        )
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.format == "%0.2f"
 
     def test_error_on_unsupported_formatters(self):
         UNSUPPORTED = "pAn"
@@ -279,6 +315,35 @@ class NumberInputTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.number_input
         assert c.min == JSNumber.MIN_SAFE_INTEGER
         assert c.max == JSNumber.MAX_SAFE_INTEGER
+
+    def test_has_min_max_reflect_user_intent(self):
+        """has_min/has_max must reflect whether the user explicitly set bounds,
+        not the safe-number sentinels used to backfill unset bounds."""
+        # No bounds provided: both flags are False.
+        st.number_input("Label")
+        c = self.get_delta_from_queue().new_element.number_input
+        assert not c.has_min
+        assert not c.has_max
+
+        # Only min_value provided: has_min True, has_max False.
+        st.number_input("Label", min_value=0)
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.has_min
+        assert c.min == 0
+        assert not c.has_max
+
+        # Only max_value provided: has_max True, has_min False.
+        st.number_input("Label", max_value=10)
+        c = self.get_delta_from_queue().new_element.number_input
+        assert not c.has_min
+        assert c.has_max
+        assert c.max == 10
+
+        # Both bounds provided: both flags True.
+        st.number_input("Label", min_value=0, max_value=10)
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.has_min
+        assert c.has_max
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""
@@ -351,11 +416,11 @@ class NumberInputTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.number_input("the label", label_visibility="wrong_value")  # type: ignore[call-arg]
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_width_config_default(self):
@@ -757,8 +822,8 @@ class NumberInputBindQueryParamsTest(DeltaGeneratorTestCase):
         assert c.default == 0
 
     def test_invalid_bind_value_raises_exception(self):
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `bind` value"):
             st.number_input("the label", key="my_key", bind="invalid-value")
 
     def test_bind_query_params_with_int_value(self):

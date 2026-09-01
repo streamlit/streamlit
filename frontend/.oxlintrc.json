@@ -1,3 +1,24 @@
 {
-  "ignorePatterns": ["lib/src/vendor/**"]
+  "ignorePatterns": ["lib/src/vendor/**"],
+  "plugins": ["unicorn", "typescript", "oxc", "jsx-a11y"],
+  "rules": {
+    "eslint/no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_",
+        "destructuredArrayIgnorePattern": "^_"
+      }
+    ],
+    "jsx-a11y/control-has-associated-label": "error",
+    "jsx-a11y/lang": "off",
+    "jsx-a11y/no-aria-hidden-on-focusable": "error",
+    "jsx-a11y/no-autofocus": ["error", { "ignoreNonDOM": true }],
+    "jsx-a11y/no-noninteractive-element-interactions": "error",
+    "jsx-a11y/no-noninteractive-element-to-interactive-role": "error",
+    "jsx-a11y/no-noninteractive-tabindex": "error",
+    "jsx-a11y/no-static-element-interactions": "error",
+    "jsx-a11y/prefer-tag-over-role": "off"
+  }
 }

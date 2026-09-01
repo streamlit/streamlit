@@ -17,6 +17,7 @@ import { type CustomCell, GridCellKind } from "@glideapps/glide-data-grid"
 import {
   Binary,
   Bool as BoolType,
+  DateDay,
   Decimal,
   Dictionary,
   Field,
@@ -26,6 +27,7 @@ import {
   List,
   Null,
   Struct,
+  Time,
   Timestamp,
   TimeUnit,
   Uint8,
@@ -57,6 +59,7 @@ import {
 import {
   CheckboxColumn,
   ColumnCreator,
+  DateColumn,
   DateTimeColumn,
   getTextCell,
   ListColumn,
@@ -1248,6 +1251,48 @@ describe("getColumnTypeFromArrow", () => {
   ])(
     "interprets %s as column type: %s",
     (arrowType: ArrowType, expectedType: ColumnCreator) => {
+      expect(getColumnTypeFromArrow(arrowType)).toEqual(expectedType)
+    }
+  )
+
+  // Time and date arrow types are kept in a separate it.each: unlike the other
+  // arrow types above, apache-arrow's Time/DateDay instances throw during
+  // vitest's it.each title serialization (%s), which would fail suite
+  // collection. Using an explicit string label avoids serializing them.
+  it.each([
+    [
+      "time",
+      {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("test", new Time(TimeUnit.SECOND, 64), true),
+        pandasType: {
+          field_name: "test",
+          name: "test",
+          pandas_type: "time",
+          numpy_type: "object",
+          metadata: null,
+        },
+      },
+      TimeColumn,
+    ],
+    [
+      "date",
+      {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("test", new DateDay(), true),
+        pandasType: {
+          field_name: "test",
+          name: "test",
+          pandas_type: "date",
+          numpy_type: "object",
+          metadata: null,
+        },
+      },
+      DateColumn,
+    ],
+  ])(
+    "interprets %s type as the correct column",
+    (_label: string, arrowType: ArrowType, expectedType: ColumnCreator) => {
       expect(getColumnTypeFromArrow(arrowType)).toEqual(expectedType)
     }
   )

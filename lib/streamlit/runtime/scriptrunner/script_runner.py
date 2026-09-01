@@ -23,8 +23,6 @@ from enum import Enum
 from timeit import default_timer as timer
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
-from blinker import Signal
-
 from streamlit import config, runtime, util
 from streamlit.errors import FragmentStorageKeyError
 from streamlit.logger import get_logger
@@ -32,6 +30,7 @@ from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import (
     create_page_profile_message,
+    format_uncaught_exception,
     to_microseconds,
 )
 from streamlit.runtime.pages_manager import PagesManager
@@ -59,6 +58,7 @@ from streamlit.runtime.state import (
     SafeSessionState,
     SessionState,
 )
+from streamlit.signal_util import Signal
 from streamlit.source_util import page_sort_key
 
 if TYPE_CHECKING:
@@ -132,7 +132,7 @@ def _mpa_v1(main_script_path: str) -> None:
     from pathlib import Path
 
     from streamlit.commands.navigation import PageType, _navigation
-    from streamlit.navigation.page import StreamlitPage
+    from streamlit.navigation.page import _create_page
 
     # Select the folder that should be used for the pages:
     resolved_main_script_path: Final = Path(main_script_path).resolve()
@@ -151,10 +151,8 @@ def _mpa_v1(main_script_path: str) -> None:
     )
 
     # Use this script as the main page and
-    main_page = StreamlitPage(resolved_main_script_path, default=True)
-    all_pages = [main_page] + [
-        StreamlitPage(pages_folder / page.name) for page in pages
-    ]
+    main_page = _create_page(resolved_main_script_path, default=True)
+    all_pages = [main_page] + [_create_page(pages_folder / page.name) for page in pages]
     # Initialize the navigation with all the pages:
     position: Literal["sidebar", "hidden", "top"] = (
         "hidden"
@@ -249,33 +247,16 @@ class ScriptRunner:
         self._requests = ScriptRequests()
         self._requests.request_rerun(initial_rerun_data)
 
-        self.on_event = Signal(
-            doc="""Emitted when a ScriptRunnerEvent occurs.
-
-            This signal is generally emitted on the ScriptRunner's script
-            thread (which is *not* the same thread that the ScriptRunner was
-            created on).
-
-            Parameters
-            ----------
-            sender: ScriptRunner
-                The sender of the event (this ScriptRunner).
-
-            event : ScriptRunnerEvent
-
-            forward_msg : ForwardMsg | None
-                The ForwardMsg to send to the frontend. Set only for the
-                ENQUEUE_FORWARD_MSG event.
-
-            exception : BaseException | None
-                Our compile error. Set only for the
-                SCRIPT_STOPPED_WITH_COMPILE_ERROR event.
-
-            widget_states : streamlit.proto.WidgetStates_pb2.WidgetStates | None
-                The ScriptRunner's final WidgetStates. Set only for the
-                SHUTDOWN event.
-            """
-        )
+        # Emitted synchronously when a ScriptRunnerEvent occurs, usually on the
+        # script or fragment-worker thread rather than the thread that created
+        # this ScriptRunner. Receivers are called as
+        # receiver(sender, event=..., **payload); events not listed below carry
+        # no payload:
+        # - ENQUEUE_FORWARD_MSG: forward_msg
+        # - SCRIPT_STOPPED_WITH_COMPILE_ERROR: exception
+        # - SHUTDOWN: client_state
+        # - SCRIPT_STARTED: page_script_hash, fragment_ids_this_run, pages
+        self.on_event = Signal()
 
         # Set to true while we're executing. Used by
         # _maybe_handle_execution_control_request.
@@ -555,6 +536,17 @@ class ScriptRunner:
                 # download buttons/links to them present in the app, which will result
                 # in a 404 should the user click on them.
                 runtime.get_instance().media_file_mgr.clear_session_refs()
+                # Same reasoning for lazy dataframe sources: on a fragment rerun
+                # we keep references so sources outside the fragment stay valid.
+                runtime.get_instance().dataframe_source_mgr.clear_session_refs()
+            else:
+                # Fragment reruns redraw only the queued fragments. Drop refs
+                # owned by those fragments before they run so removed lazy
+                # dataframes are pruned, while sources in untouched fragments
+                # and the app body remain available.
+                runtime.get_instance().dataframe_source_mgr.clear_session_refs(
+                    fragment_ids=rerun_data.fragment_id_queue
+                )
 
             self._pages_manager.set_script_intent(
                 rerun_data.page_script_hash, rerun_data.page_name
@@ -707,13 +699,34 @@ class ScriptRunner:
                     # Run callbacks for widgets whose values have changed.
                     if rerun_data.widget_states is not None:
                         self._session_state.on_script_will_rerun(
-                            rerun_data.widget_states
+                            rerun_data.widget_states,
+                            suppress_callbacks=rerun_data.suppress_callbacks,
                         )
+                        # Check for pending rerun/stop requests while
+                        # has_script_started is still False so on_script_finished
+                        # preserves this run's widget values.  On the normal path a
+                        # callback may have queued st.rerun(); on the suppressed path
+                        # an external request (e.g. new client interaction) may have
+                        # arrived during state application.
+                        self._maybe_handle_execution_control_request()
 
                     ctx.on_script_start()
 
                     if fragment_ids_this_run:
+                        # Skip queued descendants whose ancestor already ran in
+                        # this pass — the ancestor re-renders them inline, so
+                        # running them again would duplicate their widgets and
+                        # raise StreamlitDuplicateElementId (for example, when
+                        # a parent and child both use ``run_every`` and their
+                        # auto-reruns coalesce; see #10719).
+                        executed_fragment_ids: set[str] = set()
+
                         for fragment_id in fragment_ids_this_run:
+                            if self._fragment_storage.has_ancestor_in(
+                                fragment_id, executed_fragment_ids
+                            ):
+                                continue
+
                             registration_sequence_before = (
                                 self._fragment_storage.registration_sequence()
                             )
@@ -744,6 +757,13 @@ class ScriptRunner:
                                     )
                                 continue
 
+                            # We record this before the call so a fragment
+                            # that raises still suppresses its queued
+                            # descendants: it owns their containers either way,
+                            # and rerunning them here would render them outside
+                            # the parent that just failed.
+                            executed_fragment_ids.add(fragment_id)
+
                             try:
                                 wrapped_fragment()
                             except (RerunException, StopException):
@@ -769,10 +789,22 @@ class ScriptRunner:
                                         registration_sequence_before
                                     )
                                 )
-                                self._fragment_storage.clear_stale_descendants(
-                                    fragment_id,
-                                    registered_ids,
+                                removed_fragment_ids = (
+                                    self._fragment_storage.clear_stale_descendants(
+                                        fragment_id,
+                                        registered_ids,
+                                    )
                                 )
+                                # Tell the frontend to cancel auto-rerun timers for
+                                # fragments that were evicted (e.g. a nested
+                                # ``run_every`` child that is no longer rendered), so
+                                # they don't keep sending stale rerun requests.
+                                if removed_fragment_ids:
+                                    stop_msg = ForwardMsg()
+                                    stop_msg.stop_auto_rerun.fragment_ids.extend(
+                                        removed_fragment_ids
+                                    )
+                                    ctx.enqueue(stop_msg)
 
                     else:
                         # Drop wrappers from the previous run before the main
@@ -840,7 +872,7 @@ class ScriptRunner:
                             exec_time=to_microseconds(timer() - start_time),
                             prep_time=to_microseconds(prep_time),
                             uncaught_exception=(
-                                type(uncaught_exception).__name__
+                                format_uncaught_exception(uncaught_exception)
                                 if uncaught_exception
                                 else None
                             ),
@@ -873,16 +905,25 @@ class ScriptRunner:
         # Tell session_state to update itself in response
         if not premature_stop:
             self._session_state.on_script_finished(
-                ctx.shared.widget_ids_this_run.snapshot()
+                ctx.shared.widget_ids_this_run.snapshot(),
+                remove_stale_widgets=ctx.has_script_started,
             )
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
         self.on_event.send(self, event=event)
 
-        # Remove orphaned files now that the script has run and files in use
-        # are marked as active.
-        runtime.get_instance().media_file_mgr.remove_orphaned_files()
+        # Both cleanups below assume the body re-registered whatever is still in use, so
+        # a run that never reached its body would make everything look orphaned. The
+        # session refs were already cleared before this run, so deleting now would take
+        # files the app still displays with it. The next run that renders collects them.
+        if ctx.has_script_started:
+            # Remove orphaned files now that the script has run and files in use
+            # are marked as active.
+            runtime.get_instance().media_file_mgr.remove_orphaned_files()
+
+            # Prune lazy dataframe sources that were not re-registered this run.
+            runtime.get_instance().dataframe_source_mgr.remove_orphaned_sources()
 
         # Force garbage collection to run, to help avoid memory use building up
         # This is usually not an issue, but sometimes GC takes time to kick in and

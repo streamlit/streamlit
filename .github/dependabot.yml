@@ -8,7 +8,7 @@ updates:
       interval: "daily"
     # Allow a limited number of update PRs at a time
     # to keep the number of parallel dependency updates manageable.
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 8
 
     # Use cooldown to avoid updating dependencies too frequently
     # and minimize risk of supply chain attacks.
@@ -22,10 +22,6 @@ updates:
       - "never-stale"
 
     ignore:
-      - dependency-name: "baseui"
-        # 12->13: Needs to restyle date picker
-        # 13->14: Requires rewrites of lots of overrides
-        versions: [">=12.3.0"]
       - dependency-name: "iframe-resizer"
         # The license was changed to GPL-3 with the 4.4.0 update.
         # We pin the version to the last version under MIT licenses.
@@ -36,9 +32,6 @@ updates:
       - dependency-name: "react-map-gl"
         # The license was changed with the mapbox-gl update.
         versions: [">=5.4.0"]
-      - dependency-name: "ua-parser-js"
-        # The license was changed to AGPLv3 with the 2.0 major version update.
-        versions: [">=2.0.0"]
       - dependency-name: "react"
         # Updating react will need some extra work.
         versions: [">=19.0.0"]
@@ -48,15 +41,19 @@ updates:
       - dependency-name: "jsdom"
         # Breaks some of our RTL unit tests
         versions: [">=25.0.0"]
-      - dependency-name: "sass"
-        # Breaks our build process, needs more investigation
-        versions: [">=1.80.0"]
-      - dependency-name: "react-window"
-        # This requires us to update baseui, since that has a dependency on react-window v1.
-        versions: [">=2.0.0"]
       - dependency-name: "@types/node"
         # Our types should match the version of node we're using as defined in `.nvmrc`
         versions: [">=25.0.0"]
+      - dependency-name: "color2k"
+        # Our Yarn patch only applies to color2k 2.0.3.
+        versions: [">=2.0.4"]
+      - dependency-name: "katex"
+        # KaTeX 0.18 prefixed its internal CSS class names, which no longer
+        # match the markup produced by rehype-katex (it bundles katex 0.16.x).
+        # We only use the direct katex dependency for its stylesheet, so it must
+        # stay compatible with rehype-katex. Keep it below 0.18 until
+        # rehype-katex ships a katex 0.18-compatible release.
+        versions: [">=0.18.0"]
 
     groups:
       deck-gl:
@@ -114,16 +111,24 @@ updates:
         patterns:
           - "oxlint"
           - "oxfmt"
+      # Catch unmatched frontend minor/patch updates after the more specific groups.
+      frontend-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
-  # Keep python dependencies up to date (via uv)
-  # Root pyproject.toml contains dev/test dependency groups
+  # Keep direct development/test/integration dependencies up to date. These
+  # PRs own the corresponding uv.lock update; the weekly full relock owns bulk
+  # transitive and editable-package runtime freshness.
   - package-ecosystem: "uv"
     directory: "/"
     schedule:
       interval: "daily"
     # Allow a limited number of update PRs at a time
     # to keep the number of parallel dependency updates manageable.
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 8
     # The published package manifest is owned by the /lib uv job below. The
     # root uv job should only update the dev/test environment.
     exclude-paths:
@@ -135,7 +140,7 @@ updates:
     # Use cooldown to avoid updating dependencies too frequently
     # and minimize risk of supply chain attacks.
     cooldown:
-      default-days: 5
+      default-days: 4
 
     labels:
       - "change:chore"
@@ -143,23 +148,79 @@ updates:
       - "autofix"
       - "never-stale"
 
+    # Skip versions we intentionally cap out via upper bounds (`<`) in pyproject.toml,
+    # so Dependabot doesn't open PRs that only fight that cap. The manifest constraint
+    # stays the real gate; it also blocks `uv lock`. A `!=` exclusion of a single old
+    # release (e.g. pytest-rerunfailures, pytest-github-actions-annotate-failures)
+    # needs no entry here: Dependabot targets the latest allowed version, so it never
+    # proposes the excluded one.
+    ignore:
+      - dependency-name: "numpy"
+        # NumPy 2.5 stubs use Python 3.12 syntax that mypy cannot parse while
+        # Streamlit still type-checks as Python 3.10.
+        versions: [">=2.5.0"]
+      - dependency-name: "pytest"
+        # pytest >= 9.1.0 is causing issues and is not yet supported.
+        versions: [">=9.1.0"]
+      - dependency-name: "pandas-stubs"
+        # pandas-stubs 3.x diverges from 2.x (type: ignore mismatches across the
+        # type-check matrix) and requires Python >= 3.11, but we still support 3.10.
+        versions: [">=3.0.0"]
+
+    # Batch non-breaking direct updates while keeping major updates separate.
+    # More specific category groups are matched first; the catch-all
+    # python-minor-patch group absorbs any remaining minor/patch updates.
+    groups:
+      python-typing:
+        patterns:
+          - "mypy"
+          - "mypy-protobuf"
+          - "ty"
+          - "types-*"
+          - "*-stubs"
+      python-playwright:
+        patterns:
+          - "playwright"
+          - "pytest-playwright"
+          - "pixelmatch"
+      python-testing:
+        patterns:
+          - "pytest*"
+          - "hypothesis"
+          - "parameterized"
+          - "requests-mock"
+          - "testfixtures"
+      python-ruff:
+        # Ruff bumps often add lint rules or change formatting and are coupled to the
+        # ruff-pre-commit hook version (sync-ruff-version hook), so isolate them in
+        # their own PR instead of the python-minor-patch batch.
+        patterns:
+          - "ruff"
+      python-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
   # Keep streamlit package runtime dependencies up to date
   # lib/pyproject.toml contains the published package's dependencies
   - package-ecosystem: "uv"
     directory: "/lib"
     schedule:
       interval: "daily"
-    open-pull-requests-limit: 3
     # Let Dependabot classify the published Streamlit package as a library, which
     # widens supported version ranges internally. Explicit
     # `versioning-strategy: widen` is not currently accepted for the uv ecosystem
     # by GitHub's dependabot.yml schema (only lockfile-only, auto, increase, and
     # increase-if-necessary are), so `auto` is used to opt into widening.
     # Tracking issue: https://github.com/dependabot/dependabot-core/issues/15290
+    # Changes here can temporarily stale the root lock; the autofix uv-lock hook
+    # repairs it.
     versioning-strategy: auto
 
     cooldown:
-      default-days: 5
+      default-days: 4
 
     labels:
       - "change:chore"
@@ -180,6 +241,13 @@ updates:
       - "never-stale"
 
     groups:
+      github-actions-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
       codeql-action:
         patterns:
           - "github/codeql-action/init"

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act, fireEvent, screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 
 import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation/utils"
 import {
@@ -29,6 +29,7 @@ import {
   mockTheme,
   NavigationContextProps,
   toastQueue,
+  TransientNode,
   WidgetStateManager,
 } from "@streamlit/lib"
 import {
@@ -133,6 +134,46 @@ function renderAppView(
     sidebarConfigContext: sidebarConfigContextValues,
     navigationContext: navigationContextValues,
   })
+}
+
+function createAllowEmptyBlock(
+  children: Array<BlockNode | ElementNode | TransientNode> = []
+): BlockNode {
+  return new BlockNode(
+    FAKE_SCRIPT_HASH,
+    children,
+    new BlockProto({ allowEmpty: true })
+  )
+}
+
+function createChatInputNode(id: string): ElementNode {
+  return new ElementNode(
+    new Element({
+      chatInput: {
+        id,
+        placeholder: "Enter Text Here",
+        disabled: false,
+        default: "",
+      },
+    }),
+    ForwardMsgMetadata.create({}),
+    "no script run id",
+    FAKE_SCRIPT_HASH
+  )
+}
+
+function appRootWithBottom(
+  children: Array<BlockNode | ElementNode | TransientNode>
+): AppRoot {
+  return new AppRoot(
+    FAKE_SCRIPT_HASH,
+    new BlockNode(FAKE_SCRIPT_HASH, [
+      createAllowEmptyBlock(),
+      createAllowEmptyBlock(),
+      createAllowEmptyBlock(),
+      createAllowEmptyBlock(children),
+    ])
+  )
 }
 
 describe("AppView element", () => {
@@ -884,7 +925,7 @@ describe("AppView element", () => {
       const logoElement = screen.getByTestId("stHeaderLogo")
       expect(logoElement).toBeInTheDocument()
 
-      fireEvent.error(logoElement)
+      logoElement.dispatchEvent(new Event("error"))
 
       expect(sendClientErrorToHost).toHaveBeenCalledWith(
         "Header Logo",
@@ -928,52 +969,60 @@ describe("AppView element", () => {
   })
 
   it("renders a Scroll To Bottom container if there is an element in the bottom container.", () => {
-    const chatInputElement = new ElementNode(
+    const props = getProps({
+      elements: appRootWithBottom([createChatInputNode("123")]),
+    })
+
+    render(<AppView {...props} />)
+
+    expect(screen.getByTestId("stAppScrollToBottomContainer")).toBeVisible()
+  })
+
+  it.each([
+    {
+      name: "a transient node in the bottom holds a chat input",
+      transient: () =>
+        new TransientNode("no script run id", undefined, [
+          createChatInputNode("transient-chat"),
+        ]),
+    },
+    {
+      name: "a transient node's anchor is a chat input",
+      transient: () =>
+        new TransientNode(
+          "no script run id",
+          createChatInputNode("anchor-chat"),
+          []
+        ),
+    },
+  ])("renders a Scroll To Bottom container when $name", ({ transient }) => {
+    render(
+      <AppView {...getProps({ elements: appRootWithBottom([transient()]) })} />
+    )
+
+    expect(screen.getByTestId("stAppScrollToBottomContainer")).toBeVisible()
+  })
+
+  it("does not render a Scroll To Bottom container for a transient node without chat input", () => {
+    const textElement = new ElementNode(
       new Element({
-        chatInput: {
-          id: "123",
-          placeholder: "Enter Text Here",
-          disabled: false,
-          default: "",
-        },
+        text: { body: "hello" },
       }),
       ForwardMsgMetadata.create({}),
       "no script run id",
       FAKE_SCRIPT_HASH
     )
+    const transient = new TransientNode("no script run id", undefined, [
+      textElement,
+    ])
 
-    const main = new BlockNode(
-      FAKE_SCRIPT_HASH,
-      [],
-      new BlockProto({ allowEmpty: true })
-    )
-    const sidebar = new BlockNode(
-      FAKE_SCRIPT_HASH,
-      [],
-      new BlockProto({ allowEmpty: true })
-    )
-    const event = new BlockNode(
-      FAKE_SCRIPT_HASH,
-      [],
-      new BlockProto({ allowEmpty: true })
-    )
-    const bottom = new BlockNode(
-      FAKE_SCRIPT_HASH,
-      [chatInputElement],
-      new BlockProto({ allowEmpty: true })
+    render(
+      <AppView {...getProps({ elements: appRootWithBottom([transient]) })} />
     )
 
-    const props = getProps({
-      elements: new AppRoot(
-        FAKE_SCRIPT_HASH,
-        new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
-      ),
-    })
-
-    render(<AppView {...props} />)
-
-    const stbContainer = screen.queryByTestId("stAppScrollToBottomContainer")
-    expect(stbContainer).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stAppScrollToBottomContainer")
+    ).not.toBeInTheDocument()
   })
 
   describe("navigation position rendering", () => {

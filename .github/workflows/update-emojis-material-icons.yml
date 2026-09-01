@@ -26,7 +26,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: true
@@ -34,32 +34,24 @@ jobs:
       - name: Set Python version vars
         uses: ./.github/actions/build_info
 
-      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: "${{ env.PYTHON_MAX_VERSION }}"
-
       - name: Setup virtual env
         uses: ./.github/actions/make_init
         with:
           python_version: ${{ env.PYTHON_MAX_VERSION }}
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3 # v8.3.0
-
-      - name: Install Python deps for notifications
-        run: |
-          uv pip install --system requests
-
       - name: Install newest version of emoji package
-        run: pip install emoji --upgrade
+        run: uv pip install --upgrade emoji
 
       - name: Update Material Icons
         id: update-material-icons
+        env:
+          UV_NO_SYNC: "1"
         run: make update-material-icons
 
       - name: Update Emojis
         id: update-emojis
+        env:
+          UV_NO_SYNC: "1"
         run: make update-emojis
 
       - name: Check for updates
@@ -99,7 +91,7 @@ jobs:
       - name: Create PR to merge changes into develop
         id: create_pr_update_assets
         if: ${{ steps.check-updates.outputs.updates_needed == 'true' && inputs.dry_run != true }}
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
         with:
@@ -162,7 +154,7 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           PR_URL: ${{ steps.create_pr_update_assets.outputs.pr_url }}
         run: |
-          python scripts/slack_notifications.py assets success
+          uv run --no-sync python scripts/slack_notifications.py assets success
 
       - name: Slack notification - PR creation failed
         # Failure slack indicates updates were needed but PR was not created successfully
@@ -172,4 +164,4 @@ jobs:
           REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
         run: |
-          python scripts/slack_notifications.py assets failure
+          uv run --no-sync python scripts/slack_notifications.py assets failure

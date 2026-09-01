@@ -16,9 +16,8 @@
 
 import { memo, ReactElement, useMemo } from "react"
 
-import { FloatingPortal } from "@floating-ui/react"
-
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import { DataFrameOverlayPortal } from "~lib/components/widgets/DataFrame/DataFrameOverlayPortal"
 import { getTimezone } from "~lib/dataframes/arrowTypeUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useHoverSubmenu } from "~lib/hooks/useHoverSubmenu"
@@ -46,6 +45,9 @@ import {
   StyledSubMenuAnchor,
   StyledSubMenuPanel,
 } from "./styled-components"
+
+/** Marks the portal panel so ColumnMenu's outside-click detection can ignore it. */
+export const STATISTICS_MENU_CLASS = "stDataFrameStatisticsMenu"
 
 export interface StatisticsMenuProps {
   /** The column to show statistics for. */
@@ -292,18 +294,19 @@ function StatisticsMenu({
         {children}
       </StyledSubMenuAnchor>
       {isOpen && (
-        <FloatingPortal>
+        <DataFrameOverlayPortal>
           {/* No tabIndex/autoFocus — intentionally omitted for this read-only panel.
               Allows keyboard users to navigate the parent column menu while
               viewing statistics. */}
           <StyledSubMenuPanel
+            className={STATISTICS_MENU_CLASS}
             ref={setFloatingRef}
             style={floatingStyles}
             data-testid="stDataFrameStatisticsMenu"
           >
             <StatisticsContent statistics={statistics} />
           </StyledSubMenuPanel>
-        </FloatingPortal>
+        </DataFrameOverlayPortal>
       )}
     </>
   )

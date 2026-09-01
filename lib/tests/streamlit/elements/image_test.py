@@ -38,7 +38,10 @@ from streamlit.elements.lib.image_utils import (
     marshall_images,
 )
 from streamlit.elements.lib.layout_utils import LayoutConfig
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitValueError,
+)
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.memory_media_file_storage import (
     _calculate_file_id,
@@ -367,9 +370,9 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         - check shape 3 but dims 1, 3, 4
         - if only one channel convert to just 2 dimensions.
         """
-        with pytest.raises(StreamlitAPIException) as shape_exc:
+        with pytest.raises(StreamlitValueError) as shape_exc:
             st.image(np.ndarray(shape=1))
-        assert str(shape_exc.value) == "Numpy shape has to be of length 2 or 3."
+        assert "2D or 3D" in str(shape_exc.value)
 
         with pytest.raises(StreamlitAPIException) as shape2_exc:
             st.image(np.ndarray(shape=(1, 2, 2)))
@@ -420,8 +423,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         st.image(
             imgs,
             caption=["some caption"] * 3,
-            width=200,
-            use_column_width=True,
+            width="stretch",
             clamp=True,
             output_format="PNG",
         )
@@ -465,17 +467,6 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         for idx, url in enumerate(urls):
             assert el.imgs.imgs[idx].caption == "some caption"
             assert el.imgs.imgs[idx].url == url
-
-    def test_st_image_bad_width(self):
-        """Test st.image with bad width."""
-        st.image(
-            Image.new("RGB", (64, 64), color="red"),
-            use_column_width=False,
-            width=-1234,
-        )
-
-        el = self.get_delta_from_queue().new_element
-        assert el.width_config.use_content
 
     def test_st_image_default_width(self):
         """Test st.image without specifying a use_container_width."""
@@ -521,18 +512,6 @@ class ImageProtoTest(DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         assert el.width_config.pixel_width == 100
-
-    def test_st_image_use_container_width_and_use_column_width(self):
-        """Test st.image with use_container_width and use_column_width."""
-        img = Image.new("RGB", (64, 64), color="red")
-
-        with pytest.raises(StreamlitAPIException) as e:
-            st.image(img, use_container_width=True, use_column_width=True)
-
-        assert (
-            "`use_container_width` and `use_column_width` cannot be set at the same time."
-            in str(e.value)
-        )
 
     def test_st_image_width_stretch(self):
         """Test st.image with width='stretch'."""

@@ -18,6 +18,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    click_toggle,
     expect_help_tooltip,
     get_element_by_key,
     get_metric,
@@ -30,6 +31,8 @@ def test_first_metric_in_first_row(app: Page):
     expect(metric.get_by_test_id("stMetricLabel")).to_have_text("User growth")
     expect(metric.get_by_test_id("stMetricValue")).to_have_text("123")
     expect(metric.get_by_test_id("stMetricDelta")).to_have_text("123")
+    # Anti-regression: a metric without `icon` must NOT render the icon element.
+    expect(metric.get_by_test_id("stMetricIcon")).to_have_count(0)
 
 
 def test_second_metric_in_first_row(app: Page):
@@ -70,6 +73,17 @@ def test_arrow_overrides(app: Page, assert_snapshot: ImageCompareFunction):
         get_element_by_key(app, "metric_arrow_config"),
         name="st_metric-delta_arrow_config",
     )
+
+
+def test_zero_delta_has_no_arrow(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    metric = get_metric(themed_app, "Zero delta")
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("100")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text("0")
+    expect(metric.get_by_test_id("stMetricDeltaIcon-Up")).to_have_count(0)
+    expect(metric.get_by_test_id("stMetricDeltaIcon-Down")).to_have_count(0)
+    assert_snapshot(metric, name="st_metric-zero_delta")
 
 
 def test_green_up_arrow_render(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -331,3 +345,31 @@ def test_custom_delta_color_render(
         get_metric(themed_app, "Primary delta"),
         name="st_metric-primary_delta",
     )
+
+
+def test_metric_with_icon(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that a metric renders its icon inline before the label."""
+    metric = get_metric(themed_app, "Temperature")
+    expect(metric.get_by_test_id("stMetricIcon")).to_be_visible()
+    assert_snapshot(metric, name="st_metric-with_icon")
+
+
+def test_metric_chart_renders_after_empty_to_data_transition(app: Page):
+    """Empty→data chart_data left the sparkline missing without remount.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/16539
+    """
+    metric = get_metric(app, "Sparkline toggle")
+    chart_svg = metric.get_by_test_id("stMetricChart").locator("svg")
+    expect(chart_svg).to_be_visible()
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("42")
+
+    click_toggle(app, "Show sparkline data")
+    expect(metric.get_by_test_id("stMetricChart")).to_have_count(0)
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("0")
+
+    click_toggle(app, "Show sparkline data")
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("42")
+    expect(chart_svg).to_be_visible()
+    # One sparkline, not missing or duplicated.
+    expect(chart_svg).to_have_count(1)

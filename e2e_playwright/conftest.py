@@ -322,6 +322,17 @@ class AsyncSubprocess:
 
     def terminate(self) -> str | None:
         """Terminate the process and return its stdout/stderr in a string."""
+        if self._proc is not None:
+            returncode = self._proc.poll()
+            if returncode is not None:
+                signal = -returncode if returncode < 0 else None
+                print(
+                    f"Process exited before teardown: pid={self._proc.pid} "
+                    f"returncode={returncode} signal={signal} "
+                    f"command={shlex.join(self.args)}",
+                    flush=True,
+                )
+
         self._stop_process()
 
         # Read the stdout file and close it
@@ -382,9 +393,21 @@ def hash_to_range(
 
 
 def is_port_available(port: int, host: str) -> bool:
-    """Check if a port is available on the given host."""
+    """Check if a server can bind to a port on the given host."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        return sock.connect_ex((host, port)) != 0
+        try:
+            # Bind to verify the port is free. connect_ex only detects listeners,
+            # so ports held by active client sockets look free but cannot be bound.
+            # Match Streamlit's server socket options so TIME_WAIT ports that the
+            # real server could reuse (via SO_REUSEADDR) are not treated as busy.
+            # Skip SO_REUSEADDR on Windows for the same reason as starlette_server:
+            # there it can allow binding over a live listener.
+            if os.name != "nt":
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind((host, port))
+        except OSError:
+            return False
+        return True
 
 
 def find_available_port(

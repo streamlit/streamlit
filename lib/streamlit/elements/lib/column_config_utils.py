@@ -19,7 +19,14 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, TypedDict, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Literal,
+    TypeAlias,
+    overload,
+)
 
 from streamlit.dataframe_util import DataFormat
 from streamlit.elements.lib.column_types import (
@@ -30,7 +37,10 @@ from streamlit.elements.lib.column_types import (
 from streamlit.elements.lib.dicttools import remove_none_values
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import compute_and_register_element_id
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+)
 from streamlit.runtime.state import register_widget
 from streamlit.util import ReadOnlyAttributeDictionary
 
@@ -434,14 +444,30 @@ ColumnConfigMappingInput: TypeAlias = Mapping[
 ButtonColumnMapping: TypeAlias = dict[str, ButtonColumnResult]
 
 
-class ButtonClickState(TypedDict):
+class ButtonColumnClickState(ReadOnlyAttributeDictionary):
     """The schema for button click state in ButtonColumn.
 
-    Both fields are always present when a button click occurs.
+    To use this type in an annotation, import it from ``streamlit.typing``.
+
+    Read-only dict-like click payload with attribute and key access
+    (``click.row`` / ``click["row"]``). Both fields are always present when a
+    button click occurs.
     """
 
     row: int
     label: str
+
+    @overload
+    def __getitem__(self, key: Literal["row"]) -> int: ...
+
+    @overload
+    def __getitem__(self, key: Literal["label"]) -> str: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        return super().__getitem__(key)
 
 
 @dataclass
@@ -452,14 +478,14 @@ class ButtonClickSerde:
     The frontend sends the click state as a JSON string.
     """
 
-    def serialize(self, v: ButtonClickState | None) -> StringTriggerValue:
+    def serialize(self, v: ButtonColumnClickState | None) -> StringTriggerValue:
         from streamlit.proto.Common_pb2 import StringTriggerValue
 
         if v is None:
             return StringTriggerValue()
         return StringTriggerValue(data=json.dumps(v))
 
-    def deserialize(self, ui_value: str | None) -> ButtonClickState | None:
+    def deserialize(self, ui_value: str | None) -> ButtonColumnClickState | None:
         if not ui_value:
             return None
 
@@ -473,20 +499,19 @@ class ButtonClickSerde:
             or not isinstance(parsed.get("label"), str)
         ):
             raise StreamlitAPIException(
-                "Invalid button click state: expected {row: int, label: str}."
+                "Invalid button click state: expected {row: int, label: str}.",
+                error_id="button-column-invalid-click-state",
             )
 
         # Validate row is non-negative (bounds check - row < num_rows is
         # checked downstream when accessing the data)
         if parsed["row"] < 0:
             raise StreamlitAPIException(
-                f"Invalid button click row index: {parsed['row']}. Row must be >= 0."
+                f"Invalid button click row index: {parsed['row']}. Row must be >= 0.",
+                error_id="button-column-invalid-click-row",
             )
 
-        # Wrap in ReadOnlyAttributeDictionary so the click value supports both
-        # key and attribute notation (e.g. click["row"] and click.row),
-        # matching dataframe selection state.
-        return cast("ButtonClickState", ReadOnlyAttributeDictionary(parsed))
+        return ButtonColumnClickState(parsed)
 
 
 def extract_button_column_configs(
@@ -585,9 +610,11 @@ def process_config_mapping(
             # since we will apply in-place changes to it.
             transformed_column_config[column] = copy.deepcopy(config)
         else:
-            raise StreamlitAPIException(
-                f"Invalid column config for column `{column}`. "
-                f"Expected `None`, `str` or `dict`, but got `{type(config)}`."
+            raise StreamlitInvalidParameterTypeError(
+                "column_config",
+                type(config).__name__,
+                ["None", "str", "dict"],
+                detail=f"Invalid configuration for column `{column}`.",
             )
     return transformed_column_config
 
@@ -671,7 +698,8 @@ def _convert_column_config_to_json(column_config_mapping: ColumnConfigMapping) -
         )
     except ValueError as ex:
         raise StreamlitAPIException(
-            f"The provided column config cannot be serialized into JSON: {ex}"
+            f"The provided column config cannot be serialized into JSON: {ex}",
+            error_id="column-config-json-serialize-failed",
         ) from ex
 
 

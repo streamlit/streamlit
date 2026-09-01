@@ -20,8 +20,10 @@ import { vi } from "vitest"
 
 import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
 
+import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { BaseButtonKind } from "~lib/components/shared/BaseButton/styled-components"
 import { render } from "~lib/test_util"
+import { iconSizes } from "~lib/theme/primitives/iconSizes"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import MenuButton, { Props } from "./MenuButton"
@@ -82,6 +84,18 @@ describe("MenuButton widget", () => {
     })
   })
 
+  it("mounts the menu popover in the shared floating overlay portal", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    render(<MenuButton {...props} />)
+
+    await user.click(screen.getByTestId("stMenuButtonButton"))
+    const menuBody = await screen.findByTestId("stMenuButtonBody")
+
+    const portalHost = document.getElementById(FLOATING_OVERLAY_PORTAL_ID)
+    expect(portalHost).toContainElement(menuBody)
+  })
+
   it("selects an option and triggers widget manager", async () => {
     const user = userEvent.setup()
     const props = getProps()
@@ -101,10 +115,9 @@ describe("MenuButton widget", () => {
     })
 
     expect(props.widgetMgr.setStringTriggerValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       "Option B",
-      { fromUi: true },
-      undefined
+      { formId: undefined, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -127,10 +140,9 @@ describe("MenuButton widget", () => {
     })
 
     expect(props.widgetMgr.setStringTriggerValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       "Option A",
-      { fromUi: true },
-      "myFragmentId"
+      { formId: undefined, fragmentId: "myFragmentId", fromUser: true }
     )
   })
 
@@ -274,6 +286,35 @@ describe("MenuButton widget", () => {
 
     const button = screen.getByTestId("stMenuButtonButton")
     expect(button).toHaveTextContent("expand_more")
+  })
+
+  describe("wrap=false", () => {
+    it("keeps the chevron visible and sets the full label as a native title", () => {
+      const props = getProps({ label: "A very long menu label", wrap: false })
+      render(<MenuButton {...props} />)
+
+      const button = screen.getByTestId("stMenuButtonButton")
+      expect(button).toHaveTextContent("expand_more")
+      const label = screen.getByTitle("A very long menu label")
+      expect(label).toBeVisible()
+      expect(label.parentElement).toHaveStyle({
+        maxWidth: `calc(100% + ${iconSizes.lg} * 0.25)`,
+        marginRight: `calc(-${iconSizes.lg} * 0.25)`,
+      })
+    })
+
+    it("does not set a title when help is set (help tooltip takes over)", () => {
+      const props = getProps({
+        label: "A very long menu label",
+        wrap: false,
+        help: "Help wins",
+      })
+      render(<MenuButton {...props} />)
+
+      expect(
+        screen.queryByTitle("A very long menu label")
+      ).not.toBeInTheDocument()
+    })
   })
 
   it("renders no options gracefully", () => {

@@ -361,3 +361,108 @@ st.text(
 if st.button("Switch to ES", key="switch_to_es_btn"):
     st.session_state["dynamic_fmt_lang"] = "es"
     st.rerun()
+
+# --- Interdependent pills with dynamic format_func (gh-16269) ---
+# Regression test: when a parent pill's selection is cleared, the child pill's
+# format_func output (a record count embedded in the label) changes for the
+# still-selected option. The child must stay visually selected at its new label
+# instead of silently deselecting, and its return value must be preserved.
+
+st.header("Pills - interdependent format_func")
+
+# Both the child option set and the per-option counts depend on whether the
+# parent filter is active, mirroring the original repro where a dataframe is
+# filtered by the parent selection: with the parent active fewer rows remain,
+# so the option list shrinks and the counts drop. This exercises the case where
+# a still-selected option ("D") keeps its value across both a label change and a
+# change to the surrounding options list.
+if st.session_state.get("idf_parent"):
+    _idf_counts = {"D": 1, "E": 1}
+else:
+    _idf_counts = {"D": 3, "E": 2, "F": 4}
+
+st.pills("idf parent", options=["A", "B"], key="idf_parent")
+idf_child_val = st.pills(
+    "idf child",
+    options=list(_idf_counts),
+    format_func=lambda x: f"{x} ({_idf_counts[x]})",
+    key="idf_child",
+)
+st.text(f"idf_child value: {idf_child_val}")
+
+# --- Wrap parameter ---
+
+st.header("Pills - wrap")
+
+_WRAP_OPTIONS = [
+    "Today",
+    "7 days",
+    "30 days",
+    "Quarter",
+    "Year",
+    "All time",
+    "Custom range",
+    "Last 90 days",
+    "Last 180 days",
+    "Year to date",
+    "Previous year",
+    "Lifetime",
+]
+
+st.pills(
+    "Wrap false scroll",
+    _WRAP_OPTIONS,
+    wrap=False,
+    width=280,
+    key="pills_wrap_false",
+)
+
+st.pills(
+    "Wrap true multi-row",
+    _WRAP_OPTIONS,
+    wrap=True,
+    width=280,
+    key="pills_wrap_true",
+)
+
+st.pills(
+    "Wrap auto vertical",
+    _WRAP_OPTIONS,
+    width=280,
+    key="pills_wrap_auto_vertical",
+)
+
+with st.container(horizontal=True, width=320, key="pills_wrap_auto_horizontal"):
+    st.pills(
+        "Wrap auto horizontal",
+        _WRAP_OPTIONS,
+        key="pills_wrap_auto_h",
+    )
+
+st.pills(
+    "Wrap false selected into view",
+    _WRAP_OPTIONS,
+    default="Lifetime",
+    wrap=False,
+    width=280,
+    key="pills_wrap_selected_into_view",
+)
+
+with st.container(width=280, key="pills_wrap_stretch_container"):
+    st.pills(
+        "Wrap false stretch",
+        _WRAP_OPTIONS,
+        wrap=False,
+        width="stretch",
+        key="pills_wrap_false_stretch",
+    )
+
+_wrap_toggle = st.toggle("Enable wrap", value=False, key="pills_wrap_toggle")
+_wrap_val = st.pills(
+    "Wrap toggle preserves selection",
+    ["Alpha", "Beta", "Gamma"],
+    default="Beta",
+    wrap=_wrap_toggle,
+    key="pills_wrap_preserve",
+)
+st.text(f"pills_wrap_preserve: {_wrap_val}")

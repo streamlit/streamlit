@@ -26,13 +26,10 @@ from typing import (
     Any,
     Literal,
     TypeAlias,
-    TypedDict,
     Union,
     cast,
     overload,
 )
-
-from typing_extensions import Required
 
 from streamlit import dataframe_util, type_util
 from streamlit.deprecation_util import (
@@ -55,14 +52,18 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.proto.VegaLiteChart_pb2 import (
     VegaLiteChart as VegaLiteChartProto,
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.util import AttributeDictionary, calc_hash
+from streamlit.util import ReadOnlyAttributeDictionary, calc_hash
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -87,13 +88,15 @@ AltairChart: TypeAlias = Union[
 _altair_globals_lock = threading.Lock()
 
 
-class VegaLiteState(TypedDict, total=False):
+class VegaLiteState(ReadOnlyAttributeDictionary):
     """
     The schema for the Vega-Lite event state.
 
-    The event state is stored in a dictionary-like object that supports both
-    key and attribute notation. Event states cannot be programmatically
-    changed or set through Session State.
+    To use this type in an annotation, import it from ``streamlit.typing``.
+
+    The event state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Event states cannot be
+    programmatically changed or set through Session State.
 
     Only selection events are supported at this time.
 
@@ -190,7 +193,29 @@ class VegaLiteState(TypedDict, total=False):
 
     """
 
-    selection: Required[AttributeDictionary]
+    # The selection payload is keyed by the user's Vega-Lite parameter names, so
+    # it has no fixed schema and is exposed as a plain (read-only) dictionary.
+    selection: ReadOnlyAttributeDictionary
+
+    # ReadOnlyAttributeDictionary routes attribute access through __getitem__,
+    # so the override below is enough to keep `selection` typed. Use
+    # dict.__getitem__ for the selection key so the read-only base class does
+    # not re-wrap the already-wrapped nested instance.
+    @overload
+    def __getitem__(self, key: Literal["selection"]) -> ReadOnlyAttributeDictionary: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        if key == "selection":
+            item = dict.__getitem__(self, key)
+            if not isinstance(item, ReadOnlyAttributeDictionary):
+                item = ReadOnlyAttributeDictionary(item)
+                # Cache so repeated bracket/attribute access stays identity-stable.
+                dict.__setitem__(self, key, item)
+            return item
+        return super().__getitem__(key)
 
 
 @dataclass
@@ -200,23 +225,26 @@ class VegaLiteStateSerde:
     selection_parameters: Sequence[str]
 
     def deserialize(self, ui_value: str | None) -> VegaLiteState:
-        empty_selection_state: VegaLiteState = {
-            "selection": AttributeDictionary(
-                # Initialize the select state with empty dictionaries for each selection parameter.
-                {param: {} for param in self.selection_parameters}
-            ),
-        }
-
-        selection_state = (
-            empty_selection_state
-            if ui_value is None
-            else cast("VegaLiteState", AttributeDictionary(json.loads(ui_value)))
+        empty_selection_state = VegaLiteState(
+            {
+                "selection": ReadOnlyAttributeDictionary(
+                    # Initialize the select state with empty dictionaries for each selection parameter.
+                    {param: {} for param in self.selection_parameters}
+                ),
+            }
         )
 
-        if "selection" not in selection_state:
-            selection_state = empty_selection_state  # type: ignore[unreachable]
+        if ui_value is None:
+            return empty_selection_state
 
-        return cast("VegaLiteState", AttributeDictionary(selection_state))
+        parsed = json.loads(ui_value)
+        if "selection" not in parsed:
+            return empty_selection_state
+
+        # Eagerly wrap selection so bracket access returns a stable typed
+        # instance instead of creating a shallow copy on every access.
+        parsed["selection"] = ReadOnlyAttributeDictionary(parsed["selection"])
+        return VegaLiteState(parsed)
 
     def serialize(self, selection_state: VegaLiteState) -> str:
         return json.dumps(selection_state, default=str)
@@ -292,7 +320,10 @@ def _prepare_vega_lite_spec(
     spec = dict(spec)
 
     if len(spec) == 0:
-        raise StreamlitAPIException("Vega-Lite charts require a non-empty spec dict.")
+        raise StreamlitMissingRequiredParameterError(
+            "spec",
+            detail="Vega-Lite charts require a non-empty spec dict.",
+        )
 
     if "autosize" not in spec:
         # type fit does not work for many chart types. This change focuses
@@ -438,8 +469,20 @@ def _convert_altair_to_vega_lite_spec(
             with data_transformer:  # ty: ignore[invalid-context-manager]
                 chart_dict = altair_chart.to_dict()
 
-    # Put datasets back into the chart dict:
-    chart_dict["datasets"] = datasets
+    # Merge the Arrow-serialized datasets we collected with any datasets the chart
+    # already carries, letting the Arrow-serialized datasets win on key collisions.
+    #
+    # Replacing outright would discard data — charts built with alt.Chart.from_json
+    # carry their data as inline datasets keyed by name, with the spec referencing
+    # them via {"data": {"name": ...}}. Our transformer never sees a dataframe for
+    # those, so `datasets` is empty and the chart would render with axes but no
+    # data. See https://github.com/streamlit/streamlit/issues/6269.
+    existing_datasets = chart_dict.get("datasets")
+    chart_dict["datasets"] = (
+        {**existing_datasets, **datasets}
+        if isinstance(existing_datasets, dict)
+        else datasets
+    )
     return chart_dict
 
 
@@ -517,7 +560,8 @@ def _parse_selection_mode(
             "have any selections defined. To add selections to `st.altair_chart`, check out the documentation "
             "[here](https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions)."
             " For adding selections to `st.vega_lite_chart`, take a look "
-            "at the specification [here](https://vega.github.io/vega-lite/docs/selection.html)."
+            "at the specification [here](https://vega.github.io/vega-lite/docs/selection.html).",
+            error_id="vega-on-select-without-spec-selections",
         )
 
     if selection_mode is None:
@@ -533,7 +577,8 @@ def _parse_selection_mode(
         if selection_name not in all_selection_params:
             raise StreamlitAPIException(
                 f"Selection parameter '{selection_name}' is not defined in the chart "
-                f"spec. Available selection parameters are: {all_selection_params}."
+                f"spec. Available selection parameters are: {all_selection_params}.",
+                error_id="vega-selection-parameter-not-defined",
             )
     return sorted(selection_mode)
 
@@ -1119,11 +1164,7 @@ class VegaChartsMixin:
 
         """
         # Check that the stack parameter is valid, raise more informative error message if not
-        maybe_raise_stack_warning(
-            stack,
-            "st.area_chart",
-            "https://docs.streamlit.io/develop/api-reference/charts/st.area_chart",
-        )
+        maybe_raise_stack_warning(stack)
 
         # st.area_chart's stack=False option translates to a "layered" area chart for
         # vega. We reserve stack=False for
@@ -1448,17 +1489,14 @@ class VegaChartsMixin:
 
         """
         # Check that the stack parameter is valid, raise more informative error message if not
-        maybe_raise_stack_warning(
-            stack,
-            "st.bar_chart",
-            "https://docs.streamlit.io/develop/api-reference/charts/st.bar_chart",
-        )
+        maybe_raise_stack_warning(stack)
 
         # Offset encodings (used for non-stacked/grouped bar charts) are not supported in Altair < 5.0.0
         if type_util.is_altair_version_less_than("5.0.0") and stack is False:
             raise StreamlitAPIException(
                 "Streamlit does not support non-stacked (grouped) bar charts with "
-                "Altair 4.x. Please upgrade to Version 5."
+                "Altair 4.x. Please upgrade to Version 5.",
+                error_id="altair4-grouped-bar-not-supported",
             )
 
         bar_chart_type = (
@@ -1925,12 +1963,12 @@ class VegaChartsMixin:
 
         Returns
         -------
-        element or dict
+        element or VegaLiteState
             If ``on_select`` is ``"ignore"`` (default), this command returns an
             internal placeholder for the chart element. Otherwise, this command
-            returns a dictionary-like object that supports both key and attribute
-            notation. The attributes are described by the ``VegaLiteState``
-            dictionary schema.
+            returns a ``VegaLiteState`` object. This object is dictionary-like
+            and supports both key and attribute notation. To use this type in
+            an annotation, import it from ``streamlit.typing``.
 
         Examples
         --------
@@ -2157,12 +2195,12 @@ class VegaChartsMixin:
 
         Returns
         -------
-        element or dict
+        element or VegaLiteState
             If ``on_select`` is ``"ignore"`` (default), this command returns an
             internal placeholder for the chart element. Otherwise, this command
-            returns a dictionary-like object that supports both key and attribute
-            notation. The attributes are described by the ``VegaLiteState``
-            dictionary schema.
+            returns a ``VegaLiteState`` object. This object is dictionary-like
+            and supports both key and attribute notation. To use this type in
+            an annotation, import it from ``streamlit.typing``.
 
         Examples
         --------
@@ -2227,7 +2265,8 @@ class VegaChartsMixin:
                 "Streamlit does not support selections with Altair 4.x. Please upgrade "
                 "to Version 5. "
                 "If you would like to use Altair 4.x with selections, please upvote "
-                "this [Github issue](https://github.com/streamlit/streamlit/issues/8516)."
+                "this [Github issue](https://github.com/streamlit/streamlit/issues/8516).",
+                error_id="altair4-selections-not-supported",
             )
 
         vega_lite_spec = _convert_altair_to_vega_lite_spec(altair_chart)
@@ -2260,16 +2299,11 @@ class VegaChartsMixin:
         See the `vega_lite_chart` method docstring for more information.
         """
         if theme not in {"streamlit", None}:
-            raise StreamlitAPIException(
-                f'You set theme="{theme}" while Streamlit charts only support '
-                "theme=”streamlit” or theme=None to fallback to the default "
-                "library theme."
-            )
+            raise StreamlitValueError("theme", ["'streamlit'", "None"])
 
         if on_select not in {"ignore", "rerun"} and not callable(on_select):
-            raise StreamlitAPIException(
-                f"You have passed {on_select} to `on_select`. But only 'ignore', "
-                "'rerun', or a callable is supported."
+            raise StreamlitValueError(
+                "on_select", ["'rerun'", "'ignore'", "a callback function"]
             )
 
         key = to_key(key)
@@ -2282,7 +2316,9 @@ class VegaChartsMixin:
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_select) if is_callback else None,
+                on_change=cast("WidgetCallback", on_select)  # ty: ignore[redundant-cast]
+                if is_callback
+                else None,
                 default_value=None,
                 writes_allowed=False,
                 enable_check_callback_rules=is_callback,
@@ -2291,7 +2327,7 @@ class VegaChartsMixin:
         # Support passing data inside spec['datasets'] and spec['data'].
         # (The data gets pulled out of the spec dict later on.)
         if isinstance(data, dict) and spec is None:
-            spec = data
+            spec = cast("VegaLiteSpec", data)
             data = None
 
         if spec is None:

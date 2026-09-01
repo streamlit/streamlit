@@ -51,6 +51,15 @@ query = st.text_input(
 )
 ```
 
+## HTML and iframes
+
+Prefer native Streamlit elements over recreating UI with custom HTML. This includes UI created with `st.html`, `st.markdown(..., unsafe_allow_html=True)`, or deprecated `st.components.v1.html`. Use custom HTML only when no native element provides the required UI or behavior.
+
+Do not use the deprecated `st.components.v1.html` or `st.components.v1.iframe` commands.
+
+- Use `st.iframe` for URLs or HTML that should render inside an iframe. It is the iframe-based replacement for either legacy command.
+- Use `st.html` for static HTML or CSS that should render directly in the app instead of inside an iframe. JavaScript is ignored by default; only enable it with `unsafe_allow_javascript=True` when necessary, and never enable it for untrusted content.
+
 ## Layout
 
 Use `width` instead of deprecated `use_container_width`.
@@ -88,7 +97,7 @@ with st.container(border=True):
 
 ## Navigation and pages
 
-Use `st.navigation` with an `app_pages/` directory. Avoid the legacy `pages/` auto-discovery pattern and app-body navigation built from `st.page_link`.
+Use `st.navigation` with an `app_pages/` directory. Give every `st.Page` a context-appropriate Material Symbols icon. Avoid the legacy `pages/` auto-discovery pattern and app-body navigation built from `st.page_link`.
 
 ```python
 # GOOD: streamlit_app.py
@@ -111,6 +120,7 @@ Keep page files as direct scripts. Do not wrap the page body in a render functio
 def render_page():
     st.title("Sales")
     st.line_chart(load_sales())
+
 
 render_page()
 ```
@@ -161,6 +171,27 @@ Use `st.cache_resource` for shared resources, and do not wrap `st.connection`.
 def load_model():
     return SentenceTransformer("all-MiniLM-L6-v2")
 ```
+
+Render stable UI before slow calls. Streamlit emits UI updates top to bottom during each rerun, so slow code before downstream elements leaves faded stale content from the previous run on screen while it runs. Render fast UI first, reserve the slow result's position with `st.container()`, then fill that slot once the work completes — wrap the slow work in `with container.skeleton():` to show a loading placeholder, and write results explicitly to the container (e.g. `container.dataframe(...)`), since the block doesn't redirect bare `st.*` calls into it. Avoid standalone `st.empty()`/`st.skeleton()` placeholders that you fill after slow work: the delay unmounts the old element and resets stateful widgets (e.g. a dataframe's scroll, sort, and selection), whereas a reserved container keeps it mounted at a stable position. Give stateful elements a stable `key`.
+
+```python
+# BAD: The whole page is stuck behind a slow load and greys out
+orders = load_orders()  # ~5s
+st.title("Orders")
+region = st.selectbox("Region", regions)
+st.dataframe(orders)
+
+# GOOD: Title and filter paint immediately; a container reserves the table's slot and
+# shows a skeleton while it loads, so the table keeps its state at a stable position.
+st.title("Orders")
+region = st.selectbox("Region", regions)
+table_slot = st.container()  # Reserve the table's position up front
+with table_slot.skeleton():
+    orders = load_orders()
+    table_slot.dataframe(orders, key="orders")  # Write into the reserved slot
+```
+
+See `performance.md` for the rendering-order details and a fuller placeholder example.
 
 Use fragments for independent sections that can rerun separately from the page.
 
@@ -225,10 +256,14 @@ st.bar_chart(df, x="category", y="orders")
 st.scatter_chart(df, x="revenue", y="margin", color="segment")
 
 # GOOD: Altair for complex charts
-chart = alt.Chart(df).mark_line().encode(
-    x=alt.X("date:T", title="Date"),
-    y=alt.Y("revenue:Q", title="Revenue"),
-    color="region:N",
+chart = (
+    alt.Chart(df)
+    .mark_line()
+    .encode(
+        x=alt.X("date:T", title="Date"),
+        y=alt.Y("revenue:Q", title="Revenue"),
+        color="region:N",
+    )
 )
 st.altair_chart(chart)
 ```
@@ -282,6 +317,18 @@ query = st.text_input(f"Search {category}")
 
 # GOOD: Stable widget identity and session-state access
 query = st.text_input(f"Search {category}", key="search_query")
+```
+
+Sync a widget to the URL with `bind="query-params"` rather than hand-rolling `st.query_params`.
+
+```python
+# BAD: Manual read/write plumbing that crashes on an unexpected URL value
+default = st.query_params.get("sort", SORTS[0])
+sort = st.selectbox("Sort", SORTS, index=SORTS.index(default))
+st.query_params["sort"] = sort
+
+# GOOD: Streamlit keeps the widget and the URL in sync
+sort = st.selectbox("Sort", SORTS, key="sort", bind="query-params")
 ```
 
 ## Secrets and queries

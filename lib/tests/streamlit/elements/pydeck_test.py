@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 from unittest import mock
@@ -29,10 +30,16 @@ from streamlit.elements import deck_gl_json_chart
 from streamlit.elements.deck_gl_json_chart import (
     PydeckMixin,
     PydeckSelectionSerde,
+    PydeckSelectionState,
+    PydeckState,
     _get_pydeck_width,
     parse_selection_mode,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -199,11 +206,11 @@ class PyDeckTest(DeltaGeneratorTestCase):
 
     def test_unknown_selection_mode_raises_exception(self):
         """
-        Test that it throws an StreamlitAPIException when an unknown
+        Test that it throws an StreamlitValueError when an unknown
         selection_mode is given
         """
 
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.pydeck_chart(
                 pdk.Deck(
                     layers=[
@@ -214,15 +221,15 @@ class PyDeckTest(DeltaGeneratorTestCase):
                 selection_mode="multi-row",
             )
 
-        assert "Invalid selection mode: multi-row" in str(e.value)
+        assert "Invalid `selection_mode` value" in str(e.value)
 
     def test_selection_mode_set(self):
         """
-        Test that it throws an StreamlitAPIException when a set is given for
+        Test that it throws an StreamlitInvalidParameterTypeError when a set is given for
         selection_mode
         """
 
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitInvalidParameterTypeError) as e:
             st.pydeck_chart(
                 pdk.Deck(
                     layers=[
@@ -233,7 +240,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
                 selection_mode={"multi-object"},
             )
 
-        assert "Invalid selection mode: {'multi-object'}." in str(e.value)
+        assert "Invalid `selection_mode` type" in str(e.value)
 
     @patch_config_options({"mapbox.token": "MOCK_CONFIG_KEY"})
     def test_mapbox_token_config(self):
@@ -673,7 +680,33 @@ class PydeckSelectionSerdeTest(DeltaGeneratorTestCase):
         result = serde.deserialize(json_str)
 
         # Should support both dict and attribute access
+        assert isinstance(result, PydeckState)
+        assert isinstance(result.selection, PydeckSelectionState)
         assert result.selection.indices["layer1"] == [0]
+        # Nested selection must be a stable stored instance (not a per-access copy).
+        assert result["selection"] is result["selection"]
+        assert result.selection is result["selection"]
+
+    def test_state_is_read_only(self):
+        """The PyDeck event state is read-only at the top and nested levels.
+
+        It also keeps its typed classes through deepcopy, since Session State
+        deep-copies the initial widget value.
+        """
+        result = PydeckSelectionSerde().deserialize(None)
+
+        with pytest.raises(TypeError, match="Widget state is read-only"):
+            result["selection"] = {}
+        with pytest.raises(TypeError, match="Widget state is read-only"):
+            result.selection = {}
+        with pytest.raises(TypeError, match="Widget state is read-only"):
+            result["selection"]["indices"] = {"layer1": [0]}
+
+        # Read access still works, and deepcopy preserves the concrete types.
+        assert result.selection.indices == {}
+        copied = copy.deepcopy(result)
+        assert isinstance(copied, PydeckState)
+        assert isinstance(copied.selection, PydeckSelectionState)
 
 
 class ParseSelectionModeTest(DeltaGeneratorTestCase):
@@ -692,20 +725,20 @@ class ParseSelectionModeTest(DeltaGeneratorTestCase):
         assert len(result) == 1
 
     def test_invalid_selection_mode_raises_exception(self):
-        """Test that an invalid selection mode raises StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as e:
+        """Test that an invalid selection mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as e:
             parse_selection_mode("invalid-mode")
-        assert "Invalid selection mode" in str(e.value)
+        assert "Invalid `selection_mode` value" in str(e.value)
 
     def test_set_selection_mode_raises_exception(self):
-        """Test that a set of selection modes raises StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as e:
+        """Test that a set of selection modes raises StreamlitInvalidParameterTypeError."""
+        with pytest.raises(StreamlitInvalidParameterTypeError) as e:
             parse_selection_mode({"single-object", "multi-object"})
         assert "Selection mode must be a single value" in str(e.value)
 
     def test_list_selection_mode_raises_exception(self):
-        """Test that a list of selection modes raises StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as e:
+        """Test that a list of selection modes raises StreamlitInvalidParameterTypeError."""
+        with pytest.raises(StreamlitInvalidParameterTypeError) as e:
             parse_selection_mode(["single-object"])
         assert "Selection mode must be a single value" in str(e.value)
 
@@ -814,8 +847,8 @@ class PydeckCallbackTest(DeltaGeneratorTestCase):
         assert el.deck_gl_json_chart.selection_mode == []
 
     def test_invalid_on_select_raises_exception(self):
-        """Test that an invalid on_select value raises StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as e:
+        """Test that an invalid on_select value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as e:
             st.pydeck_chart(
                 pdk.Deck(
                     layers=[
@@ -824,7 +857,7 @@ class PydeckCallbackTest(DeltaGeneratorTestCase):
                 ),
                 on_select="invalid",
             )
-        assert "only 'ignore', 'rerun', or a callable is supported" in str(e.value)
+        assert "Invalid `on_select` value" in str(e.value)
 
 
 class TestPreparePydeckForJson:

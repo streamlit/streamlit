@@ -68,14 +68,6 @@ if TYPE_CHECKING:
     assert_type(image("image.png", use_container_width=False), DeltaGenerator)
     assert_type(image("image.png", use_container_width=None), DeltaGenerator)
 
-    # Image with use_column_width parameter (deprecated but still supported)
-    assert_type(image("image.png", use_column_width=True), DeltaGenerator)
-    assert_type(image("image.png", use_column_width=False), DeltaGenerator)
-    assert_type(image("image.png", use_column_width="auto"), DeltaGenerator)
-    assert_type(image("image.png", use_column_width="always"), DeltaGenerator)
-    assert_type(image("image.png", use_column_width="never"), DeltaGenerator)
-    assert_type(image("image.png", use_column_width=None), DeltaGenerator)
-
     # Image with link parameter
     assert_type(image("image.png", link="https://streamlit.io"), DeltaGenerator)
     assert_type(image("image.png", link="/my_page"), DeltaGenerator)
@@ -101,23 +93,28 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Invalid width value (not "content", "stretch", or int)
-    image("image.png", width="invalid")  # type: ignore[arg-type]
+    image("image.png", width="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid channels value (not "RGB" or "BGR")
-    image("image.png", channels="RGBA")  # type: ignore[arg-type]
+    image("image.png", channels="RGBA")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid output_format value (not "JPEG", "PNG", "GIF", or "auto")
-    image("image.png", output_format="WEBP")  # type: ignore[arg-type]
+    image("image.png", output_format="WEBP")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
-    # Passing link as positional argument (should be keyword-only)
+    # Passing link as positional argument (should be keyword-only).
+    # The suppressions sit on different lines because ty reports on the first
+    # extra positional argument while mypy reports on the whole call. If
+    # st.image gains or loses a positional parameter, move the ty suppression.
     image(
         "image.png",
         None,
         "stretch",
-        None,
         False,
         "RGB",
         "auto",
-        None,
+        None,  # ty: ignore[too-many-positional-arguments]
         "https://example.com",
-    )  # type: ignore[misc]
+    )  # type: ignore[call-arg]
+
+    # Removed deprecated parameter
+    image("image.png", use_column_width=True)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]

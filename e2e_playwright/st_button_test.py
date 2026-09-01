@@ -15,14 +15,19 @@
 import re
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_run,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
     click_checkbox,
     click_toggle,
+    expect_label_truncated,
     expect_markdown,
     expect_prefixed_markdown,
     get_button,
@@ -31,7 +36,13 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-TOTAL_BUTTONS = 32
+TOTAL_BUTTONS = 40
+
+WRAP_LABEL = "Regenerate the complete quarterly report now"
+
+# Minimum height difference (px) that distinguishes a wrapped two-line control
+# from a single-row one; absorbs sub-pixel rounding.
+WRAPPED_HEIGHT_MARGIN = 4
 
 
 def test_button_widget_rendering(
@@ -303,3 +314,102 @@ def test_markdown_syntax_in_labels(app: Page):
     # Test that "1." is not parsed as an ordered list marker
     numbered_button = get_element_by_key(app, "markdown_numbered_label")
     expect(numbered_button).to_contain_text("1. Something")
+
+
+def test_wrap_false_keeps_single_row_and_sets_title(app: Page):
+    """wrap=False keeps the button on one row and exposes the full label via a
+    native title, while the auto default (``wrap=None``) in a vertical layout
+    wraps, grows taller, and adds no title.
+    """
+    wrap_false = get_element_by_key(app, "wrap_false_button")
+    wrap_auto_vertical = get_element_by_key(app, "wrap_auto_vertical_button")
+
+    # wrap=False exposes the full label via a native title; auto vertical does not.
+    expect(wrap_false.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+    expect(wrap_auto_vertical.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+
+    # Same long label: auto vertical wraps onto another line and is clearly taller.
+    false_box = wrap_false.locator("button").bounding_box()
+    auto_box = wrap_auto_vertical.locator("button").bounding_box()
+    assert false_box is not None
+    assert auto_box is not None
+    assert auto_box["height"] > false_box["height"] + WRAPPED_HEIGHT_MARGIN
+
+
+def test_wrap_auto_no_wrap_inside_horizontal_container(app: Page):
+    """With the default (auto) wrap, a button inside a horizontal container keeps
+    its single-row height and exposes the full label via a native title, whereas
+    the same default in a vertical container wraps and adds no title.
+    """
+    auto_horizontal = get_element_by_key(app, "wrap_auto_button")
+    # The label is actually ellipsized (not just given a title attribute).
+    expect_label_truncated(auto_horizontal)
+    expect(auto_horizontal.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+
+    # Same default (auto) in a vertical container wraps and gets no title.
+    auto_vertical = get_element_by_key(app, "wrap_auto_vertical_button")
+    expect(auto_vertical.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+
+
+def test_wrap_auto_no_wrap_for_direct_column_children(app: Page):
+    """Direct column children keep auto no-wrap, including after columns stack.
+
+    Nested containers and a form placed in a column wrap; wrap=True still wraps.
+    """
+    auto_direct = get_element_by_key(app, "wrap_auto_direct_column_button")
+    explicit_true = get_element_by_key(app, "wrap_true_direct_column_button")
+    auto_nested = get_element_by_key(app, "wrap_auto_nested_column_button")
+    form_submit = get_element_by_key(app, "wrap_auto_form_submit_in_column")
+
+    expect_label_truncated(auto_direct)
+    expect(auto_direct.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+    expect(explicit_true.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+    expect(auto_nested.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+    expect(form_submit.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+
+    def button_height(element: Locator) -> float:
+        box = element.locator("button").bounding_box()
+        assert box is not None
+        return box["height"]
+
+    direct_height = button_height(auto_direct)
+    assert button_height(explicit_true) > direct_height + WRAPPED_HEIGHT_MARGIN
+    assert button_height(auto_nested) > direct_height + WRAPPED_HEIGHT_MARGIN
+    assert button_height(form_submit) > direct_height + WRAPPED_HEIGHT_MARGIN
+
+    app.set_viewport_size({"width": 390, "height": 844})
+    auto_direct.scroll_into_view_if_needed()
+
+    def columns_are_stacked() -> bool:
+        auto_box = auto_direct.locator("button").bounding_box()
+        explicit_box = explicit_true.locator("button").bounding_box()
+        return (
+            auto_box is not None
+            and explicit_box is not None
+            and explicit_box["y"] > auto_box["y"]
+        )
+
+    wait_until(app, columns_are_stacked)
+    expect_label_truncated(auto_direct)
+    expect(auto_direct.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+
+
+def test_wrap_false_help_takes_precedence_over_title(app: Page):
+    """When help is set, no native title is added (the help tooltip takes over)."""
+    container = get_element_by_key(app, "wrap_help_button")
+    expect(container.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+
+    # Prime the interaction modality to 'pointer' before hovering so React Aria
+    # reliably opens the help tooltip (the cursor starts off-page otherwise).
+    reset_hovering(app)
+    container.hover()
+    expect(app.get_by_text("wrap help text")).to_be_visible()
+
+
+def test_wrap_false_keeps_icon_and_shortcut_visible(app: Page):
+    """Icons and keyboard shortcuts stay visible when the label ellipsizes."""
+    container = get_element_by_key(app, "wrap_icon_button")
+    expect(container.get_by_test_id("stIconMaterial")).to_be_visible()
+    expect(container.locator("kbd")).to_be_visible()
+    # The full label is still exposed via the native title.
+    expect(container.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()

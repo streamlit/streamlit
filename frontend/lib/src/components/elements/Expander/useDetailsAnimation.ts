@@ -16,6 +16,7 @@
 
 import {
   MouseEvent,
+  RefCallback,
   RefObject,
   useCallback,
   useEffect,
@@ -69,15 +70,19 @@ export interface UseDetailsAnimationOptions {
   label: string
   /** Callback when user toggles (for widget mode) */
   onToggle?: (newOpen: boolean) => void
-  /** Whether the expander is in compact mode (no border) */
-  isCompact?: boolean
+  /** Whether the expander draws a border, which counts towards its height */
+  hasBorder?: boolean
 }
 
 interface UseDetailsAnimationResult {
   /** Current open state */
   isOpen: boolean
-  /** Ref to attach to <details> element */
-  detailsRef: RefObject<HTMLDetailsElement>
+  /**
+   * Ref callback for the <details> element. It re-applies the current open
+   * state on every mount, because a step that starts empty renders a plain
+   * header and only swaps in a <details> once its first child arrives.
+   */
+  detailsRef: RefCallback<HTMLDetailsElement>
   /** Ref to attach to <summary> element */
   summaryRef: RefObject<HTMLElement>
   /** Ref to attach to content panel */
@@ -100,13 +105,14 @@ export function useDetailsAnimation({
   backendExpanded,
   label,
   onToggle,
-  isCompact = false,
+  hasBorder = true,
 }: UseDetailsAnimationOptions): UseDetailsAnimationResult {
   const [isOpen, setIsOpen] = useState(backendExpanded ?? false)
-  // Border size to add to height calculations (0 for compact mode which has no border)
-  const borderOffset = isCompact ? 0 : 2 * BORDER_SIZE
+  // Border size to add to height calculations (0 for the borderless
+  // compact and step styles)
+  const borderOffset = hasBorder ? 2 * BORDER_SIZE : 0
 
-  const detailsRef = useRef<HTMLDetailsElement>(null)
+  const detailsRef = useRef<HTMLDetailsElement | null>(null)
   const summaryRef = useRef<HTMLElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
 
@@ -124,12 +130,48 @@ export function useDetailsAnimation({
   // Track if component has mounted (to skip animation on initial render)
   const hasMountedRef = useRef(false)
 
+  // Store the <details> node in state so the ResizeObserver effect re-runs
+  // when a step remounts it. A ref alone would not retrigger that effect.
+  const [detailsElement, setDetailsElement] =
+    useState<HTMLDetailsElement | null>(null)
+
+  const attachDetails = useCallback(
+    (node: HTMLDetailsElement | null): void => {
+      detailsRef.current = node
+      if (node) {
+        node.open = isOpenRef.current
+      }
+      setDetailsElement(node)
+    },
+    []
+  )
+
   /**
-   * Cancel any running animation.
+   * Cancel any running animation and clear the inline height/overflow lock it
+   * left behind.
+   *
+   * Clearing here (rather than in `animateHeight`'s async `cancel` listener) is
+   * both safe and correct: the WAAPI `cancel` event fires asynchronously, so
+   * clearing in that listener would clobber the fresh lock that callers apply
+   * synchronously right after cancelling. Callers that keep animating
+   * (`animateTo` / `animateResize`) re-apply `height` + `overflow` on the very
+   * next lines, so this clear is immediately overwritten for them.
+   *
+   * The one caller that does NOT re-lock is the "new expander" reset on a label
+   * change. It relies on this clear so a reused `<details>` node isn't left
+   * clipped by the previous expander's interrupted animation. This upholds the
+   * invariant that the element is never locked with no animation to clear it
+   * (issue #16027).
    */
   const cancelAnimation = useCallback((): void => {
     animationRef.current?.cancel()
     animationRef.current = null
+
+    const details = detailsRef.current
+    if (details) {
+      details.style.height = ""
+      details.style.overflow = ""
+    }
   }, [])
 
   /**
@@ -180,14 +222,17 @@ export function useDetailsAnimation({
             currentHeight,
             targetHeight
           )
+        } else {
+          // contentHeight is 0 — the browser hasn't laid out the content yet
+          // (rare: StyledDetailsPanel has padding, so a mounted panel usually
+          // measures > 0). Clear the lock instead of leaving it in place: the
+          // element then sizes to its natural height so content is never
+          // clipped, and the ResizeObserver animates the reveal once layout
+          // settles. Leaving it locked risked a permanent clip if that resize
+          // never fired a healing animation (issue #16027).
+          details.style.height = ""
+          details.style.overflow = ""
         }
-        // If contentHeight is 0, leave inline height + overflow locked.
-        // This is rare in practice — StyledDetailsPanel always has padding,
-        // so even an empty expander measures > 0. It can only happen if
-        // getBoundingClientRect fires before the browser has laid out the
-        // content. Keeping styles locked lets the ResizeObserver animate
-        // from the collapsed height to the full content height once layout
-        // settles.
       } else {
         // Closing: animate to collapsed height, then set open=false
         const targetHeight = summaryHeight + borderOffset
@@ -278,7 +323,8 @@ export function useDetailsAnimation({
     prevLabelRef.current = label
 
     // If label changed, this is a "new expander" - cancel animations and reset.
-    // Clear any stale inline styles that cancelAnimation leaves behind.
+    // cancelAnimation clears the inline height/overflow lock, so a reused
+    // <details> node isn't left clipped from the previous expander's animation.
     if (labelChanged) {
       cancelAnimation()
       const newOpen = backendExpanded ?? false
@@ -286,8 +332,6 @@ export function useDetailsAnimation({
 
       setIsOpen(newOpen)
       if (detailsRef.current) {
-        detailsRef.current.style.height = ""
-        detailsRef.current.style.overflow = ""
         detailsRef.current.open = newOpen
       }
       return
@@ -317,10 +361,12 @@ export function useDetailsAnimation({
     }
   }, [backendExpanded, label, cancelAnimation, animateTo])
 
-  // ResizeObserver for content size changes
+  // ResizeObserver for content size changes. Keyed on the <details> element so
+  // that a step which starts without content — and therefore mounts its
+  // <details> only once the first child arrives — still gets observed.
   useEffect(() => {
     const content = contentRef.current
-    const details = detailsRef.current
+    const details = detailsElement
     if (!content || !details) {
       return
     }
@@ -340,7 +386,7 @@ export function useDetailsAnimation({
       observer.disconnect()
       clearResizeTimeout()
     }
-  }, [clearResizeTimeout, restartResizeTimeout])
+  }, [detailsElement, clearResizeTimeout, restartResizeTimeout])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -370,7 +416,7 @@ export function useDetailsAnimation({
 
   return {
     isOpen,
-    detailsRef,
+    detailsRef: attachDetails,
     summaryRef,
     contentRef,
     handleToggle,

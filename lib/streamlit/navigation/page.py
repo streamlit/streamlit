@@ -19,7 +19,15 @@ import types
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit import env_util
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitMissingRequiredParameterError,
+    StreamlitPageNotFoundError,
+    StreamlitValueError,
+)
+from streamlit.path_security import is_windows_unc_path
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.source_util import page_icon_and_name
@@ -49,23 +57,14 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-@gather_metrics("Page")
-def Page(  # noqa: N802
-    page: str | Path | Callable[[], None],
-    *,
-    title: str | None = None,
-    icon: str | None = None,
-    url_path: str | None = None,
-    default: bool = False,
-    visibility: Literal["visible", "hidden"] = "visible",
-) -> StreamlitPage:
+class Page:
     """Configure a page for ``st.navigation`` in a multipage app.
 
-    Call ``st.Page`` to initialize a ``StreamlitPage`` object, and pass it to
+    Call ``st.Page`` to initialize a ``Page`` object, and pass it to
     ``st.navigation`` to declare a page in your app.
 
     When a user navigates to a page, ``st.navigation`` returns the selected
-    ``StreamlitPage`` object. Call ``.run()`` on the returned ``StreamlitPage``
+    ``Page`` object. Call ``.run()`` on the returned ``Page``
     object to execute the page. You can only run the page returned by
     ``st.navigation``, and you can only run it once per app rerun.
 
@@ -172,47 +171,6 @@ def Page(  # noqa: N802
            ``st.navigation`` during the new session's initial script
            run. The page can be visible or hidden.
 
-    Returns
-    -------
-    StreamlitPage
-        The page object associated to the given script.
-
-    Example
-    -------
-    .. code-block:: python
-        :filename: streamlit_app.py
-
-        import streamlit as st
-
-        def page2():
-            st.title("Second page")
-
-        pg = st.navigation([
-            st.Page("page1.py", title="First page", icon="🔥"),
-            st.Page(page2, title="Second page", icon=":material/favorite:"),
-            st.Page(
-                "https://docs.streamlit.io",
-                title="Streamlit Docs",
-                icon=":material/open_in_new:"
-            ),
-        ])
-        pg.run()
-    """
-    return StreamlitPage(
-        page,
-        title=title,
-        icon=icon,
-        url_path=url_path,
-        default=default,
-        visibility=visibility,
-    )
-
-
-class StreamlitPage:
-    """A page within a multipage Streamlit app.
-
-    Use ``st.Page`` to initialize a ``StreamlitPage`` object.
-
     Attributes
     ----------
     icon : str
@@ -259,8 +217,29 @@ class StreamlitPage:
            to ``st.navigation`` during the new session's initial script
            run.
 
+    Example
+    -------
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        def page2():
+            st.title("Second page")
+
+        pg = st.navigation([
+            st.Page("page1.py", title="First page", icon="🔥"),
+            st.Page(page2, title="Second page", icon=":material/favorite:"),
+            st.Page(
+                "https://docs.streamlit.io",
+                title="Streamlit Docs",
+                icon=":material/open_in_new:"
+            ),
+        ])
+        pg.run()
     """
 
+    @gather_metrics("Page", _positional_arg_offset=1)
     def __init__(
         self,
         page: str | Path | Callable[[], None],
@@ -287,19 +266,19 @@ class StreamlitPage:
 
         # Check if page is an external URL
         if isinstance(page, str) and is_url(page):
-            if title is None:
-                raise StreamlitAPIException(
-                    "External URL pages require a `title` parameter. "
-                    f"Please provide a title for the URL: {page}"
-                )
-            if title.strip() == "":
-                raise StreamlitAPIException(
-                    "External URL pages require a non-empty `title` parameter. "
-                    f"Please provide a title for the URL: {page}"
+            if title is None or title.strip() == "":
+                raise StreamlitMissingRequiredParameterError(
+                    "title",
+                    detail=(
+                        "External URL pages require a non-empty title. "
+                        f"Please provide a title for the URL: {page}"
+                    ),
                 )
             if default:
-                raise StreamlitAPIException(
-                    "External URL pages cannot be set as the default page."
+                raise StreamlitIncompatibleParametersError(
+                    "page=<external URL>",
+                    "default=True",
+                    explanation="External URL pages cannot be set as the default page.",
                 )
             self._external_url = page
             self._page: Path | Callable[[], None] | None = None
@@ -315,17 +294,39 @@ class StreamlitPage:
             # Validate url_path for external URLs (same constraints as internal pages)
             self._url_path = self._url_path.strip().strip("/")
             if self._url_path == "":
-                raise StreamlitAPIException(
-                    "The URL path cannot be empty. Please provide a valid `url_path` "
-                    "or a `title` that can be converted to a valid URL path."
+                raise StreamlitMissingRequiredParameterError(
+                    "url_path",
+                    detail=(
+                        "Provide a non-empty `url_path`, or omit it and provide a "
+                        "`title` that can be converted to a valid URL path."
+                    ),
                 )
             if "/" in self._url_path:
                 raise StreamlitAPIException(
-                    "The URL path cannot contain a nested path (e.g. foo/bar)."
+                    "The URL path cannot contain a nested path (e.g. foo/bar).",
+                    error_id="page-nested-url-path",
                 )
 
             self._can_be_called: bool = False
             return
+
+        if isinstance(page, (str, Path)):
+            page_path = str(page)
+            if "\x00" in page_path:
+                raise StreamlitAPIException(
+                    "Unable to create Page. Page paths must not contain null bytes.",
+                    error_id="page-path-contains-null-bytes",
+                )
+
+            # Reject UNC paths before resolve/is_file can initiate an SMB connection
+            # and disclose the server process's Windows credentials. Absolute and
+            # drive-local paths (e.g. "C:\\...") are intentionally still allowed, as
+            # passing an absolute page path is part of the public st.Page contract.
+            if env_util.IS_WINDOWS and is_windows_unc_path(page_path):
+                raise StreamlitAPIException(
+                    "Unable to create Page. Network paths are not supported.",
+                    error_id="page-network-path-not-supported",
+                )
 
         main_path = ctx.pages_manager.main_script_parent
         if isinstance(page, str):
@@ -334,9 +335,7 @@ class StreamlitPage:
             page = (main_path / page).resolve()
 
             if not page.is_file():
-                raise StreamlitAPIException(
-                    f"Unable to create Page. The file `{page.name}` could not be found."
-                )
+                raise StreamlitPageNotFoundError(page.name)
 
         inferred_name = ""
         inferred_icon = ""
@@ -350,8 +349,9 @@ class StreamlitPage:
             # but in special cases (e.g. a callable class instance), one may
             # not exist. In that case, we should inform the user the title is
             # mandatory.
-            raise StreamlitAPIException(
-                "Cannot infer page title for Callable. Set the `title=` keyword argument."
+            raise StreamlitMissingRequiredParameterError(
+                "title",
+                detail="Streamlit cannot infer a title from this callable.",
             )
 
         self._page = page
@@ -363,8 +363,9 @@ class StreamlitPage:
         self._icon = icon or inferred_icon
 
         if self._title.strip() == "":
-            raise StreamlitAPIException(
-                "The title of the page cannot be empty or consist of underscores/spaces only"
+            raise StreamlitMissingRequiredParameterError(
+                "title",
+                detail="It cannot be empty or consist of underscores/spaces only.",
             )
 
         self._url_path = inferred_name
@@ -372,14 +373,16 @@ class StreamlitPage:
             url_path_trimmed = url_path.strip()
             stripped_url_path = url_path_trimmed.strip("/")
             if stripped_url_path.strip() == "" and not default:
-                raise StreamlitAPIException(
-                    "The URL path cannot be an empty string unless the page is the default page."
+                raise StreamlitMissingRequiredParameterError(
+                    "url_path",
+                    detail="It can only be empty for the default page.",
                 )
 
             self._url_path = stripped_url_path
             if "/" in self._url_path:
                 raise StreamlitAPIException(
-                    "The URL path cannot contain a nested path (e.g. foo/bar)."
+                    "The URL path cannot contain a nested path (e.g. foo/bar).",
+                    error_id="page-nested-url-path",
                 )
 
         if self._icon:
@@ -468,7 +471,8 @@ class StreamlitPage:
         """
         if not self._can_be_called:
             raise StreamlitAPIException(
-                "This page cannot be called directly. Only the page returned from st.navigation can be called once."
+                "This page cannot be called directly. Only the page returned from st.navigation can be called once.",
+                error_id="page-cannot-be-called-directly",
             )
 
         self._can_be_called = False
@@ -498,11 +502,27 @@ class StreamlitPage:
         return calc_hash(self._url_path)
 
 
-def _validate_registered_page(page: StreamlitPage) -> None:
-    """Validate that a ``StreamlitPage`` matches what was registered with
+# Keep this alias for backward compatibility with existing imports and
+# isinstance checks.
+StreamlitPage = Page
+
+
+def _create_page(page: str | Path, *, default: bool = False) -> Page:
+    """Create an internal Page without recording public-command telemetry."""
+    page_object = Page.__new__(Page)
+    # ``gather_metrics`` wraps ``__init__``, so ``__wrapped__`` is the original
+    # initializer; calling it directly skips the telemetry recorded for st.Page.
+    Page.__init__.__wrapped__(  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+        page_object, page, default=default
+    )
+    return page_object
+
+
+def _validate_registered_page(page: Page) -> None:
+    """Validate that a ``Page`` matches what was registered with
     ``st.navigation``.
 
-    Page hashes are derived solely from ``url_path``, so two ``StreamlitPage``
+    Page hashes are derived solely from ``url_path``, so two ``Page``
     objects sharing a ``url_path`` collide even when their underlying source
     differs. Without this check, ``st.switch_page`` and ``st.page_link`` would
     silently route to the registered page rather than surfacing the mismatch.
@@ -530,7 +550,8 @@ def _validate_registered_page(page: StreamlitPage) -> None:
                 f"registered with `st.navigation` for URL pathname "
                 f"`/{page.url_path}` (`{registered_source}`). Pass the page "
                 "object returned by `st.navigation` or re-create the page "
-                "with the matching source."
+                "with the matching source.",
+                error_id="page-source-mismatch-file",
             )
     elif callable(page._page) and registered_script_path:
         raise StreamlitAPIException(
@@ -538,7 +559,8 @@ def _validate_registered_page(page: StreamlitPage) -> None:
             f"(`{registered_script_path}`) is registered with `st.navigation` "
             f"for URL pathname `/{page.url_path}`. Pass the page object "
             "returned by `st.navigation` or re-create the page with the "
-            "matching source."
+            "matching source.",
+            error_id="page-source-mismatch-callable",
         )
     # Callable-vs-callable collisions fall through intentionally: PageInfo
     # only stores an empty script_path for callables, so we have no identity

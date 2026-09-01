@@ -57,17 +57,29 @@ if TYPE_CHECKING:
     assert_type(title("Title", text_alignment="right"), DeltaGenerator)
     assert_type(title("Title", text_alignment="justify"), DeltaGenerator)
 
+    # Title with icon parameter (keyword-only)
+    assert_type(title("Title", icon="🔥"), DeltaGenerator)
+    assert_type(title("Title", icon=":material/dashboard:"), DeltaGenerator)
+    assert_type(title("Title", icon="spinner"), DeltaGenerator)
+    assert_type(title("Title", icon=None), DeltaGenerator)
+
     # Title with all parameters combined
     assert_type(
         title(
             "My Title",
             anchor="title-anchor",
             help="Title help text",
+            icon=":material/dashboard:",
             width="stretch",
             text_alignment="center",
+            wrap=True,
         ),
         DeltaGenerator,
     )
+
+    # Title with wrap parameter (keyword-only)
+    assert_type(title("Title", wrap=True), DeltaGenerator)
+    assert_type(title("Title", wrap=False), DeltaGenerator)
 
     # =====================================================================
     # st.header return type tests
@@ -114,18 +126,30 @@ if TYPE_CHECKING:
     assert_type(header("Header", text_alignment="right"), DeltaGenerator)
     assert_type(header("Header", text_alignment="justify"), DeltaGenerator)
 
+    # Header with icon parameter (keyword-only)
+    assert_type(header("Header", icon="🔥"), DeltaGenerator)
+    assert_type(header("Header", icon=":material/home:"), DeltaGenerator)
+    assert_type(header("Header", icon="spinner"), DeltaGenerator)
+    assert_type(header("Header", icon=None), DeltaGenerator)
+
     # Header with all parameters combined
     assert_type(
         header(
             "My Header",
             anchor="header-anchor",
             help="Header help text",
+            icon=":material/home:",
             divider="blue",
             width="stretch",
             text_alignment="left",
+            wrap=True,
         ),
         DeltaGenerator,
     )
+
+    # Header with wrap parameter (keyword-only)
+    assert_type(header("Header", wrap=True), DeltaGenerator)
+    assert_type(header("Header", wrap=False), DeltaGenerator)
 
     # =====================================================================
     # st.subheader return type tests
@@ -165,34 +189,51 @@ if TYPE_CHECKING:
     assert_type(subheader("Subheader", text_alignment="right"), DeltaGenerator)
     assert_type(subheader("Subheader", text_alignment="justify"), DeltaGenerator)
 
+    # Subheader with icon parameter (keyword-only)
+    assert_type(subheader("Subheader", icon="🔥"), DeltaGenerator)
+    assert_type(subheader("Subheader", icon=":material/bolt:"), DeltaGenerator)
+    assert_type(subheader("Subheader", icon="spinner"), DeltaGenerator)
+    assert_type(subheader("Subheader", icon=None), DeltaGenerator)
+
     # Subheader with all parameters combined
     assert_type(
         subheader(
             "My Subheader",
             anchor="subheader-anchor",
             help="Subheader help text",
+            icon=":material/bolt:",
             divider="green",
             width="content",
             text_alignment="center",
+            wrap=False,
         ),
         DeltaGenerator,
     )
+
+    # Subheader with wrap parameter (keyword-only)
+    assert_type(subheader("Subheader", wrap=True), DeltaGenerator)
+    assert_type(subheader("Subheader", wrap=False), DeltaGenerator)
 
     # =====================================================================
     # Invalid usages - should NOT type check
     # =====================================================================
 
     # Invalid width value (not "stretch", "content", or int)
-    title("Title", width="invalid")  # type: ignore[arg-type]
-    header("Header", width="auto")  # type: ignore[arg-type]
-    subheader("Subheader", width="auto")  # type: ignore[arg-type]
+    title("Title", width="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    header("Header", width="auto")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    subheader("Subheader", width="auto")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid text_alignment value (not "left", "center", "right", or "justify")
-    title("Title", text_alignment="start")  # type: ignore[arg-type]
-    header("Header", text_alignment="end")  # type: ignore[arg-type]
-    subheader("Subheader", text_alignment="end")  # type: ignore[arg-type]
+    title("Title", text_alignment="start")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    header("Header", text_alignment="end")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    subheader("Subheader", text_alignment="end")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Passing keyword-only parameters as positional (help is keyword-only)
-    title("Title", "anchor", "help text")  # type: ignore[misc]
-    header("Header", "anchor", "help text")  # type: ignore[misc]
-    subheader("Subheader", "anchor", "help text")  # type: ignore[misc]
+    title("Title", "anchor", "help text")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
+    header("Header", "anchor", "help text")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
+    subheader("Subheader", "anchor", "help text")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
+
+    # Invalid wrap value (must be bool)
+    title("Title", wrap="yes")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    header("Header", wrap="yes")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    subheader("Subheader", wrap="yes")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]

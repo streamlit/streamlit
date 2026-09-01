@@ -61,7 +61,7 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Invalid height value (not int or "stretch")
-    pdf("file.pdf", height="content")  # type: ignore[arg-type]
+    pdf("file.pdf", height="content")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # height is keyword-only and cannot be passed positionally
-    pdf("file.pdf", 600)  # type: ignore[misc]
+    pdf("file.pdf", 600)  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]

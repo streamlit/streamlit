@@ -21,7 +21,7 @@ python-lint               Lint and check formatting of Python files.
 python-format             Format Python files.
 python-tests              Run Python unit tests.
 python-performance-tests  Run Python performance tests.
-python-integration-tests  Run Python integration tests. Requires `uv sync --group integration` to be run first.
+python-integration-tests  Run Python integration tests. Requires `PYTHON_DEPENDENCY_GROUP=integration make python-init` first.
 python-types              Run the Python type checker.
 frontend-init             Install all frontend dependencies.
 frontend                  Build the frontend.
@@ -33,7 +33,7 @@ frontend-lint             Lint and check formatting of frontend files.
 frontend-types            Run the frontend type checker.
 frontend-format           Format frontend files.
 frontend-tests            Run frontend unit tests and generate coverage report.
-frontend-knip             Run Knip with default reporter.
+frontend-knip             Run Knip unused-export and unused-dependency analysis.
 frontend-typesync         Check for unsynced frontend types.
 update-frontend-typesync  Installs missing typescript typings for dependencies.
 update-snapshots          Update e2e playwright snapshots based on the latest completed CI run.

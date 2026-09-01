@@ -101,18 +101,18 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Invalid latitude / longitude values (only str | None, not int)
-    st_map(df, latitude=1)  # type: ignore[arg-type]
-    st_map(df, longitude=1)  # type: ignore[arg-type]
+    st_map(df, latitude=1)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    st_map(df, longitude=1)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid zoom value (only int | None, not str)
-    st_map(df, zoom="10")  # type: ignore[arg-type]
+    st_map(df, zoom="10")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid width / height values ("content" is not a valid value here, and
     # None is not allowed)
-    st_map(df, width="content")  # type: ignore[arg-type]
-    st_map(df, width=None)  # type: ignore[arg-type]
-    st_map(df, height="content")  # type: ignore[arg-type]
-    st_map(df, height=None)  # type: ignore[arg-type]
+    st_map(df, width="content")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    st_map(df, width=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    st_map(df, height="content")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    st_map(df, height=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # All parameters except data are keyword-only.
-    st_map(df, "lat")  # type: ignore[misc]
+    st_map(df, "lat")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]

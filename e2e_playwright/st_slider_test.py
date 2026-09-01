@@ -28,6 +28,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_form_button,
     click_toggle,
+    expect_font,
     expect_help_tooltip,
     expect_markdown,
     expect_prefixed_markdown,
@@ -38,7 +39,7 @@ from e2e_playwright.shared.app_utils import (
     tab_until_focused,
 )
 
-NUM_SLIDER_WIDGETS = 38
+NUM_SLIDER_WIDGETS = 39
 
 
 def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -149,9 +150,8 @@ def test_slider_in_expander(app: Page, assert_snapshot: ImageCompareFunction):
     wait_for_app_run(app)
 
     expect_markdown(app, "Value B: 17500")
-    # React Aria moves the nearest thumb on click; at the exact midpoint of a range
-    # slider both thumbs are equidistant, so RA moves the right thumb rather than
-    # the left (BaseUI's tie-breaking went the other way).
+    # React Aria moves the nearest thumb on click. At the exact midpoint of a range
+    # slider, both thumbs are equidistant, so it moves the right thumb.
     expect_prefixed_markdown(app, "Range Value B:", "(10000, 17500)")
 
     assert_snapshot(first_slider_in_expander, name="st_slider-in_expander_regular")
@@ -278,6 +278,11 @@ def test_slider_with_float_formatting(app: Page, assert_snapshot: ImageCompareFu
     # Wait for the tick bar (min/max labels) to fully fade out (transition: 300ms + 200ms delay)
     # so the snapshot is stable and not captured mid-transition.
     expect(slider.get_by_test_id("stSliderTickBar")).to_have_css("opacity", "0")
+    # The "0.8%" thumb value label only renders after this interaction, so on a
+    # cold page load it can be captured before the "Source Sans" web font finishes
+    # loading (flash-of-fallback-text). Wait for the font to avoid a snapshot flake
+    # where only the value label differs.
+    expect_font(app, "Source Sans")
     assert_snapshot(slider, name="st_slider-float_formatting")
 
 
@@ -591,7 +596,7 @@ def test_slider_query_param_datetime_updates_url_with_iso(app: Page):
     """Test that interacting with a datetime slider updates the URL with ISO format.
 
     The default (2023-06-15 14:30) is between step boundaries (step=1day from
-    midnight). BaseWeb quantizes to the nearest boundary on interaction, so
+    midnight). Interaction quantizes to the nearest boundary, so
     ArrowRight produces 2023-06-17 00:00 rather than 2023-06-16 14:30.
     """
     slider = get_element_by_key(app, "bound_datetime")
@@ -685,3 +690,49 @@ def test_slider_setvalue_preserved_on_rerun(app: Page):
         wait_for_app_run(app)
         expect_markdown(app, f"Slider counter: {expected_counter}")
         expect(slider).to_contain_text("50")
+
+
+def test_slider_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun and sends value on next rerun."""
+    expect(app.get_by_text("Runs: 1")).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore slider value:", "25")
+
+    slider = get_element_by_key(app, "ignore_slider")
+    slider_role = slider.get_by_role("slider")
+
+    # Change slider value - should NOT trigger a rerun, but should update the URL
+    slider_role.press("ArrowRight")
+
+    # Wait for any potential rerun to complete. If on_change="ignore" is working
+    # correctly, no rerun will occur, but this ensures that if a bug causes
+    # a rerun, we wait for it before checking.
+    wait_for_app_run(app)
+
+    # Verify no rerun occurred (run count should still be 1)
+    expect(app.get_by_text("Runs: 1")).to_be_visible()
+    expect(app.get_by_text("Runs: 2")).not_to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_slider=26"))
+
+    # Increment value further (from 26 to 30)
+    for _ in range(4):
+        slider_role.press("ArrowRight")
+
+    expect(slider).to_contain_text("30")
+    expect_prefixed_markdown(app, "Ignore slider value:", "25")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_slider=30"))
+
+    # Click button to trigger a rerun - accumulated value should be sent
+    app.get_by_role("button", name="Apply ignore slider", exact=True).click()
+    wait_for_app_run(app)
+
+    # Verify the updated value is now visible
+    expect(app.get_by_text("Ignore slider value: 30", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore slider value: 30", exact=True)
+    ).to_be_visible()
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(get_element_by_key(app, "ignore_slider")).to_contain_text("30")
+    expect_prefixed_markdown(app, "Ignore slider value:", "30")

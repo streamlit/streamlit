@@ -35,6 +35,7 @@ import BaseButton, {
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
+import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import useTimeout from "~lib/hooks/useTimeout"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
@@ -54,6 +55,11 @@ function DownloadButton(props: Props): ReactElement {
   const { disabled, element, widgetMgr, endpoints, fragmentId } = props
   const { help, label, icon, ignoreRerun, type, url, deferredFileId } = element
   const shortcut = element.shortcut ? element.shortcut : undefined
+
+  // When wrap resolves to no-wrap, reveal the full label on hover via a native
+  // title, skipped when help is set since help provides the tooltip.
+  const wrap = useResolvedWrap(element.wrap)
+  const addTitleTooltip = !wrap && !help
 
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -132,7 +138,11 @@ function DownloadButton(props: Props): ReactElement {
 
     if (!ignoreRerun) {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-      widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
+      widgetMgr.setTriggerValue(element.id, {
+        formId: element.formId,
+        fragmentId,
+        fromUser: true,
+      })
     }
 
     const isDeferred = Boolean(deferredFileId?.length)
@@ -200,6 +210,8 @@ function DownloadButton(props: Props): ReactElement {
             iconPosition={mapProtoIconPosition(element.iconPosition)}
             label={label}
             shortcut={shortcut}
+            wrap={wrap}
+            addTitleTooltip={addTitleTooltip}
           />
         </BaseButton>
       </BaseButtonTooltip>

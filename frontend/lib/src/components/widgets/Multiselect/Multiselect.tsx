@@ -17,47 +17,80 @@
 import {
   FC,
   memo,
+  type ReactElement,
   useCallback,
   useContext,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
 } from "react"
 
-import { ChevronDown } from "baseui/icon"
+import { KeyboardArrowDown } from "@emotion-icons/material-outlined"
+import { Cancel } from "@emotion-icons/material-rounded"
 import {
-  type OnChangeParams,
-  type Option,
-  type SharedStylePropsArg,
-  StyledValueContainer,
-  TYPE,
-  Select as UISelect,
-} from "baseui/select"
-import { without } from "lodash-es"
+  ComboBox,
+  ComboBoxStateContext,
+  I18nProvider,
+  type Key,
+  ListLayout,
+  Virtualizer,
+} from "react-aria-components"
 
-import { MultiSelect as MultiSelectProto } from "@streamlit/protobuf"
+import {
+  MultiSelect as MultiSelectProto,
+  streamlit,
+} from "@streamlit/protobuf"
+import { notNullOrUndefined } from "@streamlit/utils"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import {
-  getBorderColor,
-  getPopoverContainerStyle,
-} from "~lib/components/shared/Base/styled-components"
-import VirtualDropdown, {
-  SELECT_ALL_ID,
-  SELECT_MATCHES_ID,
-} from "~lib/components/shared/Dropdown/VirtualDropdown"
+import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
-import { StyledUISelect } from "~lib/components/widgets/Multiselect/styled-components"
 import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useSelectCommon } from "~lib/hooks/useSelectCommon"
+import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
+import {
+  SHIFT_VIEWPORT_PADDING,
+  useFloatingOverlay,
+} from "~lib/hooks/useFloatingOverlay"
+import { useHorizontalScrollOverflow } from "~lib/hooks/useHorizontalScrollOverflow"
+import {
+  CREATABLE_ID,
+  type MultiselectOption,
+  SELECT_ALL_ID,
+  SELECT_MATCHES_ID,
+  useMultiselectFiltering,
+} from "~lib/hooks/useMultiselectFiltering"
+import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import { convertRemToPx } from "~lib/theme/utils"
-import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
+import { isMobile } from "~lib/util/isMobile"
+import {
+  getSelectPlaceholder,
+  labelVisibilityProtoValueToEnum,
+} from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
+
+import {
+  StyledClearButton,
+  StyledEmptyState,
+  StyledFilterInput,
+  StyledItemHighlight,
+  StyledListBox,
+  StyledListBoxItem,
+  StyledOpenButton,
+  StyledPopover,
+  StyledTag,
+  StyledTagGroup,
+  StyledTagRemoveButton,
+  StyledTagsContainer,
+  StyledTagText,
+  StyledTrigger,
+} from "./styled-components"
 
 export interface Props {
   disabled: boolean
@@ -65,14 +98,6 @@ export interface Props {
   widgetMgr: WidgetStateManager
   fragmentId?: string
 }
-
-/**
- * Threshold at or above which "Select all" / "Select X matches" is disabled.
- * Selecting all items at once with very large option lists (>= 1000) causes
- * severe performance issues (browser freezes, large serialization payloads).
- * See: https://github.com/streamlit/streamlit/issues/15299
- */
-const SELECT_ALL_THRESHOLD = 1000
 
 type MultiselectValue = string[]
 
@@ -86,13 +111,13 @@ const getStateFromWidgetMgr = (
 const getDefaultStateFromProto = (
   element: MultiSelectProto
 ): MultiselectValue => {
-  return element.default.map(i => element.options[i]) ?? null
+  return element.default.map(i => element.options[i])
 }
 
 const getCurrStateFromProto = (
   element: MultiSelectProto
 ): MultiselectValue => {
-  return element.rawValues ?? null
+  return element.rawValues ?? []
 }
 
 const updateWidgetMgrState = (
@@ -101,12 +126,66 @@ const updateWidgetMgrState = (
   valueWithSource: ValueWithSource<MultiselectValue>,
   fragmentId: string | undefined
 ): void => {
-  widgetMgr.setStringArrayValue(
-    element,
-    valueWithSource.value,
-    { fromUi: valueWithSource.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringArrayValue(element.id, valueWithSource.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: valueWithSource.fromUser,
+  })
+}
+
+/**
+ * Null-render component mounted inside <ComboBox> to expose RAC's internal
+ * open/close methods and focusedKey via refs. Same pattern as the Selectbox widget.
+ */
+const DropdownController = memo<{
+  openRef: React.MutableRefObject<
+    ((focusStrategy?: "first" | "last" | null) => void) | null
+  >
+  focusedKeyRef: React.MutableRefObject<Key | null>
+}>(({ openRef, focusedKeyRef }) => {
+  const state = useContext(ComboBoxStateContext)
+  useEffect(() => {
+    if (state) {
+      openRef.current = (focusStrategy = null) =>
+        state.open(focusStrategy, "manual")
+    }
+    return () => {
+      openRef.current = null
+    }
+  }, [state, openRef])
+  // Read synchronously — an effect would leave a stale-read window for keydown handlers
+  focusedKeyRef.current = state?.selectionManager.focusedKey ?? null
+  return null
+})
+DropdownController.displayName = "DropdownController"
+
+const TagRemoveIcon: FC = () => (
+  <svg
+    aria-hidden="true"
+    height="0.5em"
+    width="0.5em"
+    viewBox="0 0 10 10"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M9 1L5 5M1 9L5 5M5 5L1 1M5 5L9 9"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeWidth="2"
+    />
+  </svg>
+)
+
+/**
+ * Pass-through filter for RAC's <ComboBox defaultFilter>. Our own
+ * `filterSelectOptions` runs upstream in useMultiselectFiltering, so RAC
+ * must not re-filter — otherwise its built-in "contains" strategy drops
+ * fuzzy matches and pseudo-options like "Select X matches". See #16003.
+ */
+const PASS_THROUGH_FILTER = (): boolean => true
+
+const preventInputEvent = (e: React.SyntheticEvent): void => {
+  e.preventDefault()
 }
 
 const Multiselect: FC<Props> = props => {
@@ -114,8 +193,13 @@ const Multiselect: FC<Props> = props => {
 
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
-  const valueContainerRef = useRef<HTMLDivElement>(null)
+  const scrollbarGutterSize = useScrollbarGutterSize()
+  const tagsContainerRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const scrollTopRef = useRef(0)
+  const scrollLeftRef = useRef(0)
+  const scrollLockRef = useRef(false)
+  const focusedTagIndexRef = useRef(0)
 
   const queryParamBinding = element.queryParamKey
     ? {
@@ -126,8 +210,6 @@ const Multiselect: FC<Props> = props => {
       }
     : undefined
 
-  // Ref to store filtered matches for "Select X matches" option
-  const selectMatchesRef = useRef<string[]>([])
   const [value, setValueWithSource] = useBasicWidgetState<
     MultiselectValue,
     MultiSelectProto
@@ -143,209 +225,562 @@ const Multiselect: FC<Props> = props => {
     queryParamBinding,
   })
 
-  const overMaxSelections =
-    element.maxSelections > 0 && value.length >= element.maxSelections
+  // Local filter state — filterActive is derived from inputValue to avoid sync issues
+  const [inputValue, setInputValue] = useState("")
+  const filterActive = inputValue !== ""
+  const filterActiveRef = useRef(false)
+  filterActiveRef.current = filterActive
+  const inputValueRef = useRef("")
+  inputValueRef.current = inputValue
 
-  const getNoResultsMsg = useMemo(() => {
-    if (element.maxSelections === 0) {
-      return "No results"
-    } else if (value.length === element.maxSelections) {
+  // Clear stale filter when value changes externally (rerun, session state, etc.)
+  useExecuteWhenChanged(() => setInputValue(""), [value])
+
+  const isOpenRef = useRef(false)
+  const openDropdownRef = useRef<
+    ((focusStrategy?: "first" | "last" | null) => void) | null
+  >(null)
+  const focusedKeyRef = useRef<Key | null>(null)
+  const hoveredKeyRef = useRef<Key | null>(null)
+
+  // In the sidebar, flip/shift are bounded by the viewport so the dropdown can
+  // flip up when near the bottom, rather than overflowing (see #16181).
+  const sidebarBoundary = isInSidebar
+    ? { boundary: document.documentElement }
+    : undefined
+
+  const { refs, floatingStyles } = useFloatingOverlay({
+    open: true,
+    placement: "bottom-start",
+    offsetPx: convertRemToPx(theme.spacing.twoXS),
+    flipOptions: sidebarBoundary,
+    shiftOptions: sidebarBoundary && {
+      ...sidebarBoundary,
+      padding: SHIFT_VIEWPORT_PADDING,
+    },
+    matchTriggerWidth: true,
+  })
+
+  const { displayOptions, resolvedFilterMode } = useMultiselectFiltering({
+    options: element.options,
+    selectedValues: value,
+    inputValue,
+    filterActive,
+    filterMode: element.filterMode,
+    acceptNewOptions: element.acceptNewOptions ?? false,
+    maxSelections: element.maxSelections,
+    selectAll: element.selectAll,
+  })
+
+  const displayOptionsRef = useRef(displayOptions)
+  displayOptionsRef.current = displayOptions
+  // onHoverEnd does not fire when filtering unmounts the hovered row.
+  if (
+    notNullOrUndefined(hoveredKeyRef.current) &&
+    !displayOptions.some(o => o.id === hoveredKeyRef.current)
+  ) {
+    hoveredKeyRef.current = null
+  }
+  const valueRef = useRef(value)
+  valueRef.current = value
+
+  const isFilterNone =
+    resolvedFilterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE
+
+  const { placeholder, shouldDisable: placeholderDisable } = useMemo(
+    () =>
+      getSelectPlaceholder(
+        element.placeholder,
+        element.options,
+        element.acceptNewOptions ?? false,
+        true
+      ),
+    [element.placeholder, element.options, element.acceptNewOptions]
+  )
+
+  const disabled = props.disabled || placeholderDisable
+
+  // Resolve the tri-state wrap proto field: true = chips wrap onto multiple
+  // rows (grows vertically), false = chips stay in a single, horizontally
+  // scrollable row.
+  const wrap = useResolvedWrap(element.wrap)
+  const { canScrollLeft, canScrollRight } = useHorizontalScrollOverflow({
+    elementRef: tagsContainerRef,
+    enabled: !wrap,
+    layoutKey: value,
+  })
+
+  // Max height. When wrapping, cut through the 5th tag row so the control can
+  // grow and scroll vertically. When not wrapping, pin the control to a single
+  // row height so it stays aligned regardless of the selection count.
+  const maxHeight = useMemo(() => {
+    if (!wrap) {
+      return theme.sizes.minElementHeight
+    }
+    const rowHeight = `calc(${theme.sizes.elementHighlightHeight} + ${theme.sizes.tagMarginInsideBorder})`
+    return `calc(4.5 * ${rowHeight} + ${theme.sizes.tagMarginInsideBorder} + 2 * ${theme.sizes.borderWidth})`
+  }, [
+    wrap,
+    theme.sizes.minElementHeight,
+    theme.sizes.elementHighlightHeight,
+    theme.sizes.tagMarginInsideBorder,
+    theme.sizes.borderWidth,
+  ])
+
+  const virtualizerLayoutOptions = useMemo(
+    () => ({
+      rowSize: convertRemToPx(theme.sizes.dropdownItemHeight),
+    }),
+    [theme.sizes.dropdownItemHeight]
+  )
+
+  // maxSelections === 0 means "no limit"
+  const noResultsMsg = useMemo(() => {
+    if (element.maxSelections === 0) return "No results"
+    if (value.length >= element.maxSelections) {
       const option = element.maxSelections !== 1 ? "options" : "option"
       return `You can only select up to ${element.maxSelections} ${option}. Remove an option first.`
     }
     return "No results"
   }, [element.maxSelections, value.length])
 
-  const generateNewState = useCallback(
-    (data: OnChangeParams): MultiselectValue => {
-      switch (data.type) {
-        case "remove": {
-          return without(value, data.option?.value)
+  // Tracks the previous selection count to distinguish additions from removals.
+  const prevValueLengthRef = useRef(value.length)
+
+  // Preserve scroll position when tags are removed via UI interaction, and
+  // reveal the newest chip + input when a tag is added in single-row mode.
+  useLayoutEffect(() => {
+    const prevLength = prevValueLengthRef.current
+    prevValueLengthRef.current = value.length
+    const container = tagsContainerRef.current
+    if (!container) return
+
+    if (scrollLockRef.current) {
+      const savedTop = scrollTopRef.current
+      const savedLeft = scrollLeftRef.current
+      scrollLockRef.current = false
+      requestAnimationFrame(() => {
+        container.scrollTop = savedTop
+        container.scrollLeft = savedLeft
+        scrollTopRef.current = savedTop
+        scrollLeftRef.current = savedLeft
+      })
+      return
+    }
+
+    // A selection was added while chips are in a single row: scroll to the end
+    // so the newest chip and the input stay visible.
+    if (!wrap && value.length > prevLength) {
+      requestAnimationFrame(() => {
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+        container.scrollLeft = container.scrollWidth
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+        scrollLeftRef.current = container.scrollLeft
+      })
+    }
+  }, [value, wrap])
+
+  const handleTagsScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    if (scrollLockRef.current) return
+    const target = e.currentTarget
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+    scrollTopRef.current = target.scrollTop
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+    scrollLeftRef.current = target.scrollLeft
+  }, [])
+
+  const handleChange = useCallback(
+    (keys: Key[]): void => {
+      if (!isOpenRef.current) return
+
+      const selectedKeys = keys.map(String)
+
+      // Check for bulk action keys
+      const bulkActionKey = selectedKeys.find(
+        k => k === SELECT_ALL_ID || k === SELECT_MATCHES_ID
+      )
+
+      if (bulkActionKey) {
+        // Bulk select: add all currently displayed (non-special) options
+        const options = displayOptionsRef.current
+        const optionsToAdd = options
+          .filter(o => !o.isBulkAction && !o.isCreatable)
+          .map(o => o.value)
+
+        let newValue: string[]
+        if (element.maxSelections > 0) {
+          const remainingSlots = element.maxSelections - value.length
+          newValue = [...value, ...optionsToAdd.slice(0, remainingSlots)]
+        } else {
+          newValue = [...value, ...optionsToAdd]
         }
-        case "clear": {
-          return []
-        }
-        case "select": {
-          // Handle "Select all" option (no search) - compute from element.options
-          if (data.option?.value === SELECT_ALL_ID) {
-            const unselectedValues = element.options.filter(
-              opt => !value.includes(opt)
-            )
 
-            // Respect maxSelections limit
-            if (element.maxSelections > 0) {
-              const remainingSlots = element.maxSelections - value.length
-              return [...value, ...unselectedValues.slice(0, remainingSlots)]
-            }
-
-            return [...value, ...unselectedValues]
-          }
-
-          // Handle "Select X matches" option (with search) - values stored in ref
-          if (data.option?.value === SELECT_MATCHES_ID) {
-            const filteredValues = selectMatchesRef.current
-
-            // Respect maxSelections limit
-            if (element.maxSelections > 0) {
-              const remainingSlots = element.maxSelections - value.length
-              return [...value, ...filteredValues.slice(0, remainingSlots)]
-            }
-
-            return [...value, ...filteredValues]
-          }
-
-          return value.concat([data.option?.value])
-        }
-        default: {
-          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-          throw new Error(`State transition is unknown: ${data.type}`)
-        }
+        setValueWithSource({ value: newValue, fromUser: true })
+        setInputValue("")
+        return
       }
-    },
-    [value, element.maxSelections, element.options]
-  )
 
-  /**
-   * This is the onChange handler for the baseweb Select component.
-   * It is called whenever the user selects an option or removes an option.
-   * When the user starts to modify an option by typing in the input field and
-   * pressing backspace, a single `type="remove"` event is fired with the value set
-   * to the option that is being removed. The same type of event is fired when the
-   * user removes an option by clicking the X icon.
-   *
-   * If we wanted to prevent an immediate rerun when starting to delete characters,
-   * we would need to introduce two new states, e.g. `localValue` and `aboutToDelete`,
-   * and commit that state to the backend upon an onBlur event.
-   * To keep it simple, we just accept the rerun happening for now.
-   */
-  const onChange = useCallback(
-    (params: OnChangeParams) => {
+      // Check for creatable key — use ref to avoid stale closure
+      if (selectedKeys.includes(CREATABLE_ID)) {
+        if (
+          element.maxSelections > 0 &&
+          value.length >= element.maxSelections
+        ) {
+          return
+        }
+        if (value.includes(inputValueRef.current)) {
+          setInputValue("")
+          return
+        }
+        const newValue = [...value, inputValueRef.current]
+        setValueWithSource({ value: newValue, fromUser: true })
+        setInputValue("")
+        return
+      }
+
+      // Normal toggle: compute the diff
+      // selectedKeys from RAC contains the full new selection set (option IDs)
+      // We need to map IDs back to values. Bulk-action and creatable keys are
+      // already handled by early returns above, so only filter undefined here.
+      const optionById = new Map(
+        displayOptionsRef.current
+          .filter(o => !o.isBulkAction && !o.isCreatable)
+          .map(o => [o.id, o.value])
+      )
+      const newValues = selectedKeys
+        .map(id => optionById.get(id))
+        .filter((v): v is string => v !== undefined)
+
+      // Merge with existing values that aren't in the current display
+      // (already-selected items not shown in the filtered list)
+      const displayedValues = new Set(optionById.values())
+      const preservedValues = value.filter(v => !displayedValues.has(v))
+      const finalValue = [...preservedValues, ...newValues]
+
       if (
-        element.maxSelections &&
-        params.type === "select" &&
-        value.length >= element.maxSelections
+        element.maxSelections > 0 &&
+        finalValue.length > element.maxSelections
       ) {
         return
       }
-      setValueWithSource({
-        value: generateNewState(params),
-        fromUi: true,
-      })
+
+      setValueWithSource({ value: finalValue, fromUser: true })
+      setInputValue("")
     },
-    [element.maxSelections, generateNewState, setValueWithSource, value.length]
+    [element.maxSelections, setValueWithSource, value]
   )
 
-  const { options } = element
+  const handleInputChange = useCallback((text: string): void => {
+    // RAC can echo the previous filter text via onInputChange when the menu
+    // closes. Unlike the single-select Selectbox (which displays a committed
+    // label when closed), the multiselect input should be empty when closed.
+    // Ignore echoes entirely so they don't overwrite the clear from
+    // handleOpenChange or trigger a reopen.
+    if (text === inputValueRef.current) return
 
-  const {
-    placeholder,
-    disabled: shouldDisable,
-    selectOptions,
-    inputReadOnly,
-    valuesToUiMulti,
-    createFilterOptions,
-  } = useSelectCommon({
-    options,
-    isMulti: true,
-    acceptNewOptions: element.acceptNewOptions ?? false,
-    filterMode: element.filterMode,
-    placeholderInput: element.placeholder,
-  })
-
-  const filterOptions = useCallback(
-    (options: readonly Option[], filterValue: string): readonly Option[] => {
-      if (overMaxSelections) {
-        return []
-      }
-
-      // Get filtered options (excluding already selected ones) for the dropdown
-      const filteredOptions = createFilterOptions(value)(options, filterValue)
-
-      // Add "Select all" or "Select X matches" option when multiple selectable options
-      // Disable for large option lists to prevent browser freezes
-      if (
-        filteredOptions.length > 1 &&
-        element.options.length < SELECT_ALL_THRESHOLD
-      ) {
-        if (filterValue.trim()) {
-          // With search: store filtered values in dedicated ref
-          // Using separate ref from "Select all" avoids race conditions
-          selectMatchesRef.current = filteredOptions.map(
-            (opt: Option) => opt.value as string
-          )
-          const selectMatchesOption: Option = {
-            label: `Select ${filteredOptions.length} matches`,
-            value: SELECT_MATCHES_ID,
-            id: SELECT_MATCHES_ID,
-          }
-          return [selectMatchesOption, ...filteredOptions]
-        }
-
-        // No search: just use marker, handler computes unselected from element.options
-        const selectAllOption: Option = {
-          label: "Select all",
-          value: SELECT_ALL_ID,
-          id: SELECT_ALL_ID,
-        }
-        return [selectAllOption, ...filteredOptions]
-      }
-
-      return filteredOptions
-    },
-    [createFilterOptions, element.options.length, overMaxSelections, value]
-  )
-
-  const disabled = props.disabled || shouldDisable
-  const valueFromState = useMemo(
-    () => valuesToUiMulti(value),
-    [valuesToUiMulti, value]
-  )
-
-  // Calculate the max height of the selectbox based on the baseFontSize
-  // to better support advanced theming
-  const maxHeight = useMemo(() => {
-    // Set max height to cut through fifth row of options so the scroll state is apparent
-    const rowHeight = `calc(${theme.sizes.elementHighlightHeight} + ${theme.sizes.tagMarginInsideBorder})`
-    const maxHeight = `calc(4.5 * ${rowHeight} + ${theme.sizes.tagMarginInsideBorder} + 2 * ${theme.sizes.borderWidth})`
-    return maxHeight
-  }, [
-    theme.sizes.elementHighlightHeight,
-    theme.sizes.tagMarginInsideBorder,
-    theme.sizes.borderWidth,
-  ])
-
-  // Runs every render to capture BaseWeb's internal DOM updates that can reset scroll position.
-  // Performance is acceptable since this is a leaf component with no children to re-render.
-  useLayoutEffect(() => {
-    if (valueContainerRef.current) {
-      valueContainerRef.current.scrollTop = scrollTopRef.current
+    setInputValue(text)
+    if (text !== "" && !isOpenRef.current) {
+      openDropdownRef.current?.()
     }
-  })
+  }, [])
 
-  const handleValueContainerScroll = useCallback(
-    (e: React.UIEvent<HTMLDivElement>) => {
-      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Safe: layout already computed during scroll event
-      scrollTopRef.current = e.currentTarget.scrollTop
+  const handleOpenChange = useCallback((open: boolean): void => {
+    isOpenRef.current = open
+    if (!open) {
+      setInputValue("")
+      hoveredKeyRef.current = null
+    }
+  }, [])
+
+  /** Render a single option. Cast required: styled(ListBox) erases the generic item type. */
+  const renderOption = useCallback((item: unknown): ReactElement => {
+    const option = item as MultiselectOption
+    return (
+      <StyledListBoxItem
+        id={option.id}
+        textValue={option.label}
+        $isCreatable={option.isCreatable}
+        $isBulkAction={option.isBulkAction}
+        onHoverStart={() => {
+          hoveredKeyRef.current = option.id
+        }}
+        onHoverEnd={() => {
+          if (hoveredKeyRef.current === option.id) {
+            hoveredKeyRef.current = null
+          }
+        }}
+      >
+        <StyledItemHighlight data-item-hl="">
+          {option.label}
+        </StyledItemHighlight>
+      </StyledListBoxItem>
+    )
+  }, [])
+
+  const handleTagGroupRemove = useCallback(
+    (keys: Set<Key>): void => {
+      scrollLockRef.current = true
+      const container = tagsContainerRef.current
+      if (container) {
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+        scrollTopRef.current = container.scrollTop
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+        scrollLeftRef.current = container.scrollLeft
+      }
+      const keysToRemove = new Set([...keys].map(String))
+      const newValue = valueRef.current.filter(v => !keysToRemove.has(v))
+      valueRef.current = newValue
+      setValueWithSource({ value: newValue, fromUser: true })
+    },
+    [setValueWithSource]
+  )
+
+  const handleTagKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLSpanElement>): void => {
+      const tag = e.currentTarget
+      const container = tag.parentElement
+      if (!container) return
+
+      const tags = Array.from(
+        container.querySelectorAll<HTMLElement>("[data-tag]")
+      )
+      const idx = tags.indexOf(tag)
+
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault()
+        const prev = tags[idx - 1]
+        if (prev) {
+          tag.tabIndex = -1
+          prev.tabIndex = 0
+          prev.focus()
+          focusedTagIndexRef.current = idx - 1
+        }
+      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault()
+        const next = tags[idx + 1]
+        if (next) {
+          tag.tabIndex = -1
+          next.tabIndex = 0
+          next.focus()
+          focusedTagIndexRef.current = idx + 1
+        } else {
+          tag.tabIndex = -1
+          const first = tags[0]
+          if (first) first.tabIndex = 0
+          focusedTagIndexRef.current = 0
+          inputRef.current?.focus()
+        }
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault()
+        const tagValue = value[idx]
+        if (tagValue !== undefined) {
+          const nextFocus = tags[idx + 1] ?? tags[idx - 1]
+          handleTagGroupRemove(new Set([tagValue]))
+          if (nextFocus && nextFocus !== tag) {
+            // After removal, right neighbor slides to idx; left stays at idx-1
+            focusedTagIndexRef.current =
+              nextFocus === tags[idx + 1] ? idx : idx - 1
+            nextFocus.tabIndex = 0
+            nextFocus.focus({ preventScroll: true })
+          } else {
+            focusedTagIndexRef.current = 0
+            inputRef.current?.focus({ preventScroll: true })
+          }
+        }
+      } else if (e.key === "Home") {
+        e.preventDefault()
+        const first = tags[0]
+        if (first && first !== tag) {
+          tag.tabIndex = -1
+          first.tabIndex = 0
+          first.focus()
+          focusedTagIndexRef.current = 0
+        }
+      } else if (e.key === "End") {
+        e.preventDefault()
+        const last = tags[tags.length - 1]
+        if (last && last !== tag) {
+          tag.tabIndex = -1
+          last.tabIndex = 0
+          last.focus()
+          focusedTagIndexRef.current = tags.length - 1
+        }
+      } else if (e.key === " ") {
+        e.preventDefault()
+      }
+    },
+    [handleTagGroupRemove, value]
+  )
+
+  const handleTagPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLSpanElement>): void => {
+      const clicked = e.currentTarget
+      const container = clicked.parentElement
+      if (!container) return
+      const tags = container.querySelectorAll<HTMLElement>("[data-tag]")
+      tags.forEach(t => {
+        t.tabIndex = t === clicked ? 0 : -1
+      })
+      const idx = Number(clicked.dataset.tagIndex)
+      focusedTagIndexRef.current = idx
     },
     []
   )
 
-  // Memoized to prevent BaseWeb from remounting on every render
-  const ValueContainer = useMemo(
-    () =>
-      // eslint-disable-next-line @eslint-react/no-nested-component-definitions -- Required for baseweb component override with refs
-      function ValueContainer(
-        props: SharedStylePropsArg & { children: React.ReactNode }
-      ): React.ReactElement {
-        return (
-          <StyledValueContainer
-            {...props}
-            ref={valueContainerRef}
-            onScroll={handleValueContainerScroll}
-          />
-        )
-      },
-    [handleValueContainerScroll]
+  const handleClearAll = useCallback((): void => {
+    setValueWithSource({ value: [], fromUser: true })
+  }, [setValueWithSource])
+
+  const handleContainerClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>): void => {
+      if (disabled) return
+      const target = e.target as HTMLElement
+      // Ignore clicks on buttons and tags — only empty space triggers focus/open
+      if (target.closest("button") || target.closest("[data-tag]")) return
+      inputRef.current?.focus()
+      openDropdownRef.current?.()
+    },
+    [disabled]
+  )
+
+  const handleInputPointerDown = useCallback((): void => {
+    if (disabled) return
+    openDropdownRef.current?.()
+  }, [disabled])
+
+  const handleInputKeyDownCapture = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>): void => {
+      if (disabled) return
+
+      // RAC binds Mod+A to "select all options" while the menu is open and
+      // calls preventDefault(), which would keep the user from selecting the
+      // typed filter text. stopPropagation (without preventDefault) keeps the
+      // input's native select-all.
+      if (
+        e.key.toLowerCase() === "a" &&
+        (e.ctrlKey || e.metaKey) &&
+        !e.altKey &&
+        !e.shiftKey
+      ) {
+        e.stopPropagation()
+        return
+      }
+
+      // Block character input for FILTER_MODE_NONE, but allow Backspace
+      // through when input is empty so the tag-removal handler can process it.
+      if (isFilterNone && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const isTagRemoval =
+          e.key === "Backspace" && !e.currentTarget.value && value.length > 0
+        if (
+          !isTagRemoval &&
+          (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete")
+        ) {
+          e.preventDefault()
+          return
+        }
+      }
+
+      if (
+        (e.key === "ArrowDown" || e.key === "ArrowUp") &&
+        !isOpenRef.current
+      ) {
+        openDropdownRef.current?.()
+      }
+
+      if (e.key === "Escape") {
+        if (filterActiveRef.current) {
+          // Layered: first Escape clears filter (keeps dropdown open),
+          // RAC handles the next Escape to close the dropdown.
+          e.preventDefault()
+          e.stopPropagation()
+          setInputValue("")
+          return
+        }
+      }
+
+      // Enter with no RAC focusedKey: commit the hovered row if any,
+      // otherwise the first visible row so users do not need ArrowDown first.
+      // Hover paints data-hovered without setting focusedKey, so we track
+      // it separately. The first row is "Select all" / "Select X matches"
+      // when that bulk action is shown, otherwise the first matching option.
+      // "Add: …" is last, so it is first only when the query matches no
+      // existing option.
+      // TODO: Set RAC focusedKey / aria-activedescendant to the Enter target
+      // (ComboBox focus-management follow-up; see StyledListBox).
+      if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+        if (notNullOrUndefined(focusedKeyRef.current)) {
+          return
+        }
+        if (!isOpenRef.current) return
+        const display = displayOptionsRef.current
+        const hovered = hoveredKeyRef.current
+        const hoveredStillShown =
+          notNullOrUndefined(hovered) && display.some(o => o.id === hovered)
+        // Swallow Enter when the menu is open with no rows (for example
+        // max_selections reached) so RAC does not try to commit typed text.
+        e.preventDefault()
+        e.stopPropagation()
+        const targetId = hoveredStillShown ? hovered : display[0]?.id
+        if (notNullOrUndefined(targetId)) {
+          handleChange([targetId])
+        }
+        return
+      }
+
+      // Backspace on empty input removes last tag
+      if (
+        e.key === "Backspace" &&
+        !e.currentTarget.value &&
+        value.length > 0
+      ) {
+        e.preventDefault()
+        scrollLockRef.current = true
+        const container = tagsContainerRef.current
+        if (container) {
+          // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+          scrollTopRef.current = container.scrollTop
+          // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+          scrollLeftRef.current = container.scrollLeft
+        }
+        const newValue = valueRef.current.slice(0, -1)
+        valueRef.current = newValue
+        setValueWithSource({ value: newValue, fromUser: true })
+      }
+    },
+    [disabled, handleChange, isFilterNone, setValueWithSource, value]
+  )
+
+  // Map selected values to option IDs for the ComboBox selection prop
+  const optionIndexMap = useMemo(
+    () => new Map(element.options.map((opt, idx) => [opt, idx])),
+    [element.options]
+  )
+  const selectedKeys = useMemo((): Set<Key> => {
+    const keys = new Set<Key>()
+    for (const v of value) {
+      const idx = optionIndexMap.get(v)
+      if (idx !== undefined) {
+        keys.add(String(idx))
+      }
+    }
+    return keys
+  }, [value, optionIndexMap])
+
+  const selectedKeysArray = useMemo(() => [...selectedKeys], [selectedKeys])
+
+  // Only use readOnly for mobile small-list case. Never for isFilterNone —
+  // readOnly breaks RAC keyboard navigation (Arrow/Enter). isFilterNone uses
+  // inputMode="none" + character blocking in the capture handler instead.
+  const inputReadOnly =
+    !isFilterNone &&
+    isMobile() &&
+    element.options.length <= 10 &&
+    !(element.acceptNewOptions ?? false)
+
+  // Derive clamped tag index for render — don't mutate ref during render
+  const clampedTagIndex = Math.min(
+    focusedTagIndexRef.current,
+    Math.max(0, value.length - 1)
   )
 
   return (
@@ -361,249 +796,138 @@ const Multiselect: FC<Props> = props => {
           <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
-      <StyledUISelect>
-        <UISelect
-          creatable={element.acceptNewOptions ?? false}
-          options={selectOptions}
-          labelKey="label"
-          valueKey="value"
-          aria-label={element.label}
-          placeholder={placeholder}
-          type={TYPE.select}
-          multi
-          onChange={onChange}
-          value={valueFromState}
-          disabled={disabled}
-          size={"compact"}
-          noResultsMsg={getNoResultsMsg}
-          filterOptions={filterOptions}
-          closeOnSelect={false}
-          escapeClearsValue={element.default.length > 0 ? false : !disabled}
-          ignoreCase={false}
-          overrides={{
-            DropdownContainer: {
-              style: () => ({
-                ...getPopoverContainerStyle(theme),
-
-                // Height constraint - VirtualDropdown handles scrolling internally
-                maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
-                overflow: "hidden",
-              }),
-            },
-            Popover: {
-              props: {
-                ignoreBoundary: isInSidebar,
-                popoverMargin: convertRemToPx(theme.spacing.twoXS),
-                overrides: {
-                  Body: {
-                    style: () => ({
-                      // Scrolling is handled by the VirtualDropdown component
-                      overflow: "hidden",
-                    }),
-                  },
-                },
-              },
-            },
-            SelectArrow: {
-              component: ChevronDown,
-              props: {
-                style: {
-                  cursor: "pointer",
-                },
-                overrides: {
-                  Svg: {
-                    style: () => ({
-                      width: theme.iconSizes.lg,
-                      height: theme.iconSizes.lg,
-                    }),
-                  },
-                },
-              },
-            },
-
-            IconsContainer: {
-              style: () => ({
-                paddingRight: theme.spacing.sm,
-              }),
-            },
-            ControlContainer: {
-              style: ({ $isFocused }: { $isFocused: boolean }) => {
-                const borderColor = getBorderColor(theme.colors, $isFocused)
-                return {
-                  maxHeight: maxHeight,
-                  minHeight: theme.sizes.minElementHeight,
-                  // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                  borderLeftWidth: theme.sizes.borderWidth,
-                  borderRightWidth: theme.sizes.borderWidth,
-                  borderTopWidth: theme.sizes.borderWidth,
-                  borderBottomWidth: theme.sizes.borderWidth,
-
-                  borderTopColor: borderColor,
-                  borderRightColor: borderColor,
-                  borderBottomColor: borderColor,
-                  borderLeftColor: borderColor,
+      <I18nProvider locale="en-US">
+        <ComboBox
+          selectionMode="multiple"
+          value={selectedKeysArray}
+          inputValue={inputValue}
+          onChange={handleChange}
+          onInputChange={handleInputChange}
+          onOpenChange={handleOpenChange}
+          isDisabled={disabled}
+          allowsCustomValue={element.acceptNewOptions ?? false}
+          allowsEmptyCollection
+          menuTrigger="manual"
+          defaultFilter={PASS_THROUGH_FILTER}
+          aria-label={element.label || "Multiselect"}
+        >
+          <DropdownController
+            openRef={openDropdownRef}
+            focusedKeyRef={focusedKeyRef}
+          />
+          <StyledTrigger
+            ref={refs.setReference}
+            $maxHeight={maxHeight}
+            onClick={handleContainerClick}
+          >
+            <StyledTagsContainer
+              ref={tagsContainerRef}
+              onScroll={handleTagsScroll}
+              data-testid="stMultiSelectTagsContainer"
+              $wrap={wrap}
+              data-can-scroll-start={canScrollLeft ? "" : undefined}
+              data-can-scroll-end={canScrollRight ? "" : undefined}
+            >
+              {value.length > 0 && (
+                <StyledTagGroup role="group" aria-label="Selected values">
+                  {value.map((v, idx) => (
+                    <StyledTag
+                      key={v}
+                      tabIndex={!disabled && idx === clampedTagIndex ? 0 : -1}
+                      aria-label={v}
+                      $disabled={disabled}
+                      $wrap={wrap}
+                      data-tag=""
+                      data-tag-index={idx}
+                      onKeyDown={disabled ? undefined : handleTagKeyDown}
+                      onPointerDown={
+                        disabled ? undefined : handleTagPointerDown
+                      }
+                    >
+                      <StyledTagText title={v}>{v}</StyledTagText>
+                      {!disabled && (
+                        <StyledTagRemoveButton
+                          aria-label={`Remove ${v}`}
+                          tabIndex={-1}
+                          onClick={e => {
+                            e.stopPropagation()
+                            handleTagGroupRemove(new Set([v]))
+                            inputRef.current?.focus({ preventScroll: true })
+                          }}
+                        >
+                          <TagRemoveIcon />
+                        </StyledTagRemoveButton>
+                      )}
+                    </StyledTag>
+                  ))}
+                </StyledTagGroup>
+              )}
+              <StyledFilterInput
+                ref={inputRef}
+                placeholder={value.length === 0 ? placeholder : ""}
+                readOnly={inputReadOnly}
+                inputMode={isFilterNone ? "none" : undefined}
+                $typingDisabled={isFilterNone}
+                $hasValues={value.length > 0}
+                onPointerDown={handleInputPointerDown}
+                onKeyDownCapture={handleInputKeyDownCapture}
+                onPaste={isFilterNone ? preventInputEvent : undefined}
+                onCompositionStart={
+                  isFilterNone ? preventInputEvent : undefined
                 }
-              },
-            },
-            Placeholder: {
-              style: () => ({
-                flex: "inherit",
-                color: disabled
-                  ? theme.colors.fadedText40
-                  : theme.colors.fadedText60,
-                // Position absolute so Input can overlay it
-                position: "absolute",
-                // Vertically center in the container
-                top: "50%",
-                transform: "translateY(-50%)",
-                // Left padding aligns with tag text
-                paddingLeft: theme.spacing.sm,
-                // Allow clicks to pass through to input
-                pointerEvents: "none",
-              }),
-            },
-            ValueContainer: {
-              component: ValueContainer,
-              style: () => ({
-                overflowY: "auto",
-                // Uniform top and left padding - placeholder/input/tags are sized
-                paddingLeft: theme.sizes.tagMarginInsideBorder,
-                paddingTop: theme.sizes.tagMarginInsideBorder,
-                // Right and bottom gaps are deferred to items
-                paddingBottom: theme.spacing.none,
-                paddingRight: theme.spacing.none,
-              }),
-            },
-            ClearIcon: {
-              props: {
-                overrides: {
-                  Svg: {
-                    style: {
-                      color: theme.colors.grayTextColor,
-                      // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
-                      padding: theme.spacing.threeXS,
-                      height: theme.sizes.clearIconSize,
-                      width: theme.sizes.clearIconSize,
-                      cursor: "pointer",
-                      ":hover": {
-                        fill: theme.colors.bodyText,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            SearchIcon: {
-              style: {
-                color: theme.colors.grayTextColor,
-              },
-            },
-            Tag: {
-              props: {
-                overrides: {
-                  Root: {
-                    style: {
-                      fontWeight: theme.fontWeights.normal,
-                      borderTopLeftRadius: theme.radii.md2,
-                      borderTopRightRadius: theme.radii.md2,
-                      borderBottomRightRadius: theme.radii.md2,
-                      borderBottomLeftRadius: theme.radii.md2,
-                      fontSize: theme.fontSizes.sm,
-                      paddingLeft: theme.spacing.sm,
-                      // Top and left margins are deferred to ValueContainer padding
-                      marginTop: theme.spacing.none,
-                      marginLeft: theme.spacing.none,
-                      // Right and bottom margins to handle tag spacing and row gap
-                      marginRight: theme.spacing.twoXS,
-                      marginBottom: theme.sizes.tagMarginInsideBorder,
-                      height: theme.sizes.elementHighlightHeight,
-                      maxWidth: `calc(100% - ${theme.spacing.lg})`,
-                      // Using !important because the alternative would be
-                      // uglier: we'd have to put it under a selector like
-                      // "&[role="button"]:not(:disabled)" in order to win in
-                      // the order of the precedence.
-                      cursor: "default !important",
-                      // Allow clicks to pass through to the container/input
-                      pointerEvents: "none",
-                    },
-                  },
-                  Text: {
-                    style: {
-                      // Re-enable pointer events for the text so the title
-                      // tooltip is shown on hover (pointerEvents: none on Root
-                      // disables it by default)
-                      pointerEvents: "auto",
-                    },
-                  },
-                  Action: {
-                    style: {
-                      paddingLeft: theme.spacing.none,
-                      // Re-enable pointer events for the close button
-                      pointerEvents: "auto",
-                    },
-                  },
-                  ActionIcon: {
-                    props: {
-                      overrides: {
-                        Svg: {
-                          style: {
-                            // The action icon should be around 0.625% of the parent font size.
-                            width: "0.625em",
-                            height: "0.625em",
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            MultiValue: {
-              props: {
-                overrides: {
-                  Root: {
-                    style: {
-                      fontSize: theme.fontSizes.sm,
-                    },
-                  },
-                },
-              },
-            },
-            InputContainer: {
-              style: ({ $isFocused }: { $isFocused: boolean }) => ({
-                // Height matches tags
-                height: theme.sizes.elementHighlightHeight,
-                // Alignment and left margin to match tags (ValueContainer padding)
-                alignSelf: "flex-start",
-                marginLeft: theme.spacing.none,
-                marginTop: theme.spacing.none,
-                // Bottom margin required to size the container correctly if the
-                // input is orphaned on a new line (in focus)
-                marginBottom: theme.sizes.tagMarginInsideBorder,
-                // Stack input when not focused to prevent premature line wrap
-                position: $isFocused ? "relative" : "absolute",
-                width: "fit-content",
-                flexGrow: 0,
-                // Center input vertically
-                display: "flex",
-              }),
-            },
-            Input: {
-              props: {
-                readOnly: inputReadOnly,
-              },
-              style: () => ({
-                color: theme.colors.bodyText,
-                caretColor: theme.colors.bodyText,
-                // Left padding aligns cursor with tag/placeholder text (only when focused)
-                paddingLeft: theme.spacing.sm,
-                fieldSizing: "content",
-              }),
-            },
-            Dropdown: { component: VirtualDropdown },
-          }}
-        />
-      </StyledUISelect>
+              />
+            </StyledTagsContainer>
+            {value.length > 0 && !disabled && (
+              <StyledClearButton
+                aria-label="Clear all"
+                slot={null}
+                onPress={handleClearAll}
+              >
+                <Cancel size={theme.iconSizes.base} aria-hidden="true" />
+              </StyledClearButton>
+            )}
+            <StyledOpenButton
+              aria-label="Open"
+              excludeFromTabOrder
+              onPress={() => openDropdownRef.current?.()}
+            >
+              <KeyboardArrowDown
+                size={theme.iconSizes.lg}
+                aria-hidden="true"
+              />
+            </StyledOpenButton>
+          </StyledTrigger>
+          <StyledPopover
+            ref={refs.setFloating}
+            data-testid="stMultiSelectDropdown"
+            placement="bottom left"
+            isNonModal
+            $isInSidebar={isInSidebar}
+            offset={0}
+            style={
+              {
+                ...floatingStyles,
+                "--scrollbar-gutter-size": `${scrollbarGutterSize}px`,
+              } as React.CSSProperties
+            }
+          >
+            <Virtualizer
+              layout={ListLayout}
+              layoutOptions={virtualizerLayoutOptions}
+            >
+              <StyledListBox
+                aria-label={element.label || "Multiselect options"}
+                items={displayOptions}
+                renderEmptyState={() => (
+                  <StyledEmptyState>{noResultsMsg}</StyledEmptyState>
+                )}
+              >
+                {renderOption}
+              </StyledListBox>
+            </Virtualizer>
+          </StyledPopover>
+        </ComboBox>
+      </I18nProvider>
     </div>
   )
 }

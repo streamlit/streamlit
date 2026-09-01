@@ -20,11 +20,24 @@ import "streamlit/proto/LabelVisibility.proto";
 
 message TextInput {
   enum Type {
-    // A normal text input.
+    // A normal text input. Renders a native <input type="text">.
     DEFAULT = 0;
 
     // A password text input. Typed values are obscured by default.
+    // Renders a native <input type="password">.
     PASSWORD = 1;
+
+    // An email input. Renders a native <input type="email">.
+    EMAIL = 2;
+
+    // A URL input. Renders a native <input type="url">.
+    URL = 3;
+
+    // A phone number input. Renders a native <input type="tel">.
+    PHONE = 4;
+
+    // A search input. Renders a native <input type="search">.
+    SEARCH = 5;
   }
 
   string id = 1;
@@ -43,4 +56,13 @@ message TextInput {
   string icon = 14;
   // If set, widget value is bound to this query parameter key
   optional string query_param_key = 15;
+  optional string validate_regex = 16;
+  optional string validate_message = 17;
+
+  // Set by on_change="ignore": do not schedule a rerun; buffer the value until
+  // the next rerun. Bound widgets still update the URL when the value is
+  // committed. Inside a form, this flag has no effect because the form batches
+  // values until submit.
+  bool ignore_rerun = 18;
+  // Next: 19
 }

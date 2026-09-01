@@ -23,17 +23,16 @@ import {
   useState,
 } from "react"
 
-import { FloatingPortal } from "@floating-ui/react"
-
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import { DataFrameOverlayPortal } from "~lib/components/widgets/DataFrame/DataFrameOverlayPortal"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 
-import FormattingMenu from "./FormattingMenu"
-import StatisticsMenu from "./StatisticsMenu"
+import FormattingMenu, { FORMATTING_MENU_CLASS } from "./FormattingMenu"
+import StatisticsMenu, { STATISTICS_MENU_CLASS } from "./StatisticsMenu"
 import { supportsStatistics } from "./statisticsUtils"
 import {
   COLUMN_MENU_OFFSET,
@@ -144,9 +143,11 @@ function ColumnMenu({
     isOpen: true,
     onClose: onCloseMenu,
     floatingSetFn: refs.setFloating,
+    // The statistics and formatting sub-menus render in a portal outside this
+    // panel, so pointer events inside them must not count as outside clicks.
     excludeSelectors: [
-      '[data-testid="stDataFrameColumnFormattingMenu"]',
-      '[data-testid="stDataFrameStatisticsMenu"]',
+      `.${FORMATTING_MENU_CLASS}`,
+      `.${STATISTICS_MENU_CLASS}`,
     ],
   })
 
@@ -191,7 +192,7 @@ function ColumnMenu({
           pointerEvents: "none",
         }}
       />
-      <FloatingPortal>
+      <DataFrameOverlayPortal>
         <StyledColumnMenuPanel
           ref={setFloatingRef}
           data-testid="stDataFrameColumnMenu"
@@ -268,11 +269,9 @@ function ColumnMenu({
                     onFocus={() => handleStatsOpenChange(true)}
                     onBlur={e => {
                       if (pointerDownRef.current) return
-                      const related = e.relatedTarget
+                      // Keep the sub-menu open when focus moves into its portal panel.
                       if (
-                        related?.closest(
-                          '[data-testid="stDataFrameStatisticsMenu"]'
-                        )
+                        e.relatedTarget?.closest(`.${STATISTICS_MENU_CLASS}`)
                       ) {
                         return
                       }
@@ -314,11 +313,9 @@ function ColumnMenu({
                   onFocus={() => handleFormatOpenChange(true)}
                   onBlur={e => {
                     if (pointerDownRef.current) return
-                    const related = e.relatedTarget
+                    // Keep the sub-menu open when focus moves into its portal panel.
                     if (
-                      related?.closest(
-                        '[data-testid="stDataFrameColumnFormattingMenu"]'
-                      )
+                      e.relatedTarget?.closest(`.${FORMATTING_MENU_CLASS}`)
                     ) {
                       return
                     }
@@ -402,7 +399,7 @@ function ColumnMenu({
             )}
           </StyledMenuList>
         </StyledColumnMenuPanel>
-      </FloatingPortal>
+      </DataFrameOverlayPortal>
     </>
   )
 }

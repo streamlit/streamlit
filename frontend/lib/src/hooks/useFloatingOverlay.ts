@@ -43,7 +43,12 @@ interface UseFloatingOverlayOptions {
   extraMiddleware?: Middleware[]
 }
 
-const SHIFT_VIEWPORT_PADDING = 8
+/**
+ * Default padding (px) kept between a shifted overlay and its boundary edge.
+ * Exported so callers that override `shiftOptions` (e.g. to set a boundary) can
+ * preserve the same padding instead of falling back to Floating UI's 0 default.
+ */
+export const SHIFT_VIEWPORT_PADDING = 8
 const EMPTY_MIDDLEWARE: Middleware[] = []
 
 /**

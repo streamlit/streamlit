@@ -47,7 +47,8 @@ if TYPE_CHECKING:
     assert_type(menu_button("Action", [Action.EXPORT, Action.IMPORT]), Action | None)
 
     # Menu button with mixed types
-    assert_type(menu_button("Mixed", [1, "two", Action.DELETE]), object)
+    # ty infers `int | str | Action | None` rather than `object`.
+    assert_type(menu_button("Mixed", [1, "two", Action.DELETE]), object)  # ty: ignore[type-assertion-failure]
 
     # Menu button with key parameter (str or int)
     assert_type(menu_button("Actions", ["a", "b"], key="my_menu"), str | None)
@@ -104,6 +105,11 @@ if TYPE_CHECKING:
     assert_type(menu_button("Actions", ["a", "b"], format_func=my_format), str | None)
     assert_type(menu_button("Actions", ["a", "b"], format_func=str), str | None)
 
+    # Menu button with wrap parameter
+    assert_type(menu_button("Actions", ["a"], wrap=True), str | None)
+    assert_type(menu_button("Actions", ["a"], wrap=False), str | None)
+    assert_type(menu_button("Actions", ["a"], wrap=None), str | None)
+
     # Menu button with all parameters combined
     assert_type(
         menu_button(
@@ -119,6 +125,7 @@ if TYPE_CHECKING:
             disabled=False,
             width="stretch",
             format_func=str,
+            wrap=False,
         ),
         str | None,
     )

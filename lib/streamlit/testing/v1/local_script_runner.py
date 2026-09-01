@@ -46,6 +46,7 @@ class LocalScriptRunner(ScriptRunner):
         pages_manager: PagesManager,
         args: Any = None,
         kwargs: Any = None,
+        fragment_storage: MemoryFragmentStorage | None = None,
     ) -> None:
         """Initializes the ScriptRunner for the given script_path."""
 
@@ -66,7 +67,11 @@ class LocalScriptRunner(ScriptRunner):
             script_cache=ScriptCache(),
             initial_rerun_data=RerunData(),
             user_info={"email": "test@example.com"},
-            fragment_storage=MemoryFragmentStorage(),
+            fragment_storage=(
+                fragment_storage
+                if fragment_storage is not None
+                else MemoryFragmentStorage()
+            ),
             pages_manager=pages_manager,
         )
 
@@ -84,6 +89,17 @@ class LocalScriptRunner(ScriptRunner):
 
             self.events.append(event)
             self.event_data.append(kwargs)
+
+            if event == ScriptRunnerEvent.SCRIPT_STARTED:
+                # Drop stale deltas from the previous run so the element tree
+                # does not accumulate elements across (internal) reruns. This
+                # mirrors AppSession._clear_queue: fragment_ids_this_run is
+                # forwarded so that a fragment-scoped rerun preserves deltas
+                # belonging to elements outside the running fragment(s).
+                self.forward_msg_queue.clear(
+                    retain_lifecycle_msgs=True,
+                    fragment_ids_this_run=kwargs.get("fragment_ids_this_run"),
+                )
 
             # Send ENQUEUE_FORWARD_MSGs to our queue
             if event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:
@@ -156,7 +172,8 @@ class LocalScriptRunner(ScriptRunner):
     ) -> None:
         if not premature_stop:
             self._session_state.on_script_finished(
-                ctx.shared.widget_ids_this_run.snapshot()
+                ctx.shared.widget_ids_this_run.snapshot(),
+                remove_stale_widgets=ctx.has_script_started,
             )
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
@@ -164,8 +181,10 @@ class LocalScriptRunner(ScriptRunner):
         self.on_event.send(self, event=event)
 
         # Remove orphaned files now that the script has run and files in use
-        # are marked as active.
-        runtime.get_instance().media_file_mgr.remove_orphaned_files()
+        # are marked as active. Skipped for a run that never reached its body, which
+        # re-registered nothing and would look like everything is orphaned.
+        if ctx.has_script_started:
+            runtime.get_instance().media_file_mgr.remove_orphaned_files()
 
     def _new_module(self, name: str) -> types.ModuleType:
         module = types.ModuleType(name)

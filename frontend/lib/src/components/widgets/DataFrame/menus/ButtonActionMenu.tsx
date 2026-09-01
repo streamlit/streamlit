@@ -16,13 +16,12 @@
 
 import { memo, ReactElement, useCallback, useEffect } from "react"
 
-import { FloatingPortal } from "@floating-ui/react"
-
 import {
   DynamicIcon,
   extractLeadingMaterialIcon,
 } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { DataFrameOverlayPortal } from "~lib/components/widgets/DataFrame/DataFrameOverlayPortal"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 
@@ -64,17 +63,17 @@ function ButtonActionMenu({
   })
 
   // panelRef is used by the scroll-close effect below to ignore scrolls inside the panel.
-  const { panelRef, setFloatingRef } = useOverlayDismissal({
+  const { panelRef, setFloatingRef, setReferenceRef } = useOverlayDismissal({
     isOpen: true,
     onClose: onCloseMenu,
     floatingSetFn: refs.setFloating,
-    excludeSelectors: ['[data-testid="stDataFrameButtonActionMenuTarget"]'],
+    referenceSetFn: refs.setReference,
   })
 
   // Close menu on any scroll in the document (fixed positioning would misalign
-  // with cell). The menu is rendered via FloatingPortal outside the dataframe's
-  // DOM tree, so we cannot rely on ancestor containment checks — we must close
-  // on any scroll except within the menu itself.
+  // with cell). The menu is rendered via DataFrameOverlayPortal outside the
+  // dataframe's DOM tree, so we cannot rely on ancestor containment checks —
+  // we must close on any scroll except within the menu itself.
   useEffect(() => {
     function handleScroll(event: Event): void {
       // Ignore if the scroll is on the menu itself
@@ -122,7 +121,7 @@ function ButtonActionMenu({
        * Its position (top/left from canvas coords) determines where the menu appears.
        */}
       <div
-        ref={refs.setReference}
+        ref={setReferenceRef}
         data-testid="stDataFrameButtonActionMenuTarget"
         style={{
           position: "fixed",
@@ -134,7 +133,7 @@ function ButtonActionMenu({
           pointerEvents: "none",
         }}
       />
-      <FloatingPortal>
+      <DataFrameOverlayPortal>
         <StyledButtonActionMenuPanel
           ref={setFloatingRef}
           style={floatingStyles}
@@ -171,7 +170,7 @@ function ButtonActionMenu({
             })}
           </StyledMenuList>
         </StyledButtonActionMenuPanel>
-      </FloatingPortal>
+      </DataFrameOverlayPortal>
     </>
   )
 }

@@ -24,12 +24,11 @@ import pandas as pd
 import pytest
 
 from streamlit.elements.lib import built_in_chart_utils as chart_utils
-from streamlit.elements.lib.built_in_chart_utils import (
-    StreamlitColorLengthError,
-    StreamlitColumnNotFoundError,
-    StreamlitInvalidColorError,
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
 )
-from streamlit.errors import StreamlitAPIException
 
 
 @pytest.mark.parametrize(
@@ -38,14 +37,14 @@ from streamlit.errors import StreamlitAPIException
 )
 def test_maybe_raise_stack_warning_accepts_valid(stack: Any) -> None:
     """Supported stack values do not raise."""
-    chart_utils.maybe_raise_stack_warning(stack, "bar_chart", "https://docs")
+    chart_utils.maybe_raise_stack_warning(stack)
 
 
 @pytest.mark.parametrize("stack", ["invalid_value", 1.5])
 def test_maybe_raise_stack_warning_rejects_invalid(stack: Any) -> None:
-    """Unsupported stack values raise StreamlitAPIException."""
-    with pytest.raises(StreamlitAPIException, match="Invalid value for stack"):
-        chart_utils.maybe_raise_stack_warning(stack, "bar_chart", "https://docs")
+    """Unsupported stack values raise StreamlitValueError."""
+    with pytest.raises(StreamlitValueError, match=r"Invalid `stack` value"):
+        chart_utils.maybe_raise_stack_warning(stack)
 
 
 @pytest.mark.parametrize(
@@ -108,15 +107,19 @@ def test_parse_x_column_with_none_returns_none() -> None:
 def test_parse_x_column_raises_for_unknown_column() -> None:
     """``_parse_x_column`` raises when the column is not in the DataFrame."""
     df = pd.DataFrame({"a": [1]})
-    with pytest.raises(StreamlitColumnNotFoundError):
+    with pytest.raises(StreamlitAPIException, match="does not have a column") as exc:
         chart_utils._parse_x_column(df, "missing")
+    assert exc.value.error_id == "chart-column-not-found"
 
 
 def test_parse_x_column_raises_for_invalid_type() -> None:
-    """``_parse_x_column`` raises StreamlitAPIException for non-str inputs."""
+    """``_parse_x_column`` raises StreamlitInvalidParameterTypeError for non-str inputs."""
     df = pd.DataFrame({"a": [1]})
-    with pytest.raises(StreamlitAPIException, match="x parameter"):
+    with pytest.raises(
+        StreamlitInvalidParameterTypeError, match=r"Invalid `x` type"
+    ) as exc:
         chart_utils._parse_x_column(df, 123)  # type: ignore[arg-type]
+    assert exc.value.exec_kwargs["expected_types"] == "str, None"
 
 
 @pytest.mark.parametrize("sort_from_user", [True, False])
@@ -135,8 +138,9 @@ def test_parse_sort_column_strips_minus_prefix() -> None:
 def test_parse_sort_column_raises_when_missing() -> None:
     """A sort column not in the DataFrame raises."""
     df = pd.DataFrame({"name": [1]})
-    with pytest.raises(StreamlitColumnNotFoundError):
+    with pytest.raises(StreamlitAPIException, match="does not have a column") as exc:
         chart_utils._parse_sort_column(df, "missing")
+    assert exc.value.error_id == "chart-column-not-found"
 
 
 @pytest.mark.parametrize(
@@ -178,10 +182,11 @@ def test_parse_y_columns(
 
 
 def test_parse_y_columns_raises_for_unknown() -> None:
-    """An unknown y column raises ``StreamlitColumnNotFoundError``."""
+    """An unknown y column raises a tagged StreamlitAPIException."""
     df = pd.DataFrame({"a": [1]})
-    with pytest.raises(StreamlitColumnNotFoundError):
+    with pytest.raises(StreamlitAPIException, match="does not have a column") as exc:
         chart_utils._parse_y_columns(df, "missing", None)
+    assert exc.value.error_id == "chart-column-not-found"
 
 
 def test_drop_unused_columns_dedupes_and_filters_none() -> None:
@@ -256,20 +261,22 @@ def test_get_size_encoding_scatter(
     expected_cls: type,
 ) -> None:
     """Scatter plots produce Size/SizeValue encodings depending on input."""
-    encoding = chart_utils._get_size_encoding(chart_type, size_column, size_value)
+    encoding = chart_utils._get_size_encoding(chart_type, size_column, size_value, {})
     assert isinstance(encoding, expected_cls)
 
 
 def test_get_size_encoding_invalid_size_value_raises() -> None:
-    """Non-numeric size_value should raise StreamlitAPIException."""
-    with pytest.raises(StreamlitAPIException, match="valid size"):
-        chart_utils._get_size_encoding(chart_utils.ChartType.SCATTER, None, "huge")
+    """Non-numeric size_value should raise StreamlitValueError."""
+    with pytest.raises(StreamlitValueError, match=r"a column name, a number") as exc:
+        chart_utils._get_size_encoding(chart_utils.ChartType.SCATTER, None, "huge", {})
+    assert "huge" in str(exc.value)
 
 
 def test_get_size_encoding_returns_none_for_non_scatter() -> None:
     """Non-scatter chart types get no size encoding."""
     assert (
-        chart_utils._get_size_encoding(chart_utils.ChartType.LINE, None, None) is None
+        chart_utils._get_size_encoding(chart_utils.ChartType.LINE, None, None, {})
+        is None
     )
 
 
@@ -337,11 +344,83 @@ def test_melt_data_raises_on_too_many_mixed_types() -> None:
 def test_convert_col_names_to_str_in_place_stringifies_columns() -> None:
     """Integer column names are converted to strings."""
     df = pd.DataFrame({0: [1], 1: [2]})
-    x, y_list, color, size, sort = chart_utils._convert_col_names_to_str_in_place(
-        df, 0, [1], None, None, None
-    )
+    (
+        x,
+        y_list,
+        color,
+        size,
+        sort,
+        alias_to_original,
+    ) = chart_utils._convert_col_names_to_str_in_place(df, 0, [1], None, None, None)
     assert list(df.columns) == ["0", "1"]
     assert (x, y_list, color, size, sort) == ("0", ["1"], None, None, None)
+    # Plain column names should not require aliasing.
+    assert alias_to_original == {}
+
+
+def test_convert_col_names_to_str_in_place_aliases_dotted_columns() -> None:
+    """Regression test for #7714: columns with characters Vega-Lite treats as
+    special (``.``, ``[``, ``]``, ``\\``) are renamed to safe internal aliases
+    and the alias-to-original map is returned so encodings can preserve titles.
+    """
+    df = pd.DataFrame({"col.name": [1, 2], "plain": [3, 4], "CO2 [t]": [5, 6]})
+    (
+        _x,
+        y_list,
+        _color,
+        _size,
+        _sort,
+        alias_to_original,
+    ) = chart_utils._convert_col_names_to_str_in_place(
+        df, None, ["col.name", "plain", "CO2 [t]"], None, None, None
+    )
+    # The special-char columns must have been renamed to aliases; the plain one
+    # must have been left alone.
+    assert "col.name" not in df.columns
+    assert "CO2 [t]" not in df.columns
+    assert "plain" in df.columns
+    # The y column list must reference the aliases (never the raw names).
+    assert "col.name" not in y_list
+    assert "CO2 [t]" not in y_list
+    assert "plain" in y_list
+    # And the alias map must round-trip back to the original names.
+    assert set(alias_to_original.values()) == {"col.name", "CO2 [t]"}
+
+
+def test_convert_col_names_to_str_in_place_alias_avoids_collision() -> None:
+    """Regression test: a generated alias must never collide with a plain user
+    column that happens to already be named like the default alias form. If it
+    did, the prepared DataFrame would end up with duplicate labels and downstream
+    field selection would return both columns instead of the intended series.
+    """
+    # A dotted column plus a plain column literally named like the default alias.
+    df = pd.DataFrame(
+        {
+            "a.b": [1, 2],
+            "col -- streamlit-generated-0": [3, 4],
+        }
+    )
+    (
+        _x,
+        y_list,
+        _color,
+        _size,
+        _sort,
+        alias_to_original,
+    ) = chart_utils._convert_col_names_to_str_in_place(
+        df, None, ["a.b", "col -- streamlit-generated-0"], None, None, None
+    )
+    # No duplicate column labels — the alias must have been bumped past the
+    # already-taken name.
+    assert not df.columns.duplicated().any()
+    # The plain user column must be preserved untouched.
+    assert "col -- streamlit-generated-0" in df.columns
+    # The dotted column must be aliased to a distinct name.
+    assert "a.b" not in df.columns
+    # And the alias for the dotted column must round-trip back to its original.
+    assert set(alias_to_original.values()) == {"a.b"}
+    # The y column list must have no duplicate entries either.
+    assert len(y_list) == len(set(y_list))
 
 
 @pytest.mark.parametrize(
@@ -358,6 +437,7 @@ def test_get_color_encoding_single_color_yields_color_value(color_value: Any) ->
         color_column=None,
         y_column_list=["y1"],
         color_from_user=color_value,
+        alias_to_original={},
     )
     assert isinstance(encoding, alt.ColorValue)
 
@@ -365,24 +445,28 @@ def test_get_color_encoding_single_color_yields_color_value(color_value: Any) ->
 def test_get_color_encoding_builtin_name_with_multiple_y_raises() -> None:
     """A single color string with multiple y columns raises a length error."""
     df = pd.DataFrame({"y1": [1], "y2": [2]})
-    with pytest.raises(StreamlitColorLengthError):
+    with pytest.raises(StreamlitAPIException, match="must have the same") as exc:
         chart_utils._get_color_encoding(
             df=df,
             color_value="primary",
             color_column=None,
             y_column_list=["y1", "y2"],
             color_from_user="primary",
+            alias_to_original={},
         )
+    assert exc.value.error_id == "chart-color-length-mismatch"
 
 
 def test_get_color_encoding_invalid_color_raises() -> None:
-    """Non-color, non-iterable color values raise StreamlitInvalidColorError."""
+    """Non-color, non-iterable color values raise a tagged StreamlitAPIException."""
     df = pd.DataFrame({"y1": [1]})
-    with pytest.raises(StreamlitInvalidColorError):
+    with pytest.raises(StreamlitAPIException, match="valid color argument") as exc:
         chart_utils._get_color_encoding(
             df=df,
             color_value=123,
             color_column=None,
             y_column_list=["y1"],
             color_from_user=123,
+            alias_to_original={},
         )
+    assert exc.value.error_id == "chart-invalid-color"

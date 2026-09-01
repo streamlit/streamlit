@@ -46,6 +46,18 @@ class StringUtilTest(unittest.TestCase):
         """Test streamlit.string_util.is_emoji."""
         assert string_util.is_emoji(text) == expected
 
+    def test_to_str(self):
+        """``to_str`` leaves strings unchanged and stringifies other values."""
+        assert string_util.to_str("already") == "already"
+        assert string_util.to_str(123) == "123"
+        assert string_util.to_str(None) == "None"
+
+    def test_to_help_str(self):
+        """``to_help_str`` stringifies and dedents help text."""
+        assert string_util.to_help_str("already") == "already"
+        assert string_util.to_help_str(123) == "123"
+        assert string_util.to_help_str("    indented") == "indented"
+
     @parameterized.expand(
         [
             ("", ("", "")),
@@ -146,6 +158,12 @@ class StringUtilTest(unittest.TestCase):
 
         assert string_util.simplify_number(1000000000000) == "1t"
 
+        # Numbers beyond a trillion stay in trillions instead of raising an
+        # IndexError past the largest suffix.
+        assert string_util.simplify_number(1000000000000000) == "1000t"
+
+        assert string_util.simplify_number(2500000000000000000) == "2500000t"
+
     @parameterized.expand(
         [
             ("", "`", 0),
@@ -217,6 +235,11 @@ class StringUtilTest(unittest.TestCase):
         with pytest.raises(TypeError):
             string_util.from_number(None)
 
+    def test_from_number_zero_dim_array_uses_item(self):
+        """A 0-d numpy array isn't a Number, so its item() value is formatted."""
+        assert string_util.from_number(np.array(5)) == "5"
+        assert string_util.from_number(np.array(2.5)) == "2.5"
+
     @parameterized.expand(
         [
             (None, ""),
@@ -259,6 +282,30 @@ class StringUtilTest(unittest.TestCase):
     def test_is_binary_string(self, inp: bytes, expected: bool):
         """Test that is_binary_string correctly identifies binary vs text data."""
         assert string_util.is_binary_string(inp) == expected
+
+    @parameterized.expand(
+        [
+            ("<foo blarg at 0x15ee6f9a0>", True),  # glibc: lowercase hex
+            ("<__main__.Foo object at 0x0000027B0C1B1550>", True),  # MSVC instance
+            ("<property object at 0x000002500A1F3240>", True),  # MSVC property
+            # The "at" and "0x" literals stay case-sensitive: CPython normalizes
+            # the prefix to a lowercase "0x" no matter how the C runtime cased
+            # the digits.
+            ("<foo blarg AT 0X15EE6F9A0>", False),
+            ("<module 'os' from '/usr/lib/os.py'>", False),  # Repr with no address
+            ("<foo blarg at 0xdeadbeefg>", False),  # Non-hex character
+            ("<foo blarg at 15ee6f9a0>", False),  # Missing the 0x prefix
+            ("", False),
+        ]
+    )
+    def test_is_mem_address_str(self, string: str, expected: bool) -> None:
+        """``is_mem_address_str`` matches default object reprs in either hex casing."""
+        assert string_util.is_mem_address_str(string) == expected
+
+    def test_is_mem_address_str_matches_this_host(self) -> None:
+        """This host's default object repr matches, whatever hex casing its C
+        runtime emits."""
+        assert string_util.is_mem_address_str(repr(object()))
 
     def test_from_number_with_invalid_item_method(self):
         """Test from_number with object that has item() but returns non-numeric."""

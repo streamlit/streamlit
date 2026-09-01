@@ -26,7 +26,6 @@ import {
 } from "react"
 
 import { ChevronLeft, ChevronRight } from "@emotion-icons/material-outlined"
-import classNames from "classnames"
 import { Key, SelectionIndicator } from "react-aria-components"
 
 import { AppNode, BlockNode } from "~lib/AppNode"
@@ -39,6 +38,7 @@ import {
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import Icon from "~lib/components/shared/Icon/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { useHorizontalScrollOverflow } from "~lib/hooks/useHorizontalScrollOverflow"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
@@ -51,7 +51,6 @@ import {
 } from "./styled-components"
 
 const SCROLL_AMOUNT = 200
-const SCROLL_TOLERANCE = 1
 
 /**
  * Look up the persisted active tab label from elementStates and resolve
@@ -77,6 +76,7 @@ export interface TabProps extends BlockPropsWithoutWidth {
     childProps: JSX.IntrinsicAttributes & BlockPropsWithoutWidth
   ) => ReactElement
   width: React.CSSProperties["width"]
+  height?: React.CSSProperties["height"]
   flex: React.CSSProperties["flex"]
   fragmentId?: string
 }
@@ -87,6 +87,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     node,
     isStale,
     width,
+    height,
     flex,
     widgetMgr,
     fragmentId,
@@ -154,25 +155,12 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   }
 
   const tabListRef = useRef<HTMLDivElement>(null)
-
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(false)
-
-  // Derive isOverflowing from scroll state instead of tracking separately
+  const { canScrollLeft, canScrollRight } = useHorizontalScrollOverflow({
+    elementRef: tabListRef,
+    enabled: true,
+    layoutKey: allTabLabels.join("\0"),
+  })
   const isOverflowing = canScrollLeft || canScrollRight
-
-  // Update scroll state based on current scroll position
-  const updateScrollState = useCallback((): void => {
-    if (tabListRef.current) {
-      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Required for scroll tracking
-      const { scrollLeft, scrollWidth, clientWidth } = tabListRef.current
-      // Use SCROLL_TOLERANCE for both directions to handle floating point rounding
-      setCanScrollLeft(scrollLeft > SCROLL_TOLERANCE)
-      setCanScrollRight(
-        scrollLeft + clientWidth < scrollWidth - SCROLL_TOLERANCE
-      )
-    }
-  }, [])
 
   // Scroll the tabs by a fixed amount
   const scroll = useCallback((direction: "left" | "right"): void => {
@@ -203,14 +191,13 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
           // Keep the widget manager in sync with the backend-driven tab change.
           // Without this, subsequent reruns would send a stale widget value that
           // overrides session_state, making tab.open return False for the new tab.
-          // fromUi: false avoids scheduling a spurious rerun.
+          // fromUser: false avoids scheduling a spurious rerun.
           if (widgetId && widgetMgr) {
-            widgetMgr.setStringValue(
-              { id: widgetId, formId: "" },
-              newLabel,
-              { fromUi: false },
-              fragmentId
-            )
+            widgetMgr.setStringValue(widgetId, newLabel, {
+              formId: "",
+              fragmentId,
+              fromUser: false,
+            })
           }
         }
         prevDefaultTabIndexRef.current = defaultTabIndex
@@ -270,34 +257,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     })
   }, [activeTabKey])
 
-  // Set up scroll event listener and resize observer
   useEffect(() => {
-    const tabList = tabListRef.current
-    if (tabList) {
-      tabList.addEventListener("scroll", updateScrollState, { passive: true })
-
-      // Use ResizeObserver to update scroll state when container resizes
-      // (e.g., window resize, sidebar toggle, orientation change)
-      const resizeObserver = new ResizeObserver(() => {
-        updateScrollState()
-      })
-      resizeObserver.observe(tabList)
-
-      return () => {
-        tabList.removeEventListener("scroll", updateScrollState)
-        resizeObserver.disconnect()
-      }
-    }
-    return undefined
-  }, [updateScrollState])
-
-  useEffect(() => {
-    // React Aria's Collection-based rendering may add tab DOM nodes in a
-    // subsequent microtask/frame, so scrollWidth can still equal clientWidth
-    // on the synchronous effect run. Schedule via rAF so layout is finalised
-    // before we measure overflow.
-    const rafId = requestAnimationFrame(updateScrollState)
-
     // If tab # changes, match the selected tab label, otherwise default to first tab.
     // When isPassivelyKeyed, prefer the stored label over the tracked ref value.
     if (isPassivelyKeyed) {
@@ -305,7 +265,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       if (persisted) {
         setActiveTabKey(persisted.index)
         activeTabNameRef.current = persisted.label
-        return () => cancelAnimationFrame(rafId)
+        return
       }
     }
 
@@ -321,10 +281,8 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
         widgetMgr.setElementState(blockId, "activeTabLabel", fallbackLabel)
       }
     }
-
-    return () => cancelAnimationFrame(rafId)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only re-run when tab count changes; other deps are stable across renders
-  }, [node.children.length, updateScrollState])
+  }, [node.children.length])
 
   const handleSelectionChange = useCallback(
     (key: Key): void => {
@@ -341,12 +299,11 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       }
 
       if (isDynamic && widgetId && widgetMgr) {
-        widgetMgr.setStringValue(
-          { id: widgetId, formId: "" },
-          newLabel,
-          { fromUi: true },
-          fragmentId
-        )
+        widgetMgr.setStringValue(widgetId, newLabel, {
+          formId: "",
+          fragmentId,
+          fromUser: true,
+        })
       }
     },
     [
@@ -360,17 +317,23 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     ]
   )
 
+  const hasConstrainedHeight = height !== undefined
+
   return (
     <StyledTabContainer
-      className={classNames("stTabs", convertKeyToClassName(userKey))}
+      className={["stTabs", convertKeyToClassName(userKey)]
+        .filter(Boolean)
+        .join(" ")}
       data-testid="stTabs"
       isOverflowing={isOverflowing}
       width={width}
+      height={height}
       flex={flex}
     >
       <StyledTabsRoot
         selectedKey={String(activeTabKey)}
         onSelectionChange={handleSelectionChange}
+        $constrainedHeight={hasConstrainedHeight}
       >
         <StyledTabList ref={tabListRef} $isStale={isStale}>
           {node.children.map(
@@ -411,11 +374,14 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
             }
             return (
               <StyledTabPanel
+                data-testid="stTabPanel"
                 id={String(index)}
+                $isActive={activeTabKey === index}
                 // TODO: Update to match React best practices
                 // eslint-disable-next-line @eslint-react/no-array-index-key
                 key={index}
                 shouldForceMount
+                $constrainedHeight={hasConstrainedHeight}
               >
                 {props.renderTabContent(childProps)}
               </StyledTabPanel>

@@ -95,7 +95,7 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Invalid width value (not "stretch" or int)
-    audio("audio.wav", width="content")  # type: ignore[arg-type]
+    audio("audio.wav", width="content")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Passing sample_rate as positional argument (should be keyword-only)
-    audio("audio.wav", "audio/wav", 0, 44100)  # type: ignore[misc]
+    audio("audio.wav", "audio/wav", 0, 44100)  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]

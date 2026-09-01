@@ -25,7 +25,6 @@ from typing import (
     Final,
     Literal,
     TypeAlias,
-    TypedDict,
     cast,
     overload,
 )
@@ -43,7 +42,11 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitIncompatibleParametersError,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -51,7 +54,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     register_widget,
 )
-from streamlit.util import AttributeDictionary
+from streamlit.util import ReadOnlyAttributeDictionary
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -81,26 +84,27 @@ def parse_selection_mode(
         # Only a single selection mode was passed
         selection_mode_set = {selection_mode}
     else:
-        # Multiple selection modes were passed.
-        # This is not yet supported as a functionality, but the infra is here to
-        # support it in the future!
-        # @see DeckGlJsonChart.tsx
-        raise StreamlitAPIException(
-            f"Invalid selection mode: {selection_mode}. ",
-            "Selection mode must be a single value, but got a set instead.",
+        # Only a single string selection mode is supported. Lists and sets are
+        # rejected until multi-mode selection lands (see DeckGlJsonChart.tsx).
+        raise StreamlitInvalidParameterTypeError(
+            "selection_mode",
+            type(selection_mode).__name__,
+            ["str"],
+            detail="Selection mode must be a single value.",
         )
 
     if not selection_mode_set.issubset(_SELECTION_MODES):
-        raise StreamlitAPIException(
-            f"Invalid selection mode: {selection_mode}. "
-            f"Valid options are: {_SELECTION_MODES}"
+        raise StreamlitValueError(
+            "selection_mode",
+            [f"'{mode}'" for mode in sorted(_SELECTION_MODES)],
         )
 
     if selection_mode_set.issuperset(  # pragma: no cover - defensive, only string inputs reach here
         {"single-object", "multi-object"}
     ):
-        raise StreamlitAPIException(
-            "Only one of `single-object` or `multi-object` can be selected as selection mode."
+        raise StreamlitIncompatibleParametersError(
+            "selection_mode='single-object'",
+            "selection_mode='multi-object'",
         )
 
     parsed_selection_modes = []
@@ -112,12 +116,12 @@ def parse_selection_mode(
     return set(parsed_selection_modes)
 
 
-class PydeckSelectionState(TypedDict, total=False):
+class PydeckSelectionState(ReadOnlyAttributeDictionary):
     r"""
     The schema for the PyDeck chart selection state.
 
-    The selection state is stored in a dictionary-like object that supports
-    both key and attribute notation. Selection states cannot be
+    The selection state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Selection states cannot be
     programmatically changed or set through Session State.
 
     You must define ``id`` in ``pydeck.Layer`` to ensure statefulness when
@@ -218,14 +222,30 @@ class PydeckSelectionState(TypedDict, total=False):
     indices: dict[str, list[int]]
     objects: dict[str, list[dict[str, Any]]]
 
+    @overload
+    def __getitem__(self, key: Literal["indices"]) -> dict[str, list[int]]: ...
 
-class PydeckState(TypedDict, total=False):
+    @overload
+    def __getitem__(
+        self, key: Literal["objects"]
+    ) -> dict[str, list[dict[str, Any]]]: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        return super().__getitem__(key)
+
+
+class PydeckState(ReadOnlyAttributeDictionary):
     """
     The schema for the PyDeck event state.
 
-    The event state is stored in a dictionary-like object that supports both
-    key and attribute notation. Event states cannot be programmatically changed
-    or set through Session State.
+    To use this type in an annotation, import it from ``streamlit.typing``.
+
+    The event state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Event states cannot be
+    programmatically changed or set through Session State.
 
     Only selection events are supported at this time.
 
@@ -234,12 +254,31 @@ class PydeckState(TypedDict, total=False):
     selection : dict
         The state of the ``on_select`` event. This attribute returns a
         dictionary-like object that supports both key and attribute notation.
-        The attributes are described by the ``PydeckSelectionState``
-        dictionary schema.
+        The attributes are described by ``PydeckSelectionState``.
 
     """
 
     selection: PydeckSelectionState
+
+    # ReadOnlyAttributeDictionary routes attribute access through __getitem__,
+    # so the override below is enough to keep `selection` typed as
+    # PydeckSelectionState. Use dict.__getitem__ for the selection key so the
+    # read-only base class does not re-wrap the already-typed nested instance.
+    @overload
+    def __getitem__(self, key: Literal["selection"]) -> PydeckSelectionState: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        if key == "selection":
+            item = dict.__getitem__(self, key)
+            if not isinstance(item, PydeckSelectionState):
+                item = PydeckSelectionState(item)
+                # Cache so repeated bracket/attribute access stays identity-stable.
+                dict.__setitem__(self, key, item)
+            return item
+        return super().__getitem__(key)
 
 
 @dataclass
@@ -247,24 +286,33 @@ class PydeckSelectionSerde:
     """PydeckSelectionSerde is used to serialize and deserialize the Pydeck selection state."""
 
     def deserialize(self, ui_value: str | None) -> PydeckState:
-        empty_selection_state: PydeckState = {
-            "selection": {
-                "indices": {},
-                "objects": {},
+        empty_selection_state = PydeckState(
+            {
+                "selection": PydeckSelectionState(
+                    {
+                        "indices": {},
+                        "objects": {},
+                    }
+                )
             }
-        }
-
-        selection_state = (
-            empty_selection_state if ui_value is None else json.loads(ui_value)
         )
 
+        if ui_value is None:
+            return empty_selection_state
+
+        selection_state = json.loads(ui_value)
         # We have seen some situations where the ui_value was just an empty
         # dict, so we want to ensure that it always returns the empty state in
         # case this happens.
         if "selection" not in selection_state:
-            selection_state = empty_selection_state
+            return empty_selection_state
 
-        return cast("PydeckState", AttributeDictionary(selection_state))
+        # Eagerly wrap selection so bracket access returns a stable typed
+        # instance instead of creating a shallow copy on every access.
+        selection_state["selection"] = PydeckSelectionState(
+            selection_state["selection"]
+        )
+        return PydeckState(selection_state)
 
     def serialize(self, selection_state: PydeckState) -> str:
         return json.dumps(selection_state, default=str)
@@ -279,11 +327,8 @@ class PydeckMixin:
         width: WidthWithoutContent = "stretch",
         use_container_width: bool | None = None,
         height: HeightWithoutContent = 500,
-        selection_mode: Literal[
-            "single-object"
-        ],  # Selection mode will only be activated by on_select param; default value here to make it work with mypy
-        # No default value here to make it work with mypy
-        on_select: Literal["ignore"],
+        selection_mode: SelectionMode = "single-object",
+        on_select: Literal["ignore"] = "ignore",
         key: Key | None = None,
     ) -> DeltaGenerator: ...
 
@@ -296,7 +341,8 @@ class PydeckMixin:
         use_container_width: bool | None = None,
         height: HeightWithoutContent = 500,
         selection_mode: SelectionMode = "single-object",
-        on_select: Literal["rerun"] | WidgetCallback = "rerun",
+        # No default: omitted on_select must match the "ignore" overload.
+        on_select: Literal["rerun"] | WidgetCallback,
         key: Key | None = None,
     ) -> PydeckState: ...
 
@@ -433,12 +479,12 @@ class PydeckMixin:
 
         Returns
         -------
-        element or dict
+        element or PydeckState
             If ``on_select`` is ``"ignore"`` (default), this command returns an
             internal placeholder for the chart element. Otherwise, this method
-            returns a dictionary-like object that supports both key and
-            attribute notation. The attributes are described by the
-            ``PydeckState`` dictionary schema.
+            returns a ``PydeckState`` object. This object is dictionary-like
+            and supports both key and attribute notation. To use this type in
+            an annotation, import it from ``streamlit.typing``.
 
         Examples
         --------
@@ -546,9 +592,8 @@ class PydeckMixin:
         is_selection_activated = on_select != "ignore"
 
         if on_select not in {"ignore", "rerun"} and not callable(on_select):
-            raise StreamlitAPIException(
-                f"You have passed {on_select} to `on_select`. "
-                "But only 'ignore', 'rerun', or a callable is supported."
+            raise StreamlitValueError(
+                "on_select", ["'rerun'", "'ignore'", "a callback function"]
             )
 
         if is_selection_activated:
@@ -560,7 +605,9 @@ class PydeckMixin:
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_select) if is_callback else None,
+                on_change=cast("WidgetCallback", on_select)  # ty: ignore[redundant-cast]
+                if is_callback
+                else None,
                 default_value=None,
                 writes_allowed=False,
                 enable_check_callback_rules=is_callback,

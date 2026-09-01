@@ -17,11 +17,11 @@
 import { act } from "react"
 
 import {
-  fireEvent,
   render,
   RenderResult,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react"
 import userEvent, {
   PointerEventsCheckLevel,
@@ -86,6 +86,7 @@ import {
   IPageInfo,
   IPageNotFound,
   IParentMessage,
+  IStopAutoRerun,
   Navigation,
   SessionEvent,
   SessionStatus,
@@ -93,6 +94,7 @@ import {
 } from "@streamlit/protobuf"
 
 import { App, LOG, Props } from "./App"
+import { SKILLS_NUDGE_SNOOZED_AT_KEY } from "./components/SkillsNudgeToast/skillsNudge"
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
@@ -440,6 +442,7 @@ type ForwardMsgType =
   | IPageInfo
   | IParentMessage
   | IPageNotFound
+  | IStopAutoRerun
   | Omit<SessionEvent, "toJSON">
   | Omit<SessionStatus, "toJSON">
 
@@ -461,17 +464,8 @@ function sendForwardMessage(
 }
 
 async function openCacheModal(): Promise<void> {
-  // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-  fireEvent.keyDown(document.body, {
-    key: "c",
-    which: 67,
-  })
-
-  // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-  fireEvent.keyUp(document.body, {
-    key: "c",
-    which: 67,
-  })
+  const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
+  await user.keyboard("c")
 
   expect(
     screen.getByText(
@@ -482,6 +476,16 @@ async function openCacheModal(): Promise<void> {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(0)
   })
+}
+
+/**
+ * Advances fake timers when active so userEvent delays don't hang under
+ * vi.useFakeTimers(). Passed as userEvent.setup({ advanceTimers }).
+ */
+function advanceUserEventTimers(delay: number): void {
+  if (vi.isFakeTimers()) {
+    vi.advanceTimersByTime(delay)
+  }
 }
 
 describe("App", () => {
@@ -723,7 +727,8 @@ describe("App", () => {
     expect(metricsManager.enqueue).toHaveBeenCalledWith("updateReport")
   })
 
-  it("reruns when the user presses 'r'", () => {
+  it("reruns when the user presses 'r'", async () => {
+    const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
     renderApp(getProps())
 
     getMockConnectionManager(true)
@@ -732,11 +737,7 @@ describe("App", () => {
       getStoredValue<WidgetStateManager>(WidgetStateManager)
     expect(widgetStateManager.sendUpdateWidgetsMessage).not.toHaveBeenCalled()
 
-    // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-    fireEvent.keyDown(document.body, {
-      key: "r",
-      which: 82,
-    })
+    await user.keyboard("r")
 
     expect(widgetStateManager.sendUpdateWidgetsMessage).toHaveBeenCalled()
   })
@@ -2465,8 +2466,6 @@ describe("App", () => {
           props.theme.activeTheme = {
             name: CUSTOM_THEME_NAME,
             emotion: { ...lightTheme.emotion },
-            basewebTheme: lightTheme.basewebTheme,
-            primitives: lightTheme.primitives,
             themeInput: { primaryColor: "blue" },
           }
 
@@ -2495,8 +2494,6 @@ describe("App", () => {
             name: CUSTOM_THEME_LIGHT_NAME,
             displayName: "Light",
             emotion: { ...lightTheme.emotion },
-            basewebTheme: lightTheme.basewebTheme,
-            primitives: lightTheme.primitives,
             themeInput: { primaryColor: "lightblue" },
           }
 
@@ -2576,8 +2573,6 @@ describe("App", () => {
           props.theme.activeTheme = {
             name: CUSTOM_THEME_NAME,
             emotion: { ...lightTheme.emotion },
-            basewebTheme: lightTheme.basewebTheme,
-            primitives: lightTheme.primitives,
             themeInput: { primaryColor: "blue" },
           }
 
@@ -2612,8 +2607,6 @@ describe("App", () => {
             name: CUSTOM_THEME_LIGHT_NAME,
             displayName: "Light",
             emotion: { ...lightTheme.emotion },
-            basewebTheme: lightTheme.basewebTheme,
-            primitives: lightTheme.primitives,
             themeInput: { primaryColor: "lightblue" },
           }
 
@@ -2706,8 +2699,6 @@ describe("App", () => {
           props.theme.activeTheme = {
             name: CUSTOM_THEME_NAME,
             emotion: { ...lightTheme.emotion },
-            basewebTheme: lightTheme.basewebTheme,
-            primitives: lightTheme.primitives,
             themeInput: { primaryColor: "blue" },
           }
 
@@ -2744,8 +2735,6 @@ describe("App", () => {
             name: CUSTOM_THEME_LIGHT_NAME,
             displayName: "Light",
             emotion: { ...lightTheme.emotion },
-            basewebTheme: lightTheme.basewebTheme,
-            primitives: lightTheme.primitives,
             themeInput: { primaryColor: "lightblue" },
           }
 
@@ -2903,8 +2892,6 @@ describe("App", () => {
         name: CUSTOM_THEME_DARK_NAME,
         displayName: "Dark",
         emotion: { ...darkTheme.emotion },
-        basewebTheme: darkTheme.basewebTheme,
-        primitives: darkTheme.primitives,
         themeInput: customTheme,
       }
       renderApp(props)
@@ -3911,6 +3898,200 @@ describe("App", () => {
         },
       })
     })
+
+    it("does not accumulate duplicate timers when a fragment re-registers its auto-rerun", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBefore = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        // Register the same fragment twice, as happens when an ancestor
+        // re-renders a run_every fragment.
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "myFragmentId",
+        })
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "myFragmentId",
+        })
+        vi.advanceTimersByTime(1000)
+      })
+
+      // Only one interval should be active despite two registrations; without
+      // deduping, two timers would each fire and send two messages per tick.
+      expect(
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        connectionManager.sendMessage.mock.calls.length - callsBefore
+      ).toBe(1)
+    })
+
+    it("ignores an auto-rerun message without a fragment id", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBefore = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        // Auto-reruns are always fragment-scoped; a message with no fragment id
+        // must not register a timer (and two of them must not collide under an
+        // empty-string key).
+        sendForwardMessage("autoRerun", { interval: 1.0 })
+        sendForwardMessage("autoRerun", { interval: 1.0 })
+        vi.advanceTimersByTime(2000)
+      })
+
+      // No timer was registered, so no auto-rerun messages are sent.
+      expect(
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        connectionManager.sendMessage.mock.calls.length - callsBefore
+      ).toBe(0)
+    })
+
+    it("does not reset the countdown when a fragment re-registers with the same interval", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBefore = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "myFragmentId",
+        })
+        vi.advanceTimersByTime(600)
+        // An ancestor re-render re-sends the same auto-rerun before the interval
+        // elapses. This must not restart the timer.
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "myFragmentId",
+        })
+        vi.advanceTimersByTime(500)
+      })
+
+      // The original countdown was preserved, so it fired ~1000ms after the
+      // first registration. If re-registration had reset it, only 500ms would
+      // have elapsed since the reset and nothing would have fired.
+      expect(
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        connectionManager.sendMessage.mock.calls.length - callsBefore
+      ).toBe(1)
+    })
+
+    it("restarts a fragment's timer when its interval changes", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBefore = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        // Start with a long interval, then re-register with a short one.
+        sendForwardMessage("autoRerun", {
+          interval: 10.0,
+          fragmentId: "myFragmentId",
+        })
+        vi.advanceTimersByTime(500)
+        sendForwardMessage("autoRerun", {
+          interval: 0.1,
+          fragmentId: "myFragmentId",
+        })
+        vi.advanceTimersByTime(250)
+      })
+
+      // The 10s timer was replaced by a 0.1s timer, which then fired. Had the
+      // interval change been ignored, the 10s timer would not have fired yet.
+      expect(
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        connectionManager.sendMessage.mock.calls.length - callsBefore
+      ).toBeGreaterThanOrEqual(1)
+    })
+
+    it("cancels only the targeted fragment's timer on a stopAutoRerun message", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      type SentRerun = { fragmentId?: string; isAutoRerun?: boolean }
+      const autoRerunFragmentIdsSince = (
+        fromIndex: number
+      ): (string | undefined)[] => {
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        const calls = connectionManager.sendMessage.mock.calls as Array<
+          [{ rerunScript?: SentRerun }]
+        >
+        return calls
+          .slice(fromIndex)
+          .map(call => call[0].rerunScript)
+          .filter((rerunScript): rerunScript is SentRerun =>
+            Boolean(rerunScript?.isAutoRerun)
+          )
+          .map(rerunScript => rerunScript.fragmentId)
+      }
+
+      act(() => {
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "fragmentA",
+        })
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "fragmentB",
+        })
+        vi.advanceTimersByTime(1000)
+      })
+      expect(new Set(autoRerunFragmentIdsSince(0))).toEqual(
+        new Set(["fragmentA", "fragmentB"])
+      )
+
+      // The server evicts fragmentA and tells the client to cancel its timer.
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBeforeStop = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        sendForwardMessage("stopAutoRerun", { fragmentIds: ["fragmentA"] })
+        vi.advanceTimersByTime(2000)
+      })
+
+      const idsAfterStop = autoRerunFragmentIdsSince(callsBeforeStop)
+      // fragmentB keeps ticking; fragmentA's timer was cancelled.
+      expect(idsAfterStop.length).toBeGreaterThan(0)
+      expect(idsAfterStop).not.toContain("fragmentA")
+      expect(idsAfterStop.every(id => id === "fragmentB")).toBe(true)
+    })
   })
 
   describe("App.requestFileURLs", () => {
@@ -3986,16 +4167,13 @@ describe("App", () => {
   })
 
   describe("Test Main Menu shortcut functionality", () => {
-    it("Tests dev menu shortcuts cannot be accessed as a viewer", () => {
+    it("Tests dev menu shortcuts cannot be accessed as a viewer", async () => {
+      const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
       renderApp(getProps())
 
       getMockConnectionManager(true)
 
-      // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-      fireEvent.keyPress(screen.getByTestId("stApp"), {
-        key: "c",
-        which: 67,
-      })
+      await user.keyboard("c")
 
       expect(
         screen.queryByText(
@@ -4024,6 +4202,40 @@ describe("App", () => {
       } finally {
         vi.useRealTimers()
       }
+    })
+
+    it("does not clear caches when the copy modifier is released first", async () => {
+      const user = userEvent.setup({
+        advanceTimers: advanceUserEventTimers,
+      })
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.DEVELOPER,
+        },
+      })
+
+      getMockConnectionManager(true)
+
+      // Hold Cmd+C, then release Cmd before C.
+      await user.keyboard("[MetaLeft>][KeyC>][/MetaLeft][/KeyC]")
+
+      expect(
+        screen.queryByTestId("stClearCacheDialog")
+      ).not.toBeInTheDocument()
+    })
+
+    it("stops screencast recording when Escape is released", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
+      renderApp(props)
+
+      await user.keyboard("{Escape}")
+
+      expect(props.screenCast.stopRecording).toHaveBeenCalled()
     })
   })
 
@@ -4251,7 +4463,8 @@ describe("App", () => {
       expect(sendUpdateWidgetsMessageSpy).toHaveBeenCalled()
     })
 
-    it("requests script rerun if wasRerunRequested is true", () => {
+    it("requests script rerun if wasRerunRequested is true", async () => {
+      const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
       renderApp(getProps())
       const widgetStateManager =
         getStoredValue<WidgetStateManager>(WidgetStateManager)
@@ -4266,11 +4479,7 @@ describe("App", () => {
 
       // trigger a state transition to RERUN_REQUESTED
       getMockConnectionManager(true)
-      // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-      fireEvent.keyDown(document.body, {
-        key: "r",
-        which: 82,
-      })
+      await user.keyboard("r")
 
       act(() => {
         getMockConnectionManagerProp("connectionStateChanged")(
@@ -5390,7 +5599,11 @@ describe("App", () => {
       )
     })
 
-    it("retains embed query params even if the page hash is different", () => {
+    it("retains embed query params even if the page hash is different", async () => {
+      const user = userEvent.setup({
+        advanceTimers: advanceUserEventTimers,
+        pointerEventsCheck: PointerEventsCheckLevel.Never,
+      })
       const embedParams =
         "embed=true&embed_options=disable_scrolling&embed_options=show_padding"
       window.history.pushState({}, "", `/?${embedParams}`)
@@ -5436,8 +5649,7 @@ describe("App", () => {
       // Clear only the hostCommunicationMgr mock before navigation
       ;(hostCommunicationMgr.sendMessageToHost as Mock).mockClear()
 
-      // eslint-disable-next-line testing-library/prefer-user-event -- navLinks have pointer-events:none which userEvent.click respects but the real browser click works
-      fireEvent.click(navLinks[1])
+      await user.click(navLinks[1])
 
       expect(
         // @ts-expect-error
@@ -5700,6 +5912,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
   })
 
   it("ensures incrementMessageCacheRunCount is NOT called when hasReceivedNewSession is false", async () => {
+    const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
     renderApp(getProps())
     const connectionManager = getMockConnectionManager(true) // isConnected = true
     const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
@@ -5733,11 +5946,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       scriptIsRunning: false,
     })
 
-    // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-    fireEvent.keyDown(document.body, {
-      key: "r",
-      which: 82, // Key code for 'r'
-    })
+    await user.keyboard("r")
 
     // Wait for state updates from rerunScript to propagate if any were async.
     // sendRerunBackMsg, which sets hasReceivedNewSession to false, is called synchronously in this path.
@@ -5922,7 +6131,8 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         ).toBeVisible()
       })
 
-      it("does not display error dialog if already dismissed", () => {
+      it("does not display error dialog if already dismissed", async () => {
+        const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
         renderApp(getProps())
         const connectionManager = getMockConnectionManager(false)
 
@@ -5935,10 +6145,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
-        act(() => {
-          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
-          fireEvent.click(closeButton)
-        })
+        await user.click(closeButton)
 
         expect(screen.queryByText("Connection error")).toBeNull()
 
@@ -6000,7 +6207,8 @@ describe("App.hasReceivedNewSession flag behavior", () => {
     })
 
     describe("connection state transitions with error dismissal", () => {
-      it("resets dismissal state when reconnected", () => {
+      it("resets dismissal state when reconnected", async () => {
+        const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
         renderApp(getProps())
         const connectionManager = getMockConnectionManager(false)
 
@@ -6013,10 +6221,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
-        act(() => {
-          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
-          fireEvent.click(closeButton)
-        })
+        await user.click(closeButton)
 
         expect(screen.queryByText("Connection error")).toBeNull()
 
@@ -6163,7 +6368,8 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         expect(screen.queryByText(/Error 2/)).toBeNull()
       })
 
-      it("maintains dismissal state across multiple disconnections", () => {
+      it("maintains dismissal state across multiple disconnections", async () => {
+        const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
         renderApp(getProps())
         const connectionManager = getMockConnectionManager(false)
 
@@ -6174,10 +6380,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
-        act(() => {
-          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
-          fireEvent.click(closeButton)
-        })
+        await user.click(closeButton)
 
         expect(screen.queryByText("Connection error")).toBeNull()
 
@@ -6894,35 +7097,138 @@ describe("Skills install nudge", () => {
     expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeShown",
+      surface: "toast",
     })
   })
 
-  it("tracks a suppressed (non-loopback) nudge without showing it", () => {
+  it.each([
+    // Non-loopback keeps the label it has emitted since 1.59, so the existing
+    // adoption funnel keeps resolving across the upgrade.
+    ["non_loopback_private", "skillsNudgeSuppressedNonLocal:private"],
+    ["non_loopback_unknown", "skillsNudgeSuppressedNonLocal:unknown"],
+    // New reasons get the generic label.
+    ["conflict", "skillsNudgeSuppressed:conflict"],
+    ["check_failed", "skillsNudgeSuppressed:check_failed"],
+  ])(
+    "tracks a suppressed nudge (%s) without showing it",
+    (reason, expectedLabel) => {
+      renderApp(getProps())
+      const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+      // Server says the nudge was eligible but withheld it, and says why.
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        initialize: {
+          ...NEW_SESSION_JSON.initialize,
+          recommendSkillsInstall: false,
+          skillsNudgeSuppressedReason: reason,
+        },
+      })
+
+      // The nudge is not shown...
+      expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+      // ...but the reason is recorded, so suppression is measurable instead of
+      // silent. `conflict` matches the install-failure reason of the same cause,
+      // so the two are comparable in one query.
+      expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+        label: expectedLabel,
+        surface: "toast",
+      })
+      // And no (false) impression is logged.
+      expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+        label: "skillsNudgeShown",
+        surface: "toast",
+      })
+    }
+  )
+
+  it("still shows the nudge after an earlier suppression, on reconnect", () => {
     renderApp(getProps())
     const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
 
-    // Server says the nudge was eligible but suppressed because the browser
-    // isn't on a direct-loopback connection (Docker/VM/tunnel).
+    // Connect, and let a transient `check_failed` withhold the nudge.
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+    })
     sendForwardMessage("newSession", {
       ...NEW_SESSION_JSON,
       initialize: {
         ...NEW_SESSION_JSON.initialize,
         recommendSkillsInstall: false,
-        skillsNudgeSuppressedLocality: "private",
+        skillsNudgeSuppressedReason: "check_failed",
       },
     })
-
-    // The nudge is not shown...
     expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
-    // ...but the connection class is recorded so we can measure the excluded
-    // (containerized/remote) slice of the agent-harness audience.
+
+    // Reconnect re-runs the first-session initialization. `check_failed` is
+    // transient — the eligibility check threw, it did not decide against us — so
+    // a now-eligible session must still be able to surface the nudge. Reusing the
+    // shown-guard for suppression would withhold it until a full page reload.
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.PINGING_SERVER
+      )
+    })
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+    })
+    sendRecommendingNewSession()
+
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
-      label: "skillsNudgeSuppressedNonLocal:private",
-    })
-    // And no (false) impression is logged.
-    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeShown",
+      surface: "toast",
     })
+  })
+
+  it("reports a suppression only once across a reconnect", () => {
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+    const sendSuppressedNewSession = (): void => {
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        initialize: {
+          ...NEW_SESSION_JSON.initialize,
+          recommendSkillsInstall: false,
+          skillsNudgeSuppressedReason: "conflict",
+        },
+      })
+    }
+
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+    })
+    sendSuppressedNewSession()
+
+    // A reconnect re-runs initialization, which must not double-count this
+    // developer in the suppression metric.
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.PINGING_SERVER
+      )
+    })
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+    })
+    sendSuppressedNewSession()
+
+    const suppressions = (
+      metricsManager.enqueue as ReturnType<typeof vi.fn>
+    ).mock.calls.filter(
+      ([event, payload]) =>
+        event === "menuClick" &&
+        payload?.label === "skillsNudgeSuppressed:conflict"
+    )
+    expect(suppressions).toHaveLength(1)
   })
 
   it("tracks the impression only once across a reconnect", () => {
@@ -6970,6 +7276,7 @@ describe("Skills install nudge", () => {
     expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
     expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeShown",
+      surface: "toast",
     })
   })
 
@@ -6995,6 +7302,7 @@ describe("Skills install nudge", () => {
     expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
     expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeShown",
+      surface: "toast",
     })
   })
 
@@ -7054,6 +7362,7 @@ describe("Skills install nudge", () => {
 
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeInstall",
+      surface: "toast",
     })
   })
 
@@ -7073,10 +7382,12 @@ describe("Skills install nudge", () => {
     expect(screen.getByText("Installed to .agents/skills")).toBeVisible()
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeInstallSucceeded",
+      surface: "toast",
     })
     // The failure outcome must not be reported on success.
     expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeInstallFailed",
+      surface: "toast",
     })
     expect(installSpy).toHaveBeenCalledTimes(1)
   })
@@ -7100,9 +7411,112 @@ describe("Skills install nudge", () => {
     expect(screen.queryByText("Skills installed")).not.toBeInTheDocument()
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeInstallFailed",
+      surface: "toast",
     })
     expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeInstallSucceeded",
+      surface: "toast",
+    })
+  })
+
+  it("appends the server failure reason to the install-failed label", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    // The server classifies the failure (e.g. a filesystem write failure on a
+    // locked-down target dir) and the rejected error carries a machine-readable
+    // reason from the fixed vocabulary.
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockRejectedValue(
+      Object.assign(new Error("Could not write ~/.claude/skills/..."), {
+        reason: "write_failed",
+      })
+    )
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
+
+    // The reason is a label suffix (mirroring skillsNudgeSuppressedNonLocal:<locality>)
+    // so the funnel can break install failures down by cause.
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed:write_failed",
+      surface: "toast",
+    })
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed",
+      surface: "toast",
+    })
+  })
+
+  it("tags a rerouted install with the server's fallback reason", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    // Installs the server reroutes from project mode to a global copy carry WHY.
+    // Symlinks being unavailable machine-wide (Windows without Developer Mode) is a
+    // different problem from a single link failing, so the label keeps them apart.
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockResolvedValue({
+      detail: "Installed to ~/.agents/skills",
+      fallbackReason: "symlinks_unsupported",
+    })
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
+
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallSucceeded:symlinks_unsupported",
+      surface: "toast",
+    })
+    // The plain success label must not also fire (it would double-count).
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallSucceeded",
+      surface: "toast",
+    })
+  })
+
+  it("tracks a safety-gate refusal as Refused, not Failed", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    // The server prefixes gate reasons with `refused:` — the install was declined
+    // before it was attempted, so it must not inflate the install-failure rate.
+    // Label construction is unit-tested in skillsNudge.test.ts; this asserts App
+    // routes a refusal to the distinct EVENT, which is the funnel discontinuity
+    // this PR introduces and the one thing a unit test cannot see.
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockRejectedValue(
+      Object.assign(
+        new Error("Skills install is not available in this environment."),
+        { reason: "refused:non_loopback" }
+      )
+    )
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
+
+    // The prefix is stripped, so the gate name stays readable in the label.
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallRefused:non_loopback",
+      surface: "toast",
+    })
+    // A refusal is not a failure and must stay off the failure funnel.
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed:refused:non_loopback",
+      surface: "toast",
+    })
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed",
+      surface: "toast",
     })
   })
 
@@ -7124,9 +7538,11 @@ describe("Skills install nudge", () => {
     // funnel) — and surfaced with a reassuring, retry-friendly message.
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeInstallDropped",
+      surface: "toast",
     })
     expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeInstallFailed",
+      surface: "toast",
     })
     expect(screen.getByText(/Lost connection during install/)).toBeVisible()
     expect(screen.getByRole("button", { name: "Retry" })).toBeVisible()
@@ -7147,6 +7563,7 @@ describe("Skills install nudge", () => {
     expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeSnoozed",
+      surface: "toast",
     })
     expect(window.localStorage.getItem("stSkillsNudgeSnoozedAt")).toBeTruthy()
   })
@@ -7171,6 +7588,7 @@ describe("Skills install nudge", () => {
     expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
     expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
       label: "skillsNudgeDontShowAgain",
+      surface: "toast",
     })
     // Both stores are written: the browser flag AND the server-side marker.
     expect(window.localStorage.getItem("stSkillsNudgeDismissed")).toBe("true")
@@ -7201,5 +7619,298 @@ describe("Skills install nudge", () => {
     })
     expect(screen.queryByText("app toast message")).not.toBeInTheDocument()
     expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+  })
+
+  /** Connect, mark the script running, (optionally) recommend skills, select a page. */
+  const connectRunRecommendNavigate = (recommend = true): void => {
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+    })
+    sendForwardMessage("sessionStatusChanged", {
+      runOnSave: false,
+      scriptIsRunning: true,
+    })
+    sendRecommendingNewSession(recommend)
+    sendForwardMessage("navigation", {
+      appPages: [
+        {
+          pageScriptHash: "page_script_hash",
+          pageName: "streamlit app",
+          urlPathname: "streamlit_app",
+          isDefault: true,
+        },
+      ],
+      pageScriptHash: "page_script_hash",
+      position: Navigation.Position.SIDEBAR,
+      sections: [],
+    })
+  }
+
+  /** Render an uncaught-style exception element into the app body. */
+  const sendErrorElement = (deltaPath: number[] = [0, 0]): void => {
+    sendForwardMessage(
+      "delta",
+      {
+        type: "newElement",
+        newElement: {
+          type: "exception",
+          exception: {
+            type: "StreamlitAPIException",
+            message: "boom",
+            stackTrace: ["line 1"],
+            isWarning: false,
+            // Streamlit-raised error: this is what scopes the callout in.
+            isStreamlitException: true,
+          },
+        },
+      },
+      { deltaPath, activeScriptHash: "hash1" }
+    )
+  }
+
+  /**
+   * Snooze the proactive toast so the in-error callout becomes the active
+   * surface. With the toast snoozed it stays hidden (mutual exclusion), while
+   * the callout intentionally ignores the snooze — mirroring the spec: an
+   * error is a higher-intent moment than a snoozed proactive nudge. Call
+   * before renderApp; the snooze is read during session initialization.
+   */
+  const snoozeToastSoCalloutShows = (): void => {
+    window.localStorage.setItem(
+      SKILLS_NUDGE_SNOOZED_AT_KEY,
+      String(Date.now())
+    )
+  }
+
+  it("keeps the callout mutually exclusive with the toast, showing it only once the toast is dismissed", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const installSpy = vi
+      .spyOn(BackendOperationClient.prototype, "requestInstallSkills")
+      .mockResolvedValue({ detail: "Installed to .agents/skills" })
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+    connectRunRecommendNavigate()
+    sendErrorElement()
+
+    // The proactive toast owns the screen; while it's up the in-error callout
+    // is suppressed (mutual exclusion), even on a Streamlit-raised error...
+    const nudge = await screen.findByTestId("stSkillsNudge")
+    expect(nudge).toBeVisible()
+    await screen.findByTestId("stException")
+    expect(
+      screen.queryByTestId("stSkillsInstallCallout")
+    ).not.toBeInTheDocument()
+    // ...and no errorCallout impression is logged while it's hidden.
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeShown",
+      surface: "errorCallout",
+    })
+
+    // Dismiss the toast (its ✕ snoozes + closes it). An error is a
+    // higher-intent moment than a snoozed proactive nudge, so — with the toast
+    // gone — the callout now takes over. The 24h snooze does not gate it.
+    await user.click(within(nudge).getByRole("button", { name: "Close" }))
+    const callout = await screen.findByTestId("stSkillsInstallCallout")
+    expect(callout).toBeVisible()
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+    // The callout's impression is attributed to the error-callout surface.
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeShown",
+      surface: "errorCallout",
+    })
+
+    // Installing from the callout is likewise attributed to errorCallout.
+    await user.click(
+      within(callout).getByRole("button", { name: "Install skills" })
+    )
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstall",
+      surface: "errorCallout",
+    })
+    expect(installSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not show the in-error callout in an embedded app", async () => {
+    // Embedded (?embed=true) apps are chromeless; neither surface should show
+    // even on an error. This specifically guards the callout's !isEmbed gate
+    // (embedding does not affect the exception box's own localhost link gate).
+    vi.mocked(isEmbed).mockReturnValue(true)
+    renderApp(getProps())
+    connectRunRecommendNavigate()
+    sendErrorElement()
+
+    await screen.findByTestId("stException")
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stSkillsInstallCallout")
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not show the in-error callout when not on localhost", async () => {
+    mockWindowLocation("myapp.streamlit.app")
+    renderApp(getProps())
+    connectRunRecommendNavigate()
+    sendErrorElement()
+
+    await screen.findByTestId("stException")
+    expect(
+      screen.queryByTestId("stSkillsInstallCallout")
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not show the in-error callout when the server does not recommend it", async () => {
+    // recommendSkillsInstall is the feature's primary, server-driven gate.
+    // Everything else is eligible (localhost, non-embed, storage available, a
+    // Streamlit-raised error, no prior dismissal), so this isolates that gate:
+    // with recommend=false the callout must stay hidden and log no impression.
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    connectRunRecommendNavigate(false)
+    sendErrorElement()
+
+    await screen.findByTestId("stException")
+    expect(
+      screen.queryByTestId("stSkillsInstallCallout")
+    ).not.toBeInTheDocument()
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeShown",
+      surface: "errorCallout",
+    })
+  })
+
+  it("does not show the in-error callout once the nudge was permanently dismissed", async () => {
+    // A prior "Don't show again" must suppress BOTH surfaces. The toast is
+    // gated out by its own dismissal check (so !showSkillsNudge is true and
+    // would otherwise let the callout through), leaving the callout's own
+    // !isSkillsNudgeDismissed() gate as the load-bearing one under test.
+    window.localStorage.setItem("stSkillsNudgeDismissed", "true")
+    renderApp(getProps())
+    connectRunRecommendNavigate()
+    sendErrorElement()
+
+    await screen.findByTestId("stException")
+    expect(
+      screen.queryByTestId("stSkillsInstallCallout")
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not show the in-error callout when localStorage is unavailable", async () => {
+    // Fail closed: without storage we can't honor a future dismissal, so the
+    // callout (like the toast) must not appear. Simulate a locked-down browser.
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("storage disabled")
+    })
+    renderApp(getProps())
+    connectRunRecommendNavigate()
+    sendErrorElement()
+
+    await screen.findByTestId("stException")
+    expect(
+      screen.queryByTestId("stSkillsInstallCallout")
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not re-offer the callout after skills are installed this session", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockResolvedValue({ detail: "Installed to .agents/skills" })
+    snoozeToastSoCalloutShows()
+    renderApp(getProps())
+    connectRunRecommendNavigate()
+    sendErrorElement([0, 0])
+
+    // Install from the callout (the toast is snoozed, so it's the live surface).
+    const callout = await screen.findByTestId("stSkillsInstallCallout")
+    await user.click(
+      within(callout).getByRole("button", { name: "Install skills" })
+    )
+    await act(async () => {
+      await Promise.resolve()
+    })
+    // The success confirmation lingers, then the callout removes itself.
+    act(() => {
+      vi.advanceTimersByTime(3000)
+    })
+    expect(
+      screen.queryByTestId("stSkillsInstallCallout")
+    ).not.toBeInTheDocument()
+
+    // A later error in the same session must NOT re-offer the install — the
+    // skills are already installed (the server only re-detects next session).
+    //
+    // The first error box has to go FIRST. It's still mounted (only its local
+    // dismissed flag hid the callout) and the shared slot is released on unmount
+    // only — so simply adding a second error would be refused the slot and this
+    // test would pass on that alone, proving nothing about
+    // `skillsInstalledThisSession`.
+    sendForwardMessage(
+      "delta",
+      {
+        type: "newElement",
+        newElement: { type: "text", text: { body: "ok" } },
+      },
+      { deltaPath: [0, 0] }
+    )
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(screen.queryByTestId("stException")).not.toBeInTheDocument()
+
+    // Slot is now free, so a fresh eligible error could claim it — and must not.
+    sendErrorElement([0, 1])
+    await act(async () => {
+      await Promise.resolve()
+    })
+    await screen.findByTestId("stException")
+    expect(
+      screen.queryByTestId("stSkillsInstallCallout")
+    ).not.toBeInTheDocument()
+  })
+
+  it("logs the errorCallout impression only once even when the error remounts", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    snoozeToastSoCalloutShows()
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    connectRunRecommendNavigate()
+    sendErrorElement([0, 0])
+    await screen.findByTestId("stSkillsInstallCallout")
+
+    const shownCount = (): number =>
+      (metricsManager.enqueue as ReturnType<typeof vi.fn>).mock.calls.filter(
+        ([event, payload]) =>
+          event === "menuClick" &&
+          payload?.label === "skillsNudgeShown" &&
+          payload?.surface === "errorCallout"
+      ).length
+    expect(shownCount()).toBe(1)
+
+    // Replace the error with a non-error element so the callout unmounts...
+    sendForwardMessage(
+      "delta",
+      {
+        type: "newElement",
+        newElement: { type: "text", text: { body: "ok" } },
+      },
+      { deltaPath: [0, 0], activeScriptHash: "hash1" }
+    )
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId("stSkillsInstallCallout")
+      ).not.toBeInTheDocument()
+    )
+
+    // ...then bring the error back so the callout remounts. The impression must
+    // NOT be logged again (once per page load, like the toast).
+    sendErrorElement([0, 0])
+    await screen.findByTestId("stSkillsInstallCallout")
+    expect(shownCount()).toBe(1)
   })
 })

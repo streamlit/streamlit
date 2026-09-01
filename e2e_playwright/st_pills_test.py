@@ -21,6 +21,7 @@ from e2e_playwright.conftest import (
     build_app_url,
     wait_for_app_loaded,
     wait_for_app_run,
+    wait_until,
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
@@ -28,17 +29,27 @@ from e2e_playwright.shared.app_utils import (
     click_checkbox,
     click_form_button,
     click_toggle,
+    expect_button_group_overflows,
     expect_help_tooltip,
     expect_markdown,
     expect_prefixed_markdown,
+    expect_selected_option_in_view,
     expect_text,
     get_button_group,
+    get_button_group_options,
     get_element_by_key,
 )
 
 
-def get_pill_button(locator: Locator, text: str) -> Locator:
-    return locator.locator("button[data-variant='pills']").filter(has_text=text)
+def get_pill_button(locator: Locator, text: str, *, exact: bool = False) -> Locator:
+    # exact=True anchors the match with a regex (^\s*text\s*$), not Playwright's
+    # built-in exact= parameter, so trailing whitespace the button adds is tolerated.
+    pills = locator.locator("button[data-variant='pills']")
+    if exact:
+        # Anchor the match so e.g. "D (1)" does not also match "D (10)". The
+        # \s* tolerates whitespace the button rendering may add around the label.
+        return pills.filter(has_text=re.compile(rf"^\s*{re.escape(text)}\s*$"))
+    return pills.filter(has_text=text)
 
 
 def test_pills_regression_no_wrap_at_app_start(
@@ -377,6 +388,56 @@ def test_dynamic_format_func_preserves_selection_and_suppresses_callback(
     expect(naranja_btn).to_have_attribute("data-selected", "true")
 
 
+def test_interdependent_format_func_keeps_child_pill_selected(app: Page):
+    """A child pill stays selected when a parent filter change alters its label.
+
+    Regression test for gh-16269: when clearing the parent pill changes the
+    child's format_func output (a record count embedded in the label) for the
+    still-selected option, the child must remain visually selected at its new
+    label rather than silently deselecting. The return value must be preserved.
+    Clearing the parent also expands the child's option list (mirroring a
+    dataframe that is filtered by the parent), so this covers a label change and
+    a change to the surrounding options at once.
+
+    Steps
+    -----
+    1. Select parent "A": the child options become "D (1)" / "E (1)".
+    2. Select child "D (1)": it is selected and the value is "D".
+    3. Deselect the parent by clicking "A" again: the child label becomes
+       "D (3)", a new option "F (4)" appears, and the pill must stay selected at
+       "D (3)" with the value still "D".
+    """
+    parent_section = get_element_by_key(app, "idf_parent")
+    child_section = get_element_by_key(app, "idf_child")
+    expect(parent_section).to_be_visible()
+
+    # Step 1: select the parent "A" so the child labels reflect the filtered count.
+    get_pill_button(parent_section, "A").click()
+    wait_for_app_run(app)
+    child_d_filtered = get_pill_button(child_section, "D (1)", exact=True)
+    expect(child_d_filtered).to_be_visible()
+
+    # Step 2: select the child "D (1)".
+    child_d_filtered.click()
+    wait_for_app_run(app)
+    expect(child_d_filtered).to_have_attribute("data-selected", "true")
+    expect_text(app, "idf_child value: D")
+
+    # Step 3: clear the parent by clicking "A" again. The child's label count
+    # changes from "D (1)" to "D (3)" and the option list expands to include
+    # "F (4)", all without the user touching the child.
+    get_pill_button(parent_section, "A").click()
+    wait_for_app_run(app)
+
+    # Child stays selected at its new label, keeps its value, renders the newly
+    # added option, and no longer shows the stale label (negative assertion).
+    child_d_full = get_pill_button(child_section, "D (3)", exact=True)
+    expect(child_d_full).to_have_attribute("data-selected", "true")
+    expect_text(app, "idf_child value: D")
+    expect(get_pill_button(child_section, "F (4)", exact=True)).to_be_visible()
+    expect(child_section).not_to_contain_text("D (1)")
+
+
 # --- Query parameter binding tests ---
 
 
@@ -649,3 +710,59 @@ def test_required_pills_behavior(app: Page):
 
     # Value should be None - deselection is allowed
     expect_text(app, "not_required: None")
+
+
+def test_pills_wrap_behavior(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test wrap layout and state behavior for pills.
+
+    Covers:
+    - wrap=False stays one row with local horizontal overflow
+    - wrap=True / auto in vertical layout wrap to multiple rows
+    - auto inside a horizontal container stays one row
+    - selected option scrolls into view when wrap=False
+    - toggling wrap preserves selection
+    """
+    false_group = get_button_group_options(app, "pills_wrap_false")
+    true_group = get_button_group_options(app, "pills_wrap_true")
+    auto_v_group = get_button_group_options(app, "pills_wrap_auto_vertical")
+    auto_h_group = get_button_group_options(app, "pills_wrap_auto_h")
+    selected_group = get_button_group_options(app, "pills_wrap_selected_into_view")
+    stretch_group = get_button_group_options(app, "pills_wrap_false_stretch")
+
+    def _height(group: Locator) -> float:
+        box = group.bounding_box()
+        assert box is not None, "Expected the option group to have a bounding box."
+        return box["height"]
+
+    # wrap=False: single row with local horizontal overflow. Poll heights so
+    # first-paint / scroll-into-view layout does not flake the comparison.
+    wait_until(app, lambda: _height(false_group) < _height(true_group))
+
+    expect_button_group_overflows(false_group)
+    # Overflow is local — the app scroll container must not gain horizontal scroll
+    main = app.get_by_test_id("stMain")
+    wait_until(
+        app,
+        lambda: main.evaluate("el => el.scrollWidth <= el.clientWidth") is True,
+    )
+
+    # Default (auto) in vertical layout wraps like wrap=True
+    wait_until(app, lambda: _height(auto_v_group) > _height(false_group))
+
+    # Default (auto) inside horizontal container stays one row and scrolls
+    wait_until(app, lambda: _height(auto_h_group) < _height(true_group))
+    expect_button_group_overflows(auto_h_group)
+
+    expect_selected_option_in_view(selected_group)
+    expect_button_group_overflows(stretch_group)
+
+    assert_snapshot(
+        get_element_by_key(app, "pills_wrap_false"),
+        name="st_pills-wrap_false_scroll",
+    )
+
+    # Changing wrap must not reset widget state
+    expect_text(app, "pills_wrap_preserve: Beta")
+    click_toggle(app, "Enable wrap")
+    wait_for_app_run(app)
+    expect_text(app, "pills_wrap_preserve: Beta")

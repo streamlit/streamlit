@@ -16,9 +16,8 @@
 
 import { memo, ReactElement } from "react"
 
-import { FloatingPortal } from "@floating-ui/react"
-
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import { DataFrameOverlayPortal } from "~lib/components/widgets/DataFrame/DataFrameOverlayPortal"
 import { useHoverSubmenu } from "~lib/hooks/useHoverSubmenu"
 
 import {
@@ -27,6 +26,9 @@ import {
   StyledSubMenuAnchor,
   StyledSubMenuPanel,
 } from "./styled-components"
+
+/** Marks the portal panel so ColumnMenu's outside-click detection can ignore it. */
+export const FORMATTING_MENU_CLASS = "stDataFrameColumnFormattingMenu"
 
 /**
  * A list of formats available for number columns (number & progress).
@@ -84,6 +86,7 @@ const NUMBER_FORMATS: { format: string; label: string; icon: string }[] = [
     icon: ":material/finance_chip:",
   },
 ]
+
 /**
  * A mapping of column kinds to their available formats.
  * Each column kind has an array of objects, each representing a format
@@ -203,8 +206,9 @@ function FormattingMenu({
         {children}
       </StyledSubMenuAnchor>
       {isOpen && (
-        <FloatingPortal>
+        <DataFrameOverlayPortal>
           <StyledSubMenuPanel
+            className={FORMATTING_MENU_CLASS}
             ref={setFloatingRef}
             style={floatingStyles}
             data-testid="stDataFrameColumnFormattingMenu"
@@ -227,7 +231,7 @@ function FormattingMenu({
               ))}
             </StyledMenuList>
           </StyledSubMenuPanel>
-        </FloatingPortal>
+        </DataFrameOverlayPortal>
       )}
     </>
   )

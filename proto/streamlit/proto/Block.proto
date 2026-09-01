@@ -104,6 +104,16 @@ message Block {
     enum Type {
       DEFAULT = 0; // Default: with border and background
       COMPACT = 1; // Minimal inline toggle without border
+      STEP = 2; // Timeline step with icon column and connector line
+    }
+
+    // Progress state of a status container. Left at STATE_UNDEFINED for
+    // st.expander, which has no notion of progress.
+    enum State {
+      STATE_UNDEFINED = 0;
+      RUNNING = 1;
+      COMPLETE = 2;
+      ERROR = 3;
     }
 
     string label = 1;
@@ -114,6 +124,9 @@ message Block {
     optional string id = 4;
     // Visual style of the expandable container.
     Type type = 5;
+    // Progress state, only set by st.status. The frontend uses it to pick the
+    // step icon and to announce the state to screen readers.
+    State state = 6;
   }
 
   message Dialog {
@@ -168,6 +181,9 @@ message Block {
     // When absent, the popover may still have a block-level id for CSS
     // key styling but should not trigger reruns on toggle.
     optional string id = 8;
+    // If false, the trigger label ellipsizes on one line instead of wrapping.
+    // Absent means the frontend decides the optimal wrapping behavior based on the layout.
+    optional bool wrap = 9;
 
     reserved 2;
   }

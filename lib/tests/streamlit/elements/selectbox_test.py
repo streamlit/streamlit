@@ -27,9 +27,11 @@ from streamlit.elements.lib.options_selector_utils import create_mappings
 from streamlit.elements.widgets.selectbox import SelectboxSerde
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidBindValueError,
+    StreamlitIncompatibleParametersError,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
     StreamlitValueError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
@@ -176,32 +178,31 @@ class SelectboxTest(DeltaGeneratorTestCase):
 
     def test_filter_mode_none_with_accept_new_options_raises_exception(self):
         """Test that filter_mode=None is incompatible with accept_new_options=True."""
-        with pytest.raises(
-            StreamlitAPIException,
-            match=r"cannot be None when `accept_new_options=True`",
-        ):
+        with pytest.raises(StreamlitIncompatibleParametersError):
             st.selectbox(
                 "the label", ("m", "f"), filter_mode=None, accept_new_options=True
             )
 
     def test_invalid_value(self):
         """Test that value must be an int."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError,
+            match=r"Expected one of: int, None\. Provided type: str\.",
+        ):
             st.selectbox("the label", ("m", "f"), "1")
 
     def test_invalid_value_range(self):
         """Test that value must be within the length of the options."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueOutOfRangeError):
             st.selectbox("the label", ("m", "f"), 2)
 
-    def test_raises_exception_of_index_larger_than_options(self):
-        """Test that it raises an exception if index is larger than options."""
-        with pytest.raises(StreamlitAPIException) as ex:
+    def test_index_out_of_range_error_message(self):
+        """Out-of-range index names the closed interval in StreamlitValueOutOfRangeError."""
+        with pytest.raises(StreamlitValueOutOfRangeError) as ex:
             st.selectbox("Test box", ["a"], index=1)
 
-        assert (
-            str(ex.value)
-            == "Selectbox index must be greater than or equal to 0 and less than the length of options."
+        assert str(ex.value) == (
+            "The `index` parameter, set to 1, is outside the required range [0, 0]."
         )
 
     def test_outside_form(self):
@@ -241,11 +242,11 @@ class SelectboxTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.selectbox("the label", ("m", "f"), label_visibility="wrong_value")
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_placeholder(self):
@@ -738,6 +739,27 @@ class TestSelectboxSerde:
         res = serde.serialize(None)
         assert res is None
 
+    def test_serialize_falls_back_to_str_when_format_func_raises(self):
+        """When format_func raises, serialize falls back to str(value)."""
+        options = [{"id": "a"}, {"id": "b"}]
+
+        def format_func(x):
+            return x["id"]
+
+        formatted_options, formatted_option_to_option_index = create_mappings(
+            options, format_func
+        )
+        serde = SelectboxSerde(
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=format_func,
+        )
+
+        # A bare string value makes format_func raise a TypeError, triggering the
+        # str(value) fallback path.
+        assert serde.serialize("free text") == "free text"
+
     def test_serialize_empty_options(self):
         """Test serializing with empty options.
 
@@ -991,8 +1013,8 @@ class SelectboxBindQueryParamsTest(DeltaGeneratorTestCase):
         assert c.label == "the label"
 
     def test_invalid_bind_value_raises_exception(self):
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `bind` value"):
             st.selectbox("the label", ["a", "b"], key="my_key", bind="invalid-value")
 
     def test_persist_state_passed_to_metadata(self) -> None:

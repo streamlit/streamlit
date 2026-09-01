@@ -37,6 +37,77 @@ name = st.text_input("Name", key="user_name")
 # st.session_state.user_name contains the same value as `name`
 ```
 
+## Syncing a widget to the URL (shareable links)
+
+To make a widget's value shareable through the page URL, pass `bind="query-params"` together with `key=`. Streamlit writes the value to the URL query string when it changes and restores it from the URL on load — **don't hand-roll `st.query_params`** for this. The `key=` becomes the query-parameter name.
+
+```python
+# GOOD: one widget, automatic URL sync. Picking "Newest" -> ?sort=Newest;
+# loading ?sort=Price reopens with "Price" selected.
+sort = st.selectbox(
+    "Sort order",
+    ["Relevance", "Newest", "Price"],
+    key="sort",  # REQUIRED with bind=; becomes the URL param name (?sort=...)
+    bind="query-params",  # exact string, with a hyphen
+)
+st.write(f"Sorting by: {sort}")
+```
+
+```python
+# BAD: hand-rolled plumbing. More code, an extra rerun to guard, it conflicts
+# with bind= (a bound param can't be set/deleted via st.query_params), and it
+# crashes on an unexpected URL value — .index(default) raises ValueError if a
+# user opens ?sort=Foo. With bind="query-params", an unknown URL value just
+# falls back to the default instead of raising.
+default = st.query_params.get("sort", "Relevance")
+sort = st.selectbox(
+    "Sort order",
+    ["Relevance", "Newest", "Price"],
+    index=["Relevance", "Newest", "Price"].index(default),
+)
+st.query_params["sort"] = sort  # don't do this when bind= handles sync
+```
+
+Notes:
+- `bind="query-params"` requires `key=`. The only valid value is the exact string `"query-params"` (hyphen, not `"query_params"`); anything else is invalid. Not supported with `st.text_input(type="password")`.
+- When the value equals the default, the param is dropped from the URL to keep it clean.
+- A bound param can't be set or deleted through `st.query_params` — change it programmatically by assigning to `st.session_state[key]` *before* the widget renders, or from an `on_change` callback. Assigning after the widget has already rendered on the same run raises `StreamlitAPIException` (see [Modifying state after widget creation](#modifying-state-after-widget-creation)). Do not mix `bind=` with manual `st.query_params` reads/writes.
+- Still render the value (e.g. `st.write(f"Sorting by: {sort}")`) if the app needs to show the current selection.
+- Works on input widgets generally. It's **not** supported on trigger/button widgets (`st.button`, `st.download_button`, `st.form_submit_button`), file and media inputs (`st.file_uploader`, `st.camera_input`, `st.audio_input`), `st.chat_input`, or `st.data_editor`, nor on selections from `st.dataframe`/charts — assume any other input widget supports it. (Listing the exceptions rather than every supported widget keeps this from going stale as new widgets ship.)
+- Multi-page apps: query params belong to the app URL, not an individual page, so a bound value persists in the URL across `st.navigation` page switches and is shared app-wide. If two pages bind widgets to the same `key=`, they share that value — use distinct keys per page when you don't want it to carry over.
+- To keep a value across reruns or page switches *without* exposing it in the URL, use `persist_state` instead (see [Persisting widget values](#persisting-widget-values-persist_state)); when both are set, `bind` takes precedence.
+
+## Widget input constraints are mostly client-side
+
+Most widget input constraints—`options` allow-lists (`st.selectbox`, `st.multiselect`, `st.radio`), `min_value`/`max_value` (`st.slider`, `st.number_input`), `max_chars` (`st.text_input`), `disabled`, and `st.data_editor` column `validate`/`num_rows`—are primarily enforced in the browser for UX. Treat them as guardrails for normal users, **not** as a security boundary: a widget's return value (and its `st.session_state` entry) reflects what the client sent, and a modified or malicious client can submit values outside those constraints.
+
+For any security-relevant or sensitive decision—authorization/role checks, database writes, file paths, spending or quota limits, or anything that must not exceed a declared bound—re-validate the value in your own script before acting on it:
+
+```python
+ALLOWED_ROLES = ["viewer", "editor"]
+role = st.selectbox("Role", ALLOWED_ROLES, key="role")
+
+# Don't rely on the widget's options as a security check.
+if role not in ALLOWED_ROLES:
+    st.error("Invalid role.")
+    st.stop()
+grant_access(role)
+```
+
+## Persisting widget values (`persist_state`)
+
+By default, a keyed widget's value is lost when the widget stops being rendered (for example, when it's conditionally hidden or the user switches pages). Set the keyword-only `persist_state` parameter to keep the value:
+
+- `None` (default): the value is dropped when the widget isn't rendered.
+- `"page"`: the value is preserved while the user stays on the page where the widget is defined (e.g., while it's conditionally hidden); it's discarded on a page switch.
+- `"session"`: the value is preserved for the whole session, including across page switches, so it returns when the user navigates back.
+
+```python
+st.text_input("Name", key="name", persist_state="session")
+```
+
+`persist_state` requires a `key` and is available on every widget that supports `bind="query-params"`. When both are set, `bind` takes precedence, so the value lives in the URL and persists across page switches regardless of the `persist_state` scope.
+
 ## Callbacks
 
 Callbacks execute **before** the script reruns, allowing immediate state changes. Use `on_change` or `on_click` with optional `args` and `kwargs`:
@@ -45,10 +116,13 @@ Callbacks execute **before** the script reruns, allowing immediate state changes
 def increment(amount):
     st.session_state.count += amount
 
+
 st.button("Add 5", on_click=increment, args=(5,))
 ```
 
 Access a widget's value in its own callback via `st.session_state.key`, not the return variable.
+
+Calling `st.rerun()` or `st.switch_page()` inside a callback ends that callback immediately (statements after the call don't run). Streamlit still runs the interaction's other callbacks before performing the rerun or navigation.
 
 ## Initialization patterns
 
@@ -62,7 +136,7 @@ st.session_state.setdefault("filters", {})
 
 ## Multipage state
 
-Widgets are NOT stateful across pages. Their values reset when navigating between pages.
+By default, widgets are NOT stateful across pages—their values reset when navigating between pages. To keep a widget's value across page switches, set `persist_state="session"` (see [Persisting widget values](#persisting-widget-values-persist_state) above).
 
 ### Sharing state
 

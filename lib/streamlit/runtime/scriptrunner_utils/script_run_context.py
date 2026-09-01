@@ -20,6 +20,7 @@ import dataclasses
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Final,
@@ -64,6 +65,19 @@ _LOGGER: Final = get_logger(__name__)
 UserInfoType: TypeAlias = dict[str, str | bool | dict[str, str] | None]
 
 
+class RunLocation(Enum):
+    """Which phase of Streamlit execution is active on this thread.
+
+    - ``MAIN_SCRIPT`` — the top-level app script body.
+    - ``FRAGMENT`` — a ``@st.fragment`` body.
+    - ``CALLBACK`` — a widget callback (``on_change``, ``on_click``, etc.).
+    """
+
+    MAIN_SCRIPT = "main_script"
+    FRAGMENT = "fragment"
+    CALLBACK = "callback"
+
+
 # If true, it indicates that we are in a cached function that disallows the usage of
 # widgets. Using contextvars to be thread-safe.
 in_cached_function: contextvars.ContextVar[bool] = contextvars.ContextVar(
@@ -82,7 +96,7 @@ class FragmentThreadState:
 
     fragment_id: str | None = None
     delta_path: tuple[int, ...] | None = None
-    in_fragment_callback: bool = False
+    run_location: RunLocation = RunLocation.MAIN_SCRIPT
     active_script_hash: str = ""
     # Set on parallel-fragment workers so wrapped_fragment() skips creating a
     # second st.container(); the main thread already pre-allocated one before
@@ -92,6 +106,13 @@ class FragmentThreadState:
     # _check_not_parallel_worker() to gate APIs that are unsafe during
     # concurrent execution (e.g. st.dialog, st.switch_page).
     is_parallel_worker: bool = False
+
+    @property
+    def in_fragment_callback(self) -> bool:
+        """True while a callback for a widget defined inside a fragment is running."""
+        return (
+            self.run_location is RunLocation.CALLBACK and self.fragment_id is not None
+        )
 
 
 class _FragmentThreadStateFields(TypedDict, total=False):
@@ -104,7 +125,7 @@ class _FragmentThreadStateFields(TypedDict, total=False):
 
     fragment_id: str | None
     delta_path: tuple[int, ...] | None
-    in_fragment_callback: bool
+    run_location: RunLocation
     active_script_hash: str
     pre_allocated_container_fragment_id: str | None
     is_parallel_worker: bool
@@ -291,6 +312,16 @@ class ScriptRunContext:
                 qp.set_initial_query_params(query_string)
                 qp.populate_from_query_string(query_string)
 
+    @property
+    def has_script_started(self) -> bool:
+        """Whether this run reached its script body.
+
+        False when a widget callback queued an ``st.rerun()`` that preempted the run
+        before its body. ``SessionState.on_script_finished`` then skips stale-widget
+        cleanup, which assumes the body re-registered its widgets.
+        """
+        return self._has_script_started
+
     def on_script_start(self) -> None:
         self._has_script_started = True
 
@@ -393,11 +424,16 @@ def add_script_run_ctx(
         ):
             original_run = thread.run
 
-            def _run_with_thread_state(*args: object, **kwargs: object) -> None:
+            # Accept but ignore extra args: ``original_run`` is already bound and
+            # takes none. Some thread wrappers (e.g. Sentry's ThreadingIntegration)
+            # re-invoke our replacement ``run`` with the thread as a positional
+            # arg; forwarding it would raise "run() takes 1 positional argument
+            # but 2 were given" (GitHub issues #15374, #16139).
+            def _run_with_thread_state(*_args: object, **_kwargs: object) -> None:
                 fields = getattr(thread, _FRAGMENT_THREAD_STATE_FIELDS_ATTR, None)
                 if fields is not None:
                     ThreadState.initialize(**fields)
-                original_run(*args, **kwargs)
+                original_run()
 
             thread.run = _run_with_thread_state  # type: ignore[method-assign]  # ty: ignore[invalid-assignment]
             setattr(thread, _FRAGMENT_THREAD_STATE_WRAP_INSTALLED_ATTR, True)

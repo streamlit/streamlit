@@ -81,13 +81,13 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Invalid width value (not "stretch" or int)
-    json({"data": "value"}, width="invalid")  # type: ignore[arg-type]
+    json({"data": "value"}, width="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # "content" is accepted by some sibling commands but NOT by st.json
-    json({"data": "value"}, width="content")  # type: ignore[arg-type]
+    json({"data": "value"}, width="content")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid expanded type (not bool or int)
-    json({"data": "value"}, expanded="true")  # type: ignore[arg-type]
+    json({"data": "value"}, expanded="true")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Passing expanded as positional argument (should be keyword-only)
-    json({"data": "value"}, True)  # type: ignore[misc]
+    json({"data": "value"}, True)  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]

@@ -66,7 +66,8 @@ def marshall_table(
         # and `None` otherwise.
         if not isinstance(default_uuid, str):
             raise StreamlitAPIException(
-                "Default UUID must be a string for Styler data."
+                "Default UUID must be a string for Styler data.",
+                error_id="styler-default-uuid-must-be-string",
             )
         marshall_styler(proto, data, default_uuid)
 
@@ -114,7 +115,7 @@ def _compute_hide_index(
     # For Styler objects, check the underlying data
     if dataframe_util.is_pandas_styler(data):
         # Styler.data is the underlying DataFrame
-        return dataframe_util.has_range_index(data.data)  # type: ignore[attr-defined]
+        return dataframe_util.has_range_index(data.data)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
 
     # If data is already a pandas DataFrame, check directly without conversion
     if isinstance(data, pd.DataFrame):
@@ -163,11 +164,12 @@ class TableMixin:
     ) -> DeltaGenerator:
         """Display a static table.
 
-        While ``st.dataframe`` is geared towards large datasets and interactive
-        data exploration, ``st.table`` is useful for displaying small, styled
-        tables without sorting or scrolling. For example, ``st.table`` may be
-        the preferred way to display a confusion matrix or leaderboard.
-        Additionally, ``st.table`` supports Markdown.
+        While ``st.dataframe`` is geared towards larger datasets and interactive
+        data exploration, ``st.table`` is useful for small, static, styled
+        tables. For example, ``st.table`` is a great fit for description lists
+        and other key-value data, confusion matrices, and leaderboards.
+        Additionally, ``st.table`` supports Markdown and offers more extensive
+        Pandas Styler support than ``st.dataframe``.
 
         Parameters
         ----------

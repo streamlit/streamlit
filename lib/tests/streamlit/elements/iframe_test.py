@@ -20,7 +20,11 @@ import pytest
 
 import streamlit as st
 from streamlit.elements.iframe import IframeMixin, _is_file, marshall
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -42,13 +46,25 @@ def test_marshall_with_valid_tab_index(tab_index: int | None) -> None:
 
 @pytest.mark.parametrize(
     "invalid_value",
-    ["0", 1.5, True, [], {}, -2, -100],
-    ids=["string", "float", "bool", "list", "dict", "minus_two", "minus_hundred"],
+    ["0", 1.5, True, [], {}],
+    ids=["string", "float", "bool", "list", "dict"],
 )
-def test_marshall_with_invalid_tab_index(invalid_value: object) -> None:
-    """Test that invalid tab_index types and values raise StreamlitAPIException."""
+def test_marshall_with_invalid_tab_index_type(invalid_value: object) -> None:
+    """Invalid tab_index types raise StreamlitInvalidParameterTypeError."""
     proto = IFrameProto()
-    with pytest.raises(StreamlitAPIException):
+    with pytest.raises(StreamlitInvalidParameterTypeError):
+        marshall(proto, src="https://example.com", tab_index=invalid_value)
+
+
+@pytest.mark.parametrize(
+    "invalid_value",
+    [-2, -100],
+    ids=["minus_two", "minus_hundred"],
+)
+def test_marshall_with_invalid_tab_index_value(invalid_value: object) -> None:
+    """Out-of-range tab_index integers raise StreamlitValueError."""
+    proto = IFrameProto()
+    with pytest.raises(StreamlitValueError):
         marshall(proto, src="https://example.com", tab_index=invalid_value)
 
 
@@ -329,7 +345,7 @@ class StIframeTest(DeltaGeneratorTestCase):
 
     def test_iframe_with_invalid_tab_index_raises(self):
         """Test that invalid tab_index values raise an exception."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.iframe("https://example.com", height=400, tab_index=-2)
 
     def test_iframe_with_invalid_width_raises(self):
@@ -346,8 +362,8 @@ class StIframeTest(DeltaGeneratorTestCase):
 class StIframeLocalFileTest(DeltaGeneratorTestCase):
     """Test st.iframe with local files."""
 
-    def test_iframe_with_local_html_file(self):
-        """Test st.iframe with a local HTML file embeds via srcdoc."""
+    def test_iframe_with_string_html_file_path(self):
+        """Test st.iframe warns and doesn't read a string HTML file path."""
         html_content = "<html><body><h1>Test</h1></body></html>"
 
         with tempfile.NamedTemporaryFile(
@@ -357,11 +373,22 @@ class StIframeLocalFileTest(DeltaGeneratorTestCase):
             temp_path = Path(f.name)
 
         try:
-            st.iframe(str(temp_path), height=500)
+            with (
+                patch(
+                    "streamlit.elements.iframe.show_deprecation_warning"
+                ) as mock_show_warning,
+                patch("streamlit.elements.iframe.open") as mock_open,
+            ):
+                st.iframe(str(temp_path), height=500)
 
             element = self.get_delta_from_queue().new_element
 
-            assert element.iframe.srcdoc == html_content
+            mock_show_warning.assert_called_once_with(
+                "Passing a local file path as a string to `st.iframe` is no longer "
+                "supported. To load a local file, pass a `pathlib.Path` object instead."
+            )
+            mock_open.assert_not_called()
+            assert element.iframe.srcdoc == str(temp_path)
             assert element.iframe.src == ""  # src should be empty for srcdoc
             assert element.height_config.pixel_height == 500
         finally:
@@ -397,7 +424,7 @@ class StIframeLocalFileTest(DeltaGeneratorTestCase):
             temp_path = Path(f.name)
 
         try:
-            st.iframe(str(temp_path), height=300)
+            st.iframe(temp_path, height=300)
 
             element = self.get_delta_from_queue().new_element
 
@@ -413,28 +440,56 @@ class StIframeLocalFileTest(DeltaGeneratorTestCase):
     def test_iframe_with_nonexistent_file_string_treated_as_html(self):
         """Test that a string that's not a file or URL is treated as HTML."""
         # A string that doesn't exist as a file and isn't a URL is treated as HTML
-        st.iframe("some random text", height=100)
+        with patch(
+            "streamlit.elements.iframe.show_deprecation_warning"
+        ) as mock_show_warning:
+            st.iframe("some random text", height=100)
 
+        # A string that doesn't resolve to a file must not trigger the warning.
+        mock_show_warning.assert_not_called()
         element = self.get_delta_from_queue().new_element
 
         assert element.iframe.srcdoc == "some random text"
 
-    def test_iframe_with_non_html_local_file(self):
-        """Test st.iframe uploads non-HTML local files and sets iframe.src."""
+    def test_iframe_with_non_html_string_file_path(self):
+        """Test st.iframe doesn't upload a non-HTML string file path."""
         with tempfile.NamedTemporaryFile(mode="wb", suffix=".pdf", delete=False) as f:
             # Write some bytes that resemble a PDF header
             f.write(b"%PDF-1.4 test content")
             temp_path = Path(f.name)
 
         try:
-            st.iframe(str(temp_path), height=250)
+            with (
+                patch(
+                    "streamlit.elements.iframe.show_deprecation_warning"
+                ) as mock_show_warning,
+                patch(
+                    "streamlit.elements.iframe.runtime.get_instance"
+                ) as mock_get_runtime,
+            ):
+                st.iframe(str(temp_path), height=250)
 
             element = self.get_delta_from_queue().new_element
 
-            # Non-HTML files should not be embedded via srcdoc
+            mock_show_warning.assert_called_once()
+            mock_get_runtime.assert_not_called()
+            assert element.iframe.srcdoc == str(temp_path)
+            assert element.iframe.src == ""
+        finally:
+            temp_path.unlink()
+
+    def test_iframe_with_non_html_path_object(self):
+        """Test st.iframe uploads a non-HTML Path and sets iframe.src."""
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".pdf", delete=False) as f:
+            f.write(b"%PDF-1.4 test content")
+            temp_path = Path(f.name)
+
+        try:
+            st.iframe(temp_path, height=250)
+
+            element = self.get_delta_from_queue().new_element
+
             assert element.iframe.srcdoc == ""
-            # The file should be uploaded and exposed via a media URL
-            assert element.iframe.src != ""
             assert element.iframe.src.startswith("/media/")
         finally:
             temp_path.unlink()
@@ -453,7 +508,7 @@ class StIframeLocalFileTest(DeltaGeneratorTestCase):
                 side_effect=PermissionError("denied"),
             ):
                 with pytest.raises(StreamlitAPIException, match="Unable to read file"):
-                    st.iframe(str(temp_path), height=400)
+                    st.iframe(temp_path, height=400)
         finally:
             temp_path.unlink()
 
@@ -469,7 +524,7 @@ class StIframeLocalFileTest(DeltaGeneratorTestCase):
                 side_effect=PermissionError("denied"),
             ):
                 with pytest.raises(StreamlitAPIException, match="Unable to read file"):
-                    st.iframe(str(temp_path), height=400)
+                    st.iframe(temp_path, height=400)
         finally:
             temp_path.unlink()
 
@@ -481,7 +536,7 @@ class StIframeLocalFileTest(DeltaGeneratorTestCase):
 
         try:
             with patch("streamlit.elements.iframe.runtime.exists", return_value=False):
-                st.iframe(str(temp_path), height=300)
+                st.iframe(temp_path, height=300)
 
                 element = self.get_delta_from_queue().new_element
                 # Without runtime, src should be empty for non-HTML files

@@ -18,7 +18,7 @@ import re
 from typing import TYPE_CHECKING
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import FilePayload, Page, expect
 
 from e2e_playwright.conftest import IframedPage, rerun_app, wait_for_app_run, wait_until
 from e2e_playwright.shared.app_utils import (
@@ -28,6 +28,7 @@ from e2e_playwright.shared.app_utils import (
     expect_no_skeletons,
     fill_number_input,
     get_checkbox,
+    get_element_by_key,
     get_number_input,
     get_text_input,
     open_popover,
@@ -200,6 +201,47 @@ def test_mega_tester_app_rendering_performance(app: Page) -> None:
         rerun_app(app)
 
 
+@pytest.mark.external_test
+def test_mega_tester_app_uploads_small_file(app_target: AppTarget) -> None:
+    """A small file uploads end to end and reaches a settled, error-free state.
+
+    This is the only coverage that drives the ``/_stcore/upload_file`` route
+    against a hosted app; the other external tests assert rendering, console
+    errors, and host messaging. Uploads are a separate round trip that hosting
+    can break on its own — via XSRF handling, session affinity, proxy body
+    limits, or path rewriting — without anything else looking wrong.
+
+    The payload is only a few hundred bytes, so a failure points at the upload
+    round trip itself rather than at a hosting body-size limit.
+    """
+    uploader = app_target.locator(".st-key-file_input")
+    uploader.scroll_into_view_if_needed()
+
+    with app_target.page.expect_file_chooser() as file_chooser_info:
+        uploader.get_by_test_id("stFileUploaderDropzone").click()
+
+    file_chooser_info.value.set_files(
+        files=[
+            FilePayload(
+                name="upload_probe.csv",
+                mimeType="text/csv",
+                buffer=b"col_a,col_b\n" + b"1,2\n" * 40,
+            )
+        ]
+    )
+
+    app_target.wait_for_run()
+
+    expect(uploader.get_by_test_id("stFileChipName")).to_have_text(
+        "upload_probe.csv", use_inner_text=True
+    )
+    # The chip name alone renders while the PUT is still in flight, so assert the
+    # terminal state: the spinner exists only during upload, and the alert only on
+    # error. Together these fail a stalled or rejected round trip.
+    expect(uploader.get_by_test_id("stFileChipIconSpinner")).to_have_count(0)
+    expect(uploader.get_by_role("alert")).to_have_count(0)
+
+
 @pytest.mark.external_test(upload_test_assets=True)
 def test_mega_tester_app_renders_expected_content(app_target: AppTarget) -> None:
     expect_no_skeletons(app_target.locator_context, timeout=25000)
@@ -250,6 +292,15 @@ def test_mega_tester_app_renders_expected_content(app_target: AppTarget) -> None
     expect(
         app_target.get_by_role("button", name="Download data as CSV", exact=True)
     ).to_be_visible()
+    expect(
+        app_target.get_by_role("heading", name="Paginated sample rows", exact=True)
+    ).to_be_visible()
+    expect(
+        app_target.locator(".st-key-mega_sample_pagination")
+        .get_by_test_id("stPagination")
+        .first
+    ).to_be_visible()
+    expect(app_target.get_by_text("Showing page 1 of 5", exact=True)).to_be_visible()
     column_config_heading = app_target.get_by_role(
         "heading", name="Column config matrix", exact=True
     )
@@ -285,6 +336,7 @@ def test_mega_tester_app_renders_expected_content(app_target: AppTarget) -> None
     else:
         expect(plotly_charts).to_have_count(0)
     expect(app_target.get_by_test_id("stGraphVizChart").first).to_be_visible()
+    expect(app_target.get_by_test_id("stMermaidChart").first).to_be_visible()
 
     # Custom UI: verify HTML component iframe and unsafe markdown output.
     custom_html_iframe = app_target.locator(
@@ -309,6 +361,10 @@ def test_mega_tester_app_renders_expected_content(app_target: AppTarget) -> None
     expect(app_target.get_by_text("Success", exact=True)).to_be_visible()
     expect(app_target.get_by_text("Success with icon", exact=True)).to_be_visible()
     expect(
+        app_target.get_by_text("Loading generated summary...", exact=True)
+    ).to_be_visible()
+    expect(app_target.locator(".stMarkdownShimmer").first).to_be_visible()
+    expect(
         app_target.get_by_role("heading", name="Header with blue divider", exact=True)
     ).to_be_visible()
     expect(
@@ -331,6 +387,9 @@ def test_mega_tester_app_renders_expected_content(app_target: AppTarget) -> None
     ).to_be_visible()
     expect(
         app_target.get_by_role("button", name=re.compile(r"Button tertiary"))
+    ).to_be_visible()
+    expect(
+        app_target.get_by_test_id("stMenuButton").filter(has_text="Menu button").first
     ).to_be_visible()
     expect(app_target.get_by_text("Accept new options", exact=True)).to_be_visible()
     file_uploader_mode = app_target.get_by_text("File uploader mode", exact=True)
@@ -450,6 +509,26 @@ def test_mega_tester_app_interactions_validate_behavior(app: Page) -> None:
     expect(
         app.get_by_text("You pressed the tertiary button", exact=True)
     ).to_be_visible()
+
+    menu_button = (
+        app.get_by_test_id("stMenuButton").filter(has_text="Menu button").first
+    )
+    menu_button.get_by_test_id("stMenuButtonButton").first.click()
+    menu_body = app.get_by_test_id("stMenuButtonBody")
+    expect(menu_body).to_be_visible()
+    menu_body.get_by_text("Export CSV", exact=True).click()
+    wait_for_app_run(app)
+    expect(
+        app.get_by_text("Menu button selected: Export CSV", exact=True)
+    ).to_be_visible()
+
+    pagination = get_element_by_key(app, "mega_sample_pagination").get_by_test_id(
+        "stPagination"
+    )
+    expect(pagination).to_be_visible()
+    pagination.get_by_test_id("stPaginationNext").click()
+    wait_for_app_run(app)
+    expect(app.get_by_text("Showing page 2 of 5", exact=True)).to_be_visible()
 
     # Expander should hide content until opened.
     expect(app.get_by_text("Expander content", exact=True)).to_be_hidden()

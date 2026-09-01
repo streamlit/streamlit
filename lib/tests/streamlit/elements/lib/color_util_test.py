@@ -278,3 +278,22 @@ class ColorUtilTest(unittest.TestCase):
                 f"Expected is_color_like({test_arg!r}) to be False "
                 "(builtin names need special handling)"
             )
+
+    def test_normalize_tuple_rejects_wrong_length(self):
+        """_normalize_tuple raises for a tuple that isn't length 3 or 4."""
+        with pytest.raises(errors.StreamlitInvalidColorError):
+            color_util._normalize_tuple(
+                (1, 2),  # type: ignore[arg-type]
+                color_util._int_formatter,
+                color_util._int_formatter,
+            )
+
+    def test_int_formatter_rejects_non_numeric_component(self):
+        """_int_formatter raises when the component is neither int nor float."""
+        with pytest.raises(errors.StreamlitInvalidColorError):
+            color_util._int_formatter("x", "x")  # type: ignore[arg-type]
+
+    def test_float_formatter_rejects_non_numeric_component(self):
+        """_float_formatter raises when the component is neither int nor float."""
+        with pytest.raises(errors.StreamlitInvalidColorError):
+            color_util._float_formatter("x", "x")  # type: ignore[arg-type]

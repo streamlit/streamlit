@@ -40,9 +40,10 @@ if TYPE_CHECKING:
     assert_type(tab2, TabContainer)
     assert_type(tab3, TabContainer)
 
-    # TabContainer is a DeltaGenerator (Liskov substitution)
-    tab_list: Sequence[DeltaGenerator] = tabs(["A", "B"])
-    assert_type(tab_list, Sequence[DeltaGenerator])
+    # Check that the container is usable anywhere a DeltaGenerator is expected.
+    # The annotated assignment is the subtype check: assert_type here would only
+    # see the DeltaGenerator annotation, so it could never fail.
+    _tabs_as_delta_generators: Sequence[DeltaGenerator] = tabs(["A", "B"])
 
     # Context manager returns Self
     with tabs(["A", "B"])[0] as ctx:
@@ -84,4 +85,16 @@ if TYPE_CHECKING:
     )
 
     # Invalid usages — should NOT type check
-    tabs(["A", "B"], on_change=123)  # type: ignore[arg-type]
+    tabs(["A", "B"], on_change=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # --- Height parameter ---
+
+    # Valid heights — should type check
+    assert_type(tabs(["A", "B"], height=300), Sequence[TabContainer])
+    assert_type(tabs(["A", "B"], height="stretch"), Sequence[TabContainer])
+    assert_type(tabs(["A", "B"], height="content"), Sequence[TabContainer])
+
+    # Invalid heights — should NOT type check
+    tabs(["A", "B"], height="tall")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    tabs(["A", "B"], height=1.5)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    tabs(["A", "B"], height=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]

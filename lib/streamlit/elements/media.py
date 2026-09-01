@@ -25,7 +25,13 @@ from streamlit import runtime, type_util, url_util
 from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
 from streamlit.elements.lib.subtitle_utils import process_subtitle_data
 from streamlit.elements.lib.utils import compute_and_register_element_id
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitInvalidParameterTypeError,
+    StreamlitMissingRequiredParameterError,
+)
+from streamlit.logger import get_logger
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
@@ -39,6 +45,8 @@ if TYPE_CHECKING:
     from numpy import typing as npt
 
     from streamlit.delta_generator import DeltaGenerator
+
+_LOGGER: Final = get_logger(__name__)
 
 
 MediaData: TypeAlias = Union[
@@ -200,13 +208,16 @@ class MediaMixin:
         is_data_numpy_array = type_util.is_type(data, "numpy.ndarray")
 
         if is_data_numpy_array and sample_rate is None:
-            raise StreamlitAPIException(
-                "`sample_rate` must be specified when `data` is a numpy array."
+            raise StreamlitMissingRequiredParameterError(
+                "sample_rate",
+                detail="Must be specified when `data` is a numpy array.",
             )
         if not is_data_numpy_array and sample_rate is not None:
-            self.dg.warning(
-                "Warning: `sample_rate` will be ignored since data is not a numpy "
-                "array."
+            # `sample_rate` only applies to NumPy data, so it is dropped here
+            # and surfaced to the developer via the console.
+            _LOGGER.warning(
+                "`sample_rate` will be ignored since data is not a numpy array.",
+                stack_info=True,
             )
         coordinates = self.dg._get_delta_path_str()
         marshall_audio(
@@ -487,7 +498,11 @@ def _marshall_av_media(
     elif type_util.is_type(data, "numpy.ndarray"):
         data_or_filename = data.tobytes()
     else:
-        raise RuntimeError(f"Invalid binary data format: {type(data)}")
+        raise StreamlitInvalidParameterTypeError(
+            "data",
+            type(data).__name__,
+            ["str", "bytes", "Path", "BytesIO", "file-like", "ndarray"],
+        )
 
     if runtime.exists():
         file_url = runtime.get_instance().media_file_mgr.add(
@@ -565,7 +580,10 @@ def marshall_video(
     """
 
     if start_time < 0 or (end_time is not None and end_time <= start_time):
-        raise StreamlitAPIException("Invalid start_time and end_time combination.")
+        raise StreamlitAPIException(
+            "Invalid start_time and end_time combination.",
+            error_id="media-invalid-start-end-time",
+        )
 
     proto.start_time = start_time
     proto.muted = muted
@@ -600,8 +618,10 @@ def marshall_video(
             proto.url = youtube_url
             proto.type = VideoProto.Type.YOUTUBE_IFRAME
             if subtitles:
-                raise StreamlitAPIException(
-                    "Subtitles are not supported for YouTube videos."
+                raise StreamlitIncompatibleParametersError(
+                    "subtitles",
+                    "data=<YouTube URL>",
+                    explanation="Subtitles are not supported for YouTube videos.",
                 )
         else:
             proto.url = data
@@ -618,9 +638,10 @@ def marshall_video(
         elif isinstance(subtitles, dict):
             subtitle_items.extend(subtitles.items())
         else:
-            raise StreamlitAPIException(
-                f"Unsupported data type for subtitles: {type(subtitles)}. "
-                f"Only str (file paths) and dict are supported."
+            raise StreamlitInvalidParameterTypeError(
+                "subtitles",
+                type(subtitles).__name__,
+                ["str", "bytes", "BytesIO", "Path", "dict"],
             )
 
         for label, subtitle_data in subtitle_items:
@@ -637,9 +658,14 @@ def marshall_video(
                 sub.url = process_subtitle_data(
                     subtitle_coordinates, subtitle_data, label
                 )
-            except (TypeError, ValueError) as original_err:
+            except (TypeError, ValueError, StreamlitAPIException) as original_err:
+                # Include the track label so a multi-track dict names which
+                # subtitle failed. Subtitle helpers raise Streamlit types;
+                # lower-level parsing can still raise native TypeError/ValueError.
                 raise StreamlitAPIException(
-                    f"Failed to process the provided subtitle: {label}"
+                    f"Failed to process the provided subtitle {label!r}: "
+                    f"{original_err}",
+                    error_id="video-failed-processing-subtitle",
                 ) from original_err
 
     if autoplay:
@@ -675,7 +701,9 @@ def _parse_start_time_end_time(
         error_msg = TIMEDELTA_PARSE_ERROR_MESSAGE.format(
             param_name="start_time", param_value=start_time
         )
-        raise StreamlitAPIException(error_msg) from None
+        raise StreamlitAPIException(
+            error_msg, error_id="media-invalid-start-time"
+        ) from None
 
     try:
         end_time = time_to_seconds(end_time, coerce_none_to_inf=False)
@@ -685,7 +713,9 @@ def _parse_start_time_end_time(
         error_msg = TIMEDELTA_PARSE_ERROR_MESSAGE.format(
             param_name="end_time", param_value=end_time
         )
-        raise StreamlitAPIException(error_msg) from None
+        raise StreamlitAPIException(
+            error_msg, error_id="media-invalid-end-time"
+        ) from None
 
     return start_time, end_time
 
@@ -724,7 +754,10 @@ def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
         nchan = transformed_data.shape[0]
         transformed_data = transformed_data.T.ravel()
     else:
-        raise StreamlitAPIException("Numpy array audio input must be a 1D or 2D array.")
+        raise StreamlitAPIException(
+            "Numpy array audio input must be a 1D or 2D array.",
+            error_id="audio-numpy-invalid-rank",
+        )
 
     if transformed_data.size == 0:
         return transformed_data.astype(np.int16).tobytes(), nchan

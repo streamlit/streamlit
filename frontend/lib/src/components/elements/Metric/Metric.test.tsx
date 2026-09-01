@@ -67,6 +67,21 @@ describe("Metric element", () => {
     expect(metricElement).toHaveClass("stMetric")
   })
 
+  it("unwraps fenced code in truncated metric labels so the metric stays one line", () => {
+    const props = getProps({ label: "```\nfenced code\n```" })
+    render(<Metric {...props} />)
+
+    expect(screen.queryByTestId("stMarkdownPre")).not.toBeInTheDocument()
+    expect(screen.getByTestId("stMetricLabel")).toHaveTextContent(
+      /fenced code/
+    )
+    expect(
+      screen
+        .getByTestId("stMetricLabel")
+        .querySelector("[data-testid='stMarkdownContainer']")
+    ).toHaveStyle({ "white-space": "nowrap" })
+  })
+
   it("renders metric label as expected", () => {
     const props = getProps()
     render(<Metric {...props} />)
@@ -361,6 +376,14 @@ describe("Metric element", () => {
 
   // Chart feature tests
   describe("Chart feature", () => {
+    const mockFinalize = vi.fn()
+
+    beforeEach(() => {
+      vi.mocked(embed).mockResolvedValue({
+        finalize: mockFinalize,
+      } as unknown as Awaited<ReturnType<typeof embed>>)
+    })
+
     it("renders chart when chartData is provided", () => {
       const props = getProps({
         chartData: [1, 2, 3, 4, 5],
@@ -417,6 +440,90 @@ describe("Metric element", () => {
             }),
           })
         )
+      })
+    })
+
+    it("re-embeds and finalizes after chartData is cleared then restored", async () => {
+      const chartData = [1, 2, 3, 4, 5]
+      const withChart = getProps({
+        chartData,
+        chartType: MetricProto.ChartType.LINE,
+      })
+      const withoutChart = getProps({
+        chartData: [],
+        chartType: MetricProto.ChartType.LINE,
+      })
+      const { rerender } = render(<Metric {...withChart} />)
+
+      await waitFor(() => {
+        expect(vi.mocked(embed)).toHaveBeenCalledTimes(1)
+      })
+
+      rerender(<Metric {...withoutChart} />)
+      expect(screen.queryByTestId("stMetricChart")).not.toBeInTheDocument()
+      await waitFor(() => {
+        expect(mockFinalize).toHaveBeenCalledTimes(1)
+      })
+
+      rerender(<Metric {...withChart} />)
+
+      await waitFor(() => {
+        expect(vi.mocked(embed)).toHaveBeenCalledTimes(2)
+      })
+      expect(screen.getByTestId("stMetricChart")).toBeVisible()
+    })
+
+    it("passes chart data presence to useCalculatedDimensions", () => {
+      const withChart = getProps({
+        chartData: [1, 2, 3],
+        chartType: MetricProto.ChartType.LINE,
+      })
+      const withoutChart = getProps({
+        chartData: [],
+        chartType: MetricProto.ChartType.LINE,
+      })
+      const { rerender } = render(<Metric {...withChart} />)
+
+      expect(vi.mocked(useCalculatedDimensions)).toHaveBeenLastCalledWith([
+        true,
+      ])
+
+      rerender(<Metric {...withoutChart} />)
+      expect(vi.mocked(useCalculatedDimensions)).toHaveBeenLastCalledWith([
+        false,
+      ])
+
+      rerender(<Metric {...withChart} />)
+      expect(vi.mocked(useCalculatedDimensions)).toHaveBeenLastCalledWith([
+        true,
+      ])
+    })
+
+    it("finalizes vega-embed if it resolves after unmount", async () => {
+      const lateFinalize = vi.fn()
+      const { promise, resolve } = Promise.withResolvers<{
+        finalize: () => void
+      }>()
+      vi.mocked(embed).mockReturnValue(promise as ReturnType<typeof embed>)
+
+      const { unmount } = render(
+        <Metric
+          {...getProps({
+            chartData: [1, 2, 3],
+            chartType: MetricProto.ChartType.LINE,
+          })}
+        />
+      )
+
+      await waitFor(() => {
+        expect(vi.mocked(embed)).toHaveBeenCalled()
+      })
+      unmount()
+
+      resolve({ finalize: lateFinalize })
+
+      await waitFor(() => {
+        expect(lateFinalize).toHaveBeenCalledTimes(1)
       })
     })
 
@@ -583,9 +690,59 @@ describe("Metric element", () => {
                 strokeCap: "round",
               }),
             }),
+            encoding: expect.objectContaining({
+              y2: { datum: 1 },
+            }),
           }),
         ]),
       })
+    })
+
+    it.each([
+      { chartData: [100, 110, 105], expectedBaseline: 100 },
+      { chartData: [-30, -20, -25], expectedBaseline: -30 },
+      { chartData: [-10, 0, 10], expectedBaseline: 0 },
+      { chartData: [0, 0, 0], expectedBaseline: 0 },
+      { chartData: [42], expectedBaseline: 42 },
+      { chartData: [], expectedBaseline: 0 },
+      // Series that only touch zero do not cross it: they still anchor to
+      // the data minimum rather than diverging around the zero line.
+      { chartData: [-2, -1, 0], expectedBaseline: -2 },
+      { chartData: [0, 5, 10], expectedBaseline: 0 },
+    ])(
+      "sets area chart baseline to $expectedBaseline for $chartData",
+      ({ chartData, expectedBaseline }) => {
+        const spec = getMetricChartSpec(
+          chartData,
+          MetricProto.ChartType.AREA,
+          200,
+          mockTheme.emotion,
+          MetricProto.MetricColor.GRAY
+        ) as TopLevelSpec & {
+          layer: Array<{ encoding?: { y2?: { datum: number } } }>
+        }
+
+        expect(spec.layer[0].encoding?.y2).toEqual({
+          datum: expectedBaseline,
+        })
+      }
+    )
+
+    it.each([
+      { chartType: MetricProto.ChartType.LINE, name: "line" },
+      { chartType: MetricProto.ChartType.BAR, name: "bar" },
+    ])("does not set a y2 baseline for $name charts", ({ chartType }) => {
+      const spec = getMetricChartSpec(
+        [-10, 0, 10],
+        chartType,
+        200,
+        mockTheme.emotion,
+        MetricProto.MetricColor.GRAY
+      ) as TopLevelSpec & {
+        layer: Array<{ encoding?: { y2?: { datum: number } } }>
+      }
+
+      expect(spec.layer[0].encoding?.y2).toBeUndefined()
     })
 
     it("handles single value by duplicating it", () => {
@@ -750,6 +907,23 @@ describe("Metric element", () => {
         "aria-describedby",
         descriptionElement.id
       )
+    })
+  })
+
+  describe("Icon", () => {
+    it("renders icon when provided", () => {
+      render(<Metric {...getProps({ icon: ":material/thermostat:" })} />)
+      expect(screen.getByTestId("stMetricIcon")).toBeVisible()
+    })
+
+    it("does not render icon when not provided", () => {
+      render(<Metric {...getProps()} />)
+      expect(screen.queryByTestId("stMetricIcon")).not.toBeInTheDocument()
+    })
+
+    it("does not render icon when icon is empty string", () => {
+      render(<Metric {...getProps({ icon: "" })} />)
+      expect(screen.queryByTestId("stMetricIcon")).not.toBeInTheDocument()
     })
   })
 })

@@ -58,7 +58,7 @@ SyntaxError: invalid syntax
         assert expected.strip() == _format_syntax_error_message(err)
 
     @parameterized.expand([(True,), (False,)])
-    def test_markdown_flag(self, is_uncaught_app_exception):
+    def test_markdown_flag(self, apply_show_error_details):
         """Test that ExceptionProtos for StreamlitAPIExceptions (and
         subclasses) have the "message_is_markdown" flag set.
         """
@@ -66,7 +66,7 @@ SyntaxError: invalid syntax
         exception.marshall(
             proto,
             RuntimeError("oh no!"),
-            is_uncaught_app_exception=is_uncaught_app_exception,
+            apply_show_error_details=apply_show_error_details,
         )
         assert not proto.message_is_markdown
 
@@ -74,7 +74,7 @@ SyntaxError: invalid syntax
         exception.marshall(
             proto,
             StreamlitAPIException("oh no!"),
-            is_uncaught_app_exception=is_uncaught_app_exception,
+            apply_show_error_details=apply_show_error_details,
         )
         assert proto.message_is_markdown
 
@@ -82,7 +82,7 @@ SyntaxError: invalid syntax
         exception.marshall(
             proto,
             errors.DuplicateWidgetID("oh no!"),
-            is_uncaught_app_exception=is_uncaught_app_exception,
+            apply_show_error_details=apply_show_error_details,
         )
         assert proto.message_is_markdown
 
@@ -118,9 +118,7 @@ SyntaxError: invalid syntax
 
         # Marshall it.
         proto = ExceptionProto()
-        exception.marshall(
-            proto, cast("Exception", err), is_uncaught_app_exception=True
-        )
+        exception.marshall(proto, cast("Exception", err), apply_show_error_details=True)
 
         user_module_path = os.path.join(os.path.realpath(user_module_path), "")
         assert user_module_path in proto.stack_trace[0], "Stack not stripped"
@@ -158,7 +156,7 @@ SyntaxError: invalid syntax
         # Marshall it.
         proto = ExceptionProto()
         exception.marshall(
-            proto, cast("Exception", err), is_uncaught_app_exception=False
+            proto, cast("Exception", err), apply_show_error_details=False
         )
 
         user_module_path = os.path.join(os.path.realpath(user_module_path), "")
@@ -183,7 +181,7 @@ SyntaxError: invalid syntax
 
             # Marshall it.
             proto = ExceptionProto()
-            exception.marshall(proto, err, is_uncaught_app_exception=True)
+            exception.marshall(proto, err, apply_show_error_details=True)
 
             assert proto.message == "module 'streamlit' has no attribute 'format'"
             assert len(proto.stack_trace) > 0
@@ -203,7 +201,7 @@ SyntaxError: invalid syntax
 
             # Marshall it.
             proto = ExceptionProto()
-            exception.marshall(proto, err, is_uncaught_app_exception=True)
+            exception.marshall(proto, err, apply_show_error_details=True)
 
             assert proto.message == _GENERIC_UNCAUGHT_EXCEPTION_TEXT
             assert len(proto.stack_trace) > 0
@@ -220,7 +218,7 @@ SyntaxError: invalid syntax
 
             # Marshall it.
             proto = ExceptionProto()
-            exception.marshall(proto, err, is_uncaught_app_exception=True)
+            exception.marshall(proto, err, apply_show_error_details=True)
 
             assert proto.message == _GENERIC_UNCAUGHT_EXCEPTION_TEXT
             assert len(proto.stack_trace) > 0
@@ -237,7 +235,7 @@ SyntaxError: invalid syntax
 
             # Marshall it.
             proto = ExceptionProto()
-            exception.marshall(proto, err, is_uncaught_app_exception=True)
+            exception.marshall(proto, err, apply_show_error_details=True)
 
             assert proto.message == _GENERIC_UNCAUGHT_EXCEPTION_TEXT
             assert len(proto.stack_trace) == 0
@@ -254,7 +252,7 @@ SyntaxError: invalid syntax
 
             # Marshall it.
             proto = ExceptionProto()
-            exception.marshall(proto, err, is_uncaught_app_exception=True)
+            exception.marshall(proto, err, apply_show_error_details=True)
 
             assert proto.message == _GENERIC_UNCAUGHT_EXCEPTION_TEXT
             assert len(proto.stack_trace) == 0
@@ -341,6 +339,88 @@ def test_marshall_with_alternate_name() -> None:
     proto = ExceptionProto()
     exception.marshall(proto, err)
     assert proto.type == "PrettyErrorName"
+
+
+@pytest.mark.parametrize(
+    ("show_error_details", "expected_type", "expected_flag"),
+    [
+        ("full", "streamlit.errors.StreamlitAPIException", True),
+        ("stacktrace", "streamlit.errors.StreamlitAPIException", True),
+        ("type", "streamlit.errors.StreamlitAPIException", True),
+        # "none" withholds the type as well, leaving nothing to offer help about.
+        ("none", "", False),
+    ],
+)
+def test_marshall_is_streamlit_exception_follows_type_redaction(
+    show_error_details: str, expected_type: str, expected_flag: bool
+) -> None:
+    """The provenance flag is withheld exactly when the type is.
+
+    ``client.showErrorDetails="none"`` redacts the type, message and trace, so a
+    surface keyed off this flag would otherwise offer to fix an error the box
+    refused to describe. Every less-strict level keeps the flag, so redaction
+    must not over-clear it either.
+    """
+    with testutil.patch_config_options({"client.showErrorDetails": show_error_details}):
+        proto = ExceptionProto()
+        exception.marshall(
+            proto, StreamlitAPIException("boom"), apply_show_error_details=True
+        )
+        assert proto.type == expected_type
+        assert proto.is_streamlit_exception is expected_flag
+
+
+def test_marshall_is_streamlit_exception_survives_redaction_for_direct_calls() -> None:
+    """``st.exception()`` is not an uncaught app exception, so redaction is moot.
+
+    ``showErrorDetails`` only governs errors Streamlit caught itself; a direct
+    call is the developer choosing to display something, so the flag stands even
+    at the strictest level.
+    """
+    with testutil.patch_config_options({"client.showErrorDetails": "none"}):
+        proto = ExceptionProto()
+        exception.marshall(proto, StreamlitAPIException("boom"))
+        assert proto.is_streamlit_exception is True
+
+
+@pytest.mark.parametrize(
+    ("err", "expected"),
+    [
+        (errors.Error("base"), True),
+        (StreamlitAPIException("boom"), True),
+        (errors.DuplicateWidgetID("dup"), True),
+        (StreamlitInvalidWidthError("bad"), True),
+        (ValueError("v"), False),
+        (ZeroDivisionError(), False),
+        (KeyError("k"), False),
+    ],
+)
+def test_marshall_is_streamlit_exception(err: BaseException, expected: bool) -> None:
+    """is_streamlit_exception is True only for streamlit.errors.Error subclasses.
+
+    This flag scopes the in-error "Install skills" callout to Streamlit API
+    misuse; arbitrary user/runtime errors must not set it.
+    """
+    proto = ExceptionProto()
+    exception.marshall(proto, err)
+    assert proto.is_streamlit_exception is expected
+
+
+def test_marshall_is_streamlit_exception_ignores_alternate_name() -> None:
+    """A non-Streamlit exception is not flagged even if it spoofs its type name.
+
+    The flag is computed from the class (isinstance of streamlit.errors.Error),
+    not the reported type string, so an ``alternate_name`` that mimics a
+    Streamlit type cannot make a foreign error qualify.
+    """
+
+    class DuplicateWidgetID(Exception):  # Same name as a real Streamlit error.
+        alternate_name = "DuplicateWidgetID"
+
+    proto = ExceptionProto()
+    exception.marshall(proto, DuplicateWidgetID("nope"))
+    assert proto.type == "DuplicateWidgetID"
+    assert proto.is_streamlit_exception is False
 
 
 def test_marshall_syntax_error() -> None:

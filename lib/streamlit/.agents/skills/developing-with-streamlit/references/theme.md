@@ -3,6 +3,8 @@
 
 Build professional, brand-aligned themes using `.streamlit/config.toml`. This skill covers design principles and complete configuration for polished, cohesive themes.
 
+Use `streamlit config show` to look up the full, current set of available theme configuration options and their descriptions before configuring a theme. The theme settings are grouped under `[theme]`, `[theme.sidebar]`, and the light and dark variants.
+
 ## Theme file setup
 
 Theme options go in Streamlit's `config.toml` under the `[theme]` section:
@@ -66,7 +68,9 @@ greenTextColor = "#116329"         # Darkened for readability
 
 ### Chart colors
 
-Define colors for Plotly, Altair, and Vega-Lite charts:
+Define colors for Plotly, Altair, and Vega-Lite charts. These can be set in
+`[theme]`, `[theme.light]`, `[theme.dark]`, and the corresponding sidebar
+sections. Unset sections inherit from `[theme]`.
 
 ```toml
 [theme]
@@ -75,6 +79,10 @@ chartCategoricalColors = ["#0969da", "#1a7f37", "#bf3989", "#8250df", "#cf222e",
 
 # Sequential/gradient data (heatmaps) - exactly 10 colors required
 chartSequentialColors = ["#f0f6fc", "#c8e1ff", "#79c0ff", "#58a6ff", "#388bfd", "#1f6feb", "#1158c7", "#0d419d", "#0a3069", "#04244a"]
+
+[theme.dark]
+# Brighter palette for dark backgrounds
+chartCategoricalColors = ["#58a6ff", "#3fb950", "#db61a2", "#a371f7", "#f85149", "#d29922", "#8b949e"]
 ```
 
 ### Dataframe styling
@@ -195,12 +203,14 @@ primaryColor = "#0969da"
 backgroundColor = "#ffffff"
 secondaryBackgroundColor = "#f6f8fa"
 textColor = "#1F2328"
+chartCategoricalColors = ["#0969da", "#1a7f37", "#bf3989", "#8250df", "#cf222e", "#bf8700", "#57606a"]
 
 [theme.dark]
 primaryColor = "#58a6ff"
 backgroundColor = "#0d1117"
 secondaryBackgroundColor = "#161b22"
 textColor = "#e6edf3"
+chartCategoricalColors = ["#58a6ff", "#3fb950", "#db61a2", "#a371f7", "#f85149", "#d29922", "#8b949e"]
 
 [theme.light.sidebar]
 backgroundColor = "#f6f8fa"

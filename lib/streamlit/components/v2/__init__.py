@@ -25,7 +25,7 @@ from streamlit.components.v2.component_definition_resolver import (
 from streamlit.components.v2.get_bidi_component_manager import (
     get_bidi_component_manager,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitInvalidParameterTypeError
 
 if TYPE_CHECKING:
     from streamlit.components.v2.types import ComponentRenderer
@@ -72,14 +72,17 @@ def _register_component(
 
     Raises
     ------
-    StreamlitAPIException
+    StreamlitInvalidParameterTypeError
         If ``css`` or ``js`` parameters are not strings or None.
     """
     # Parameter type guards: only strings or None are supported for js/css
     for _param_name, _param_value in (("css", css), ("js", js)):
         if _param_value is not None and not isinstance(_param_value, str):
-            raise StreamlitAPIException(
-                f"{_param_name} parameter must be a string or None. Pass a string path or glob."
+            raise StreamlitInvalidParameterTypeError(
+                _param_name,
+                type(_param_value).__name__,
+                ["str", "None"],
+                detail="Pass a string path or glob.",
             )
 
     component_key = name
@@ -124,7 +127,7 @@ def _create_component_callable(
         Inline JavaScript (string) or a string path/glob to a file under
         ``asset_dir``; see :func:`_register_component` for path validation semantics.
     isolate_styles : bool
-        Whether to sandbox the component's styles in a shadow root.
+        Whether to isolate the component's styles in a shadow root.
         Defaults to True.
 
     Returns
@@ -218,6 +221,16 @@ def component(
     are provided, the component renders as an empty element without raising
     an error.
 
+    .. warning::
+        Components are trusted code. Streamlit does not sanitize the ``html``,
+        ``css``, or ``js`` content passed to this function. HTML may include
+        ``<script>`` tags, and JavaScript executes with normal app-page DOM
+        privileges. Never pass untrusted or user-provided content to ``html``,
+        ``css``, or ``js``, including content from widgets, query parameters,
+        databases, uploaded files, LLM output, or other external sources.
+        Sanitize or escape untrusted data before a component renders it as
+        HTML.
+
     If your component is defined in an installed package, you can declare an
     asset directory (``asset_dir``) through ``pyproject.toml`` files in the
     package. This allows you to serve component assets and reference them by
@@ -259,6 +272,9 @@ def component(
         - A path or glob to an HTML file, relative to the component's
           asset directory.
 
+        This is trusted component content. Streamlit does not sanitize it, and
+        any scripts in the HTML can execute in the app page.
+
         If any HTML depends on data passed at mount time, use a placeholder
         element and populate it via JavaScript. Alternatively, you can append
         a new element to the parent. For more information, see Example 2.
@@ -277,13 +293,19 @@ def component(
         - A path or glob to a JS file, relative to the component's
           asset directory.
 
+        This is trusted component code. It executes with normal app-page DOM
+        privileges.
+
     isolate_styles : bool
-        Whether to sandbox the component styles in a shadow root. If this is
+        Whether to isolate the component styles in a shadow root. If this is
         ``True`` (default), the component's HTML is mounted inside a shadow DOM
         and, in your component's JavaScript, ``parentElement`` returns a
         ``ShadowRoot``. If this is ``False``, the component's HTML is mounted
         directly into the app's DOM tree, and ``parentElement`` returns a
         regular ``HTMLElement``.
+
+        This is style isolation only. It is not a security boundary and does
+        not sandbox the component's JavaScript.
 
     Returns
     -------
@@ -350,11 +372,11 @@ def component(
 
     .. warning::
 
-        If you directly modify the inner HTML of the parent element, you will
-        overwrite the HTML and CSS passed to the component. Instead, create a
-        new child element and set its inner HTML. You can create the
-        placeholder dynamically in JavaScript or include it in the ``html``
-        parameter.
+        Only render trusted HTML this way. If you directly modify the inner
+        HTML of the parent element, you will overwrite the HTML and CSS passed
+        to the component. Instead, create a new child element and set its
+        inner HTML. You can create the placeholder dynamically in JavaScript
+        or include it in the ``html`` parameter.
 
     .. code-block:: python
 

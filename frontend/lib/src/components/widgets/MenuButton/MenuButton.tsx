@@ -29,6 +29,7 @@ import { type Key } from "react-aria-components"
 
 import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
 
+import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { Box } from "~lib/components/shared/Base/styled-components"
 import BaseButton, {
   BaseButtonKind,
@@ -36,6 +37,7 @@ import BaseButton, {
 } from "~lib/components/shared/BaseButton/BaseButton"
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
+import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import {
   DynamicIcon,
   extractLeadingMaterialIcon,
@@ -130,6 +132,11 @@ function MenuButton(props: Props): ReactElement {
 
   const hideChevron = isMenuStyleIconLabel(element.icon, element.label)
 
+  // When wrap resolves to no-wrap, reveal the full label on hover via a native
+  // title, skipped when help is set since help provides the tooltip.
+  const wrap = useResolvedWrap(element.wrap)
+  const addTitleTooltip = !wrap && !element.help
+
   const handleItemSelect = useCallback(
     (key: Key) => {
       if (buttonDisabled) {
@@ -137,12 +144,12 @@ function MenuButton(props: Props): ReactElement {
       }
       // Strip the instance prefix added for DOM id uniqueness
       const value = String(key).slice(instanceId.length)
-      widgetMgr.setStringTriggerValue(
-        element,
-        value,
-        { fromUi: true },
-        fragmentId
-      )
+      widgetMgr.setStringTriggerValue(element.id, value, {
+        // Menu buttons cannot be placed inside a form.
+        formId: undefined,
+        fragmentId,
+        fromUser: true,
+      })
       setIsOpen(false)
     },
     [buttonDisabled, element, widgetMgr, fragmentId, instanceId]
@@ -165,8 +172,16 @@ function MenuButton(props: Props): ReactElement {
           aria-haspopup="menu"
           aria-expanded={isOpen}
         >
-          <StyledMenuButtonLabelContainer $hideChevron={hideChevron}>
-            <DynamicButtonLabel icon={element.icon} label={element.label} />
+          <StyledMenuButtonLabelContainer
+            $hideChevron={hideChevron}
+            $truncate={!wrap}
+          >
+            <DynamicButtonLabel
+              icon={element.icon}
+              label={element.label}
+              wrap={wrap}
+              addTitleTooltip={addTitleTooltip}
+            />
             {!hideChevron && (
               <StyledMenuButtonExpansionIcon aria-hidden="true">
                 <DynamicIcon
@@ -183,7 +198,7 @@ function MenuButton(props: Props): ReactElement {
         </BaseButton>
       </BaseButtonTooltip>
       {isOpen && (
-        <FloatingPortal>
+        <FloatingPortal id={FLOATING_OVERLAY_PORTAL_ID}>
           <StyledMenuPopover
             ref={setFloatingRef}
             data-testid="stMenuButtonBody"

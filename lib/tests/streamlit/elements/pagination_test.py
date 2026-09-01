@@ -22,7 +22,12 @@ import pytest
 
 import streamlit as st
 from streamlit.elements.widgets.pagination import PaginationSerde
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+    StreamlitValueOutOfRangeError,
+)
 from streamlit.runtime.state.session_state import get_script_run_ctx
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -127,14 +132,27 @@ class TestPaginationValidation(DeltaGeneratorTestCase):
         assert "`num_pages` must be an integer of at least 1" in str(e.value)
 
     def test_default_must_be_in_range(self):
-        """Test that default must be between 1 and num_pages."""
-        with pytest.raises(StreamlitAPIException) as e:
+        """Values outside [1, num_pages] raise StreamlitValueOutOfRangeError."""
+        with pytest.raises(StreamlitValueOutOfRangeError) as e:
             st.pagination(10, default=0)
-        assert "`default` must be between 1 and `num_pages`" in str(e.value)
+        assert "required range [1, 10]" in str(e.value)
 
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueOutOfRangeError) as e:
             st.pagination(10, default=11)
-        assert "`default` must be between 1 and `num_pages`" in str(e.value)
+        assert "required range [1, 10]" in str(e.value)
+
+    def test_default_must_be_int(self):
+        """Non-int values raise StreamlitInvalidParameterTypeError.
+
+        True is a subclass of int and would otherwise be treated as page 1.
+        """
+        with pytest.raises(StreamlitInvalidParameterTypeError) as e:
+            st.pagination(10, default=True)
+        assert e.value.exec_kwargs["parameter"] == "default"
+
+        with pytest.raises(StreamlitInvalidParameterTypeError) as e:
+            st.pagination(10, default="1")
+        assert e.value.exec_kwargs["parameter"] == "default"
 
     def test_max_visible_pages_negative(self):
         """Test that negative max_visible_pages raises exception."""
@@ -306,8 +324,8 @@ class TestPaginationBindQueryParams(DeltaGeneratorTestCase):
         assert proto.query_param_key == ""
 
     def test_invalid_bind_value_raises_exception(self):
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `bind` value"):
             st.pagination(10, key="my_key", bind="invalid-value")
 
     def test_bind_with_custom_default(self):

@@ -100,8 +100,69 @@ st.text_input(
     "text input 16 - material icon", placeholder="Placeholder", icon=":material/search:"
 )
 
+st.markdown("Specialized input types:")
+
+email_value = st.text_input("Email", key="email_input", type="email")
+st.write("email value:", email_value)
+
+url_value = st.text_input("URL", key="url_input", type="url")
+st.write("url value:", url_value)
+
+st.text_input("Phone", key="phone_input", type="phone")
+st.text_input("Search", key="search_input", type="search", bind="query-params")
+
+override_value = st.text_input(
+    "Work email (overrides)",
+    key="email_override_input",
+    type="email",
+    icon=":material/work:",
+    placeholder="name@company.com",
+    validate=(r"^[\w.+-]+@company\.com$", "Use your @company.com address."),
+    autocomplete="off",
+)
+st.write("override value:", override_value)
+
 st.text_input("text input 17 (width=200px)", "width test", width=200)
 st.text_input("text input 18 (width='stretch')", "width test", width="stretch")
+
+if "validation_rerun_counter" not in st.session_state:
+    st.session_state.validation_rerun_counter = 0
+
+st.session_state.validation_rerun_counter += 1
+st.markdown("Validation text inputs:")
+
+validated_regex_value = st.text_input(
+    "text input 19 (validate regex)",
+    key="validated_regex_input",
+    validate=r"^[a-z]+$",
+)
+st.write("validated regex value:", validated_regex_value)
+
+validated_custom_value = st.text_input(
+    "text input 20 (validate custom message)",
+    key="validated_custom_input",
+    validate=(r"^[a-z]+$", "Lowercase only"),
+)
+st.write("validated custom value:", validated_custom_value)
+
+invalid_regex_value = st.text_input(
+    "text input 21 (invalid validate regex)",
+    key="invalid_validate_regex_input",
+    validate="[",
+)
+st.write("invalid regex value:", invalid_regex_value)
+
+with st.form("validated_text_input_form"):
+    st.text_input(
+        "text input 22 (validate in form)",
+        key="validated_form_input",
+        validate=(r"^[0-9]{4}$", "Enter exactly four digits."),
+    )
+    validated_form_submitted = st.form_submit_button("Submit validated text input form")
+
+st.write("validated form submitted:", validated_form_submitted)
+st.write("validated form value:", st.session_state.get("validated_form_input", ""))
+st.write("Validation rerun counter:", st.session_state.validation_rerun_counter)
 
 st.markdown("Dynamic text input:")
 
@@ -194,3 +255,16 @@ st.text_input(
 st.write(f"Text input counter: {st.session_state.setvalue_counter}")
 
 st.button("Trigger text input rerun")
+
+# --- on_change="ignore" text input ---
+ignore_text = st.text_input(
+    "Ignore change text input",
+    value="hello",
+    key="ignore_text",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore text value:", ignore_text)
+
+if st.button("Apply ignore text", key="apply_ignore_text"):
+    st.write("Applied ignore text value:", ignore_text)

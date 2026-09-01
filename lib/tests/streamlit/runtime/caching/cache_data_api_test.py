@@ -30,11 +30,18 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import file_util
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitIncompatibleParametersError,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching import cached_message_replay
-from streamlit.runtime.caching.cache_data_api import get_data_cache_stats_provider
+from streamlit.runtime.caching.cache_data_api import (
+    _data_caches,
+    get_data_cache_stats_provider,
+)
 from streamlit.runtime.caching.cache_errors import CacheError
 from streamlit.runtime.caching.cached_message_replay import (
     CachedResult,
@@ -68,7 +75,7 @@ from tests.streamlit.element_mocks import (
 from tests.streamlit.runtime.caching.common_cache_test import (
     as_cached_result as _as_cached_result,
 )
-from tests.testutil import create_mock_script_run_ctx
+from tests.testutil import create_mock_script_run_ctx, patch_config_options
 
 
 def as_cached_result(value: Any) -> CachedResult:
@@ -367,15 +374,14 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
 
     def test_bad_persist_value(self):
         """Throw an error if an invalid value is passed to 'persist'."""
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
 
             @st.cache_data(persist="yesplz")
             def foo():
                 pass
 
         assert (
-            str(e.value)
-            == "Unsupported persist option 'yesplz'. Valid values are 'disk' or None."
+            str(e.value) == "Invalid `persist` value. Supported values: 'disk', None."
         )
 
     @patch("shutil.rmtree")
@@ -868,3 +874,181 @@ class AlwaysFailingTestCacheStorageManager(CacheStorageManager):
 
     def check_context(self, context: CacheStorageContext) -> None:
         raise InvalidCacheStorageContextError("This CacheStorageManager always fails")
+
+
+class CacheDataBackgroundRefreshTest(unittest.TestCase):
+    """st.cache_data refresh_mode="background" tests."""
+
+    def setUp(self) -> None:
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+        mock_runtime = MagicMock(spec=Runtime)
+        mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
+        Runtime._instance = mock_runtime
+
+    def tearDown(self) -> None:
+        st.cache_data.clear()
+
+    def test_background_without_ttl_raises(self) -> None:
+        """refresh_mode="background" without a ttl requires a positive ttl."""
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match=r'Set a positive `ttl` \(for example `ttl="1h"`\)',
+        ):
+
+            @st.cache_data(refresh_mode="background")
+            def foo() -> int:
+                return 1
+
+    def test_background_with_zero_ttl_raises(self) -> None:
+        """A non-positive ttl is an invalid value for background refresh."""
+        with pytest.raises(
+            StreamlitValueError,
+            match=r"Background refresh requires a positive `ttl`",
+        ):
+
+            @st.cache_data(ttl=0, refresh_mode="background")
+            def foo() -> int:
+                return 1
+
+    @parameterized.expand(
+        [
+            ("disk",),
+            (True,),
+        ]
+    )
+    def test_background_with_persist_raises(self, persist: str | bool) -> None:
+        """refresh_mode="background" with persist raises an incompatibility error."""
+        with pytest.raises(
+            StreamlitIncompatibleParametersError,
+            match=rf"persist={persist!r}",
+        ):
+
+            @st.cache_data(ttl="1h", persist=persist, refresh_mode="background")
+            def foo() -> int:
+                return 1
+
+    def test_invalid_refresh_mode_raises(self) -> None:
+        """An unknown refresh_mode value raises a StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc:
+
+            @st.cache_data(ttl="1h", refresh_mode="sideways")
+            def foo() -> int:
+                return 1
+
+        assert (
+            str(exc.value)
+            == "Invalid `refresh_mode` value. Supported values: foreground, background."
+        )
+
+    def test_hard_ttl_is_double_fresh_ttl(self) -> None:
+        """The default hard TTL is twice the user-facing freshness TTL."""
+        cache = _data_caches.get_cache(
+            key="bg_key",
+            persist=None,
+            max_entries=None,
+            ttl=100,
+            display_name="bg",
+            refresh_mode="background",
+        )
+        assert cache.fresh_ttl_seconds == 100
+        assert cache.ttl_seconds == 200
+
+    @parameterized.expand(
+        [
+            ("custom", 3.5, 350),
+            ("overflow_fallback", 1e308, 200),
+        ]
+    )
+    # Each case needs a distinct key so it builds a fresh cache rather than reusing one.
+    def test_configured_multiplier_sets_background_hard_ttl(
+        self, case: str, multiplier: float, expected_hard_ttl: float
+    ) -> None:
+        """The configured multiplier sets background hard TTL; overflow falls back."""
+        with patch_config_options(
+            {"runner.cacheBackgroundRefreshTTLMultiplier": multiplier}
+        ):
+            cache = _data_caches.get_cache(
+                key=f"multiplier_{case}",
+                persist=None,
+                max_entries=None,
+                ttl=100,
+                display_name=f"multiplier_{case}",
+                refresh_mode="background",
+            )
+
+        assert cache.fresh_ttl_seconds == 100
+        assert cache.ttl_seconds == expected_hard_ttl
+
+    def test_stored_at_set_only_in_background_mode(self) -> None:
+        """stored_at is set (and survives pickling) in background mode, and None otherwise."""
+        bg_cache = _data_caches.get_cache(
+            key="bg",
+            persist=None,
+            max_entries=None,
+            ttl=100,
+            display_name="bg",
+            refresh_mode="background",
+        )
+        bg_cache.write_result("vk", 123, [])
+        bg_result = bg_cache.read_result("vk")
+        assert bg_result.value == 123
+        assert isinstance(bg_result.stored_at, float)
+
+        fg_cache = _data_caches.get_cache(
+            key="fg",
+            persist=None,
+            max_entries=None,
+            ttl=100,
+            display_name="fg",
+            refresh_mode="foreground",
+        )
+        fg_cache.write_result("vk", 456, [])
+        assert fg_cache.read_result("vk").stored_at is None
+
+    def test_background_writeback_checks_presence_without_reading_value(self) -> None:
+        """A background write-back doesn't deserialize the existing cached value."""
+        cache = _data_caches.get_cache(
+            key="bg_presence",
+            persist=None,
+            max_entries=None,
+            ttl=100,
+            display_name="bg_presence",
+            refresh_mode="background",
+        )
+        cache.write_result("vk", 123, [])
+
+        with (
+            patch.object(cache.storage, "has", wraps=cache.storage.has) as mock_has,
+            patch.object(cache.storage, "get", wraps=cache.storage.get) as mock_get,
+        ):
+            cache.write_background_refresh_result(
+                "vk",
+                456,
+                expected_generation=cache.generation,
+                expected_key_generation=cache.key_generation("vk"),
+            )
+            mock_has.assert_called_once_with("vk")
+            mock_get.assert_not_called()
+
+        assert cache.read_result("vk").value == 456
+
+    def test_cache_recreated_on_mode_change(self) -> None:
+        """Changing refresh_mode across reruns rebuilds the cache."""
+        common_kwargs = {
+            "key": "mode_key",
+            "persist": None,
+            "max_entries": None,
+            "ttl": 100,
+            "display_name": "mode",
+        }
+        cache_fg = _data_caches.get_cache(**common_kwargs, refresh_mode="foreground")
+        # Same params -> same cache object.
+        assert (
+            _data_caches.get_cache(**common_kwargs, refresh_mode="foreground")
+            is cache_fg
+        )
+        # Different refresh_mode -> new cache object.
+        cache_bg = _data_caches.get_cache(**common_kwargs, refresh_mode="background")
+        assert cache_bg is not cache_fg
+        # The replaced cache is detached so an in-flight refresh would be discarded.
+        assert cache_fg.is_active is False

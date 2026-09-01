@@ -16,11 +16,15 @@ from __future__ import annotations
 
 from dataclasses import replace
 from enum import Enum, EnumMeta
-from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, cast, overload
 
 from streamlit import config, logger
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitDefaultNotInOptionsError,
+    StreamlitIncompatibleParametersError,
+    StreamlitValueError,
+)
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
     SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
 )
@@ -57,7 +61,6 @@ def validate_select_widget_filter_mode(
     filter_mode: SelectWidgetFilterMode,
     *,
     accept_new_options: bool,
-    command: Literal["st.selectbox", "st.multiselect"],
 ) -> ProtoSelectWidgetFilterMode.ValueType:
     """Validate ``filter_mode`` and return the protobuf enum value."""
     try:
@@ -72,9 +75,13 @@ def validate_select_widget_filter_mode(
         )
 
     if filter_mode is None and accept_new_options:
-        raise StreamlitAPIException(
-            f"The `filter_mode` argument to `{command}` cannot be None when "
-            "`accept_new_options=True`."
+        raise StreamlitIncompatibleParametersError(
+            "filter_mode=None",
+            "accept_new_options=True",
+            explanation=(
+                "`filter_mode` cannot be `None` when `accept_new_options=True`. "
+                "Set `filter_mode` to `fuzzy`, `contains`, or `prefix`."
+            ),
         )
 
     return _SELECT_WIDGET_FILTER_MODE_PROTO_MAP[filter_mode]
@@ -119,10 +126,7 @@ def check_and_convert_to_indices(
 
     for value in default_values:
         if value not in opt:
-            raise StreamlitAPIException(
-                f"The default value '{value}' is not part of the options. "
-                "Please make sure that every default values also exists in the options."
-            )
+            raise StreamlitDefaultNotInOptionsError(value)
 
     return [opt.index(value) for value in default_values]
 
@@ -166,10 +170,9 @@ def _coerce_enum(from_enum_value: E1, to_enum_class: type[E2]) -> E1 | E2:
 
     coercion_type = config.get_option("runner.enumCoercion")
     if coercion_type not in _ALLOWED_ENUM_COERCION_CONFIG_SETTINGS:
-        raise StreamlitAPIException(
-            "Invalid value for config option runner.enumCoercion. "
-            f"Expected one of {_ALLOWED_ENUM_COERCION_CONFIG_SETTINGS}, "
-            f"but got '{coercion_type}'."
+        raise StreamlitValueError(
+            "runner.enumCoercion",
+            [f"'{v}'" for v in _ALLOWED_ENUM_COERCION_CONFIG_SETTINGS],
         )
     if coercion_type == "off":
         return from_enum_value  # do not attempt to coerce
@@ -240,8 +243,10 @@ def maybe_coerce_enum(
     the original RegisterWidgetResult.
     """
 
-    # If the value is not a Enum, return early
-    if not isinstance(register_widget_result.value, Enum):
+    value = register_widget_result.value
+
+    # If the value is not an Enum, return early
+    if not isinstance(value, Enum):
         return register_widget_result
 
     coerce_class: EnumMeta | None
@@ -251,12 +256,13 @@ def maybe_coerce_enum(
         coerce_class = _extract_common_class_from_iter(opt_sequence)
         if coerce_class is None:
             return register_widget_result
+    enum_class = cast("type[Enum]", coerce_class)
 
     # Use replace so other fields (e.g. incoming_serialized_value) are preserved
     # rather than dropped when only the value is coerced.
     return replace(
         register_widget_result,
-        value=_coerce_enum(register_widget_result.value, coerce_class),
+        value=_coerce_enum(value, enum_class),
     )
 
 
@@ -300,13 +306,15 @@ def maybe_coerce_enum_sequence(
         coerce_class = _extract_common_class_from_iter(opt_sequence)
         if coerce_class is None:
             return register_widget_result
+    enum_class = cast("type[Enum]", coerce_class)
 
     # Return a new RegisterWidgetResult with the coerced enum values sequence.
     # Use replace so other fields (e.g. incoming_serialized_value) are preserved.
     return replace(
         register_widget_result,
         value=type(register_widget_result.value)(
-            _coerce_enum(val, coerce_class) for val in register_widget_result.value
+            _coerce_enum(cast("Enum", val), enum_class)
+            for val in register_widget_result.value
         ),
     )
 

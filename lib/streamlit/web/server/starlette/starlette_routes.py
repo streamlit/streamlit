@@ -18,7 +18,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
+import time
+from contextlib import aclosing
 from typing import TYPE_CHECKING, Final
 from urllib.parse import quote
 
@@ -26,6 +29,7 @@ from streamlit import config, file_util
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import get_extension_for_mimetype
+from streamlit.runtime.stats import CACHE_MEMORY_FAMILY
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.web.server.component_file_utils import (
     build_safe_abspath,
@@ -50,6 +54,7 @@ if TYPE_CHECKING:
     from starlette.requests import Request
     from starlette.responses import Response
     from starlette.routing import BaseRoute
+    from starlette.types import Message
 
     from streamlit.components.types.base_component_registry import BaseComponentRegistry
     from streamlit.components.v2.component_manager import BidiComponentManager
@@ -57,9 +62,86 @@ if TYPE_CHECKING:
     from streamlit.runtime import Runtime
     from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
     from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
-    from streamlit.runtime.stats import Stat
+    from streamlit.runtime.stats import Stat, StatsManager
 
 _LOGGER: Final = get_logger(__name__)
+
+# TTL for the cached cache_memory_bytes result. Short enough that scrapers
+# (Prometheus default interval is 15 s) still see fresh data; long enough to
+# collapse request floods to one computation per window.
+_METRICS_EXPENSIVE_STATS_TTL_SECONDS: Final = 5.0
+
+
+class _ExpensiveStatsCache:
+    """Single-flight, short-TTL cache for the ``cache_memory_bytes`` metric family.
+
+    That family is the only CPU-heavy metrics family (it walks session state,
+    caches, media files, and uploads). Caching collapses request floods to one
+    computation per TTL window; single-flight coalesces concurrent callers onto
+    the same in-flight task.
+
+    Concurrency notes:
+    - The event-loop thread exclusively owns this state, so no locks are needed.
+    - ``get`` must not ``await`` between reading ``_inflight`` and assigning it,
+      or more than one task could start per expired window.
+    - Waiters ``await asyncio.shield(_inflight)`` so cancelling one request
+      (client disconnect, scraper timeout) does not cancel the shared task or
+      other waiters. A done callback owns caching and clearing ``_inflight``.
+    """
+
+    def __init__(self, stats_mgr: StatsManager) -> None:
+        self._stats_mgr = stats_mgr
+        self._result: Mapping[str, Sequence[Stat]] | None = None
+        self._expiry: float = 0.0
+        self._inflight: asyncio.Task[Mapping[str, Sequence[Stat]]] | None = None
+
+    async def get(self) -> Mapping[str, Sequence[Stat]]:
+        """Return cached ``cache_memory_bytes`` stats, or compute them once for all waiters."""
+        from starlette.concurrency import run_in_threadpool
+
+        if self._result is not None and time.monotonic() < self._expiry:
+            return self._result
+        # Join an in-flight computation instead of starting another. Do not await
+        # between this check and the assignment below.
+        if self._inflight is None:
+            task: asyncio.Task[Mapping[str, Sequence[Stat]]] = asyncio.create_task(
+                run_in_threadpool(
+                    self._stats_mgr.get_stats,
+                    family_names=[CACHE_MEMORY_FAMILY],
+                )
+            )
+
+            def _on_done(
+                done: asyncio.Task[Mapping[str, Sequence[Stat]]],
+            ) -> None:
+                # Clear and cache only when *this* shared task settles, so a
+                # cancelled waiter cannot drop the single-flight marker while
+                # the worker is still running.
+                if self._inflight is done:
+                    self._inflight = None
+                if done.cancelled():
+                    return
+                exc = done.exception()
+                if exc is not None:
+                    # Waiters that are still awaiting see the failure via
+                    # shield; log here so a wave where every waiter cancelled
+                    # still leaves an ops signal.
+                    _LOGGER.error(
+                        "Failed to compute %s metrics",
+                        CACHE_MEMORY_FAMILY,
+                        exc_info=(type(exc), exc, exc.__traceback__),
+                    )
+                    return
+                self._result = done.result()
+                self._expiry = time.monotonic() + _METRICS_EXPENSIVE_STATS_TTL_SECONDS
+
+            self._inflight = task
+            task.add_done_callback(_on_done)
+
+        # Shield so cancelling this waiter does not cancel the shared task
+        # (or other waiters coalesced onto it).
+        return await asyncio.shield(self._inflight)
+
 
 # Route path constants (without base URL prefix)
 # These define the canonical paths for all Starlette server endpoints.
@@ -103,6 +185,15 @@ _SAME_SITE_HEADER_VALUES: Final = {
 
 # App static files
 _ROUTE_APP_STATIC: Final = "app/static/{path:path}"
+
+# Framing margin for the streaming upload-size cap in `_upload_put`: the raw
+# request body is rejected once it exceeds `server.maxUploadSize` plus this
+# margin, and the exact per-file limit is still re-checked after parsing. The
+# margin exists because a multipart body is slightly larger than the file it
+# carries (boundary lines, part headers, filename), so without it a legitimate
+# file of exactly `maxUploadSize` could be rejected while streaming. 1 MB
+# comfortably covers that framing overhead.
+_MAX_UPLOAD_MULTIPART_OVERHEAD_BYTES: Final = 1024 * 1024  # 1 MB
 
 
 def _stats_to_text(stats_by_family: Mapping[str, Sequence[Stat]]) -> str:
@@ -439,12 +530,56 @@ def create_script_health_routes(
 
 def create_metrics_routes(runtime: Runtime, base_url: str | None) -> list[BaseRoute]:
     """Create metrics route handlers."""
+    from starlette.concurrency import run_in_threadpool
     from starlette.responses import PlainTextResponse, Response
     from starlette.routing import Route
 
+    expensive_cache = _ExpensiveStatsCache(runtime.stats_mgr)
+
     async def _metrics_endpoint(request: Request) -> Response:
-        requested_families = request.query_params.getlist("families")
-        stats = runtime.stats_mgr.get_stats(family_names=requested_families or None)
+        requested: list[str] | None = request.query_params.getlist("families") or None
+        wants_expensive = requested is None or CACHE_MEMORY_FAMILY in requested
+
+        # Cheap families stay live; only cache_memory_bytes uses the TTL cache.
+        all_registered = runtime.stats_mgr.registered_families()
+        if requested is None:
+            cheap_families = [f for f in all_registered if f != CACHE_MEMORY_FAMILY]
+        else:
+            cheap_families = [f for f in requested if f != CACHE_MEMORY_FAMILY]
+
+        cheap_result: Mapping[str, Sequence[Stat]] = {}
+        expensive_result: Mapping[str, Sequence[Stat]] = {}
+
+        # Overlap cheap (thread-pool) and expensive (cache / thread-pool) work
+        # when both are needed so scrape latency is the max of the two, not the sum.
+        async def _fetch_cheap() -> Mapping[str, Sequence[Stat]]:
+            if not cheap_families:
+                return {}
+            return await run_in_threadpool(
+                runtime.stats_mgr.get_stats,
+                family_names=cheap_families,
+            )
+
+        async def _fetch_expensive() -> Mapping[str, Sequence[Stat]]:
+            if not wants_expensive:
+                return {}
+            return await expensive_cache.get()
+
+        cheap_result, expensive_result = await asyncio.gather(
+            _fetch_cheap(),
+            _fetch_expensive(),
+        )
+
+        # Merge in registration order so the serialized output is deterministic.
+        # Unknown requested families are omitted (same as get_stats).
+        stats: dict[str, Sequence[Stat]] = {}
+        for family in all_registered:
+            if family == CACHE_MEMORY_FAMILY:
+                if CACHE_MEMORY_FAMILY in expensive_result:
+                    stats[CACHE_MEMORY_FAMILY] = expensive_result[CACHE_MEMORY_FAMILY]
+            elif family in cheap_result:
+                stats[family] = cheap_result[family]
+
         accept = request.headers.get("Accept", "")
         if "application/x-protobuf" in accept:
             payload = _stats_to_proto(stats).SerializeToString()
@@ -646,6 +781,7 @@ def create_upload_routes(
     """
     from starlette.datastructures import UploadFile
     from starlette.exceptions import HTTPException
+    from starlette.requests import Request as StarletteRequest
     from starlette.responses import Response
     from starlette.routing import Route
 
@@ -706,7 +842,8 @@ def create_upload_routes(
             config.get_option("server.maxUploadSize") * 1024 * 1024
         )
 
-        # 1. Fast fail via header (if present) - check before reading the body
+        # 1. Fast fail via the Content-Length header (if present), before reading
+        # any of the body. This rejects well-behaved oversized uploads early.
         content_length = request.headers.get("content-length")
         if content_length:
             try:
@@ -717,7 +854,86 @@ def create_upload_routes(
                     status_code=400, detail="Invalid Content-Length header"
                 )
 
-        form = await request.form()
+        # 2. Enforce the limit while streaming the body. Content-Length can be
+        # absent or falsified (e.g. Transfer-Encoding: chunked), so we cap the
+        # raw request body as it arrives and abort as soon as it exceeds the
+        # limit. Without this, an oversized upload would be fully buffered in
+        # memory (upload.read()) or spooled to disk (request.form()) before the
+        # size check below could reject it, allowing a single request to exhaust
+        # the server's memory/disk.
+        max_body_bytes = max_size_bytes + _MAX_UPLOAD_MULTIPART_OVERHEAD_BYTES
+        bytes_received = 0
+
+        # Use the original request's stream so a middleware-cached body is
+        # replayed instead of blocking on the drained ASGI channel (a keep-alive
+        # connection sends no disconnect). Create the iterator once so each
+        # `limited_receive` call advances the same stream, and aclose it so
+        # cleanup does not wait for GC. Sentry's StarletteIntegration is the
+        # reported trigger: it reads bodies to attach them to error events.
+        # See #16697.
+        async with aclosing(request.stream()) as body_chunks:
+
+            async def limited_receive() -> Message:
+                nonlocal bytes_received
+                try:
+                    chunk = await anext(body_chunks)
+                except StopAsyncIteration:
+                    # The stream is exhausted, so the body is complete.
+                    return {"type": "http.request", "body": b"", "more_body": False}
+                except RuntimeError as ex:
+                    # Starlette raises RuntimeError("Stream consumed") when a
+                    # middleware streamed the body away without caching it,
+                    # leaving nothing to parse. Any other RuntimeError comes from
+                    # the ASGI channel; let it keep its 500 rather than blaming a
+                    # body that was never consumed.
+                    if "Stream consumed" not in str(ex):
+                        raise
+                    # The client only ever sees the HTTP status, so log the cause
+                    # for whoever has to fix the middleware. Without this a 400
+                    # leaves no server-side signal at all, unlike the 413 below.
+                    _LOGGER.warning(
+                        "Upload rejected: the request body was already consumed "
+                        "before reaching the upload handler. This usually means "
+                        "in-process ASGI middleware read the body without "
+                        "replaying it downstream."
+                    )
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            "Request body was already consumed before it reached "
+                            "the upload handler, most likely by ASGI middleware "
+                            "that read the body without replaying it."
+                        ),
+                    ) from ex
+
+                bytes_received += len(chunk)
+                if bytes_received > max_body_bytes:
+                    # Log the streaming-cap rejection so operators can tell a
+                    # misconfigured server.maxUploadSize (legitimate uploads being
+                    # rejected) apart from an actual abuse attempt.
+                    _LOGGER.warning(
+                        "Upload rejected: request body exceeded the size limit "
+                        "while streaming (%d bytes received, cap %d bytes). If "
+                        "legitimate uploads are affected, increase "
+                        "server.maxUploadSize.",
+                        bytes_received,
+                        max_body_bytes,
+                    )
+                    # Raising here aborts the multipart parse mid-stream. Starlette
+                    # only closes its spooled temp files on MultiPartException /
+                    # OSError, so this HTTPException leaves cleanup to GC once the
+                    # frames unwind - the same as an upstream ClientDisconnect.
+                    # Resource use stays bounded to one in-flight request.
+                    raise HTTPException(status_code=413, detail="File too large")
+
+                # Report more body unconditionally and let exhaustion above mark
+                # the end, so framing never depends on how `stream()` chunks an
+                # empty tail. A trailing empty chunk is harmless to the parser.
+                return {"type": "http.request", "body": chunk, "more_body": True}
+
+            limited_request = StarletteRequest(request.scope, limited_receive)
+            form = await limited_request.form()
+
         uploads = [value for value in form.values() if isinstance(value, UploadFile)]
 
         if len(uploads) != 1:
@@ -727,9 +943,8 @@ def create_upload_routes(
 
         upload = uploads[0]
 
-        # 2. Check actual file size (Content-Length may be absent or inaccurate)
-        # TODO(lukasmasuch): Improve by using a streaming approach that rejects uploads as soon as
-        # they exceed max_size_bytes, rather than waiting for the full upload to complete.
+        # 3. Enforce the exact per-file size limit. The streaming cap above
+        # allows a small framing margin, so re-check the parsed file size here.
         try:
             data = await upload.read()
         finally:

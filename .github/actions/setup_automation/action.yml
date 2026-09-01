@@ -1,0 +1,18 @@
+name: "Setup Python Automation Environment"
+description: "Sets up the small locked Python environment used by CI utility scripts."
+
+runs:
+  using: composite
+  steps:
+    - name: Install uv and Python
+      uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+      with:
+        python-version: "3.12"
+        enable-cache: true
+        cache-suffix: automation-py3.12
+        cache-python: true
+        github-token: ${{ github.token }}
+
+    - name: Sync locked automation dependencies
+      run: uv sync --locked --only-group automation
+      shell: bash

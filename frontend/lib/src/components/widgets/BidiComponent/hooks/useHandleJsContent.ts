@@ -16,13 +16,12 @@
 
 import { useEffect, useMemo, useRef } from "react"
 
-import { v4 as uuidv4 } from "uuid"
-
 import {
   CleanupFunction,
   FrontendRendererArgs,
   FrontendState,
 } from "@streamlit/component-v2-lib"
+import { generateUuid } from "@streamlit/utils"
 
 import { BidiComponentContext } from "~lib/components/widgets/BidiComponent/BidiComponentContext"
 import { blobUrlManager } from "~lib/components/widgets/BidiComponent/utils/blobUrl"
@@ -95,12 +94,11 @@ const loadAndRunModule = async <T extends FrontendState>({
       newValue = { [name]: value } as T
     }
 
-    void widgetMgr.setJsonValue(
-      { id: componentIdForWidgetMgr, formId },
-      newValue,
-      { fromUi: true },
-      fragmentId
-    )
+    void widgetMgr.setJsonValue(componentIdForWidgetMgr, newValue, {
+      formId,
+      fragmentId,
+      fromUser: true,
+    })
   }
 
   const setTriggerValue = <T extends FrontendState>(
@@ -121,9 +119,8 @@ const loadAndRunModule = async <T extends FrontendState>({
     }
     const triggerId = makeTriggerAggregatorId(componentIdForWidgetMgr)
     void widgetMgr.setTriggerValue(
-      { id: triggerId, formId },
-      { fromUi: true },
-      fragmentId,
+      triggerId,
+      { formId, fragmentId, fromUser: true },
       { event: name, value }
     )
   }
@@ -181,7 +178,7 @@ export const useHandleJsContent = ({
   setError: (error: Error) => void
   skip?: boolean
 }): void => {
-  const thisUuid = useMemo(() => uuidv4(), [])
+  const thisUuid = useMemo(() => generateUuid(), [])
   const componentId = `st-bidi-component-${thisUuid}`
 
   const {
