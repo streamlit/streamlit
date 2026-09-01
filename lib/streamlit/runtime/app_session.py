@@ -88,21 +88,26 @@ _REPORTED_NUDGE_SUPPRESSION_REASONS: Final = frozenset({"conflict", "check_faile
 
 
 def _close_script_event_loop(loop: asyncio.AbstractEventLoop) -> None:
-    """Close the AppSession-owned script-thread event loop at session teardown.
+    """Best-effort close the AppSession-owned loop at session teardown.
 
     Resource owners must release loop-bound resources before session teardown
     and must not close this shared loop themselves. Streamlit installs the loop
     but does not run it continuously, although user or library code may drive
     it explicitly.
 
-    When no loop is running on the current thread, this cancels and drains
-    pending tasks, async generators, and the default executor before closing
-    the loop. When another loop is running on the current thread, Python
-    prevents this loop from being driven; this cancels known tasks and closes
-    the loop without guaranteeing asynchronous finalization.
+    If another runner is still driving the loop, closure is deferred because
+    tasks cannot be safely inspected or cancelled cross-thread. Otherwise,
+    pending tasks, async generators, and the default executor are drained when
+    Python permits the loop to be driven on this thread.
     """
     if loop.is_closed():
         return
+    if loop.is_running():
+        _LOGGER.warning(
+            "Deferring script event loop closure because the loop is still running"
+        )
+        return
+
     tasks_to_cancel = asyncio.all_tasks(loop)
     for task in tasks_to_cancel:
         task.cancel()
@@ -118,7 +123,23 @@ def _close_script_event_loop(loop: asyncio.AbstractEventLoop) -> None:
             )
         loop.run_until_complete(loop.shutdown_asyncgens())
         loop.run_until_complete(loop.shutdown_default_executor())
-    loop.close()
+
+    # The loop can start on another thread after the check above.
+    if loop.is_running():
+        _LOGGER.warning(
+            "Deferring script event loop closure because the loop is still running"
+        )
+        return
+    try:
+        loop.close()
+    except RuntimeError:
+        # BaseEventLoop.close() raises RuntimeError only when the loop is
+        # running. Re-check state so unrelated RuntimeErrors still propagate.
+        if not loop.is_running():
+            raise
+        _LOGGER.warning(
+            "Deferring script event loop closure because the loop started running"
+        )
 
 
 class AppSessionState(Enum):
@@ -848,21 +869,22 @@ class AppSession:
                 self._local_sources_watcher.update_watched_modules()
 
         elif event == ScriptRunnerEvent.SHUTDOWN:
-            if self._state == AppSessionState.SHUTDOWN_REQUESTED:
-                # Only clear media files and session caches if the script is done
-                # running AND the session is actually shutting down.
-                runtime.get_instance().media_file_mgr.clear_session_refs(self.id)
-                runtime.get_instance().dataframe_source_mgr.clear_all_for_session(
-                    self.id
-                )
-                self.clear_session_caches()
-                # Script execution has unwound and the runner has detached the
-                # loop before SHUTDOWN fires, so it can no longer use the loop.
-                _close_script_event_loop(self._script_event_loop)
-
-            if client_state is not None:
-                self._client_state = client_state
-            self._scriptrunner = None
+            try:
+                if self._state == AppSessionState.SHUTDOWN_REQUESTED:
+                    # Only clear media files and session caches if the script is done
+                    # running AND the session is actually shutting down.
+                    runtime.get_instance().media_file_mgr.clear_session_refs(self.id)
+                    runtime.get_instance().dataframe_source_mgr.clear_all_for_session(
+                        self.id
+                    )
+                    self.clear_session_caches()
+                    _close_script_event_loop(self._script_event_loop)
+            finally:
+                if client_state is not None:
+                    self._client_state = client_state
+                # Final runner state must be retained and the completed runner
+                # released even when best-effort teardown cannot close the loop.
+                self._scriptrunner = None
 
         elif event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:
             if forward_msg is None:  # pragma: no cover - defensive

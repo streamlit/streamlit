@@ -487,6 +487,74 @@ class AppSessionTest(unittest.TestCase):
         assert session._scriptrunner is None
         assert session._client_state is original_client_state
 
+    def test_shutdown_defers_closure_while_script_loop_is_running(self):
+        """SHUTDOWN releases the runner without closing a loop in use elsewhere."""
+        session = _create_test_session()
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+        session._state = AppSessionState.SHUTDOWN_REQUESTED
+        loop = session._script_event_loop
+        loop_started = threading.Event()
+        loop.call_soon(loop_started.set)
+        loop_thread = threading.Thread(target=loop.run_forever)
+        loop_thread.start()
+
+        try:
+            assert loop_started.wait(timeout=5)
+            with (
+                patch(
+                    "streamlit.runtime.app_session.asyncio.get_running_loop",
+                    return_value=session._event_loop,
+                ),
+                self.assertLogs(
+                    "streamlit.runtime.app_session", level="WARNING"
+                ) as logs,
+            ):
+                session._handle_scriptrunner_event_on_event_loop(
+                    sender=mock_scriptrunner,
+                    event=ScriptRunnerEvent.SHUTDOWN,
+                    client_state=ClientState(),
+                )
+
+            assert session._scriptrunner is None
+            assert loop.is_running()
+            assert not loop.is_closed()
+            assert any("still running" in message for message in logs.output)
+        finally:
+            loop.call_soon_threadsafe(loop.stop)
+            loop_thread.join(timeout=5)
+            assert not loop_thread.is_alive()
+            loop.close()
+
+    def test_shutdown_releases_runner_when_loop_closure_raises(self):
+        """Final SHUTDOWN state is retained if best-effort loop closure fails."""
+        session = _create_test_session()
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+        session._state = AppSessionState.SHUTDOWN_REQUESTED
+        final_client_state = ClientState()
+
+        with (
+            patch(
+                "streamlit.runtime.app_session.asyncio.get_running_loop",
+                return_value=session._event_loop,
+            ),
+            patch(
+                "streamlit.runtime.app_session._close_script_event_loop",
+                side_effect=RuntimeError("unrelated close failure"),
+            ),
+            pytest.raises(RuntimeError, match="unrelated close failure"),
+        ):
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=mock_scriptrunner,
+                event=ScriptRunnerEvent.SHUTDOWN,
+                client_state=final_client_state,
+            )
+
+        assert session._client_state is final_client_state
+        assert session._scriptrunner is None
+        session._script_event_loop.close()
+
     @patch("streamlit.runtime.app_session.AppSession.request_script_stop")
     def test_request_script_stop_keeps_script_event_loop_open(
         self, mock_stop: MagicMock
@@ -3297,3 +3365,21 @@ def test_close_script_event_loop_while_runtime_loop_is_running() -> None:
         runtime_loop.close()
 
     assert closed, "script_loop must be closed after _close_script_event_loop"
+
+
+def test_close_script_event_loop_propagates_unrelated_runtime_error() -> None:
+    """Best-effort closure does not hide RuntimeErrors from a stopped loop."""
+    script_loop = MagicMock(spec=asyncio.AbstractEventLoop)
+    script_loop.is_closed.return_value = False
+    script_loop.is_running.return_value = False
+    script_loop.close.side_effect = RuntimeError("unrelated close failure")
+
+    with (
+        patch("streamlit.runtime.app_session.asyncio.all_tasks", return_value=set()),
+        patch(
+            "streamlit.runtime.app_session.asyncio.get_running_loop",
+            return_value=MagicMock(spec=asyncio.AbstractEventLoop),
+        ),
+        pytest.raises(RuntimeError, match="unrelated close failure"),
+    ):
+        _close_script_event_loop(script_loop)
