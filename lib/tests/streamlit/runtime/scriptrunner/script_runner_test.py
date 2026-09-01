@@ -1736,6 +1736,21 @@ class ScriptRunnerTest(unittest.TestCase):
 
         scriptrunner._test_event_loop.close()
 
+    def test_fallback_event_loop_closed_after_script_thread_exit(self):
+        """A runner-created fallback loop is closed when its thread exits."""
+        scriptrunner = TestScriptRunner(
+            "asyncio_event_loop.py", use_event_loop_fallback=True
+        )
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        captured = scriptrunner._session_state["captured_loops"]
+        assert len(captured) == 2
+        assert captured[0] is captured[1]
+        assert captured[0].is_closed()
+        assert scriptrunner._event_loop is None
+
     def test_event_loop_persists_across_reruns(self):
         """The same loop object is current on every rerun of a session."""
         scriptrunner = TestScriptRunner("asyncio_event_loop.py")
@@ -1883,6 +1898,8 @@ class TestScriptRunner(ScriptRunner):
         script_name: str,
         initial_rerun_data: RerunData | None = None,
         event_loop: asyncio.AbstractEventLoop | None = None,
+        *,
+        use_event_loop_fallback: bool = False,
     ):
         """Initializes the ScriptRunner for the given script_name."""
         # DeltaGenerator deltas will be enqueued into self.forward_msg_queue.
@@ -1892,12 +1909,12 @@ class TestScriptRunner(ScriptRunner):
             os.path.dirname(__file__), "test_data", script_name
         )
 
-        # Caller-supplied loop (simulates AppSession ownership).  When none is
-        # provided we create a dedicated one so the runner has a loop to
-        # install; the caller is responsible for closing it when done.
-        if event_loop is None:
+        # Most tests simulate AppSession ownership with a dedicated loop. A
+        # focused test leaves this unset to exercise the runner's fallback.
+        if event_loop is None and not use_event_loop_fallback:
             event_loop = asyncio.new_event_loop()
-        self._test_event_loop = event_loop
+        if event_loop is not None:
+            self._test_event_loop = event_loop
 
         script_cache = ScriptCache()
         super().__init__(
