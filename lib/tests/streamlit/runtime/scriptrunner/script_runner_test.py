@@ -1734,21 +1734,19 @@ class ScriptRunnerTest(unittest.TestCase):
         # The loop is only installed, never run.
         assert scriptrunner._session_state["loop_running"] is False
 
-        scriptrunner._test_event_loop.close()
-
-    def test_fallback_event_loop_closed_after_script_thread_exit(self):
-        """A runner-created fallback loop is closed when its thread exits."""
-        scriptrunner = TestScriptRunner(
-            "asyncio_event_loop.py", use_event_loop_fallback=True
-        )
+    def test_closed_caller_loop_fails_without_replacement(self):
+        """ScriptRunner does not replace a closed caller-owned loop."""
+        loop = asyncio.new_event_loop()
+        loop.close()
+        scriptrunner = TestScriptRunner("asyncio_event_loop.py", event_loop=loop)
         scriptrunner.start()
         scriptrunner.join()
 
-        self._assert_no_exceptions(scriptrunner)
-        captured = scriptrunner._session_state["captured_loops"]
-        assert len(captured) == 2
-        assert captured[0] is captured[1]
-        assert captured[0].is_closed()
+        assert len(scriptrunner.script_thread_exceptions) == 1
+        assert str(scriptrunner.script_thread_exceptions[0]) == (
+            "ScriptRunner event loop is closed"
+        )
+        assert scriptrunner.events == [ScriptRunnerEvent.SHUTDOWN]
         assert scriptrunner._event_loop is None
 
     def test_event_loop_persists_across_reruns(self):
@@ -1763,8 +1761,6 @@ class ScriptRunnerTest(unittest.TestCase):
         assert len(captured) == 2
         assert captured[0] is captured[1]
 
-        scriptrunner._test_event_loop.close()
-
     def test_asyncio_run_unaffected_by_persistent_loop(self):
         """User code calling asyncio.run() keeps working: our loop never runs,
         so there is no nested-loop conflict, and asyncio.run() closes its own
@@ -1778,8 +1774,6 @@ class ScriptRunnerTest(unittest.TestCase):
         assert scriptrunner._session_state["asyncio_run_result"] == 42
         # asyncio.run() must not have closed the persistent loop.
         assert scriptrunner._session_state["persistent_loop_closed_mid_run"] is False
-
-        scriptrunner._test_event_loop.close()
 
     def test_event_loop_detached_after_scriptrunner_shutdown(self):
         """After the script thread stops the runner's loop reference is cleared,
@@ -1898,8 +1892,6 @@ class TestScriptRunner(ScriptRunner):
         script_name: str,
         initial_rerun_data: RerunData | None = None,
         event_loop: asyncio.AbstractEventLoop | None = None,
-        *,
-        use_event_loop_fallback: bool = False,
     ):
         """Initializes the ScriptRunner for the given script_name."""
         # DeltaGenerator deltas will be enqueued into self.forward_msg_queue.
@@ -1909,12 +1901,10 @@ class TestScriptRunner(ScriptRunner):
             os.path.dirname(__file__), "test_data", script_name
         )
 
-        # Most tests simulate AppSession ownership with a dedicated loop. A
-        # focused test leaves this unset to exercise the runner's fallback.
-        if event_loop is None and not use_event_loop_fallback:
+        self._owns_test_event_loop = event_loop is None
+        if event_loop is None:
             event_loop = asyncio.new_event_loop()
-        if event_loop is not None:
-            self._test_event_loop = event_loop
+        self._test_event_loop = event_loop
 
         script_cache = ScriptCache()
         super().__init__(
@@ -1963,6 +1953,9 @@ class TestScriptRunner(ScriptRunner):
             super()._run_script_thread()
         except BaseException as e:
             self.script_thread_exceptions.append(e)
+        finally:
+            if self._owns_test_event_loop and not self._test_event_loop.is_closed():
+                self._test_event_loop.close()
 
     def _run_script(self, rerun_data: RerunData) -> None:
         self.clear_forward_msgs()

@@ -14,12 +14,13 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 import pytest
 
 from streamlit.runtime.pages_manager import PagesManager
-from streamlit.testing.v1 import AppTest
+from streamlit.testing.v1 import AppTest, local_script_runner
 from streamlit.util import calc_hash
 
 
@@ -42,6 +43,31 @@ def test_smoke():
     at = r.run()
     assert at.radio[0].value == "b"
     assert at.radio.values == ["b", "c"]
+
+
+def test_each_run_closes_its_local_script_runner_event_loop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Each explicit AppTest run owns and closes a fresh event loop."""
+    created_loops: list[asyncio.AbstractEventLoop] = []
+    new_event_loop = asyncio.new_event_loop
+
+    def track_new_event_loop() -> asyncio.AbstractEventLoop:
+        loop = new_event_loop()
+        created_loops.append(loop)
+        return loop
+
+    monkeypatch.setattr(
+        local_script_runner.asyncio, "new_event_loop", track_new_event_loop
+    )
+
+    at = AppTest.from_string("import asyncio; asyncio.get_event_loop()")
+    at.run()
+    at.run()
+
+    assert len(created_loops) == 2
+    assert created_loops[0] is not created_loops[1]
+    assert all(loop.is_closed() for loop in created_loops)
 
 
 def test_from_file_str():
