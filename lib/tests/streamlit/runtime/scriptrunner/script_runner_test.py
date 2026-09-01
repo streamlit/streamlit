@@ -256,7 +256,7 @@ class ScriptRunnerTest(unittest.TestCase):
         assert run_script_mock.call_count == 3
 
     def test_internal_base_exception_emits_shutdown_once(self):
-        """An unexpected internal failure still reaches terminal finalization."""
+        """An unexpected BaseException emits exactly one SHUTDOWN."""
         scriptrunner = TestScriptRunner("not_a_script.py")
         primary_error = BaseException("internal failure")
         scriptrunner._requests.on_scriptrunner_ready = MagicMock(
@@ -274,7 +274,7 @@ class ScriptRunnerTest(unittest.TestCase):
             scriptrunner._test_event_loop.close()
 
     def test_context_setup_failure_emits_shutdown_without_client_state(self):
-        """A failure before context creation has no authoritative snapshot."""
+        """Context setup failure emits SHUTDOWN without client state."""
         scriptrunner = TestScriptRunner("not_a_script.py")
         setup_error = RuntimeError("context setup failed")
 
@@ -292,7 +292,7 @@ class ScriptRunnerTest(unittest.TestCase):
             scriptrunner._test_event_loop.close()
 
     def test_shutdown_receiver_failure_does_not_mask_primary_exception(self):
-        """Terminal dispatch errors are secondary to an escaping runner error."""
+        """SHUTDOWN receiver failure does not replace an escaping runner error."""
         scriptrunner = TestScriptRunner("not_a_script.py")
         primary_error = RuntimeError("primary failure")
         dispatch_error = RuntimeError("dispatch failure")
@@ -320,7 +320,7 @@ class ScriptRunnerTest(unittest.TestCase):
             scriptrunner._test_event_loop.close()
 
     def test_shutdown_receiver_failure_propagates_on_normal_termination(self):
-        """Terminal dispatch keeps its existing propagation behavior."""
+        """Receiver failure propagates when no runner error is active."""
         scriptrunner = TestScriptRunner("not_a_script.py")
         dispatch_error = RuntimeError("dispatch failure")
         scriptrunner.request_stop()
@@ -343,7 +343,7 @@ class ScriptRunnerTest(unittest.TestCase):
             scriptrunner._test_event_loop.close()
 
     def test_shutdown_notification_follows_event_loop_detachment(self):
-        """Receivers run only after the runner releases its loop."""
+        """Receivers run after loop references are cleared."""
         scriptrunner = TestScriptRunner("not_a_script.py")
         scriptrunner.request_stop()
         loop_references: list[asyncio.AbstractEventLoop | None] = []
@@ -1761,7 +1761,7 @@ class ScriptRunnerTest(unittest.TestCase):
         assert len(captured) == 2
         assert captured[0] is captured[1]
 
-    def test_asyncio_run_unaffected_by_persistent_loop(self):
+    def test_asyncio_run_uses_temporary_loop_without_closing_persistent_loop(self):
         """User code calling asyncio.run() keeps working: our loop never runs,
         so there is no nested-loop conflict, and asyncio.run() closes its own
         temporary loop rather than ours."""

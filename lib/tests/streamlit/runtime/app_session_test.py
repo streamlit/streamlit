@@ -364,7 +364,7 @@ class AppSessionTest(unittest.TestCase):
 
     @patch("streamlit.runtime.app_session.ScriptRunner")
     def test_create_scriptrunner(self, mock_scriptrunner: MagicMock):
-        """Test that _create_scriptrunner does what it should."""
+        """Verify that ScriptRunner receives the session-owned script event loop."""
         session = _create_test_session()
         assert session._scriptrunner is None
 
@@ -427,7 +427,9 @@ class AppSessionTest(unittest.TestCase):
         expected_loop.close()
 
     @patch("streamlit.runtime.app_session.AppSession.request_script_stop")
-    def test_script_event_loop_closed_on_shutdown_no_runner(self, mock_stop: MagicMock):
+    def test_shutdown_closes_script_event_loop_when_no_runner_is_active(
+        self, mock_stop: MagicMock
+    ):
         """AppSession closes the script-thread event loop immediately on shutdown
         when no ScriptRunner is active (no runner to wait for)."""
         session = _create_test_session()
@@ -456,7 +458,7 @@ class AppSessionTest(unittest.TestCase):
         loop.close()
 
     @patch("streamlit.runtime.app_session.AppSession.request_script_stop")
-    def test_exceptional_runner_shutdown_closes_loop_and_clears_runner(
+    def test_shutdown_without_client_state_completes_cleanup(
         self, mock_stop: MagicMock
     ):
         """Shutdown cleanup does not depend on a final client-state snapshot."""
@@ -486,7 +488,9 @@ class AppSessionTest(unittest.TestCase):
         assert session._client_state is original_client_state
 
     @patch("streamlit.runtime.app_session.AppSession.request_script_stop")
-    def test_script_event_loop_not_closed_before_shutdown(self, mock_stop: MagicMock):
+    def test_request_script_stop_keeps_script_event_loop_open(
+        self, mock_stop: MagicMock
+    ):
         """request_script_stop (reconnect path) must not close the loop."""
         session = _create_test_session()
         loop = session._script_event_loop
@@ -3275,12 +3279,11 @@ def test_create_file_change_message_marks_script_changed() -> None:
 
 
 async def _run_close_from_running_loop(loop: asyncio.AbstractEventLoop) -> bool:
-    """Helper that calls _close_script_event_loop from within a running loop."""
     _close_script_event_loop(loop)
     return loop.is_closed()
 
 
-def test_close_script_event_loop_from_within_running_loop() -> None:
+def test_close_script_event_loop_while_runtime_loop_is_running() -> None:
     """_close_script_event_loop closes the loop even when called from within
     a running asyncio event loop, without raising RuntimeError."""
     script_loop = asyncio.new_event_loop()

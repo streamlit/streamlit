@@ -97,8 +97,8 @@ class ScriptRunnerEvent(Enum):
     # by the user.
     FRAGMENT_STOPPED_WITH_SUCCESS = "FRAGMENT_STOPPED_WITH_SUCCESS"
 
-    # Script execution has unwound and the ScriptRunner will no longer use its
-    # event loop.
+    # Script execution has unwound, the event loop is detached, and the script
+    # thread is about to exit.
     SHUTDOWN = "SHUTDOWN"
 
     # "Data" events. These are emitted when the ScriptRunner's script has
@@ -235,9 +235,9 @@ class ScriptRunner:
 
         event_loop
             A persistent, non-running asyncio event loop owned by the caller
-            (typically ``AppSession``). The runner installs it on the script
-            thread and never closes it; the caller is responsible for closing it
-            after the script thread exits.
+            (typically ``AppSession``). The runner installs and detaches the
+            loop but never closes it. After the runner emits ``SHUTDOWN``, the
+            caller may safely close the loop.
         """
         self._session_id = session_id
         self._main_script_path = main_script_path
@@ -426,6 +426,9 @@ class ScriptRunner:
                     f"Unrecognized ScriptRequestType: {request.type}. This should never happen."
                 )
         finally:
+            # Keep cleanup nested so loop detachment and exactly one SHUTDOWN
+            # dispatch attempt both occur even if an earlier cleanup step
+            # fails. Receiver dispatch may itself raise.
             try:
                 try:
                     # Detach the loop before notifying AppSession, which may
@@ -470,14 +473,13 @@ class ScriptRunner:
         return self._script_thread == threading.current_thread()
 
     def _install_event_loop(self) -> None:
-        """Set the session event loop as the script thread's current loop.
+        """Reinstall the loop at each run boundary after ``asyncio.run()`` clears it.
 
-        Uses the caller-owned loop supplied at construction.
-
-        The loop is installed but not run here. User or library code may
-        explicitly drive this same loop with ``run_until_complete()``.
-        By contrast, ``asyncio.run()`` creates a temporary loop and clears the
-        thread's current-loop reference afterward.
+        The caller-owned loop supplied at construction is installed but not
+        run here. User or library code may explicitly drive this same loop with
+        ``run_until_complete()``. By contrast, ``asyncio.run()`` creates a
+        temporary loop and clears the thread's current-loop reference
+        afterward.
         """
         loop = self._event_loop
         if loop is None:
@@ -590,16 +592,11 @@ class ScriptRunner:
 
         # An explicit loop instead of recursion to avoid stack overflows
         while True:
-            # asyncio.run() unsets the thread's current loop in its finally
-            # block (via set_event_loop(None)). Re-assert our persistent loop so
-            # user code that reaches for the current loop keeps seeing it, both
-            # later in this run and on subsequent reruns.
-            #
-            # Known gap: within a single run, asyncio.get_event_loop() will
-            # raise *after* a user asyncio.run() call and *before* the next
-            # run boundary re-assert. This is acceptable — the crashes this
-            # fixes (#744) come from get_event_loop() at import/construction
-            # time, not from code that first calls asyncio.run().
+            # asyncio.run() clears the thread's current-loop reference. The
+            # persistent loop is reinstated at each subsequent run boundary,
+            # but not later within the same run after asyncio.run() returns.
+            # This still addresses #744, where get_event_loop() is called
+            # during import or object construction.
             self._install_event_loop()
 
             if self._local_sources_watcher is not None:

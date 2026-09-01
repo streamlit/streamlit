@@ -48,12 +48,12 @@ def test_smoke():
 def test_each_run_closes_its_local_script_runner_event_loop(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Each explicit AppTest run owns and closes a fresh event loop."""
+    """Each AppTest.run() creates a LocalScriptRunner that owns and closes a fresh loop."""
     created_loops: list[asyncio.AbstractEventLoop] = []
-    new_event_loop = asyncio.new_event_loop
+    original_new_event_loop = asyncio.new_event_loop
 
     def track_new_event_loop() -> asyncio.AbstractEventLoop:
-        loop = new_event_loop()
+        loop = original_new_event_loop()
         created_loops.append(loop)
         return loop
 

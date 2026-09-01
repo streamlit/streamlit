@@ -88,26 +88,23 @@ _REPORTED_NUDGE_SUPPRESSION_REASONS: Final = frozenset({"conflict", "check_faile
 
 
 def _close_script_event_loop(loop: asyncio.AbstractEventLoop) -> None:
-    """Best-effort teardown of the script-thread event loop at session end.
+    """Close the AppSession-owned script-thread event loop at session teardown.
 
-    Streamlit installs this loop but does not run it continuously. User or
-    library code may explicitly drive it and attach tasks, async generators,
-    or default-executor resources.
+    Resource owners must release loop-bound resources before session teardown
+    and must not close this shared loop themselves. Streamlit installs the loop
+    but does not run it continuously, although user or library code may drive
+    it explicitly.
 
-    Code that attaches resources to this shared AppSession-owned loop remains
-    responsible for releasing them before session teardown and must not close
-    the loop itself.
-
-    When no other loop is running on the current thread, task cancellation,
-    async generators, and the default executor are drained before close. When
-    invoked from Streamlit's active runtime-loop thread, Python prevents
-    driving the script loop, so known tasks are cancelled and the loop is
-    closed without guaranteeing asynchronous finalization.
+    When no loop is running on the current thread, this cancels and drains
+    pending tasks, async generators, and the default executor before closing
+    the loop. When another loop is running on the current thread, Python
+    prevents this loop from being driven; this cancels known tasks and closes
+    the loop without guaranteeing asynchronous finalization.
     """
     if loop.is_closed():
         return
-    to_cancel = asyncio.all_tasks(loop)
-    for task in to_cancel:
+    tasks_to_cancel = asyncio.all_tasks(loop)
+    for task in tasks_to_cancel:
         task.cancel()
     try:
         running_loop = asyncio.get_running_loop()
@@ -115,8 +112,10 @@ def _close_script_event_loop(loop: asyncio.AbstractEventLoop) -> None:
         running_loop = None
     if running_loop is None:
         # No other loop is running on this thread; safe to drive the loop.
-        if to_cancel:
-            loop.run_until_complete(asyncio.gather(*to_cancel, return_exceptions=True))
+        if tasks_to_cancel:
+            loop.run_until_complete(
+                asyncio.gather(*tasks_to_cancel, return_exceptions=True)
+            )
         loop.run_until_complete(loop.shutdown_asyncgens())
         loop.run_until_complete(loop.shutdown_default_executor())
     loop.close()
@@ -200,11 +199,10 @@ class AppSession:
 
         self._event_loop = asyncio.get_running_loop()
 
-        # One persistent asyncio event loop for the session's script thread.
-        # Streamlit does not drive it autonomously. It outlives individual
-        # ScriptRunners so that loop-bound objects stored in st.session_state or
-        # @st.cache_resource(scope="session") remain valid across reruns and
-        # fastRerun churn.
+        # AppSession owns one persistent event loop for its script thread.
+        # Streamlit installs the loop but does not run it continuously. The
+        # loop outlives individual ScriptRunners so loop-bound session and
+        # cache resources remain valid when a runner is replaced.
         self._script_event_loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
         self._script_data = script_data
         self._uploaded_file_mgr = uploaded_file_manager

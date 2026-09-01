@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 
 
 class LocalScriptRunner(ScriptRunner):
-    """Subclasses ScriptRunner to provide some testing features."""
+    """AppTest adapter that captures events and owns each run's event loop."""
 
     def __init__(
         self,
