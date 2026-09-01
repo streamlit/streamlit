@@ -19,6 +19,7 @@ import mimetypes
 import os
 import signal
 import sys
+import threading
 from typing import TYPE_CHECKING, Any, Final, Literal
 
 from streamlit import cli_util, config, env_util, file_util, net_util, secrets
@@ -192,8 +193,13 @@ def _on_server_start(server: Server) -> None:
 
         cli_util.open_browser(server_util.get_url(addr))
 
-    # Schedule the browser to open on the main thread.
-    asyncio.get_running_loop().call_soon(maybe_open_browser)
+    # Named webbrowser controllers (UnixBrowser, MacOSXOSAScript) can
+    # Popen.wait() for several seconds. Do not run that on the event loop.
+    threading.Thread(
+        target=maybe_open_browser,
+        daemon=True,
+        name="streamlit-open-browser",
+    ).start()
 
 
 def _fix_pydeck_mapbox_api_warning() -> None:

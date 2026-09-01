@@ -54,7 +54,13 @@ def style_for_cli(message: str, **kwargs: Any) -> str:
 
 
 def _get_logger() -> Any:
-    """Return this module's logger. Load it lazily to avoid a config import cycle."""
+    """Return this module's logger.
+
+    Load it lazily: ``get_logger()`` calls ``setup_formatter()``, which imports
+    ``streamlit.config``. This module is imported by ``config_util`` during
+    config load (``config`` → ``config_util`` → ``cli_util``), so a module-level
+    ``_LOGGER = get_logger(__name__)`` would cycle.
+    """
     from streamlit.logger import get_logger
 
     return get_logger(__name__)
@@ -75,12 +81,12 @@ def _open_browser_with_command(command: str, url: str) -> None:
 
 
 def _nonblocking_webbrowser_command(browser_command: str) -> str:
-    """If the command contains ``%s``, ensure it ends with a standalone ``&``.
+    """Keep ``%s`` command templates from blocking the server.
 
-    ``webbrowser.get()`` uses ``BackgroundBrowser`` only when the last shlex
-    token is ``&``. ``GenericBrowser`` waits for the subprocess and would
-    block the server event loop. A trailing ``&`` glued to ``%s`` (``%s&``)
-    is split off so the URL placeholder stays intact.
+    ``webbrowser.get()`` uses ``GenericBrowser``, which waits for the
+    subprocess, unless the command ends with a standalone ``&``. A trailing
+    ``&`` glued to ``%s`` (``%s&``) is split off so the URL placeholder stays
+    intact.
     """
     if "%s" not in browser_command:
         return browser_command
@@ -112,44 +118,49 @@ def _executable_from_browser_command(browser_command: str) -> str | None:
 def _browser_command_refers_to_existing_executable(browser_command: str) -> bool:
     """Return whether ``browser.command`` points at a program we can launch.
 
-    Bare paths are checked as a whole so paths with spaces are not split.
-    Command templates use the first shlex token (the program).
+    Uses ``shutil.which`` so a non-executable regular file is not treated as
+    a valid browser. Bare paths are checked as a whole so paths with spaces
+    are not split. Command templates use the first shlex token (the program).
     """
-    if os.path.isfile(browser_command) or shutil.which(browser_command) is not None:
+    if shutil.which(browser_command) is not None:
         return True
     if "%s" not in browser_command:
         return False
     executable = _executable_from_browser_command(browser_command)
     if executable is None:
         return False
-    return os.path.isfile(executable) or shutil.which(executable) is not None
+    return shutil.which(executable) is not None
 
 
 def _open_browser_with_configured_command(browser_command: str, url: str) -> bool:
-    """Try to open ``url`` with ``browser.command`` via ``webbrowser.get()``.
+    """Launch ``url`` with ``browser.command`` without blocking forever.
 
-    Return True if a controller was constructed and ``open()`` was invoked
-    without raising. Return False if the command cannot be resolved, the
-    executable does not exist, the controller would block the server
-    (``GenericBrowser``), or ``open()`` raises ``OSError``, so the caller
-    can fall back.
+    Ignore a falsey ``open()`` only for ``BackgroundBrowser`` (the helper
+    often exits after a successful launch). Other controllers treat False as
+    a failed launch. Return False so the caller can fall back if the command
+    cannot be resolved, the executable does not exist, the controller is a
+    blocking ``GenericBrowser``, ``open()`` raises ``OSError``, or a
+    non-background ``open()`` returns False.
 
-    Do not treat ``open()``'s boolean as success. ``BackgroundBrowser``
-    returns False when the helper exits immediately (for example ``open -a``
-    or a browser that is already running), which is not a launch failure.
+    Named GUI controllers (``UnixBrowser``, ``MacOSXOSAScript``) may
+    ``wait()`` for a few seconds. Callers on the asyncio loop must run this
+    function off the loop.
     """
     import webbrowser
 
     try:
-        using = _nonblocking_webbrowser_command(browser_command)
-        if "%s" in using and not _browser_command_refers_to_existing_executable(using):
+        webbrowser_spec = _nonblocking_webbrowser_command(browser_command)
+        if (
+            "%s" in webbrowser_spec
+            and not _browser_command_refers_to_existing_executable(webbrowser_spec)
+        ):
             return False
-        controller = webbrowser.get(using)
+        controller = webbrowser.get(webbrowser_spec)
     except (webbrowser.Error, ValueError, IndexError):
-        # webbrowser.get() only resolves a bare path when its basename matches a
-        # registered browser, and it splits on whitespace, so quoted paths and
-        # paths with spaces fail. Retry as an explicit "%s &" command template
-        # only when that path exists.
+        # webbrowser.get() does not take a raw path when:
+        # - the basename is not a registered browser, or
+        # - the path contains spaces (it splits on whitespace).
+        # Retry as a quoted "%s &" template only when that path exists.
         if (
             "%s" in browser_command
             or not _browser_command_refers_to_existing_executable(browser_command)
@@ -160,17 +171,20 @@ def _open_browser_with_configured_command(browser_command: str, url: str) -> boo
         except (webbrowser.Error, ValueError, IndexError):
             return False
 
-    # GenericBrowser.open() calls Popen.wait() and would block the server.
+    # GenericBrowser.open() calls Popen.wait() until the process exits
+    # (console browsers such as lynx). Do not use those. UnixBrowser and
+    # MacOSXOSAScript are not GenericBrowser subclasses; they may still
+    # wait briefly and must be invoked off the asyncio loop.
     if isinstance(controller, webbrowser.GenericBrowser) and not isinstance(
         controller, webbrowser.BackgroundBrowser
     ):
         return False
 
     try:
-        controller.open(url)
+        opened = controller.open(url)
     except OSError:
         return False
-    return True
+    return bool(opened) or isinstance(controller, webbrowser.BackgroundBrowser)
 
 
 def _open_browser_with_os_default(url: str) -> None:
@@ -216,7 +230,7 @@ def open_browser(url: str) -> None:
     """
     from streamlit import config
 
-    browser_command = str(config.get_option("browser.command") or "").strip()
+    browser_command = config.get_option("browser.command").strip()
     if browser_command and _open_browser_with_configured_command(browser_command, url):
         return
     if browser_command:

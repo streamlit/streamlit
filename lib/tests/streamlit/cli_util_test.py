@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import os
 import shlex
 import shutil
 import webbrowser
@@ -29,6 +30,7 @@ from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from pathlib import Path
 
 _URL = "http://some-url"
 
@@ -128,10 +130,7 @@ def test_configured_command_passed_to_webbrowser_get(
     with (
         _platform(darwin=True),
         patch_config_options({"browser.command": browser_command}),
-        patch(
-            "streamlit.cli_util._browser_command_refers_to_existing_executable",
-            return_value=True,
-        ),
+        patch("streamlit.cli_util.shutil.which", return_value="/usr/bin/firefox"),
         patch("webbrowser.get", return_value=controller) as webbrowser_get,
         patch("webbrowser.open") as webbrowser_open,
         patch("subprocess.Popen") as subprocess_popen,
@@ -151,10 +150,7 @@ def test_configured_command_retries_bare_path_as_quoted_template() -> None:
     with (
         _platform(darwin=True),
         patch_config_options({"browser.command": path}),
-        patch(
-            "streamlit.cli_util._browser_command_refers_to_existing_executable",
-            return_value=True,
-        ),
+        patch("streamlit.cli_util.shutil.which", return_value=path),
         patch(
             "webbrowser.get",
             side_effect=[webbrowser.Error("unknown"), controller],
@@ -246,24 +242,62 @@ def test_configured_command_falls_back_for_generic_browser() -> None:
         os_default.assert_called_once_with(_URL)
 
 
-def test_configured_command_does_not_fall_back_when_open_returns_false() -> None:
-    """A falsey controller.open() result must not open a second (OS default) browser.
-
-    BackgroundBrowser returns False when the helper exits immediately, which
-    is normal for ``open -a`` and for a browser that is already running.
-    """
-    controller = MagicMock()
-    controller.open.return_value = False
+def test_background_browser_false_does_not_fall_back() -> None:
+    """BackgroundBrowser returning False is a successful launch, not a fallback."""
+    controller = webbrowser.BackgroundBrowser("true")
     with (
         _platform(darwin=True),
         patch_config_options({"browser.command": "firefox"}),
         patch("webbrowser.get", return_value=controller),
+        patch.object(controller, "open", return_value=False) as mock_open,
         patch("streamlit.cli_util._open_browser_with_os_default") as os_default,
         patch("streamlit.cli_util._get_logger") as mock_get_logger,
     ):
         open_browser(_URL)
 
-        controller.open.assert_called_once_with(_URL)
+        mock_open.assert_called_once_with(_URL)
+        mock_get_logger.assert_not_called()
+        os_default.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "controller",
+    [webbrowser.Mozilla("firefox"), webbrowser.MacOSXOSAScript("chrome")],
+    ids=["mozilla", "macosx_osascript"],
+)
+def test_non_background_controller_false_falls_back(
+    controller: webbrowser.BaseBrowser,
+) -> None:
+    """False from UnixBrowser or MacOSXOSAScript is a failed launch; fall back."""
+    with (
+        _platform(darwin=True),
+        patch_config_options({"browser.command": "firefox"}),
+        patch("webbrowser.get", return_value=controller),
+        patch.object(controller, "open", return_value=False) as mock_open,
+        patch("streamlit.cli_util._open_browser_with_os_default") as os_default,
+        patch("streamlit.cli_util._get_logger") as mock_get_logger,
+    ):
+        open_browser(_URL)
+
+        mock_open.assert_called_once_with(_URL)
+        mock_get_logger.return_value.warning.assert_called_once()
+        os_default.assert_called_once_with(_URL)
+
+
+def test_unix_browser_true_does_not_fall_back() -> None:
+    """Mozilla/Chrome controllers are invoked rather than rejected as GenericBrowser."""
+    controller = webbrowser.Mozilla("firefox")
+    with (
+        _platform(darwin=True),
+        patch_config_options({"browser.command": "firefox"}),
+        patch("webbrowser.get", return_value=controller),
+        patch.object(controller, "open", return_value=True) as mock_open,
+        patch("streamlit.cli_util._open_browser_with_os_default") as os_default,
+        patch("streamlit.cli_util._get_logger") as mock_get_logger,
+    ):
+        open_browser(_URL)
+
+        mock_open.assert_called_once_with(_URL)
         mock_get_logger.assert_not_called()
         os_default.assert_not_called()
 
@@ -291,8 +325,26 @@ def test_configured_command_falls_back_when_open_raises(error: OSError) -> None:
         subprocess_popen.assert_called_once()
 
 
+@pytest.mark.skipif(os.name == "nt", reason="Windows has no POSIX execute bit")
+def test_configured_command_falls_back_for_non_executable_file(tmp_path: Path) -> None:
+    """An existing non-executable file must not skip the OS-default fallback."""
+    path = tmp_path / "not-a-browser"
+    path.write_text("#!/bin/sh\n")
+    path.chmod(0o644)
+    with (
+        _platform(darwin=True),
+        patch_config_options({"browser.command": str(path)}),
+        patch("streamlit.cli_util._open_browser_with_os_default") as os_default,
+        patch("streamlit.cli_util._get_logger") as mock_get_logger,
+    ):
+        open_browser(_URL)
+
+        mock_get_logger.return_value.warning.assert_called_once()
+        os_default.assert_called_once_with(_URL)
+
+
 @pytest.mark.skipif(shutil.which("true") is None, reason="true is not on PATH")
-def test_background_browser_false_does_not_fall_back() -> None:
+def test_immediately_exiting_configured_template_does_not_fall_back() -> None:
     """A %s template that exits immediately must not also open the OS default."""
     with (
         _platform(darwin=True),

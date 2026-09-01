@@ -1364,15 +1364,19 @@ _create_option(
         streamlit run and streamlit docs).
 
         If empty (default), Streamlit uses the operating system's default
-        handler. This option has no effect when server.headless is true.
-        If the value cannot be resolved, Streamlit logs a warning and
-        falls back to the default handler.
+        handler. For streamlit run, this option has no effect when
+        server.headless is true. If the value cannot be resolved, Streamlit
+        logs a warning and falls back to the default handler.
 
         Examples:
-        - A browser name such as "chrome", "firefox", or "safari".
+        - A registered name such as "firefox", "safari", or "google-chrome"
+          when that name is registered on your OS.
         - A command with "%s" as the URL placeholder, for example
-          'open -a Firefox %s'.
-        - An executable path, including paths with spaces.
+          'open -a "Google Chrome" %s' or 'open -a Firefox %s' on macOS.
+          webbrowser parses "%s" templates with POSIX shlex, so a Windows
+          path that contains backslashes should omit "%s".
+        - An executable path, including paths with spaces (for example WSL
+          Chrome). On Windows, use the path without "%s".
     """,
     default_val="",
     type_=str,
