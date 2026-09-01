@@ -194,9 +194,14 @@ class AppSessionTest(unittest.TestCase):
         session = _create_test_session()
         mock_scriptrunner = MagicMock(spec=ScriptRunner)
         session._scriptrunner = mock_scriptrunner
+        loop = session._script_event_loop
 
-        session.request_script_stop()
-        mock_scriptrunner.request_stop.assert_called()
+        try:
+            session.request_script_stop()
+            mock_scriptrunner.request_stop.assert_called_once_with()
+            assert not loop.is_closed()
+        finally:
+            loop.close()
 
     def test_request_script_stop_no_scriptrunner(self):
         """Test that calling request_script_stop when there is no scriptrunner doesn't
@@ -554,19 +559,6 @@ class AppSessionTest(unittest.TestCase):
         assert session._client_state is final_client_state
         assert session._scriptrunner is None
         session._script_event_loop.close()
-
-    @patch("streamlit.runtime.app_session.AppSession.request_script_stop")
-    def test_request_script_stop_keeps_script_event_loop_open(
-        self, mock_stop: MagicMock
-    ):
-        """request_script_stop (reconnect path) must not close the loop."""
-        session = _create_test_session()
-        loop = session._script_event_loop
-
-        session.request_script_stop()
-
-        assert not loop.is_closed()
-        loop.close()
 
     @patch("streamlit.runtime.app_session.ScriptRunner", MagicMock(spec=ScriptRunner))
     @patch("streamlit.runtime.app_session.AppSession._enqueue_forward_msg")
