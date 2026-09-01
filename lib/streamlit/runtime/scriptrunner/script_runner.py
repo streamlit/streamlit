@@ -902,13 +902,13 @@ class ScriptRunner:
         with self._join_wake_lock:
             self._join_wake_coordinator = None
 
-        # Skip stale-widget cleanup when this run stopped for a rerun.
-        # st.rerun() can interrupt before later widgets register, so
-        # widget_ids_this_run would treat them as stale. The next run
-        # that completes still drops widgets that were not re-registered.
         if not premature_stop:
             self._session_state.on_script_finished(
                 ctx.shared.widget_ids_this_run.snapshot(),
+                # Skip stale-widget cleanup when this run stopped for a rerun.
+                # st.rerun() can interrupt before later widgets register, so
+                # widget_ids_this_run would treat them as stale. The next run
+                # that completes still drops widgets that were not re-registered.
                 remove_stale_widgets=(
                     ctx.has_script_started
                     and event != ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
