@@ -971,6 +971,86 @@ describe("useEChartsSelections", () => {
     )
   })
 
+  it("resolves grid_index from the axis gridIndex, not the axis index", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+
+    const chart = createFakeChart()
+    chart.getOption.mockReturnValue({
+      xAxis: [{}, { gridIndex: 2 }],
+    })
+    act(() => {
+      result.current.bindSelections(chart)
+    })
+
+    act(() => {
+      chart.trigger("brushEnd", {
+        areas: [
+          {
+            brushType: "lineX",
+            coordRange: [0, 2],
+            xAxisIndex: 1,
+          },
+        ],
+      })
+    })
+    flush()
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      "chart-id",
+      JSON.stringify({
+        selection: {
+          points: [],
+          point_indices: [],
+          box: [{ x: [0, 2], y: [], grid_index: 2 }],
+          lasso: [],
+        },
+      }),
+      { formId: "", fragmentId: undefined, fromUser: true }
+    )
+  })
+
+  it("defaults grid_index to 0 when the axis has no gridIndex", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+
+    const chart = createFakeChart()
+    chart.getOption.mockReturnValue({
+      xAxis: [{}, {}],
+    })
+    act(() => {
+      result.current.bindSelections(chart)
+    })
+
+    act(() => {
+      chart.trigger("brushEnd", {
+        areas: [
+          {
+            brushType: "lineX",
+            coordRange: [0, 2],
+            xAxisIndex: 1,
+          },
+        ],
+      })
+    })
+    flush()
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      "chart-id",
+      JSON.stringify({
+        selection: {
+          points: [],
+          point_indices: [],
+          box: [{ x: [0, 2], y: [], grid_index: 0 }],
+          lasso: [],
+        },
+      }),
+      { formId: "", fragmentId: undefined, fromUser: true }
+    )
+  })
+
   it("resets the series cursor to default for display-only charts", () => {
     // An empty id makes the chart display-only (no selection).
     const { result } = renderHook(() =>

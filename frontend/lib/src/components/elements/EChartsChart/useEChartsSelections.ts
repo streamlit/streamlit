@@ -350,21 +350,61 @@ function convertPixelRange(
 }
 
 /**
+ * Look up ``gridIndex`` on the axis at ``axisIndex``. ECharts defaults a
+ * missing ``gridIndex`` to 0, so axis index is never used as a grid index.
+ * Returns ``undefined`` when the axis list does not contain that index.
+ */
+function gridIndexFromAxis(
+  axes: unknown,
+  axisIndex: number
+): number | undefined {
+  const list = Array.isArray(axes) ? axes : axes ? [axes] : []
+  if (axisIndex < 0 || axisIndex >= list.length) {
+    return undefined
+  }
+  const axis = list[axisIndex]
+  if (!isPlainObject(axis)) {
+    return 0
+  }
+  const gridIndex = (axis as Record<string, unknown>).gridIndex
+  return typeof gridIndex === "number" ? gridIndex : 0
+}
+
+/**
  * Resolve the grid a brush area belongs to.
  *
- * ``xAxisIndex`` is an axis index, not a grid index — they only coincide when
- * each grid owns exactly one x axis in the same order. A ``lineY`` brush
- * carries ``yAxisIndex`` instead. Prefer ECharts' ``panelId`` (``"grid--N"``)
- * when present.
+ * Prefer ECharts' ``panelId`` (``"grid--N"``). ``xAxisIndex`` / ``yAxisIndex``
+ * are axis indexes, not grid indexes — look up ``gridIndex`` on that axis in
+ * the option. Fall back to grid 0 when neither is available.
  */
-function resolveGridIndex(area: BrushArea): number {
+function resolveGridIndex(
+  area: BrushArea,
+  chart: EChartsSelectionInstance
+): number {
   if (typeof area.panelId === "string") {
     const match = /grid--(\d+)/.exec(area.panelId)
     if (match) {
       return Number(match[1])
     }
   }
-  return area.xAxisIndex ?? area.yAxisIndex ?? 0
+
+  const option = resolveChartOption(chart)
+  if (option) {
+    if (typeof area.xAxisIndex === "number") {
+      const fromAxis = gridIndexFromAxis(option.xAxis, area.xAxisIndex)
+      if (fromAxis !== undefined) {
+        return fromAxis
+      }
+    }
+    if (typeof area.yAxisIndex === "number") {
+      const fromAxis = gridIndexFromAxis(option.yAxis, area.yAxisIndex)
+      if (fromAxis !== undefined) {
+        return fromAxis
+      }
+    }
+  }
+
+  return 0
 }
 
 /** Convert a single brush area into a serializable selection item. */
@@ -372,7 +412,7 @@ function areaToSelectionItem(
   chart: EChartsSelectionInstance,
   area: BrushArea
 ): Record<string, unknown> {
-  const gridIndex = resolveGridIndex(area)
+  const gridIndex = resolveGridIndex(area, chart)
   const coordRange = area.coordRange
 
   if (Array.isArray(coordRange)) {
