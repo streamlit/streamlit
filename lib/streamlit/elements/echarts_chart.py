@@ -41,7 +41,11 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.EChartsChart_pb2 import EChartsChart as EChartsChartProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -241,19 +245,20 @@ def _loads_json_option(raw: str) -> Any:
     try:
         return json.loads(raw)
     except (json.JSONDecodeError, TypeError, ValueError) as ex:
-        message = (
-            "The provided ECharts options could not be parsed as JSON. "
-            "`st.echarts_chart` only supports JSON-compatible option objects in v1."
-        )
         if _contains_js_callback(raw):
-            message = (
+            raise StreamlitAPIException(
                 "The provided ECharts options contain JavaScript callbacks (e.g. "
                 "`function` values or `JsCode`), which are not supported by "
                 "`st.echarts_chart` in v1. Only JSON-compatible option objects are "
                 "supported. Use ECharts string-template formatters instead of "
-                "JavaScript functions."
-            )
-        raise StreamlitAPIException(message) from ex
+                "JavaScript functions.",
+                error_id="echarts-js-callbacks-not-supported",
+            ) from ex
+        raise StreamlitAPIException(
+            "The provided ECharts options could not be parsed as JSON. "
+            "`st.echarts_chart` only supports JSON-compatible option objects in v1.",
+            error_id="echarts-options-invalid-json",
+        ) from ex
 
 
 def _dataframe_to_records(df: pd.DataFrame) -> list[dict[str, Any]]:
@@ -311,16 +316,18 @@ def _normalize_options(options: EChartsOptions) -> dict[str, Any]:
         # Duck-typed pyecharts chart (detected without importing pyecharts).
         option = _loads_json_option(options.dump_options())
     else:
-        raise StreamlitAPIException(
-            f"Invalid options type: {type(options).__name__}. `st.echarts_chart` "
-            "expects an ECharts option mapping, a JSON string, or a pyecharts "
-            "chart (an object with a `dump_options` method)."
+        raise StreamlitInvalidParameterTypeError(
+            "options",
+            type(options).__name__,
+            ["dict", "str", "pyecharts chart"],
         )
 
     if not isinstance(option, dict):
-        raise StreamlitAPIException(
-            "The provided ECharts options must be a JSON object (mapping), but "
-            f"resolved to a {type(option).__name__}."
+        raise StreamlitInvalidParameterTypeError(
+            "options",
+            type(option).__name__,
+            ["dict"],
+            detail="ECharts options must be a JSON object (mapping).",
         )
 
     _convert_dataset_sources(option)
@@ -341,7 +348,8 @@ def _serialize_options(option: dict[str, Any]) -> str:
             "The provided ECharts options are not JSON-serializable. "
             "`st.echarts_chart` only supports JSON-compatible option objects in "
             "v1: JavaScript callbacks, arbitrary Python objects, and non-finite "
-            "numbers (NaN/Infinity) are not supported."
+            "numbers (NaN/Infinity) are not supported.",
+            error_id="echarts-options-not-json-serializable",
         ) from ex
 
 
@@ -625,22 +633,14 @@ class EChartsMixin:
         validate_height(height, allow_content=True)
 
         if theme not in {"streamlit", None}:
-            raise StreamlitAPIException(
-                f'You set theme="{theme}" while Streamlit charts only support '
-                "theme=”streamlit” or theme=None to fallback to the default "
-                "library theme."
-            )
+            raise StreamlitValueError("theme", ["'streamlit'", "None"])
 
         if renderer not in {"canvas", "svg"}:
-            raise StreamlitAPIException(
-                f'You set renderer="{renderer}" while `st.echarts_chart` only '
-                'supports renderer="canvas" or renderer="svg".'
-            )
+            raise StreamlitValueError("renderer", ["'canvas'", "'svg'"])
 
         if on_select not in {"ignore", "rerun"} and not callable(on_select):
-            raise StreamlitAPIException(
-                f"You have passed {on_select} to `on_select`. But only 'ignore', "
-                "'rerun', or a callable is supported."
+            raise StreamlitValueError(
+                "on_select", ["'rerun'", "'ignore'", "a callback function"]
             )
 
         key = to_key(key)

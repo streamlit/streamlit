@@ -32,7 +32,13 @@ from streamlit.elements.echarts_chart import (
     _resolve_content_width,
     _serialize_options,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidHeightError,
+    StreamlitInvalidParameterTypeError,
+    StreamlitInvalidWidthError,
+    StreamlitValueError,
+)
 from streamlit.proto.EChartsChart_pb2 import EChartsChart as EChartsChartProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -149,9 +155,14 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         assert el.theme == proto_value
 
     def test_bad_theme(self):
-        """An invalid theme raises a helpful exception."""
-        with pytest.raises(StreamlitAPIException):
+        """An invalid theme raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc:
             st.echarts_chart(_BASIC_OPTIONS, theme="bad_theme")
+
+        assert (
+            str(exc.value)
+            == "Invalid `theme` value. Supported values: 'streamlit', None."
+        )
 
     @parameterized.expand(
         [
@@ -167,14 +178,25 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         assert el.renderer == proto_value
 
     def test_bad_renderer(self):
-        """An invalid renderer raises a helpful exception."""
-        with pytest.raises(StreamlitAPIException):
+        """An invalid renderer raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc:
             st.echarts_chart(_BASIC_OPTIONS, renderer="webgl")
 
+        assert (
+            str(exc.value)
+            == "Invalid `renderer` value. Supported values: 'canvas', 'svg'."
+        )
+
     def test_invalid_on_select(self):
-        """An invalid on_select value raises an exception."""
-        with pytest.raises(StreamlitAPIException):
+        """An invalid on_select value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc:
             st.echarts_chart(_BASIC_OPTIONS, on_select="invalid")
+
+        assert (
+            str(exc.value)
+            == "Invalid `on_select` value. Supported values: 'rerun', 'ignore', "
+            "a callback function."
+        )
 
     @parameterized.expand(
         [
@@ -235,6 +257,15 @@ class EChartsChartTest(DeltaGeneratorTestCase):
             st.echarts_chart('{"tooltip": {"formatter": function (p) { return p; }}}')
 
         assert "JavaScript callbacks" in str(exc.value)
+        assert exc.value.error_id == "echarts-js-callbacks-not-supported"
+
+    def test_invalid_json_string_raises(self):
+        """A malformed JSON string raises with a parse-failure error_id."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.echarts_chart("{not json")
+
+        assert "could not be parsed as JSON" in str(exc.value)
+        assert exc.value.error_id == "echarts-options-invalid-json"
 
     def test_lambda_in_dict_raises(self):
         """A callable embedded in the option dict raises instead of stringifying."""
@@ -336,14 +367,14 @@ class EChartsChartTest(DeltaGeneratorTestCase):
 
     @parameterized.expand([("invalid",), (0,), (-100,)])
     def test_width_validation_errors(self, invalid_value):
-        """Invalid width values raise validation errors."""
-        with pytest.raises(StreamlitAPIException):
+        """Invalid width values raise StreamlitInvalidWidthError."""
+        with pytest.raises(StreamlitInvalidWidthError):
             st.echarts_chart(_BASIC_OPTIONS, width=invalid_value)
 
     @parameterized.expand([("invalid",), (0,), (-100,)])
     def test_height_validation_errors(self, invalid_value):
-        """Invalid height values raise validation errors."""
-        with pytest.raises(StreamlitAPIException):
+        """Invalid height values raise StreamlitInvalidHeightError."""
+        with pytest.raises(StreamlitInvalidHeightError):
             st.echarts_chart(_BASIC_OPTIONS, height=invalid_value)
 
 
@@ -370,14 +401,20 @@ def test_normalize_options_deep_copies_mapping() -> None:
 
 def test_normalize_options_invalid_type_raises() -> None:
     """A non-mapping, non-string, non-pyecharts input raises."""
-    with pytest.raises(StreamlitAPIException):
+    with pytest.raises(StreamlitInvalidParameterTypeError) as exc:
         _normalize_options(12345)  # type: ignore[arg-type]
+
+    assert "Invalid `options` type" in str(exc.value)
+    assert "int" in str(exc.value)
 
 
 def test_normalize_options_non_object_json_raises() -> None:
     """A JSON string that is not an object (e.g. a list) raises."""
-    with pytest.raises(StreamlitAPIException):
+    with pytest.raises(StreamlitInvalidParameterTypeError) as exc:
         _normalize_options("[1, 2, 3]")
+
+    assert "Invalid `options` type" in str(exc.value)
+    assert "list" in str(exc.value)
 
 
 def test_serialize_options_rejects_arbitrary_object() -> None:
@@ -387,8 +424,10 @@ def test_serialize_options_rejects_arbitrary_object() -> None:
         def __str__(self) -> str:  # pragma: no cover - must not be reached
             return "SHOULD_NOT_APPEAR"
 
-    with pytest.raises(StreamlitAPIException):
+    with pytest.raises(StreamlitAPIException) as exc:
         _serialize_options({"series": _Custom()})
+
+    assert exc.value.error_id == "echarts-options-not-json-serializable"
 
 
 def test_serde_deserialize_none_returns_empty_selection() -> None:
