@@ -16,14 +16,32 @@
 
 import styled from "@emotion/styled"
 import {
-  Checkbox as RACheckbox,
-  Switch as RASwitch,
+  CheckboxButton as RACheckboxButton,
+  CheckboxField as RACheckboxField,
+  SwitchButton as RASwitchButton,
+  SwitchField as RASwitchField,
 } from "react-aria-components"
 
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
-export const StyledCheckbox = styled.div(({ theme }) => ({
+/**
+ * Outer wrapper for the checkbox variant. React Aria's `CheckboxField` owns the
+ * widget state (`isSelected`, `isDisabled`, `onChange`) and renders the `<div>`
+ * that wraps the clickable `CheckboxButton` label.
+ */
+export const StyledCheckboxField = styled(RACheckboxField)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  minHeight: theme.sizes.smallElementHeight,
+}))
+
+/**
+ * Outer wrapper for the toggle variant. Kept separate from `StyledCheckboxField`
+ * because `SwitchButton` reads its state from a `SwitchField`, not from a
+ * `CheckboxField`.
+ */
+export const StyledSwitchField = styled(RASwitchField)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   minHeight: theme.sizes.smallElementHeight,
@@ -72,13 +90,8 @@ interface StyledRootProps {
   $truncate?: boolean
 }
 
-/**
- * Wrapper around React Aria Checkbox — handles layout and keyboard-focus background.
- * Checkbox is deprecated in favor of CheckboxField + CheckboxButton. Keep the
- * current composition until that migration is done as its own a11y/DOM change.
- */
-// eslint-disable-next-line @typescript-eslint/no-deprecated
-export const StyledCheckboxRoot = styled(RACheckbox, {
+/** Wrapper around React Aria CheckboxButton — handles layout and keyboard-focus background. */
+export const StyledCheckboxRoot = styled(RACheckboxButton, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
 })<StyledRootProps>(({ theme, $truncate }) => ({
   display: "flex",
@@ -162,13 +175,8 @@ export const StyledCheckboxIndicator =
     }
   )
 
-/**
- * Wrapper around React Aria Switch — handles layout for the toggle variant.
- * Switch is deprecated in favor of SwitchField + SwitchButton. Keep the
- * current composition until that migration is done as its own a11y/DOM change.
- */
-// eslint-disable-next-line @typescript-eslint/no-deprecated
-export const StyledSwitchRoot = styled(RASwitch, {
+/** Wrapper around React Aria SwitchButton — handles layout for the toggle variant. */
+export const StyledSwitchRoot = styled(RASwitchButton, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
 })<StyledRootProps>(({ theme, $truncate }) => ({
   display: "flex",
