@@ -15,6 +15,7 @@
  */
 
 import { screen } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
 import { ImageList as ImageListProto, streamlit } from "@streamlit/protobuf"
 
@@ -62,6 +63,10 @@ describe("ImageList Element", () => {
       elementRef: { current: null },
       values: [250],
     })
+  })
+
+  afterEach(() => {
+    document.body.style.overflow = ""
   })
 
   it("renders without crashing", () => {
@@ -152,6 +157,24 @@ describe("ImageList Element", () => {
       expect(link).toHaveAttribute("href", "#")
       expect(link).toHaveAttribute("target", "_self")
       expect(link).toHaveAttribute("rel", "noreferrer")
+    })
+
+    it("prevents navigation when a blocked link is clicked", () => {
+      const props = getProps({
+        imgs: [{ caption: "a", url: "/media/mockImage1.jpeg" }],
+        link: "javascript:alert(1)",
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      const event = new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+      })
+      link.dispatchEvent(event)
+
+      expect(event.defaultPrevented).toBe(true)
+      expect(link).toHaveAttribute("href", "#")
     })
   })
 
@@ -265,6 +288,21 @@ describe("ImageList Element", () => {
       "onerror triggered",
       "https://mock.media.url/"
     )
+  })
+
+  it("fills available width when rendered in fullscreen", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    render(<ImageList {...props} />)
+
+    await user.click(screen.getByLabelText("Fullscreen"))
+
+    screen.getAllByRole("img").forEach(image => {
+      expect(image).toHaveStyle({ width: "100%", objectFit: "contain" })
+    })
+
+    await user.click(screen.getByLabelText("Close fullscreen"))
+    expect(document.body.style.overflow).toBe("unset")
   })
 
   describe("crossOrigin attribute", () => {

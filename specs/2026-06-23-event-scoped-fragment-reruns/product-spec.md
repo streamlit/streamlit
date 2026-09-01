@@ -117,8 +117,8 @@ st.selectbox(
 )
 ```
 
-`scope` therefore accepts `"app"`, `"fragment"`, a **single fragment key**, or a **list of keys**
-(`Literal["app", "fragment"] | Key | list[Key]`); passing a list reruns all of them in one ordered
+`scope` therefore accepts `"app"`, `"fragment"`, a **single fragment key**, or a **sequence of keys**
+(`Literal["app", "fragment"] | Key | Sequence[Key]`); passing a sequence reruns all of them in one ordered
 pass. `"app"` and `"fragment"` remain reserved level names — any other value is read as a fragment
 key. Every key must match a fragment that has rendered at least once — an unknown key (a single
 `scope` or anywhere in a list) raises a `StreamlitAPIException`, so a typo or stale key fails loudly
@@ -332,9 +332,13 @@ reasons:
 
 **A targeted rerun replaces the interaction's default rerun.** A widget interaction normally schedules
 a full-app rerun once its callbacks have run (or a fragment-scoped rerun, if the triggering widget
-already lives inside a fragment). When a callback issues a targeted rerun, that default full-app rerun
-is **skipped** — Streamlit runs only the targeted fragment(s), not the whole app; running the full app
-in addition would just redo those fragments and erase the partial-update benefit.
+already lives inside a fragment). When a callback issues a targeted rerun, that default rerun is
+**skipped** — Streamlit runs only the targeted fragment(s), not the whole app or enclosing fragment;
+running the default in addition would just redo those fragments and erase the partial-update benefit.
+Callback-less widget changes (e.g. form fields) do not override this — their values are already in
+session state and will render on the next full rerun. Escalation to a full-app rerun happens only when
+another callback explicitly expects the default (returns normally or calls plain `st.rerun()`); the
+escalated run replays widget values with callbacks suppressed to avoid re-firing.
 
 Beyond replacing that default rerun, targeted reruns make it normal for a **single interaction to
 produce several rerun requests at once** — a list of keys, multiple `st.rerun` calls, or reruns from

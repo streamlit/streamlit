@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
 from streamlit import config
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 from streamlit.web.server.server_util import get_cookie_secret
 from streamlit.web.server.starlette.starlette_app_utils import (
     generate_random_hex_string,
@@ -67,11 +67,12 @@ if TYPE_CHECKING:
     import asyncio
     from collections.abc import AsyncIterator, Callable, Mapping, Sequence
     from contextlib import AbstractAsyncContextManager
+    from typing import TypeAlias
 
     from starlette.applications import Starlette
     from starlette.middleware import Middleware
     from starlette.routing import BaseRoute
-    from starlette.types import ExceptionHandler, Receive, Scope, Send
+    from starlette.types import Receive, Scope, Send
 
     from streamlit.runtime import Runtime
     from streamlit.runtime.media_file_manager import MediaFileManager
@@ -81,6 +82,13 @@ if TYPE_CHECKING:
         OnScriptErrorHandler,
     )
     from streamlit.runtime.secrets import SecretsValue
+
+    # Accept handlers typed with a specific exception subclass (the usual user
+    # pattern). Starlette's ExceptionHandler uses Callable[[Request, Exception],
+    # Response]; because Callable parameters are contravariant, those handlers
+    # are rejected. Two Any parameters accept them while still requiring a
+    # two-argument callable.
+    ExceptionHandler: TypeAlias = Callable[[Any, Any], Any]
 
 # Reserved route prefixes that users cannot override.
 _RESERVED_ROUTE_PREFIXES: Final[tuple[str, ...]] = (
@@ -99,21 +107,27 @@ def _validate_run_config(
         return {}
 
     if not isinstance(run_config, MappingABC):
-        raise StreamlitAPIException(
-            f"config must be a mapping or None, got {type(run_config).__name__!r}."
+        raise StreamlitInvalidParameterTypeError(
+            "config",
+            type(run_config).__name__,
+            ["Mapping", "None"],
         )
 
     validated_config = dict(run_config)
     for config_key in validated_config:
         config_option = config._config_options_template.get(config_key)
         if config_option is None:
-            raise StreamlitAPIException(f"Unrecognized config option: {config_key!r}")
+            raise StreamlitAPIException(
+                f"Unrecognized config option: {config_key!r}",
+                error_id="app-run-unrecognized-config-option",
+            )
 
         if config_option.sensitive:
             raise StreamlitAPIException(
                 f"Setting {config_key!r} option using App.run(config=...) is not "
                 "allowed. Set this option in the configuration file or environment "
-                f"variable: {config_option.env_var!r}"
+                f"variable: {config_option.env_var!r}",
+                error_id="app-run-sensitive-config-option",
             )
 
     return validated_config
@@ -339,9 +353,10 @@ class App:
         A mapping of either integer status codes, or exception class types onto
         callables which handle the exceptions. Exception handler callables should
         be of the form ``handler(request, exc) -> response`` and may be either
-        standard functions, or async functions. This is only for exception handling
-        on the network layer. Use ``on_script_error`` for customized handling of
-        uncaught exceptions from the app script.
+        standard functions, or async functions. The ``exc`` argument may be
+        annotated with a specific exception subclass. This is only for exception
+        handling on the network layer. Use ``on_script_error`` for customized
+        handling of uncaught exceptions from the app script.
     debug : bool
         Enable debug mode for the underlying Starlette application.
 
@@ -575,7 +590,8 @@ class App:
             raise StreamlitAPIException(
                 "A Streamlit server is already running in this process; call "
                 "App.run() only once, and not when the app is also served via "
-                "streamlit run, uvicorn, or mounted on another framework."
+                "streamlit run, uvicorn, or mounted on another framework.",
+                error_id="app-already-running",
             )
 
         # Guard on `sys.argv[0]` representing a script path, not just on

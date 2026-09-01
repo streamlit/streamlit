@@ -31,6 +31,7 @@ from e2e_playwright.shared.app_utils import (
     get_color_picker,
     get_markdown,
     is_child_bounding_box_inside_parent,
+    open_json_path_tooltip,
     select_selectbox_option,
 )
 from e2e_playwright.shared.dataframe_utils import (
@@ -287,6 +288,47 @@ def test_dialog_allows_interacting_with_color_picker(app: Page):
     expect(dialog).to_be_visible()
 
 
+def test_dialog_allows_interacting_with_menu_button(app: Page):
+    """A menu button dropdown opened inside an st.dialog must stay interactive
+    without dismissing the dialog.
+    """
+    click_button(app, "Open Dialog with Menu Button")
+    dialog = app.get_by_test_id(modal_test_id)
+    expect(dialog).to_be_visible()
+
+    dialog.get_by_test_id("stMenuButtonButton").click()
+    menu_body = app.get_by_test_id("stMenuButtonBody")
+    expect(menu_body).to_be_visible()
+
+    # Click a menu option — this verifies the menu items are not inert
+    menu_body.get_by_role("menuitem", name="Beta").click()
+    wait_for_app_run(app)
+
+    expect_markdown(dialog, "menu selected: Beta")
+    expect(dialog).to_be_visible()
+
+
+def test_dialog_allows_interacting_with_json_path_tooltip(app: Page):
+    """A JSON path tooltip opened inside an st.dialog must stay interactive
+    without dismissing the dialog.
+    """
+    click_button(app, "Open Dialog with JSON Path Tooltip")
+    dialog = app.get_by_test_id(modal_test_id)
+    expect(dialog).to_be_visible()
+
+    json_element = dialog.get_by_test_id("stJson")
+    expect(json_element).to_be_visible()
+    tooltip = open_json_path_tooltip(app, json_element)
+
+    # The copy button inside the tooltip must be clickable (not inert)
+    copy_button = tooltip.get_by_role("button", name="Copy to clipboard")
+    expect(copy_button).to_be_visible()
+    copy_button.click()
+
+    # The dialog must not be dismissed by the interaction
+    expect(dialog).to_be_visible()
+
+
 def test_dialog_stays_dismissed_when_interacting_with_different_fragment(app: Page):
     """Dismissing a dialog is a UI-only interaction as of today (the Python backend does
     not know about this). We use a deltaMsgReceivedAt to differentiate React renders
@@ -525,7 +567,8 @@ def test_nested_dialogs(app: Page):
     """Test that st.dialog may not be nested inside other dialogs."""
     open_nested_dialogs(app)
     expect_exception(
-        app, "StreamlitAPIException: Dialogs may not be nested inside other dialogs."
+        app,
+        "StreamlitInvalidLayoutContextError: Dialogs may not be nested inside other dialogs.",
     )
 
 
@@ -544,7 +587,8 @@ def test_dialogs_have_different_fragment_ids(app: Page):
     open_nested_dialogs(app)
     nested_dialog_fragment_id = get_markdown(app, "Fragment Id:").text_content()
     expect_exception(
-        app, "StreamlitAPIException: Dialogs may not be nested inside other dialogs."
+        app,
+        "StreamlitInvalidLayoutContextError: Dialogs may not be nested inside other dialogs.",
     )
 
     click_to_dismiss(app)

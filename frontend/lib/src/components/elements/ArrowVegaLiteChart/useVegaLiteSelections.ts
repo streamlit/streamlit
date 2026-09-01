@@ -122,12 +122,13 @@ export const useVegaLiteSelections = (
             // with the backend.
             if (!isEqual(currentWidgetState, updatedSelections)) {
               widgetMgr.setStringValue(
-                widgetInfo,
+                widgetInfo.id,
                 JSON.stringify(updatedSelections),
                 {
-                  fromUi: true,
-                },
-                fragmentId
+                  formId: widgetInfo.formId,
+                  fragmentId,
+                  fromUser: true,
+                }
               )
             }
           })
@@ -172,12 +173,13 @@ export const useVegaLiteSelections = (
 
     if (!isEqual(currentWidgetState, emptySelectionState)) {
       widgetMgr.setStringValue(
-        widgetInfo,
+        widgetInfo.id,
         JSON.stringify(emptySelectionState),
         {
-          fromUi: true,
-        },
-        fragmentId
+          formId: widgetInfo.formId,
+          fragmentId,
+          fromUser: true,
+        }
       )
     }
   }, [chartId, formId, fragmentId, selectionMode, widgetMgr])

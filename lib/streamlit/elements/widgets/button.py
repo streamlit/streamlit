@@ -20,7 +20,6 @@ import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     BinaryIO,
@@ -45,7 +44,8 @@ from streamlit.elements.lib.utils import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitMissingPageLabelError,
+    StreamlitInvalidLayoutContextError,
+    StreamlitMissingRequiredParameterError,
     StreamlitPageNotFoundError,
     StreamlitValueError,
 )
@@ -69,7 +69,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.state.query_params import process_query_params
-from streamlit.string_util import validate_icon_or_emoji
+from streamlit.string_util import to_help_str, to_str, validate_icon_or_emoji
 from streamlit.url_util import is_url
 from streamlit.util import in_sidebar
 
@@ -305,10 +305,10 @@ class ButtonMixin:
             one of the following:
 
             - ``None`` (default): Streamlit decides based on the surrounding
-              layout. Inside a horizontal container, the button keeps its
-              standard, single-row height and truncates an overflowing label
-              with an ellipsis; in other layouts, the label wraps onto
-              additional lines.
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the button keeps its standard, single-row height
+              and truncates an overflowing label with an ellipsis; in other
+              layouts, the label wraps onto additional lines.
             - ``True``: If the label is too wide for the button, it wraps onto
               additional lines and the button grows taller.
             - ``False``: The button keeps its standard, single-row height. A
@@ -652,10 +652,10 @@ class ButtonMixin:
             one of the following:
 
             - ``None`` (default): Streamlit decides based on the surrounding
-              layout. Inside a horizontal container, the button keeps its
-              standard, single-row height and truncates an overflowing label
-              with an ellipsis; in other layouts, the label wraps onto
-              additional lines.
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the button keeps its standard, single-row height
+              and truncates an overflowing label with an ellipsis; in other
+              layouts, the label wraps onto additional lines.
             - ``True``: If the label is too wide for the button, it wraps onto
               additional lines and the button grows taller.
             - ``False``: The button keeps its standard, single-row height. A
@@ -1085,10 +1085,10 @@ class ButtonMixin:
             one of the following:
 
             - ``None`` (default): Streamlit decides based on the surrounding
-              layout. Inside a horizontal container, the button keeps its
-              standard, single-row height and truncates an overflowing label
-              with an ellipsis; in other layouts, the label wraps onto
-              additional lines.
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the button keeps its standard, single-row height
+              and truncates an overflowing label with an ellipsis; in other
+              layouts, the label wraps onto additional lines.
             - ``True``: If the label is too wide for the button, it wraps onto
               additional lines and the button grows taller.
             - ``False``: The button keeps its standard, single-row height. A
@@ -1384,6 +1384,7 @@ class ButtonMixin:
         wrap: bool | None = None,
     ) -> bool:
         key = to_key(key)
+        label = "" if label is None else to_str(label)
 
         on_click_callback: WidgetCallback | None = (
             None
@@ -1420,7 +1421,7 @@ class ButtonMixin:
         )
 
         if is_in_form(self.dg):
-            raise StreamlitAPIException(
+            raise StreamlitInvalidLayoutContextError(
                 f"`st.download_button()` can't be used in an `st.form()`.{FORM_DOCS_INFO}"
             )
 
@@ -1437,7 +1438,7 @@ class ButtonMixin:
         download_button_proto.disabled = disabled
 
         if help is not None:
-            download_button_proto.help = dedent(help)
+            download_button_proto.help = to_help_str(help)
 
         if icon is not None:
             download_button_proto.icon = validate_icon_or_emoji(icon)
@@ -1494,6 +1495,7 @@ class ButtonMixin:
         ctx: ScriptRunContext | None = None,
     ) -> bool | DeltaGenerator:
         key = to_key(key)
+        label = "" if label is None else to_str(label)
         ignore_rerun = on_click == "ignore"
         is_rerun_mode = not ignore_rerun
         on_click_callback: WidgetCallback | None = (
@@ -1545,7 +1547,7 @@ class ButtonMixin:
             link_button_proto.wrap = wrap
 
         if help is not None:
-            link_button_proto.help = dedent(help)
+            link_button_proto.help = to_help_str(help)
 
         if icon is not None:
             link_button_proto.icon = validate_icon_or_emoji(icon)
@@ -1608,13 +1610,13 @@ class ButtonMixin:
         page_link_proto.disabled = disabled
 
         if label is not None:
-            page_link_proto.label = label
+            page_link_proto.label = to_str(label)
 
         if icon is not None:
             page_link_proto.icon = validate_icon_or_emoji(icon)
 
         if help is not None:
-            page_link_proto.help = dedent(help)
+            page_link_proto.help = to_help_str(help)
 
         if isinstance(page, Page):
             if label is None:
@@ -1642,7 +1644,10 @@ class ButtonMixin:
             # Handle external links:
             if is_url(page):
                 if label is None or label == "":
-                    raise StreamlitMissingPageLabelError()
+                    raise StreamlitMissingRequiredParameterError(
+                        "label",
+                        detail="Streamlit cannot infer a label for an external URL.",
+                    )
                 page_link_proto.page = page
                 page_link_proto.external = True
                 return self.dg._enqueue(
@@ -1663,12 +1668,16 @@ class ButtonMixin:
             for page_data in all_app_pages.values():
                 full_path = page_data["script_path"]
                 page_name = page_data["page_name"]
-                url_pathname = page_data["url_pathname"]
+                # Default pages payload omits url_pathname until st.navigation
+                # registers pages.
+                url_pathname = page_data.get("url_pathname")
                 if requested_page == full_path:
                     if label is None:
                         page_link_proto.label = page_name
                     page_link_proto.page_script_hash = page_data["page_script_hash"]
-                    page_link_proto.page = url_pathname
+                    # Click navigation uses page_script_hash. Do not fall back
+                    # to page_name (a display title) as the href.
+                    page_link_proto.page = url_pathname or ""
                     break
 
             if page_link_proto.page_script_hash == "":
@@ -1702,6 +1711,7 @@ class ButtonMixin:
         wrap: bool | None = None,
     ) -> bool:
         key = to_key(key)
+        label = "" if label is None else to_str(label)
 
         normalized_shortcut: str | None = None
         if shortcut is not None:
@@ -1740,13 +1750,13 @@ class ButtonMixin:
         # they will have no script_run_ctx.
         if runtime.exists():
             if is_in_form(self.dg) and not is_form_submitter:
-                raise StreamlitAPIException(
+                raise StreamlitInvalidLayoutContextError(
                     "`st.button()` can't be used in an `st.form()`. Use "
                     "`st.form_submit_button()` instead to submit the form."
                     f"{FORM_DOCS_INFO}"
                 )
             if not is_in_form(self.dg) and is_form_submitter:
-                raise StreamlitAPIException(
+                raise StreamlitInvalidLayoutContextError(
                     f"`st.form_submit_button()` must be used inside an `st.form()`.{FORM_DOCS_INFO}"
                 )
 
@@ -1762,7 +1772,7 @@ class ButtonMixin:
             button_proto.wrap = wrap
 
         if help is not None:
-            button_proto.help = dedent(help)
+            button_proto.help = to_help_str(help)
 
         if icon is not None:
             button_proto.icon = validate_icon_or_emoji(icon)
@@ -1864,7 +1874,8 @@ def marshall_file(
     data_as_bytes, inferred_mime_type = convert_data_to_bytes_and_infer_mime(
         data,
         unsupported_error=StreamlitAPIException(
-            f"Invalid binary data format: {type(data)}"
+            f"Invalid binary data format: {type(data)}",
+            error_id="download-button-invalid-binary-data-format",
         ),
     )
     if mimetype is None:

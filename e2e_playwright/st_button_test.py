@@ -15,9 +15,13 @@
 import re
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_run,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
@@ -32,9 +36,13 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-TOTAL_BUTTONS = 37
+TOTAL_BUTTONS = 40
 
 WRAP_LABEL = "Regenerate the complete quarterly report now"
+
+# Minimum height difference (px) that distinguishes a wrapped two-line control
+# from a single-row one; absorbs sub-pixel rounding.
+WRAPPED_HEIGHT_MARGIN = 4
 
 
 def test_button_widget_rendering(
@@ -325,10 +333,7 @@ def test_wrap_false_keeps_single_row_and_sets_title(app: Page):
     auto_box = wrap_auto_vertical.locator("button").bounding_box()
     assert false_box is not None
     assert auto_box is not None
-    # The 4px margin absorbs sub-pixel rounding so the assertion stays robust:
-    # the wrapped (two-line) button must be clearly taller than the single-row
-    # one, not just larger by a rounding artifact.
-    assert auto_box["height"] > false_box["height"] + 4
+    assert auto_box["height"] > false_box["height"] + WRAPPED_HEIGHT_MARGIN
 
 
 def test_wrap_auto_no_wrap_inside_horizontal_container(app: Page):
@@ -344,6 +349,49 @@ def test_wrap_auto_no_wrap_inside_horizontal_container(app: Page):
     # Same default (auto) in a vertical container wraps and gets no title.
     auto_vertical = get_element_by_key(app, "wrap_auto_vertical_button")
     expect(auto_vertical.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+
+
+def test_wrap_auto_no_wrap_for_direct_column_children(app: Page):
+    """Direct column children keep auto no-wrap, including after columns stack.
+
+    Nested containers and a form placed in a column wrap; wrap=True still wraps.
+    """
+    auto_direct = get_element_by_key(app, "wrap_auto_direct_column_button")
+    explicit_true = get_element_by_key(app, "wrap_true_direct_column_button")
+    auto_nested = get_element_by_key(app, "wrap_auto_nested_column_button")
+    form_submit = get_element_by_key(app, "wrap_auto_form_submit_in_column")
+
+    expect_label_truncated(auto_direct)
+    expect(auto_direct.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+    expect(explicit_true.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+    expect(auto_nested.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+    expect(form_submit.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+
+    def button_height(element: Locator) -> float:
+        box = element.locator("button").bounding_box()
+        assert box is not None
+        return box["height"]
+
+    direct_height = button_height(auto_direct)
+    assert button_height(explicit_true) > direct_height + WRAPPED_HEIGHT_MARGIN
+    assert button_height(auto_nested) > direct_height + WRAPPED_HEIGHT_MARGIN
+    assert button_height(form_submit) > direct_height + WRAPPED_HEIGHT_MARGIN
+
+    app.set_viewport_size({"width": 390, "height": 844})
+    auto_direct.scroll_into_view_if_needed()
+
+    def columns_are_stacked() -> bool:
+        auto_box = auto_direct.locator("button").bounding_box()
+        explicit_box = explicit_true.locator("button").bounding_box()
+        return (
+            auto_box is not None
+            and explicit_box is not None
+            and explicit_box["y"] > auto_box["y"]
+        )
+
+    wait_until(app, columns_are_stacked)
+    expect_label_truncated(auto_direct)
+    expect(auto_direct.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
 
 
 def test_wrap_false_help_takes_precedence_over_title(app: Page):

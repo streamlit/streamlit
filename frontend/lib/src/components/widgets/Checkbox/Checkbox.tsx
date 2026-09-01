@@ -79,7 +79,7 @@ function Checkbox({
 
   const handleChange = useCallback(
     (isSelected: boolean): void => {
-      setValueWithSource({ value: isSelected, fromUi: true })
+      setValueWithSource({ value: isSelected, fromUser: true })
     },
     [setValueWithSource]
   )
@@ -89,10 +89,10 @@ function Checkbox({
     element.labelVisibility?.value
   )
 
-  // wrap=None resolves from layout: no-wrap in horizontal containers, wrap otherwise.
-  // When truncated, a native title on the label reveals the full label on hover.
-  // Unlike a button (whose help tooltip covers the whole control), help here lives
-  // on a separate icon, so the title and help never compete and both stay enabled.
+  // When wrap resolves to no-wrap, a native title on the label reveals the full
+  // label on hover. Unlike a button (whose help tooltip covers the whole control),
+  // help here lives on a separate icon, so the title and help never compete and
+  // both stay enabled.
   const wrap = useResolvedWrap(element.wrap)
   const truncate = !wrap
   const { titleRef, labelTextRef } = useLabelTitleTooltip(
@@ -116,6 +116,7 @@ function Checkbox({
             allowHTML={false}
             isLabel
             truncate={truncate}
+            inheritLineHeight
           />
         </span>
       </StyledLabelText>
@@ -213,12 +214,11 @@ function updateWidgetMgrState(
   vws: ValueWithSource<boolean>,
   fragmentId: string | undefined
 ): void {
-  widgetMgr.setBoolValue(
-    element,
-    vws.value,
-    { fromUi: vws.fromUi },
-    fragmentId
-  )
+  widgetMgr.setBoolValue(element.id, vws.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: vws.fromUser,
+  })
 }
 
 export default memo(Checkbox)

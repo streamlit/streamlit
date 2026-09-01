@@ -5,6 +5,7 @@ instructions/*
 !instructions/python.instructions.md
 !instructions/python_tests.instructions.md
 !instructions/python_lib.instructions.md
+!instructions/embedded_skills.instructions.md
 !instructions/protobuf.instructions.md
 !instructions/typescript.instructions.md
 !instructions/typescript_tests.instructions.md

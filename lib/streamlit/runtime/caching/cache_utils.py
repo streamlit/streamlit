@@ -19,6 +19,7 @@ from __future__ import annotations
 import contextlib
 import functools
 import inspect
+import math
 import threading
 import time
 from abc import abstractmethod
@@ -42,7 +43,11 @@ from typing_extensions import ParamSpec
 from streamlit import type_util, util
 from streamlit.dataframe_util import is_unevaluated_data_object
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_background_refresh
 from streamlit.runtime.caching.cache_errors import (
@@ -92,9 +97,13 @@ CacheScope: TypeAlias = Literal["global", "session"]
 # How a cache entry is refreshed once its ttl expires.
 RefreshMode: TypeAlias = Literal["foreground", "background"]
 
-# The hard-expiration TTL for background refresh caches is this multiple of the
-# user-facing freshness TTL.
-BACKGROUND_REFRESH_TTL_MULTIPLIER: Final = 2
+# Unset or invalid config still hard-expires background caches at 2 * ttl.
+_DEFAULT_BACKGROUND_REFRESH_TTL_MULTIPLIER: Final = 2.0
+
+# Configured multipliers we have already warned about. Many cached functions can
+# be created under one misconfiguration, so warning on every read would flood
+# the log.
+_warned_background_refresh_ttl_multipliers: Final[set[str]] = set()
 
 # How long (in seconds) to wait before retrying a background refresh after a failure,
 # so a persistently failing upstream isn't retried on every rerun.
@@ -105,13 +114,98 @@ _FAILURE_COOLDOWN_SECONDS: Final = 60.0
 class CacheReadResult(Generic[R]):
     """The result of a cache read together with its freshness.
 
-    ``is_stale`` is only ever ``True`` for ``refresh_mode="background"`` caches when
-    the entry is within the stale grace window ``[ttl, 2*ttl)``. Fresh hits and any
-    foreground-mode read report ``is_stale=False``.
+    ``is_stale`` is ``True`` only when a ``refresh_mode="background"`` entry is past
+    its freshness TTL but still within the configured hard-expiration TTL. Fresh hits
+    and foreground-mode reads report ``is_stale=False``.
     """
 
     result: CachedResult[R]
     is_stale: bool
+
+
+def _warn_background_refresh_ttl_multiplier(configured: object, reason: str) -> None:
+    """Warn that the TTL multiplier is being ignored, once per distinct value.
+
+    Keyed on the repr so a quoted and an unquoted TOML value are reported as the
+    user wrote them, and so an unhashable value cannot raise from here.
+    """
+    key = repr(configured)
+    if key in _warned_background_refresh_ttl_multipliers:
+        return
+    _warned_background_refresh_ttl_multipliers.add(key)
+    _LOGGER.warning(
+        "Ignoring runner.cacheBackgroundRefreshTTLMultiplier=%s: %s Falling "
+        "back to the default multiplier of %s.",
+        key,
+        reason,
+        _DEFAULT_BACKGROUND_REFRESH_TTL_MULTIPLIER,
+    )
+
+
+def _resolve_background_refresh_ttl_multiplier() -> tuple[float, object]:
+    """Return ``(multiplier, configured)`` for the hard-expiration bound.
+
+    Invalid values fall back to the default so malformed configuration cannot break
+    cache creation or make the hard TTL shorter than the freshness TTL. The raw
+    configured value is returned so overflow warnings can log it as the user wrote it.
+    """
+    from streamlit import config
+
+    # Callers hold `_caches_lock` while `config.get_option` takes `_config_lock`.
+    # Safe because no `_on_config_parsed` receiver acquires a cache-registry lock.
+    configured = config.get_option("runner.cacheBackgroundRefreshTTLMultiplier")
+    try:
+        multiplier = float(configured)
+    except (TypeError, ValueError, OverflowError):
+        multiplier = None
+
+    if multiplier is None or not math.isfinite(multiplier) or multiplier <= 1.0:
+        _warn_background_refresh_ttl_multiplier(
+            configured,
+            "it must be a finite number greater than 1.0.",
+        )
+        return _DEFAULT_BACKGROUND_REFRESH_TTL_MULTIPLIER, configured
+
+    return multiplier, configured
+
+
+def _get_background_refresh_hard_ttl(fresh_ttl_seconds: float) -> float:
+    """Return the configured hard-expiration TTL for a background cache."""
+    multiplier, configured = _resolve_background_refresh_ttl_multiplier()
+    hard_ttl_seconds = fresh_ttl_seconds * multiplier
+    # A huge-but-finite multiplier can overflow the product to inf.
+    if math.isfinite(fresh_ttl_seconds) and not math.isfinite(hard_ttl_seconds):
+        _warn_background_refresh_ttl_multiplier(
+            configured,
+            "ttl * multiplier overflows to infinity.",
+        )
+        return fresh_ttl_seconds * _DEFAULT_BACKGROUND_REFRESH_TTL_MULTIPLIER
+    return hard_ttl_seconds
+
+
+@overload
+def get_hard_ttl_seconds(
+    refresh_mode: RefreshMode, fresh_ttl_seconds: float
+) -> float: ...
+
+
+@overload
+def get_hard_ttl_seconds(
+    refresh_mode: RefreshMode, fresh_ttl_seconds: float | None
+) -> float | None: ...
+
+
+def get_hard_ttl_seconds(
+    refresh_mode: RefreshMode, fresh_ttl_seconds: float | None
+) -> float | None:
+    """Return the eviction TTL for a cache.
+
+    Background caches use a later hard-expiration TTL so stale values can still be
+    served while a refresh runs. Foreground caches use the freshness TTL as-is.
+    """
+    if refresh_mode != "background" or fresh_ttl_seconds is None:
+        return fresh_ttl_seconds
+    return _get_background_refresh_hard_ttl(fresh_ttl_seconds)
 
 
 def validate_refresh_mode(refresh_mode: str, ttl_seconds: float | None) -> None:
@@ -127,19 +221,32 @@ def validate_refresh_mode(refresh_mode: str, ttl_seconds: float | None) -> None:
     Raises
     ------
     StreamlitValueError
-        Raised if ``refresh_mode`` is not a valid value.
-    StreamlitAPIException
-        Raised if ``refresh_mode="background"`` is used without a positive ttl.
+        Raised if ``refresh_mode`` is not a valid value, or if
+        ``refresh_mode="background"`` is used with a non-positive ttl.
+    StreamlitMissingRequiredParameterError
+        Raised if ``refresh_mode="background"`` is used without a ttl.
     """
     if refresh_mode not in {"foreground", "background"}:
         raise StreamlitValueError("refresh_mode", ["foreground", "background"])
 
-    if refresh_mode == "background" and (ttl_seconds is None or ttl_seconds <= 0):
-        raise StreamlitAPIException(
-            "The 'refresh_mode=\"background\"' option requires a 'ttl' value. "
-            "Background refresh only makes sense when cache entries can expire. Set "
-            'a \'ttl\' (e.g. ttl="1h") or use refresh_mode="foreground".'
-        )
+    if refresh_mode == "background":
+        if ttl_seconds is None:
+            raise StreamlitMissingRequiredParameterError(
+                "ttl",
+                detail=(
+                    'Set a positive `ttl` (for example `ttl="1h"`) or use '
+                    '`refresh_mode="foreground"`.'
+                ),
+            )
+        if ttl_seconds <= 0:
+            raise StreamlitValueError(
+                "ttl",
+                ["a positive duration"],
+                detail=(
+                    "Background refresh requires a positive `ttl` (for example "
+                    '`ttl="1h"`) or `refresh_mode="foreground"`.'
+                ),
+            )
 
 
 def get_session_id_or_throw() -> str:
@@ -159,7 +266,8 @@ def get_session_id_or_throw() -> str:
         raise StreamlitAPIException(
             "A session-scoped cache was accessed outside of the app execution thread. "
             "Make sure all session-scoped caches are read during rendering and not "
-            "read in background threads."
+            "read in background threads.",
+            error_id="session-scoped-cache-outside-app-thread",
         )
     return ctx.session_id
 
@@ -227,8 +335,9 @@ class Cache(Generic[R]):
         """Read a value together with its freshness.
 
         Delegates to ``read_result`` and to ``_is_stale``. Foreground caches are never
-        stale; background-mode caches override ``_is_stale`` to detect entries in the
-        stale grace window ``[ttl, 2*ttl)``.
+        stale; background-mode caches override ``_is_stale`` to detect entries that are
+        past their freshness TTL. Hard-expired keys never reach this method: the
+        storage layer treats them as missing.
 
         Raises
         ------
@@ -241,10 +350,11 @@ class Cache(Generic[R]):
 
     # Positional-only so subclasses can name the parameter freely (e.g. result).
     def _is_stale(self, _result: CachedResult[R], /) -> bool:
-        """Whether a present entry is past its fresh ttl.
+        """Whether a present entry is past its freshness TTL.
 
-        Always ``False`` for foreground caches. Background-mode caches override this to
-        report entries in the stale grace window ``[ttl, 2*ttl)``.
+        Always ``False`` for foreground caches. Background-mode caches override this.
+        Hard-expired keys never reach this method: the storage layer treats them as
+        missing.
         """
         return False
 
@@ -732,13 +842,13 @@ class CachedFunc(Generic[P, R]):
         """Warn that display output won't replay on hits in background mode."""
         from streamlit import exception
 
-        # We use an exception here to show a proper stack trace pointing at the user's
-        # cached function (same channel as the cached-widget warning).
-        exception(
-            CachedStFunctionInBackgroundModeWarning(
-                self._info.cache_type, self._info.func
-            )
+        # Mirrors the cached-widget warning: st.exception surfaces it in the
+        # app, the log surfaces it in the console.
+        warning = CachedStFunctionInBackgroundModeWarning(
+            self._info.cache_type, self._info.func
         )
+        _LOGGER.warning("%s", warning, stack_info=True)
+        exception(warning)
 
     @overload
     def clear(self) -> None: ...

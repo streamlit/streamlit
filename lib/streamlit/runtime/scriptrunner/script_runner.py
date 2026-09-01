@@ -23,8 +23,6 @@ from enum import Enum
 from timeit import default_timer as timer
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
-from blinker import Signal
-
 from streamlit import config, runtime, util
 from streamlit.errors import FragmentStorageKeyError
 from streamlit.logger import get_logger
@@ -60,6 +58,7 @@ from streamlit.runtime.state import (
     SafeSessionState,
     SessionState,
 )
+from streamlit.signal_util import Signal
 from streamlit.source_util import page_sort_key
 
 if TYPE_CHECKING:
@@ -248,33 +247,16 @@ class ScriptRunner:
         self._requests = ScriptRequests()
         self._requests.request_rerun(initial_rerun_data)
 
-        self.on_event = Signal(
-            doc="""Emitted when a ScriptRunnerEvent occurs.
-
-            This signal is generally emitted on the ScriptRunner's script
-            thread (which is *not* the same thread that the ScriptRunner was
-            created on).
-
-            Parameters
-            ----------
-            sender: ScriptRunner
-                The sender of the event (this ScriptRunner).
-
-            event : ScriptRunnerEvent
-
-            forward_msg : ForwardMsg | None
-                The ForwardMsg to send to the frontend. Set only for the
-                ENQUEUE_FORWARD_MSG event.
-
-            exception : BaseException | None
-                Our compile error. Set only for the
-                SCRIPT_STOPPED_WITH_COMPILE_ERROR event.
-
-            widget_states : streamlit.proto.WidgetStates_pb2.WidgetStates | None
-                The ScriptRunner's final WidgetStates. Set only for the
-                SHUTDOWN event.
-            """
-        )
+        # Emitted synchronously when a ScriptRunnerEvent occurs, usually on the
+        # script or fragment-worker thread rather than the thread that created
+        # this ScriptRunner. Receivers are called as
+        # receiver(sender, event=..., **payload); events not listed below carry
+        # no payload:
+        # - ENQUEUE_FORWARD_MSG: forward_msg
+        # - SCRIPT_STOPPED_WITH_COMPILE_ERROR: exception
+        # - SHUTDOWN: client_state
+        # - SCRIPT_STARTED: page_script_hash, fragment_ids_this_run, pages
+        self.on_event = Signal()
 
         # Set to true while we're executing. Used by
         # _maybe_handle_execution_control_request.
@@ -717,8 +699,16 @@ class ScriptRunner:
                     # Run callbacks for widgets whose values have changed.
                     if rerun_data.widget_states is not None:
                         self._session_state.on_script_will_rerun(
-                            rerun_data.widget_states
+                            rerun_data.widget_states,
+                            suppress_callbacks=rerun_data.suppress_callbacks,
                         )
+                        # Check for pending rerun/stop requests while
+                        # has_script_started is still False so on_script_finished
+                        # preserves this run's widget values.  On the normal path a
+                        # callback may have queued st.rerun(); on the suppressed path
+                        # an external request (e.g. new client interaction) may have
+                        # arrived during state application.
+                        self._maybe_handle_execution_control_request()
 
                     ctx.on_script_start()
 
@@ -915,19 +905,25 @@ class ScriptRunner:
         # Tell session_state to update itself in response
         if not premature_stop:
             self._session_state.on_script_finished(
-                ctx.shared.widget_ids_this_run.snapshot()
+                ctx.shared.widget_ids_this_run.snapshot(),
+                remove_stale_widgets=ctx.has_script_started,
             )
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
         self.on_event.send(self, event=event)
 
-        # Remove orphaned files now that the script has run and files in use
-        # are marked as active.
-        runtime.get_instance().media_file_mgr.remove_orphaned_files()
+        # Both cleanups below assume the body re-registered whatever is still in use, so
+        # a run that never reached its body would make everything look orphaned. The
+        # session refs were already cleared before this run, so deleting now would take
+        # files the app still displays with it. The next run that renders collects them.
+        if ctx.has_script_started:
+            # Remove orphaned files now that the script has run and files in use
+            # are marked as active.
+            runtime.get_instance().media_file_mgr.remove_orphaned_files()
 
-        # Prune lazy dataframe sources that were not re-registered this run.
-        runtime.get_instance().dataframe_source_mgr.remove_orphaned_sources()
+            # Prune lazy dataframe sources that were not re-registered this run.
+            runtime.get_instance().dataframe_source_mgr.remove_orphaned_sources()
 
         # Force garbage collection to run, to help avoid memory use building up
         # This is usually not an issue, but sometimes GC takes time to kick in and

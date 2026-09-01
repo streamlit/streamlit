@@ -32,10 +32,7 @@ const ThemedSidebar = ({
   const sidebarTheme = createSidebarTheme(activeTheme)
 
   return (
-    <ThemeProvider
-      theme={sidebarTheme.emotion}
-      baseuiTheme={sidebarTheme.basewebTheme}
-    >
+    <ThemeProvider theme={sidebarTheme.emotion}>
       <Sidebar {...sidebarProps}>{children}</Sidebar>
     </ThemeProvider>
   )

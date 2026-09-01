@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import decamelize from "decamelize"
 import { get } from "lodash-es"
 import xxhash from "xxhashjs"
 
@@ -655,9 +654,7 @@ export function keysToSnakeCase(
 ): Record<string, unknown> {
   return Object.keys(obj).reduce(
     (acc, key) => {
-      const newKey = decamelize(key, {
-        preserveConsecutiveUppercase: true,
-      }).replace(".", "_")
+      const newKey = decamelizePreservingUppercase(key).replace(".", "_")
       let value = obj[key]
 
       if (value && typeof value === "object" && !Array.isArray(value)) {
@@ -676,6 +673,32 @@ export function keysToSnakeCase(
       return acc
     },
     {} as Record<string, unknown>
+  )
+}
+
+/** Convert camelCase to snake_case, keeping consecutive uppercase abbreviations intact (`XMLHttpRequest` → `XML_http_request`).
+ *  Adapted from sindresorhus/decamelize (`preserveConsecutiveUppercase: true`), MIT. */
+function decamelizePreservingUppercase(value: string): string {
+  if (value.length < 2) {
+    return value
+  }
+
+  // Insert `_` between a lowercase letter or digit and an uppercase letter.
+  const separated = value.replace(
+    /([\p{Lowercase_Letter}\d])(\p{Uppercase_Letter})/gu,
+    "$1_$2"
+  )
+  // Lowercase isolated uppercase letters/digits so they are not treated as abbreviations.
+  const lowercasedSingleLetters = separated.replace(
+    /((?<![\p{Uppercase_Letter}\d])[\p{Uppercase_Letter}\d](?![\p{Uppercase_Letter}\d]))/gu,
+    character => character.toLowerCase()
+  )
+
+  // Split an abbreviation from the capitalized word that follows it (`XMLHttp` → `XML_http`).
+  return lowercasedSingleLetters.replace(
+    /(?<!\p{Uppercase_Letter})(\p{Uppercase_Letter}+)(\p{Uppercase_Letter}\p{Lowercase_Letter}+)/gu,
+    (_, uppercase: string, trailingWord: string) =>
+      `${uppercase}_${trailingWord.toLowerCase()}`
   )
 }
 

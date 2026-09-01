@@ -268,3 +268,14 @@ export type IGuestToHostMessage =
 export type VersionedMessage<Message> = {
   stCommVersion: number
 } & Message
+
+/**
+ * Guest→host postMessage envelope. `isGuestToHostEcho` is set only on the
+ * same-window copy Streamlit posts when embedded. Hosts that observe both this
+ * window and `window.parent` should ignore tagged copies to avoid
+ * double-counting; a host running inside the app frame sees only the tagged
+ * copy and should handle it. See `HostCommunicationManager.postMessageToParentAndEcho`.
+ */
+export type GuestToHostEnvelope = VersionedMessage<IGuestToHostMessage> & {
+  isGuestToHostEcho?: boolean
+}

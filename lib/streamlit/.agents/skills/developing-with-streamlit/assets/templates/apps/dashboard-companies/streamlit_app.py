@@ -28,7 +28,6 @@ your actual data source (e.g., Snowflake queries, CRM APIs, etc.).
 """
 
 from datetime import date, timedelta
-from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -296,14 +295,11 @@ with st.container(border=True):
     days_filter = timeframe_options.get(timeframe or "Last 28 days")
 
     # Account types
-    account_types = cast(
-        "list[str]",
-        st.pills(
-            "Account types",
-            options=ACCOUNT_TYPES,
-            default=["Enterprise", "Growth", "Startup"],
-            selection_mode="multi",
-        ),
+    account_types = st.pills(
+        "Account types",
+        options=ACCOUNT_TYPES,
+        default=["Enterprise", "Growth", "Startup"],
+        selection_mode="multi",
     )
 
 # Determine sort order

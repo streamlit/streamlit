@@ -38,6 +38,12 @@ class SharedRunState:
         self.form_ids_this_run: ThreadSafeSet[str] = ThreadSafeSet()
         self.new_fragment_ids: ThreadSafeSet[str] = ThreadSafeSet()
 
+        # Maps each fragment user key to the id of the fragment definition that
+        # claimed it this run, so multiple call sites of one keyed fragment don't
+        # collide while two different definitions sharing a key do.
+        self._fragment_user_keys_lock = threading.Lock()
+        self._fragment_user_keys_this_run: dict[str, str] = {}
+
         self._telemetry_lock = threading.Lock()
         self._tracked_commands: list[Command] = []
         self._tracked_commands_counter: collections.Counter[str] = collections.Counter()
@@ -52,6 +58,9 @@ class SharedRunState:
         self.widget_user_keys_this_run.clear()
         self.form_ids_this_run.clear()
         self.new_fragment_ids.clear()
+
+        with self._fragment_user_keys_lock:
+            self._fragment_user_keys_this_run.clear()
 
         with self._telemetry_lock:
             self._tracked_commands = []
@@ -84,3 +93,17 @@ class SharedRunState:
         """Return how many times a command name has been tracked."""
         with self._telemetry_lock:
             return self._tracked_commands_counter[name]
+
+    def register_fragment_user_key(self, user_key: str, definition_id: str) -> bool:
+        """Atomically claim a fragment user key for the given definition this run.
+
+        Returns True if the key is free or already held by the same fragment
+        definition (multiple call sites of one keyed fragment), and False if a
+        different definition already claimed it this run (a duplicate-key
+        collision).
+        """
+        with self._fragment_user_keys_lock:
+            existing_definition_id = self._fragment_user_keys_this_run.setdefault(
+                user_key, definition_id
+            )
+            return existing_definition_id == definition_id

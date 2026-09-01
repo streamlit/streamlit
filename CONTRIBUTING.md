@@ -111,7 +111,7 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | `discovering-make-commands` | To list available `make` commands for build, test, lint, or format tasks |
 | `fixing-streamlit-ci` | When CI checks fail and you need to diagnose and fix errors |
 | `fixing-flaky-e2e-tests` | When E2E tests fail intermittently, show timeout errors, have snapshot mismatches, or exhibit browser-specific failures |
-| `implementing-feature` | When you have a spec folder, URL, or GitHub issue to implement end-to-end |
+| `implementing-feature` | When you have a spec folder, URL, or GitHub issue to implement end-to-end, or want the next papercut enhancement selected automatically |
 | `understanding-streamlit-architecture` | When debugging cross-layer issues, understanding how features work end-to-end, or onboarding to the codebase |
 | `creating-pull-requests` | When changes are ready to be submitted as a PR with proper labels and formatting |
 | `addressing-pr-review-comments` | When a PR has reviewer feedback to address, including inline and general PR comments |
@@ -135,6 +135,10 @@ Subagents run autonomously in a fresh context, which optimizes for context size 
 | `simplifying-local-changes` | When you want to simplify and refine code for clarity and maintainability |
 | `fixing-pr` | When a PR needs CI fixes, review feedback handling, and validation before merge |
 | `qa-testing-feature` | After implementing a feature to perform comprehensive QA testing before finalizing a PR |
+
+### Bundled user-facing skills
+
+Streamlit ships user-facing skills with the library under `lib/streamlit/.agents/skills/` (for example, `developing-with-streamlit`). When adding or editing those skills, follow [`lib/streamlit/.agents/skills/AGENTS.md`](./lib/streamlit/.agents/skills/AGENTS.md).
 
 ## Style Guide
 
@@ -429,7 +433,7 @@ make python-types
 
 ### Javascript / Typescript
 
-For Javascript/Typescript, we utilize oxfmt, oxlint, and ESLint.
+For Javascript/Typescript, we utilize oxfmt, oxlint, ESLint, and Knip.
 
 #### Formatting
 
@@ -455,6 +459,16 @@ For type-checking, run:
 ```bash
 make frontend-types
 ```
+
+#### Dependency analysis
+
+To check for unused exports and unused `dependencies` / `devDependencies`, run:
+
+```bash
+make frontend-knip
+```
+
+Knip also fails on undeclared (`unlisted`) imports: every direct import must be listed in that workspace's `package.json`. See [`frontend/AGENTS.md`](./frontend/AGENTS.md).
 
 ### VS-Code / Cursor Setup
 
@@ -512,6 +526,8 @@ To reproduce CI or release-generated output, use the compiler version configured
 [`.github/actions/make_init/action.yml`](./.github/actions/make_init/action.yml).
 
 ## Introducing dependencies
+
+Add a dependency only when it provides meaningful value that cannot easily be replicated with an in-house implementation. Each dependency increases the risk of supply-chain attacks, breakage from incompatible new versions, and conflicts with other dependencies in users' environments.
 
 We aim to only introduce dependencies in this project that have reasonable restrictions and comply with various laws.
 

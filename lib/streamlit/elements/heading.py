@@ -17,11 +17,14 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
-from streamlit.elements.lib.layout_utils import create_layout_config
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.elements.lib.layout_utils import create_layout_config, validate_wrap
+from streamlit.errors import (
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import clean_text
+from streamlit.string_util import clean_text, to_help_str, validate_icon_or_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -47,9 +50,11 @@ class HeadingMixin:
         anchor: Anchor = None,
         *,  # keyword-only arguments:
         help: str | None = None,
+        icon: str | None = None,
         divider: Divider = False,
         width: Width = "stretch",
         text_alignment: TextAlignment = "left",
+        wrap: bool = True,
     ) -> DeltaGenerator:
         """Display text in header formatting.
 
@@ -77,6 +82,30 @@ class HeadingMixin:
             The tooltip can optionally contain GitHub-flavored Markdown,
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
+
+        icon : str or None
+            An optional emoji or icon to display next to the header. If
+            ``icon`` is ``None`` (default) or ``""``, no icon is displayed.
+            Empty string is accepted so you can pass ``page.icon`` when a
+            page has no icon. If ``icon`` is a non-empty string, the
+            following options are valid:
+
+            - A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            - An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
+
+            - ``"spinner"``: Displays a spinner as an icon.
+
+            The icon is decorative: it is not included in the heading's
+            accessible name and does not affect the auto-generated anchor.
 
         divider : bool, "blue", "green", "orange", "red", "violet", "yellow", "gray"/"grey", or "rainbow"
             Shows a colored divider below the header. If this is ``True``,
@@ -114,6 +143,17 @@ class HeadingMixin:
                 ``width="content"`` with short text, the alignment may not be
                 noticeable.
 
+        wrap : bool
+            Whether the header can wrap onto multiple lines. This can be one
+            of the following:
+
+            - ``True`` (default): If the header is too wide for the element, it
+              wraps onto additional lines.
+            - ``False``: The header stays on one line. Overflow is truncated
+              with an ellipsis. Extra body lines after the first newline are
+              omitted so the heading stays one line. Anchor and help icons
+              remain visible.
+
         Examples
         --------
         >>> import streamlit as st
@@ -125,6 +165,7 @@ class HeadingMixin:
         >>> st.header("Two", divider=True)
         >>> st.header("Three", divider=True)
         >>> st.header("Four", divider=True)
+        >>> st.header("Header with an icon", icon=":material/home:")
 
         .. output::
            https://doc-header.streamlit.app/
@@ -145,6 +186,8 @@ class HeadingMixin:
                 anchor=anchor,
                 help=help,
                 divider=divider,
+                icon=icon,
+                wrap=wrap,
             ),
             layout_config=layout_config,
         )
@@ -156,9 +199,11 @@ class HeadingMixin:
         anchor: Anchor = None,
         *,  # keyword-only arguments:
         help: str | None = None,
+        icon: str | None = None,
         divider: Divider = False,
         width: Width = "stretch",
         text_alignment: TextAlignment = "left",
+        wrap: bool = True,
     ) -> DeltaGenerator:
         """Display text in subheader formatting.
 
@@ -186,6 +231,30 @@ class HeadingMixin:
             The tooltip can optionally contain GitHub-flavored Markdown,
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
+
+        icon : str or None
+            An optional emoji or icon to display next to the subheader. If
+            ``icon`` is ``None`` (default) or ``""``, no icon is displayed.
+            Empty string is accepted so you can pass ``page.icon`` when a
+            page has no icon. If ``icon`` is a non-empty string, the
+            following options are valid:
+
+            - A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            - An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
+
+            - ``"spinner"``: Displays a spinner as an icon.
+
+            The icon is decorative: it is not included in the heading's
+            accessible name and does not affect the auto-generated anchor.
 
         divider : bool, "blue", "green", "orange", "red", "violet", "yellow", "gray"/"grey", or "rainbow"
             Shows a colored divider below the header. If this is ``True``,
@@ -223,6 +292,17 @@ class HeadingMixin:
                 ``width="content"`` with short text, the alignment may not be
                 noticeable.
 
+        wrap : bool
+            Whether the subheader can wrap onto multiple lines. This can be one
+            of the following:
+
+            - ``True`` (default): If the subheader is too wide for the element,
+              it wraps onto additional lines.
+            - ``False``: The subheader stays on one line. Overflow is truncated
+              with an ellipsis. Extra body lines after the first newline are
+              omitted so the heading stays one line. Anchor and help icons
+              remain visible.
+
         Examples
         --------
         >>> import streamlit as st
@@ -234,6 +314,7 @@ class HeadingMixin:
         >>> st.subheader("Two", divider=True)
         >>> st.subheader("Three", divider=True)
         >>> st.subheader("Four", divider=True)
+        >>> st.subheader("Subheader with an icon", icon=":material/bolt:")
 
         .. output::
            https://doc-subheader.streamlit.app/
@@ -254,6 +335,8 @@ class HeadingMixin:
                 anchor=anchor,
                 help=help,
                 divider=divider,
+                icon=icon,
+                wrap=wrap,
             ),
             layout_config=layout_config,
         )
@@ -265,8 +348,10 @@ class HeadingMixin:
         anchor: Anchor = None,
         *,  # keyword-only arguments:
         help: str | None = None,
+        icon: str | None = None,
         width: Width = "stretch",
         text_alignment: TextAlignment = "left",
+        wrap: bool = True,
     ) -> DeltaGenerator:
         """Display text in title formatting.
 
@@ -298,6 +383,30 @@ class HeadingMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
+        icon : str or None
+            An optional emoji or icon to display next to the title. If
+            ``icon`` is ``None`` (default) or ``""``, no icon is displayed.
+            Empty string is accepted so you can pass ``page.icon`` when a
+            page has no icon. If ``icon`` is a non-empty string, the
+            following options are valid:
+
+            - A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            - An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
+
+            - ``"spinner"``: Displays a spinner as an icon.
+
+            The icon is decorative: it is not included in the heading's
+            accessible name and does not affect the auto-generated anchor.
+
         width : "stretch", "content", or int
             The width of the title element. This can be one of the following:
 
@@ -326,16 +435,28 @@ class HeadingMixin:
                 ``width="content"`` with short text, the alignment may not be
                 noticeable.
 
+        wrap : bool
+            Whether the title can wrap onto multiple lines. This can be one
+            of the following:
+
+            - ``True`` (default): If the title is too wide for the element, it
+              wraps onto additional lines.
+            - ``False``: The title stays on one line. Overflow is truncated
+              with an ellipsis. Extra body lines after the first newline are
+              omitted so the heading stays one line. Anchor and help icons
+              remain visible.
+
         Examples
         --------
         >>> import streamlit as st
         >>>
         >>> st.title("This is a title")
         >>> st.title("_Streamlit_ is :blue[cool] :sunglasses:")
+        >>> st.title("Dashboard", icon=":material/dashboard:")
 
         .. output::
            https://doc-title.streamlit.app/
-           height: 220px
+           height: 320px
 
         """
         layout_config = create_layout_config(
@@ -351,6 +472,8 @@ class HeadingMixin:
                 body=body,
                 anchor=anchor,
                 help=help,
+                icon=icon,
+                wrap=wrap,
             ),
             layout_config=layout_config,
         )
@@ -389,10 +512,16 @@ class HeadingMixin:
         anchor: Anchor = None,
         help: str | None = None,
         divider: Divider = False,
+        icon: str | None = None,
+        wrap: bool = True,
     ) -> HeadingProto:
+        validate_wrap(wrap)
         proto = HeadingProto()
         proto.tag = tag.value
         proto.body = clean_text(body)
+        # Treat "" like None so callers can pass page.icon (which is "" when unset).
+        proto.icon = validate_icon_or_emoji(None if icon == "" else icon)
+        proto.wrap = wrap
         if divider:
             proto.divider = HeadingMixin._handle_divider_color(divider)
         if anchor is not None:
@@ -401,17 +530,18 @@ class HeadingMixin:
             elif isinstance(anchor, str):
                 proto.anchor = anchor
             elif anchor is True:  # type: ignore
-                raise StreamlitAPIException(
-                    f"Anchor parameter has invalid value: {anchor}. "
-                    "Supported values: None, any string or False"
+                raise StreamlitValueError(
+                    "anchor",
+                    ["None", "False", "any string"],
                 )
             else:
-                raise StreamlitAPIException(
-                    f"Anchor parameter has invalid type: {type(anchor).__name__}. "
-                    "Supported values: None, any string or False"
+                raise StreamlitInvalidParameterTypeError(
+                    "anchor",
+                    type(anchor).__name__,
+                    ["str", "None", "False"],
                 )
 
         if help:
-            proto.help = help
+            proto.help = to_help_str(help)
 
         return proto

@@ -33,8 +33,14 @@ export const StyledMenuButtonLabelContainer = styled.div<{
   // Only apply when the chevron is visible.
   marginRight: $hideChevron ? 0 : `calc(-${theme.iconSizes.lg} * 0.25)`,
   // Constrain the container to the button width so the label can ellipsize
-  // while the chevron stays visible.
-  ...($truncate && { maxWidth: "100%" }),
+  // while the chevron stays visible. Account for the negative chevron margin;
+  // otherwise a content-width trigger loses that space and truncates a label
+  // that fits at its natural width.
+  ...($truncate && {
+    maxWidth: $hideChevron
+      ? "100%"
+      : `calc(100% + ${theme.iconSizes.lg} * 0.25)`,
+  }),
 }))
 
 export const StyledMenuButtonExpansionIcon = styled.div(({ theme }) => ({

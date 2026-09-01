@@ -27,11 +27,10 @@ from collections import OrderedDict
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Final, Literal
 
-from blinker import Signal
-
 from streamlit import config_util, development, env_util, file_util, util
 from streamlit.config_option import ConfigOption
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidThemeSectionError
+from streamlit.signal_util import Signal
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -189,7 +188,10 @@ def set_user_option(key: str, value: Any) -> None:
     try:
         opt = _config_options_template[key]
     except KeyError as ke:
-        raise StreamlitAPIException(f"Unrecognized config option: {key}") from ke
+        raise StreamlitAPIException(
+            f"Unrecognized config option: {key}",
+            error_id="unrecognized-config-option",
+        ) from ke
     # Allow e2e tests to set any option
     if opt.scriptable:
         set_option(key, value)
@@ -197,7 +199,8 @@ def set_user_option(key: str, value: Any) -> None:
 
     raise StreamlitAPIException(
         f"{key} cannot be set on the fly. Set as command line option, e.g. "
-        f"streamlit run script.py --{key}, or in config.toml instead."
+        f"streamlit run script.py --{key}, or in config.toml instead.",
+        error_id="config-option-not-scriptable",
     )
 
 
@@ -817,11 +820,37 @@ _create_option(
         still served) rather than queued.
 
         Set to 0 to disable background refresh entirely: stale entries are then
-        recomputed by a blocking foreground call at hard expiry (2 x ttl).
+        recomputed by a blocking foreground call at the configured hard-expiry
+        bound.
     """,
     visibility="hidden",
     default_val=4,
     type_=int,
+)
+
+_create_option(
+    "runner.cacheBackgroundRefreshTTLMultiplier",
+    description="""
+        Multiplier applied to a cached function's ttl to set the hard-expiration
+        bound for refresh_mode="background". Hard expiry occurs at
+        multiplier * ttl. The default is 2.0, so stale values can be served
+        for one additional ttl while Streamlit attempts a background refresh.
+
+        This is a process-wide bound for every refresh_mode="background"
+        function in the process, not a per-function default. Raising it to
+        keep one long-idle cache also keeps stale entries for every other
+        background cache for (multiplier - 1) * ttl.
+
+        Values must be finite and greater than 1.0. Invalid values are ignored
+        with a warning and the default 2.0 is used. Values of 1.0 would remove
+        the stale window; values below 1.0 would hard-expire before the
+        freshness ttl. Use refresh_mode="foreground" to never serve stale
+        values. Larger values keep entries longer after idle periods or
+        refresh failures, at the cost of higher memory use and older served
+        data. Applies to both @st.cache_data and @st.cache_resource.
+    """,
+    default_val=2.0,
+    type_=float,
 )
 
 _create_option(
@@ -2941,7 +2970,7 @@ def _maybe_convert_to_number(v: Any) -> Any:
 
 # Allow outside modules to wait for the config file to be parsed before doing
 # something.
-_on_config_parsed = Signal(doc="Emitted when the config file is parsed.")
+_on_config_parsed = Signal()
 
 
 def get_config_files(file_name: str) -> list[str]:

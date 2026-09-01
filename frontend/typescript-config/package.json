@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/typescript-config",
-  "version": "1.61.1",
+  "version": "1.62.0",
   "license": "Apache-2.0",
   "private": true,
   "files": [
@@ -12,6 +12,8 @@
     "typecheck:all": "cd $INIT_CWD && node \"$PROJECT_CWD/node_modules/typescript-v7/bin/tsc\""
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^7.0.1",
     "typescript": "^6.0.3",
     "typescript-v7": "npm:typescript@7.0.2"
   },

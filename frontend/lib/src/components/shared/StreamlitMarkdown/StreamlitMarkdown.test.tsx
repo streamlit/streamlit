@@ -40,6 +40,7 @@ import StreamlitMarkdown, {
   isValidCssColor,
   LinkWithTargetBlank,
 } from "./StreamlitMarkdown"
+import { StyledStreamlitMarkdown } from "./styled-components"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
 vi.mock("@streamlit/utils", async () => {
@@ -848,6 +849,92 @@ describe("StreamlitMarkdown", () => {
     }
   )
 
+  it("does not render fenced code blocks when truncating a label", () => {
+    render(
+      <StreamlitMarkdown
+        source={"```\nfenced code\n```"}
+        allowHTML={false}
+        isLabel
+        truncate
+      />
+    )
+    expect(screen.queryByTestId("stMarkdownPre")).not.toBeInTheDocument()
+    expect(screen.getByText(/fenced code/)).toBeInTheDocument()
+  })
+
+  it("keeps fenced code blocks in non-truncated labels", async () => {
+    render(
+      <StreamlitMarkdown
+        source={"```\nfenced code\n```"}
+        allowHTML={false}
+        isLabel
+      />
+    )
+    expect(await screen.findByTestId("stMarkdownPre")).toBeVisible()
+  })
+
+  it("keeps truncated label markdown on one line when the source has blocks", () => {
+    const source = [
+      "# Heading",
+      "",
+      "- item",
+      "",
+      "| a | b |",
+      "| - | - |",
+      "| 1 | 2 |",
+      "",
+      "```",
+      "code block",
+      "```",
+    ].join("\n")
+    render(
+      <StreamlitMarkdown source={source} allowHTML={false} isLabel truncate />
+    )
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(screen.queryByTestId("stMarkdownPre")).not.toBeInTheDocument()
+    expect(screen.queryByRole("heading")).not.toBeInTheDocument()
+    expect(screen.queryByRole("table")).not.toBeInTheDocument()
+    expect(screen.queryByRole("list")).not.toBeInTheDocument()
+    expect(container).toHaveStyle("white-space: nowrap")
+    expect(container).toHaveTextContent(/code block/)
+  })
+
+  it("inlines leftover paragraphs when truncating", () => {
+    render(
+      <StreamlitMarkdown
+        source={"one\n\ntwo"}
+        allowHTML={false}
+        isLabel
+        truncate
+      />
+    )
+    const container = screen.getByTestId("stMarkdownContainer")
+    const paragraphs = container.querySelectorAll("p")
+    expect(paragraphs.length).toBeGreaterThan(0)
+    for (const paragraph of paragraphs) {
+      expect(paragraph).toHaveStyle("display: inline")
+    }
+    expect(screen.queryByRole("table")).not.toBeInTheDocument()
+  })
+
+  it("replaces hard breaks with a gap when truncating", () => {
+    render(
+      <StreamlitMarkdown source={"one  \ntwo"} allowHTML={false} truncate />
+    )
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container.querySelector("br")).toHaveStyle("display: inline-block")
+    expect(container).toHaveStyle("white-space: nowrap")
+  })
+
+  it("inlines display math when truncating", () => {
+    render(
+      <StyledStreamlitMarkdown isCaption={false} isInDialog={false} truncate>
+        <div className="katex-display">x + y</div>
+      </StyledStreamlitMarkdown>
+    )
+    expect(screen.getByText("x + y")).toHaveStyle("display: inline")
+  })
+
   it("doesn't render links when disableLinks is true", () => {
     // Valid markdown further restricted with buttons to eliminate links
     const source = "[Link text](www.example.com)"
@@ -1120,8 +1207,7 @@ describe("StreamlitMarkdown", () => {
     )
     const shimmerElement = screen.getByText("Loading...")
     expect(shimmerElement).toHaveClass("stMarkdownShimmer")
-    // Verify the parent span has the color directive class (shimmer uses fadedText60,
-    // but the outer :red[] span still has its color class applied)
+    // Outer :red[] still applies; shimmer inherits that color.
     const parentSpan = shimmerElement.parentElement
     expect(parentSpan).not.toBeNull()
     expect(parentSpan).toHaveClass("stMarkdownColoredText")
@@ -1137,6 +1223,25 @@ describe("StreamlitMarkdown", () => {
     expect(container).toHaveStyle("overflow: hidden")
     expect(container).toHaveStyle("white-space: nowrap")
     expect(container).toHaveStyle("text-overflow: ellipsis")
+    expect(container).toHaveStyle("line-height: normal")
+    expect(screen.getByText(source)).toHaveStyle("line-height: normal")
+  })
+
+  it("inherits line height when truncating if requested", () => {
+    const source = "This text should preserve its parent's line height"
+    render(
+      <StreamlitMarkdown
+        source={source}
+        allowHTML={false}
+        truncate
+        inheritLineHeight
+      />
+    )
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container).toHaveStyle("line-height: inherit")
+    expect(screen.getByText(source)).toHaveStyle("line-height: inherit")
+    expect(container).toHaveStyle("white-space: nowrap")
+    expect(container).toHaveStyle("text-overflow: ellipsis")
   })
 
   it("does not apply truncate styles when truncate is false", () => {
@@ -1144,6 +1249,20 @@ describe("StreamlitMarkdown", () => {
     render(<StreamlitMarkdown source={source} allowHTML={false} />)
     const container = screen.getByTestId("stMarkdownContainer")
     expect(container).not.toHaveStyle("white-space: nowrap")
+  })
+
+  it("does not stretch truncated widget labels to 100% width", () => {
+    render(
+      <StreamlitMarkdown
+        source="Compact label"
+        allowHTML={false}
+        isLabel
+        truncate
+      />
+    )
+    expect(screen.getByTestId("stMarkdownContainer")).not.toHaveStyle({
+      width: "100%",
+    })
   })
 
   // Custom color directive tests

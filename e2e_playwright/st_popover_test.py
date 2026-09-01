@@ -119,6 +119,17 @@ def test_popover_columns(app: Page, assert_snapshot: ImageCompareFunction):
     columns_popover_1 = open_popover(app, "popover 16 (in column 1)")
     expect_markdown(columns_popover_1, "Popover in column 1")
 
+    # Auto no-wrap must not ellipsize a content-width trigger whose label fits.
+    # Measure the markdown container: wrap=False inlines leftover <p> boxes,
+    # so the paragraph itself is not the overflow box.
+    content_width_label = get_popover(app, "popover 17 (in column 2)").get_by_test_id(
+        "stMarkdownContainer"
+    )
+    wait_until(
+        app,
+        lambda: content_width_label.evaluate("el => el.scrollWidth <= el.clientWidth"),
+    )
+
     assert_snapshot(
         columns_container,
         name="st_popover-columns",
@@ -613,10 +624,9 @@ def test_date_input_selection_does_not_dismiss_popover(app: Page):
     """Selecting a day in a date_input calendar opened inside a popover must not
     dismiss the popover.
 
-    Regression test for https://github.com/streamlit/streamlit/issues/15959: the
-    popover read the click target at `click` time, but BaseWeb closes the
-    calendar synchronously on selection, detaching the clicked day before the
-    handler ran — so the popover treated it as an outside click and closed.
+    Regression test for https://github.com/streamlit/streamlit/issues/15959.
+    Day selection must stay inside the popover even if the calendar
+    synchronously detaches the clicked day before the click handler runs.
     """
     popover_container = open_popover(app, "popover 21 (date dismissal)")
     date_input = popover_container.get_by_test_id("stDateInput")

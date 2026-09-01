@@ -15,8 +15,10 @@
 """download_button unit test."""
 
 import io
+import mimetypes
 import os
 import tempfile
+from unittest.mock import patch
 
 from parameterized import parameterized
 
@@ -28,6 +30,28 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 class DownloadButtonTest(DeltaGeneratorTestCase):
     """Test ability to marshall download_button protos."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        # Bind `mimetypes.types_map` to the dict `guess_type` actually reads, so
+        # the pin in setUp takes effect. A lookup initializes the registry only
+        # if it is not initialized yet; calling `init()` instead would rebuild
+        # it and drop any `add_type()` registrations made earlier in the process.
+        mimetypes.guess_type("pin.csv")
+
+    def setUp(self) -> None:
+        super().setUp()
+        # Pin the extensions these tests infer so the assertions cover
+        # Streamlit's inference, not the host's. On Windows `mimetypes` reads the
+        # registry, where an installed app can claim an extension (Excel maps
+        # .csv to application/vnd.ms-excel).
+        patcher = patch.dict(
+            mimetypes.types_map,
+            {".csv": "text/csv", ".json": "application/json", ".png": "image/png"},
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     @parameterized.expand([("hello world",), (b"byteshere",)])
     def test_just_label(self, data):

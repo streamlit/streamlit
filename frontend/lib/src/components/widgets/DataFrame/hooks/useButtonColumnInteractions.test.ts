@@ -143,10 +143,9 @@ describe("useButtonColumnInteractions", () => {
     act(() => result.current.onCellClicked([0, 2], event))
 
     expect(setStringTriggerValue).toHaveBeenCalledWith(
-      { id: "widget-id", formId: "form-id" },
+      "widget-id",
       JSON.stringify({ row: 102, label: "Open" }),
-      { fromUi: true },
-      "fragment-id"
+      { formId: "form-id", fragmentId: "fragment-id", fromUser: true }
     )
     expect(event.preventDefault).toHaveBeenCalledTimes(1)
   })
@@ -175,10 +174,9 @@ describe("useButtonColumnInteractions", () => {
     act(() => result.current.onCellClicked([0, 1], createCellClickedEvent()))
 
     expect(setStringTriggerValue).toHaveBeenCalledWith(
-      { id: "positional-widget-id", formId: "form-id" },
+      "positional-widget-id",
       JSON.stringify({ row: 1, label: "Open" }),
-      { fromUi: true },
-      undefined
+      { formId: "form-id", fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -220,10 +218,9 @@ describe("useButtonColumnInteractions", () => {
     })
 
     expect(setStringTriggerValue).toHaveBeenCalledWith(
-      { id: "widget-id", formId: "form-id" },
+      "widget-id",
       JSON.stringify({ row: 14, label: "Delete" }),
-      { fromUi: true },
-      undefined
+      { formId: "form-id", fragmentId: undefined, fromUser: true }
     )
     expect(result.current.buttonActionMenu).toBeUndefined()
   })
@@ -361,10 +358,9 @@ describe("useButtonColumnInteractions", () => {
     act(() => result.current.onCellClicked([0, 5], createCellClickedEvent()))
 
     expect(setStringTriggerValue).toHaveBeenCalledWith(
-      { id: "index-widget-id", formId: "form-id" },
+      "index-widget-id",
       JSON.stringify({ row: 5, label: "Open" }),
-      { fromUi: true },
-      undefined
+      { formId: "form-id", fragmentId: undefined, fromUser: true }
     )
   })
 

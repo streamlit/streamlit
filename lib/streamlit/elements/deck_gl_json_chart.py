@@ -42,7 +42,11 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitIncompatibleParametersError,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -80,13 +84,13 @@ def parse_selection_mode(
         # Only a single selection mode was passed
         selection_mode_set = {selection_mode}
     else:
-        # Multiple selection modes were passed.
-        # This is not yet supported as a functionality, but the infra is here to
-        # support it in the future!
-        # @see DeckGlJsonChart.tsx
-        raise StreamlitAPIException(
-            f"Invalid selection mode: {selection_mode}. ",
-            "Selection mode must be a single value, but got a set instead.",
+        # Only a single string selection mode is supported. Lists and sets are
+        # rejected until multi-mode selection lands (see DeckGlJsonChart.tsx).
+        raise StreamlitInvalidParameterTypeError(
+            "selection_mode",
+            type(selection_mode).__name__,
+            ["str"],
+            detail="Selection mode must be a single value.",
         )
 
     if not selection_mode_set.issubset(_SELECTION_MODES):
@@ -98,8 +102,9 @@ def parse_selection_mode(
     if selection_mode_set.issuperset(  # pragma: no cover - defensive, only string inputs reach here
         {"single-object", "multi-object"}
     ):
-        raise StreamlitAPIException(
-            "Only one of `single-object` or `multi-object` can be selected as selection mode."
+        raise StreamlitIncompatibleParametersError(
+            "selection_mode='single-object'",
+            "selection_mode='multi-object'",
         )
 
     parsed_selection_modes = []
@@ -322,11 +327,8 @@ class PydeckMixin:
         width: WidthWithoutContent = "stretch",
         use_container_width: bool | None = None,
         height: HeightWithoutContent = 500,
-        selection_mode: Literal[
-            "single-object"
-        ],  # Selection mode will only be activated by on_select param; default value here to make it work with mypy
-        # No default value here to make it work with mypy
-        on_select: Literal["ignore"],
+        selection_mode: SelectionMode = "single-object",
+        on_select: Literal["ignore"] = "ignore",
         key: Key | None = None,
     ) -> DeltaGenerator: ...
 
@@ -339,7 +341,8 @@ class PydeckMixin:
         use_container_width: bool | None = None,
         height: HeightWithoutContent = 500,
         selection_mode: SelectionMode = "single-object",
-        on_select: Literal["rerun"] | WidgetCallback = "rerun",
+        # No default: omitted on_select must match the "ignore" overload.
+        on_select: Literal["rerun"] | WidgetCallback,
         key: Key | None = None,
     ) -> PydeckState: ...
 
