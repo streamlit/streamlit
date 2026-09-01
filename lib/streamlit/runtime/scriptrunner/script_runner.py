@@ -236,9 +236,10 @@ class ScriptRunner:
 
         event_loop
             A persistent, non-running asyncio event loop owned by the caller
-            (typically ``AppSession``). The runner installs and detaches the
-            loop but never closes it. After the runner emits ``SHUTDOWN``, the
-            caller may safely close the loop.
+            (typically ``AppSession``). The runner installs and detaches it but
+            never closes it. After this runner emits ``SHUTDOWN``, it no longer
+            uses the loop. The caller determines when no other runner is using
+            the loop and it is safe to close.
         """
         self._session_id = session_id
         self._main_script_path = main_script_path
