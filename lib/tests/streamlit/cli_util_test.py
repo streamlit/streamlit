@@ -262,16 +262,38 @@ def test_background_browser_false_does_not_fall_back() -> None:
 
 @pytest.mark.parametrize(
     "controller",
-    [webbrowser.Mozilla("firefox"), webbrowser.MacOSXOSAScript("chrome")],
-    ids=["mozilla", "macosx_osascript"],
+    [webbrowser.Mozilla("firefox"), webbrowser.Chrome("google-chrome")],
+    ids=["mozilla", "chrome"],
 )
 def test_non_background_controller_false_falls_back(
     controller: webbrowser.BaseBrowser,
 ) -> None:
-    """False from UnixBrowser or MacOSXOSAScript is a failed launch; fall back."""
+    """False from UnixBrowser is a failed launch; fall back to the OS default."""
     with (
         _platform(darwin=True),
         patch_config_options({"browser.command": "firefox"}),
+        patch("webbrowser.get", return_value=controller),
+        patch.object(controller, "open", return_value=False) as mock_open,
+        patch("streamlit.cli_util._open_browser_with_os_default") as os_default,
+        patch("streamlit.cli_util._get_logger") as mock_get_logger,
+    ):
+        open_browser(_URL)
+
+        mock_open.assert_called_once_with(_URL)
+        mock_get_logger.return_value.warning.assert_called_once()
+        os_default.assert_called_once_with(_URL)
+
+
+@pytest.mark.skipif(
+    not hasattr(webbrowser, "MacOSXOSAScript"),
+    reason="MacOSXOSAScript is only defined on macOS",
+)
+def test_macosx_osascript_false_falls_back() -> None:
+    """False from MacOSXOSAScript (macOS chrome/firefox names) is a failed launch."""
+    controller = webbrowser.MacOSXOSAScript("chrome")
+    with (
+        _platform(darwin=True),
+        patch_config_options({"browser.command": "chrome"}),
         patch("webbrowser.get", return_value=controller),
         patch.object(controller, "open", return_value=False) as mock_open,
         patch("streamlit.cli_util._open_browser_with_os_default") as os_default,
