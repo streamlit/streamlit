@@ -17,6 +17,8 @@
 from __future__ import annotations
 
 import os
+import shlex
+import shutil
 from typing import Any
 
 from streamlit import env_util, errors
@@ -73,39 +75,97 @@ def _open_browser_with_command(command: str, url: str) -> None:
 
 
 def _nonblocking_webbrowser_command(browser_command: str) -> str:
-    """If the command contains ``%s`` and does not already end with ``&``,
-    append ``&`` so ``webbrowser.get()`` uses ``BackgroundBrowser`` instead of
-    ``GenericBrowser`` (which waits for the subprocess and would block the server).
+    """If the command contains ``%s``, ensure it ends with a standalone ``&``.
+
+    ``webbrowser.get()`` uses ``BackgroundBrowser`` only when the last shlex
+    token is ``&``. ``GenericBrowser`` waits for the subprocess and would
+    block the server event loop. A trailing ``&`` glued to ``%s`` (``%s&``)
+    is split off so the URL placeholder stays intact.
     """
-    if "%s" in browser_command and not browser_command.rstrip().endswith("&"):
-        return f"{browser_command} &"
-    return browser_command
+    if "%s" not in browser_command:
+        return browser_command
+    try:
+        parts = shlex.split(browser_command)
+    except ValueError:
+        return browser_command
+    if not parts or parts[-1] == "&":
+        return browser_command
+    stripped = browser_command.rstrip()
+    if stripped.endswith("&"):
+        return f"{stripped[:-1].rstrip()} &"
+    return f"{stripped} &"
+
+
+def _executable_from_browser_command(browser_command: str) -> str | None:
+    """Return the program token from a webbrowser command, or None if unparsable."""
+    try:
+        parts = shlex.split(browser_command)
+    except ValueError:
+        return None
+    if parts and parts[-1] == "&":
+        parts = parts[:-1]
+    if not parts:
+        return None
+    return parts[0]
+
+
+def _browser_command_refers_to_existing_executable(browser_command: str) -> bool:
+    """Return whether ``browser.command`` points at a program we can launch.
+
+    Bare paths are checked as a whole so paths with spaces are not split.
+    Command templates use the first shlex token (the program).
+    """
+    if os.path.isfile(browser_command) or shutil.which(browser_command) is not None:
+        return True
+    if "%s" not in browser_command:
+        return False
+    executable = _executable_from_browser_command(browser_command)
+    if executable is None:
+        return False
+    return os.path.isfile(executable) or shutil.which(executable) is not None
 
 
 def _open_browser_with_configured_command(browser_command: str, url: str) -> bool:
     """Try to open ``url`` with ``browser.command`` via ``webbrowser.get()``.
 
     Return True if a controller was constructed and ``open()`` was invoked
-    without raising. Return False only if the command cannot be resolved or
-    ``open()`` raises ``OSError``, so the caller can fall back.
+    without raising. Return False if the command cannot be resolved, the
+    executable does not exist, the controller would block the server
+    (``GenericBrowser``), or ``open()`` raises ``OSError``, so the caller
+    can fall back.
 
     Do not treat ``open()``'s boolean as success. ``BackgroundBrowser``
     returns False when the helper exits immediately (for example ``open -a``
     or a browser that is already running), which is not a launch failure.
     """
-    import shlex
     import webbrowser
 
     try:
-        controller = webbrowser.get(_nonblocking_webbrowser_command(browser_command))
-    except webbrowser.Error:
-        try:
-            # webbrowser.get() only synthesizes a controller from a path when
-            # the string contains "%s". Keep this Error handler in case that
-            # contract changes.
-            controller = webbrowser.get(f"{shlex.quote(browser_command)} %s &")
-        except webbrowser.Error:
+        using = _nonblocking_webbrowser_command(browser_command)
+        if "%s" in using and not _browser_command_refers_to_existing_executable(using):
             return False
+        controller = webbrowser.get(using)
+    except (webbrowser.Error, ValueError, IndexError):
+        # webbrowser.get() only resolves a bare path when its basename matches a
+        # registered browser, and it splits on whitespace, so quoted paths and
+        # paths with spaces fail. Retry as an explicit "%s &" command template
+        # only when that path exists.
+        if (
+            "%s" in browser_command
+            or not _browser_command_refers_to_existing_executable(browser_command)
+        ):
+            return False
+        try:
+            controller = webbrowser.get(f"{shlex.quote(browser_command)} %s &")
+        except (webbrowser.Error, ValueError, IndexError):
+            return False
+
+    # GenericBrowser.open() calls Popen.wait() and would block the server.
+    if isinstance(controller, webbrowser.GenericBrowser) and not isinstance(
+        controller, webbrowser.BackgroundBrowser
+    ):
+        return False
+
     try:
         controller.open(url)
     except OSError:

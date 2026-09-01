@@ -1360,7 +1360,8 @@ def _browser_server_port() -> int:
 _create_option(
     "browser.command",
     description="""
-        Browser or command used to open the app when Streamlit starts.
+        Browser or command Streamlit uses when it opens a URL (for example,
+        streamlit run and streamlit docs).
 
         If empty (default), Streamlit uses the operating system's default
         handler. This option has no effect when server.headless is true.

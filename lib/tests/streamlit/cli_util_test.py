@@ -24,7 +24,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from streamlit import env_util
-from streamlit.cli_util import open_browser
+from streamlit.cli_util import _nonblocking_webbrowser_command, open_browser
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
@@ -111,8 +111,14 @@ def test_open_browser_linux_no_xdg() -> None:
         ("firefox", "firefox"),
         ("/usr/bin/firefox %s", "/usr/bin/firefox %s &"),
         ("firefox %s &", "firefox %s &"),
+        ("firefox %s&", "firefox %s &"),
     ],
-    ids=["registered_name", "percent_s_appends_ampersand", "template_keeps_ampersand"],
+    ids=[
+        "registered_name",
+        "percent_s_appends_ampersand",
+        "template_keeps_ampersand",
+        "glued_ampersand_is_split",
+    ],
 )
 def test_configured_command_passed_to_webbrowser_get(
     browser_command: str, expected_get_arg: str
@@ -122,6 +128,10 @@ def test_configured_command_passed_to_webbrowser_get(
     with (
         _platform(darwin=True),
         patch_config_options({"browser.command": browser_command}),
+        patch(
+            "streamlit.cli_util._browser_command_refers_to_existing_executable",
+            return_value=True,
+        ),
         patch("webbrowser.get", return_value=controller) as webbrowser_get,
         patch("webbrowser.open") as webbrowser_open,
         patch("subprocess.Popen") as subprocess_popen,
@@ -142,6 +152,10 @@ def test_configured_command_retries_bare_path_as_quoted_template() -> None:
         _platform(darwin=True),
         patch_config_options({"browser.command": path}),
         patch(
+            "streamlit.cli_util._browser_command_refers_to_existing_executable",
+            return_value=True,
+        ),
+        patch(
             "webbrowser.get",
             side_effect=[webbrowser.Error("unknown"), controller],
         ) as webbrowser_get,
@@ -161,23 +175,75 @@ def test_configured_command_falls_back_for_unknown_name() -> None:
     """An unresolvable command logs a warning and uses the OS default."""
     with (
         _platform(darwin=True),
-        patch_config_options({"browser.command": "not-a-browser"}),
-        patch(
-            "webbrowser.get", side_effect=webbrowser.Error("unknown")
-        ) as webbrowser_get,
-        patch("webbrowser.open") as webbrowser_open,
-        patch("subprocess.Popen") as subprocess_popen,
+        patch_config_options({"browser.command": "definitely-not-a-browser-xyz"}),
+        patch("streamlit.cli_util._open_browser_with_os_default") as os_default,
         patch("streamlit.cli_util._get_logger") as mock_get_logger,
     ):
         open_browser(_URL)
 
-        assert webbrowser_get.call_count == 2
         mock_get_logger.return_value.warning.assert_called_once()
         warning_args = mock_get_logger.return_value.warning.call_args.args
         assert "browser.command=%r" in warning_args[0]
-        assert warning_args[1] == "not-a-browser"
-        subprocess_popen.assert_called_once()
-        webbrowser_open.assert_not_called()
+        assert warning_args[1] == "definitely-not-a-browser-xyz"
+        os_default.assert_called_once_with(_URL)
+
+
+def test_configured_command_falls_back_for_missing_path() -> None:
+    """A missing executable path logs a warning and uses the OS default."""
+    path = "/definitely/not/a/browser/that/exists"
+    with (
+        _platform(darwin=True),
+        patch_config_options({"browser.command": path}),
+        patch("streamlit.cli_util._open_browser_with_os_default") as os_default,
+        patch("streamlit.cli_util._get_logger") as mock_get_logger,
+    ):
+        open_browser(_URL)
+
+        mock_get_logger.return_value.warning.assert_called_once()
+        os_default.assert_called_once_with(_URL)
+
+
+def test_configured_command_falls_back_for_missing_template_executable() -> None:
+    """A %s template whose program does not exist warns and uses the OS default."""
+    with (
+        _platform(darwin=True),
+        patch_config_options({"browser.command": "definitely-not-a-browser-xyz %s"}),
+        patch("streamlit.cli_util._open_browser_with_os_default") as os_default,
+        patch("streamlit.cli_util._get_logger") as mock_get_logger,
+    ):
+        open_browser(_URL)
+
+        mock_get_logger.return_value.warning.assert_called_once()
+        os_default.assert_called_once_with(_URL)
+
+
+def test_configured_command_falls_back_for_malformed_template() -> None:
+    """Unmatched quotes in a %s template must not skip the OS-default fallback."""
+    with (
+        _platform(darwin=True),
+        patch_config_options({"browser.command": 'firefox "profile %s'}),
+        patch("streamlit.cli_util._open_browser_with_os_default") as os_default,
+        patch("streamlit.cli_util._get_logger") as mock_get_logger,
+    ):
+        open_browser(_URL)
+
+        mock_get_logger.return_value.warning.assert_called_once()
+        os_default.assert_called_once_with(_URL)
+
+
+def test_configured_command_falls_back_for_generic_browser() -> None:
+    """GenericBrowser.open() waits for the process; fall back instead of blocking."""
+    with (
+        _platform(darwin=True),
+        patch_config_options({"browser.command": "lynx"}),
+        patch("webbrowser.get", return_value=webbrowser.GenericBrowser("lynx")),
+        patch("streamlit.cli_util._open_browser_with_os_default") as os_default,
+        patch("streamlit.cli_util._get_logger") as mock_get_logger,
+    ):
+        open_browser(_URL)
+
+        mock_get_logger.return_value.warning.assert_called_once()
+        os_default.assert_called_once_with(_URL)
 
 
 def test_configured_command_does_not_fall_back_when_open_returns_false() -> None:
@@ -272,3 +338,25 @@ def test_open_browser_ignores_server_headless() -> None:
         controller.open.assert_called_once_with(_URL)
         webbrowser_open.assert_not_called()
         subprocess_popen.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("command", "expected"),
+    [
+        ("firefox", "firefox"),
+        ("firefox %s", "firefox %s &"),
+        ("firefox %s &", "firefox %s &"),
+        ("firefox %s&", "firefox %s &"),
+        ("open -a Firefox %s", "open -a Firefox %s &"),
+    ],
+    ids=[
+        "name_unchanged",
+        "appends_ampersand",
+        "keeps_ampersand",
+        "splits_glued_ampersand",
+        "open_a_template",
+    ],
+)
+def test_nonblocking_webbrowser_command(command: str, expected: str) -> None:
+    """Normalize %s templates so webbrowser.get() uses BackgroundBrowser."""
+    assert _nonblocking_webbrowser_command(command) == expected
