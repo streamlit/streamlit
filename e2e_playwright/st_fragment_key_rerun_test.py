@@ -14,6 +14,7 @@
 
 """Playwright tests for @st.fragment(key=...) and st.rerun(scope=<key>)."""
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.shared.app_utils import (
@@ -22,6 +23,11 @@ from e2e_playwright.shared.app_utils import (
     expect_no_exception,
     get_element_by_key,
 )
+
+
+@pytest.fixture(scope="module")
+def app_server_extra_args() -> list[str]:
+    return ["--runner.fastReruns=false"]
 
 
 def _text(app: Page, key: str) -> str:
@@ -93,3 +99,23 @@ def test_unknown_key_raises_visible_exception(app: Page) -> None:
     click_button(app, "Rerun unknown fragment")
 
     expect_exception(app, "No fragment found for target 'nonexistent_key'")
+
+
+def test_fresh_input_coalesces_with_main_script_callback_replay(app: Page) -> None:
+    app.get_by_label("Race name").fill("  Laura  ")
+    app.get_by_role("button", name="Submit race form").click()
+    expect(app.get_by_text("Form callback waiting for fresh input")).to_be_visible()
+
+    app.get_by_role("button", name="Fresh interaction").click()
+
+    expect(get_element_by_key(app, "race_results")).to_contain_text("Form callbacks: 1")
+    expect(get_element_by_key(app, "race_results")).to_contain_text(
+        "Fresh callbacks: 1"
+    )
+    expect(get_element_by_key(app, "race_results")).to_contain_text(
+        "Normalized name: Laura"
+    )
+    expect(get_element_by_key(app, "race_results")).to_contain_text(
+        "Body saw submit: True"
+    )
+    expect_no_exception(app)

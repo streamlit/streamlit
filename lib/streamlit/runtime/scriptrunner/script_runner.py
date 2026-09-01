@@ -697,17 +697,19 @@ class ScriptRunner:
                     self._set_execing_flag(),
                 ):
                     # Run callbacks for widgets whose values have changed.
-                    if rerun_data.widget_states is not None:
+                    if (
+                        rerun_data.widget_states is not None
+                        or rerun_data.replay_trigger_states is not None
+                    ):
                         self._session_state.on_script_will_rerun(
                             rerun_data.widget_states,
-                            suppress_callbacks=rerun_data.suppress_callbacks,
+                            rerun_data.replay_trigger_states,
                         )
                         # Check for pending rerun/stop requests while
                         # has_script_started is still False so on_script_finished
                         # preserves this run's widget values.  On the normal path a
-                        # callback may have queued st.rerun(); on the suppressed path
-                        # an external request (e.g. new client interaction) may have
-                        # arrived during state application.
+                        # callback may have queued st.rerun(); an external request
+                        # may also have arrived during state application.
                         self._maybe_handle_execution_control_request()
 
                     ctx.on_script_start()

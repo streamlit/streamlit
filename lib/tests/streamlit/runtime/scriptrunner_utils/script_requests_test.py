@@ -19,6 +19,7 @@ from unittest.mock import patch
 
 import pytest
 
+from streamlit.proto.Common_pb2 import ChatInputValue, StringTriggerValue
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.scriptrunner_utils.script_requests import (
     RerunData,
@@ -268,72 +269,87 @@ class ScriptRequestsTest(unittest.TestCase):
         assert reqs._rerun_data.fragment_id_queue == []
         assert reqs._rerun_data.is_fragment_scoped_rerun is False
 
-    def test_suppress_callbacks_preserved_during_coalescing(self):
-        """suppress_callbacks=True survives coalescing with a regular request."""
+    def test_replay_state_survives_state_less_coalescing(self):
         reqs = ScriptRequests()
-        reqs.request_rerun(
-            RerunData(fragment_id_queue=["frag"], is_fragment_scoped_rerun=True)
-        )
-        reqs.request_rerun(RerunData(suppress_callbacks=True))
-        assert reqs._rerun_data.suppress_callbacks is True
+        replay = WidgetStates()
+        _create_widget("btn_a", replay).trigger_value = True
+        reqs.request_rerun(RerunData(replay_trigger_states=replay))
+        reqs.request_rerun(RerunData(fragment_id_queue=["frag"], is_auto_rerun=True))
 
-    def test_suppress_callbacks_false_when_neither_sets_it(self):
-        """Two non-suppressing requests coalesce to suppress_callbacks=False."""
-        reqs = ScriptRequests()
-        reqs.request_rerun(RerunData())
-        reqs.request_rerun(RerunData(query_string="new"))
-        assert reqs._rerun_data.suppress_callbacks is False
-
-    def test_suppressed_old_triggers_not_preserved_during_coalescing(self):
-        """Old triggers whose callbacks already ran are dropped during coalescing.
-
-        When the old request had suppress_callbacks=True (an escalated replay),
-        its button triggers should not carry forward into the merged request —
-        preserving them would cause duplicate callback execution.
-        """
-        reqs = ScriptRequests()
-
-        old_states = WidgetStates()
-        _create_widget("btn_a", old_states).trigger_value = True
-        _create_widget("slider", old_states).int_value = 50
-        reqs.request_rerun(RerunData(widget_states=old_states, suppress_callbacks=True))
-
-        new_states = WidgetStates()
-        _create_widget("btn_b", new_states).trigger_value = True
-        _create_widget("slider", new_states).int_value = 75
-        reqs.request_rerun(
-            RerunData(widget_states=new_states, suppress_callbacks=False)
-        )
-
-        result = reqs._rerun_data.widget_states
-        assert _get_widget("btn_a", result) is None
-        assert _get_widget("btn_b", result).trigger_value is True
-        assert _get_widget("slider", result).int_value == 75
-        assert reqs._rerun_data.suppress_callbacks is False
+        result = reqs._rerun_data.replay_trigger_states
+        assert result is not None
+        assert _get_widget("btn_a", result).trigger_value is True
 
     def test_normal_old_triggers_preserved_during_coalescing(self):
         """Old triggers from a non-suppressed request are still preserved.
 
-        Rapid clicks where neither request has suppress_callbacks should
-        continue preserving both triggers (the existing behavior).
+        Rapid clicks continue preserving both triggers.
         """
         reqs = ScriptRequests()
 
         old_states = WidgetStates()
         _create_widget("btn_a", old_states).trigger_value = True
-        reqs.request_rerun(
-            RerunData(widget_states=old_states, suppress_callbacks=False)
-        )
+        reqs.request_rerun(RerunData(widget_states=old_states))
 
         new_states = WidgetStates()
         _create_widget("btn_b", new_states).trigger_value = True
-        reqs.request_rerun(
-            RerunData(widget_states=new_states, suppress_callbacks=False)
-        )
+        reqs.request_rerun(RerunData(widget_states=new_states))
 
         result = reqs._rerun_data.widget_states
         assert _get_widget("btn_a", result).trigger_value is True
         assert _get_widget("btn_b", result).trigger_value is True
+
+    def test_fresh_and_replay_channels_coalesce_independently(self):
+        reqs = ScriptRequests()
+        old_fresh = WidgetStates()
+        _create_widget("scalar", old_fresh).int_value = 1
+        old_replay = WidgetStates()
+        _create_widget("bool", old_replay).trigger_value = True
+        _create_widget("string", old_replay).string_trigger_value.CopyFrom(
+            StringTriggerValue(data="old")
+        )
+        reqs.request_rerun(
+            RerunData(
+                widget_states=old_fresh,
+                replay_trigger_states=old_replay,
+            )
+        )
+
+        new_fresh = WidgetStates()
+        _create_widget("scalar", new_fresh).int_value = 2
+        new_replay = WidgetStates()
+        _create_widget("chat", new_replay).chat_input_value.CopyFrom(
+            ChatInputValue(data="hello")
+        )
+        _create_widget("json", new_replay).json_trigger_value = '{"event":"go"}'
+        _create_widget("invalid", new_replay).int_value = 99
+        reqs.request_rerun(
+            RerunData(
+                widget_states=new_fresh,
+                replay_trigger_states=new_replay,
+            )
+        )
+
+        assert _get_widget("scalar", reqs._rerun_data.widget_states).int_value == 2
+        replay = reqs._rerun_data.replay_trigger_states
+        assert replay is not None
+        assert [state.id for state in replay.widgets] == [
+            "bool",
+            "string",
+            "chat",
+            "json",
+        ]
+
+    def test_request_rerun_batch_folds_all_requests_under_one_lock(self):
+        reqs = ScriptRequests()
+        reqs.request_rerun_batch(
+            [
+                RerunData(fragment_id_queue=["frag-a"]),
+                RerunData(fragment_id_queue=["frag-b"]),
+            ]
+        )
+
+        assert reqs._rerun_data.fragment_id_queue == ["frag-a", "frag-b"]
 
     def test_on_script_yield_with_no_request(self):
         """Return None; remain in the CONTINUE state."""

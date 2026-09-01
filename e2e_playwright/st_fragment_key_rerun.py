@@ -14,9 +14,12 @@
 
 """E2E app for @st.fragment(key=...) and st.rerun(scope=<key>) scenarios."""
 
+from time import monotonic, sleep
 from uuid import uuid4
 
 import streamlit as st
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequestType
 
 # ------------------------------------------------------------------ #
 # Scenario 1: Widget outside a keyed fragment triggers a fragment-only rerun.
@@ -115,3 +118,53 @@ st.button(
     key="rerun_unknown_btn",
     on_click=lambda: st.rerun("nonexistent_key"),
 )
+
+# ------------------------------------------------------------------ #
+# Scenario 5: Fresh input coalesces with a callback-generated replay.
+# ------------------------------------------------------------------ #
+st.header("Scenario 5: callback replay coalescing")
+
+for key in ("form_callbacks", "fresh_callbacks"):
+    if key not in st.session_state:
+        st.session_state[key] = 0
+
+
+def wait_for_fresh_request() -> None:
+    st.session_state.form_callbacks += 1
+    st.session_state.normalized_name = st.session_state.race_name.strip()
+    st.write("Form callback waiting for fresh input")
+    ctx = get_script_run_ctx()
+    assert ctx is not None
+    assert ctx.script_requests is not None
+    deadline = monotonic() + 10
+    while ctx.script_requests._state is ScriptRequestType.CONTINUE:
+        if monotonic() >= deadline:
+            raise RuntimeError("Fresh browser interaction did not arrive")
+        sleep(0.01)
+    st.rerun("race_target")
+
+
+def record_fresh_callback() -> None:
+    st.session_state.fresh_callbacks += 1
+
+
+@st.fragment(key="race_target")
+def race_target() -> None:
+    st.write("Race target")
+
+
+race_target()
+
+with st.form("race_form"):
+    st.text_input("Race name", key="race_name")
+    race_submitted = st.form_submit_button(
+        "Submit race form", on_click=wait_for_fresh_request
+    )
+
+st.button("Fresh interaction", key="fresh_interaction", on_click=record_fresh_callback)
+
+with st.container(key="race_results"):
+    st.write(f"Form callbacks: {st.session_state.form_callbacks}")
+    st.write(f"Fresh callbacks: {st.session_state.fresh_callbacks}")
+    st.write(f"Normalized name: {st.session_state.get('normalized_name', '')}")
+    st.write(f"Body saw submit: {race_submitted}")

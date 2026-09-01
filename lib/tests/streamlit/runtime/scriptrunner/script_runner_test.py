@@ -936,6 +936,22 @@ class ScriptRunnerTest(unittest.TestCase):
 
         patched_call_callbacks.assert_called_once()
 
+    @patch("streamlit.runtime.state.session_state.SessionState.on_script_will_rerun")
+    def test_replay_only_request_prepares_session_state(
+        self, patched_on_script_will_rerun: MagicMock
+    ) -> None:
+        replay = WidgetStates()
+        _create_widget("button", replay).trigger_value = True
+        scriptrunner = TestScriptRunner(
+            "good_script.py",
+            RerunData(widget_states=None, replay_trigger_states=replay),
+        )
+
+        scriptrunner.start()
+        scriptrunner.join()
+
+        patched_on_script_will_rerun.assert_called_once_with(None, replay)
+
     @patch("streamlit.elements.exception._exception")
     @patch("streamlit.runtime.state.session_state.SessionState._call_callbacks")
     def test_calls_widget_callbacks_error(
