@@ -474,9 +474,10 @@ class ScriptRunner:
 
         Uses the caller-owned loop supplied at construction.
 
-        The loop is never run here; ``asyncio.run()`` and
-        ``run_until_complete()`` remain free to spin up their own temporary
-        loops without conflict.
+        The loop is installed but not run here. User or library code may
+        explicitly drive this same loop with ``run_until_complete()``.
+        By contrast, ``asyncio.run()`` creates a temporary loop and clears the
+        thread's current-loop reference afterward.
         """
         loop = self._event_loop
         if loop is None:
