@@ -427,9 +427,7 @@ class AppSessionTest(unittest.TestCase):
         expected_loop.close()
 
     @patch("streamlit.runtime.app_session.AppSession.request_script_stop")
-    def test_script_event_loop_closed_on_shutdown_no_runner(
-        self, mock_stop: MagicMock
-    ):
+    def test_script_event_loop_closed_on_shutdown_no_runner(self, mock_stop: MagicMock):
         """AppSession closes the script-thread event loop immediately on shutdown
         when no ScriptRunner is active (no runner to wait for)."""
         session = _create_test_session()
@@ -458,9 +456,7 @@ class AppSessionTest(unittest.TestCase):
         loop.close()
 
     @patch("streamlit.runtime.app_session.AppSession.request_script_stop")
-    def test_script_event_loop_closed_on_shutdown_event(
-        self, mock_stop: MagicMock
-    ):
+    def test_script_event_loop_closed_on_shutdown_event(self, mock_stop: MagicMock):
         """The script-thread event loop is closed when the SHUTDOWN event fires
         and the session state is SHUTDOWN_REQUESTED."""
         session = _create_test_session()
