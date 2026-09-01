@@ -456,19 +456,21 @@ class AppSessionTest(unittest.TestCase):
         loop.close()
 
     @patch("streamlit.runtime.app_session.AppSession.request_script_stop")
-    def test_script_event_loop_closed_on_shutdown_event(self, mock_stop: MagicMock):
-        """The script-thread event loop is closed when the SHUTDOWN event fires
-        and the session state is SHUTDOWN_REQUESTED."""
+    def test_exceptional_runner_shutdown_closes_loop_and_clears_runner(
+        self, mock_stop: MagicMock
+    ):
+        """Shutdown cleanup does not depend on a final client-state snapshot."""
         session = _create_test_session()
         mock_scriptrunner = MagicMock(spec=ScriptRunner)
         session._scriptrunner = mock_scriptrunner
         loop = session._script_event_loop
+        original_client_state = session._client_state
 
         # Simulate a full shutdown: shutdown() sets state but defers loop close.
         session.shutdown()
         assert not loop.is_closed(), "Loop must still be open before SHUTDOWN event"
 
-        # Now the ScriptRunner fires its SHUTDOWN event (script thread has exited).
+        # Script execution has unwound and the runner has detached the loop.
         with patch(
             "streamlit.runtime.app_session.asyncio.get_running_loop",
             return_value=session._event_loop,
@@ -476,10 +478,12 @@ class AppSessionTest(unittest.TestCase):
             session._handle_scriptrunner_event_on_event_loop(
                 sender=mock_scriptrunner,
                 event=ScriptRunnerEvent.SHUTDOWN,
-                client_state=ClientState(),
+                client_state=None,
             )
 
         assert loop.is_closed()
+        assert session._scriptrunner is None
+        assert session._client_state is original_client_state
 
     @patch("streamlit.runtime.app_session.AppSession.request_script_stop")
     def test_script_event_loop_not_closed_before_shutdown(self, mock_stop: MagicMock):
@@ -1541,25 +1545,24 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
                 exception=None,  # This is the condition we're testing
             )
 
-    async def test_event_handler_raises_error_if_client_state_none_on_shutdown(
-        self,
-    ):
-        """Test that _handle_scriptrunner_event_on_event_loop raises RuntimeError
-        if client_state is None when event is SHUTDOWN.
-        """
+    async def test_shutdown_without_client_state_preserves_existing_state(self):
+        """An early runner failure clears lifecycle state without fabricating data."""
         session = _create_test_session(asyncio.get_running_loop())
         mock_scriptrunner = MagicMock(spec=ScriptRunner)
         session._scriptrunner = mock_scriptrunner
+        original_client_state = session._client_state
 
-        with pytest.raises(
-            RuntimeError,
-            match=r"client_state must be set for the SHUTDOWN event. This should never happen.",
-        ):
+        try:
             session._handle_scriptrunner_event_on_event_loop(
                 sender=mock_scriptrunner,
                 event=ScriptRunnerEvent.SHUTDOWN,
-                client_state=None,  # This is the condition we're testing
+                client_state=None,
             )
+        finally:
+            session._script_event_loop.close()
+
+        assert session._scriptrunner is None
+        assert session._client_state is original_client_state
 
     async def test_event_handler_raises_error_if_forward_msg_none_on_enqueue(
         self,

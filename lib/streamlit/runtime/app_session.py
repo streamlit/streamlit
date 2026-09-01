@@ -382,8 +382,9 @@ class AppSession:
 
             # Close the script-thread event loop only when there is no active
             # ScriptRunner to wait for. When a runner exists, its SHUTDOWN event
-            # fires after the script thread has exited (loop guaranteed idle), so
-            # we defer the close there to avoid a race with in-flight user code.
+            # fires after script execution has unwound and the runner has
+            # detached the loop, so we defer the close there to avoid a race
+            # with in-flight user code.
             if self._scriptrunner is None:
                 _close_script_event_loop(self._script_event_loop)
 
@@ -722,8 +723,9 @@ class AppSession:
             SCRIPT_STOPPED_WITH_COMPILE_ERROR event.
 
         client_state : streamlit.proto.ClientState_pb2.ClientState | None
-            The ScriptRunner's final ClientState. Set only for the
-            SHUTDOWN event.
+            The ScriptRunner's final ClientState. Set only for the SHUTDOWN
+            event, and may be None if runner setup failed before a context was
+            available.
 
         page_script_hash : str | None
             A hash of the script path corresponding to the page currently being
@@ -830,11 +832,6 @@ class AppSession:
                 self._local_sources_watcher.update_watched_modules()
 
         elif event == ScriptRunnerEvent.SHUTDOWN:
-            if client_state is None:  # pragma: no cover - defensive
-                raise RuntimeError(
-                    "client_state must be set for the SHUTDOWN event. This should never happen."
-                )
-
             if self._state == AppSessionState.SHUTDOWN_REQUESTED:
                 # Only clear media files and session caches if the script is done
                 # running AND the session is actually shutting down.
@@ -843,12 +840,12 @@ class AppSession:
                     self.id
                 )
                 self.clear_session_caches()
-                # The script thread has exited by the time SHUTDOWN fires, so the
-                # loop is guaranteed to be idle. Close it here rather than in
-                # shutdown() to avoid a race with in-flight user code.
+                # Script execution has unwound and the runner has detached the
+                # loop before SHUTDOWN fires, so it can no longer use the loop.
                 _close_script_event_loop(self._script_event_loop)
 
-            self._client_state = client_state
+            if client_state is not None:
+                self._client_state = client_state
             self._scriptrunner = None
 
         elif event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:

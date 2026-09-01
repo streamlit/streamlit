@@ -31,6 +31,7 @@ import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.delta_generator_singletons import context_dg_stack
 from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
+from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
@@ -253,6 +254,122 @@ class ScriptRunnerTest(unittest.TestCase):
         # RERUN request.
         self._assert_no_exceptions(scriptrunner)
         assert run_script_mock.call_count == 3
+
+    def test_internal_base_exception_emits_shutdown_once(self):
+        """An unexpected internal failure still reaches terminal finalization."""
+        scriptrunner = TestScriptRunner("not_a_script.py")
+        primary_error = BaseException("internal failure")
+        scriptrunner._requests.on_scriptrunner_ready = MagicMock(
+            side_effect=primary_error
+        )
+
+        try:
+            scriptrunner.start()
+            scriptrunner.join()
+
+            assert scriptrunner.script_thread_exceptions == [primary_error]
+            assert scriptrunner.events == [ScriptRunnerEvent.SHUTDOWN]
+            assert isinstance(scriptrunner.event_data[0]["client_state"], ClientState)
+        finally:
+            scriptrunner._test_event_loop.close()
+
+    def test_context_setup_failure_emits_shutdown_without_client_state(self):
+        """A failure before context creation has no authoritative snapshot."""
+        scriptrunner = TestScriptRunner("not_a_script.py")
+        setup_error = RuntimeError("context setup failed")
+
+        try:
+            with patch.object(
+                script_runner_module, "ScriptRunContext", side_effect=setup_error
+            ):
+                scriptrunner.start()
+                scriptrunner.join()
+
+            assert scriptrunner.script_thread_exceptions == [setup_error]
+            assert scriptrunner.events == [ScriptRunnerEvent.SHUTDOWN]
+            assert scriptrunner.event_data[0]["client_state"] is None
+        finally:
+            scriptrunner._test_event_loop.close()
+
+    def test_shutdown_receiver_failure_does_not_mask_primary_exception(self):
+        """Terminal dispatch errors are secondary to an escaping runner error."""
+        scriptrunner = TestScriptRunner("not_a_script.py")
+        primary_error = RuntimeError("primary failure")
+        dispatch_error = RuntimeError("dispatch failure")
+        scriptrunner._requests.on_scriptrunner_ready = MagicMock(
+            side_effect=primary_error
+        )
+
+        def fail_on_shutdown(
+            _sender: ScriptRunner | None, event: ScriptRunnerEvent, **_kwargs: Any
+        ) -> None:
+            if event == ScriptRunnerEvent.SHUTDOWN:
+                raise dispatch_error
+
+        scriptrunner.on_event.connect(fail_on_shutdown, weak=False)
+
+        try:
+            with patch.object(script_runner_module, "_LOGGER") as patched_logger:
+                scriptrunner.start()
+                scriptrunner.join()
+
+            assert scriptrunner.script_thread_exceptions == [primary_error]
+            assert scriptrunner.events.count(ScriptRunnerEvent.SHUTDOWN) == 1
+            patched_logger.exception.assert_called_once()
+        finally:
+            scriptrunner._test_event_loop.close()
+
+    def test_shutdown_receiver_failure_propagates_on_normal_termination(self):
+        """Terminal dispatch keeps its existing propagation behavior."""
+        scriptrunner = TestScriptRunner("not_a_script.py")
+        dispatch_error = RuntimeError("dispatch failure")
+        scriptrunner.request_stop()
+
+        def fail_on_shutdown(
+            _sender: ScriptRunner | None, event: ScriptRunnerEvent, **_kwargs: Any
+        ) -> None:
+            if event == ScriptRunnerEvent.SHUTDOWN:
+                raise dispatch_error
+
+        scriptrunner.on_event.connect(fail_on_shutdown, weak=False)
+
+        try:
+            scriptrunner.start()
+            scriptrunner.join()
+
+            assert scriptrunner.script_thread_exceptions == [dispatch_error]
+            assert scriptrunner.events.count(ScriptRunnerEvent.SHUTDOWN) == 1
+        finally:
+            scriptrunner._test_event_loop.close()
+
+    def test_shutdown_notification_follows_event_loop_detachment(self):
+        """Receivers run only after the runner releases its loop."""
+        scriptrunner = TestScriptRunner("not_a_script.py")
+        scriptrunner.request_stop()
+        loop_references: list[asyncio.AbstractEventLoop | None] = []
+        current_loop_is_detached: list[bool] = []
+
+        def inspect_shutdown(
+            _sender: ScriptRunner | None, event: ScriptRunnerEvent, **_kwargs: Any
+        ) -> None:
+            if event != ScriptRunnerEvent.SHUTDOWN:
+                return
+            loop_references.append(scriptrunner._event_loop)
+            with pytest.raises(RuntimeError):
+                asyncio.get_event_loop()
+            current_loop_is_detached.append(True)
+
+        scriptrunner.on_event.connect(inspect_shutdown, weak=False)
+
+        try:
+            scriptrunner.start()
+            scriptrunner.join()
+
+            self._assert_no_exceptions(scriptrunner)
+            assert loop_references == [None]
+            assert current_loop_is_detached == [True]
+        finally:
+            scriptrunner._test_event_loop.close()
 
     @parameterized.expand(
         [
@@ -1685,8 +1802,6 @@ class ScriptRunnerTest(unittest.TestCase):
             # or reconnect where AppSession creates a new ScriptRunner but
             # passes the same _script_event_loop).
             second = TestScriptRunner("asyncio_event_loop.py", event_loop=shared_loop)
-            second._session_state = first._session_state
-            second._session_state["captured_loops"] = []
             second.request_rerun(RerunData())
             second.start()
             second.join()
@@ -1801,7 +1916,7 @@ class TestScriptRunner(ScriptRunner):
         )
 
         # Accumulates uncaught exceptions thrown by our run thread.
-        self.script_thread_exceptions: list[Exception] = []
+        self.script_thread_exceptions: list[BaseException] = []
 
         # Accumulates all ScriptRunnerEvents emitted by us.
         self.events: list[ScriptRunnerEvent] = []
@@ -1829,7 +1944,7 @@ class TestScriptRunner(ScriptRunner):
     def _run_script_thread(self) -> None:
         try:
             super()._run_script_thread()
-        except Exception as e:
+        except BaseException as e:
             self.script_thread_exceptions.append(e)
 
     def _run_script(self, rerun_data: RerunData) -> None:

@@ -97,8 +97,8 @@ class ScriptRunnerEvent(Enum):
     # by the user.
     FRAGMENT_STOPPED_WITH_SUCCESS = "FRAGMENT_STOPPED_WITH_SUCCESS"
 
-    # The ScriptRunner is done processing the ScriptEventQueue and
-    # is shut down.
+    # Script execution has unwound and the ScriptRunner will no longer use its
+    # event loop.
     SHUTDOWN = "SHUTDOWN"
 
     # "Data" events. These are emitted when the ScriptRunner's script has
@@ -264,7 +264,7 @@ class ScriptRunner:
         # no payload:
         # - ENQUEUE_FORWARD_MSG: forward_msg
         # - SCRIPT_STOPPED_WITH_COMPILE_ERROR: exception
-        # - SHUTDOWN: client_state
+        # - SHUTDOWN: client_state (None if setup failed before context creation)
         # - SCRIPT_STARTED: page_script_hash, fragment_ids_this_run, pages
         self.on_event = Signal()
 
@@ -399,27 +399,28 @@ class ScriptRunner:
 
         _LOGGER.debug("Beginning script thread")
 
-        # Create and attach the thread's ScriptRunContext
-        ctx = ScriptRunContext(
-            session_id=self._session_id,
-            _enqueue=self._enqueue_forward_msg,
-            script_requests=self._requests,
-            query_string="",
-            session_state=self._session_state,
-            uploaded_file_mgr=self._uploaded_file_mgr,
-            main_script_path=self._main_script_path,
-            user_info=self._user_info,
-            gather_usage_stats=bool(config.get_option("browser.gatherUsageStats")),
-            fragment_storage=self._fragment_storage,
-            pages_manager=self._pages_manager,
-            context_info=None,
-            on_script_error=self._on_script_error,
-        )
-        add_script_run_ctx(threading.current_thread(), ctx)
-
-        self._install_event_loop()
-
+        ctx: ScriptRunContext | None = None
         try:
+            # Create and attach the thread's ScriptRunContext.
+            ctx = ScriptRunContext(
+                session_id=self._session_id,
+                _enqueue=self._enqueue_forward_msg,
+                script_requests=self._requests,
+                query_string="",
+                session_state=self._session_state,
+                uploaded_file_mgr=self._uploaded_file_mgr,
+                main_script_path=self._main_script_path,
+                user_info=self._user_info,
+                gather_usage_stats=bool(config.get_option("browser.gatherUsageStats")),
+                fragment_storage=self._fragment_storage,
+                pages_manager=self._pages_manager,
+                context_info=None,
+                on_script_error=self._on_script_error,
+            )
+            add_script_run_ctx(threading.current_thread(), ctx)
+
+            self._install_event_loop()
+
             request = self._requests.on_scriptrunner_ready()
             while request.type == ScriptRequestType.RERUN:
                 # When the script thread starts, we'll have a pending rerun
@@ -434,29 +435,54 @@ class ScriptRunner:
                     f"Unrecognized ScriptRequestType: {request.type}. This should never happen."
                 )
         finally:
-            # Unset the loop from this thread's local state.
-            asyncio.set_event_loop(None)
-            # Close the loop if we created it as a fallback (no caller-supplied
-            # loop at construction time).  Caller-supplied loops are owned by
-            # AppSession and must remain open for the next ScriptRunner.
-            if (
-                self._event_loop is not None
-                and self._event_loop is not self._session_event_loop
-                and not self._event_loop.is_closed()
-            ):
-                self._event_loop.close()
-            self._event_loop = None
+            try:
+                try:
+                    # Detach the loop before notifying AppSession, which may
+                    # close its session-owned loop synchronously.
+                    asyncio.set_event_loop(None)
+                finally:
+                    event_loop = self._event_loop
+                    self._event_loop = None
 
-        # Send a SHUTDOWN event before exiting, so some state can be saved
-        # for use in a future script run when not triggered by the client.
-        client_state = ClientState()
-        client_state.query_string = ctx.query_string
-        client_state.page_script_hash = ctx.page_script_hash
-        if ctx.context_info:
-            client_state.context_info.CopyFrom(ctx.context_info)
-        self.on_event.send(
-            self, event=ScriptRunnerEvent.SHUTDOWN, client_state=client_state
-        )
+                    # Close only a fallback loop created by this runner.
+                    # AppSession-owned loops persist across replacement runners.
+                    if (
+                        event_loop is not None
+                        and event_loop is not self._session_event_loop
+                        and not event_loop.is_closed()
+                    ):
+                        event_loop.close()
+            finally:
+                # Save state for a future script run when enough context was
+                # created to provide an authoritative snapshot.
+                client_state: ClientState | None = None
+                if ctx is not None:
+                    try:
+                        final_client_state = ClientState()
+                        final_client_state.query_string = ctx.query_string
+                        final_client_state.page_script_hash = ctx.page_script_hash
+                        if ctx.context_info:
+                            final_client_state.context_info.CopyFrom(ctx.context_info)
+                        client_state = final_client_state
+                    except Exception:
+                        _LOGGER.exception(
+                            "Failed to build client state during ScriptRunner shutdown"
+                        )
+
+                propagating_exception = sys.exc_info()[1]
+                try:
+                    self.on_event.send(
+                        self,
+                        event=ScriptRunnerEvent.SHUTDOWN,
+                        client_state=client_state,
+                    )
+                except BaseException:
+                    if propagating_exception is None:
+                        raise
+                    _LOGGER.exception(
+                        "Failed to dispatch ScriptRunner shutdown while preserving "
+                        "the original exception"
+                    )
 
     def _is_in_script_thread(self) -> bool:
         """True if the calling function is running in the script thread."""
