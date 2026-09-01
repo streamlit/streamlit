@@ -1282,6 +1282,46 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
 
         handle_event_spy.assert_called_once()
 
+    def test_on_scriptrunner_event_when_event_loop_closed(self):
+        """A late ScriptRunner event after the loop is closed is dropped."""
+        loop = asyncio.new_event_loop()
+        loop.close()
+        session = _create_test_session(loop)
+        handle_event = MagicMock()
+        session._handle_scriptrunner_event_on_event_loop = handle_event
+
+        session._on_scriptrunner_event(
+            sender=MagicMock(),
+            event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+        )
+
+        handle_event.assert_not_called()
+
+    def test_handle_backmsg_exception_when_event_loop_closed(self):
+        """A late backmsg exception after the loop is closed is dropped."""
+        loop = asyncio.new_event_loop()
+        loop.close()
+        session = _create_test_session(loop)
+        handle_event = MagicMock()
+        enqueue = MagicMock()
+        session._handle_scriptrunner_event_on_event_loop = handle_event
+        session._enqueue_forward_msg = enqueue
+
+        session.handle_backmsg_exception(RuntimeError("late exception"))
+
+        handle_event.assert_not_called()
+        enqueue.assert_not_called()
+
+    def test_call_soon_on_event_loop_reraises_when_loop_open(self):
+        """Unexpected RuntimeError from call_soon_threadsafe is not swallowed."""
+        loop = MagicMock()
+        loop.is_closed.return_value = False
+        loop.call_soon_threadsafe.side_effect = RuntimeError("unexpected")
+        session = _create_test_session(loop)
+
+        with pytest.raises(RuntimeError, match="unexpected"):
+            session._call_soon_on_event_loop(lambda: None)
+
     async def test_event_handler_asserts_if_called_off_event_loop(self):
         """AppSession._handle_scriptrunner_event_on_event_loop will assert
         if it's called from another event loop (or no event loop).

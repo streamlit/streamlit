@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-import { act, screen, waitFor } from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import type { MockInstance } from "vitest"
 
 import {
   DateTimeInput as DateTimeInputProto,
@@ -137,6 +138,55 @@ describe("DateTimeInput widget", () => {
     await user.click(segments[0])
 
     expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+  })
+
+  it("Escape closes the month picker without closing the calendar", async () => {
+    const user = userEvent.setup()
+    render(<DateTimeInput {...getProps()} />)
+
+    await user.click(screen.getAllByRole("spinbutton")[0])
+    const calendar = screen.getByTestId("stDateTimeInputCalendar")
+    await user.click(within(calendar).getByRole("button", { name: "month" }))
+
+    expect(screen.getByTestId("stDateInputHeaderPickerPopover")).toHaveClass(
+      "stDateInputHeaderPickerPopover"
+    )
+
+    await user.keyboard("{Escape}")
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputHeaderPickerPopover")
+      ).not.toBeInTheDocument()
+    })
+    expect(calendar).toBeVisible()
+  })
+
+  // CalendarPopoverHeader is shared with st.date_input, so the year-boundary
+  // regression in #16686 applies here too.
+  it("year picker lists the boundary year when min/max cross a year", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateTimeInput
+        {...getProps({
+          min: "2024-08-03T00:00",
+          max: "2025-02-03T23:59",
+          default: ["2025-02-01T10:00"],
+        })}
+      />
+    )
+
+    await user.click(screen.getAllByRole("spinbutton")[0])
+    const calendar = screen.getByTestId("stDateTimeInputCalendar")
+    const yearTrigger = within(calendar).getByRole("button", { name: "year" })
+    expect(yearTrigger).toHaveTextContent("2025")
+    expect(yearTrigger).not.toHaveTextContent("2024")
+
+    await user.click(yearTrigger)
+    const years = (await screen.findAllByRole("option")).map(
+      option => option.textContent
+    )
+    expect(years).toEqual(["2024", "2025"])
   })
 
   it("calendar selection stays open and commits on close", async () => {
@@ -1929,6 +1979,800 @@ describe("DateTimeInput widget", () => {
         }
       }
       expect(reachedTimeField).toBe(true)
+    })
+  })
+
+  describe("Time given before a date", () => {
+    /** Pins the empty calendar to November 2025 so the `/November 19/` locator is
+     * deterministic rather than dependent on today's date. The widget starts empty,
+     * so its date segments stay placeholders. */
+    const emptyProps = (): Props =>
+      getProps({
+        default: [],
+        min: "2025-11-01T00:00",
+        max: "2025-11-30T23:59",
+        format: "YYYY/MM/DD",
+      })
+
+    /** Puts the widget in a form whose submit clears it. */
+    const inAForm = (props: Props): void => {
+      props.element.formId = "form"
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+    }
+
+    /** Renders an empty widget alongside an outside target to dismiss into, with
+     * the commit spy already cleared of anything the mount itself recorded. */
+    const renderEmpty = (
+      configure?: (props: Props) => void
+    ): {
+      user: ReturnType<typeof userEvent.setup>
+      props: Props
+      spy: MockInstance<WidgetStateManager["setStringArrayValue"]>
+    } => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      configure?.(props)
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+      return { user, props, spy }
+    }
+
+    /** Asserts the widget committed exactly `iso` to widget state. */
+    const expectCommitted = async (
+      spy: MockInstance<WidgetStateManager["setStringArrayValue"]>,
+      props: Props,
+      iso: string
+    ): Promise<void> => {
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(props.element.id, [iso], {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+      })
+    }
+
+    it("keeps a time typed inline when a date is then picked in the calendar", async () => {
+      const { user, props, spy } = renderEmpty()
+
+      // Type only the time; the date segments stay empty.
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[3])
+      await user.keyboard("03")
+      await user.keyboard("24")
+      expect(segments[3]).toHaveTextContent("03")
+      expect(segments[4]).toHaveTextContent("24")
+
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(screen.getByRole("button", { name: /November 19/ }))
+      await user.click(screen.getByTestId("outside"))
+
+      await expectCommitted(spy, props, "2025-11-19T03:24")
+      // The typed time must not be discarded in favour of midnight.
+      expect(spy).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-19T00:00"],
+        expect.anything()
+      )
+    })
+
+    // eslint-disable-next-line vitest/expect-expect -- asserts via expectCommitted
+    it("keeps an hour typed inline without a minute", async () => {
+      const { user, props, spy } = renderEmpty()
+
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[3])
+      await user.keyboard("07")
+
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(screen.getByRole("button", { name: /November 19/ }))
+      await user.click(screen.getByTestId("outside"))
+
+      await expectCommitted(spy, props, "2025-11-19T07:00")
+    })
+
+    it("keeps the popover TimeField interactive while the widget is empty", async () => {
+      const user = userEvent.setup()
+      render(<DateTimeInput {...emptyProps()} />)
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      // Doubles as the guard for getTypedTimeFromDom's assumptions: exactly two
+      // segments in the whole popover means no dayPeriod segment (hourCycle 24)
+      // and no seconds segment, and that no other control there reports an
+      // hour/minute the resolver could pick up by mistake.
+      const popoverSegments = within(
+        screen.getByTestId("stDateTimeInputCalendar")
+      ).getAllByRole("spinbutton")
+      expect(popoverSegments).toHaveLength(2)
+      popoverSegments.forEach(seg => {
+        expect(seg).not.toHaveAttribute("aria-disabled", "true")
+      })
+    })
+
+    // eslint-disable-next-line vitest/expect-expect -- asserts via expectCommitted
+    it("applies a time set in the popover when a date is picked afterwards", async () => {
+      const { user, props, spy } = renderEmpty()
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      // Set the time in the popover before any date exists.
+      const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
+      const popoverHour = timeRow.querySelector<HTMLElement>(
+        '[data-type="hour"]'
+      ) as HTMLElement
+      await user.click(popoverHour)
+      await user.keyboard("09")
+      await user.keyboard("45")
+
+      await user.click(screen.getByRole("button", { name: /November 19/ }))
+      await user.click(screen.getByTestId("outside"))
+
+      await expectCommitted(spy, props, "2025-11-19T09:45")
+    })
+
+    it("does not commit a time on its own without a date", async () => {
+      const { user, spy } = renderEmpty()
+
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[3])
+      await user.keyboard("03")
+      await user.keyboard("24")
+      await user.click(screen.getByTestId("outside"))
+
+      // A time with no date is a partially typed field, which reverts.
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+      expect(spy).not.toHaveBeenCalled()
+    })
+
+    // eslint-disable-next-line vitest/expect-expect -- asserts via expectCommitted
+    it("keeps a partial time set in the popover, without a minute", async () => {
+      const { user, props, spy } = renderEmpty()
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      // Only the hour: TimeField withholds onChange until both its segments are
+      // filled, so this never reaches handlePopoverTimeChange.
+      const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
+      await user.click(within(timeRow).getAllByRole("spinbutton")[0])
+      await user.keyboard("09")
+
+      await user.click(screen.getByRole("button", { name: /November 19/ }))
+      await user.click(screen.getByTestId("outside"))
+
+      await expectCommitted(spy, props, "2025-11-19T09:00")
+    })
+
+    it("prefers the time control the user focused most recently", async () => {
+      const { user, props, spy } = renderEmpty()
+
+      // Type inline first, then override in the popover. Both hold a time at
+      // once and both are on screen, so the control focused most recently wins.
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[3])
+      await user.keyboard("03")
+      await user.keyboard("24")
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
+      const popoverSegments = within(timeRow).getAllByRole("spinbutton")
+      await user.click(popoverSegments[0])
+      await user.keyboard("09")
+      await user.keyboard("45")
+
+      await user.click(screen.getByRole("button", { name: /November 19/ }))
+      await user.click(screen.getByTestId("outside"))
+
+      await expectCommitted(spy, props, "2025-11-19T09:45")
+      // The earlier inline time must not win just because it was typed first.
+      expect(spy).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-19T03:24"],
+        expect.anything()
+      )
+    })
+
+    it("forgets a pending popover time once the inline field supplies its own", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      render(<DateTimeInput {...props} />)
+
+      // Set a popover time with no date, so it is held as pending.
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(
+        within(screen.getByTestId("stDateTimeInputPopoverTime")).getAllByRole(
+          "spinbutton"
+        )[0]
+      )
+      await user.keyboard("0945")
+
+      // Complete the inline field, which supersedes the pending time...
+      const inlineField = screen.getByTestId("stDateTimeInputField")
+      const inlineSegments = within(inlineField).getAllByRole("spinbutton")
+      await user.click(inlineSegments[0])
+      await user.keyboard("20251119")
+      await user.keyboard("0300")
+
+      // ...then empty it again. The superseded 09:45 must not come back, which
+      // it would if the pending time had outlived the inline field's own value.
+      for (const segment of within(inlineField).getAllByRole("spinbutton")) {
+        await clearSegment(user, segment)
+      }
+      await screen.findByTestId("stDateTimeInputCalendar")
+      expect(
+        within(screen.getByTestId("stDateTimeInputPopoverTime")).getAllByRole(
+          "spinbutton"
+        )[0]
+      ).toHaveAttribute("data-placeholder", "true")
+    })
+
+    it("forgets a popover time the user clears again", async () => {
+      const { user, props, spy } = renderEmpty()
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
+      const popoverSegments = within(timeRow).getAllByRole("spinbutton")
+      await user.click(popoverSegments[0])
+      await user.keyboard("0945")
+      expect(popoverSegments[0]).toHaveTextContent("09")
+
+      // Backspace both segments away. React Aria re-seeds the field from its
+      // controlled value, so a retained pending time would reappear here.
+      await clearSegment(user, popoverSegments[1])
+      await clearSegment(user, popoverSegments[0])
+      expect(popoverSegments[0]).toHaveAttribute("data-placeholder", "true")
+      expect(popoverSegments[1]).toHaveAttribute("data-placeholder", "true")
+
+      // Picking a date must not resurrect the cleared time.
+      await user.click(screen.getByRole("button", { name: /November 19/ }))
+      await user.click(screen.getByTestId("outside"))
+
+      await expectCommitted(spy, props, "2025-11-19T00:00")
+      expect(spy).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-19T09:45"],
+        expect.anything()
+      )
+    })
+
+    it("forgets a dismissed popover time, on screen and on commit", async () => {
+      const { user, props, spy } = renderEmpty()
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      const popoverSegments = within(
+        screen.getByTestId("stDateTimeInputPopoverTime")
+      ).getAllByRole("spinbutton")
+      await user.click(popoverSegments[0])
+      await user.keyboard("0945")
+      expect(popoverSegments[0]).toHaveTextContent("09")
+
+      // Dismissed with no date to attach the time to, so nothing commits.
+      await user.click(screen.getByTestId("outside"))
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+      expect(spy).not.toHaveBeenCalled()
+
+      // The next session starts empty rather than showing the discarded time...
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      expect(
+        within(screen.getByTestId("stDateTimeInputPopoverTime")).getAllByRole(
+          "spinbutton"
+        )[0]
+      ).toHaveAttribute("data-placeholder", "true")
+
+      // ...and a date picked in that session must not resurrect it either,
+      // where nothing on screen would explain the time.
+      await user.click(screen.getByRole("button", { name: /November 19/ }))
+      await user.click(screen.getByTestId("outside"))
+      await expectCommitted(spy, props, "2025-11-19T00:00")
+      expect(spy).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-19T09:45"],
+        expect.anything()
+      )
+    })
+
+    // eslint-disable-next-line vitest/expect-expect -- asserts via expectCommitted
+    it("completes a date typed inline with a time given in the popover", async () => {
+      const { user, props, spy } = renderEmpty()
+
+      // Time in the popover...
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(
+        within(screen.getByTestId("stDateTimeInputPopoverTime")).getAllByRole(
+          "spinbutton"
+        )[0]
+      )
+      await user.keyboard("0945")
+
+      // ...and only the date inline, so the field reports no value at all.
+      const inlineField = screen.getByTestId("stDateTimeInputField")
+      await user.click(within(inlineField).getAllByRole("spinbutton")[0])
+      await user.keyboard("20251119")
+
+      // Both halves are on screen, so dismissal must combine rather than
+      // discard them.
+      await user.click(screen.getByTestId("outside"))
+      await expectCommitted(spy, props, "2025-11-19T09:45")
+    })
+
+    it("still reverts when one segment of an existing value is cleared", async () => {
+      const user = userEvent.setup()
+      // A committed value, in a form so an Enter submit would be observable.
+      const props = getProps({
+        default: ["2025-11-19T16:45"],
+        min: "2025-11-01T00:00",
+        max: "2025-11-30T23:59",
+        format: "YYYY/MM/DD",
+      })
+      props.element.formId = "form"
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      const submitSpy = vi.spyOn(props.widgetMgr, "submitForm")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      // Clearing one segment leaves the date readable and the old time in state,
+      // but this is an edit in progress rather than two halves to combine.
+      const inlineField = screen.getByTestId("stDateTimeInputField")
+      const minute = within(inlineField)
+        .getAllByRole("spinbutton")
+        .find(s => s.getAttribute("data-type") === "minute") as HTMLElement
+      await clearSegment(user, minute)
+
+      // Submitting here would send the old minute the user just deleted.
+      await user.keyboard("{Enter}")
+      expect(submitSpy).not.toHaveBeenCalled()
+
+      await user.click(screen.getByTestId("outside"))
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+      // Dismissal must not commit it either.
+      expect(spy).not.toHaveBeenCalled()
+    })
+
+    it("shows the merged value in the field when committing inside a form", async () => {
+      const { user } = renderEmpty(inAForm)
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(
+        within(screen.getByTestId("stDateTimeInputPopoverTime")).getAllByRole(
+          "spinbutton"
+        )[0]
+      )
+      await user.keyboard("0945")
+      const inlineField = screen.getByTestId("stDateTimeInputField")
+      await user.click(within(inlineField).getAllByRole("spinbutton")[0])
+      await user.keyboard("20251119")
+      await user.click(screen.getByTestId("outside"))
+
+      // Nothing reruns inside a form, so the field must recover the committed
+      // value from the local round-trip alone — not from a server response.
+      await waitFor(() => {
+        const minute = within(inlineField)
+          .getAllByRole("spinbutton")
+          .find(s => s.getAttribute("data-type") === "minute")
+        expect(minute).not.toHaveAttribute("data-placeholder", "true")
+      })
+      expect(within(inlineField).getByText("45")).toBeVisible()
+    })
+
+    it("reverts a merged value that falls outside min/max", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        min: "2026-01-01T00:00",
+        max: "2026-12-31T23:59",
+        format: "YYYY/MM/DD",
+      })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(
+        within(screen.getByTestId("stDateTimeInputPopoverTime")).getAllByRole(
+          "spinbutton"
+        )[0]
+      )
+      await user.keyboard("0945")
+
+      // 2025 is before min, so the merged value must not reach widget state.
+      const inlineField = screen.getByTestId("stDateTimeInputField")
+      await user.click(within(inlineField).getAllByRole("spinbutton")[0])
+      await user.keyboard("20251119")
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+      expect(spy).not.toHaveBeenCalled()
+    })
+
+    it("keeps a popover time when Enter leaves the popover open", async () => {
+      const { user, props, spy } = renderEmpty()
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      const popoverSegments = within(
+        screen.getByTestId("stDateTimeInputPopoverTime")
+      ).getAllByRole("spinbutton")
+      await user.click(popoverSegments[0])
+      await user.keyboard("0945")
+
+      // Enter from the inline field commits without closing the popover, so the
+      // time is still on screen and must not be forgotten out from under it.
+      await user.click(
+        within(screen.getByTestId("stDateTimeInputField")).getAllByRole(
+          "spinbutton"
+        )[0]
+      )
+      await user.keyboard("{Enter}")
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+      expect(popoverSegments[0]).toHaveTextContent("09")
+
+      await user.click(screen.getByRole("button", { name: /November 19/ }))
+      await user.click(screen.getByTestId("outside"))
+
+      await expectCommitted(spy, props, "2025-11-19T09:45")
+      expect(spy).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-19T00:00"],
+        expect.anything()
+      )
+    })
+
+    // eslint-disable-next-line vitest/expect-expect -- asserts via expectCommitted
+    it("completes the value when Tab leaves the field, not just on dismissal", async () => {
+      const { user, props, spy } = renderEmpty()
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(
+        within(screen.getByTestId("stDateTimeInputPopoverTime")).getAllByRole(
+          "spinbutton"
+        )[0]
+      )
+      await user.keyboard("0945")
+
+      const inlineField = screen.getByTestId("stDateTimeInputField")
+      const inline = within(inlineField).getAllByRole("spinbutton")
+      await user.click(inline[0])
+      await user.keyboard("20251119")
+
+      // Tab off the last segment closes the popover, so the merge has to happen
+      // while it is still mounted — otherwise its half is unreadable and both
+      // halves are discarded.
+      await user.click(inline[inline.length - 1])
+      await user.tab()
+
+      await expectCommitted(spy, props, "2025-11-19T09:45")
+    })
+
+    it("prefers the popover time over an inline draft when both are on screen at dismissal", async () => {
+      const { user, props, spy } = renderEmpty()
+
+      // A complete date plus an hour inline, so the field still reports nothing
+      // and holds an 03:00 draft of its own.
+      const inlineField = screen.getByTestId("stDateTimeInputField")
+      await user.click(within(inlineField).getAllByRole("spinbutton")[0])
+      await user.keyboard("20251119")
+      await user.keyboard("03")
+
+      // Then a different, complete time in the popover — focused last, so it wins.
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(
+        within(screen.getByTestId("stDateTimeInputPopoverTime")).getAllByRole(
+          "spinbutton"
+        )[0]
+      )
+      await user.keyboard("0945")
+
+      await user.click(screen.getByTestId("outside"))
+
+      await expectCommitted(spy, props, "2025-11-19T09:45")
+      // The inline draft must not win, and must not commit as a second value.
+      expect(spy).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-19T03:00"],
+        expect.anything()
+      )
+      expect(spy).toHaveBeenCalledTimes(1)
+    })
+
+    it("commits the same value again after a form clear", async () => {
+      const { user, props, spy } = renderEmpty(inAForm)
+
+      const enterSameValue = async (): Promise<void> => {
+        const field = screen.getByTestId("stDateTimeInputField")
+        await user.click(within(field).getAllByRole("spinbutton")[0])
+        await user.keyboard("20251119")
+        await user.keyboard("1200")
+        await user.click(screen.getByTestId("outside"))
+        await waitFor(() => {
+          expect(
+            screen.queryByTestId("stDateTimeInputCalendar")
+          ).not.toBeInTheDocument()
+        })
+      }
+
+      await enterSameValue()
+      act(() => {
+        props.widgetMgr.submitForm("form", undefined)
+      })
+      spy.mockClear()
+
+      // Re-entering the value that was just submitted has to reach widget state
+      // again — the dedup memory must not outlive the clear.
+      await enterSameValue()
+      await expectCommitted(spy, props, "2025-11-19T12:00")
+    })
+
+    it("forgets an incomplete popover time across a form clear", async () => {
+      const { user, props, spy } = renderEmpty(inAForm)
+
+      // A complete value inline, which populates the popover time field...
+      const inlineField = screen.getByTestId("stDateTimeInputField")
+      await user.click(within(inlineField).getAllByRole("spinbutton")[0])
+      await user.keyboard("20251119")
+      await user.keyboard("1200")
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      // ...then clear one of its segments, which is neither cleared nor complete,
+      // so React Aria reports nothing and `pendingTime` never learns about it.
+      const popover = within(
+        screen.getByTestId("stDateTimeInputPopoverTime")
+      ).getAllByRole("spinbutton")
+      await clearSegment(user, popover[1])
+      expect(popover[0]).toHaveTextContent("12")
+
+      // Enter keeps the popover mounted across the clear, so the leftover hour
+      // must not survive to be merged into a date picked afterwards.
+      act(() => {
+        props.widgetMgr.submitForm("form", undefined)
+      })
+      spy.mockClear()
+
+      await user.click(screen.getByRole("button", { name: /November 19/ }))
+      await user.click(screen.getByTestId("outside"))
+
+      await expectCommitted(spy, props, "2025-11-19T00:00")
+      expect(spy).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-19T12:00"],
+        expect.anything()
+      )
+    })
+
+    // eslint-disable-next-line vitest/expect-expect -- asserts via expectCommitted
+    it("commits the same datetime again after Enter-submitting it", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      props.element.formId = "form"
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      // Mock only the gate — the real submitForm has to run so the clear fires.
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<DateTimeInput {...props} />)
+
+      const typeAndEnter = async (): Promise<void> => {
+        const field = screen.getByTestId("stDateTimeInputField")
+        await user.click(within(field).getAllByRole("spinbutton")[0])
+        await user.keyboard("20251119")
+        await user.keyboard("1200")
+        await user.keyboard("{Enter}")
+      }
+
+      await typeAndEnter()
+      spy.mockClear()
+
+      // The clear ends the interaction, so re-entering the value just submitted
+      // has to reach widget state again. Nothing else resets the dedup memory on
+      // this path: the clear overwrites the pending value before `value` becomes
+      // the datetime, and the popover stays open across an Enter submit.
+      await typeAndEnter()
+
+      await expectCommitted(spy, props, "2025-11-19T12:00")
+    })
+
+    // eslint-disable-next-line vitest/expect-expect -- asserts via expectCommitted
+    it("merges a lone popover hour as the top of that hour", async () => {
+      const { user, props, spy } = renderEmpty()
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(
+        within(screen.getByTestId("stDateTimeInputPopoverTime")).getAllByRole(
+          "spinbutton"
+        )[0]
+      )
+      await user.keyboard("09")
+
+      const inlineField = screen.getByTestId("stDateTimeInputField")
+      await user.click(within(inlineField).getAllByRole("spinbutton")[0])
+      await user.keyboard("20251119")
+      await user.click(screen.getByTestId("outside"))
+
+      // A half-given time is still a time the user typed, so it commits with the
+      // minute at zero — the same rule the calendar path uses. Only a time given
+      // nowhere at all reverts.
+      await expectCommitted(spy, props, "2025-11-19T09:00")
+    })
+
+    it("reverts a date typed inline when no time was given anywhere", async () => {
+      const { user, spy } = renderEmpty()
+
+      // A date with no time is still incomplete — midnight would be a guess.
+      const inlineField = screen.getByTestId("stDateTimeInputField")
+      await user.click(within(inlineField).getAllByRole("spinbutton")[0])
+      await user.keyboard("20251119")
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+      expect(spy).not.toHaveBeenCalled()
+    })
+
+    it("keeps an inline time that is still on screen after dismissal", async () => {
+      const { user, props, spy } = renderEmpty()
+
+      // Unlike the popover field, the inline segments do not unmount on
+      // dismissal, so the time stays visible — and a later date pick commits it.
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[3])
+      await user.keyboard("0324")
+      await user.click(screen.getByTestId("outside"))
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+      expect(segments[3]).toHaveTextContent("03")
+
+      await user.click(segments[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(screen.getByRole("button", { name: /November 19/ }))
+      await user.click(screen.getByTestId("outside"))
+
+      await expectCommitted(spy, props, "2025-11-19T03:24")
+    })
+    it("forgets an inline time typed before a form clear", async () => {
+      const { user, props, spy } = renderEmpty(inAForm)
+
+      const inlineField = screen.getByTestId("stDateTimeInputField")
+      await user.click(within(inlineField).getAllByRole("spinbutton")[3])
+      await user.keyboard("0324")
+
+      act(() => {
+        props.widgetMgr.submitForm("form", undefined)
+      })
+
+      // clear_on_submit has to empty the segments too, not just the value —
+      // otherwise the time stays on screen and a later date selection commits it.
+      await waitFor(() => {
+        const hour = within(inlineField)
+          .getAllByRole("spinbutton")
+          .find(s => s.getAttribute("data-type") === "hour")
+        expect(hour).toHaveAttribute("data-placeholder", "true")
+      })
+
+      spy.mockClear()
+      await user.click(within(inlineField).getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(screen.getByRole("button", { name: /November 19/ }))
+      await user.click(screen.getByTestId("outside"))
+
+      await expectCommitted(spy, props, "2025-11-19T00:00")
+      expect(spy).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-19T03:24"],
+        expect.anything()
+      )
+    })
+
+    it("keeps focus in the field after a form clear, with the calendar still open", async () => {
+      const user = userEvent.setup()
+      const props = emptyProps()
+      props.element.formId = "form"
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      render(<DateTimeInput {...props} />)
+
+      const inlineField = screen.getByTestId("stDateTimeInputField")
+      const hour = within(inlineField)
+        .getAllByRole("spinbutton")
+        .find(s => s.getAttribute("data-type") === "hour") as HTMLElement
+      await user.click(hour)
+      await user.keyboard("0324")
+
+      act(() => {
+        props.widgetMgr.submitForm("form", undefined)
+      })
+
+      // Remounting the field to clear it must not cost the user their place —
+      // Enter-to-submit leaves focus here.
+      await waitFor(() => {
+        const first = within(
+          screen.getByTestId("stDateTimeInputField")
+        ).getAllByRole("spinbutton")[0]
+        expect(first).toHaveFocus()
+      })
+      expect(document.body).not.toHaveFocus()
+      // The popover stays open across a form clear: focusing a segment is what
+      // opens it, so the focus restore cannot close it.
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+    })
+
+    it("drops a pending popover time when the form is reset", async () => {
+      const { user, props, spy } = renderEmpty(inAForm)
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
+      const popoverSegments = within(timeRow).getAllByRole("spinbutton")
+      await user.click(popoverSegments[0])
+      await user.keyboard("09")
+      await user.keyboard("45")
+
+      // A form reset clears buffered edits, including the pending time.
+      act(() => {
+        props.widgetMgr.submitForm("form", undefined)
+      })
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      expect(
+        within(screen.getByTestId("stDateTimeInputPopoverTime")).getAllByRole(
+          "spinbutton"
+        )[0]
+      ).toHaveAttribute("data-placeholder", "true")
+      // A blank display could also mean it committed and was then reset, so pin
+      // that the time never reached widget state.
+      expect(spy).not.toHaveBeenCalledWith(
+        props.element.id,
+        expect.arrayContaining([expect.stringContaining("09:45")]),
+        expect.anything()
+      )
     })
   })
 })

@@ -16,13 +16,12 @@
 
 import { useEffect, useMemo, useRef } from "react"
 
-import { v4 as uuidv4 } from "uuid"
-
 import {
   CleanupFunction,
   FrontendRendererArgs,
   FrontendState,
 } from "@streamlit/component-v2-lib"
+import { generateUuid } from "@streamlit/utils"
 
 import { BidiComponentContext } from "~lib/components/widgets/BidiComponent/BidiComponentContext"
 import { blobUrlManager } from "~lib/components/widgets/BidiComponent/utils/blobUrl"
@@ -179,7 +178,7 @@ export const useHandleJsContent = ({
   setError: (error: Error) => void
   skip?: boolean
 }): void => {
-  const thisUuid = useMemo(() => uuidv4(), [])
+  const thisUuid = useMemo(() => generateUuid(), [])
   const componentId = `st-bidi-component-${thisUuid}`
 
   const {

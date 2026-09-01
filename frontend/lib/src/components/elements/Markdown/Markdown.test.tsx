@@ -292,6 +292,168 @@ describe("Markdown element with help", () => {
   })
 })
 
+describe("Markdown wrap", () => {
+  it("does not truncate by default", () => {
+    render(<Markdown {...getProps()} />)
+    expect(screen.getByTestId("stMarkdownContainer")).not.toHaveStyle({
+      "text-overflow": "ellipsis",
+    })
+    expect(screen.queryByTitle(/Emphasis/)).not.toBeInTheDocument()
+    // The title-hook wrapper is omitted unless wrap=false, so colored
+    // markdown spans stay the first <span> in the element.
+    expect(
+      screen
+        .getByTestId("stMarkdown")
+        .querySelector("span[style*='display: contents']")
+    ).toBeNull()
+  })
+
+  it("truncates and uses label-mode markdown when wrap is false", () => {
+    const props = getProps({
+      body: "# Heading that should be inline",
+      wrap: false,
+    })
+    render(<Markdown {...props} />)
+
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container).toHaveStyle({
+      "text-overflow": "ellipsis",
+      "white-space": "nowrap",
+    })
+    // Label mode escapes the leading "#" (gh-7359), so it renders as literal
+    // text instead of a heading and the element stays on one line.
+    expect(
+      screen.queryByRole("heading", { name: "Heading that should be inline" })
+    ).not.toBeInTheDocument()
+    expect(container).toHaveTextContent("# Heading that should be inline")
+  })
+
+  it("does not truncate latex when wrap is false", async () => {
+    const props = getProps({
+      body: "$$\nx + y\n$$",
+      wrap: false,
+      elementType: MarkdownProto.Type.LATEX,
+    })
+    render(<Markdown {...props} />)
+
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container).not.toHaveStyle("white-space: nowrap")
+    expect(container).not.toHaveStyle("text-overflow: ellipsis")
+    expect(screen.queryByTitle("x + y")).not.toBeInTheDocument()
+    expect(
+      screen
+        .getByTestId("stMarkdown")
+        .querySelector("span[style*='display: contents']")
+    ).toBeNull()
+    // Formula stays display math, not label-mode truncated markdown.
+    await waitFor(() => {
+      expect(container.querySelector(".katex-display")).toBeTruthy()
+    })
+  })
+
+  it("does not truncate a divider when wrap is false", () => {
+    const props = getProps({
+      body: "---",
+      wrap: false,
+      elementType: MarkdownProto.Type.DIVIDER,
+    })
+    render(<Markdown {...props} />)
+
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container).not.toHaveStyle("white-space: nowrap")
+    expect(container).not.toHaveStyle("text-overflow: ellipsis")
+    expect(screen.queryByTitle("---")).not.toBeInTheDocument()
+    expect(container.querySelector("hr")).toBeTruthy()
+    expect(
+      screen.queryByRole("heading", { name: "---" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not truncate a badge when wrap is unset", () => {
+    const props = getProps({
+      body: ":blue-badge[Label]",
+      elementType: MarkdownProto.Type.NATIVE,
+    })
+    render(<Markdown {...props} />)
+
+    expect(screen.getByText("Label")).toBeVisible()
+    expect(screen.getByTestId("stMarkdownContainer")).not.toHaveStyle(
+      "white-space: nowrap"
+    )
+    expect(screen.queryByTitle("Label")).not.toBeInTheDocument()
+  })
+
+  it("keeps wrap=false block markdown on one inline line without fenced code", () => {
+    const props = getProps({
+      body: "# Heading\n\n- item\n\n| a | b |\n| - | - |\n| 1 | 2 |\n\n```\ncode block\n```",
+      wrap: false,
+    })
+    render(<Markdown {...props} />)
+
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(screen.queryByTestId("stMarkdownPre")).not.toBeInTheDocument()
+    expect(screen.queryByRole("heading")).not.toBeInTheDocument()
+    expect(screen.queryByRole("table")).not.toBeInTheDocument()
+    expect(screen.queryByRole("list")).not.toBeInTheDocument()
+    expect(container).toHaveStyle({ "white-space": "nowrap" })
+    expect(container).toHaveTextContent(/code block/)
+  })
+
+  it("exposes the full plain text via a native title when wrap is false", async () => {
+    const props = getProps({
+      body: "**Bold** report",
+      wrap: false,
+    })
+    render(<Markdown {...props} />)
+
+    expect(await screen.findByTitle("Bold report")).toBeVisible()
+    expect(screen.queryByTitle("**Bold** report")).not.toBeInTheDocument()
+  })
+
+  it("joins leftover paragraphs with spaces in the native title", async () => {
+    const props = getProps({
+      body: "one\n\ntwo",
+      wrap: false,
+    })
+    render(<Markdown {...props} />)
+
+    expect(await screen.findByTitle("one two")).toBeVisible()
+  })
+
+  it("sets a native title when wrap is false, including when help is set", async () => {
+    const props = getProps({
+      body: "Overflowing markdown",
+      wrap: false,
+      help: "help text",
+    })
+    render(<Markdown {...props} />)
+
+    expect(screen.getByTestId("stTooltipHoverTarget")).toBeVisible()
+    expect(await screen.findByTitle("Overflowing markdown")).toBeVisible()
+    // Native title stays on the truncated text, not an ancestor of help.
+    expect(
+      screen.getByTestId("stTooltipHoverTarget").closest("[title]")
+    ).toBeNull()
+  })
+
+  it("keeps a sibling help icon for a truncated single badge", async () => {
+    const props = getProps({
+      body: ":blue-badge[Overflowing badge]",
+      wrap: false,
+      help: "help text",
+      elementType: MarkdownProto.Type.NATIVE,
+    })
+    render(<Markdown {...props} />)
+
+    expect(screen.getByText("Overflowing badge")).toBeVisible()
+    expect(screen.getByRole("button", { name: "Help" })).toBeVisible()
+    expect(await screen.findByTitle("Overflowing badge")).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Help" }).closest("[title]")
+    ).toBeNull()
+  })
+})
+
 describe("Markdown badge with help", () => {
   it("renders a markdown badge and displays a tooltip when help is provided", async () => {
     const user = userEvent.setup()

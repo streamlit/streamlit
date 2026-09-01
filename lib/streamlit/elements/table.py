@@ -66,7 +66,8 @@ def marshall_table(
         # and `None` otherwise.
         if not isinstance(default_uuid, str):
             raise StreamlitAPIException(
-                "Default UUID must be a string for Styler data."
+                "Default UUID must be a string for Styler data.",
+                error_id="styler-default-uuid-must-be-string",
             )
         marshall_styler(proto, data, default_uuid)
 

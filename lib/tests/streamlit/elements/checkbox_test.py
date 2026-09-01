@@ -53,6 +53,20 @@ class CheckboxTest(DeltaGeneratorTestCase):
         )
         assert c.type == CheckboxProto.StyleType.DEFAULT
 
+    def test_non_str_label_is_coerced(self):
+        """Non-string labels are coerced so protobuf assignment does not TypeError."""
+        st.checkbox(123)
+
+        c = self.get_delta_from_queue().new_element.checkbox
+        assert c.label == "123"
+
+    def test_non_str_help_is_coerced(self):
+        """Non-string help is coerced so protobuf assignment does not TypeError."""
+        st.checkbox("the label", help=123)
+
+        c = self.get_delta_from_queue().new_element.checkbox
+        assert c.help == "123"
+
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
         st.checkbox("the label", disabled=True)

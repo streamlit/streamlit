@@ -21,10 +21,12 @@ from streamlit.elements.lib.layout_utils import (
     Width,
     WidthWithoutContent,
     create_layout_config,
+    validate_wrap,
 )
+from streamlit.errors import StreamlitIncompatibleParametersError
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import clean_text, validate_icon_or_emoji
+from streamlit.string_util import clean_text, to_help_str, validate_icon_or_emoji
 from streamlit.type_util import SupportsStr, is_sympy_expression
 
 if TYPE_CHECKING:
@@ -33,6 +35,20 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 MARKDOWN_HORIZONTAL_RULE_EXPRESSION: Final = "---"
+
+
+def _validate_markdown_wrap(*, wrap: bool, unsafe_allow_html: bool) -> None:
+    """Reject invalid wrap values and the wrap=False + HTML combination."""
+    validate_wrap(wrap)
+    if wrap is False and unsafe_allow_html:
+        raise StreamlitIncompatibleParametersError(
+            "wrap=False",
+            "unsafe_allow_html=True",
+            explanation=(
+                "One-line markdown cannot ellipsize raw HTML. Pass `wrap=True` "
+                "to render HTML, or omit `unsafe_allow_html` to truncate."
+            ),
+        )
 
 
 class MarkdownMixin:
@@ -46,8 +62,10 @@ class MarkdownMixin:
         text_alignment: TextAlignment = "left",
         unterminated_parsing: bool = False,
         anchors: bool = True,
+        wrap: bool = True,
     ) -> DeltaGenerator:
         """Internal markdown method with extended options."""
+        _validate_markdown_wrap(wrap=wrap, unsafe_allow_html=unsafe_allow_html)
         markdown_proto = MarkdownProto()
 
         markdown_proto.body = clean_text(body)
@@ -55,8 +73,9 @@ class MarkdownMixin:
         markdown_proto.element_type = MarkdownProto.Type.NATIVE
         markdown_proto.unterminated_parsing = unterminated_parsing
         markdown_proto.hide_anchors = not anchors
+        markdown_proto.wrap = wrap
         if help:
-            markdown_proto.help = help
+            markdown_proto.help = to_help_str(help)
 
         if width != "auto":
             layout_config = create_layout_config(
@@ -79,6 +98,7 @@ class MarkdownMixin:
         width: Width | Literal["auto"] = "auto",
         text_alignment: TextAlignment = "left",
         anchors: bool = True,
+        wrap: bool = True,
     ) -> DeltaGenerator:
         r"""Display string formatted as Markdown.
 
@@ -162,6 +182,8 @@ class MarkdownMixin:
             Adding custom HTML to your app impacts safety, styling, and
             maintainability.
 
+            ``unsafe_allow_html=True`` cannot be combined with ``wrap=False``.
+
             .. note::
                 If you only want to insert HTML or CSS without Markdown text,
                 we recommend using ``st.html`` instead.
@@ -217,6 +239,20 @@ class MarkdownMixin:
             This is useful when Markdown headings are used purely for
             styling and the anchor link icons would be visual noise.
 
+        wrap : bool
+            Whether the text can wrap onto multiple lines. This can be one
+            of the following:
+
+            - ``True`` (default): If the text is too wide for the element, it
+              wraps onto additional lines.
+            - ``False``: The text stays on one line. Overflow is truncated
+              with an ellipsis. Markdown is limited to inline formatting
+              (the same subset used in widget labels). Leading block
+              markers such as ``#`` and ``-`` are shown as literal text
+              rather than headings or lists. This cannot be combined with
+              ``unsafe_allow_html=True``. Truncation only appears when the
+              element is narrower than its text.
+
         Examples
         --------
         >>> import streamlit as st
@@ -247,6 +283,7 @@ class MarkdownMixin:
             width=width,
             text_alignment=text_alignment,
             anchors=anchors,
+            wrap=wrap,
         )
 
     @gather_metrics("caption")
@@ -258,6 +295,7 @@ class MarkdownMixin:
         help: str | None = None,
         width: Width = "stretch",
         text_alignment: TextAlignment = "left",
+        wrap: bool = True,
     ) -> DeltaGenerator:
         """Display text in small font.
 
@@ -284,6 +322,8 @@ class MarkdownMixin:
 
             Adding custom HTML to your app impacts safety, styling, and
             maintainability.
+
+            ``unsafe_allow_html=True`` cannot be combined with ``wrap=False``.
 
             .. note::
                 If you only want to insert HTML or CSS without Markdown text,
@@ -325,6 +365,19 @@ class MarkdownMixin:
                 ``width="content"`` with short text, the alignment may not be
                 noticeable.
 
+        wrap : bool
+            Whether the caption can wrap onto multiple lines. This can be one
+            of the following:
+
+            - ``True`` (default): If the caption is too wide for the element,
+              it wraps onto additional lines.
+            - ``False``: The caption stays on one line. Overflow is truncated
+              with an ellipsis. Markdown is limited to inline formatting
+              (the same subset used in widget labels). Leading block
+              markers such as ``#`` and ``-`` are shown as literal text
+              rather than headings or lists. This cannot be combined with
+              ``unsafe_allow_html=True``.
+
         Examples
         --------
         >>> import streamlit as st
@@ -333,12 +386,14 @@ class MarkdownMixin:
         >>> st.caption("A caption with _italics_ :blue[colors] and emojis :sunglasses:")
 
         """
+        _validate_markdown_wrap(wrap=wrap, unsafe_allow_html=unsafe_allow_html)
         caption_proto = MarkdownProto()
         caption_proto.body = clean_text(body)
         caption_proto.allow_html = unsafe_allow_html
         caption_proto.element_type = MarkdownProto.Type.CAPTION
+        caption_proto.wrap = wrap
         if help:
-            caption_proto.help = help
+            caption_proto.help = to_help_str(help)
 
         layout_config = create_layout_config(
             width=width, text_alignment=text_alignment, allow_content_width=True
@@ -409,7 +464,7 @@ class MarkdownMixin:
         latex_proto.body = f"$$\n{clean_text(body)}\n$$"
         latex_proto.element_type = MarkdownProto.Type.LATEX
         if help:
-            latex_proto.help = help
+            latex_proto.help = to_help_str(help)
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
 
@@ -575,7 +630,7 @@ class MarkdownMixin:
         badge_proto.element_type = MarkdownProto.Type.NATIVE
 
         if help is not None:
-            badge_proto.help = help
+            badge_proto.help = to_help_str(help)
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
 

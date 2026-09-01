@@ -376,7 +376,8 @@ def _get_lat_or_lon_col_name(
 
             raise StreamlitAPIException(
                 f"Map data must contain a {human_readable_name} column named: "
-                f"{formatted_allowed_col_name}. Existing columns: {formmated_col_names}"
+                f"{formatted_allowed_col_name}. Existing columns: {formmated_col_names}",
+                error_id="map-missing-lat-lon-column",
             )
         col_name = candidate_col_name
 
@@ -389,7 +390,8 @@ def _get_lat_or_lon_col_name(
     if any(data[col_name].isna().array):
         raise StreamlitAPIException(
             f"Column {col_name} is not allowed to contain null values, such "
-            "as NaN, NaT, or None."
+            "as NaN, NaT, or None.",
+            error_id="map-column-contains-nulls",
         )
 
     return col_name
@@ -450,7 +452,8 @@ def _convert_color_arg_or_column(
             data[color_col_name] = data[color_col_name].map(to_int_color_tuple)
         else:
             raise StreamlitAPIException(
-                f'Column "{color_col_name}" does not appear to contain valid colors.'
+                f'Column "{color_col_name}" does not appear to contain valid colors.',
+                error_id="map-invalid-color-column",
             )
 
         color_arg_out = color_arg

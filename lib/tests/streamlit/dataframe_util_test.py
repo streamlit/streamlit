@@ -19,10 +19,11 @@ import os
 import sqlite3
 import unittest
 from collections.abc import Iterator, Mapping
+from contextlib import closing
 from datetime import date
 from decimal import Decimal
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
@@ -32,7 +33,7 @@ from pandas.api.types import infer_dtype
 from parameterized import parameterized
 
 from streamlit import dataframe_util
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitDataframeConversionError
 from streamlit.type_util import get_fqn_type
 from tests.streamlit.data_mocks.snowpandas_mocks import DataFrame as SnowpandasDataFrame
 from tests.streamlit.data_mocks.snowpandas_mocks import Index as SnowpandasIndex
@@ -111,6 +112,29 @@ class DataframeUtilTest(unittest.TestCase):
 
         table = dataframe_util.convert_pandas_df_to_arrow_table(df)
         assert isinstance(table, pa.Table)
+
+    def test_convert_pandas_df_to_arrow_table_retry_failure_raises(self):
+        """A second from_pandas failure raises StreamlitDataframeConversionError."""
+        df = pd.DataFrame({"col": [1, 2, 3]})
+        arrow_error = pa.ArrowInvalid("still incompatible")
+        fake_pa = MagicMock()
+        fake_pa.ArrowTypeError = pa.ArrowTypeError
+        fake_pa.ArrowInvalid = pa.ArrowInvalid
+        fake_pa.ArrowNotImplementedError = pa.ArrowNotImplementedError
+        fake_pa.Table.from_pandas.side_effect = arrow_error
+
+        with (
+            # pa.Table is a C-extension type, so from_pandas cannot be patched
+            # on the class. Replace the local ``import pyarrow`` instead.
+            patch.dict("sys.modules", {"pyarrow": fake_pa}),
+            pytest.raises(
+                StreamlitDataframeConversionError,
+                match="Unable to convert dataframe to Arrow table",
+            ) as exc_info,
+        ):
+            dataframe_util.convert_pandas_df_to_arrow_table(df)
+
+        assert exc_info.value.__cause__ is arrow_error
 
     def test_convert_arrow_table_to_arrow_bytes_downcasts_large_list(self):
         """Test that convert_arrow_table_to_arrow_bytes downcasts large_list to list."""
@@ -368,7 +392,6 @@ class DataframeUtilTest(unittest.TestCase):
         """Test that ArrowInvalid from __arrow_c_stream__ causes fallback to
         later conversion methods (interchange protocol or pandas constructor).
         """
-        from streamlit.errors import StreamlitAPIException
 
         class PyCapsuleOnlyObject:
             """Object with only __arrow_c_stream__ (no to_pandas or __dataframe__).
@@ -389,7 +412,9 @@ class DataframeUtilTest(unittest.TestCase):
         obj = PyCapsuleOnlyObject()
 
         # Should raise because there's no fallback after PyCapsule fails
-        with pytest.raises(StreamlitAPIException, match="Unable to convert"):
+        with pytest.raises(
+            StreamlitDataframeConversionError, match="Unable to convert"
+        ):
             dataframe_util.convert_anything_to_pandas_df(obj)
 
         # Verify the PyCapsule path was attempted
@@ -723,28 +748,27 @@ class DataframeUtilTest(unittest.TestCase):
     def test_verify_sqlite3_integration(self):
         """Verify that sqlite3 cursor can be used as a data source."""
 
-        con = sqlite3.connect("file::memory:", uri=True)
-        cur = con.cursor()
-        cur.execute("CREATE TABLE movie(title, year, score)")
-        cur.execute("""
-            INSERT INTO movie VALUES
-                ('Monty Python and the Holy Grail', 1975, 8.2),
-                ('And Now for Something Completely Different', 1971, 7.5)
-        """)
-        con.commit()
-        db_cursor = cur.execute("SELECT * FROM movie")
-        assert dataframe_util.is_dbapi_cursor(db_cursor) is True
-        assert (
-            dataframe_util.determine_data_format(db_cursor)
-            is dataframe_util.DataFormat.DBAPI_CURSOR
-        )
-        converted_df = dataframe_util.convert_anything_to_pandas_df(db_cursor)
-        assert isinstance(
-            converted_df,
-            pd.DataFrame,
-        )
-        assert converted_df.shape == (2, 3)
-        con.close()
+        with closing(sqlite3.connect("file::memory:", uri=True)) as con:
+            cur = con.cursor()
+            cur.execute("CREATE TABLE movie(title, year, score)")
+            cur.execute("""
+                INSERT INTO movie VALUES
+                    ('Monty Python and the Holy Grail', 1975, 8.2),
+                    ('And Now for Something Completely Different', 1971, 7.5)
+            """)
+            con.commit()
+            db_cursor = cur.execute("SELECT * FROM movie")
+            assert dataframe_util.is_dbapi_cursor(db_cursor) is True
+            assert (
+                dataframe_util.determine_data_format(db_cursor)
+                is dataframe_util.DataFormat.DBAPI_CURSOR
+            )
+            converted_df = dataframe_util.convert_anything_to_pandas_df(db_cursor)
+            assert isinstance(
+                converted_df,
+                pd.DataFrame,
+            )
+            assert converted_df.shape == (2, 3)
 
     @pytest.mark.require_integration
     def test_verify_duckdb_db_api_integration(self):
@@ -909,7 +933,8 @@ class DataframeUtilTest(unittest.TestCase):
 
         if metadata.expected_data_format == dataframe_util.DataFormat.UNKNOWN:
             with pytest.raises(
-                ValueError, match=r"Unsupported input data format: DataFormat.UNKNOWN"
+                StreamlitDataframeConversionError,
+                match=r"Unsupported input data format: DataFormat.UNKNOWN",
             ):
                 dataframe_util.convert_pandas_df_to_data_format(
                     converted_df, metadata.expected_data_format
@@ -952,7 +977,8 @@ class DataframeUtilTest(unittest.TestCase):
         passed an unknown data format.
         """
         with pytest.raises(
-            ValueError, match=r"Unsupported input data format: DataFormat.UNKNOWN"
+            StreamlitDataframeConversionError,
+            match=r"Unsupported input data format: DataFormat.UNKNOWN",
         ):
             dataframe_util.convert_pandas_df_to_data_format(
                 pd.DataFrame({"a": [1, 2, 3]}), dataframe_util.DataFormat.UNKNOWN
@@ -1160,11 +1186,13 @@ def test_fix_arrow_incompatible_column_types_stringifies_mixed_index_only() -> N
     assert infer_dtype(fixed.index) == "string"
 
 
-def test_convert_dict_fallback_failure_raises_streamlit_api_exception() -> None:
+def test_convert_dict_fallback_failure_raises_dataframe_conversion_error() -> None:
     """If both the default and key-value dict conversions fail, raise a clear error."""
     bad: dict[int, list[int]] = {0: [1], 1: [2, 3]}
     with (
-        pytest.raises(StreamlitAPIException, match="Unable to convert object"),
+        pytest.raises(
+            StreamlitDataframeConversionError, match="Unable to convert object"
+        ),
         patch.object(
             dataframe_util,
             "_dict_to_pandas_df",
@@ -1245,7 +1273,7 @@ def test_convert_duckdb_relation_row_cap_triggers_caption() -> None:
 
 def test_convert_dbapi_cursor_row_cap_triggers_caption() -> None:
     """DB-API cursors that return a full fetchmany batch may show a row-limit caption."""
-    with sqlite3.connect("file::memory:", uri=True) as con:
+    with closing(sqlite3.connect("file::memory:", uri=True)) as con:
         cur = con.cursor()
         cur.execute("CREATE TABLE t(x INTEGER)")
         cur.executemany("INSERT INTO t VALUES (?)", [(i,) for i in range(6)])
@@ -1273,7 +1301,7 @@ def test_convert_pandas_df_to_data_format_requires_single_column_for_series_like
 ) -> None:
     """Series-like targets reject multi-column frames."""
     df = pd.DataFrame({"a": [1], "b": [2]})
-    with pytest.raises(ValueError, match="single column"):
+    with pytest.raises(StreamlitDataframeConversionError, match="single column"):
         dataframe_util.convert_pandas_df_to_data_format(df, fmt)
 
 
@@ -1610,9 +1638,9 @@ def test_downcast_large_list_schema_replaces_large_list() -> None:
 
 
 def test_pandas_df_to_series_raises_on_multi_column() -> None:
-    """``_pandas_df_to_series`` raises ValueError on multi-column inputs."""
+    """``_pandas_df_to_series`` raises StreamlitDataframeConversionError on multi-column inputs."""
     df = pd.DataFrame({"a": [1], "b": [2]})
-    with pytest.raises(ValueError, match="single column"):
+    with pytest.raises(StreamlitDataframeConversionError, match="single column"):
         dataframe_util._pandas_df_to_series(df)
 
 

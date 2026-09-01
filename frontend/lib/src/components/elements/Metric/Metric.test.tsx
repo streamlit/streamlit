@@ -67,6 +67,21 @@ describe("Metric element", () => {
     expect(metricElement).toHaveClass("stMetric")
   })
 
+  it("unwraps fenced code in truncated metric labels so the metric stays one line", () => {
+    const props = getProps({ label: "```\nfenced code\n```" })
+    render(<Metric {...props} />)
+
+    expect(screen.queryByTestId("stMarkdownPre")).not.toBeInTheDocument()
+    expect(screen.getByTestId("stMetricLabel")).toHaveTextContent(
+      /fenced code/
+    )
+    expect(
+      screen
+        .getByTestId("stMetricLabel")
+        .querySelector("[data-testid='stMarkdownContainer']")
+    ).toHaveStyle({ "white-space": "nowrap" })
+  })
+
   it("renders metric label as expected", () => {
     const props = getProps()
     render(<Metric {...props} />)

@@ -786,6 +786,181 @@ def test_upload_put_chunked_body_capped_before_full_read() -> None:
     mock_logger.warning.assert_called_once()
 
 
+def test_upload_put_succeeds_when_middleware_cached_body() -> None:
+    """An upload succeeds after a middleware cached the request body.
+
+    Regression test for #16697.
+    """
+    endpoint = _endpoint_for(_upload_routes(), "PUT")
+
+    body, boundary = _multipart_body(b"hello world")
+    receive_calls = 0
+
+    def _count_receive() -> None:
+        nonlocal receive_calls
+        receive_calls += 1
+
+    request = _make_upload_request(
+        [{"type": "http.request", "body": body, "more_body": False}],
+        boundary=boundary,
+        on_receive=_count_receive,
+    )
+
+    async def read_body_then_upload() -> Response:
+        # Stand in for the middleware: populates Starlette's cached body and
+        # exhausts the underlying ASGI channel.
+        await request.body()
+        return await endpoint(request)
+
+    with patch_config_options({"server.enableXsrfProtection": False}):
+        response = asyncio.run(read_body_then_upload())
+
+    assert response.status_code == 204
+    # The middleware's read is the only trip to the raw ASGI channel. Any further
+    # call would mean the handler is reading a drained channel again, which is
+    # what hung before the fix.
+    assert receive_calls == 1
+
+
+@pytest.mark.parametrize(
+    "include_intermediate_empty_chunk",
+    [
+        pytest.param(False, id="contiguous_chunks"),
+        pytest.param(True, id="with_intermediate_empty_chunk"),
+    ],
+)
+def test_upload_put_parses_multi_chunk_body(
+    include_intermediate_empty_chunk: bool,
+) -> None:
+    """A body delivered across several ASGI messages parses and is stored.
+
+    The handler rebuilds ASGI framing from ``stream()`` chunks, so a multi-message
+    body must still parse; the pre-existing chunked test only covers the oversized
+    abort path. Regression test for #16697.
+    """
+    runtime = MagicMock()
+    runtime.is_active_session.return_value = True
+    upload_mgr = MemoryUploadedFileManager("/_stcore/upload_file")
+    endpoint = _endpoint_for(
+        create_upload_routes(runtime, upload_mgr, ""),
+        "PUT",
+    )
+
+    body, boundary = _multipart_body(b"chunked payload", filename="chunked.txt")
+    split_at = len(body) // 2
+    messages: list[dict[str, Any]] = [
+        {"type": "http.request", "body": body[:split_at], "more_body": True}
+    ]
+    if include_intermediate_empty_chunk:
+        # An empty message mid-body must not truncate the parse.
+        messages.append({"type": "http.request", "body": b"", "more_body": True})
+    messages.append(
+        {"type": "http.request", "body": body[split_at:], "more_body": False}
+    )
+
+    request = _make_upload_request(messages, boundary=boundary)
+
+    with patch_config_options({"server.enableXsrfProtection": False}):
+        response = asyncio.run(endpoint(request))
+
+    assert response.status_code == 204
+    stored = upload_mgr.get_files("session123", ["fileid"])
+    assert len(stored) == 1
+    assert stored[0].name == "chunked.txt"
+    assert stored[0].data == b"chunked payload"
+
+
+def test_upload_put_enforces_size_cap_on_cached_body() -> None:
+    """The streaming size cap still applies when the body came from the cache.
+
+    Guards against trading the #16697 hang for a lost size limit: reading the
+    cached body must still count bytes against ``server.maxUploadSize``.
+    """
+    endpoint = _endpoint_for(_upload_routes(), "PUT")
+
+    body, boundary = _multipart_body(b"x" * 100)
+    request = _make_upload_request(
+        [{"type": "http.request", "body": body, "more_body": False}],
+        boundary=boundary,
+    )
+
+    async def read_body_then_upload() -> Response:
+        await request.body()
+        return await endpoint(request)
+
+    with (
+        patch_config_options(
+            {"server.enableXsrfProtection": False, "server.maxUploadSize": 0}
+        ),
+        patch(
+            "streamlit.web.server.starlette.starlette_routes"
+            "._MAX_UPLOAD_MULTIPART_OVERHEAD_BYTES",
+            8,
+        ),
+        pytest.raises(HTTPException) as exc_info,
+    ):
+        asyncio.run(read_body_then_upload())
+
+    assert exc_info.value.status_code == 413
+
+
+def test_upload_put_body_consumed_without_caching_returns_400() -> None:
+    """A body streamed away without being cached is rejected 400, not hung.
+
+    Regression test for #16697.
+    """
+    endpoint = _endpoint_for(_upload_routes(), "PUT")
+
+    body, boundary = _multipart_body(b"hello world")
+    request = _make_upload_request(
+        [{"type": "http.request", "body": body, "more_body": False}],
+        boundary=boundary,
+    )
+
+    async def stream_body_then_upload() -> Response:
+        # Consumes the stream without populating the cached body.
+        async for _ in request.stream():
+            pass
+        return await endpoint(request)
+
+    with (
+        patch_config_options({"server.enableXsrfProtection": False}),
+        patch("streamlit.web.server.starlette.starlette_routes._LOGGER") as mock_logger,
+        pytest.raises(HTTPException) as exc_info,
+    ):
+        asyncio.run(stream_body_then_upload())
+
+    assert exc_info.value.status_code == 400
+    assert "already consumed" in exc_info.value.detail
+    # The client only sees the status code, so the cause must reach the logs for
+    # whoever has to fix the offending middleware.
+    mock_logger.warning.assert_called_once()
+
+
+def test_upload_put_unrelated_runtime_error_is_not_reported_as_400() -> None:
+    """A ``RuntimeError`` from the ASGI channel keeps its 500 rather than becoming 400.
+
+    Only Starlette's "Stream consumed" means the body is unrecoverable.
+    """
+    endpoint = _endpoint_for(_upload_routes(), "PUT")
+
+    body, boundary = _multipart_body(b"hello world")
+    # `more_body=True` with nothing following: the helper's ``receive`` raises
+    # StopIteration, which asyncio surfaces as an unrelated RuntimeError.
+    request = _make_upload_request(
+        [{"type": "http.request", "body": body, "more_body": True}],
+        boundary=boundary,
+    )
+
+    with (
+        patch_config_options({"server.enableXsrfProtection": False}),
+        pytest.raises(RuntimeError) as exc_info,
+    ):
+        asyncio.run(endpoint(request))
+
+    assert "StopIteration" in str(exc_info.value)
+
+
 def test_upload_put_stores_file_and_returns_204() -> None:
     """A valid single-file upload is stored and the handler returns 204."""
     runtime = MagicMock()

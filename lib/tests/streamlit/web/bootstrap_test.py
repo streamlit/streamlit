@@ -555,18 +555,19 @@ class BootstrapRunTest(IsolatedAsyncioTestCase):
         with testutil.patch_config_options({"server.headless": True}):
             bootstrap.run("", False, [], {}, stop_immediately_for_testing=True)
 
-    def test_bootstrap_run_in_existing_event_loop(self):
+    async def test_bootstrap_run_in_existing_event_loop(self):
         """Bootstrap run works within an existing event loop."""
-        import asyncio
-
-        event_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(event_loop)
         with testutil.patch_config_options({"server.headless": True}):
-
-            async def _run():
-                bootstrap.run("", False, [], {}, stop_immediately_for_testing=True)
-
-            event_loop.run_until_complete(_run())
+            bootstrap.run("", False, [], {}, stop_immediately_for_testing=True)
+            # When a loop is already running, run() schedules the server and
+            # returns. Await that task so serve_with_signal is not leaked.
+            bootstrap_tasks = [
+                task
+                for task in asyncio.all_tasks()
+                if task.get_name() == "bootstrap.run_server"
+            ]
+            assert bootstrap_tasks
+            await asyncio.gather(*bootstrap_tasks)
 
     def test_bootstrap_run_without_existing_event_loop(self):
         """Bootstrap run creates event loop when none exists."""
@@ -580,50 +581,142 @@ class BootstrapRunTest(IsolatedAsyncioTestCase):
 
 
 class BootstrapUvloopTest(TestCase):
-    def test_installs_uvloop_when_available(self):
-        """uvloop is installed as the default policy when present."""
+    def test_returns_uvloop_factory_when_available(self):
+        """uvloop's new_event_loop is used as the asyncio loop factory."""
         fake_uvloop = types.ModuleType("uvloop")
-        fake_uvloop.install = Mock()
+        fake_uvloop.new_event_loop = Mock(name="new_event_loop")
 
         with (
             patch.object(bootstrap.env_util, "IS_WINDOWS", False),
             patch.dict("sys.modules", {"uvloop": fake_uvloop}),
         ):
-            bootstrap._maybe_install_uvloop(running_in_event_loop=False)
+            factory = bootstrap._get_uvloop_loop_factory()
 
-        fake_uvloop.install.assert_called_once()
+        assert factory is fake_uvloop.new_event_loop
 
-    def test_skips_install_when_loop_running(self):
-        """uvloop installation is skipped if a loop is already running."""
+    def test_returns_none_on_windows(self):
+        """uvloop is not used on Windows."""
         fake_uvloop = types.ModuleType("uvloop")
-        fake_uvloop.install = Mock()
-
-        with (
-            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
-            patch.dict("sys.modules", {"uvloop": fake_uvloop}),
-        ):
-            bootstrap._maybe_install_uvloop(running_in_event_loop=True)
-
-        fake_uvloop.install.assert_not_called()
-
-    def test_skips_install_on_windows(self):
-        """uvloop installation is skipped on Windows."""
-        fake_uvloop = types.ModuleType("uvloop")
-        fake_uvloop.install = Mock()
+        fake_uvloop.new_event_loop = Mock()
 
         with (
             patch.object(bootstrap.env_util, "IS_WINDOWS", True),
             patch.dict("sys.modules", {"uvloop": fake_uvloop}),
         ):
-            bootstrap._maybe_install_uvloop(running_in_event_loop=False)
+            assert bootstrap._get_uvloop_loop_factory() is None
 
-        fake_uvloop.install.assert_not_called()
+    def test_returns_none_when_uvloop_missing(self):
+        """Missing uvloop yields no loop factory."""
+        with (
+            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
+            patch.dict("sys.modules", {"uvloop": None}),
+        ):
+            assert bootstrap._get_uvloop_loop_factory() is None
 
-    def test_handles_missing_uvloop(self):
-        """Missing uvloop does not raise."""
-        with patch.object(bootstrap.env_util, "IS_WINDOWS", False):
-            with patch.dict("sys.modules", {"uvloop": None}):
-                bootstrap._maybe_install_uvloop(running_in_event_loop=False)
+    def test_returns_none_when_new_event_loop_missing(self):
+        """An older uvloop without ``new_event_loop`` yields no loop factory."""
+        fake_uvloop = types.ModuleType("uvloop")
+
+        with (
+            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
+            patch.dict("sys.modules", {"uvloop": fake_uvloop}),
+        ):
+            assert bootstrap._get_uvloop_loop_factory() is None
+
+    def test_run_server_loop_uses_runner_loop_factory(self):
+        """When asyncio.Runner exists, the server uses loop_factory=uvloop."""
+        fake_loop = Mock(name="uvloop")
+        fake_factory = Mock(name="uvloop_factory", return_value=fake_loop)
+        mock_runner = Mock()
+        mock_runner.__enter__ = Mock(return_value=mock_runner)
+        mock_runner.__exit__ = Mock(return_value=False)
+        coro = Mock(name="main_coro")
+
+        with (
+            patch.object(
+                bootstrap, "_get_uvloop_loop_factory", return_value=fake_factory
+            ),
+            patch(
+                "streamlit.web.bootstrap.asyncio.Runner",
+                return_value=mock_runner,
+                create=True,
+            ) as mock_runner_cls,
+        ):
+            bootstrap._run_server_loop(coro)
+
+        fake_factory.assert_called_once_with()
+        mock_runner_cls.assert_called_once()
+        assert mock_runner_cls.call_args.kwargs["loop_factory"]() is fake_loop
+        mock_runner.run.assert_called_once_with(coro)
+
+    def test_run_server_loop_falls_back_when_factory_fails(self):
+        """A failing uvloop factory falls back to the default loop."""
+        coro = Mock(name="main_coro")
+        fake_factory = Mock(name="uvloop_factory", side_effect=RuntimeError("boom"))
+
+        with (
+            patch.object(
+                bootstrap, "_get_uvloop_loop_factory", return_value=fake_factory
+            ),
+            patch(
+                "streamlit.web.bootstrap.asyncio.Runner",
+                create=True,
+            ) as mock_runner_cls,
+            patch.object(bootstrap, "_try_install_uvloop") as mock_install,
+            patch("streamlit.web.bootstrap.asyncio.run") as mock_run,
+            patch.object(bootstrap._LOGGER, "warning") as mock_warning,
+        ):
+            bootstrap._run_server_loop(coro)
+
+        mock_runner_cls.assert_not_called()
+        mock_install.assert_not_called()
+        mock_run.assert_called_once_with(coro)
+        mock_warning.assert_called_once()
+
+    def test_run_server_loop_uses_install_when_runner_unavailable(self):
+        """Python 3.10 (no asyncio.Runner) falls back to uvloop.install()."""
+        fake_uvloop = types.ModuleType("uvloop")
+        fake_uvloop.new_event_loop = Mock(name="new_event_loop")
+        fake_uvloop.install = Mock(name="install")
+        coro = Mock(name="main_coro")
+
+        with (
+            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
+            patch.dict("sys.modules", {"uvloop": fake_uvloop}),
+            patch.object(asyncio, "Runner", None, create=True),
+            patch("streamlit.web.bootstrap.asyncio.run") as mock_run,
+        ):
+            bootstrap._run_server_loop(coro)
+
+        fake_uvloop.install.assert_called_once()
+        mock_run.assert_called_once_with(coro)
+
+    def test_run_server_loop_falls_back_to_asyncio_run(self):
+        """Without uvloop, the server uses the stdlib event loop."""
+        coro = Mock(name="main_coro")
+
+        with (
+            patch.object(bootstrap, "_get_uvloop_loop_factory", return_value=None),
+            patch.object(bootstrap, "_try_install_uvloop") as mock_install,
+            patch("streamlit.web.bootstrap.asyncio.run") as mock_run,
+        ):
+            bootstrap._run_server_loop(coro)
+
+        mock_install.assert_called_once()
+        mock_run.assert_called_once_with(coro)
+
+    def test_try_install_uvloop_skips_when_install_missing(self):
+        """uvloop without install() does not raise or warn."""
+        fake_uvloop = types.ModuleType("uvloop")
+
+        with (
+            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
+            patch.dict("sys.modules", {"uvloop": fake_uvloop}),
+            patch.object(bootstrap._LOGGER, "warning") as mock_warning,
+        ):
+            bootstrap._try_install_uvloop()
+
+        mock_warning.assert_not_called()
 
 
 class BootstrapAsgiTest(IsolatedAsyncioTestCase):

@@ -21,6 +21,7 @@ from __future__ import annotations
 import asyncio
 import os
 import time
+from contextlib import aclosing
 from typing import TYPE_CHECKING, Final
 from urllib.parse import quote
 
@@ -863,11 +864,49 @@ def create_upload_routes(
         max_body_bytes = max_size_bytes + _MAX_UPLOAD_MULTIPART_OVERHEAD_BYTES
         bytes_received = 0
 
-        async def limited_receive() -> Message:
-            nonlocal bytes_received
-            message = await request.receive()
-            if message["type"] == "http.request":
-                bytes_received += len(message.get("body", b""))
+        # Use the original request's stream so a middleware-cached body is
+        # replayed instead of blocking on the drained ASGI channel (a keep-alive
+        # connection sends no disconnect). Create the iterator once so each
+        # `limited_receive` call advances the same stream, and aclose it so
+        # cleanup does not wait for GC. Sentry's StarletteIntegration is the
+        # reported trigger: it reads bodies to attach them to error events.
+        # See #16697.
+        async with aclosing(request.stream()) as body_chunks:
+
+            async def limited_receive() -> Message:
+                nonlocal bytes_received
+                try:
+                    chunk = await anext(body_chunks)
+                except StopAsyncIteration:
+                    # The stream is exhausted, so the body is complete.
+                    return {"type": "http.request", "body": b"", "more_body": False}
+                except RuntimeError as ex:
+                    # Starlette raises RuntimeError("Stream consumed") when a
+                    # middleware streamed the body away without caching it,
+                    # leaving nothing to parse. Any other RuntimeError comes from
+                    # the ASGI channel; let it keep its 500 rather than blaming a
+                    # body that was never consumed.
+                    if "Stream consumed" not in str(ex):
+                        raise
+                    # The client only ever sees the HTTP status, so log the cause
+                    # for whoever has to fix the middleware. Without this a 400
+                    # leaves no server-side signal at all, unlike the 413 below.
+                    _LOGGER.warning(
+                        "Upload rejected: the request body was already consumed "
+                        "before reaching the upload handler. This usually means "
+                        "in-process ASGI middleware read the body without "
+                        "replaying it downstream."
+                    )
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            "Request body was already consumed before it reached "
+                            "the upload handler, most likely by ASGI middleware "
+                            "that read the body without replaying it."
+                        ),
+                    ) from ex
+
+                bytes_received += len(chunk)
                 if bytes_received > max_body_bytes:
                     # Log the streaming-cap rejection so operators can tell a
                     # misconfigured server.maxUploadSize (legitimate uploads being
@@ -886,10 +925,15 @@ def create_upload_routes(
                     # frames unwind - the same as an upstream ClientDisconnect.
                     # Resource use stays bounded to one in-flight request.
                     raise HTTPException(status_code=413, detail="File too large")
-            return message
 
-        limited_request = StarletteRequest(request.scope, limited_receive)
-        form = await limited_request.form()
+                # Report more body unconditionally and let exhaustion above mark
+                # the end, so framing never depends on how `stream()` chunks an
+                # empty tail. A trailing empty chunk is harmless to the parser.
+                return {"type": "http.request", "body": chunk, "more_body": True}
+
+            limited_request = StarletteRequest(request.scope, limited_receive)
+            form = await limited_request.form()
+
         uploads = [value for value in form.values() if isinstance(value, UploadFile)]
 
         if len(uploads) != 1:

@@ -13,7 +13,6 @@
 # limitations under the License.
 from __future__ import annotations
 
-from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -51,7 +50,10 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueOutOfRangeError,
+)
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -64,9 +66,8 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.type_util import (
-    check_python_comparable,
-)
+from streamlit.string_util import to_help_str
+from streamlit.type_util import check_python_comparable
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -97,7 +98,6 @@ class SelectboxSerde(Generic[T]):
         We do not store an option_to_formatted_option mapping because the generic
         options might not be hashable, which would raise a RuntimeError. So we do
         two lookups: option -> index -> formatted_option[index].
-
 
         Parameters
         ----------
@@ -285,6 +285,34 @@ class SelectboxMixin:
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> T | str | None: ...
+
+    # A dynamic index: int | None with default accept_new_options=False
+    # returns T | None. This sits before the bool catch-all so checkers
+    # that do not expand int | None (e.g. pyrefly) do not pick up a
+    # spurious | str. mypy expands the union, so CI cannot catch deleting
+    # this overload. See #16630.
+    @overload
+    def selectbox(
+        self,
+        label: str,
+        options: OptionSequence[T],
+        index: int | None = 0,
+        format_func: Callable[[Any], str] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        placeholder: str | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        accept_new_options: Literal[False] = False,
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
+        width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> T | None: ...
 
     @overload
     def selectbox(
@@ -624,21 +652,20 @@ class SelectboxMixin:
             on_change,
             default_value=None if index == 0 else index,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         opt = convert_anything_to_list(options)
         check_python_comparable(opt)
 
         if not isinstance(index, int) and index is not None:
-            raise StreamlitAPIException(
-                f"Selectbox Value has invalid type: {type(index).__name__}"
+            raise StreamlitInvalidParameterTypeError(
+                "index",
+                type(index).__name__,
+                ["int", "None"],
             )
 
         if index is not None and len(opt) > 0 and not 0 <= index < len(opt):
-            raise StreamlitAPIException(
-                "Selectbox index must be greater than or equal to 0 "
-                "and less than the length of options."
-            )
+            raise StreamlitValueOutOfRangeError("index", index, 0, len(opt) - 1)
 
         # Convert empty string to single space to distinguish from None:
         # - None (default) → "" → Frontend shows contextual placeholders
@@ -650,7 +677,6 @@ class SelectboxMixin:
         proto_filter_mode = validate_select_widget_filter_mode(
             filter_mode,
             accept_new_options=accept_new_options,
-            command="st.selectbox",
         )
 
         formatted_options, formatted_option_to_option_index = create_mappings(
@@ -695,7 +721,7 @@ class SelectboxMixin:
         selectbox_proto.filter_mode = proto_filter_mode
 
         if help is not None:
-            selectbox_proto.help = dedent(help)
+            selectbox_proto.help = to_help_str(help)
 
         # Set query param key if bound
         if bind == "query-params" and key is not None:

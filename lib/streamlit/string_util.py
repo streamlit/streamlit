@@ -38,6 +38,19 @@ def clean_text(text: SupportsStr) -> str:
     return textwrap.dedent(str(text)).strip()
 
 
+def to_str(value: object) -> str:
+    """Coerce ``value`` to ``str`` for protobuf string fields.
+
+    Existing strings are returned unchanged so we do not allocate a copy.
+    """
+    return value if isinstance(value, str) else str(value)
+
+
+def to_help_str(help: object) -> str:
+    """Coerce ``help`` to ``str`` and dedent it for protobuf assignment."""
+    return textwrap.dedent(to_str(help))
+
+
 def _contains_special_chars(text: str) -> bool:
     """Check if a string contains any special chars.
 
@@ -86,7 +99,8 @@ def validate_emoji(maybe_emoji: str | None) -> str:
         return maybe_emoji
     raise StreamlitAPIException(
         f'The value "{maybe_emoji}" is not a valid emoji. Shortcodes are not allowed, '
-        "please use a single character instead."
+        "please use a single character instead.",
+        error_id="invalid-emoji",
     )
 
 
@@ -113,7 +127,8 @@ def validate_material_icon(maybe_material_icon: str | None) -> str:
         raise StreamlitAPIException(
             f'The value `"{maybe_material_icon.replace("/", invisible_white_space + "/")}"` is '
             "not a valid Material icon. Please use a Material icon shortcode like "
-            f"**`:material{invisible_white_space}/thumb_up:`**"
+            f"**`:material{invisible_white_space}/thumb_up:`**",
+            error_id="invalid-material-icon",
         )
 
     pack_name, icon_name = icon_match.groups()
@@ -126,7 +141,8 @@ def validate_material_icon(maybe_material_icon: str | None) -> str:
         raise StreamlitAPIException(
             f'The value `"{maybe_material_icon.replace("/", invisible_white_space + "/")}"` is not a '
             "valid Material icon. Please use a Material icon shortcode like "
-            f"**`:material{invisible_white_space}/thumb_up:`**."
+            f"**`:material{invisible_white_space}/thumb_up:`**.",
+            error_id="invalid-material-icon",
         )
 
     return f":{pack_name}/{icon_name}:"
@@ -234,8 +250,11 @@ def simplify_number(num: int) -> str:
     )
 
 
+# Match both hex casings: CPython formats the address with the platform C
+# runtime's "%p" (glibc lowercase, MSVC uppercase). Use a character class
+# rather than re.IGNORECASE so " AT 0X" still fails to match.
 _OBJ_MEM_ADDRESS: Final = re.compile(
-    r"^\<[a-zA-Z_]+[a-zA-Z0-9<>._ ]* at 0x[0-9a-f]+\>$"
+    r"^\<[a-zA-Z_]+[a-zA-Z0-9<>._ ]* at 0x[0-9a-fA-F]+\>$"
 )
 
 

@@ -31,7 +31,7 @@ repos:
       - id: ruff-format
         types_or: [python, pyi]
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.12.5
+    rev: 0.12.6
     hooks:
       - id: uv-lock
         files: ^(pyproject\.toml|lib/pyproject\.toml|uv\.lock)$
@@ -40,7 +40,7 @@ repos:
       - id: oxlint-frontend
         name: Oxlint Frontend
         entry: ./scripts/run_in_subdirectory.py frontend yarn exec oxlint --config ./.oxlintrc.json --fix --deny-warnings
-        files: ^frontend/(app|component-v2-lib|connection|eslint-plugin-streamlit-custom|lib|utils)/.*\.(js|jsx|ts|tsx)$
+        files: ^frontend/(app|component-lib|component-v2-lib|connection|eslint-plugin-streamlit-custom|lib|utils)/.*\.(js|jsx|ts|tsx)$
         exclude: /vendor/
         # Uses `language: system` (not `node`) because the tool is invoked via
         # the frontend's yarn install, matching the buf hooks below. pre-commit
@@ -53,7 +53,7 @@ repos:
       - id: oxfmt-frontend
         name: Oxfmt Frontend
         entry: ./scripts/run_in_subdirectory.py frontend yarn exec oxfmt --config ./.oxfmtrc.json
-        files: ^frontend/(app|component-v2-lib|connection|eslint-plugin-streamlit-custom|lib|utils)/.*\.(js|jsx|ts|tsx)$
+        files: ^frontend/(app|component-lib|component-v2-lib|connection|eslint-plugin-streamlit-custom|lib|utils)/.*\.(js|jsx|ts|tsx)$
         exclude: /vendor/
         language: system
         pass_filenames: true

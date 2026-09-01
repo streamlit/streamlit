@@ -476,11 +476,12 @@ class BidiComponentTest(DeltaGeneratorTestCase):
         assert bidi_component_proto.js_content == ""
         assert bidi_component_proto.html_content == ""
 
-    def test_unregistered_component_raises_value_error(self):
-        """Test that calling an unregistered component raises ValueError."""
+    def test_unregistered_component_raises_api_exception(self):
+        """Calling an unregistered component raises StreamlitAPIException."""
         # Call a component that doesn't exist
         with pytest.raises(
-            ValueError, match="Component 'nonexistent_component' is not registered"
+            StreamlitAPIException,
+            match="Component 'nonexistent_component' is not registered",
         ):
             st._bidi_component("nonexistent_component")
 

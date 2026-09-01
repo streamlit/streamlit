@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from datetime import date
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, NoReturn, TypeAlias, cast
 
 from streamlit import dataframe_util, type_util
 from streamlit.elements.lib.color_util import (
@@ -29,7 +29,12 @@ from streamlit.elements.lib.color_util import (
     is_hex_color_like,
     to_css_color,
 )
-from streamlit.errors import Error, StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    Error,
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Sequence
@@ -576,7 +581,8 @@ def _melt_data(
     ):
         raise StreamlitAPIException(
             "The columns used for rendering the chart contain too many values with "
-            "mixed types. Please select the columns manually via the y parameter."
+            "mixed types. Please select the columns manually via the y parameter.",
+            error_id="chart-mixed-type-columns",
         )
 
     # Arrow has problems with object types after melting two different dtypes
@@ -765,14 +771,15 @@ def _parse_x_column(df: pd.DataFrame, x_from_user: str | None) -> str | None:
 
     if isinstance(x_from_user, str):
         if x_from_user not in df.columns:
-            raise StreamlitColumnNotFoundError(df, x_from_user)
+            _raise_chart_column_not_found(df, x_from_user)
 
         return x_from_user
 
-    raise StreamlitAPIException(
-        "x parameter should be a column name (str) or None to use the "
-        f" dataframe's index. Value given: {x_from_user} "
-        f"(type {type(x_from_user)})"
+    raise StreamlitInvalidParameterTypeError(
+        "x",
+        type(x_from_user).__name__,
+        ["str", "None"],
+        detail="Pass a column name or None to use the dataframe's index.",
     )
 
 
@@ -782,7 +789,7 @@ def _parse_sort_column(df: pd.DataFrame, sort_from_user: bool | str) -> str | No
 
     sort_column = sort_from_user.removeprefix("-")
     if sort_column not in df.columns:
-        raise StreamlitColumnNotFoundError(df, sort_column)
+        _raise_chart_column_not_found(df, sort_column)
 
     return sort_column
 
@@ -807,7 +814,7 @@ def _parse_y_columns(
 
     for col in y_column_list:
         if col not in df.columns:
-            raise StreamlitColumnNotFoundError(df, col)
+            _raise_chart_column_not_found(df, col)
 
     # y_column_list should only include x_column when user explicitly asked for it.
     if x_column in y_column_list and (not y_from_user or x_column not in y_from_user):
@@ -1119,7 +1126,7 @@ def _get_color_encoding(
         # If the color value is color-like, return that.
         if is_color_like(cast("Any", color_value)):
             if len(y_column_list) != 1:
-                raise StreamlitColorLengthError(
+                _raise_chart_color_length_mismatch(
                     [color_value] if color_value else [], y_column_list
                 )
 
@@ -1128,7 +1135,7 @@ def _get_color_encoding(
         # Check for built-in color names (resolved on frontend, not converted here)
         if isinstance(color_value, str) and is_builtin_color_name(color_value):
             if len(y_column_list) != 1:
-                raise StreamlitColorLengthError(
+                _raise_chart_color_length_mismatch(
                     [color_value] if color_value else [], y_column_list
                 )
             return alt.ColorValue(color_value)
@@ -1138,7 +1145,7 @@ def _get_color_encoding(
             color_values = cast("Collection[Color]", color_value)
 
             if len(color_values) != len(y_column_list):
-                raise StreamlitColorLengthError(color_values, y_column_list)
+                _raise_chart_color_length_mismatch(color_values, y_column_list)
 
             if len(color_values) == 1:
                 first_color = cast("Any", color_value[0])
@@ -1168,7 +1175,23 @@ def _get_color_encoding(
                 title=" ",
             )
 
-        raise StreamlitInvalidColorError(color_from_user)
+        # Chart color also accepts a column name and a list of colors, which
+        # StreamlitInvalidColorError does not document.
+        raise StreamlitAPIException(
+            f"""
+This does not look like a valid color argument: `{color_from_user}`.
+
+The color argument can be:
+
+* A hex string like "#ffaa00" or "#ffaa0088".
+* An RGB or RGBA tuple with the red, green, blue, and alpha
+  components specified as ints from 0 to 255 or floats from 0.0 to
+  1.0.
+* The name of a column.
+* Or a list of colors, matching the number of y columns to draw.
+            """,
+            error_id="chart-invalid-color",
+        )
 
     if color_column is not None:
         column_type: VegaLiteType
@@ -1243,8 +1266,10 @@ def _get_size_encoding(
             return alt.SizeValue(size_value)
         if size_value is None:
             return alt.SizeValue(100)
-        raise StreamlitAPIException(
-            f"This does not look like a valid size: {size_value!r}"
+        raise StreamlitValueError(
+            "size",
+            ["a column name", "a number"],
+            detail=f"Got {size_value!r}.",
         )
 
     if (
@@ -1355,42 +1380,21 @@ def _get_y_encoding_type(
     return "quantitative"  # Pick anything. If undefined, Vega-Lite may hide the axis.
 
 
-class StreamlitColumnNotFoundError(StreamlitAPIException):
-    def __init__(self, df: pd.DataFrame, col_name: str, *args: Any) -> None:
-        available_columns = ", ".join(str(c) for c in list(df.columns))
-        message = (
-            f'Data does not have a column named `"{col_name}"`. '
-            f"Available columns are `{available_columns}`"
-        )
-        super().__init__(message, *args)
+def _raise_chart_column_not_found(df: pd.DataFrame, col_name: str) -> NoReturn:
+    available_columns = ", ".join(str(c) for c in list(df.columns))
+    raise StreamlitAPIException(
+        f'Data does not have a column named `"{col_name}"`. '
+        f"Available columns are `{available_columns}`",
+        error_id="chart-column-not-found",
+    )
 
 
-class StreamlitInvalidColorError(StreamlitAPIException):
-    def __init__(self, color_from_user: str | Color | list[Color] | None) -> None:
-        message = f"""
-This does not look like a valid color argument: `{color_from_user}`.
-
-The color argument can be:
-
-* A hex string like "#ffaa00" or "#ffaa0088".
-* An RGB or RGBA tuple with the red, green, blue, and alpha
-  components specified as ints from 0 to 255 or floats from 0.0 to
-  1.0.
-* The name of a column.
-* Or a list of colors, matching the number of y columns to draw.
-        """
-        super().__init__(message)
-
-
-class StreamlitColorLengthError(StreamlitAPIException):
-    def __init__(
-        self,
-        color_values: str | Color | Collection[Color] | None,
-        y_column_list: list[str],
-    ) -> None:
-        message = (
-            f"The list of colors `{color_values}` must have the same "
-            "length as the list of columns to be colored "
-            f"`{y_column_list}`."
-        )
-        super().__init__(message)
+def _raise_chart_color_length_mismatch(
+    color_values: object, y_column_list: list[str]
+) -> NoReturn:
+    raise StreamlitAPIException(
+        f"The list of colors `{color_values}` must have the same "
+        "length as the list of columns to be colored "
+        f"`{y_column_list}`.",
+        error_id="chart-color-length-mismatch",
+    )

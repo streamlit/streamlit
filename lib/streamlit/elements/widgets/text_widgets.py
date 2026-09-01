@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from textwrap import dedent
 from typing import TYPE_CHECKING, Final, Literal, NamedTuple, cast, overload
 
 from streamlit.elements.lib.form_utils import current_form_id
@@ -35,21 +34,27 @@ from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitIncompatibleParametersError,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    OnChangeMode,
     PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
     get_session_state,
     register_widget,
+    validate_on_change_mode,
 )
-from streamlit.string_util import validate_icon_or_emoji
+from streamlit.string_util import to_help_str, validate_icon_or_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -95,16 +100,18 @@ def _parse_text_input_validate(
     if isinstance(validate, str):
         return validate, None
 
-    if (
-        isinstance(validate, tuple)
-        and len(validate) == 2
-        and all(isinstance(item, str) for item in validate)
-    ):
-        return validate
+    if isinstance(validate, tuple):
+        if len(validate) == 2 and all(isinstance(item, str) for item in validate):
+            return validate
+        raise StreamlitValueError(
+            "validate",
+            ["a regex string", "a (regex, message) tuple of strings"],
+        )
 
-    raise StreamlitAPIException(
-        "The `validate` parameter must be `None`, a regex string, or a "
-        "`(regex, message)` tuple of strings."
+    raise StreamlitInvalidParameterTypeError(
+        "validate",
+        type(validate).__name__,
+        ["None", "str", "tuple"],
     )
 
 
@@ -197,7 +204,7 @@ class TextWidgetsMixin:
         ] = "default",
         help: str | None = None,
         autocomplete: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -224,7 +231,7 @@ class TextWidgetsMixin:
         ] = "default",
         help: str | None = None,
         autocomplete: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -251,7 +258,7 @@ class TextWidgetsMixin:
         ] = "default",
         help: str | None = None,
         autocomplete: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -376,8 +383,29 @@ class TextWidgetsMixin:
             (equivalent to not setting the attribute). For more details, see
             https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete
 
-        on_change : callable
-            An optional callback invoked when this text input's value changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the text input should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the text input. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a new value (pressing Enter, blurring the field, or
+              clearing a search input).
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits a new value. The text input still updates in the UI.
+              The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. Ignored
+              commits are held in the browser and are lost if the page is
+              refreshed before that rerun, unless ``bind="query-params"``
+              is set (see ``bind``). Inside ``st.form``, this has no
+              effect: the form already defers all commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -492,6 +520,13 @@ class TextWidgetsMixin:
             This can't be used with ``type="password"``. An empty
             query parameter (e.g., ``?my_key=``) clears the widget.
 
+            When ``on_change="ignore"``, the URL is updated as soon as the
+            value is committed (Enter, blur, or search-clear); typing alone
+            does not update it. As with widgets inside a form, the URL can
+            show a value that Python hasn't received yet. Python receives
+            the new value on the next rerun, so a page load or share uses
+            the updated URL value.
+
         persist_state : "page", "session", or None
             How long to preserve the widget's value when it isn't rendered.
             If this is ``None`` (default), the value is lost when the widget
@@ -569,7 +604,7 @@ class TextWidgetsMixin:
         type: str = "default",
         help: str | None = None,
         autocomplete: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -585,6 +620,12 @@ class TextWidgetsMixin:
     ) -> str | None:
         key = to_key(key)
 
+        validate_on_change_mode(on_change)
+
+        on_change_callback: WidgetCallback | None = (
+            on_change if callable(on_change) else None
+        )
+
         type_defaults = _TEXT_INPUT_TYPE_DEFAULTS.get(type)
         if type_defaults is None:
             raise StreamlitValueError(
@@ -594,10 +635,10 @@ class TextWidgetsMixin:
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=None if value == "" else value,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         # Make sure value is always string or None:
         value = str(value) if value is not None else None
@@ -687,7 +728,7 @@ class TextWidgetsMixin:
         )
 
         if help is not None:
-            text_input_proto.help = dedent(help)
+            text_input_proto.help = to_help_str(help)
 
         if max_chars is not None:
             text_input_proto.max_chars = max_chars
@@ -710,20 +751,24 @@ class TextWidgetsMixin:
 
         # Prevent binding password inputs to query params (exposes secrets in URL)
         if bind == "query-params" and type == "password":
-            raise StreamlitAPIException(
-                "Cannot use `bind='query-params'` with `type='password'`. "
-                "Password values must not appear in URLs."
+            raise StreamlitIncompatibleParametersError(
+                "bind='query-params'",
+                "type='password'",
+                explanation="Password values must not appear in URLs.",
             )
 
         # Set query param key if bound
         if bind == "query-params" and key is not None:
             text_input_proto.query_param_key = str(key)
 
+        if isinstance(on_change, str) and on_change == "ignore":
+            text_input_proto.ignore_rerun = True
+
         serde = TextInputSerde(value, max_chars)
 
         widget_state = register_widget(
             text_input_proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
@@ -1038,7 +1083,7 @@ class TextWidgetsMixin:
             on_change,
             default_value=None if value == "" else value,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         value = str(value) if value is not None else None
 
@@ -1074,7 +1119,7 @@ class TextWidgetsMixin:
         )
 
         if help is not None:
-            text_area_proto.help = dedent(help)
+            text_area_proto.help = to_help_str(help)
 
         if max_chars is not None:
             text_area_proto.max_chars = max_chars

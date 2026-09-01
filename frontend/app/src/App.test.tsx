@@ -4203,6 +4203,40 @@ describe("App", () => {
         vi.useRealTimers()
       }
     })
+
+    it("does not clear caches when the copy modifier is released first", async () => {
+      const user = userEvent.setup({
+        advanceTimers: advanceUserEventTimers,
+      })
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.DEVELOPER,
+        },
+      })
+
+      getMockConnectionManager(true)
+
+      // Hold Cmd+C, then release Cmd before C.
+      await user.keyboard("[MetaLeft>][KeyC>][/MetaLeft][/KeyC]")
+
+      expect(
+        screen.queryByTestId("stClearCacheDialog")
+      ).not.toBeInTheDocument()
+    })
+
+    it("stops screencast recording when Escape is released", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
+      renderApp(props)
+
+      await user.keyboard("{Escape}")
+
+      expect(props.screenCast.stopRecording).toHaveBeenCalled()
+    })
   })
 
   describe("showDevelopmentMenu", () => {
