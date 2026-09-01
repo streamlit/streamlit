@@ -210,7 +210,9 @@ def test_tooltip_xss_payload_is_not_executed(app: Page):
     app.on("dialog", _record_dialog)
 
     chart = _get_chart(app, "c_xss_chart")
-    expect(chart.locator("canvas")).to_be_visible()
+    # A ``lines`` series can add a second zrender canvas layer, so don't require
+    # a unique canvas locator.
+    expect(chart.locator("canvas").first).to_be_visible()
 
     # Must NOT happen at any point: the payload must never create an executing
     # <img onerror=...> element in the DOM.
