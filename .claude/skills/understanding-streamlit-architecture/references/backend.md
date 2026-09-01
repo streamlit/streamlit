@@ -233,6 +233,13 @@ sequenceDiagram
 - Each fragment gets a unique `fragment_id` (hash of function identity + delta-path context)
 - Frontend tracks `fragmentIdsThisRun` to know which fragments are active
 - Delta messages include `fragment_id` for proper tree updates
+- `@st.fragment(key=...)` also indexes that `fragment_id` under the user-facing name in `FragmentStorage` (`"app"` and `"fragment"` are reserved and cannot be used as keys)
+
+**Keyed / event-scoped reruns**:
+- `st.rerun("<key>")` or `st.rerun(["k1", "k2"])` from a widget callback (`on_click` / `on_change`) resolves those names to fragment ids and reruns only those fragments, replacing the interaction's default rerun.
+- This form is only valid from a callback. Calling it from the main script body or a fragment body raises `StreamlitAPIException`.
+- A sibling callback in the same interaction that returns normally or calls `st.rerun()` escalates the result to a full-app rerun.
+- Keys must have been registered during the most recently completed full-app run. Fragments skipped by a `False` conditional in that run are gone from storage.
 
 **Staleness with fragments**:
 - Elements track both `scriptRunId` and `fragmentId`

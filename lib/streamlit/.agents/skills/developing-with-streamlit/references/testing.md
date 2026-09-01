@@ -65,13 +65,15 @@ The script must be runnable on its own, so it must include its own imports. `.ru
 at = AppTest.from_file("streamlit_app.py").run()  # entrypoint, not a child page
 ```
 
-To reach a file-based child page, call `switch_page()` with a path relative to the entrypoint, then `.run()`. `switch_page()` does not rerun on its own:
+To reach a file-based child page, call `switch_page()` with a path relative to the entrypoint, then `.run()`. `switch_page()` does not rerun on its own. Pass the **file** path, not a custom `url_path`. Call `.run()` at least once first so `st.navigation` can register pages — before that, a custom `url_path` will not match:
 
 ```python
 at = AppTest.from_file("streamlit_app.py").run()
-at.switch_page("pages/settings.py").run()
+at.switch_page("app_pages/settings.py").run()  # file path, even if url_path="settings"
 assert not at.exception
 ```
+
+If the file is missing, or `st.navigation` is active and that file is not a registered page, `switch_page()` raises `ValueError` instead of opening the default page.
 
 Don't pass a child page straight to `from_file()` — that makes it the main script and changes how relative page paths resolve.
 
@@ -90,12 +92,18 @@ at.button[0].click().run()
 
 Convenience aliases exist where they read naturally: `at.checkbox[0].check()` / `.uncheck()`, `at.multiselect[0].select(value)`, `at.slider[0].set_range(lo, hi)`.
 
-Widgets are addressable by index (order on the page) or by `key`:
+Widgets, keyed display elements, and keyed containers are addressable by index (order on the page) or by `key`. Use `get_by_key()` when the type does not matter. A missing key raises `KeyError`; a key reused across nodes raises `AppTestError`:
 
 ```python
 at.selectbox(key="status").select("Active").run()
 at.button(key="submit").click().run()
+at.container(key="filters").text_input[0].set_value("q").run()
+at.get_by_key("filters")  # unique key, any type
 ```
+
+Do not `set_value`, `click`, or otherwise update a disabled widget — that raises `AppTestError` (from `streamlit.testing.v1`), matching a browser user who cannot interact with it.
+
+The same `AppTest` instance keeps fragment registrations across `.run()` calls, so a callback can target `@st.fragment(key=...)` registered on an earlier run.
 
 ## Asserting on results
 
@@ -195,6 +203,8 @@ def test_status_filter():
 ## What AppTest can't simulate
 
 `AppTest` covers widget interaction and the elements your script produces, but it does **not** reproduce every front-end interaction. In particular, **selections on `st.dataframe` and charts** (click-to-select rows, Altair/Plotly selection events) can't be triggered through `AppTest` — there's no setter for them, so you can't assert on what a user's on-chart selection would return. The same applies to anything that only exists in the rendered browser: custom-component JavaScript, CSS, and scroll/resize behavior. Cover those with Playwright e2e tests instead.
+
+Elements AppTest does not fully model (`st.progress`, `st.html`, `st.balloons`, `st.page_link`, and similar) still `.run()`. Those nodes stay inspectable instead of crashing on `.value`.
 
 ## References
 

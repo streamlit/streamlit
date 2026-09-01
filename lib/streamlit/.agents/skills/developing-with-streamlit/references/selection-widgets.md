@@ -64,6 +64,8 @@ countries = st.multiselect(
 )
 ```
 
+The dropdown shows a "Select all" action when 1000 or fewer options remain selectable (the default). Pass `select_all=False` to hide it so Enter selects the first match. Pass `select_all=True` only for manageable lists — selecting thousands of values at once can freeze the browser.
+
 ## Keep options on one row with `wrap`
 
 `st.pills`, `st.segmented_control`, and `st.multiselect` accept `wrap`. The
