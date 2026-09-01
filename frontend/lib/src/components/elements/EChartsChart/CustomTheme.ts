@@ -64,9 +64,24 @@ function buildAxisDefaults(
       fontFamily: theme.genericFonts.bodyFont,
       fontSize,
     },
+    nameTextStyle: {
+      color: labelColor,
+      fontFamily: theme.genericFonts.bodyFont,
+      fontSize,
+    },
     splitLine: {
       lineStyle: {
         color: axisLineColor,
+      },
+    },
+    // Opt-in alternating bands (`splitArea.show`). ECharts' defaults are opaque
+    // light gray, which covers the plot on a dark background.
+    splitArea: {
+      areaStyle: {
+        color: [
+          transparentize(labelColor, 0.97),
+          transparentize(labelColor, 0.93),
+        ],
       },
     },
   }
@@ -147,10 +162,7 @@ export function buildStreamlitEChartsTheme(
     angleAxis: axisDefaults,
     radiusAxis: axisDefaults,
     // Parallel coordinate axes.
-    parallelAxis: {
-      ...axisDefaults,
-      nameTextStyle: bodyTextStyle,
-    },
+    parallelAxis: axisDefaults,
     // Single axis (e.g. themeRiver, single-axis heatmaps/scatter).
     singleAxis: axisDefaults,
     // Radar coordinate. ECharts' defaults render bright, near-opaque split
@@ -199,14 +211,31 @@ export function buildStreamlitEChartsTheme(
       },
       label: bodyTextStyle,
     },
-    // Sunburst: inside labels keep ECharts' (dark) default color, but slices
-    // are drawn from the categorical palette and can be dark, so add a light
-    // halo to keep labels readable regardless of the underlying slice color.
+    // Sunburst and funnel draw labels on top of palette-colored shapes whose
+    // lightness varies, so pin a dark label with a light halo instead of
+    // ECharts' fixed default (dark for sunburst, white for funnel) — either one
+    // disappears on part of the palette.
     sunburst: {
       label: {
         color: colors.gray100,
         textBorderColor: colors.white,
         textBorderWidth: 2,
+      },
+    },
+    funnel: {
+      label: {
+        color: colors.gray100,
+        textBorderColor: colors.white,
+        textBorderWidth: 2,
+        fontFamily: genericFonts.bodyFont,
+      },
+    },
+    // Boxplot: ECharts fills the box with opaque white, which glares against a
+    // dark app background. The app background keeps the box readable while
+    // still reading as "hollow" against the palette-colored outline.
+    boxplot: {
+      itemStyle: {
+        color: colors.bgColor,
       },
     },
     // Gauge: ECharts' defaults use light-mode colors for the track and dark
@@ -241,9 +270,16 @@ export function buildStreamlitEChartsTheme(
         fontFamily: genericFonts.bodyFont,
       },
     },
-    // Treemap: theme the breadcrumb trail (its default light-gray surface
-    // clashes with the app background).
+    // Treemap: theme the breadcrumb trail and the parent-node header band
+    // (their default light-gray surfaces clash with the app background).
     treemap: {
+      upperLabel: {
+        color: colors.bodyText,
+        fontFamily: genericFonts.bodyFont,
+      },
+      itemStyle: {
+        borderColor: colors.bgColor,
+      },
       breadcrumb: {
         itemStyle: {
           color: colors.secondaryBg,
@@ -260,10 +296,45 @@ export function buildStreamlitEChartsTheme(
         },
       },
     },
+    // Calendar coordinate system (e.g. calendar heatmaps).
+    calendar: {
+      itemStyle: {
+        color: "transparent",
+        borderColor: colors.borderColor,
+      },
+      splitLine: {
+        lineStyle: {
+          color: axisLineColor,
+        },
+      },
+      dayLabel: bodyTextStyle,
+      monthLabel: bodyTextStyle,
+      yearLabel: bodyTextStyle,
+    },
     // Continuous color scale for visualMap-driven charts (e.g. heatmaps).
     visualMap: {
       inRange: {
         color: [...colors.chartSequentialColors],
+      },
+      textStyle: bodyTextStyle,
+    },
+    // Timeline: ECharts' defaults are a fixed light blue-gray that reads as
+    // washed out in both themes, so theme the axis, labels, and controls.
+    timeline: {
+      lineStyle: {
+        color: axisLineColor,
+      },
+      label: bodyTextStyle,
+      itemStyle: {
+        color: labelColor,
+      },
+      checkpointStyle: {
+        color: colors.primary,
+        borderColor: colors.bgColor,
+      },
+      controlStyle: {
+        color: labelColor,
+        borderColor: labelColor,
       },
     },
     dataZoom: {
@@ -299,17 +370,64 @@ export function buildStreamlitEChartsTheme(
   }
 }
 
+/** Read ``option[key]`` as a list of component configs, ignoring other shapes. */
+function toComponentList(value: unknown): Array<Record<string, unknown>> {
+  if (isPlainObject(value)) {
+    return [value as Record<string, unknown>]
+  }
+  if (Array.isArray(value)) {
+    return value.filter(isPlainObject) as Array<Record<string, unknown>>
+  }
+  return []
+}
+
+/**
+ * True if any ``dataZoom``/``visualMap``/``timeline`` component occupies the
+ * strip below the plot, where it would otherwise be drawn over the x-axis
+ * labels.
+ *
+ * All three default to a horizontal layout along the bottom edge, so a
+ * component only escapes the strip by opting into a vertical orientation or by
+ * anchoring itself to the top.
+ */
+function hasBottomAnchoredComponent(option: EChartsOptionObject): boolean {
+  const isAtBottom = (component: Record<string, unknown>): boolean =>
+    component.show !== false &&
+    component.orient !== "vertical" &&
+    component.top === undefined
+
+  // `type: "inside"` zooms via scroll/drag on the plot itself and draws nothing.
+  const sliders = toComponentList(option.dataZoom).filter(
+    zoom => zoom.type !== "inside"
+  )
+  // A visualMap only lies flat along the bottom when explicitly horizontal;
+  // its default vertical layout sits beside the plot.
+  const flatVisualMaps = toComponentList(option.visualMap).filter(
+    visualMap => visualMap.orient === "horizontal"
+  )
+
+  return [
+    ...sliders,
+    ...flatVisualMaps,
+    ...toComponentList(option.timeline),
+  ].some(isAtBottom)
+}
+
 /**
  * Build the default cartesian ``grid`` layout so charts fill their container.
  *
  * ECharts' built-in grid reserves large margins (``left: '15%'``,
  * ``right: '10%'``, ``top: 65``, ``bottom: 80``), which leaves charts heavily
- * inset compared to other Streamlit charts. We tighten the side margins (with
- * ``containLabel`` so axis labels/ticks/names stay inside the grid) to fill the
- * width, and tighten the top/bottom only on the side that has no title/legend.
- * On a side that *does* carry a title/legend we leave the margin unset so
- * ECharts' generous default reserves room for it (guessing a fixed pixel value
- * risks clipping a title+subtitle or a multi-item legend).
+ * inset compared to other Streamlit charts. We tighten the side margins to fill
+ * the width, and tighten the top/bottom only on a side that carries nothing but
+ * the plot. On a side that *does* carry a title, legend, or bottom-anchored
+ * control we leave the margin unset so ECharts' generous default reserves room
+ * for it (guessing a fixed pixel value risks clipping a title+subtitle, a
+ * multi-item legend, or a dataZoom slider).
+ *
+ * ``outerBoundsMode: "same"`` keeps axis labels *and* axis names inside those
+ * margins. It replaces the deprecated ``containLabel``, which ECharts 6 treats
+ * as ``outerBoundsContain: "axisLabel"`` and which therefore clipped axis names.
  */
 function buildDefaultGrid(
   option: EChartsOptionObject
@@ -331,12 +449,12 @@ function buildDefaultGrid(
   const grid: Record<string, unknown> = {
     left: 8,
     right: 24,
-    containLabel: true,
+    outerBoundsMode: "same",
   }
   if (!hasTitle && !legendAtTop) {
     grid.top = 16
   }
-  if (!legendAtBottom) {
+  if (!legendAtBottom && !hasBottomAnchoredComponent(option)) {
     grid.bottom = 8
   }
   return grid
@@ -352,6 +470,9 @@ function buildDefaultGrid(
  * tooltip/label ``formatter`` and never changes ``tooltip.renderMode`` — ECharts'
  * default escaping of tooltip/label values is relied upon.
  *
+ * Timeline specs nest the chart under ``baseOption``, which is where ECharts
+ * reads ``aria`` and ``grid`` from, so the defaults are filled in there instead.
+ *
  * @param option The parsed ECharts option object.
  * @param themeStr The chart's theme string (``"streamlit"`` or ``""``).
  * @returns The option with defaults filled (a new object) or the untouched
@@ -366,6 +487,18 @@ export function applyStreamlitOptionDefaults(
     return option
   }
 
+  const baseOption = option.baseOption
+  if (isPlainObject(baseOption)) {
+    return {
+      ...option,
+      baseOption: fillOptionDefaults(baseOption as EChartsOptionObject),
+    }
+  }
+  return fillOptionDefaults(option)
+}
+
+/** Fill the ``aria`` and ``grid`` defaults on a single (non-timeline) option. */
+function fillOptionDefaults(option: EChartsOptionObject): EChartsOptionObject {
   const result: EChartsOptionObject = { ...option }
 
   // Enable ARIA descriptions for screen readers when the user hasn't opted out.
@@ -380,7 +513,7 @@ export function applyStreamlitOptionDefaults(
   }
 
   // For cartesian charts, default the grid so the plot fills its container and
-  // long axis labels stay inside the grid. Any grid key the user set wins; we
+  // axis labels and names stay inside it. Any grid key the user set wins; we
   // only fill the gaps. Arrays (multiple grids) are left untouched.
   const hasCartesianAxis = "xAxis" in result || "yAxis" in result
   const grid = result.grid

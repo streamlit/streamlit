@@ -255,7 +255,15 @@ export function EChartsChart({
       resizedInstanceRef.current = chartInstance
       return
     }
-    chartInstance.resize()
+    try {
+      chartInstance.resize()
+    } catch (error) {
+      // `resize` re-runs the full render pipeline, so an option that already
+      // failed in `setOption` throws again here. Surface it as an in-chart
+      // error; letting it escape the effect would trip the error boundary and
+      // replace the element with an unrecoverable stack trace.
+      setRenderError(ensureError(error).message)
+    }
   }, [chartInstance, width, height])
 
   // Reset the selection when the surrounding form is cleared.

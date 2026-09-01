@@ -17,7 +17,7 @@ from __future__ import annotations
 import copy
 import json
 import re
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
@@ -62,6 +62,25 @@ if TYPE_CHECKING:
 # resolve to these fixed defaults (unless a pyecharts chart exposes its own).
 _DEFAULT_CONTENT_WIDTH: Final = 700
 _DEFAULT_CONTENT_HEIGHT: Final = 400
+
+# Series types provided by the separate ECharts GL extension, which is not
+# bundled. ECharts renders an empty chart for these and only logs to the browser
+# console, so they are rejected in Python where the cause can be explained.
+_GL_SERIES_TYPES: Final = frozenset(
+    {
+        "bar3D",
+        "flowGL",
+        "globe",
+        "line3D",
+        "lines3D",
+        "linesGL",
+        "map3D",
+        "polygons3D",
+        "scatter3D",
+        "scatterGL",
+        "surface",
+    }
+)
 
 
 class EChartsCompatible(Protocol):
@@ -289,6 +308,73 @@ def _convert_single_dataset(dataset: dict[str, Any]) -> None:
         dataset["dimensions"] = [str(column) for column in df.columns]
 
 
+def _iter_option_variants(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
+    """Yield the option itself plus the variants of a timeline spec.
+
+    Timeline specs keep the chart under ``baseOption`` and per-tick overrides
+    under ``options``, so series can live in any of the three places.
+    """
+    yield option
+    base_option = option.get("baseOption")
+    if isinstance(base_option, dict):
+        yield base_option
+    for timeline_option in option.get("options") or []:
+        if isinstance(timeline_option, dict):
+            yield timeline_option
+
+
+def _iter_series(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
+    """Yield every series config in an option, across all timeline variants."""
+    for variant in _iter_option_variants(option):
+        series = variant.get("series")
+        if isinstance(series, dict):
+            yield series
+        elif isinstance(series, list):
+            for entry in series:
+                if isinstance(entry, dict):
+                    yield entry
+
+
+def _validate_supported_features(option: dict[str, Any]) -> None:
+    """Reject option features that v1 cannot render.
+
+    ECharts fails these late and unhelpfully — GL series draw nothing at all and
+    only log to the browser console, while geo charts raise an internal
+    ``TypeError`` — so they are caught here where the message can name the cause.
+    """
+    uses_geo = any(
+        "geo" in variant for variant in _iter_option_variants(option)
+    ) or any(series.get("coordinateSystem") == "geo" for series in _iter_series(option))
+
+    for series in _iter_series(option):
+        series_type = series.get("type")
+        if series_type in _GL_SERIES_TYPES:
+            raise StreamlitAPIException(
+                f"The provided ECharts options use the `{series_type}` series, which "
+                "requires the ECharts GL extension. `st.echarts_chart` does not "
+                "support 3D or WebGL charts.",
+                error_id="echarts-gl-series-not-supported",
+            )
+        if series_type == "map":
+            uses_geo = True
+        if series_type == "custom":
+            raise StreamlitAPIException(
+                "The provided ECharts options use a `custom` series, which requires "
+                "a JavaScript `renderItem` callback. `st.echarts_chart` only "
+                "supports JSON-compatible option objects, so custom series are not "
+                "supported.",
+                error_id="echarts-custom-series-not-supported",
+            )
+
+    if uses_geo:
+        raise StreamlitAPIException(
+            "The provided ECharts options use a map or geo coordinate system, which "
+            "requires registering GeoJSON map data. `st.echarts_chart` does not "
+            "support map charts.",
+            error_id="echarts-map-charts-not-supported",
+        )
+
+
 def _convert_dataset_sources(option: dict[str, Any]) -> None:
     """Convert dataframe-like ``dataset.source`` values into JSON records.
 
@@ -334,6 +420,7 @@ def _normalize_options(options: EChartsOptions) -> dict[str, Any]:
             detail="ECharts options must be a JSON object (mapping).",
         )
 
+    _validate_supported_features(option)
     _convert_dataset_sources(option)
     return option
 
@@ -460,6 +547,12 @@ class EChartsMixin:
             Embedding JavaScript callbacks (e.g. ``formatter`` functions or
             ``renderItem``) is not supported. Most formatting needs are covered
             by ECharts' string-template formatters (e.g. ``"formatter": "{b}: {c}"``).
+
+            Consequently, three families of ECharts charts are unavailable and
+            raise an error: ``custom`` series (which require a ``renderItem``
+            callback), map and geo charts (which require registering GeoJSON map
+            data), and 3D or WebGL charts from the ECharts GL extension
+            (``bar3D``, ``scatter3D``, ``globe``, and similar).
 
         Parameters
         ----------

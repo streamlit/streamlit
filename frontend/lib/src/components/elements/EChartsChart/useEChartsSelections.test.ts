@@ -15,7 +15,7 @@
  */
 
 import { act, renderHook } from "@testing-library/react"
-import { Mocked } from "vitest"
+import { Mock, Mocked } from "vitest"
 
 import { EChartsChart as EChartsChartProto } from "@streamlit/protobuf"
 
@@ -29,16 +29,25 @@ import {
 const DEBOUNCE_TIME_MS = 150
 
 interface FakeChart extends EChartsSelectionInstance {
+  zr: { on: Mock; off: Mock }
   trigger: (event: string, params: unknown) => void
 }
 
 function createFakeChart(): Mocked<FakeChart> {
+  // Chart-level and zrender-level handlers share one registry so `trigger` can
+  // fire either without the tests caring which layer a handler is bound to.
   const handlers: Record<string, (params: unknown) => void> = {}
-  const chart = {
-    on: vi.fn((event: string, handler: (params: unknown) => void) => {
+  const record =
+    () =>
+    (event: string, handler: (params: unknown) => void): void => {
       handlers[event] = handler
-    }),
+    }
+  const chart = {
+    on: vi.fn(record()),
     off: vi.fn(),
+    zr: { on: vi.fn(record()), off: vi.fn() },
+    getZr: vi.fn(() => chart.zr),
+    isDisposed: vi.fn(() => false),
     dispatchAction: vi.fn(),
     convertFromPixel: vi.fn(),
     getOption: vi.fn(() => ({})),
@@ -116,19 +125,41 @@ describe("useEChartsSelections", () => {
       cleanup = result.current.bindSelections(chart)
     })
 
-    for (const event of [
-      "selectchanged",
-      "brushSelected",
-      "brushEnd",
-      "dblclick",
-    ]) {
+    for (const event of ["selectchanged", "brushSelected", "brushEnd"]) {
       expect(chart.on).toHaveBeenCalledWith(event, expect.any(Function))
     }
+    // Double-click binds on zrender so it also fires on empty canvas and on a
+    // brush cover, not just on data items.
+    expect(chart.on).not.toHaveBeenCalledWith("dblclick", expect.any(Function))
+    expect(chart.zr.on).toHaveBeenCalledWith("dblclick", expect.any(Function))
 
     act(() => {
       cleanup()
     })
-    expect(chart.off).toHaveBeenCalledTimes(4)
+    expect(chart.off).toHaveBeenCalledTimes(3)
+    expect(chart.zr.off).toHaveBeenCalledWith("dblclick", expect.any(Function))
+  })
+
+  it("skips unbinding when the instance was already disposed", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+
+    const chart = createFakeChart()
+    let cleanup: () => void = () => {}
+    act(() => {
+      cleanup = result.current.bindSelections(chart)
+    })
+
+    // The chart is disposed before this cleanup runs when the element unmounts;
+    // unbinding from a disposed instance logs an ECharts console warning.
+    chart.isDisposed.mockReturnValue(true)
+    act(() => {
+      cleanup()
+    })
+
+    expect(chart.off).not.toHaveBeenCalled()
+    expect(chart.zr.off).not.toHaveBeenCalled()
   })
 
   it("leaves the widget's option untouched (no selection injection)", () => {

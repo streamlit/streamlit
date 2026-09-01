@@ -118,15 +118,49 @@ describe("buildStreamlitEChartsTheme", () => {
     expect(lineStyle.opacity).toBeGreaterThan(0)
   })
 
-  it("themes the treemap breadcrumb surface and text", () => {
+  it("themes the treemap breadcrumb surface, text, and parent label band", () => {
     const echartsTheme = buildStreamlitEChartsTheme(theme)
 
-    const treemap = echartsTheme.treemap as Record<
-      string,
-      Record<string, Record<string, Record<string, unknown>>>
-    >
+    const treemap = echartsTheme.treemap as Record<string, any>
     expect(treemap.breadcrumb.itemStyle.color).toBe(theme.colors.secondaryBg)
     expect(treemap.breadcrumb.itemStyle.textStyle.color).toBe(getGray70(theme))
+    // The parent-node header band defaults to illegible dark-on-white text.
+    expect(treemap.upperLabel.color).toBe(theme.colors.bodyText)
+  })
+
+  it("themes axis names and opt-in split areas", () => {
+    const echartsTheme = buildStreamlitEChartsTheme(theme)
+
+    const valueAxis = echartsTheme.valueAxis as Record<string, any>
+    expect(valueAxis.nameTextStyle.color).toBe(getGray70(theme))
+    // ECharts' default split areas are opaque light gray, which covers the plot
+    // on a dark background, so they are replaced by a faint themed pair.
+    expect(valueAxis.splitArea.areaStyle.color).toHaveLength(2)
+  })
+
+  it("themes components that keep fixed light-mode defaults", () => {
+    const echartsTheme = buildStreamlitEChartsTheme(theme)
+
+    const timeline = echartsTheme.timeline as Record<string, any>
+    expect(timeline.label.color).toBe(getGray70(theme))
+    expect(timeline.checkpointStyle.color).toBe(theme.colors.primary)
+
+    // The visualMap's range labels should match the themed axis labels.
+    const visualMap = echartsTheme.visualMap as Record<string, any>
+    expect(visualMap.textStyle.color).toBe(getGray70(theme))
+
+    const calendar = echartsTheme.calendar as Record<string, any>
+    expect(calendar.dayLabel.color).toBe(getGray70(theme))
+
+    // A boxplot's box is filled opaque white by default, which glares against a
+    // dark app background.
+    const boxplot = echartsTheme.boxplot as Record<string, any>
+    expect(boxplot.itemStyle.color).toBe(theme.colors.bgColor)
+
+    // Funnel labels sit on palette colors of varying lightness, so they get the
+    // same dark-text-plus-halo treatment as sunburst labels.
+    const funnel = echartsTheme.funnel as Record<string, any>
+    expect(funnel.label.textBorderWidth).toBeGreaterThan(0)
   })
 
   it("adds a readable halo to sunburst labels", () => {
@@ -201,14 +235,15 @@ describe("applyStreamlitOptionDefaults", () => {
       { xAxis: { type: "category" }, yAxis: { type: "value" }, series: [] },
       STREAMLIT_THEME
     )
-    // Tight margins + containLabel so the plot fills the container. With no
-    // title/legend, minimal top/bottom room is reserved.
+    // Tight margins so the plot fills the container, with `outerBoundsMode`
+    // keeping axis labels and names inside them. With no title/legend, minimal
+    // top/bottom room is reserved.
     expect(cartesian.grid).toEqual({
       left: 8,
       right: 24,
       top: 16,
       bottom: 8,
-      containLabel: true,
+      outerBoundsMode: "same",
     })
 
     // A pie chart has no cartesian axes, so no grid should be injected.
@@ -270,7 +305,64 @@ describe("applyStreamlitOptionDefaults", () => {
       top: 16,
       bottom: 8,
       containLabel: false,
+      outerBoundsMode: "same",
     })
+  })
+
+  it.each([
+    ["a dataZoom slider", { dataZoom: [{ type: "slider" }] }],
+    ["an untyped dataZoom (slider by default)", { dataZoom: {} }],
+    ["a horizontal visualMap", { visualMap: { orient: "horizontal" } }],
+    ["a timeline", { timeline: { data: ["2015"] } }],
+  ])(
+    "defers to ECharts' default bottom margin for %s",
+    (_name, bottomComponent) => {
+      const result = applyStreamlitOptionDefaults(
+        { xAxis: {}, yAxis: {}, series: [], ...bottomComponent },
+        STREAMLIT_THEME
+      )
+
+      // A tight `bottom` would let the component overlap the x-axis labels.
+      const grid = result.grid as Record<string, unknown>
+      expect(grid.bottom).toBeUndefined()
+      expect(grid.top).toBe(16)
+    }
+  )
+
+  it.each([
+    ["an inside dataZoom draws nothing", { dataZoom: [{ type: "inside" }] }],
+    [
+      "a vertical dataZoom sits beside the plot",
+      { dataZoom: { orient: "vertical" } },
+    ],
+    ["a top-anchored slider is out of the way", { dataZoom: { top: 0 } }],
+    ["a hidden slider is not rendered", { dataZoom: { show: false } }],
+    ["a visualMap defaults to vertical", { visualMap: { min: 0, max: 1 } }],
+  ])("keeps the tight bottom margin when %s", (_name, component) => {
+    const result = applyStreamlitOptionDefaults(
+      { xAxis: {}, yAxis: {}, series: [], ...component },
+      STREAMLIT_THEME
+    )
+
+    expect((result.grid as Record<string, unknown>).bottom).toBe(8)
+  })
+
+  it("fills defaults inside baseOption for timeline specs", () => {
+    const result = applyStreamlitOptionDefaults(
+      {
+        baseOption: { xAxis: {}, yAxis: {}, series: [] },
+        options: [{ series: [{ data: [1] }] }],
+      },
+      STREAMLIT_THEME
+    )
+
+    // ECharts reads `aria`/`grid` from `baseOption`, so writing them at the top
+    // level of a timeline spec would have no effect.
+    const baseOption = result.baseOption as Record<string, unknown>
+    expect(baseOption.aria).toEqual({ enabled: true })
+    expect((baseOption.grid as Record<string, unknown>).left).toBe(8)
+    expect(result.aria).toBeUndefined()
+    expect(result.grid).toBeUndefined()
   })
 
   it("leaves an array of grids untouched", () => {

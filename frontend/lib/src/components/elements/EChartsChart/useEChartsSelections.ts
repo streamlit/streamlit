@@ -72,6 +72,12 @@ export interface EChartsSelectionInstance {
     value: number[]
   ): number | number[]
   getOption(): unknown
+  isDisposed(): boolean
+  /** The underlying zrender layer, which receives every canvas-level event. */
+  getZr(): {
+    on(eventName: string, handler: (params: unknown) => void): void
+    off(eventName: string, handler?: (params: unknown) => void): void
+  }
 }
 
 /** A single entry of the ``selectchanged`` event's ``selected`` array. */
@@ -795,17 +801,28 @@ export function useEChartsSelections(
       chart.on("selectchanged", handleSelectChanged)
       chart.on("brushSelected", handleBrushSelected)
       chart.on("brushEnd", handleBrushEnd)
-      chart.on("dblclick", handleDoubleClick)
+      // Double-click clears the selection. It binds on the underlying zrender
+      // layer rather than the chart, because `chart.on("dblclick")` only fires
+      // for clicks that land on a data item — never on empty canvas or on the
+      // cover that a brushed region draws over the chart, which are exactly the
+      // spots users double-click to clear a box or lasso.
+      const zr = chart.getZr()
+      zr.on("dblclick", handleDoubleClick)
 
       return () => {
         emitSelection.cancel()
-        chart.off("selectchanged", handleSelectChanged)
-        chart.off("brushSelected", handleBrushSelected)
-        chart.off("brushEnd", handleBrushEnd)
-        chart.off("dblclick", handleDoubleClick)
         if (chartRef.current === chart) {
           chartRef.current = null
         }
+        // The instance is disposed before this cleanup when the whole chart is
+        // torn down; unbinding from a disposed instance logs a console warning.
+        if (chart.isDisposed()) {
+          return
+        }
+        chart.off("selectchanged", handleSelectChanged)
+        chart.off("brushSelected", handleBrushSelected)
+        chart.off("brushEnd", handleBrushEnd)
+        zr.off("dblclick", handleDoubleClick)
       }
     },
     [isSelectionActivated, chartId, widgetMgr, writeSelection, clearSelection]

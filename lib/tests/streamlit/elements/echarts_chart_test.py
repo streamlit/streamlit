@@ -271,6 +271,62 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.echarts_chart({"series": [{"data": [lambda: None]}]})
 
+    @parameterized.expand([("bar3D",), ("scatter3D",), ("surface",), ("globe",)])
+    def test_gl_series_raises(self, series_type):
+        """ECharts GL series raise instead of rendering an empty chart."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.echarts_chart({"series": [{"type": series_type}]})
+
+        assert "3D or WebGL charts" in str(exc.value)
+        assert exc.value.error_id == "echarts-gl-series-not-supported"
+
+    def test_custom_series_raises(self):
+        """A custom series raises, since ``renderItem`` must be a JS callback."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.echarts_chart({"series": [{"type": "custom"}]})
+
+        assert "custom series are not supported" in str(exc.value)
+        assert exc.value.error_id == "echarts-custom-series-not-supported"
+
+    @parameterized.expand(
+        [
+            ("map_series", {"series": [{"type": "map", "map": "world"}]}),
+            ("geo_component", {"geo": {"map": "world"}, "series": []}),
+            (
+                "geo_coordinate_system",
+                {"series": [{"type": "scatter", "coordinateSystem": "geo"}]},
+            ),
+        ]
+    )
+    def test_map_and_geo_raise(self, _name, options):
+        """Map and geo charts raise, since GeoJSON cannot be registered."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.echarts_chart(options)
+
+        assert "map charts" in str(exc.value)
+        assert exc.value.error_id == "echarts-map-charts-not-supported"
+
+    def test_unsupported_series_detected_inside_timeline_options(self):
+        """Timeline specs are scanned in ``baseOption`` and per-tick ``options``."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.echarts_chart(
+                {
+                    "baseOption": {"timeline": {"data": ["2015"]}},
+                    "options": [{"series": [{"type": "bar3D"}]}],
+                }
+            )
+
+        assert exc.value.error_id == "echarts-gl-series-not-supported"
+
+    def test_supported_series_named_like_gl_are_allowed(self):
+        """Ordinary series types are not caught by the GL/geo checks."""
+        st.echarts_chart(
+            {"series": [{"type": "scatter", "data": [[1, 2]]}, {"type": "lines"}]}
+        )
+
+        el = self.get_delta_from_queue().new_element.echarts_chart
+        assert json.loads(el.spec)["series"][1]["type"] == "lines"
+
     @parameterized.expand([(float("nan"),), (float("inf"),), (float("-inf"),)])
     def test_non_finite_values_rejected(self, value):
         """NaN/Infinity values are rejected (allow_nan=False)."""

@@ -37,6 +37,7 @@ const { mockInit, mockChart } = vi.hoisted(() => {
     getDataURL: vi.fn(() => "data:image/png;base64,AAA"),
     on: vi.fn(),
     off: vi.fn(),
+    getZr: vi.fn(() => ({ on: vi.fn(), off: vi.fn() })),
     dispatchAction: vi.fn(),
     convertFromPixel: vi.fn(),
     getOption: vi.fn(() => ({})),
@@ -63,10 +64,15 @@ vi.mock("echarts", () => ({
   init: mockInit,
 }))
 
+/** Lets a test change the measured size to simulate a container resize. */
+const { dimensionsHolder } = vi.hoisted(() => ({
+  dimensionsHolder: { width: 600, height: 400 },
+}))
+
 vi.mock("~lib/hooks/useCalculatedDimensions", () => ({
   useCalculatedDimensions: () => ({
-    width: 600,
-    height: 400,
+    width: dimensionsHolder.width,
+    height: dimensionsHolder.height,
     elementRef: mockContainerRef,
   }),
 }))
@@ -136,6 +142,8 @@ describe("EChartsChart", () => {
     vi.clearAllMocks()
     mockContainerRef.current = null
     themeHolder.override = null
+    dimensionsHolder.width = 600
+    dimensionsHolder.height = 400
     // Restore the shared-instance default; a test below overrides it locally.
     mockInit.mockImplementation(() => mockChart)
     mockChart.isDisposed.mockReturnValue(false)
@@ -272,6 +280,24 @@ describe("EChartsChart", () => {
     const error = screen.getByTestId("stEChartsChartError")
     expect(error).toBeVisible()
     expect(error).toHaveTextContent("invalid option")
+  })
+
+  it("renders a styled error instead of throwing when a resize fails", () => {
+    const { rerender } = render(<Wrapper element={createElement()} />)
+
+    // `resize` re-runs the render pipeline, so an option that ECharts cannot
+    // render throws here too. Escaping the effect would trip the error boundary
+    // and replace the chart with an unrecoverable stack trace.
+    mockChart.resize.mockImplementationOnce(() => {
+      throw new Error("resize failed")
+    })
+    dimensionsHolder.width = 800
+    rerender(<Wrapper element={createElement()} />)
+
+    expect(mockChart.resize).toHaveBeenCalledTimes(1)
+    const error = screen.getByTestId("stEChartsChartError")
+    expect(error).toBeVisible()
+    expect(error).toHaveTextContent("resize failed")
   })
 
   it("renders a styled error for an unparseable spec", () => {
