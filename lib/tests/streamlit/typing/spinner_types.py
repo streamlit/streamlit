@@ -70,15 +70,15 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Invalid text type (not str)
-    spinner(123)  # type: ignore[arg-type]
-    spinner(text=None)  # type: ignore[arg-type]
+    spinner(123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    spinner(text=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid show_time type (not bool)
-    spinner("Wait...", show_time="yes")  # type: ignore[arg-type]
+    spinner("Wait...", show_time="yes")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Passing show_time as positional argument (should be keyword-only)
-    spinner("Wait...", True)  # type: ignore[call-arg]
+    spinner("Wait...", True)  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
 
     # Invalid width value (not "content", "stretch", or int)
-    spinner("Wait...", width="full")  # type: ignore[arg-type]
-    spinner("Wait...", width=None)  # type: ignore[arg-type]
+    spinner("Wait...", width="full")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    spinner("Wait...", width=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
