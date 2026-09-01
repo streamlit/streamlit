@@ -120,51 +120,73 @@ st.button(
 )
 
 # ------------------------------------------------------------------ #
-# Scenario 5: Fresh input coalesces with a callback-generated replay.
+# Scenario 5: Fragment interaction coalesces with a callback-generated replay.
 # ------------------------------------------------------------------ #
-st.header("Scenario 5: callback replay coalescing")
+st.header("Scenario 5: fragment callback replay coalescing")
 
-for key in ("form_callbacks", "fresh_callbacks"):
+for key in ("source_callbacks", "fresh_callbacks"):
     if key not in st.session_state:
         st.session_state[key] = 0
-
-
-def wait_for_fresh_request() -> None:
-    st.session_state.form_callbacks += 1
-    st.session_state.normalized_name = st.session_state.race_name.strip()
-    st.write("Form callback waiting for fresh input")
-    ctx = get_script_run_ctx()
-    assert ctx is not None
-    assert ctx.script_requests is not None
-    deadline = monotonic() + 10
-    while ctx.script_requests._state is ScriptRequestType.CONTINUE:
-        if monotonic() >= deadline:
-            raise RuntimeError("Fresh browser interaction did not arrive")
-        sleep(0.01)
-    st.rerun("race_target")
 
 
 def record_fresh_callback() -> None:
     st.session_state.fresh_callbacks += 1
 
 
-@st.fragment(key="race_target")
-def race_target() -> None:
-    st.write("Race target")
+@st.fragment(key="source_fragment")
+def coalescing_source_fragment() -> None:
+    with st.container(key="fast_source_uuid"):
+        st.write(str(uuid4()))
+    callback_marker = st.empty()
+
+    def wait_for_fresh_fragment_request() -> None:
+        st.session_state.source_callbacks += 1
+        st.session_state.normalized_value = st.session_state.source_value.strip()
+        callback_marker.write("Source callback waiting for fresh fragment input")
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        assert ctx.script_requests is not None
+        deadline = monotonic() + 10
+        while ctx.script_requests._state is ScriptRequestType.CONTINUE:
+            if monotonic() >= deadline:
+                raise RuntimeError("Fresh fragment interaction did not arrive")
+            sleep(0.01)
+        st.rerun("result_fragment")
+
+    with st.form("fast_source_form"):
+        st.text_input(
+            "Source value",
+            key="source_value",
+        )
+        st.form_submit_button(
+            "Submit source",
+            key="source_submit",
+            on_click=wait_for_fresh_fragment_request,
+        )
 
 
-race_target()
-
-with st.form("race_form"):
-    st.text_input("Race name", key="race_name")
-    race_submitted = st.form_submit_button(
-        "Submit race form", on_click=wait_for_fresh_request
+@st.fragment(key="fresh_fragment")
+def coalescing_fresh_fragment() -> None:
+    with st.container(key="fast_fresh_uuid"):
+        st.write(str(uuid4()))
+    st.button(
+        "Fresh fragment interaction",
+        key="fresh_fragment_button",
+        on_click=record_fresh_callback,
     )
 
-st.button("Fresh interaction", key="fresh_interaction", on_click=record_fresh_callback)
 
-with st.container(key="race_results"):
-    st.write(f"Form callbacks: {st.session_state.form_callbacks}")
-    st.write(f"Fresh callbacks: {st.session_state.fresh_callbacks}")
-    st.write(f"Normalized name: {st.session_state.get('normalized_name', '')}")
-    st.write(f"Body saw submit: {race_submitted}")
+@st.fragment(key="result_fragment")
+def coalescing_result_fragment() -> None:
+    with st.container(key="fast_result_uuid"):
+        st.write(str(uuid4()))
+    with st.container(key="fast_results"):
+        st.write(f"Source callbacks: {st.session_state.source_callbacks}")
+        st.write(f"Fresh callbacks: {st.session_state.fresh_callbacks}")
+        st.write(f"Normalized value: {st.session_state.get('normalized_value', '')}")
+        st.write(f"Result saw submit: {st.session_state.get('source_submit', False)}")
+
+
+coalescing_source_fragment()
+coalescing_fresh_fragment()
+coalescing_result_fragment()

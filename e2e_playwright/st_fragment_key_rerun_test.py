@@ -14,7 +14,6 @@
 
 """Playwright tests for @st.fragment(key=...) and st.rerun(scope=<key>)."""
 
-import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.shared.app_utils import (
@@ -23,11 +22,6 @@ from e2e_playwright.shared.app_utils import (
     expect_no_exception,
     get_element_by_key,
 )
-
-
-@pytest.fixture(scope="module")
-def app_server_extra_args() -> list[str]:
-    return ["--runner.fastReruns=false"]
 
 
 def _text(app: Page, key: str) -> str:
@@ -101,21 +95,31 @@ def test_unknown_key_raises_visible_exception(app: Page) -> None:
     expect_exception(app, "No fragment found for target 'nonexistent_key'")
 
 
-def test_fresh_input_coalesces_with_main_script_callback_replay(app: Page) -> None:
-    app.get_by_label("Race name").fill("  Laura  ")
-    app.get_by_role("button", name="Submit race form").click()
-    expect(app.get_by_text("Form callback waiting for fresh input")).to_be_visible()
+def test_fragment_interactions_coalesce_with_replay_state(app: Page) -> None:
+    source_uuid = _text(app, "fast_source_uuid")
+    fresh_uuid = _text(app, "fast_fresh_uuid")
+    result_uuid = _text(app, "fast_result_uuid")
 
-    app.get_by_role("button", name="Fresh interaction").click()
+    app.get_by_label("Source value").fill("  retained  ")
+    app.get_by_role("button", name="Submit source").click()
+    expect(
+        app.get_by_text("Source callback waiting for fresh fragment input")
+    ).to_be_visible()
+    app.get_by_role("button", name="Fresh fragment interaction").click()
 
-    expect(get_element_by_key(app, "race_results")).to_contain_text("Form callbacks: 1")
-    expect(get_element_by_key(app, "race_results")).to_contain_text(
+    expect(get_element_by_key(app, "fast_results")).to_contain_text(
+        "Source callbacks: 1"
+    )
+    expect(get_element_by_key(app, "fast_results")).to_contain_text(
         "Fresh callbacks: 1"
     )
-    expect(get_element_by_key(app, "race_results")).to_contain_text(
-        "Normalized name: Laura"
+    expect(get_element_by_key(app, "fast_results")).to_contain_text(
+        "Normalized value: retained"
     )
-    expect(get_element_by_key(app, "race_results")).to_contain_text(
-        "Body saw submit: True"
+    expect(get_element_by_key(app, "fast_results")).to_contain_text(
+        "Result saw submit: True"
     )
+    expect(get_element_by_key(app, "fast_source_uuid")).to_have_text(source_uuid)
+    expect(get_element_by_key(app, "fast_fresh_uuid")).not_to_have_text(fresh_uuid)
+    expect(get_element_by_key(app, "fast_result_uuid")).not_to_have_text(result_uuid)
     expect_no_exception(app)
