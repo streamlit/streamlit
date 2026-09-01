@@ -429,7 +429,7 @@ class ScriptRunner:
             try:
                 try:
                     # Detach the loop before notifying AppSession, which may
-                    # close its session-owned loop synchronously.
+                    # later close its session-owned loop when handling SHUTDOWN.
                     asyncio.set_event_loop(None)
                 finally:
                     self._event_loop = None

@@ -1893,7 +1893,14 @@ class TestScriptRunner(ScriptRunner):
         initial_rerun_data: RerunData | None = None,
         event_loop: asyncio.AbstractEventLoop | None = None,
     ):
-        """Initializes the ScriptRunner for the given script_name."""
+        """Initialize the ScriptRunner for the given script_name.
+
+        ``initial_rerun_data`` defaults to a full-app rerun; supply data with a
+        ``fragment_id_queue`` to begin with a fragment run.
+
+        A supplied ``event_loop`` remains caller-owned. Otherwise, this helper
+        creates a loop and closes it when the script thread exits.
+        """
         # DeltaGenerator deltas will be enqueued into self.forward_msg_queue.
         self.forward_msg_queue = ForwardMsgQueue()
 
