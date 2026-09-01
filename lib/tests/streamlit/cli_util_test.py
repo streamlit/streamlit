@@ -14,42 +14,261 @@
 
 from __future__ import annotations
 
-import unittest
-from unittest.mock import patch
+import shlex
+import shutil
+import webbrowser
+from contextlib import contextmanager
+from typing import TYPE_CHECKING
+from unittest.mock import MagicMock, patch
 
-from parameterized import parameterized
+import pytest
 
+from streamlit import env_util
 from streamlit.cli_util import open_browser
+from tests.testutil import patch_config_options
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+_URL = "http://some-url"
 
 
-class CliUtilTest(unittest.TestCase):
-    @parameterized.expand(
-        [("Linux", False, True), ("Windows", True, False), ("Darwin", False, True)]
-    )
-    def test_open_browser(self, os_type, webbrowser_expect, popen_expect):
-        """Test web browser opening scenarios."""
-        from streamlit import env_util
+@contextmanager
+def _platform(
+    *, windows: bool = False, darwin: bool = False, linux: bool = False
+) -> Iterator[None]:
+    """Pin env_util OS flags without leaking globals across tests."""
+    with (
+        patch.object(env_util, "IS_WINDOWS", windows),
+        patch.object(env_util, "IS_DARWIN", darwin),
+        patch.object(env_util, "IS_LINUX_OR_BSD", linux),
+    ):
+        yield
 
-        env_util.IS_WINDOWS = os_type == "Windows"
-        env_util.IS_DARWIN = os_type == "Darwin"
-        env_util.IS_LINUX_OR_BSD = os_type == "Linux"
 
-        with patch("streamlit.env_util.is_executable_in_path", return_value=True):
-            with patch("webbrowser.open") as webbrowser_open:
-                with patch("subprocess.Popen") as subprocess_popen:
-                    open_browser("http://some-url")
-                    assert webbrowser_expect == webbrowser_open.called
-                    assert popen_expect == subprocess_popen.called
+def _successful_controller() -> MagicMock:
+    controller = MagicMock()
+    controller.open.return_value = True
+    return controller
 
-    def test_open_browser_linux_no_xdg(self):
-        """Test opening the browser on Linux with no xdg installed"""
-        from streamlit import env_util
 
-        env_util.IS_LINUX_OR_BSD = True
+@pytest.mark.parametrize(
+    ("os_name", "expect_webbrowser_open", "expect_popen_command"),
+    [
+        ("Linux", False, "xdg-open"),
+        ("Windows", True, None),
+        ("Darwin", False, "open"),
+    ],
+    ids=["linux_xdg_open", "windows_webbrowser", "darwin_open"],
+)
+def test_open_browser_os_default(
+    os_name: str, expect_webbrowser_open: bool, expect_popen_command: str | None
+) -> None:
+    """With an empty browser.command, each OS uses its default handler."""
+    with (
+        _platform(
+            windows=os_name == "Windows",
+            darwin=os_name == "Darwin",
+            linux=os_name == "Linux",
+        ),
+        patch_config_options({"browser.command": ""}),
+        patch("streamlit.env_util.is_executable_in_path", return_value=True),
+        patch("webbrowser.get") as webbrowser_get,
+        patch("webbrowser.open") as webbrowser_open,
+        patch("subprocess.Popen") as subprocess_popen,
+    ):
+        open_browser(_URL)
 
-        with patch("streamlit.env_util.is_executable_in_path", return_value=False):
-            with patch("webbrowser.open") as webbrowser_open:
-                with patch("subprocess.Popen") as subprocess_popen:
-                    open_browser("http://some-url")
-                    assert webbrowser_open.called
-                    assert not subprocess_popen.called
+        webbrowser_get.assert_not_called()
+        assert webbrowser_open.called is expect_webbrowser_open
+        if expect_popen_command is None:
+            subprocess_popen.assert_not_called()
+        else:
+            subprocess_popen.assert_called_once()
+            assert subprocess_popen.call_args.args[0] == [expect_popen_command, _URL]
+
+
+def test_open_browser_linux_no_xdg() -> None:
+    """Linux without xdg-open falls back to webbrowser.open."""
+    with (
+        _platform(linux=True),
+        patch_config_options({"browser.command": ""}),
+        patch("streamlit.env_util.is_executable_in_path", return_value=False),
+        patch("webbrowser.get") as webbrowser_get,
+        patch("webbrowser.open") as webbrowser_open,
+        patch("subprocess.Popen") as subprocess_popen,
+    ):
+        open_browser(_URL)
+
+        webbrowser_get.assert_not_called()
+        webbrowser_open.assert_called_once_with(_URL)
+        subprocess_popen.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("browser_command", "expected_get_arg"),
+    [
+        ("firefox", "firefox"),
+        ("/usr/bin/firefox %s", "/usr/bin/firefox %s &"),
+        ("firefox %s &", "firefox %s &"),
+    ],
+    ids=["registered_name", "percent_s_appends_ampersand", "template_keeps_ampersand"],
+)
+def test_configured_command_passed_to_webbrowser_get(
+    browser_command: str, expected_get_arg: str
+) -> None:
+    """Pass browser.command to webbrowser.get(), appending & to %s templates."""
+    controller = _successful_controller()
+    with (
+        _platform(darwin=True),
+        patch_config_options({"browser.command": browser_command}),
+        patch("webbrowser.get", return_value=controller) as webbrowser_get,
+        patch("webbrowser.open") as webbrowser_open,
+        patch("subprocess.Popen") as subprocess_popen,
+    ):
+        open_browser(_URL)
+
+        webbrowser_get.assert_called_once_with(expected_get_arg)
+        controller.open.assert_called_once_with(_URL)
+        webbrowser_open.assert_not_called()
+        subprocess_popen.assert_not_called()
+
+
+def test_configured_command_retries_bare_path_as_quoted_template() -> None:
+    """If get() fails, retry with a quoted executable path plus '%s &'."""
+    path = "/mnt/c/Program Files (x86)/Google/Chrome/Application/chrome.exe"
+    controller = _successful_controller()
+    with (
+        _platform(darwin=True),
+        patch_config_options({"browser.command": path}),
+        patch(
+            "webbrowser.get",
+            side_effect=[webbrowser.Error("unknown"), controller],
+        ) as webbrowser_get,
+        patch("webbrowser.open") as webbrowser_open,
+        patch("subprocess.Popen") as subprocess_popen,
+    ):
+        open_browser(_URL)
+
+        assert webbrowser_get.call_args_list[0].args == (path,)
+        assert webbrowser_get.call_args_list[1].args == (f"{shlex.quote(path)} %s &",)
+        controller.open.assert_called_once_with(_URL)
+        webbrowser_open.assert_not_called()
+        subprocess_popen.assert_not_called()
+
+
+def test_configured_command_falls_back_for_unknown_name() -> None:
+    """An unresolvable command logs a warning and uses the OS default."""
+    with (
+        _platform(darwin=True),
+        patch_config_options({"browser.command": "not-a-browser"}),
+        patch(
+            "webbrowser.get", side_effect=webbrowser.Error("unknown")
+        ) as webbrowser_get,
+        patch("webbrowser.open") as webbrowser_open,
+        patch("subprocess.Popen") as subprocess_popen,
+        patch("streamlit.cli_util._get_logger") as mock_get_logger,
+    ):
+        open_browser(_URL)
+
+        assert webbrowser_get.call_count == 2
+        mock_get_logger.return_value.warning.assert_called_once()
+        warning_args = mock_get_logger.return_value.warning.call_args.args
+        assert "browser.command=%r" in warning_args[0]
+        assert warning_args[1] == "not-a-browser"
+        subprocess_popen.assert_called_once()
+        webbrowser_open.assert_not_called()
+
+
+def test_configured_command_does_not_fall_back_when_open_returns_false() -> None:
+    """A falsey controller.open() result must not open a second (OS default) browser.
+
+    BackgroundBrowser returns False when the helper exits immediately, which
+    is normal for ``open -a`` and for a browser that is already running.
+    """
+    controller = MagicMock()
+    controller.open.return_value = False
+    with (
+        _platform(darwin=True),
+        patch_config_options({"browser.command": "firefox"}),
+        patch("webbrowser.get", return_value=controller),
+        patch("streamlit.cli_util._open_browser_with_os_default") as os_default,
+        patch("streamlit.cli_util._get_logger") as mock_get_logger,
+    ):
+        open_browser(_URL)
+
+        controller.open.assert_called_once_with(_URL)
+        mock_get_logger.assert_not_called()
+        os_default.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "error",
+    [OSError("boom"), FileNotFoundError("missing")],
+    ids=["raises_os_error", "raises_file_not_found"],
+)
+def test_configured_command_falls_back_when_open_raises(error: OSError) -> None:
+    """If controller.open() raises OSError, log a warning and use the OS default."""
+    controller = MagicMock()
+    controller.open.side_effect = error
+    with (
+        _platform(darwin=True),
+        patch_config_options({"browser.command": "firefox"}),
+        patch("webbrowser.get", return_value=controller),
+        patch("subprocess.Popen") as subprocess_popen,
+        patch("streamlit.cli_util._get_logger") as mock_get_logger,
+    ):
+        open_browser(_URL)
+
+        controller.open.assert_called_once_with(_URL)
+        mock_get_logger.return_value.warning.assert_called_once()
+        subprocess_popen.assert_called_once()
+
+
+@pytest.mark.skipif(shutil.which("true") is None, reason="true is not on PATH")
+def test_background_browser_false_does_not_fall_back() -> None:
+    """A %s template that exits immediately must not also open the OS default."""
+    with (
+        _platform(darwin=True),
+        patch_config_options({"browser.command": "true %s"}),
+        patch("streamlit.cli_util._open_browser_with_os_default") as os_default,
+    ):
+        open_browser(_URL)
+
+        os_default.assert_not_called()
+
+
+def test_whitespace_only_command_is_treated_as_unset() -> None:
+    """Whitespace-only browser.command uses the OS default with no warning."""
+    with (
+        _platform(darwin=True),
+        patch_config_options({"browser.command": "   "}),
+        patch("webbrowser.get") as webbrowser_get,
+        patch("webbrowser.open") as webbrowser_open,
+        patch("subprocess.Popen") as subprocess_popen,
+        patch("streamlit.cli_util._get_logger") as mock_get_logger,
+    ):
+        open_browser(_URL)
+
+        webbrowser_get.assert_not_called()
+        mock_get_logger.assert_not_called()
+        subprocess_popen.assert_called_once()
+        webbrowser_open.assert_not_called()
+
+
+def test_open_browser_ignores_server_headless() -> None:
+    """open_browser still opens when server.headless is true; headless is bootstrap's job."""
+    controller = _successful_controller()
+    with (
+        _platform(darwin=True),
+        patch_config_options({"browser.command": "chrome", "server.headless": True}),
+        patch("webbrowser.get", return_value=controller) as webbrowser_get,
+        patch("webbrowser.open") as webbrowser_open,
+        patch("subprocess.Popen") as subprocess_popen,
+    ):
+        open_browser(_URL)
+
+        webbrowser_get.assert_called_once_with("chrome")
+        controller.open.assert_called_once_with(_URL)
+        webbrowser_open.assert_not_called()
+        subprocess_popen.assert_not_called()

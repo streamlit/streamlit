@@ -51,6 +51,13 @@ def style_for_cli(message: str, **kwargs: Any) -> str:
         return message
 
 
+def _get_logger() -> Any:
+    """Return this module's logger. Load it lazily to avoid a config import cycle."""
+    from streamlit.logger import get_logger
+
+    return get_logger(__name__)
+
+
 def _open_browser_with_webbrowser(url: str) -> None:
     import webbrowser
 
@@ -65,18 +72,48 @@ def _open_browser_with_command(command: str, url: str) -> None:
         subprocess.Popen(cmd_line, stdout=devnull, stderr=subprocess.STDOUT)  # noqa: S603
 
 
-def open_browser(url: str) -> None:
-    """Open a web browser pointing to a given URL.
-
-    We use this function instead of Python's `webbrowser` module because this
-    way we can capture stdout/stderr to avoid polluting the terminal with the
-    browser's messages. For example, Chrome always prints things like "Created
-    new window in existing browser session", and those get on the user's way.
-
-    url : str
-        The URL. Must include the protocol.
-
+def _nonblocking_webbrowser_command(browser_command: str) -> str:
+    """If the command contains ``%s`` and does not already end with ``&``,
+    append ``&`` so ``webbrowser.get()`` uses ``BackgroundBrowser`` instead of
+    ``GenericBrowser`` (which waits for the subprocess and would block the server).
     """
+    if "%s" in browser_command and not browser_command.rstrip().endswith("&"):
+        return f"{browser_command} &"
+    return browser_command
+
+
+def _open_browser_with_configured_command(browser_command: str, url: str) -> bool:
+    """Try to open ``url`` with ``browser.command`` via ``webbrowser.get()``.
+
+    Return True if a controller was constructed and ``open()`` was invoked
+    without raising. Return False only if the command cannot be resolved or
+    ``open()`` raises ``OSError``, so the caller can fall back.
+
+    Do not treat ``open()``'s boolean as success. ``BackgroundBrowser``
+    returns False when the helper exits immediately (for example ``open -a``
+    or a browser that is already running), which is not a launch failure.
+    """
+    import shlex
+    import webbrowser
+
+    try:
+        controller = webbrowser.get(_nonblocking_webbrowser_command(browser_command))
+    except webbrowser.Error:
+        try:
+            # webbrowser.get() only synthesizes a controller from a path when
+            # the string contains "%s". Keep this Error handler in case that
+            # contract changes.
+            controller = webbrowser.get(f"{shlex.quote(browser_command)} %s &")
+        except webbrowser.Error:
+            return False
+    try:
+        controller.open(url)
+    except OSError:
+        return False
+    return True
+
+
+def _open_browser_with_os_default(url: str) -> None:
     # Treat Windows separately because:
     # 1. /dev/null doesn't exist.
     # 2. subprocess.Popen(['start', url]) doesn't actually pop up the
@@ -106,3 +143,26 @@ def open_browser(url: str) -> None:
     import platform  # pragma: no cover - unsupported platform
 
     raise errors.Error(f'Cannot open browser in platform "{platform.system()}"')  # ty: ignore[unresolved-attribute]  # pragma: no cover - unsupported platform
+
+
+def open_browser(url: str) -> None:
+    """Open a web browser pointing to a given URL.
+
+    If ``browser.command`` is set, try that browser via ``webbrowser.get()``.
+    If it is unset or opening fails, use the operating system's default handler.
+
+    url : str
+        The URL. Must include the protocol.
+    """
+    from streamlit import config
+
+    browser_command = str(config.get_option("browser.command") or "").strip()
+    if browser_command and _open_browser_with_configured_command(browser_command, url):
+        return
+    if browser_command:
+        _get_logger().warning(
+            "Could not open the browser configured by browser.command=%r. "
+            "Falling back to the system default.",
+            browser_command,
+        )
+    _open_browser_with_os_default(url)
