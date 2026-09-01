@@ -902,11 +902,17 @@ class ScriptRunner:
         with self._join_wake_lock:
             self._join_wake_coordinator = None
 
-        # Tell session_state to update itself in response
+        # Tell session_state to update itself in response.
+        # Do not drop unseen widgets when the script stopped for a rerun.
+        # st.rerun() interrupts before later widgets register, so
+        # widget_ids_this_run would treat them as stale.
         if not premature_stop:
             self._session_state.on_script_finished(
                 ctx.shared.widget_ids_this_run.snapshot(),
-                remove_stale_widgets=ctx.has_script_started,
+                remove_stale_widgets=(
+                    ctx.has_script_started
+                    and event != ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
+                ),
             )
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
