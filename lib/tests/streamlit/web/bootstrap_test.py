@@ -939,11 +939,12 @@ class BootstrapOnServerStartBrowserTest(IsolatedAsyncioTestCase):
         ):
             bootstrap._on_server_start(Mock(is_running_hello=False))
 
-        mock_thread.assert_called_once()
-        kwargs = mock_thread.call_args.kwargs
-        assert kwargs["daemon"] is True
-        assert kwargs["name"] == "streamlit-open-browser"
-        kwargs["target"]()
+            mock_thread.assert_called_once()
+            kwargs = mock_thread.call_args.kwargs
+            assert kwargs["daemon"] is True
+            assert kwargs["name"] == "streamlit-open-browser"
+            kwargs["target"]()
+
         mock_open_browser.assert_called_once()
 
     async def test_does_not_open_browser_in_headless_mode(self, mock_open_browser):
