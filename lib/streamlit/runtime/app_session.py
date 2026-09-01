@@ -94,6 +94,10 @@ def _close_script_event_loop(loop: asyncio.AbstractEventLoop) -> None:
     library code may explicitly drive it and attach tasks, async generators,
     or default-executor resources.
 
+    Code that attaches resources to this shared AppSession-owned loop remains
+    responsible for releasing them before session teardown and must not close
+    the loop itself.
+
     When no other loop is running on the current thread, task cancellation,
     async generators, and the default executor are drained before close. When
     invoked from Streamlit's active runtime-loop thread, Python prevents

@@ -415,7 +415,7 @@ class AppSessionTest(unittest.TestCase):
 
         session._create_scriptrunner(initial_rerun_data=RerunData())
 
-        # Stop the first runner so the second can start.
+        # Clear the first runner reference so AppSession creates a second one.
         session._scriptrunner = None
 
         session._create_scriptrunner(initial_rerun_data=RerunData())
