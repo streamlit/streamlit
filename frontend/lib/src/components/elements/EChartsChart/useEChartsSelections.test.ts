@@ -112,6 +112,19 @@ describe("useEChartsSelections", () => {
     expect(chart.off).not.toHaveBeenCalled()
   })
 
+  it("does not activate selection when disabled", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr, undefined, true)
+    )
+
+    expect(result.current.isSelectionActivated).toBe(false)
+    const chart = createFakeChart()
+    act(() => {
+      result.current.bindSelections(chart)
+    })
+    expect(chart.on).not.toHaveBeenCalled()
+  })
+
   it("binds all selection listeners for a selection widget", () => {
     const { result } = renderHook(() =>
       useEChartsSelections(createElement(), widgetMgr)
@@ -489,6 +502,201 @@ describe("useEChartsSelections", () => {
     )
   })
 
+  it("emits an empty box when brushSelected clears without brushEnd", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+
+    const chart = createFakeChart()
+    act(() => {
+      result.current.bindSelections(chart)
+    })
+
+    act(() => {
+      chart.trigger("brushEnd", {
+        areas: [
+          {
+            brushType: "rect",
+            coordRange: [
+              [0, 2],
+              [10, 20],
+            ],
+            xAxisIndex: 0,
+          },
+        ],
+      })
+    })
+    flush()
+    ;(widgetMgr.setStringValue as Mock).mockClear()
+
+    // Toolbox clear: empty brushSelected, no brushEnd.
+    act(() => {
+      chart.trigger("brushSelected", { batch: [] })
+    })
+    flush()
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      "chart-id",
+      JSON.stringify({
+        selection: { points: [], point_indices: [], box: [], lasso: [] },
+      }),
+      { formId: "", fragmentId: undefined, fromUser: true }
+    )
+  })
+
+  it("does not emit while restoreSelection re-applies a programmatic select", () => {
+    widgetMgr.getElementState.mockImplementation(
+      (_id: string, key: string) => {
+        if (key === "selectedPoints") {
+          return [{ seriesIndex: 0, dataIndex: [0] }]
+        }
+        return undefined
+      }
+    )
+
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+    const chart = createFakeChart()
+    chart.dispatchAction.mockImplementation(
+      (payload: Record<string, unknown>) => {
+        if (payload.type === "select") {
+          chart.trigger("selectchanged", {
+            selected: [{ seriesIndex: 0, dataIndex: [0] }],
+          })
+        }
+      }
+    )
+
+    act(() => {
+      result.current.bindSelections(chart)
+    })
+    act(() => {
+      result.current.restoreSelection(chart)
+    })
+    flush()
+
+    expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    [
+      "rect",
+      {
+        brushType: "rect",
+        range: [
+          [0, 20],
+          [10, 40],
+        ],
+      },
+      { x: [0, 2], y: [1, 4], grid_index: 0 },
+    ],
+    [
+      "lineX",
+      { brushType: "lineX", range: [0, 20] },
+      { x: [0, 2], y: [], grid_index: 0 },
+    ],
+    [
+      "lineY",
+      { brushType: "lineY", range: [10, 40], yAxisIndex: 0 },
+      { x: [], y: [1, 4], grid_index: 0 },
+    ],
+    [
+      "polygon",
+      {
+        brushType: "polygon",
+        range: [
+          [0, 10],
+          [20, 40],
+        ],
+      },
+      { x: [0, 2], y: [1, 4], grid_index: 0 },
+    ],
+  ])(
+    "converts a pixel %s range via convertFromPixel",
+    (_name, area, expectedBox) => {
+      const { result } = renderHook(() =>
+        useEChartsSelections(createElement(), widgetMgr)
+      )
+      const chart = createFakeChart()
+      chart.convertFromPixel.mockImplementation(
+        (_finder: unknown, point: number[]) => [point[0] / 10, point[1] / 10]
+      )
+      act(() => {
+        result.current.bindSelections(chart)
+      })
+
+      act(() => {
+        chart.trigger("brushEnd", { areas: [area] })
+      })
+      flush()
+
+      expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+        "chart-id",
+        JSON.stringify({
+          selection: {
+            points: [],
+            point_indices: [],
+            box: _name === "polygon" ? [] : [expectedBox],
+            lasso: _name === "polygon" ? [expectedBox] : [],
+          },
+        }),
+        { formId: "", fragmentId: undefined, fromUser: true }
+      )
+    }
+  )
+
+  it("falls back to raw pixels when convertFromPixel does not return a point", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+    const chart = createFakeChart()
+    chart.convertFromPixel.mockImplementation(
+      () => undefined as unknown as number[]
+    )
+    act(() => {
+      result.current.bindSelections(chart)
+    })
+
+    act(() => {
+      chart.trigger("brushEnd", {
+        areas: [
+          {
+            brushType: "rect",
+            range: [
+              [0, 20],
+              [10, 40],
+            ],
+          },
+        ],
+      })
+    })
+    flush()
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      "chart-id",
+      JSON.stringify({
+        selection: {
+          points: [],
+          point_indices: [],
+          box: [
+            {
+              range: [
+                [0, 20],
+                [10, 40],
+              ],
+              grid_index: 0,
+              coordinate_system: "pixel",
+            },
+          ],
+          lasso: [],
+        },
+      }),
+      { formId: "", fragmentId: undefined, fromUser: true }
+    )
+  })
+
   it("skips no-op widget updates", () => {
     const identicalState = JSON.stringify({
       selection: {
@@ -567,6 +775,95 @@ describe("useEChartsSelections", () => {
       }),
       { formId: "", fragmentId: undefined, fromUser: true }
     )
+  })
+
+  it("does not clear a lasso completed by the same double-click", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+    const chart = createFakeChart()
+    act(() => {
+      result.current.bindSelections(chart)
+    })
+
+    act(() => {
+      chart.trigger("brushEnd", {
+        areas: [
+          {
+            brushType: "polygon",
+            coordRange: [
+              [0, 0],
+              [1, 1],
+              [1, 0],
+            ],
+          },
+        ],
+      })
+      chart.trigger("dblclick", {})
+    })
+    flush()
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      "chart-id",
+      JSON.stringify({
+        selection: {
+          points: [],
+          point_indices: [],
+          box: [],
+          lasso: [{ x: [0, 1, 1], y: [0, 1, 0], grid_index: 0 }],
+        },
+      }),
+      { formId: "", fragmentId: undefined, fromUser: true }
+    )
+    expect(chart.dispatchAction).not.toHaveBeenCalledWith({
+      type: "brush",
+      areas: [],
+    })
+  })
+
+  it("does not clear a lasso when double-click is delivered before brushEnd", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+    const chart = createFakeChart()
+    act(() => {
+      result.current.bindSelections(chart)
+    })
+
+    act(() => {
+      chart.trigger("dblclick", {})
+      chart.trigger("brushEnd", {
+        areas: [
+          {
+            brushType: "polygon",
+            coordRange: [
+              [0, 0],
+              [1, 1],
+              [1, 0],
+            ],
+          },
+        ],
+      })
+    })
+    flush()
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      "chart-id",
+      JSON.stringify({
+        selection: {
+          points: [],
+          point_indices: [],
+          box: [],
+          lasso: [{ x: [0, 1, 1], y: [0, 1, 0], grid_index: 0 }],
+        },
+      }),
+      { formId: "", fragmentId: undefined, fromUser: true }
+    )
+    expect(chart.dispatchAction).not.toHaveBeenCalledWith({
+      type: "brush",
+      areas: [],
+    })
   })
 
   it("unselects persisted points when clearing via double-click", () => {

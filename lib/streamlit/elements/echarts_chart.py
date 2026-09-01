@@ -71,6 +71,7 @@ _GL_SERIES_TYPES: Final = frozenset(
         "bar3D",
         "flowGL",
         "globe",
+        "graphGL",
         "line3D",
         "lines3D",
         "linesGL",
@@ -81,6 +82,11 @@ _GL_SERIES_TYPES: Final = frozenset(
         "surface",
     }
 )
+
+# Bare ``function (...)`` in a JSON string (pyecharts ``dump_options``). A
+# substring match on ``"function"`` is too broad — it would treat a parse
+# failure whose payload merely contains the word "function" as a callback.
+_BARE_JS_FUNCTION: Final = re.compile(r"\bfunction\s*\(")
 
 
 class EChartsCompatible(Protocol):
@@ -253,30 +259,28 @@ class EChartsChartSelectionSerde:
         return json.dumps(selection_state)
 
 
-def _contains_js_callback(raw: str) -> bool:
-    """True if a raw option string appears to embed a JavaScript callback.
-
-    ``pyecharts`` encodes ``JsCode`` values with a ``--x_x--`` sentinel and
-    emits bare, unquoted ``function () { ... }`` / arrow (``=>``) values, both of
-    which are unsupported in v1.
-    """
-    return "--x_x--" in raw or "function" in raw or "=>" in raw
+def _js_callback_error() -> StreamlitAPIException:
+    return StreamlitAPIException(
+        "The provided ECharts options contain JavaScript callbacks (e.g. "
+        "`function` values or `JsCode`), which are not supported by "
+        "`st.echarts_chart` in v1. Only JSON-compatible option objects are "
+        "supported. Use ECharts string-template formatters instead of "
+        "JavaScript functions.",
+        error_id="echarts-js-callbacks-not-supported",
+    )
 
 
 def _loads_json_option(raw: str) -> Any:
     """Parse a raw JSON option string, raising a helpful error on failure."""
+    # ``dump_options_with_quotes`` produces valid JSON that still embeds the
+    # ``--x_x--`` sentinel, so this check must run before ``json.loads``.
+    if "--x_x--" in raw:
+        raise _js_callback_error()
     try:
         return json.loads(raw)
     except (json.JSONDecodeError, TypeError, ValueError) as ex:
-        if _contains_js_callback(raw):
-            raise StreamlitAPIException(
-                "The provided ECharts options contain JavaScript callbacks (e.g. "
-                "`function` values or `JsCode`), which are not supported by "
-                "`st.echarts_chart` in v1. Only JSON-compatible option objects are "
-                "supported. Use ECharts string-template formatters instead of "
-                "JavaScript functions.",
-                error_id="echarts-js-callbacks-not-supported",
-            ) from ex
+        if _BARE_JS_FUNCTION.search(raw) is not None or "=>" in raw:
+            raise _js_callback_error() from ex
         raise StreamlitAPIException(
             "The provided ECharts options could not be parsed as JSON. "
             "`st.echarts_chart` only supports JSON-compatible option objects in v1.",
@@ -302,10 +306,18 @@ def _convert_single_dataset(dataset: dict[str, Any]) -> None:
         return
 
     df = dataframe_util.convert_anything_to_pandas_df(source)
+    labels = [str(column) for column in df.columns]
+    if len(labels) != len(set(labels)):
+        raise StreamlitAPIException(
+            "The provided ECharts dataset has duplicate column labels after "
+            'converting them to strings (for example both `1` and `"1"`). '
+            "Rename the columns so each label is unique.",
+            error_id="echarts-dataset-duplicate-columns",
+        )
     dataset["source"] = _dataframe_to_records(df)
     # Preserve column order via ``dimensions`` unless the user set it explicitly.
     if "dimensions" not in dataset:
-        dataset["dimensions"] = [str(column) for column in df.columns]
+        dataset["dimensions"] = labels
 
 
 def _iter_option_variants(option: dict[str, Any]) -> Iterator[dict[str, Any]]:

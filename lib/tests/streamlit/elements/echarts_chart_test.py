@@ -119,6 +119,14 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         spec = json.loads(el.spec)
         assert spec["dataset"]["dimensions"] == ["product"]
 
+    def test_dataset_source_duplicate_stringified_columns_raises(self):
+        """Column labels that collide after ``str()`` are rejected."""
+        df = pd.DataFrame([[1, 2]], columns=[1, "1"])
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.echarts_chart({"dataset": {"source": df}, "series": [{"type": "bar"}]})
+
+        assert exc.value.error_id == "echarts-dataset-duplicate-columns"
+
     def test_dataset_source_list_of_datasets(self):
         """A list of datasets converts each dataframe ``source``."""
         df = pd.DataFrame({"x": [1], "y": [2]})
@@ -258,6 +266,30 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         assert "JavaScript callbacks" in str(exc.value)
         assert exc.value.error_id == "echarts-js-callbacks-not-supported"
 
+    def test_js_callback_sentinel_in_valid_json_raises(self):
+        """pyecharts ``dump_options_with_quotes`` embeds ``--x_x--`` in valid JSON."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.echarts_chart(
+                '{"tooltip": {"formatter": "--x_x--function (p) { return p; }--x_x--"}}'
+            )
+
+        assert exc.value.error_id == "echarts-js-callbacks-not-supported"
+
+    def test_malformed_json_mentioning_function_is_parse_error(self):
+        """The word ``function`` in a label is not treated as a JS callback."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.echarts_chart('{ "title": "my function"')
+
+        assert exc.value.error_id == "echarts-options-invalid-json"
+
+    def test_function_word_in_valid_json_is_allowed(self):
+        """A title containing the word ``function`` is still valid JSON."""
+        st.echarts_chart(
+            {"title": {"text": "my function"}, "series": [{"type": "bar", "data": [1]}]}
+        )
+        spec = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)
+        assert spec["title"]["text"] == "my function"
+
     def test_invalid_json_string_raises(self):
         """A malformed JSON string raises with a parse-failure error_id."""
         with pytest.raises(StreamlitAPIException) as exc:
@@ -271,7 +303,9 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.echarts_chart({"series": [{"data": [lambda: None]}]})
 
-    @parameterized.expand([("bar3D",), ("scatter3D",), ("surface",), ("globe",)])
+    @parameterized.expand(
+        [("bar3D",), ("scatter3D",), ("surface",), ("globe",), ("graphGL",)]
+    )
     def test_gl_series_raises(self, series_type):
         """ECharts GL series raise instead of rendering an empty chart."""
         with pytest.raises(StreamlitAPIException) as exc:

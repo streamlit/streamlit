@@ -116,7 +116,7 @@ interface BrushEndParams {
 export interface UseEChartsSelectionsOutput {
   /**
    * Whether the chart is a selection widget (``on_select`` is not ``"ignore"``,
-   * i.e. the element has an ID).
+   * i.e. the element has an ID) and the widget is not disabled.
    */
   isSelectionActivated: boolean
   /**
@@ -525,17 +525,22 @@ function withDefaultSeriesCursor(
 export function useEChartsSelections(
   element: EChartsChartProto,
   widgetMgr: WidgetStateManager,
-  fragmentId?: string
+  fragmentId?: string,
+  disabled = false
 ): UseEChartsSelectionsOutput {
   const chartId = element.id
   const formId = element.formId
 
-  // Selection is active whenever the chart is a widget (on_select != "ignore"),
-  // which is the only case the backend assigns an element ID.
-  const isSelectionActivated = Boolean(chartId)
+  // Selection is active whenever the chart is a widget (on_select != "ignore")
+  // and the widget is not disabled (e.g. a disconnected app).
+  const isSelectionActivated = Boolean(chartId) && !disabled
 
   // Keep the latest bound chart so form-clear resets can clear the visible brush.
   const chartRef = useRef<EChartsSelectionInstance | null>(null)
+  // Suppress widget emits from programmatic restore dispatches so a data-only
+  // rerun cannot loop: ``restoreSelection`` runs while handlers are already
+  // bound, and ECharts fires ``selectchanged`` for ``dispatchAction("select")``.
+  const isRestoringRef = useRef(false)
 
   const widgetInfo: WidgetInfo = useMemo(
     () => ({ id: chartId, formId }),
@@ -577,26 +582,31 @@ export function useEChartsSelections(
       if (!chartId) {
         return
       }
-      // Re-apply natively selected points (an option-replacing setOption clears
-      // the select state), then re-draw persisted brush areas.
-      const selectedPoints = widgetMgr.getElementState<SelectedEntry[]>(
-        chartId,
-        SELECTED_POINTS_STATE_KEY
-      )
-      if (Array.isArray(selectedPoints)) {
-        dispatchPointSelection(chart, selectedPoints, "select")
-      }
-
-      const areas = widgetMgr.getElementState<BrushArea[]>(
-        chartId,
-        BRUSH_AREAS_STATE_KEY
-      )
-      if (Array.isArray(areas) && areas.length > 0) {
-        try {
-          chart.dispatchAction({ type: "brush", areas })
-        } catch (error) {
-          LOG.warn("Failed to restore persisted brush areas", error)
+      isRestoringRef.current = true
+      try {
+        // Re-apply natively selected points (an option-replacing setOption clears
+        // the select state), then re-draw persisted brush areas.
+        const selectedPoints = widgetMgr.getElementState<SelectedEntry[]>(
+          chartId,
+          SELECTED_POINTS_STATE_KEY
+        )
+        if (Array.isArray(selectedPoints)) {
+          dispatchPointSelection(chart, selectedPoints, "select")
         }
+
+        const areas = widgetMgr.getElementState<BrushArea[]>(
+          chartId,
+          BRUSH_AREAS_STATE_KEY
+        )
+        if (Array.isArray(areas) && areas.length > 0) {
+          try {
+            chart.dispatchAction({ type: "brush", areas })
+          } catch (error) {
+            LOG.warn("Failed to restore persisted brush areas", error)
+          }
+        }
+      } finally {
+        isRestoringRef.current = false
       }
     },
     [chartId, widgetMgr]
@@ -738,7 +748,9 @@ export function useEChartsSelections(
             selected
           )
         }
-        emitSelection()
+        if (!isRestoringRef.current) {
+          emitSelection()
+        }
       }
 
       const handleBrushSelected = (raw: unknown): void => {
@@ -765,12 +777,31 @@ export function useEChartsSelections(
             indices,
           })
         }
-        // Do not emit here. ``brushSelected`` fires throughout a drag, so a
-        // pause longer than the debounce would rerun the app with new points
+        // Toolbox ``brush: {type: "clear"}`` fires ``brushSelected`` with an
+        // empty batch and no ``brushEnd``. Drop stale geometry and emit so
+        // Python does not keep the previous region.
+        if (
+          points.length === 0 &&
+          (latestBox.length > 0 || latestLasso.length > 0)
+        ) {
+          latestBox = []
+          latestLasso = []
+          if (chartId) {
+            widgetMgr.setElementState(chartId, BRUSH_AREAS_STATE_KEY, [])
+          }
+          if (!isRestoringRef.current) {
+            emitSelection()
+          }
+        }
+        // Otherwise do not emit: ``brushSelected`` fires throughout a drag, so
+        // a pause longer than the debounce would rerun the app with new points
         // and the previous ``box``/``lasso``. ``brushEnd`` is the commit; if
         // it already scheduled an emit (event-order inversion), the pending
         // debounce still reads these updated caches.
       }
+
+      let polygonBrushJustCompleted = false
+      let deferredClearTimer: ReturnType<typeof setTimeout> | undefined
 
       const handleBrushEnd = (raw: unknown): void => {
         const params = raw as BrushEndParams
@@ -781,10 +812,20 @@ export function useEChartsSelections(
         if (chartId) {
           widgetMgr.setElementState(chartId, BRUSH_AREAS_STATE_KEY, areas)
         }
-        emitSelection()
+        // Completing a lasso is a double-click on zrender. Set this before
+        // emitting so a paired ``dblclick`` (same turn) does not clear.
+        if (
+          !isRestoringRef.current &&
+          areas.some(area => area.brushType === "polygon")
+        ) {
+          polygonBrushJustCompleted = true
+        }
+        if (!isRestoringRef.current) {
+          emitSelection()
+        }
       }
 
-      const handleDoubleClick = (): void => {
+      const clearBoundSelection = (): void => {
         emitSelection.cancel()
         latestSelectedPoints = []
         latestSelectedIndices = []
@@ -793,6 +834,23 @@ export function useEChartsSelections(
         latestBox = []
         latestLasso = []
         clearSelection()
+      }
+
+      const handleDoubleClick = (): void => {
+        if (deferredClearTimer !== undefined) {
+          clearTimeout(deferredClearTimer)
+        }
+        // Defer so a polygon-complete ``brushEnd`` on the same double-click can
+        // set the guard first, regardless of which zr listener runs first.
+        // eslint-disable-next-line no-restricted-globals -- Coalesce zr dblclick with ECharts polygon brushEnd; not a React render timer.
+        deferredClearTimer = setTimeout(() => {
+          deferredClearTimer = undefined
+          if (polygonBrushJustCompleted) {
+            polygonBrushJustCompleted = false
+            return
+          }
+          clearBoundSelection()
+        }, 0)
       }
 
       // Bind all selection listeners: point selection (`selectchanged`) fires
@@ -811,6 +869,9 @@ export function useEChartsSelections(
 
       return () => {
         emitSelection.cancel()
+        if (deferredClearTimer !== undefined) {
+          clearTimeout(deferredClearTimer)
+        }
         if (chartRef.current === chart) {
           chartRef.current = null
         }

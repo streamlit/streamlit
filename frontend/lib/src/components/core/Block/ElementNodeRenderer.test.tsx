@@ -90,6 +90,7 @@ vi.mock(
 vi.mock("~lib/components/elements/IFrame/IFrame", mockNullDefault)
 vi.mock("~lib/components/elements/LinkButton/LinkButton", mockNullDefault)
 vi.mock("~lib/components/elements/PlotlyChart/PlotlyChart", mockNullDefault)
+vi.mock("~lib/components/elements/EChartsChart/EChartsChart", mockNullDefault)
 vi.mock(
   "~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter",
   mockNullDefault
@@ -880,6 +881,11 @@ describe("ElementNodeRenderer Block Component", () => {
       [
         "vegaLiteChart",
         { id: "vega-1" },
+        ElementContainerConfig.LARGE_OVERFLOW_VISIBLE,
+      ],
+      [
+        "echartsChart",
+        { id: "echarts-1" },
         ElementContainerConfig.LARGE_OVERFLOW_VISIBLE,
       ],
     ])(

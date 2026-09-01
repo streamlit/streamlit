@@ -15,11 +15,8 @@
  */
 
 import { mockTheme } from "~lib/mocks/mockTheme"
-import {
-  getGray30,
-  getGray70,
-  hasLightBackgroundColor,
-} from "~lib/theme/getColors"
+import { getGray30, getGray70 } from "~lib/theme/getColors"
+import { darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 
 import {
   applyStreamlitOptionDefaults,
@@ -37,7 +34,7 @@ describe("buildStreamlitEChartsTheme", () => {
       ...theme.colors.chartCategoricalColors,
     ])
     expect(echartsTheme.backgroundColor).toBe("transparent")
-    expect(echartsTheme.darkMode).toBe(!hasLightBackgroundColor(theme))
+    expect(echartsTheme.darkMode).toBe(false)
 
     const textStyle = echartsTheme.textStyle as Record<string, unknown>
     expect(textStyle.fontFamily).toBe(theme.genericFonts.bodyFont)
@@ -115,13 +112,33 @@ describe("buildStreamlitEChartsTheme", () => {
     expect(sankey.color).toEqual([...theme.colors.chartSequentialColors])
     const lineStyle = sankey.lineStyle as Record<string, unknown>
     expect(lineStyle.color).toBe(getGray70(theme))
-    expect(lineStyle.opacity).toBeGreaterThan(0)
+    expect(lineStyle.opacity).toBe(0.2)
   })
+
+  it.each([
+    ["Light", lightTheme.emotion, false, 0.2],
+    ["Dark", darkTheme.emotion, true, 0.35],
+  ] as const)(
+    "sets darkMode and sankey opacity for the %s theme",
+    (_name, emotionTheme, darkMode, sankeyOpacity) => {
+      const echartsTheme = buildStreamlitEChartsTheme(emotionTheme)
+      expect(echartsTheme.darkMode).toBe(darkMode)
+      const sankey = echartsTheme.sankey as {
+        lineStyle: { opacity: number }
+      }
+      expect(sankey.lineStyle.opacity).toBe(sankeyOpacity)
+    }
+  )
 
   it("themes the treemap breadcrumb surface, text, and parent label band", () => {
     const echartsTheme = buildStreamlitEChartsTheme(theme)
 
-    const treemap = echartsTheme.treemap as Record<string, any>
+    const treemap = echartsTheme.treemap as {
+      breadcrumb: {
+        itemStyle: { color: string; textStyle: { color: string } }
+      }
+      upperLabel: { color: string }
+    }
     expect(treemap.breadcrumb.itemStyle.color).toBe(theme.colors.secondaryBg)
     expect(treemap.breadcrumb.itemStyle.textStyle.color).toBe(getGray70(theme))
     // The parent-node header band defaults to illegible dark-on-white text.
@@ -131,7 +148,10 @@ describe("buildStreamlitEChartsTheme", () => {
   it("themes axis names and opt-in split areas", () => {
     const echartsTheme = buildStreamlitEChartsTheme(theme)
 
-    const valueAxis = echartsTheme.valueAxis as Record<string, any>
+    const valueAxis = echartsTheme.valueAxis as {
+      nameTextStyle: { color: string }
+      splitArea: { areaStyle: { color: unknown[] } }
+    }
     expect(valueAxis.nameTextStyle.color).toBe(getGray70(theme))
     // ECharts' default split areas are opaque light gray, which covers the plot
     // on a dark background, so they are replaced by a faint themed pair.
@@ -141,25 +161,36 @@ describe("buildStreamlitEChartsTheme", () => {
   it("themes components that keep fixed light-mode defaults", () => {
     const echartsTheme = buildStreamlitEChartsTheme(theme)
 
-    const timeline = echartsTheme.timeline as Record<string, any>
+    const timeline = echartsTheme.timeline as {
+      label: { color: string }
+      checkpointStyle: { color: string }
+    }
     expect(timeline.label.color).toBe(getGray70(theme))
     expect(timeline.checkpointStyle.color).toBe(theme.colors.primary)
 
     // The visualMap's range labels should match the themed axis labels.
-    const visualMap = echartsTheme.visualMap as Record<string, any>
+    const visualMap = echartsTheme.visualMap as {
+      textStyle: { color: string }
+    }
     expect(visualMap.textStyle.color).toBe(getGray70(theme))
 
-    const calendar = echartsTheme.calendar as Record<string, any>
+    const calendar = echartsTheme.calendar as {
+      dayLabel: { color: string }
+    }
     expect(calendar.dayLabel.color).toBe(getGray70(theme))
 
     // A boxplot's box is filled opaque white by default, which glares against a
     // dark app background.
-    const boxplot = echartsTheme.boxplot as Record<string, any>
+    const boxplot = echartsTheme.boxplot as {
+      itemStyle: { color: string }
+    }
     expect(boxplot.itemStyle.color).toBe(theme.colors.bgColor)
 
     // Funnel labels sit on palette colors of varying lightness, so they get the
     // same dark-text-plus-halo treatment as sunburst labels.
-    const funnel = echartsTheme.funnel as Record<string, any>
+    const funnel = echartsTheme.funnel as {
+      label: { textBorderWidth: number }
+    }
     expect(funnel.label.textBorderWidth).toBeGreaterThan(0)
   })
 

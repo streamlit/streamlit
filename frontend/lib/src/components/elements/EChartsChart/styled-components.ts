@@ -25,6 +25,13 @@ export const StyledEChartsChartContainer = styled.div({
   height: "100%",
 })
 
+/** Stacks the chart and an in-place render-error overlay at the same size. */
+export const StyledEChartsChartStack = styled.div({
+  position: "relative",
+  width: "100%",
+  height: "100%",
+})
+
 /**
  * A styled error message shown when an ECharts option cannot be rendered,
  * matching the error styling used by other charts (e.g. Mermaid).
@@ -40,3 +47,13 @@ export const StyledEChartsError = styled.div(({ theme }) => ({
   wordBreak: "break-word",
   width: "100%",
 }))
+
+/** Covers the chart so a render error does not overflow the element height. */
+export const StyledEChartsErrorOverlay = styled(StyledEChartsError)(
+  ({ theme }) => ({
+    position: "absolute",
+    inset: 0,
+    overflow: "auto",
+    zIndex: theme.zIndices.priority,
+  })
+)

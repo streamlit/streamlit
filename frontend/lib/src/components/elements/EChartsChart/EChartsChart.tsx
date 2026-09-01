@@ -50,7 +50,9 @@ import {
 } from "./CustomTheme"
 import {
   StyledEChartsChartContainer,
+  StyledEChartsChartStack,
   StyledEChartsError,
+  StyledEChartsErrorOverlay,
 } from "./styled-components"
 import { useEChartsSelections } from "./useEChartsSelections"
 
@@ -60,8 +62,8 @@ interface EChartsChartProps {
   element: EChartsChartProto
   widgetMgr: WidgetStateManager
   /**
-   * Accepted for forward compatibility with widget-disabling; has no effect in
-   * v1 (not wired up). Mirrors st.plotly_chart.
+   * When true, the chart does not bind selection handlers or write widget
+   * state. Mirrors st.plotly_chart (e.g. a disconnected app).
    */
   disabled?: boolean
   fragmentId?: string
@@ -73,6 +75,7 @@ export function EChartsChart({
   widgetMgr,
   fragmentId,
   disableFullscreenMode,
+  disabled = false,
 }: Readonly<EChartsChartProps>): ReactElement {
   const theme = useEmotionTheme()
 
@@ -142,7 +145,7 @@ export function EChartsChart({
     bindSelections,
     restoreSelection,
     onFormCleared,
-  } = useEChartsSelections(element, widgetMgr, fragmentId)
+  } = useEChartsSelections(element, widgetMgr, fragmentId, disabled)
 
   // The option actually handed to setOption: Streamlit theming defaults plus
   // selection (brush/toolbox) configuration when selections are active.
@@ -156,6 +159,12 @@ export function EChartsChart({
 
   const hasValidSpec = option !== null
   const hasValidDimensions = width > 0 && height > 0
+  const sizeRef = useRef({ width, height })
+  sizeRef.current = { width, height }
+  // When ``echarts.init`` runs against a 0x0 container (hasBeenSized is latched
+  // but the current measurement is 0), the first positive-size pass must
+  // ``resize()`` instead of being treated as the coincident init skip.
+  const needsResizeAfterZeroInitRef = useRef(false)
 
   // Latch: once the container has been measured with non-zero dimensions, keep
   // the chart mounted. Dimensions can transiently report 0 during layout
@@ -179,14 +188,19 @@ export function EChartsChart({
       return
     }
 
+    const { width: initWidth, height: initHeight } = sizeRef.current
+    needsResizeAfterZeroInitRef.current = initWidth <= 0 || initHeight <= 0
+
     const chart = echarts.init(dom, themeArg, { renderer: rendererStr })
     // Force the setOption effect to re-apply against the fresh instance.
     appliedOptionRef.current = null
+    setHasRendered(false)
     setChartInstance(chart)
 
     return () => {
       chart.dispose()
       setChartInstance(null)
+      setHasRendered(false)
     }
   }, [containerRef, rendererStr, themeArg, hasValidSpec, hasBeenSized])
 
@@ -247,13 +261,17 @@ export function EChartsChart({
       // the first positive-size pass.
       return
     }
-    // Skip the resize triggered on the same pass the instance was (re)created:
-    // echarts already sizes to the container at init, and resizing during its
-    // first render is a no-op that logs a benign "resize during main process"
-    // warning. Subsequent size changes still resize.
+    // Skip the resize triggered on the same pass the instance was (re)created
+    // at a positive size: echarts already sizes to the container at init, and
+    // resizing during its first render is a no-op that logs a benign "resize
+    // during main process" warning. If this instance was created at 0x0, the
+    // first positive observation must resize.
     if (resizedInstanceRef.current !== chartInstance) {
       resizedInstanceRef.current = chartInstance
-      return
+      if (!needsResizeAfterZeroInitRef.current) {
+        return
+      }
+      needsResizeAfterZeroInitRef.current = false
     }
     try {
       chartInstance.resize()
@@ -290,9 +308,14 @@ export function EChartsChart({
     }
     const extension = rendererStr === "svg" ? "svg" : "png"
     try {
+      const hasExplicitBackground =
+        isPlainObject(option) &&
+        (option as EChartsOptionObject).backgroundColor !== undefined
       const dataUrl = chartInstance.getDataURL({
         pixelRatio: 2,
-        backgroundColor: theme.colors.bgColor,
+        ...(hasExplicitBackground || element.theme !== STREAMLIT_THEME
+          ? {}
+          : { backgroundColor: theme.colors.bgColor }),
       })
       // Build a `YYYY-MM-DDTHH-MM` timestamp from local time so the filename
       // reflects the user's wall-clock time rather than UTC. Matches the
@@ -317,7 +340,7 @@ export function EChartsChart({
         ensureError(error)
       )
     }
-  }, [chartInstance, theme.colors.bgColor, rendererStr])
+  }, [chartInstance, theme.colors.bgColor, rendererStr, option, element.theme])
 
   return (
     <StyledToolbarElementContainer
@@ -332,11 +355,15 @@ export function EChartsChart({
         onCollapse={collapse}
         disableFullscreenMode={disableFullscreenMode}
       >
-        <ToolbarAction
-          label={rendererStr === "svg" ? "Download as SVG" : "Download as PNG"}
-          icon={FileDownload}
-          onClick={handleDownloadChart}
-        />
+        {chartInstance !== null && (
+          <ToolbarAction
+            label={
+              rendererStr === "svg" ? "Download as SVG" : "Download as PNG"
+            }
+            icon={FileDownload}
+            onClick={handleDownloadChart}
+          />
+        )}
       </Toolbar>
       {parseError !== null ? (
         <StyledEChartsError role="alert" data-testid="stEChartsChartError">
@@ -344,17 +371,23 @@ export function EChartsChart({
         </StyledEChartsError>
       ) : (
         <>
-          <StyledEChartsChartContainer
-            ref={containerRef}
-            className="stEChartsChart"
-            data-testid="stEChartsChart"
-            aria-busy={!hasRendered && renderError === null}
-          />
-          {renderError !== null && (
-            <StyledEChartsError role="alert" data-testid="stEChartsChartError">
-              ECharts chart error: {renderError}
-            </StyledEChartsError>
-          )}
+          <StyledEChartsChartStack>
+            <StyledEChartsChartContainer
+              ref={containerRef}
+              className="stEChartsChart"
+              data-testid="stEChartsChart"
+              role="img"
+              aria-busy={!hasRendered && renderError === null}
+            />
+            {renderError !== null && (
+              <StyledEChartsErrorOverlay
+                role="alert"
+                data-testid="stEChartsChartError"
+              >
+                ECharts chart error: {renderError}
+              </StyledEChartsErrorOverlay>
+            )}
+          </StyledEChartsChartStack>
         </>
       )}
     </StyledToolbarElementContainer>

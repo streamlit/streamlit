@@ -113,9 +113,11 @@ describe("EChartsChart", () => {
   const Wrapper = ({
     element,
     isFullScreen = false,
+    disabled = false,
   }: {
     element: EChartsChartProto
     isFullScreen?: boolean
+    disabled?: boolean
   }): ReactElement => {
     const contextValue = useMemo(
       () => ({
@@ -132,7 +134,7 @@ describe("EChartsChart", () => {
         <EChartsChart
           element={element}
           widgetMgr={widgetMgr}
-          disabled={false}
+          disabled={disabled}
         />
       </ElementFullscreenContext.Provider>
     )
@@ -170,6 +172,60 @@ describe("EChartsChart", () => {
     // avoiding a benign "resize during main process" warning.
     expect(mockChart.resize).not.toHaveBeenCalled()
     expect(screen.getByTestId("stEChartsChart")).toBeVisible()
+  })
+
+  it("resizes when the container size changes after init", () => {
+    const { rerender } = render(<Wrapper element={createElement()} />)
+    expect(mockChart.resize).not.toHaveBeenCalled()
+
+    dimensionsHolder.width = 800
+    rerender(<Wrapper element={createElement()} />)
+
+    expect(mockChart.resize).toHaveBeenCalledTimes(1)
+  })
+
+  it("resizes on the first positive size after a 0x0 init", () => {
+    const { rerender } = render(<Wrapper element={createElement()} />)
+    expect(mockInit).toHaveBeenCalledTimes(1)
+    mockChart.resize.mockClear()
+
+    // Recreate the instance while the hook reports 0x0 (settings-menu reflow).
+    dimensionsHolder.width = 0
+    dimensionsHolder.height = 0
+    themeHolder.override = {
+      ...mockTheme.emotion,
+      colors: { ...mockTheme.emotion.colors, bgColor: "#000000" },
+    }
+    rerender(<Wrapper element={createElement()} />)
+    expect(mockInit).toHaveBeenCalledTimes(2)
+    expect(mockChart.resize).not.toHaveBeenCalled()
+
+    dimensionsHolder.width = 600
+    dimensionsHolder.height = 400
+    rerender(<Wrapper element={createElement()} />)
+    expect(mockChart.resize).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not dispose the instance when dimensions transiently report 0", () => {
+    const { rerender } = render(<Wrapper element={createElement()} />)
+    mockChart.resize.mockClear()
+    const disposeCalls = mockChart.dispose.mock.calls.length
+
+    dimensionsHolder.width = 0
+    dimensionsHolder.height = 0
+    rerender(<Wrapper element={createElement()} />)
+
+    expect(mockChart.dispose).toHaveBeenCalledTimes(disposeCalls)
+    expect(mockChart.resize).not.toHaveBeenCalled()
+  })
+
+  it("does not bind selection handlers when disabled", () => {
+    render(
+      <Wrapper element={createElement({ id: "chart-id" })} disabled={true} />
+    )
+
+    expect(mockInit).toHaveBeenCalledTimes(1)
+    expect(mockChart.on).not.toHaveBeenCalled()
   })
 
   it("renders display-only charts (empty id) without binding selection handlers", () => {
@@ -353,6 +409,17 @@ describe("EChartsChart", () => {
       /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}_chart\.png$/
     )
     clickSpy.mockRestore()
+  })
+
+  it("does not override the export background when theme is None", async () => {
+    const user = userEvent.setup()
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {})
+
+    render(<Wrapper element={createElement({ theme: "" })} />)
+
+    await user.click(screen.getByRole("button", { name: "Download as PNG" }))
+
+    expect(mockChart.getDataURL).toHaveBeenCalledWith({ pixelRatio: 2 })
   })
 
   it("exports an SVG renderer chart with an .svg filename", async () => {
