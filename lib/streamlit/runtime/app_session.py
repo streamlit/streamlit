@@ -88,18 +88,17 @@ _REPORTED_NUDGE_SUPPRESSION_REASONS: Final = frozenset({"conflict", "check_faile
 
 
 def _close_script_event_loop(loop: asyncio.AbstractEventLoop) -> None:
-    """Tear down the script-thread event loop at session end.
+    """Best-effort teardown of the script-thread event loop at session end.
 
-    Follows the same cleanup sequence as Python's own ``asyncio.run()``:
-    cancel tasks, await their cancellation, shut down async generators and the
-    default executor, then close. For our non-running loop this is typically a
-    no-op (no tasks, generators, or executor).
+    Streamlit installs this loop but does not run it continuously. User or
+    library code may explicitly drive it and attach tasks, async generators,
+    or default-executor resources.
 
-    When called from within a running event loop (e.g. from the runtime's
-    asyncio loop during session teardown), ``run_until_complete`` is
-    unavailable and would raise ``RuntimeError``.  In that case we cancel
-    tasks synchronously and skip the async teardown; the script-thread loop
-    is never run, so abandoning pending tasks there is safe.
+    When no other loop is running on the current thread, task cancellation,
+    async generators, and the default executor are drained before close. When
+    invoked from Streamlit's active runtime-loop thread, Python prevents
+    driving the script loop, so known tasks are cancelled and the loop is
+    closed without guaranteeing asynchronous finalization.
     """
     if loop.is_closed():
         return
@@ -197,10 +196,11 @@ class AppSession:
 
         self._event_loop = asyncio.get_running_loop()
 
-        # One persistent, non-running asyncio event loop for the session's
-        # script thread. Outlives individual ScriptRunners so that loop-bound
-        # objects stored in st.session_state or @st.cache_resource(scope=
-        # "session") remain valid across reruns and fastRerun churn.
+        # One persistent asyncio event loop for the session's script thread.
+        # Streamlit does not drive it autonomously. It outlives individual
+        # ScriptRunners so that loop-bound objects stored in st.session_state or
+        # @st.cache_resource(scope="session") remain valid across reruns and
+        # fastRerun churn.
         self._script_event_loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
         self._script_data = script_data
         self._uploaded_file_mgr = uploaded_file_manager
