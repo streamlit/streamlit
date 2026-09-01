@@ -20,19 +20,14 @@ from typing_extensions import assert_type
 
 # Perform type checking tests for st.echarts_chart.
 # The return type depends on the on_select parameter:
-# - no on_select / on_select="rerun" / callable -> returns EChartsState
-# - on_select="ignore" -> returns DeltaGenerator
-# Note: because the "ignore" overload has no default value, omitting on_select
-# resolves to the "rerun" overload and therefore returns EChartsState.
+# - no on_select / on_select="ignore" -> returns DeltaGenerator
+# - on_select="rerun" / callable -> returns EChartsState
 if TYPE_CHECKING:
     from typing import Any
 
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.echarts_chart import (
-        EChartsMixin,
-        EChartsSelectionState,
-        EChartsState,
-    )
+    from streamlit.elements.echarts_chart import EChartsMixin, EChartsSelectionState
+    from streamlit.typing import EChartsState
 
     echarts_chart = EChartsMixin().echarts_chart
 
@@ -41,11 +36,11 @@ if TYPE_CHECKING:
 
     # =====================================================================
     # Basic return type tests with different option inputs
-    # (no on_select -> resolves to the "rerun" overload -> EChartsState)
+    # (no on_select -> default "ignore" overload -> DeltaGenerator)
     # =====================================================================
 
-    assert_type(echarts_chart(options), EChartsState)
-    assert_type(echarts_chart(options_json), EChartsState)
+    assert_type(echarts_chart(options), DeltaGenerator)
+    assert_type(echarts_chart(options_json), DeltaGenerator)
 
     # =====================================================================
     # Return type tests with on_select="ignore" -> DeltaGenerator
@@ -189,17 +184,17 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Invalid theme value (only "streamlit" or None)
-    echarts_chart(options, theme="dark")  # type: ignore[call-overload]
+    echarts_chart(options, theme="dark")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
 
     # Invalid width / height values (only int or "stretch" / "content")
-    echarts_chart(options, width="invalid")  # type: ignore[call-overload]
-    echarts_chart(options, height=None)  # type: ignore[call-overload]
+    echarts_chart(options, width="invalid")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
+    echarts_chart(options, height=None)  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
 
     # Invalid renderer value (only "canvas" or "svg")
-    echarts_chart(options, renderer="webgl")  # type: ignore[call-overload]
+    echarts_chart(options, renderer="webgl")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
 
     # Removed parameter: selection is configured in the options spec, not via a
     # `selection_mode` argument (reserved for future use).
-    echarts_chart(  # type: ignore[call-overload]
+    echarts_chart(  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
         options, on_select="rerun", selection_mode="points"
     )

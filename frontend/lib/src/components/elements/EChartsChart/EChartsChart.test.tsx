@@ -328,4 +328,28 @@ describe("EChartsChart", () => {
     )
     clickSpy.mockRestore()
   })
+
+  it("exports an SVG renderer chart with an .svg filename", async () => {
+    const user = userEvent.setup()
+    mockChart.getDataURL.mockReturnValueOnce("data:image/svg+xml;base64,AAA")
+    let downloadFilename: string | null = null
+    const clickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(function (this: HTMLAnchorElement) {
+        downloadFilename = this.download
+      })
+
+    render(
+      <Wrapper
+        element={createElement({ renderer: EChartsChartProto.Renderer.SVG })}
+      />
+    )
+
+    await user.click(screen.getByRole("button", { name: "Download as SVG" }))
+
+    expect(downloadFilename).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}_chart\.svg$/
+    )
+    clickSpy.mockRestore()
+  })
 })

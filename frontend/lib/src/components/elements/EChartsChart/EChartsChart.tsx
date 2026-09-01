@@ -150,13 +150,9 @@ export function EChartsChart({
     if (!option) {
       return null
     }
-    const withDefaults = applyStreamlitOptionDefaults(
-      option,
-      theme,
-      element.theme
-    )
+    const withDefaults = applyStreamlitOptionDefaults(option, element.theme)
     return configureSelectionOption(withDefaults)
-  }, [option, theme, element.theme, configureSelectionOption])
+  }, [option, element.theme, configureSelectionOption])
 
   const hasValidSpec = option !== null
   const hasValidDimensions = width > 0 && height > 0
@@ -241,12 +237,14 @@ export function EChartsChart({
   // Resize the chart when its container dimensions change. Entering/exiting
   // fullscreen changes the measured width/height, so this covers it too.
   useEffect(() => {
-    if (
-      !chartInstance ||
-      chartInstance.isDisposed() ||
-      width <= 0 ||
-      height <= 0
-    ) {
+    if (!chartInstance || chartInstance.isDisposed()) {
+      return
+    }
+    if (width <= 0 || height <= 0) {
+      // Don't record this instance as already resized. ``hasBeenSized`` can
+      // stay latched while dimensions transiently report 0 (theme-menu
+      // reflow), and init against a 0x0 container must still ``resize()`` on
+      // the first positive-size pass.
       return
     }
     // Skip the resize triggered on the same pass the instance was (re)created:
@@ -278,10 +276,11 @@ export function EChartsChart({
     }
   }, [element.formId, widgetMgr, isSelectionActivated, onFormCleared])
 
-  const handleDownloadPng = useCallback((): void => {
+  const handleDownloadChart = useCallback((): void => {
     if (!chartInstance) {
       return
     }
+    const extension = rendererStr === "svg" ? "svg" : "png"
     try {
       const dataUrl = chartInstance.getDataURL({
         pixelRatio: 2,
@@ -296,13 +295,21 @@ export function EChartsChart({
         `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
         `T${pad(now.getHours())}-${pad(now.getMinutes())}`
       const link = document.createElement("a")
-      link.download = `${timestamp}_chart.png`
+      // SVG renderer: getDataURL returns an SVG payload, so the extension
+      // must match. Canvas renderer stays PNG.
+      link.download = `${timestamp}_chart.${extension}`
       link.href = dataUrl
+      link.style.display = "none"
+      document.body.appendChild(link)
       link.click()
+      document.body.removeChild(link)
     } catch (error) {
-      LOG.error("Failed to export ECharts chart as PNG", ensureError(error))
+      LOG.error(
+        `Failed to export ECharts chart as ${extension.toUpperCase()}`,
+        ensureError(error)
+      )
     }
-  }, [chartInstance, theme.colors.bgColor])
+  }, [chartInstance, theme.colors.bgColor, rendererStr])
 
   return (
     <StyledToolbarElementContainer
@@ -318,9 +325,9 @@ export function EChartsChart({
         disableFullscreenMode={disableFullscreenMode}
       >
         <ToolbarAction
-          label="Download as PNG"
+          label={rendererStr === "svg" ? "Download as SVG" : "Download as PNG"}
           icon={FileDownload}
-          onClick={handleDownloadPng}
+          onClick={handleDownloadChart}
         />
       </Toolbar>
       {parseError !== null ? (

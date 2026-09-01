@@ -29,14 +29,21 @@ const LOG = getLogger("useEChartsSelections")
 
 /**
  * Debounce time (ms) for widget-state updates. Coalesces a single gesture's
- * point (``selectchanged``) and box/lasso (``brushSelected`` / ``brushEnd``)
- * events into exactly one update.
+ * point (``selectchanged``) and box/lasso (``brushEnd``) events into exactly
+ * one update. ``brushSelected`` only refreshes the hit-test cache so a pause
+ * mid-drag cannot emit new points with the previous region's geometry.
  */
 const DEBOUNCE_TIME_MS = 150
 
 /** Frontend-only element-state key under which raw brush areas are persisted. */
 const BRUSH_AREAS_STATE_KEY = "brushAreas"
-
+/**
+ * Element-state key for the last brush hit-test points (``seriesIndex`` /
+ * ``dataIndex`` pairs) so a remount can seed ``latestBrushPoints``. Without
+ * this, a post-remount ``selectchanged`` would emit restored ``box``/``lasso``
+ * geometry with an empty ``points`` channel.
+ */
+const BRUSH_POINTS_STATE_KEY = "brushPoints"
 /**
  * Frontend-only element-state key under which the natively selected points are
  * persisted (as ECharts ``selectchanged`` ``selected`` entries) so they can be
@@ -91,7 +98,9 @@ interface BrushArea {
   brushType?: string
   coordRange?: unknown
   range?: unknown
+  panelId?: string
   xAxisIndex?: number
+  yAxisIndex?: number
 }
 
 interface BrushEndParams {
@@ -278,8 +287,8 @@ function dispatchPointSelection(
  * back to raw pixels.
  *
  * ``gridIndex`` selects the coordinate system to convert against (derived from
- * the brush area's ``xAxisIndex``), so multi-grid charts convert against the
- * grid the brush was drawn on rather than always the first one.
+ * the brush area's ``panelId`` or axis index), so multi-grid charts convert
+ * against the grid the brush was drawn on rather than always the first one.
  */
 function convertPixelRange(
   chart: EChartsSelectionInstance,
@@ -306,6 +315,27 @@ function convertPixelRange(
       return { x: xs, y: ys }
     }
 
+    if (area.brushType === "lineX" || area.brushType === "lineY") {
+      const range1d = range as number[]
+      if (range1d.length < 2 || typeof range1d[0] !== "number") {
+        return null
+      }
+      if (area.brushType === "lineX") {
+        const start = chart.convertFromPixel(finder, [range1d[0], 0])
+        const end = chart.convertFromPixel(finder, [range1d[1], 0])
+        if (!Array.isArray(start) || !Array.isArray(end)) {
+          return null
+        }
+        return { x: [start[0], end[0]], y: [] }
+      }
+      const start = chart.convertFromPixel(finder, [0, range1d[0]])
+      const end = chart.convertFromPixel(finder, [0, range1d[1]])
+      if (!Array.isArray(start) || !Array.isArray(end)) {
+        return null
+      }
+      return { x: [], y: [start[1], end[1]] }
+    }
+
     const [xRange, yRange] = range as number[][]
     const corner0 = chart.convertFromPixel(finder, [xRange[0], yRange[0]])
     const corner1 = chart.convertFromPixel(finder, [xRange[1], yRange[1]])
@@ -319,12 +349,30 @@ function convertPixelRange(
   }
 }
 
+/**
+ * Resolve the grid a brush area belongs to.
+ *
+ * ``xAxisIndex`` is an axis index, not a grid index — they only coincide when
+ * each grid owns exactly one x axis in the same order. A ``lineY`` brush
+ * carries ``yAxisIndex`` instead. Prefer ECharts' ``panelId`` (``"grid--N"``)
+ * when present.
+ */
+function resolveGridIndex(area: BrushArea): number {
+  if (typeof area.panelId === "string") {
+    const match = /grid--(\d+)/.exec(area.panelId)
+    if (match) {
+      return Number(match[1])
+    }
+  }
+  return area.xAxisIndex ?? area.yAxisIndex ?? 0
+}
+
 /** Convert a single brush area into a serializable selection item. */
 function areaToSelectionItem(
   chart: EChartsSelectionInstance,
   area: BrushArea
 ): Record<string, unknown> {
-  const gridIndex = area.xAxisIndex ?? 0
+  const gridIndex = resolveGridIndex(area)
   const coordRange = area.coordRange
 
   if (Array.isArray(coordRange)) {
@@ -340,7 +388,10 @@ function areaToSelectionItem(
       const [xRange, yRange] = coordRange as number[][]
       return { x: xRange, y: yRange, grid_index: gridIndex }
     }
-    // lineX / lineY selections carry a single 1D range.
+    // lineX / lineY selections carry a single 1D range on that axis.
+    if (area.brushType === "lineY") {
+      return { x: [], y: coordRange as number[], grid_index: gridIndex }
+    }
     return { x: coordRange as number[], y: [], grid_index: gridIndex }
   }
 
@@ -452,7 +503,11 @@ export function useEChartsSelections(
       if (widgetMgr.getStringValue(widgetInfo) === json) {
         return
       }
-      widgetMgr.setStringValue(widgetInfo, json, { fromUi: true }, fragmentId)
+      widgetMgr.setStringValue(widgetInfo.id, json, {
+        formId: widgetInfo.formId,
+        fragmentId,
+        fromUser: true,
+      })
     },
     [widgetMgr, widgetInfo, fragmentId]
   )
@@ -522,6 +577,10 @@ export function useEChartsSelections(
     }
     if (chartId) {
       widgetMgr.setElementState(chartId, BRUSH_AREAS_STATE_KEY, [])
+      widgetMgr.setElementState(chartId, BRUSH_POINTS_STATE_KEY, {
+        points: [],
+        indices: [],
+      })
       widgetMgr.setElementState(chartId, SELECTED_POINTS_STATE_KEY, [])
     }
     writeSelection(EMPTY_SELECTION)
@@ -559,8 +618,6 @@ export function useEChartsSelections(
       // single channel doesn't drop the other channel's state. ``restoreSelection``
       // re-applies the visuals but intentionally runs *before* these handlers are
       // bound, so its events don't hydrate the caches — we do it explicitly here.
-      // Brush hit-test points aren't persisted; they repopulate on the next
-      // brush event, while the box/lasso geometry is restored from the areas.
       if (chartId) {
         const persistedPoints = widgetMgr.getElementState<SelectedEntry[]>(
           chartId,
@@ -583,6 +640,21 @@ export function useEChartsSelections(
           const { box, lasso } = buildBrushGeometry(chart, persistedAreas)
           latestBox = box
           latestLasso = lasso
+        }
+
+        const persistedBrushPoints = widgetMgr.getElementState<{
+          points: Array<Record<string, unknown>>
+          indices: number[]
+        }>(chartId, BRUSH_POINTS_STATE_KEY)
+        if (
+          persistedBrushPoints &&
+          Array.isArray(persistedBrushPoints.points) &&
+          persistedBrushPoints.points.length > 0
+        ) {
+          latestBrushPoints = persistedBrushPoints.points
+          latestBrushIndices = Array.isArray(persistedBrushPoints.indices)
+            ? persistedBrushPoints.indices
+            : []
         }
       }
 
@@ -641,7 +713,17 @@ export function useEChartsSelections(
         }
         latestBrushPoints = points
         latestBrushIndices = indices
-        emitSelection()
+        if (chartId) {
+          widgetMgr.setElementState(chartId, BRUSH_POINTS_STATE_KEY, {
+            points,
+            indices,
+          })
+        }
+        // Do not emit here. ``brushSelected`` fires throughout a drag, so a
+        // pause longer than the debounce would rerun the app with new points
+        // and the previous ``box``/``lasso``. ``brushEnd`` is the commit; if
+        // it already scheduled an emit (event-order inversion), the pending
+        // debounce still reads these updated caches.
       }
 
       const handleBrushEnd = (raw: unknown): void => {

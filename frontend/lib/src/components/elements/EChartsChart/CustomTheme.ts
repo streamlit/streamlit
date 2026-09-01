@@ -323,7 +323,9 @@ function buildDefaultGrid(
   // ECharts places the legend at the bottom-center by default; it only sits at
   // the top when the user gives it a (non-"bottom") `top`.
   const legendAtTop =
-    legendObject.top !== undefined && legendObject.top !== "bottom"
+    hasLegend &&
+    legendObject.top !== undefined &&
+    legendObject.top !== "bottom"
   const legendAtBottom = hasLegend && !legendAtTop
 
   const grid: Record<string, unknown> = {
@@ -351,14 +353,12 @@ function buildDefaultGrid(
  * default escaping of tooltip/label values is relied upon.
  *
  * @param option The parsed ECharts option object.
- * @param _theme The active Emotion theme (reserved for future gap-fills).
  * @param themeStr The chart's theme string (``"streamlit"`` or ``""``).
  * @returns The option with defaults filled (a new object) or the untouched
  *   option when ``themeStr`` is not ``"streamlit"``.
  */
 export function applyStreamlitOptionDefaults(
   option: EChartsOptionObject,
-  _theme: EmotionTheme,
   themeStr: string
 ): EChartsOptionObject {
   if (themeStr !== STREAMLIT_THEME) {

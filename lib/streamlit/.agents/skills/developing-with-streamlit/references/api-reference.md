@@ -188,6 +188,7 @@ from streamlit.typing import DataframeState, UploadedFile
 | `PlotlyState` | `st.plotly_chart` when selection events are enabled |
 | `VegaLiteState` | `st.altair_chart` and `st.vega_lite_chart` when selection events are enabled |
 | `PydeckState` | `st.pydeck_chart` when selection events are enabled |
+| `EChartsState` | `st.echarts_chart` when selection events are enabled |
 | `DataEditorState` | Session State for a keyed `st.data_editor` |
 | `ButtonColumnClickState` | Session State for a keyed `st.column_config.ButtonColumn` click |
 

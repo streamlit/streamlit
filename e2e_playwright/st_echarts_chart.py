@@ -298,7 +298,19 @@ with st.container(key="c_xss_chart"):
                     "type": "bar",
                     "barWidth": "90%",
                     "data": [{"value": 100, "name": _XSS_PAYLOAD}],
-                }
+                },
+                # The advisory that floors the bundled ECharts version lives in
+                # the `series.type="lines"` tooltip path; exercise that too.
+                {
+                    "type": "lines",
+                    "coordinateSystem": "cartesian2d",
+                    "data": [
+                        {
+                            "coords": [[0, 0], [0, 100]],
+                            "name": _XSS_PAYLOAD,
+                        }
+                    ],
+                },
             ],
             "animation": False,
         },

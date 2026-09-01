@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 from typing import Any
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
@@ -231,8 +232,6 @@ class EChartsChartTest(DeltaGeneratorTestCase):
     @parameterized.expand([("rerun",), ("ignore",)])
     def test_inside_form(self, on_select):
         """The form ID is marshalled correctly inside a form."""
-        from unittest.mock import MagicMock, patch
-
         with patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True)):
             with st.form("form"):
                 st.echarts_chart(_BASIC_OPTIONS, on_select=on_select)

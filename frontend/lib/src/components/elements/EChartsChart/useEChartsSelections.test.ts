@@ -175,7 +175,7 @@ describe("useEChartsSelections", () => {
 
     expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
     expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
-      { id: "chart-id", formId: "" },
+      "chart-id",
       JSON.stringify({
         selection: {
           points: [
@@ -194,8 +194,7 @@ describe("useEChartsSelections", () => {
           lasso: [],
         },
       }),
-      { fromUi: true },
-      undefined
+      { formId: "", fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -255,12 +254,11 @@ describe("useEChartsSelections", () => {
 
     expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
     expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
-      { id: "chart-id", formId: "" },
+      "chart-id",
       JSON.stringify({
         selection: { points: [], point_indices: [], box: [], lasso: [] },
       }),
-      { fromUi: true },
-      undefined
+      { formId: "", fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -306,7 +304,7 @@ describe("useEChartsSelections", () => {
 
       expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
       expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
-        { id: "chart-id", formId: "" },
+        "chart-id",
         JSON.stringify({
           selection: {
             points: [
@@ -318,8 +316,7 @@ describe("useEChartsSelections", () => {
             lasso: [],
           },
         }),
-        { fromUi: true },
-        undefined
+        { formId: "", fragmentId: undefined, fromUser: true }
       )
     }
   )
@@ -354,7 +351,7 @@ describe("useEChartsSelections", () => {
 
     expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
     expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
-      { id: "chart-id", formId: "" },
+      "chart-id",
       JSON.stringify({
         selection: {
           points: [],
@@ -363,8 +360,7 @@ describe("useEChartsSelections", () => {
           lasso: [{ x: [0, 1, 2], y: [0, 1, 0], grid_index: 0 }],
         },
       }),
-      { fromUi: true },
-      undefined
+      { formId: "", fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -412,7 +408,7 @@ describe("useEChartsSelections", () => {
     // carried alongside.
     expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
     expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
-      { id: "chart-id", formId: "" },
+      "chart-id",
       JSON.stringify({
         selection: {
           points: [
@@ -432,8 +428,7 @@ describe("useEChartsSelections", () => {
           lasso: [],
         },
       }),
-      { fromUi: true },
-      undefined
+      { formId: "", fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -455,12 +450,11 @@ describe("useEChartsSelections", () => {
 
     expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
     expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
-      { id: "chart-id", formId: "" },
+      "chart-id",
       JSON.stringify({
         selection: { points: [], point_indices: [], box: [], lasso: [] },
       }),
-      { fromUi: true },
-      undefined
+      { formId: "", fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -536,12 +530,11 @@ describe("useEChartsSelections", () => {
       areas: [],
     })
     expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
-      { id: "chart-id", formId: "" },
+      "chart-id",
       JSON.stringify({
         selection: { points: [], point_indices: [], box: [], lasso: [] },
       }),
-      { fromUi: true },
-      undefined
+      { formId: "", fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -599,12 +592,11 @@ describe("useEChartsSelections", () => {
     })
 
     expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
-      { id: "chart-id", formId: "" },
+      "chart-id",
       JSON.stringify({
         selection: { points: [], point_indices: [], box: [], lasso: [] },
       }),
-      { fromUi: true },
-      undefined
+      { formId: "", fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -689,7 +681,7 @@ describe("useEChartsSelections", () => {
     // newly brushed point (2) rather than being dropped.
     expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
     expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
-      { id: "chart-id", formId: "" },
+      "chart-id",
       JSON.stringify({
         selection: {
           points: [
@@ -709,8 +701,7 @@ describe("useEChartsSelections", () => {
           lasso: [],
         },
       }),
-      { fromUi: true },
-      undefined
+      { formId: "", fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -756,7 +747,7 @@ describe("useEChartsSelections", () => {
     // point-only interaction.
     expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
     expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
-      { id: "chart-id", formId: "" },
+      "chart-id",
       JSON.stringify({
         selection: {
           points: [
@@ -775,8 +766,208 @@ describe("useEChartsSelections", () => {
           lasso: [],
         },
       }),
-      { fromUi: true },
-      undefined
+      { formId: "", fragmentId: undefined, fromUser: true }
+    )
+  })
+
+  it("seeds brush hit-test points on bind so a post-remount select keeps them", () => {
+    const persistedAreas = [
+      {
+        brushType: "rect",
+        coordRange: [
+          [0, 2],
+          [10, 20],
+        ],
+        xAxisIndex: 0,
+      },
+    ]
+    const persistedBrushPoints = {
+      points: [{ component_type: "series", series_index: 0, data_index: 2 }],
+      indices: [2],
+    }
+    widgetMgr.getElementState.mockImplementation(
+      (_id: string, key: string) => {
+        if (key === "brushAreas") {
+          return persistedAreas
+        }
+        if (key === "brushPoints") {
+          return persistedBrushPoints
+        }
+        return undefined
+      }
+    )
+
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+
+    const chart = createFakeChart()
+    chart.getOption.mockReturnValue({
+      series: [{ type: "bar", name: "Sales", data: [10, 20, 30] }],
+    })
+    act(() => {
+      result.current.bindSelections(chart)
+    })
+
+    act(() => {
+      chart.trigger("selectchanged", {
+        fromAction: "select",
+        isFromClick: true,
+        selected: [{ seriesIndex: 0, dataIndex: [0] }],
+      })
+    })
+    flush()
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      "chart-id",
+      JSON.stringify({
+        selection: {
+          points: [
+            {
+              component_type: "series",
+              series_type: "bar",
+              series_index: 0,
+              series_name: "Sales",
+              data_index: 0,
+              value: 10,
+              data: 10,
+            },
+            { component_type: "series", series_index: 0, data_index: 2 },
+          ],
+          point_indices: [0, 2],
+          box: [{ x: [0, 2], y: [10, 20], grid_index: 0 }],
+          lasso: [],
+        },
+      }),
+      { formId: "", fragmentId: undefined, fromUser: true }
+    )
+  })
+
+  it("does not emit on brushSelected until brushEnd commits geometry", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+
+    const chart = createFakeChart()
+    act(() => {
+      result.current.bindSelections(chart)
+    })
+
+    act(() => {
+      chart.trigger("brushSelected", {
+        batch: [{ selected: [{ seriesIndex: 0, dataIndex: [1, 2] }] }],
+      })
+    })
+    flush()
+
+    expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+
+    act(() => {
+      chart.trigger("brushEnd", {
+        areas: [
+          {
+            brushType: "rect",
+            coordRange: [
+              [0, 2],
+              [10, 20],
+            ],
+            xAxisIndex: 0,
+          },
+        ],
+      })
+    })
+    flush()
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      "chart-id",
+      JSON.stringify({
+        selection: {
+          points: [
+            { component_type: "series", series_index: 0, data_index: 1 },
+            { component_type: "series", series_index: 0, data_index: 2 },
+          ],
+          point_indices: [1, 2],
+          box: [{ x: [0, 2], y: [10, 20], grid_index: 0 }],
+          lasso: [],
+        },
+      }),
+      { formId: "", fragmentId: undefined, fromUser: true }
+    )
+  })
+
+  it("places a lineX range on x", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+
+    const chart = createFakeChart()
+    act(() => {
+      result.current.bindSelections(chart)
+    })
+
+    act(() => {
+      chart.trigger("brushEnd", {
+        areas: [
+          {
+            brushType: "lineX",
+            coordRange: [0, 2],
+            xAxisIndex: 0,
+          },
+        ],
+      })
+    })
+    flush()
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      "chart-id",
+      JSON.stringify({
+        selection: {
+          points: [],
+          point_indices: [],
+          box: [{ x: [0, 2], y: [], grid_index: 0 }],
+          lasso: [],
+        },
+      }),
+      { formId: "", fragmentId: undefined, fromUser: true }
+    )
+  })
+
+  it("resolves grid_index from panelId for lineY brushes", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+
+    const chart = createFakeChart()
+    act(() => {
+      result.current.bindSelections(chart)
+    })
+
+    act(() => {
+      chart.trigger("brushEnd", {
+        areas: [
+          {
+            brushType: "lineY",
+            coordRange: [10, 20],
+            yAxisIndex: 1,
+            panelId: "grid--1",
+          },
+        ],
+      })
+    })
+    flush()
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      "chart-id",
+      JSON.stringify({
+        selection: {
+          points: [],
+          point_indices: [],
+          box: [{ x: [], y: [10, 20], grid_index: 1 }],
+          lasso: [],
+        },
+      }),
+      { formId: "", fragmentId: undefined, fromUser: true }
     )
   })
 

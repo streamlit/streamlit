@@ -158,7 +158,7 @@ describe("buildStreamlitEChartsTheme", () => {
 describe("applyStreamlitOptionDefaults", () => {
   it("returns the option untouched when theme is not 'streamlit'", () => {
     const option = { series: [{ type: "bar", data: [1] }] }
-    const result = applyStreamlitOptionDefaults(option, theme, "")
+    const result = applyStreamlitOptionDefaults(option, "")
 
     expect(result).toBe(option)
     expect(result.aria).toBeUndefined()
@@ -167,7 +167,6 @@ describe("applyStreamlitOptionDefaults", () => {
   it("enables ARIA by default when the user hasn't set it", () => {
     const result = applyStreamlitOptionDefaults(
       { series: [] },
-      theme,
       STREAMLIT_THEME
     )
 
@@ -177,7 +176,6 @@ describe("applyStreamlitOptionDefaults", () => {
   it("preserves an explicit aria configuration", () => {
     const result = applyStreamlitOptionDefaults(
       { aria: { enabled: false }, series: [] },
-      theme,
       STREAMLIT_THEME
     )
 
@@ -191,7 +189,7 @@ describe("applyStreamlitOptionDefaults", () => {
       yAxis: { type: "value" },
       series: [{ type: "bar", itemStyle: { color: "#abcdef" }, data: [1] }],
     }
-    const result = applyStreamlitOptionDefaults(option, theme, STREAMLIT_THEME)
+    const result = applyStreamlitOptionDefaults(option, STREAMLIT_THEME)
 
     expect(result.color).toEqual(["#123456"])
     const series = result.series as Array<Record<string, unknown>>
@@ -201,7 +199,6 @@ describe("applyStreamlitOptionDefaults", () => {
   it("defaults a container-filling grid for cartesian charts only", () => {
     const cartesian = applyStreamlitOptionDefaults(
       { xAxis: { type: "category" }, yAxis: { type: "value" }, series: [] },
-      theme,
       STREAMLIT_THEME
     )
     // Tight margins + containLabel so the plot fills the container. With no
@@ -217,7 +214,6 @@ describe("applyStreamlitOptionDefaults", () => {
     // A pie chart has no cartesian axes, so no grid should be injected.
     const nonCartesian = applyStreamlitOptionDefaults(
       { series: [{ type: "pie", data: [] }] },
-      theme,
       STREAMLIT_THEME
     )
     expect(nonCartesian.grid).toBeUndefined()
@@ -228,7 +224,6 @@ describe("applyStreamlitOptionDefaults", () => {
     // (its generous default reserves room) and keep the top tight.
     const withLegend = applyStreamlitOptionDefaults(
       { xAxis: {}, yAxis: {}, legend: { data: ["a"] }, series: [] },
-      theme,
       STREAMLIT_THEME
     )
     const legendGrid = withLegend.grid as Record<string, unknown>
@@ -238,7 +233,6 @@ describe("applyStreamlitOptionDefaults", () => {
     // A title sits at the top: leave `top` unset, keep the bottom tight.
     const withTitle = applyStreamlitOptionDefaults(
       { xAxis: {}, yAxis: {}, title: { text: "Sales" }, series: [] },
-      theme,
       STREAMLIT_THEME
     )
     const titleGrid = withTitle.grid as Record<string, unknown>
@@ -248,18 +242,25 @@ describe("applyStreamlitOptionDefaults", () => {
     // A legend explicitly positioned at the top leaves `top` unset.
     const topLegend = applyStreamlitOptionDefaults(
       { xAxis: {}, yAxis: {}, legend: { top: 0 }, series: [] },
-      theme,
       STREAMLIT_THEME
     )
     const topLegendGrid = topLegend.grid as Record<string, unknown>
     expect(topLegendGrid.top).toBeUndefined()
     expect(topLegendGrid.bottom).toBe(8)
+
+    // A hidden legend with `top` set must not reserve the default top margin.
+    const hiddenLegend = applyStreamlitOptionDefaults(
+      { xAxis: {}, yAxis: {}, legend: { show: false, top: 10 }, series: [] },
+      STREAMLIT_THEME
+    )
+    const hiddenLegendGrid = hiddenLegend.grid as Record<string, unknown>
+    expect(hiddenLegendGrid.top).toBe(16)
+    expect(hiddenLegendGrid.bottom).toBe(8)
   })
 
   it("fills only the grid gaps the user left unset (user values win)", () => {
     const result = applyStreamlitOptionDefaults(
       { xAxis: {}, grid: { containLabel: false, left: 40 }, series: [] },
-      theme,
       STREAMLIT_THEME
     )
     // User keys win; the rest are filled from the container-filling defaults.
@@ -276,7 +277,6 @@ describe("applyStreamlitOptionDefaults", () => {
     const grids = [{ left: 1 }, { left: 2 }]
     const result = applyStreamlitOptionDefaults(
       { xAxis: [{}, {}], grid: grids, series: [] },
-      theme,
       STREAMLIT_THEME
     )
     expect(result.grid).toBe(grids)
@@ -294,7 +294,7 @@ describe("applyStreamlitOptionDefaults", () => {
         },
       ],
     }
-    const result = applyStreamlitOptionDefaults(option, theme, STREAMLIT_THEME)
+    const result = applyStreamlitOptionDefaults(option, STREAMLIT_THEME)
 
     // The tooltip is left entirely untouched: no formatter, no renderMode.
     expect(result.tooltip).toBe(option.tooltip)

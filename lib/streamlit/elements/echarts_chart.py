@@ -97,12 +97,14 @@ class EChartsSelectionState(ReadOnlyAttributeDictionary):
         the item's ``name`` and ``value``. The per-item ``series_index``
         disambiguates selections in multi-series charts.
 
-        Items selected by clicking a point carry the full set of fields
-        (``component_type``, ``series_type``, ``series_index``,
-        ``series_name``, ``data_index``, ``name``, ``value``, and ``data``).
-        Items derived from a box or lasso selection carry the fields ECharts
-        reports for a brushed data item (``component_type``, ``series_index``,
-        and ``data_index``).
+        Items selected by clicking a point additionally carry
+        ``component_type``, ``series_type``, ``series_name``, ``name``,
+        ``value``, and ``data`` when those can be resolved from the option.
+        Access them with ``dict.get()``: dataset-driven series don't expose
+        per-item names or values, so the keys can be missing. Items derived
+        from a box or lasso selection carry the fields ECharts reports for a
+        brushed data item (``component_type``, ``series_index``, and
+        ``data_index``).
 
     point_indices : list[int]
         The ``data_index`` values of all selected data items. This is convenient
@@ -152,6 +154,8 @@ class EChartsSelectionState(ReadOnlyAttributeDictionary):
 class EChartsState(ReadOnlyAttributeDictionary):
     """
     The schema for the ECharts chart event state.
+
+    To use this type in an annotation, import it from ``streamlit.typing``.
 
     The event state is stored in a dictionary-like object that supports both
     key and attribute notation. Event states cannot be programmatically
@@ -410,7 +414,7 @@ class EChartsMixin:
         height: Height = "content",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["ignore"],  # No default value here to make it work with mypy
+        on_select: Literal["ignore"] = "ignore",
         renderer: Literal["canvas", "svg"] = "canvas",
     ) -> DeltaGenerator: ...
 
@@ -423,7 +427,8 @@ class EChartsMixin:
         height: Height = "content",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["rerun"] | WidgetCallback = "rerun",
+        # No default: omitted on_select must match the "ignore" overload.
+        on_select: Literal["rerun"] | WidgetCallback,
         renderer: Literal["canvas", "svg"] = "canvas",
     ) -> EChartsState: ...
 
@@ -506,7 +511,11 @@ class EChartsMixin:
             The theme of the chart. If ``theme`` is ``"streamlit"`` (default),
             Streamlit uses its own design default. If ``theme`` is ``None``,
             Streamlit falls back to ECharts' built-in default theme and leaves
-            your ``options`` untouched.
+            your ``options`` untouched, except that display-only charts (when
+            ``on_select="ignore"``) still reset the series hover cursor to
+            ``"default"`` so the chart does not look clickable. Set
+            ``series.cursor`` yourself to override that cursor default; it is
+            independent of theming and does not rewrite any other option keys.
 
             The ``"streamlit"`` theme can be partially customized through the
             configuration options ``theme.chartCategoricalColors`` and
@@ -515,13 +524,15 @@ class EChartsMixin:
 
         key : str, int, or None
             An optional string to use for giving this element a stable
-            identity. If this is ``None`` (default), the element's identity
-            will be determined based on the values of the other parameters.
+            identity. ``key`` only affects identity when selections are
+            activated (``on_select`` is ``"rerun"`` or a callback). Display-only
+            charts (``on_select="ignore"``) do not compute an element ID, so
+            ``key`` is ignored.
 
-            If selections are activated and ``key`` is provided,
-            Streamlit will register the key in Session State to store the
-            selection state. The selection state is read-only. For more
-            details, see `Widget behavior
+            If selections are activated and ``key`` is provided, Streamlit
+            will register the key in Session State to store the selection
+            state. The selection state is read-only. For more details, see
+            `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
             Additionally, when selections are activated and ``key`` is
@@ -566,12 +577,12 @@ class EChartsMixin:
 
         Returns
         -------
-        element or dict
+        element or EChartsState
             If ``on_select`` is ``"ignore"`` (default), this command returns an
             internal placeholder for the chart element. Otherwise, this command
-            returns a dictionary-like object that supports both key and
-            attribute notation. The attributes are described by the
-            ``EChartsState`` dictionary schema.
+            returns an ``EChartsState`` object. This object is dictionary-like
+            and supports both key and attribute notation. To use this type in
+            an annotation, import it from ``streamlit.typing``.
 
         Examples
         --------
