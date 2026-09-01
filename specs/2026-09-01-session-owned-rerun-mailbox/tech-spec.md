@@ -420,7 +420,7 @@ class InteractionBatch:
 
     lowest_seq: int
     highest_seq: int
-    rerun_data: RerunData          # coalesced, as produced by _coalesce_widget_states
+    rerun_data: RerunData  # coalesced, as produced by _coalesce_widget_states
     callbacks_dispatched: bool
 
 
