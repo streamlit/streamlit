@@ -761,13 +761,6 @@ _create_option(
         This makes Streamlit much more responsive to user interaction, but it
         can lead to race conditions in apps that mutate session_state data
         outside of explicit session_state assignment statements.
-
-        Application or library code that explicitly drives the script thread's
-        current asyncio loop, such as with
-        `asyncio.get_event_loop().run_until_complete(...)`, should disable fast
-        reruns to prevent ordinary interaction-driven overlap. This does not
-        guarantee replacement runners never overlap during reconnect, teardown,
-        or when a runner is already stopping.
     """,
     default_val=True,
     type_=bool,
