@@ -65,7 +65,7 @@ The script must be runnable on its own, so it must include its own imports. `.ru
 at = AppTest.from_file("streamlit_app.py").run()  # entrypoint, not a child page
 ```
 
-To reach a file-based child page, call `switch_page()` with a path relative to the entrypoint, then `.run()`. `switch_page()` does not rerun on its own. Pass the **file** path, not a custom `url_path`. Call `.run()` at least once first so `st.navigation` can register pages — before that, a custom `url_path` will not match:
+To reach a file-based child page, call `switch_page()` with a path relative to the entrypoint, then `.run()`. `switch_page()` does not rerun on its own. Pass the **file** path, not a custom `url_path`. Call `.run()` first so `st.navigation` can register pages; before that, a page whose `url_path` differs from the filename will not resolve:
 
 ```python
 at = AppTest.from_file("streamlit_app.py").run()
@@ -204,7 +204,7 @@ def test_status_filter():
 
 `AppTest` covers widget interaction and the elements your script produces, but it does **not** reproduce every front-end interaction. In particular, **selections on `st.dataframe` and charts** (click-to-select rows, Altair/Plotly selection events) can't be triggered through `AppTest` — there's no setter for them, so you can't assert on what a user's on-chart selection would return. The same applies to anything that only exists in the rendered browser: custom-component JavaScript, CSS, and scroll/resize behavior. Cover those with Playwright e2e tests instead.
 
-Elements AppTest does not fully model (`st.progress`, `st.html`, `st.balloons`, `st.page_link`, and similar) still `.run()`. Those nodes stay inspectable instead of crashing on `.value`.
+Elements that AppTest does not fully model (`st.progress`, `st.html`, `st.balloons`, `st.page_link`, and similar) do not break `.run()`. Inspect those nodes with `at.get("<type>")`; `.value` returns the element's main proto field where one exists (for example `40` for `st.progress(40)`) or `None` otherwise.
 
 ## References
 

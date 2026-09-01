@@ -238,8 +238,8 @@ sequenceDiagram
 **Keyed / event-scoped reruns**:
 - `st.rerun("<key>")` or `st.rerun(["k1", "k2"])` from a widget callback (`on_click` / `on_change`) resolves those names to fragment ids and reruns only those fragments, replacing the interaction's default rerun.
 - This form is only valid from a callback. Calling it from the main script body or a fragment body raises `StreamlitAPIException`.
-- A sibling callback in the same interaction that returns normally or calls `st.rerun()` escalates the result to a full-app rerun.
-- Keys must have been registered during the most recently completed full-app run. Fragments skipped by a `False` conditional in that run are gone from storage.
+- When the interaction's default rerun is app-wide (the widget lives in the main script, not inside a fragment), a sibling callback that returns normally or calls `st.rerun()` escalates the result to a full-app rerun. Interactions originating inside a fragment keep the targeted scope unless a sibling explicitly calls plain `st.rerun()`; a pending `st.switch_page()` is exempt.
+- A full-app run prunes `FragmentStorage` down to the fragments that actually executed during it, so a fragment skipped by a `False` conditional loses its key.
 
 **Staleness with fragments**:
 - Elements track both `scriptRunId` and `fragmentId`

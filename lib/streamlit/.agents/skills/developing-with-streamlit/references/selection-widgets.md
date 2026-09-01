@@ -64,7 +64,7 @@ countries = st.multiselect(
 )
 ```
 
-The dropdown shows a "Select all" action when 1000 or fewer options remain selectable (the default). Pass `select_all=False` to hide it so Enter selects the first match. Pass `select_all=True` only for manageable lists — selecting thousands of values at once can freeze the browser.
+The dropdown shows a "Select all" action when 2–1000 options remain selectable (the default), provided `max_selections` has not been reached. Because that action is the first row, pressing Enter bulk-selects; pass `select_all=False` to hide it so Enter selects the first match. Pass `select_all=True` only for manageable lists — selecting thousands of values at once can freeze the browser.
 
 ## Keep options on one row with `wrap`
 

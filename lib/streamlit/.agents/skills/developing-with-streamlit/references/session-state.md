@@ -124,7 +124,11 @@ Access a widget's value in its own callback via `st.session_state.key`, not the 
 
 Calling `st.rerun()` or `st.switch_page()` inside a callback ends that callback immediately (statements after the call don't run). Streamlit still runs the interaction's other callbacks before performing the rerun or navigation.
 
-Some widgets (`st.text_input`, `st.slider`) also accept `on_change="rerun"` (default) or `on_change="ignore"` instead of a callable. `"ignore"` updates the widget without rerunning; Python sees the new value on the next rerun triggered by something else. Unbound ignored values are held in the browser and are lost on refresh unless `bind="query-params"` is set. Inside `st.form`, `"ignore"` has no effect — the form already defers commits until submit.
+Some widgets accept a mode string instead of a callable: `on_change="rerun"` (default) or `on_change="ignore"` on `st.text_input` and `st.slider`, and the same values on `on_click` for `st.button` and `st.download_button`.
+
+- `"ignore"` updates the widget without rerunning; Python sees the new value on the next rerun triggered by something else.
+- Unbound ignored values live in the browser and are lost on refresh unless `bind="query-params"` is set.
+- Inside `st.form`, `"ignore"` has no effect — the form already defers commits until submit.
 
 ## Initialization patterns
 
