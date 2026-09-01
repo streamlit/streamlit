@@ -119,7 +119,7 @@ if TYPE_CHECKING:
 
     # icon parameter (keyword-only)
     assert_type(badge("New", icon=":material/star:"), DeltaGenerator)
-    assert_type(badge("Alert", icon="star"), DeltaGenerator)
+    assert_type(badge("Alert", icon="🚨"), DeltaGenerator)
     assert_type(badge("New", icon=None), DeltaGenerator)
 
     # color parameter (keyword-only) - all supported literals
@@ -166,7 +166,6 @@ if TYPE_CHECKING:
 
     # Invalid width value (not "stretch", "content", or int)
     badge("New", width="auto")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
-    badge("New", width="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid icon type (not str or None)
     badge("New", icon=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
