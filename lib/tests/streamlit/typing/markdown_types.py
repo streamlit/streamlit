@@ -123,7 +123,7 @@ if TYPE_CHECKING:
     # body is SupportsStr, so non-str values should work
     assert_type(latex(42), DeltaGenerator)
 
-    # body may be a SymPy expression
+    # Stand-in for optional unstubbed sympy.Expr (same pattern as graphviz/plotly)
     sympy_expr = cast("sympy.Expr", object())
     assert_type(latex(sympy_expr), DeltaGenerator)
 
@@ -159,6 +159,13 @@ if TYPE_CHECKING:
 
     # Passing keyword-only parameters as positional
     latex(r"x^2", "help")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
+
+    # Missing required body argument
+    latex()  # type: ignore[call-arg]  # ty: ignore[missing-argument]
+
+    # st.latex does not take markdown-only keywords
+    latex(r"x^2", text_alignment="center")  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
+    latex(r"x^2", wrap=False)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
 
     # =====================================================================
     # st.badge return type tests
