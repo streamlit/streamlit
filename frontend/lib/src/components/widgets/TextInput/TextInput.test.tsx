@@ -33,7 +33,7 @@ import {
 } from "@streamlit/protobuf"
 
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import TextInput, { Props } from "./TextInput"
@@ -1785,45 +1785,28 @@ describe("TextInput live updates", () => {
   })
 
   it("applies a session_state reset to empty after ordinary live reruns", async () => {
-    const { user, props, rerender } = renderLive({
-      liveDebounceMs: 0,
-      default: "",
-    })
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const props = getProps({ liveDebounceMs: 0, default: "" })
+    const { rerenderWithContexts } = renderWithContexts(
+      <TextInput {...props} />
+    )
 
     const input = screen.getByRole("textbox")
     await user.type(input, "a")
-    rerender(
-      <TextInput
-        {...props}
-        element={TextInputProto.create({
-          ...props.element,
-          setValue: false,
-        })}
-      />
-    )
+    rerenderWithContexts(<TextInput {...props} />, {
+      scriptRunContext: { scriptRunFinishedSequence: 1 },
+    })
     await user.clear(input)
     expect(input).toHaveValue("")
-    rerender(
-      <TextInput
-        {...props}
-        element={TextInputProto.create({
-          ...props.element,
-          setValue: false,
-        })}
-      />
-    )
+    rerenderWithContexts(<TextInput {...props} />, {
+      scriptRunContext: { scriptRunFinishedSequence: 2 },
+    })
     await user.type(input, "banana")
     expect(input).toHaveValue("banana")
-    rerender(
-      <TextInput
-        {...props}
-        element={TextInputProto.create({
-          ...props.element,
-          setValue: false,
-        })}
-      />
-    )
-    rerender(
+    rerenderWithContexts(<TextInput {...props} />, {
+      scriptRunContext: { scriptRunFinishedSequence: 3 },
+    })
+    rerenderWithContexts(
       <TextInput
         {...props}
         element={TextInputProto.create({
@@ -1831,7 +1814,8 @@ describe("TextInput live updates", () => {
           setValue: true,
           value: "",
         })}
-      />
+      />,
+      { scriptRunContext: { scriptRunFinishedSequence: 3 } }
     )
     expect(input).toHaveValue("")
   })
