@@ -277,12 +277,11 @@ export function createThemeFromOverride(
     }
   }
 
-  // Explicit `base` must not keep the selected theme's sidebar/light/dark
-  // sections: presets have no themeInput, and falling back to the menu theme
-  // would leave e.g. a light sidebar background on a dark overlayBase.
+  // Explicit `base` uses the resolved variant's input only. Presets have no
+  // themeInput; copying the selected theme would paint its colors/fonts/radii
+  // onto the sidebar while the main area stays on the preset variant.
   const parentInput = notNullOrUndefined(explicitBase)
-    ? (baseThemeConfig.themeInput ??
-      stripSectionFields(options?.parentThemeInput))
+    ? (baseThemeConfig.themeInput ?? {})
     : (options?.parentThemeInput ?? {})
 
   const name = options?.name ?? "Scoped"

@@ -254,7 +254,7 @@ describe("createThemeFromOverride", () => {
     expect(theme.name).toBe("Custom Theme Light")
     expect(theme.displayName).toBe("Light")
     expect(theme.overlayBase).toBe(CustomThemeConfig.BaseTheme.DARK)
-    expect(theme.themeInput?.headingFont).toBe("Inter")
+    expect(theme.themeInput?.headingFont).toBeUndefined()
     expect(theme.themeInput?.sidebar).toBeUndefined()
   })
 
