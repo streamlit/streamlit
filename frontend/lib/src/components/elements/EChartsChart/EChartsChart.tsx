@@ -52,6 +52,7 @@ import {
 } from "./CustomTheme"
 import {
   StyledEChartsChartContainer,
+  StyledEChartsChartFill,
   StyledEChartsChartRoot,
   StyledEChartsChartStack,
   StyledEChartsError,
@@ -414,58 +415,60 @@ export function EChartsChart({
 
   return (
     <StyledEChartsChartRoot isStretchHeight={isStretchHeight}>
-      <StyledToolbarElementContainer
-        height={isFullScreen ? fullScreenHeight : "100%"}
-        useContainerWidth={true}
-        useContainerHeight={true}
-      >
-        <Toolbar
-          target={StyledToolbarElementContainer}
-          isFullScreen={isFullScreen}
-          onExpand={expand}
-          onCollapse={collapse}
-          disableFullscreenMode={disableFullscreenMode}
+      <StyledEChartsChartFill isStretchHeight={isStretchHeight}>
+        <StyledToolbarElementContainer
+          height={isFullScreen ? fullScreenHeight : "100%"}
+          useContainerWidth={true}
+          useContainerHeight={true}
         >
-          {chartInstance !== null && (
-            <ToolbarAction
-              label={`Download as ${downloadType.toUpperCase()}`}
-              icon={FileDownload}
-              onClick={handleDownloadChart}
-            />
-          )}
-        </Toolbar>
-        {parseError !== null ? (
-          <StyledEChartsError role="alert" data-testid="stEChartsChartError">
-            ECharts chart error: {parseError}
-          </StyledEChartsError>
-        ) : (
-          <>
-            <StyledEChartsChartStack>
-              {/*
+          <Toolbar
+            target={StyledToolbarElementContainer}
+            isFullScreen={isFullScreen}
+            onExpand={expand}
+            onCollapse={collapse}
+            disableFullscreenMode={disableFullscreenMode}
+          >
+            {chartInstance !== null && (
+              <ToolbarAction
+                label={`Download as ${downloadType.toUpperCase()}`}
+                icon={FileDownload}
+                onClick={handleDownloadChart}
+              />
+            )}
+          </Toolbar>
+          {parseError !== null ? (
+            <StyledEChartsError role="alert" data-testid="stEChartsChartError">
+              ECharts chart error: {parseError}
+            </StyledEChartsError>
+          ) : (
+            <>
+              <StyledEChartsChartStack>
+                {/*
               No `role` here on purpose. ECharts sets `role="img"` plus a
               generated `aria-label` on this same element (`zr.dom`) whenever
               `aria.enabled` is on, which is the default. Declaring the role
               here too would leave it behind as an image with no accessible
               name for users who opt out with `aria: {enabled: false}`.
             */}
-              <StyledEChartsChartContainer
-                ref={containerRef}
-                className="stEChartsChart"
-                data-testid="stEChartsChart"
-                aria-busy={!hasRendered && renderError === null}
-              />
-              {renderError !== null && (
-                <StyledEChartsErrorOverlay
-                  role="alert"
-                  data-testid="stEChartsChartError"
-                >
-                  ECharts chart error: {renderError}
-                </StyledEChartsErrorOverlay>
-              )}
-            </StyledEChartsChartStack>
-          </>
-        )}
-      </StyledToolbarElementContainer>
+                <StyledEChartsChartContainer
+                  ref={containerRef}
+                  className="stEChartsChart"
+                  data-testid="stEChartsChart"
+                  aria-busy={!hasRendered && renderError === null}
+                />
+                {renderError !== null && (
+                  <StyledEChartsErrorOverlay
+                    role="alert"
+                    data-testid="stEChartsChartError"
+                  >
+                    ECharts chart error: {renderError}
+                  </StyledEChartsErrorOverlay>
+                )}
+              </StyledEChartsChartStack>
+            </>
+          )}
+        </StyledToolbarElementContainer>
+      </StyledEChartsChartFill>
     </StyledEChartsChartRoot>
   )
 }
