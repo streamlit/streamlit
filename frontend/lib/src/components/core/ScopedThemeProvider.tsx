@@ -38,18 +38,16 @@ export default function ScopedThemeProvider({
 }: ScopedThemeProviderProps): ReactElement {
   const parentEmotion = useEmotionTheme()
   const { availableThemes } = useContext(ThemeContext)
+  // Reruns re-decode the block, so `override` identity changes even when tokens
+  // do not. Key memoization on the payload; pass the original protobuf through.
   const overrideKey = JSON.stringify({
     base: override.base ?? null,
     values: override.values ?? null,
   })
 
   const scopedTheme = useMemo(
-    () =>
-      createThemeFromOverride(
-        JSON.parse(overrideKey) as IThemeOverride,
-        parentEmotion,
-        availableThemes
-      ),
+    () => createThemeFromOverride(override, parentEmotion, availableThemes),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by payload, not identity
     [overrideKey, parentEmotion, availableThemes]
   )
 

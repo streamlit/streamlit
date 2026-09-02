@@ -185,6 +185,7 @@ def _set_override_base(override: ThemeOverride, value: object) -> None:
         override.base = CustomThemeConfig.LIGHT
     elif value == "dark":
         override.base = CustomThemeConfig.DARK
+    # inherit: leave `base` unset so presence distinguishes it from LIGHT.
 
 
 def _populate_variant_section(

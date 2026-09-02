@@ -238,6 +238,7 @@ Presence differs between the two commands:
 | `{...}` | Replace the overlay | Apply scoped override |
 
 ```python
+import streamlit as st
 from streamlit import ThemeConfig
 
 overlay: ThemeConfig = {"primary_color": "green"}

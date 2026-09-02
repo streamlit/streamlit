@@ -254,19 +254,50 @@ function sanitizeThemeApiColors(
   return result
 }
 
+/**
+ * Resolve explicit `base` from availableThemes: configured Custom Theme
+ * Light/Dark first, then host-merged Light/Dark presets, then builtins.
+ */
 function resolveExplicitBaseTheme(
   base: CustomThemeConfig.BaseTheme,
   availableThemes: ThemeConfig[]
 ): ThemeConfig {
-  const wantedName =
+  const wantedNames =
     base === CustomThemeConfig.BaseTheme.DARK
-      ? CUSTOM_THEME_DARK_NAME
-      : CUSTOM_THEME_LIGHT_NAME
-  const configured = availableThemes.find(theme => theme.name === wantedName)
-  if (configured) {
-    return configured
+      ? [CUSTOM_THEME_DARK_NAME, darkTheme.name]
+      : [CUSTOM_THEME_LIGHT_NAME, lightTheme.name]
+  for (const themeName of wantedNames) {
+    const match = availableThemes.find(theme => theme.name === themeName)
+    if (match) {
+      return match
+    }
   }
   return base === CustomThemeConfig.BaseTheme.DARK ? darkTheme : lightTheme
+}
+
+/**
+ * createEmotionTheme treats a copied parent borderColor as configured and
+ * recomputes borderColorLight with transparentize. Inherit overlays that did
+ * not set border_color must keep the parent's already-derived light borders.
+ */
+function restoreInheritDerivedBorders(
+  emotion: EmotionTheme,
+  parentEmotion: EmotionTheme,
+  mergedInput: Partial<ICustomThemeConfig>
+): EmotionTheme {
+  if (notNullOrUndefined(mergedInput.borderColor)) {
+    return emotion
+  }
+  return {
+    ...emotion,
+    colors: {
+      ...emotion.colors,
+      borderColorLight: parentEmotion.colors.borderColorLight,
+      ...(isNullOrUndefined(mergedInput.dataframeBorderColor)
+        ? { dataframeBorderColor: parentEmotion.colors.dataframeBorderColor }
+        : {}),
+    },
+  }
 }
 
 function isLightOverrideMode(
@@ -317,7 +348,7 @@ export function createThemeFromOverride(
   const explicitBase = override.base
   const isLightMode = isLightOverrideMode(override, parentEmotion)
   const mergedInput = sanitizeThemeApiColors(
-    mergeOverrideValues(override, isLightMode)
+    pickThemeApiKeys(mergeOverrideValues(override, isLightMode))
   )
 
   let baseThemeConfig: ThemeConfig
@@ -364,6 +395,13 @@ export function createThemeFromOverride(
     name,
     displayName: options?.displayName ?? created.displayName,
     themeInput: mergeThemeInputs(parentInput, mergedInput),
+    emotion: notNullOrUndefined(explicitBase)
+      ? created.emotion
+      : restoreInheritDerivedBorders(
+          created.emotion,
+          parentEmotion,
+          mergedInput
+        ),
     ...(notNullOrUndefined(explicitBase) ? { overlayBase: explicitBase } : {}),
   }
 }

@@ -276,31 +276,44 @@ class LayoutsMixin:
         theme : dict or None
             A mapping of theme tokens to apply to this container and its
             descendants. If this is ``None`` (default) or ``{}``, the container
-            has no scoped theme override. This ``theme`` argument is unrelated
-            to the chart-level ``theme`` argument on ``st.plotly_chart`` and
-            ``st.altair_chart``.
+            has no scoped theme override.
 
-            Keys use snake_case and match an audited subset of ``config.toml``
-            theme options, including ``primary_color``, ``background_color``,
-            ``text_color``, radii, and chart palettes. Optional ``light`` and
-            ``dark`` mappings override shared values for the active mode.
-            Color strings are CSS Color Module Level 4 names and hex/``rgb()``
-            values, not Streamlit's semantic palette (``"green"`` is CSS
-            ``#008000``).
+            Keys use snake_case and match ``ThemeConfig``: colors, radii,
+            border flags, and chart palettes (categorical palettes must be
+            nonempty; sequential and diverging palettes must have 10 colors).
+            Optional ``light`` and ``dark`` mappings override shared values for
+            the active mode. Color strings are CSS Color Module Level 4 names
+            and hex/``rgb()`` values, not Streamlit's semantic palette
+            (``"green"`` is CSS ``#008000``). Fonts, ``fontFaces``, and sidebar
+            sections stay in ``config.toml``.
 
             ``base`` can be one of the following:
 
             - ``"inherit"`` (default): Start from the parent theme. The
               container stays transparent unless the mapping also sets
               ``background_color`` / ``text_color``.
-            - ``"light"``: Start from the light variant and paint its
-              background and text so ancestor colors cannot leak through.
-            - ``"dark"``: Same as ``"light"``, using the dark variant.
+            - ``"light"``: Start from the configured light variant when one
+              exists (``[theme.light]`` or a host Light preset), otherwise
+              Streamlit's Light preset, and paint its background and text so
+              ancestor colors cannot leak through. A single ``[theme]`` block
+              without ``[theme.light]`` is not used.
+            - ``"dark"``: Same as ``"light"``, using the dark variant / Dark
+              preset.
 
             A primary-only override does not add an opaque background. Apps
-            are responsible for color contrast.
+            are responsible for color contrast. Adding or removing ``theme``
+            remounts this container's descendants (uncommitted widget input and
+            focus are lost). Changing tokens while a theme stays set does not
+            remount. Keyed widget Session State is preserved either way because
+            ``theme`` is not part of the block identity.
 
             Import ``ThemeConfig`` from ``streamlit`` to annotate mappings.
+
+            .. note::
+
+                This ``theme`` argument is unrelated to the chart-level
+                ``theme`` argument on ``st.plotly_chart`` and
+                ``st.altair_chart``.
 
         Examples
         --------

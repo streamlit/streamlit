@@ -255,6 +255,37 @@ export interface BlockPropsWithoutWidth extends BaseBlockProps {
   node: BlockNode
 }
 
+interface ThemedFlexBoxContainerProps extends BlockPropsWithoutWidth {
+  themeOverride: NonNullable<BlockNode["deltaBlock"]["theme"]>
+}
+
+/**
+ * Theme subscription and surface flags only run when a flex container has an
+ * override, so unthemed BlockNodeRenderer stays off the Emotion theme context.
+ */
+function ThemedFlexBoxContainer({
+  themeOverride,
+  ...childProps
+}: ThemedFlexBoxContainerProps): ReactElement {
+  const parentEmotion = useEmotionTheme()
+  const surfaceFlags = getThemeOverrideSurfaceFlags(
+    themeOverride,
+    parentEmotion
+  )
+  // Adding this wrapper changes the element tree, so a block that gains or
+  // loses a theme remounts its contents. Changing tokens on a block that is
+  // already themed keeps the provider mounted and only updates the theme.
+  return (
+    <ScopedThemeProvider override={themeOverride}>
+      <FlexBoxContainer
+        {...childProps}
+        applyBackgroundColor={surfaceFlags.applyBackgroundColor}
+        applyTextColor={surfaceFlags.applyTextColor}
+      />
+    </ScopedThemeProvider>
+  )
+}
+
 const LARGE_STRETCH_BEHAVIOR = ["tabContainer"]
 const MEDIUM_STRETCH_BEHAVIOR = ["chatInput"]
 
@@ -262,7 +293,6 @@ export const BlockNodeRenderer = (
   props: BlockPropsWithoutWidth
 ): ReactElement => {
   const { node } = props
-  const parentEmotion = useEmotionTheme()
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
   const flexContext = useContext(FlexContext)
@@ -356,21 +386,11 @@ export const BlockNodeRenderer = (
       notNullOrUndefined(themeOverride) &&
       !isEmptyThemeOverride(themeOverride)
     ) {
-      const surfaceFlags = getThemeOverrideSurfaceFlags(
-        themeOverride,
-        parentEmotion
-      )
-      // Adding this wrapper changes the element tree, so a block that gains or
-      // loses a theme remounts its contents. Changing tokens on a block that is
-      // already themed keeps the provider mounted and only updates the theme.
       containerElement = (
-        <ScopedThemeProvider override={themeOverride}>
-          <FlexBoxContainer
-            {...childProps}
-            applyBackgroundColor={surfaceFlags.applyBackgroundColor}
-            applyTextColor={surfaceFlags.applyTextColor}
-          />
-        </ScopedThemeProvider>
+        <ThemedFlexBoxContainer
+          {...childProps}
+          themeOverride={themeOverride}
+        />
       )
     } else {
       containerElement = <FlexBoxContainer {...childProps} />

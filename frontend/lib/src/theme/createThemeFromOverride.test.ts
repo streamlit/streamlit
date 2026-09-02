@@ -61,6 +61,7 @@ describe("isThemeApiColor", () => {
     "rgb(0 128 0 / 0.5)",
     "green",
     "RebeccaPurple",
+    "rgb(100% 0% 0%)",
   ])("accepts %s", color => {
     expect(isThemeApiColor(color)).toBe(true)
   })
@@ -75,6 +76,8 @@ describe("isThemeApiColor", () => {
     "rgb(0, 0 0)",
     "rgb(0 0 0 / .)",
     "rgb(0,0,0); position:fixed; inset:0",
+    "rgb(100%, 0%, 0%)",
+    "rgb(0.5, 128, 0)",
   ])("rejects %s", color => {
     expect(isThemeApiColor(color)).toBe(false)
   })
@@ -423,6 +426,91 @@ describe("createThemeFromOverride", () => {
     expect(inner.emotion.colors.link).toBe(outerLink)
     expect(inner.emotion.colors.primary).toBe(OVERRIDE_PRIMARY)
     expect(inner.emotion.colors.link).not.toBe(parentLight.colors.link)
+  })
+
+  it("does not retint derived borderColorLight on a primary-only inherit overlay", () => {
+    const parentBorderLight = parentLight.colors.borderColorLight
+    const theme = createThemeFromOverride(
+      { values: { primaryColor: OVERRIDE_PRIMARY } },
+      parentLight,
+      availableThemes
+    )
+    expect(theme.emotion.colors.primary).toBe(OVERRIDE_PRIMARY)
+    expect(theme.emotion.colors.borderColorLight).toBe(parentBorderLight)
+  })
+
+  it("uses a host-merged Light preset for explicit base when Custom Theme Light is absent", () => {
+    const hostPrimary = "#112233"
+    const hostLight = {
+      ...lightTheme,
+      name: "Light",
+      themeInput: { primaryColor: hostPrimary },
+      emotion: {
+        ...lightTheme.emotion,
+        colors: {
+          ...lightTheme.emotion.colors,
+          primary: hostPrimary,
+        },
+      },
+    }
+    const theme = createThemeFromOverride(
+      { base: CustomThemeConfig.BaseTheme.LIGHT },
+      parentLight,
+      [hostLight]
+    )
+    expect(theme.emotion.colors.primary).toBe(hostPrimary)
+    expect(theme.emotion.colors.primary).not.toBe(
+      lightTheme.emotion.colors.primary
+    )
+  })
+
+  it("prefers Custom Theme Light over a host Light preset for explicit base", () => {
+    const customPrimary = "#445566"
+    const customLight = {
+      ...lightTheme,
+      name: "Custom Theme Light",
+      themeInput: { primaryColor: customPrimary },
+      emotion: {
+        ...lightTheme.emotion,
+        colors: {
+          ...lightTheme.emotion.colors,
+          primary: customPrimary,
+        },
+      },
+    }
+    const hostLight = {
+      ...lightTheme,
+      name: "Light",
+      themeInput: { primaryColor: "#112233" },
+      emotion: {
+        ...lightTheme.emotion,
+        colors: {
+          ...lightTheme.emotion.colors,
+          primary: "#112233",
+        },
+      },
+    }
+    const theme = createThemeFromOverride(
+      { base: CustomThemeConfig.BaseTheme.LIGHT },
+      parentLight,
+      [hostLight, customLight]
+    )
+    expect(theme.emotion.colors.primary).toBe(customPrimary)
+  })
+
+  it("ignores non-API overlay fields such as bodyFont", () => {
+    const theme = createThemeFromOverride(
+      {
+        values: {
+          primaryColor: OVERRIDE_PRIMARY,
+          bodyFont: "Comic Sans MS",
+        },
+      },
+      parentLight,
+      availableThemes
+    )
+    expect(theme.emotion.colors.primary).toBe(OVERRIDE_PRIMARY)
+    expect(theme.emotion.genericFonts.bodyFont).not.toContain("Comic Sans")
   })
 
   it("applies parentThemeInput link color to the derived emotion theme", () => {

@@ -187,6 +187,7 @@ def test_rejects_excluded_config_tokens(excluded: str) -> None:
         "rgb(0, 128, 0)",
         "rgba(0, 128, 0, 0.5)",
         "rgb(0 128 0)",
+        "rgb(100% 0% 0%)",
     ],
 )
 def test_accepts_valid_colors(color: str) -> None:
@@ -208,6 +209,8 @@ def test_accepts_valid_colors(color: str) -> None:
         "rgb(0, 0 0)",
         "rgb(0 0 0 / .)",
         "rgb(0,0,0); position: fixed; inset: 0",
+        "rgb(100%, 0%, 0%)",
+        "rgb(0.5, 128, 0)",
     ],
 )
 def test_rejects_invalid_colors(color: str) -> None:

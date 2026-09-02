@@ -171,15 +171,18 @@ export const CSS_NAMED_COLORS: ReadonlySet<string> = new Set([
 ])
 
 const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
-// Legacy comma-separated and modern space-separated rgb()/rgba(). Mixed
-// separators and a lone "." alpha are rejected.
-const CSS_RGB_NUM = String.raw`(?:\d+(?:\.\d+)?|\.\d+)%?`
+// Match Streamlit's patched color2k parseToRgba: comma-separated integer
+// channels (optional decimal alpha), or space-separated number/percent
+// channels (optional / alpha). Comma-separated percentages and decimal
+// channels throw in getLuminance during theme derivation.
+const CSS_RGB_INT = String.raw`\d+`
+const CSS_RGB_FLOAT_OR_PCT = String.raw`(?:\d+(?:\.\d+)?|\.\d+)%?`
 const CSS_RGB_RE = new RegExp(
   String.raw`^rgba?\(\s*(?:` +
-    `${CSS_RGB_NUM}\\s*,\\s*${CSS_RGB_NUM}\\s*,\\s*${CSS_RGB_NUM}` +
-    `(?:\\s*,\\s*${CSS_RGB_NUM})?|` +
-    `${CSS_RGB_NUM}\\s+${CSS_RGB_NUM}\\s+${CSS_RGB_NUM}` +
-    `(?:\\s*/\\s*${CSS_RGB_NUM})?` +
+    `${CSS_RGB_INT}\\s*,\\s*${CSS_RGB_INT}\\s*,\\s*${CSS_RGB_INT}` +
+    `(?:\\s*,\\s*${CSS_RGB_FLOAT_OR_PCT})?|` +
+    `${CSS_RGB_FLOAT_OR_PCT}\\s+${CSS_RGB_FLOAT_OR_PCT}\\s+${CSS_RGB_FLOAT_OR_PCT}` +
+    `(?:\\s*/\\s*${CSS_RGB_FLOAT_OR_PCT})?` +
     `)\\s*\\)$`
 )
 

@@ -21,7 +21,6 @@ from e2e_playwright.shared.app_utils import (
     get_button,
     get_button_group,
     get_element_by_key,
-    get_popover,
     get_segment_button,
     get_text_input,
     open_popover,
@@ -133,7 +132,7 @@ def test_themed_popover_and_chart(app: Page, assert_snapshot: ImageCompareFuncti
     body = open_popover(app, "Themed popover")
     expect(body.get_by_test_id("stSelectbox")).to_be_visible()
     assert_snapshot(
-        get_popover(app, "Themed popover"),
+        body,
         name="st_theme_overrides-themed_popover_open",
     )
 

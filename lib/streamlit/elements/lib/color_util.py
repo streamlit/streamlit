@@ -26,14 +26,20 @@ from streamlit.errors import StreamlitInvalidColorError
 _THEME_API_HEX_RE: Final[re.Pattern[str]] = re.compile(
     r"^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
 )
-_THEME_API_RGB_NUM: Final[str] = r"(?:\d+(?:\.\d+)?|\.\d+)%?"
+# Match Streamlit's patched color2k parseToRgba: comma-separated integer
+# channels (optional decimal alpha), or space-separated number/percent
+# channels (optional / alpha). Comma-separated percentages and decimal
+# channels throw in getLuminance during theme derivation.
+_THEME_API_RGB_INT: Final[str] = r"\d+"
+_THEME_API_RGB_FLOAT_OR_PCT: Final[str] = r"(?:\d+(?:\.\d+)?|\.\d+)%?"
 _THEME_API_RGB_RE: Final[re.Pattern[str]] = re.compile(
     rf"^rgba?\(\s*(?:"
-    rf"{_THEME_API_RGB_NUM}\s*,\s*{_THEME_API_RGB_NUM}\s*,\s*{_THEME_API_RGB_NUM}"
-    rf"(?:\s*,\s*{_THEME_API_RGB_NUM})?"
+    rf"{_THEME_API_RGB_INT}\s*,\s*{_THEME_API_RGB_INT}\s*,\s*{_THEME_API_RGB_INT}"
+    rf"(?:\s*,\s*{_THEME_API_RGB_FLOAT_OR_PCT})?"
     rf"|"
-    rf"{_THEME_API_RGB_NUM}\s+{_THEME_API_RGB_NUM}\s+{_THEME_API_RGB_NUM}"
-    rf"(?:\s*/\s*{_THEME_API_RGB_NUM})?"
+    rf"{_THEME_API_RGB_FLOAT_OR_PCT}\s+{_THEME_API_RGB_FLOAT_OR_PCT}\s+"
+    rf"{_THEME_API_RGB_FLOAT_OR_PCT}"
+    rf"(?:\s*/\s*{_THEME_API_RGB_FLOAT_OR_PCT})?"
     rf")\s*\)$"
 )
 
