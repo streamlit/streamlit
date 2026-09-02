@@ -277,10 +277,13 @@ export function createThemeFromOverride(
     }
   }
 
-  const parentInput =
-    notNullOrUndefined(explicitBase) && baseThemeConfig.themeInput
-      ? baseThemeConfig.themeInput
-      : (options?.parentThemeInput ?? {})
+  // Explicit `base` must not keep the selected theme's sidebar/light/dark
+  // sections: presets have no themeInput, and falling back to the menu theme
+  // would leave e.g. a light sidebar background on a dark overlayBase.
+  const parentInput = notNullOrUndefined(explicitBase)
+    ? (baseThemeConfig.themeInput ??
+      stripSectionFields(options?.parentThemeInput))
+    : (options?.parentThemeInput ?? {})
 
   const name = options?.name ?? "Scoped"
   const created = createTheme(

@@ -24,7 +24,7 @@ import {
 } from "./createThemeFromOverride"
 import { CSS_NAMED_COLORS, isThemeApiColor } from "./cssNamedColors"
 import { darkTheme, lightTheme } from "./themeConfigs"
-import { createPresetThemes } from "./utils"
+import { createPresetThemes, createSidebarTheme } from "./utils"
 
 const PARENT_PRIMARY = "#ff00ff"
 const PARENT_BG = "#abcdef"
@@ -254,6 +254,53 @@ describe("createThemeFromOverride", () => {
     expect(theme.name).toBe("Custom Theme Light")
     expect(theme.displayName).toBe("Light")
     expect(theme.overlayBase).toBe(CustomThemeConfig.BaseTheme.DARK)
+    expect(theme.themeInput?.headingFont).toBe("Inter")
+    expect(theme.themeInput?.sidebar).toBeUndefined()
+  })
+
+  it("uses the resolved variant sidebar when explicit base has themeInput", () => {
+    const darkVariant = {
+      ...darkTheme,
+      name: "Custom Theme Dark",
+      themeInput: {
+        headingFont: "DarkFont",
+        sidebar: { backgroundColor: "#0b1220" },
+      },
+    }
+    const theme = createThemeFromOverride(
+      { base: CustomThemeConfig.BaseTheme.DARK },
+      parentLight,
+      [darkVariant, ...availableThemes],
+      {
+        name: "Custom Theme Light",
+        parentThemeInput: {
+          headingFont: "Inter",
+          sidebar: { backgroundColor: "#f8f8ff" },
+        },
+      }
+    )
+    expect(theme.themeInput?.headingFont).toBe("DarkFont")
+    expect(theme.themeInput?.sidebar?.backgroundColor).toBe("#0b1220")
+  })
+
+  it("does not paint a selected light sidebar on an explicit dark overlayBase", () => {
+    const theme = createThemeFromOverride(
+      { base: CustomThemeConfig.BaseTheme.DARK },
+      parentLight,
+      availableThemes,
+      {
+        name: "Custom Theme Light",
+        parentThemeInput: {
+          headingFont: "Inter",
+          sidebar: { backgroundColor: "#f8f8ff" },
+        },
+      }
+    )
+    const sidebarTheme = createSidebarTheme(theme)
+    expect(sidebarTheme.themeInput?.base).toBe(
+      CustomThemeConfig.BaseTheme.DARK
+    )
+    expect(sidebarTheme.emotion.colors.bgColor).not.toBe("#f8f8ff")
   })
 
   it("applies light and dark sections based on the parent mode", () => {
