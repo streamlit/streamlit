@@ -311,6 +311,9 @@ ignore = [
   "RUF105",  # Checks for legacy `# noqa` comments (migrates them to `# ruff:ignore`).
   "RUF106",  # Checks for rule codes in suppression comments (migrates to human-readable names).
   "RUF201",  # Checks for rule codes in config selectors (migrates to human-readable names).
+  # New code-less preview rule in ruff 0.16.5 (pedantic category). Autouse
+  # fixtures are intentional in our pytest and e2e test setup.
+  "pytest-fixture-autouse",
 ]
 extend-safe-fixes = ["TC002", "TC003"]
 
