@@ -15,6 +15,7 @@
  */
 
 import { getLogger } from "loglevel"
+import { vi } from "vitest"
 
 import type { Figure as PlotlyFigureType } from "~lib/util/reactPlotlyCompat"
 

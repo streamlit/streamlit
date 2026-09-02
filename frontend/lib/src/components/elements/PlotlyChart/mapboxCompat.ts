@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+import { getLogger } from "loglevel"
+
+import type { Figure as PlotlyFigureType } from "~lib/util/reactPlotlyCompat"
+
 /**
  * plotly.js v4 removed Mapbox traces, subplots, and `mapboxAccessToken`.
  * Python Plotly (and older figure JSON) still emits those names, so rewrite
@@ -23,10 +27,6 @@
  *
  * @see https://plotly.com/javascript/guides/migrating-to-v4/
  */
-
-import { getLogger } from "loglevel"
-
-import type { Figure as PlotlyFigureType } from "~lib/util/reactPlotlyCompat"
 
 const LOG = getLogger("PlotlyChart:mapboxCompat")
 
@@ -105,24 +105,21 @@ function migrateMapboxStyle(style: unknown): unknown {
     return style
   }
 
-  const lowered = style.toLowerCase()
-  const stamenAlias = STAMEN_STYLE_ALIASES[lowered]
-  let next = style
+  const stamenAlias = STAMEN_STYLE_ALIASES[style.toLowerCase()]
   if (stamenAlias) {
-    next = stamenAlias
-  } else {
-    const mapboxUrl =
-      /^mapbox:\/\/styles\/mapbox\/([a-z0-9-]+?)(?:-v\d+)?$/i.exec(style)
-    if (mapboxUrl) {
-      next =
-        MAPBOX_URL_STYLE_TO_MAP_STYLE[mapboxUrl[1].toLowerCase()] ?? style
+    return stamenAlias
+  }
+
+  const mapboxUrl =
+    /^mapbox:\/\/styles\/mapbox\/([a-z0-9-]+?)(?:-v\d+)?$/i.exec(style)
+  if (mapboxUrl) {
+    const mappedStyle = MAPBOX_URL_STYLE_TO_MAP_STYLE[mapboxUrl[1].toLowerCase()]
+    if (mappedStyle) {
+      return mappedStyle
     }
   }
 
-  if (
-    typeof next === "string" &&
-    (next.startsWith("mapbox://") || next.toLowerCase() in STAMEN_STYLE_ALIASES)
-  ) {
+  if (style.startsWith("mapbox://")) {
     LOG.warn(
       `Plotly map style "${style}" is not supported by plotly.js v4 (MapLibre). ` +
         `Use a built-in style such as "open-street-map", "carto-positron", ` +
@@ -130,7 +127,7 @@ function migrateMapboxStyle(style: unknown): unknown {
     )
   }
 
-  return next
+  return style
 }
 
 /** Drop the Mapbox access token and rewrite the subplot style. */
