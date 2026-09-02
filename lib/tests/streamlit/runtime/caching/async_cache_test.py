@@ -31,6 +31,7 @@ import pytest
 
 import streamlit as st
 from streamlit.errors import StreamlitIncompatibleParametersError
+from streamlit.testing.v1 import AppTest
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -346,3 +347,12 @@ def test_sync_function_path_is_unchanged() -> None:
     result = load(1)
     assert result == 2
     assert not inspect.isawaitable(result)
+
+
+def test_async_cached_value_survives_script_rerun() -> None:
+    """A rerun reads the awaited value without recomputing the coroutine."""
+    app = AppTest.from_file("test_data/async_cache_rerun.py").run()
+    assert [text.value for text in app.text] == ["result: 42", "calls: 1"]
+
+    app.run()
+    assert [text.value for text in app.text] == ["result: 42", "calls: 1"]
