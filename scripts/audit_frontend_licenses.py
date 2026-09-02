@@ -78,11 +78,6 @@ PACKAGE_EXCEPTIONS: set[PackageInfo] = {
     ),
     (
         # Mapbox Web SDK license: https://github.com/mapbox/mapbox-gl-js/blob/main/LICENSE.txt
-        "@plotly/mapbox-gl@npm:1.13.4",
-        "SEE LICENSE IN LICENSE.txt",
-    ),
-    (
-        # Mapbox Web SDK license: https://github.com/mapbox/mapbox-gl-js/blob/main/LICENSE.txt
         "mapbox-gl@npm:1.13.3",
         "SEE LICENSE IN LICENSE.txt",
     ),

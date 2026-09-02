@@ -63,7 +63,7 @@ interface PlotlySelectionEventWithSelections
  * with additional properties that exist at runtime.
  */
 interface PlotlySelectionPoint extends Plotly.PlotDatum {
-  data: Plotly.PlotData & { legendgroup?: string }
+  data: Plotly.Data & { legendgroup?: string }
   fullData?: unknown
   pointIndices?: number[]
   legendgroup?: string

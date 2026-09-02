@@ -114,11 +114,12 @@ export function PlotlyChart({
   // Load the initial figure spec from the element message
   const initialFigureSpec = useMemo<PlotlyFigureType>(() => {
     if (!element.spec) {
-      return {
+      const emptyFigure: PlotlyFigureType = {
         layout: {},
         data: [],
-        frames: undefined,
+        frames: null,
       }
+      return emptyFigure
     }
 
     return migratePlotlyMapboxFigure(JSON.parse(element.spec))

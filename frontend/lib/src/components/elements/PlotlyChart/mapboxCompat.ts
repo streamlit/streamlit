@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import type * as Plotly from "plotly.js"
-
 import type { Figure as PlotlyFigureType } from "~lib/util/reactPlotlyCompat"
 
 /**
@@ -23,8 +21,17 @@ import type { Figure as PlotlyFigureType } from "~lib/util/reactPlotlyCompat"
  * Python Plotly (and older figure JSON) still emits those names, so rewrite
  * them to the MapLibre `map` family before handing figures to plotly.js.
  *
+ * Input is untyped wire JSON (v3 `mapbox` fields are not in v4 `Layout`).
+ *
  * @see https://plotly.com/javascript/guides/migrating-to-v4/
  */
+
+/** Figure JSON that may still use plotly.js v3 Mapbox field names. */
+type LoosePlotlyFigure = {
+  data?: unknown
+  layout?: unknown
+  frames?: unknown
+}
 
 const MAPBOX_TRACE_TYPES: Record<string, string> = {
   scattermapbox: "scattermap",
@@ -112,7 +119,7 @@ function migrateTemplate(
       Object.entries(next.data).map(([traceType, traces]) => {
         const migratedType = MAPBOX_TRACE_TYPES[traceType] ?? traceType
         const migratedTraces = Array.isArray(traces)
-          ? traces.map(trace => migratePlotlyMapboxTrace(trace as Plotly.Data))
+          ? traces.map(trace => migratePlotlyMapboxTrace(trace))
           : traces
         return [migratedType, migratedTraces]
       })
@@ -148,7 +155,7 @@ function migratePlotlyMapboxLayout(
   return next
 }
 
-function migratePlotlyMapboxTrace(trace: Plotly.Data): Plotly.Data {
+function migratePlotlyMapboxTrace(trace: unknown): unknown {
   if (!isRecord(trace)) {
     return trace
   }
@@ -163,22 +170,20 @@ function migratePlotlyMapboxTrace(trace: Plotly.Data): Plotly.Data {
   if ("subplot" in next) {
     next.subplot = migrateMapboxSubplotId(next.subplot)
   }
-  return next as Plotly.Data
+  return next
 }
 
-function migratePlotlyMapboxFrame(frame: Plotly.Frame): Plotly.Frame {
+function migratePlotlyMapboxFrame(frame: unknown): unknown {
   if (!isRecord(frame)) {
     return frame
   }
 
-  const next: Plotly.Frame = { ...frame }
+  const next: Record<string, unknown> = { ...frame }
   if (Array.isArray(frame.data)) {
     next.data = frame.data.map(migratePlotlyMapboxTrace)
   }
   if (isRecord(frame.layout)) {
-    next.layout = migratePlotlyMapboxLayout(
-      frame.layout
-    ) as Partial<Plotly.Layout>
+    next.layout = migratePlotlyMapboxLayout(frame.layout)
   }
   return next
 }
@@ -202,22 +207,20 @@ function migrateModeBarButton(button: unknown): unknown {
  * Already-migrated figures are returned unchanged.
  */
 export function migratePlotlyMapboxFigure(
-  figure: PlotlyFigureType
+  figure: LoosePlotlyFigure
 ): PlotlyFigureType {
   return {
     ...figure,
     data: Array.isArray(figure.data)
       ? figure.data.map(migratePlotlyMapboxTrace)
-      : figure.data,
+      : (figure.data ?? []),
     layout: isRecord(figure.layout)
-      ? (migratePlotlyMapboxLayout(
-          figure.layout
-        ) as PlotlyFigureType["layout"])
-      : figure.layout,
+      ? migratePlotlyMapboxLayout(figure.layout)
+      : (figure.layout ?? {}),
     frames: Array.isArray(figure.frames)
       ? figure.frames.map(migratePlotlyMapboxFrame)
-      : figure.frames,
-  }
+      : (figure.frames ?? null),
+  } as PlotlyFigureType
 }
 
 /**
@@ -225,7 +228,7 @@ export function migratePlotlyMapboxFigure(
  * so plotly.js v4 config objects stay valid.
  */
 export function migratePlotlyMapboxConfig<T extends object>(config: T): T {
-  const next = { ...config } as T & Record<string, unknown>
+  const next: Record<string, unknown> = { ...config }
   delete next.mapboxAccessToken
 
   if (typeof next.scrollZoom === "string") {
@@ -239,5 +242,5 @@ export function migratePlotlyMapboxConfig<T extends object>(config: T): T {
     }
   }
 
-  return next
+  return next as T
 }

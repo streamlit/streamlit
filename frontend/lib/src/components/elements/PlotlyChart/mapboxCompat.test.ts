@@ -74,7 +74,7 @@ describe("migratePlotlyMapboxFigure", () => {
   })
 
   it("leaves non-map traces and layouts unchanged", () => {
-    const figure: PlotlyFigureType = {
+    const figure = {
       data: [{ type: "scatter", x: [1], y: [2] }],
       layout: { title: "Bars", xaxis: { title: "x" } },
       frames: null,
