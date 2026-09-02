@@ -13,12 +13,10 @@
 # limitations under the License.
 
 import os
-import shutil
 import tempfile
 from pathlib import Path
 from typing import Any
 
-import pytest
 from playwright.sync_api import FilePayload, Page, Route, expect
 
 from e2e_playwright.conftest import (
@@ -54,19 +52,16 @@ def create_temp_directory_with_files(file_data: list[dict[str, Any]]) -> str:
     str
         Path to the temporary directory
     """
-    # Use a deterministic directory name for consistent test results
-    temp_base = tempfile.gettempdir()
-    # Create a nested structure so the uploaded directory preserves relative paths
-    test_base_dir = os.path.join(temp_base, "streamlit_e2e_test_base")
+    # The base directory must be unique per call. Callers can run concurrently in
+    # separate xdist workers, and a shared base made each one delete and rebuild
+    # the other's directory mid-test, so a single upload picked up both sets of
+    # files. The uploaded directory itself stays named "upload_dir" so that
+    # webkitRelativePath, and the chip titles asserted against it, are unchanged.
+    test_base_dir = tempfile.mkdtemp(prefix="streamlit_e2e_upload_")
     temp_dir = os.path.join(test_base_dir, "upload_dir")
     temp_path = Path(temp_dir)
 
-    # Clean up any existing directory
-    base_path = Path(test_base_dir)
-    if base_path.exists():
-        shutil.rmtree(base_path)
-
-    # Create the directory
+    # Create a nested structure so the uploaded directory preserves relative paths
     temp_path.mkdir(parents=True, exist_ok=True)
 
     for file_info in file_data:
@@ -352,7 +347,6 @@ def test_compact_uploader_with_files_snapshot(
     assert_snapshot(file_uploader, name="st_file_uploader-compact_with_files")
 
 
-@pytest.mark.flaky(reruns=3)
 def test_uploads_directory_with_multiple_files(app: Page):
     """Test that directory upload works correctly with multiple files.
 
@@ -403,7 +397,6 @@ def test_uploads_directory_with_multiple_files(app: Page):
     expect(uploader_text).to_contain_text("Directory contains 2 files:")
 
 
-@pytest.mark.flaky(reruns=3)
 def test_directory_upload_with_file_type_filtering(app: Page):
     """Test that directory upload correctly filters files by type.
 
