@@ -111,7 +111,21 @@ class ConfigOptionTest(unittest.TestCase):
         assert my_value == c.value
         assert where_defined == c.where_defined
 
+    def _assert_deprecation_banner_is_flush_left(self, message: str) -> None:
+        """Logged deprecation banners must be flush left.
+
+        If the first non-empty line has no indent, textwrap.dedent() is a
+        no-op and later lines keep their source indent.
+        """
+        non_empty = [line for line in message.splitlines() if line]
+        assert non_empty[0].startswith("═"), (
+            f"banner should start at column 0, got {non_empty[0][:40]!r}"
+        )
+        for line in non_empty:
+            assert not line.startswith(" "), f"line still indented: {line!r}"
+
     def test_deprecated_expired(self):
+        """Expired options log a flush-left error that the option is unsupported."""
         my_value = "myValue"
         where_defined = "im defined here"
 
@@ -124,13 +138,18 @@ class ConfigOptionTest(unittest.TestCase):
             expiration_date="2000-01-01",
         )
 
-        # Expired options behave like deprecated options
-        # just a slightly different text.
-        c.set_value(my_value, where_defined)
+        with self.assertLogs("streamlit.config_option", level="ERROR") as logs:
+            c.set_value(my_value, where_defined)
 
+        message = logs.records[0].getMessage()
+        self._assert_deprecation_banner_is_flush_left(message)
+        assert "mysection.myName IS NO LONGER SUPPORTED." in message
+        assert "dep text" in message
+        assert "Please update im defined here." in message
         assert c.is_expired()
 
     def test_deprecated_unexpired(self):
+        """Unexpired options log a flush-left warning that the option is deprecated."""
         my_value = "myValue"
         where_defined = "im defined here"
 
@@ -143,8 +162,15 @@ class ConfigOptionTest(unittest.TestCase):
             expiration_date="2100-01-01",
         )
 
-        c.set_value(my_value, where_defined)
+        with self.assertLogs("streamlit.config_option", level="WARNING") as logs:
+            c.set_value(my_value, where_defined)
 
+        message = logs.records[0].getMessage()
+        self._assert_deprecation_banner_is_flush_left(message)
+        assert "mysection.myName IS DEPRECATED." in message
+        assert "dep text" in message
+        assert "This option will be removed on or after 2100-01-01." in message
+        assert "Please update im defined here." in message
         assert not c.is_expired()
 
     def test_replaced_by_unexpired(self):

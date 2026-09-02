@@ -197,12 +197,12 @@ def _on_server_start(server: Server) -> None:
 
 
 def _fix_pydeck_mapbox_api_warning() -> None:
-    """Sets MAPBOX_API_KEY environment variable needed for PyDeck otherwise it
-    will throw an exception.
-    """
+    """Prevent PyDeck from throwing when MAPBOX_API_KEY is unset.
 
-    if "MAPBOX_API_KEY" not in os.environ:
-        os.environ["MAPBOX_API_KEY"] = config.get_option("mapbox.token")
+    PyDeck requires the environment variable to exist; an empty default is
+    enough when the user has not provided a token.
+    """
+    os.environ.setdefault("MAPBOX_API_KEY", "")
 
 
 def _initialize_mimetypes() -> None:

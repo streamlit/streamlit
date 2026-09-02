@@ -18,9 +18,10 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 from typing import TYPE_CHECKING, Any, Final, cast
 
-from streamlit import config, dataframe_util
+from streamlit import dataframe_util
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
@@ -520,6 +521,8 @@ def marshall(
     pydeck_proto.json = pydeck_json
     pydeck_proto.id = ""
 
-    mapbox_token = config.get_option("mapbox.token")
+    # st.map builds Deck JSON itself and has no Deck.mapbox_key; copy
+    # MAPBOX_API_KEY onto the proto so the frontend can use Mapbox styles.
+    mapbox_token = os.environ.get("MAPBOX_API_KEY")
     if mapbox_token:
         pydeck_proto.mapbox_token = mapbox_token

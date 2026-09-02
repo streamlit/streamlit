@@ -263,15 +263,14 @@ class CliTest(unittest.TestCase):
         )
         assert result.exit_code == 0
 
-    @parameterized.expand(["mapbox.token", "server.cookieSecret"])
-    def test_run_command_with_sensitive_options_as_flag(self, sensitive_option):
+    def test_run_command_with_sensitive_options_as_flag(self):
         with (
             patch("streamlit.url_util.is_url", return_value=False),
             patch("streamlit.web.cli._main_run"),
             patch("pathlib.Path.exists", return_value=True),
         ):
             result = self.runner.invoke(
-                cli, ["run", "file_name.py", f"--{sensitive_option}=TESTSECRET"]
+                cli, ["run", "file_name.py", "--server.cookieSecret=TESTSECRET"]
             )
 
         assert "option using the CLI flag is not allowed" in result.output

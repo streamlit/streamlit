@@ -283,7 +283,7 @@ class ConfigOption:
 
                 get_logger(__name__).warning(
                     textwrap.dedent(
-                        f"""s
+                        f"""
                     ════════════════════════════════════════════════
                     {self.key} IS DEPRECATED.
                     {self.deprecation_text}
