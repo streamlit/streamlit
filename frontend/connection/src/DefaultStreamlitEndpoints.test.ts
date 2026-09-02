@@ -333,7 +333,7 @@ describe("DefaultStreamlitEndpoints", () => {
       const actualRequestConfig = axiosMock.history.put[0]
 
       const expectedData = new FormData()
-      expectedData.append(MOCK_FILE.name, MOCK_FILE)
+      expectedData.append("file", MOCK_FILE)
 
       expect(actualRequestConfig.url).toBe(
         "http://streamlit.mock:80/mock/base/path/_stcore/upload_file/file_1"
@@ -368,7 +368,7 @@ describe("DefaultStreamlitEndpoints", () => {
       const actualRequestConfig = axiosMock.history.put[0]
 
       const expectedData = new FormData()
-      expectedData.append(MOCK_FILE.name, MOCK_FILE)
+      expectedData.append("file", MOCK_FILE)
 
       expect(actualRequestConfig.url).toBe(
         "http://example.com/upload_file/file_2"
@@ -409,7 +409,7 @@ describe("DefaultStreamlitEndpoints", () => {
       const actualRequestConfig = axiosMock.history.put[0]
 
       const expectedData = new FormData()
-      expectedData.append(MOCK_FILE.name, MOCK_FILE)
+      expectedData.append("file", MOCK_FILE)
 
       expect(actualRequestConfig.url).toBe(
         "http://example.com/someprefix/upload_file/file_2"
@@ -427,6 +427,50 @@ describe("DefaultStreamlitEndpoints", () => {
       expect(actualRequestConfig.signal).toBe(mockAbortController.signal)
       expect(actualRequestConfig.onUploadProgress).toBe(mockOnUploadProgress)
     })
+
+    it.each([
+      {
+        description: "a regular file",
+        file: MOCK_FILE,
+        expectedFileName: "file1.txt",
+      },
+      {
+        description: "a file with a hostile name",
+        file: new File(["file1"], 'evil"; name="injected'),
+        expectedFileName: 'evil"; name="injected',
+      },
+      {
+        description: "a directory upload",
+        file: Object.assign(new File(["file1"], "photo.jpg"), {
+          webkitRelativePath: "album/photo.jpg",
+        }),
+        expectedFileName: "album/photo.jpg",
+      },
+    ])(
+      "sends $description under a static form field name",
+      async ({ file, expectedFileName }) => {
+        axiosMock
+          .onPut("http://streamlit.mock:80/mock/base/path/_stcore/upload_file")
+          .reply(() => [200, 1])
+
+        await expect(
+          endpoints.uploadFileUploaderFile(
+            "/_stcore/upload_file",
+            file,
+            "mockSessionId"
+          )
+        ).resolves.toBeUndefined()
+
+        const formData = axiosMock.history.put[0].data as FormData
+        const entries = Array.from(formData.entries())
+
+        expect(entries).toHaveLength(1)
+        const [fieldName, uploadedFile] = entries[0]
+        expect(fieldName).toBe("file")
+        expect(fieldName).not.toBe(file.name)
+        expect((uploadedFile as File).name).toBe(expectedFileName)
+      }
+    )
 
     it("errors on bad status", async () => {
       axiosMock
