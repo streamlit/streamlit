@@ -1406,28 +1406,6 @@ _create_option(
 )
 
 
-# Config Section: Mapbox #
-
-_create_section("mapbox", "Mapbox configuration that is being used by DeckGL.")
-
-_create_option(
-    "mapbox.token",
-    description="""
-        If you'd like to show maps using Mapbox rather than Carto, use this
-        to pass the Mapbox API token.
-    """,
-    default_val="",
-    type_=str,
-    sensitive=True,
-    deprecated=True,
-    deprecation_text="""
-        Instead of this, you should use either the MAPBOX_API_KEY environment
-        variable or PyDeck's `api_keys` argument.
-    """,
-    expiration_date="2026-05-01",
-)
-
-
 # Config Section: Magic #
 
 _create_section("magic", "Settings for how Streamlit pre-processes your script")
