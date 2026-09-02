@@ -201,9 +201,10 @@ supported chart types.
   its built-in default theme and the user's `spec` stays untouched (see [Theming](#theming-frontend)).
   - Only initialize once the container has valid positive dimensions (ECharts renders incorrectly
     into zero-sized/hidden containers); otherwise defer init rather than throw.
-  - On renderer **or** theme change, dispose and recreate the instance (both are fixed at `init`),
+  - On **renderer** change, dispose and recreate the instance (the renderer is fixed at `init`),
     then reset the option/selection memoization so the fresh instance isn't left blank by a stale
-    "option unchanged" cache.
+    "option unchanged" cache. A **theme** change instead calls `chart.setTheme(...)` in place;
+    the create effect therefore reads the theme through a ref so it isn't a dependency.
   - **Merge behavior**: default to `notMerge: true` for deterministic reruns (the new option fully
     replaces the previous one, matching Streamlit's "same inputs → same UI" principle). This mirrors
     `st.plotly_chart` re-rendering from the full spec. `streamlit-echarts` exposes a `replace_merge`
@@ -274,9 +275,13 @@ that are absent — so we **never** clobber explicit values (e.g. `series[0].ite
 top-level `color`). We do **not** deep-merge the theme into the user option. This is cleaner than
 Plotly's placeholder-replacement approach because ECharts has first-class theme support.
 
-Dark/light switching: because the theme object is derived from the Emotion theme, when the theme
-changes we re-create the instance (ECharts theme is fixed at `init` time) — dispose + `init` with
-the new theme object + `setOption`, preserving current option/selection state.
+Dark/light switching: the theme object is derived from the Emotion theme, so a toggle produces a
+new theme object. ECharts 6's `setTheme` keeps the current option model (it re-themes and re-runs
+`update` without touching `_model`), so we call `chart.setTheme(themeObject)` — or
+`setTheme("default")` to revert to ECharts' built-in theme when `theme=None` — instead of
+disposing. The prepared option does not depend on the Emotion theme, so no `setOption` follows;
+the selection is re-applied because re-theming re-runs the render pipeline. This keeps a toggle
+free of the dispose flash and the entry-animation replay.
 
 Config-driven palette overrides (`theme.chartCategoricalColors`, `theme.chartSequentialColors`)
 already flow into `theme.colors.chart*Colors`, so they are picked up automatically — no extra

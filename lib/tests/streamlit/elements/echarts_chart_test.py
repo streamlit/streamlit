@@ -260,6 +260,19 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.echarts_chart({"series": object()})
 
+    def test_dataframe_outside_dataset_points_at_dataset_source(self):
+        """A dataframe in ``series.data`` is rejected with an actionable hint.
+
+        Only ``dataset.source`` is converted, so the error has to say where
+        dataframes actually work.
+        """
+        df = pd.DataFrame({"x": [1, 2]})
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.echarts_chart({"series": [{"type": "bar", "data": df}]})
+
+        assert "dataset.source" in str(exc.value)
+        assert exc.value.error_id == "echarts-spec-not-json-serializable"
+
     def test_js_callback_string_raises(self):
         """A JSON string with a bare ``function`` callback raises a helpful error."""
         with pytest.raises(StreamlitAPIException) as exc:
@@ -315,6 +328,26 @@ class EChartsChartTest(DeltaGeneratorTestCase):
 
         assert "3D or WebGL charts" in str(exc.value)
         assert exc.value.error_id == "echarts-gl-series-not-supported"
+
+    @parameterized.expand([("grid3D",), ("geo3D",)])
+    def test_gl_components_raise(self, component):
+        """ECharts GL components are rejected like their series counterparts."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.echarts_chart({component: {}, "series": [{"type": "bar"}]})
+
+        assert "3D or WebGL charts" in str(exc.value)
+        assert exc.value.error_id == "echarts-gl-series-not-supported"
+
+    @parameterized.expand(
+        [("wordCloud", "echarts-wordcloud"), ("liquidFill", "echarts-liquidfill")]
+    )
+    def test_unbundled_extension_series_raise(self, series_type, extension):
+        """Series needing an unbundled extension raise instead of rendering empty."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.echarts_chart({"series": [{"type": series_type}]})
+
+        assert extension in str(exc.value)
+        assert exc.value.error_id == "echarts-extension-series-not-supported"
 
     def test_custom_series_raises(self):
         """A custom series raises, since ``renderItem`` must be a JS callback."""
@@ -592,6 +625,18 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         """Invalid height values raise StreamlitInvalidHeightError."""
         with pytest.raises(StreamlitInvalidHeightError):
             st.echarts_chart(_BASIC_SPEC, height=invalid_value)
+
+
+@pytest.mark.require_integration
+def test_dataset_source_pyarrow_table() -> None:
+    """A PyArrow table ``dataset.source`` is converted to records + dimensions."""
+    import pyarrow as pa
+
+    option = _normalize_spec(
+        {"dataset": {"source": pa.table({"a": [1, 2], "b": [3, 4]})}}
+    )
+    assert option["dataset"]["source"] == [{"a": 1, "b": 3}, {"a": 2, "b": 4}]
+    assert option["dataset"]["dimensions"] == ["a", "b"]
 
 
 @pytest.mark.require_integration

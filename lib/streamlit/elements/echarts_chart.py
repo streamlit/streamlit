@@ -92,6 +92,18 @@ _GL_SERIES_TYPES: Final = frozenset(
     }
 )
 
+# Components from the same ECharts GL extension. Unlike the series types above
+# these are top-level option keys, so they are matched per option variant.
+_GL_COMPONENT_KEYS: Final = frozenset({"geo3D", "grid3D"})
+
+# Series types from other ECharts extensions that Streamlit doesn't bundle,
+# mapped to the package that provides them. This list is best-effort: any other
+# third-party series also renders as an empty chart rather than raising.
+_EXTENSION_SERIES_TYPES: Final = {
+    "liquidFill": "echarts-liquidfill",
+    "wordCloud": "echarts-wordcloud",
+}
+
 # Bare ``function (...)`` in a JSON string (pyecharts ``dump_options``). A
 # substring match on ``"function"`` is too broad — it would treat a parse
 # failure whose payload merely contains the word "function" as a callback.
@@ -372,6 +384,19 @@ def _validate_supported_features(option: dict[str, Any]) -> None:
         "geo" in variant for variant in _iter_option_variants(option)
     ) or any(series.get("coordinateSystem") == "geo" for series in _iter_series(option))
 
+    gl_components = sorted(
+        component
+        for variant in _iter_option_variants(option)
+        for component in _GL_COMPONENT_KEYS & variant.keys()
+    )
+    if gl_components:
+        raise StreamlitAPIException(
+            f"The provided ECharts spec uses the `{gl_components[0]}` component, "
+            "which requires the ECharts GL extension. `st.echarts_chart` does not "
+            "support 3D or WebGL charts.",
+            error_id="echarts-gl-series-not-supported",
+        )
+
     for series in _iter_series(option):
         series_type = series.get("type")
         if series_type in _GL_SERIES_TYPES:
@@ -380,6 +405,15 @@ def _validate_supported_features(option: dict[str, Any]) -> None:
                 "requires the ECharts GL extension. `st.echarts_chart` does not "
                 "support 3D or WebGL charts.",
                 error_id="echarts-gl-series-not-supported",
+            )
+        if isinstance(series_type, str) and (
+            extension := _EXTENSION_SERIES_TYPES.get(series_type)
+        ):
+            raise StreamlitAPIException(
+                f"The provided ECharts spec uses the `{series_type}` series, which "
+                f"requires the `{extension}` extension. `st.echarts_chart` bundles "
+                "only core ECharts, so this chart would render empty.",
+                error_id="echarts-extension-series-not-supported",
             )
         if series_type == "map":
             uses_geo = True
@@ -465,7 +499,9 @@ def _serialize_option(option: dict[str, Any]) -> str:
             "The provided ECharts spec is not JSON-serializable. "
             "`st.echarts_chart` only supports JSON-compatible option objects in "
             "v1: JavaScript callbacks, arbitrary Python objects, and non-finite "
-            "numbers (NaN/Infinity) are not supported.",
+            "numbers (NaN/Infinity) are not supported. Dataframes are converted "
+            "automatically only inside `dataset.source`; anywhere else (for "
+            "example `series.data`) convert them to plain lists first.",
             error_id="echarts-spec-not-json-serializable",
         ) from ex
 

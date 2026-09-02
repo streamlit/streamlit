@@ -31,6 +31,7 @@ import { EChartsChart } from "./EChartsChart"
 const { mockInit, mockChart } = vi.hoisted(() => {
   const mockChart = {
     setOption: vi.fn(),
+    setTheme: vi.fn(),
     resize: vi.fn(),
     dispose: vi.fn(),
     isDisposed: vi.fn(() => false),
@@ -189,20 +190,20 @@ describe("EChartsChart", () => {
     expect(mockInit).toHaveBeenCalledTimes(1)
     mockChart.resize.mockClear()
 
-    // Recreate the instance while the hook reports 0x0 (settings-menu reflow).
+    // Recreate the instance (a renderer switch is the one change still fixed
+    // at init time) while the hook reports 0x0, as during a layout reflow.
+    const svgElement = createElement({
+      renderer: EChartsChartProto.Renderer.SVG,
+    })
     dimensionsHolder.width = 0
     dimensionsHolder.height = 0
-    themeHolder.override = {
-      ...mockTheme.emotion,
-      colors: { ...mockTheme.emotion.colors, bgColor: "#000000" },
-    }
-    rerender(<Wrapper element={createElement()} />)
+    rerender(<Wrapper element={svgElement} />)
     expect(mockInit).toHaveBeenCalledTimes(2)
     expect(mockChart.resize).not.toHaveBeenCalled()
 
     dimensionsHolder.width = 600
     dimensionsHolder.height = 400
-    rerender(<Wrapper element={createElement()} />)
+    rerender(<Wrapper element={svgElement} />)
     expect(mockChart.resize).toHaveBeenCalledTimes(1)
   })
 
@@ -311,18 +312,28 @@ describe("EChartsChart", () => {
     expect(charts[0].setOption).toHaveBeenCalledTimes(1)
 
     // Simulate a settings-menu theme switch: the emotion theme object identity
-    // changes (same colors), which recreates the ECharts instance.
+    // changes (same colors), so a new theme object is built.
     themeHolder.override = { ...mockTheme.emotion }
     rerender(<Wrapper element={element} />)
 
-    // The old instance is disposed and a fresh one is created...
-    expect(charts[0].dispose).toHaveBeenCalledTimes(1)
-    expect(charts).toHaveLength(2)
-    // ...and the option is (re)applied to the fresh instance. Regression guard:
-    // previously a stale effect marked the option as applied against the
-    // disposed instance, so the new one skipped its render and stayed blank.
-    expect(charts[1].setOption).toHaveBeenCalledTimes(1)
+    // The instance is re-themed in place rather than recreated, so there is no
+    // dispose flash and no entry-animation replay.
+    expect(charts[0].setTheme).toHaveBeenCalledTimes(1)
+    expect(charts[0].dispose).not.toHaveBeenCalled()
+    expect(charts).toHaveLength(1)
+    // The option model survives `setTheme`, so it isn't re-applied.
+    expect(charts[0].setOption).toHaveBeenCalledTimes(1)
     expect(screen.queryByTestId("stEChartsChartError")).not.toBeInTheDocument()
+  })
+
+  it("reverts to ECharts' built-in theme when theme becomes None", () => {
+    const { rerender } = render(<Wrapper element={createElement()} />)
+    expect(mockChart.setTheme).not.toHaveBeenCalled()
+
+    rerender(<Wrapper element={createElement({ theme: "" })} />)
+
+    expect(mockChart.setTheme).toHaveBeenCalledWith("default")
+    expect(mockChart.dispose).not.toHaveBeenCalled()
   })
 
   it("skips no-op setOption calls on unrelated reruns", () => {

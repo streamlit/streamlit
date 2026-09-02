@@ -138,6 +138,11 @@ export function EChartsChart({
         : undefined,
     [element.theme, theme]
   )
+  // The create effect reads the theme through a ref so that re-theming doesn't
+  // recreate the instance; `appliedThemeRef` tracks what the live instance has.
+  const themeArgRef = useRef(themeArg)
+  themeArgRef.current = themeArg
+  const appliedThemeRef = useRef(themeArg)
 
   const {
     isSelectionActivated,
@@ -179,9 +184,11 @@ export function EChartsChart({
     }
   }, [hasValidDimensions])
 
-  // Create (and dispose) the ECharts instance. Because both the renderer and the
-  // theme are fixed at init time, a change to either disposes and recreates the
-  // instance. We never init into a zero-sized container.
+  // Create (and dispose) the ECharts instance. Only the renderer is fixed at
+  // init time, so only a renderer change recreates the instance; a theme change
+  // is applied in place by the effect below. The theme is read through a ref so
+  // that a light/dark toggle doesn't tear the instance down. We never init into
+  // a zero-sized container.
   useEffect(() => {
     const dom = containerRef.current
     if (!dom || !hasValidSpec || !hasBeenSized) {
@@ -191,7 +198,10 @@ export function EChartsChart({
     const { width: initWidth, height: initHeight } = sizeRef.current
     needsResizeAfterZeroInitRef.current = initWidth <= 0 || initHeight <= 0
 
-    const chart = echarts.init(dom, themeArg, { renderer: rendererStr })
+    const chart = echarts.init(dom, themeArgRef.current, {
+      renderer: rendererStr,
+    })
+    appliedThemeRef.current = themeArgRef.current
     // Force the setOption effect to re-apply against the fresh instance.
     appliedOptionRef.current = null
     setHasRendered(false)
@@ -202,7 +212,30 @@ export function EChartsChart({
       setChartInstance(null)
       setHasRendered(false)
     }
-  }, [containerRef, rendererStr, themeArg, hasValidSpec, hasBeenSized])
+  }, [containerRef, rendererStr, hasValidSpec, hasBeenSized])
+
+  // Re-theme in place when the app switches between light and dark. ECharts
+  // 6's `setTheme` keeps the current option model, so this avoids the
+  // dispose/re-init flash and the entry-animation replay a recreate would
+  // cause. `"default"` is ECharts' way of reverting to its built-in theme.
+  useEffect(() => {
+    if (!chartInstance || chartInstance.isDisposed()) {
+      return
+    }
+    if (appliedThemeRef.current === themeArg) {
+      return
+    }
+    appliedThemeRef.current = themeArg
+
+    try {
+      chartInstance.setTheme(themeArg ?? "default")
+      // Re-theming re-runs the render pipeline, which drops the native
+      // select/brush visuals, so put them back.
+      restoreSelection(chartInstance)
+    } catch (error) {
+      setRenderError(ensureError(error).message)
+    }
+  }, [chartInstance, themeArg, restoreSelection])
 
   // Apply the option whenever it (or the underlying instance) changes. Skips
   // no-op setOption calls and re-applies the persisted selection afterwards.
