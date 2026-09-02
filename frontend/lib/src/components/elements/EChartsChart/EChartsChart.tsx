@@ -302,20 +302,26 @@ export function EChartsChart({
     }
   }, [element.formId, widgetMgr, isSelectionActivated, onFormCleared])
 
+  const downloadType = rendererStr === "svg" ? "svg" : "png"
+
   const handleDownloadChart = useCallback((): void => {
     if (!chartInstance) {
       return
     }
-    const extension = rendererStr === "svg" ? "svg" : "png"
     try {
       const hasExplicitBackground =
         isPlainObject(option) &&
         (option as EChartsOptionObject).backgroundColor !== undefined
       const dataUrl = chartInstance.getDataURL({
-        pixelRatio: 2,
-        ...(hasExplicitBackground || element.theme !== STREAMLIT_THEME
-          ? {}
-          : { backgroundColor: theme.colors.bgColor }),
+        type: downloadType,
+        ...(downloadType === "png"
+          ? {
+              pixelRatio: 2,
+              ...(hasExplicitBackground || element.theme !== STREAMLIT_THEME
+                ? {}
+                : { backgroundColor: theme.colors.bgColor }),
+            }
+          : {}),
       })
       // Build a `YYYY-MM-DDTHH-MM` timestamp from local time so the filename
       // reflects the user's wall-clock time rather than UTC. Matches the
@@ -328,7 +334,7 @@ export function EChartsChart({
       const link = document.createElement("a")
       // SVG renderer: getDataURL returns an SVG payload, so the extension
       // must match. Canvas renderer stays PNG.
-      link.download = `${timestamp}_chart.${extension}`
+      link.download = `${timestamp}_chart.${downloadType}`
       link.href = dataUrl
       link.style.display = "none"
       document.body.appendChild(link)
@@ -336,11 +342,17 @@ export function EChartsChart({
       document.body.removeChild(link)
     } catch (error) {
       LOG.error(
-        `Failed to export ECharts chart as ${extension.toUpperCase()}`,
+        `Failed to export ECharts chart as ${downloadType.toUpperCase()}`,
         ensureError(error)
       )
     }
-  }, [chartInstance, theme.colors.bgColor, rendererStr, option, element.theme])
+  }, [
+    chartInstance,
+    theme.colors.bgColor,
+    downloadType,
+    option,
+    element.theme,
+  ])
 
   return (
     <StyledToolbarElementContainer
@@ -357,9 +369,7 @@ export function EChartsChart({
       >
         {chartInstance !== null && (
           <ToolbarAction
-            label={
-              rendererStr === "svg" ? "Download as SVG" : "Download as PNG"
-            }
+            label={`Download as ${downloadType.toUpperCase()}`}
             icon={FileDownload}
             onClick={handleDownloadChart}
           />

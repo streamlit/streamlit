@@ -228,14 +228,12 @@ class EChartsChartTest(DeltaGeneratorTestCase):
             _BASIC_OPTIONS, on_select="rerun", key="echarts_chart"
         )
 
-        assert selection.selection.points == []
-        assert selection.selection.box == []
-        assert selection.selection.lasso == []
-        assert selection.selection.point_indices == []
+        assert selection.selection.selected == []
+        assert selection.selection.areas == []
 
         # The selection state is exposed through session state.
-        assert st.session_state.echarts_chart.selection.points == []
-        assert st.session_state.echarts_chart.selection.point_indices == []
+        assert st.session_state.echarts_chart.selection.selected == []
+        assert st.session_state.echarts_chart.selection.areas == []
 
     @parameterized.expand([("rerun",), ("ignore",)])
     def test_inside_form(self, on_select):
@@ -524,10 +522,18 @@ def test_serde_deserialize_none_returns_empty_selection() -> None:
     serde = EChartsChartSelectionSerde()
     state = serde.deserialize(None)
 
-    assert state["selection"]["points"] == []
-    assert state["selection"]["point_indices"] == []
-    assert state["selection"]["box"] == []
-    assert state["selection"]["lasso"] == []
+    assert state["selection"]["selected"] == []
+    assert state["selection"]["areas"] == []
+
+
+def test_serde_fills_missing_selection_fields() -> None:
+    """Deserialization restores required empty lists in partial payloads."""
+    serde = EChartsChartSelectionSerde()
+
+    state = serde.deserialize('{"selection": {"selected": []}}')
+
+    assert state.selection.selected == []
+    assert state.selection.areas == []
 
 
 def test_serde_round_trip() -> None:
@@ -535,10 +541,22 @@ def test_serde_round_trip() -> None:
     serde = EChartsChartSelectionSerde()
     state: dict[str, Any] = {
         "selection": {
-            "points": [{"series_index": 0, "data_index": 3, "value": 80}],
-            "point_indices": [3],
-            "box": [],
-            "lasso": [],
+            "selected": [
+                {
+                    "series_index": 0,
+                    "series_id": "sales",
+                    "series_name": "Sales",
+                    "data_type": "main",
+                    "data_indices": [1, 3],
+                }
+            ],
+            "areas": [
+                {
+                    "brush_index": 0,
+                    "brush_type": "rect",
+                    "coord_range": [[0, 2], [10, 20]],
+                }
+            ],
         }
     }
 
@@ -546,10 +564,10 @@ def test_serde_round_trip() -> None:
     assert isinstance(payload, str)
 
     restored = serde.deserialize(payload)
-    assert restored["selection"]["point_indices"] == [3]
-    assert restored["selection"]["points"][0]["data_index"] == 3
+    assert restored["selection"]["selected"][0]["data_indices"] == [1, 3]
+    assert restored["selection"]["areas"][0]["brush_type"] == "rect"
     # Attribute-style access is also supported (via ReadOnlyAttributeDictionary).
-    assert restored.selection.point_indices == [3]
+    assert restored.selection.selected[0]["series_id"] == "sales"
 
 
 def test_deserialize_returns_read_only_state() -> None:
@@ -570,7 +588,9 @@ def test_deserialize_returns_read_only_state() -> None:
     with pytest.raises(TypeError):
         state["selection"] = {}  # type: ignore[index]
     with pytest.raises(TypeError):
-        state.selection["points"] = [{"data_index": 0}]  # type: ignore[index]
+        state.selection["selected"] = [  # type: ignore[index]
+            {"series_index": 0}
+        ]
 
 
 def test_resolve_content_width_passthrough() -> None:

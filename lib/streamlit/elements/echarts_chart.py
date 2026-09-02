@@ -113,61 +113,38 @@ class EChartsSelectionState(ReadOnlyAttributeDictionary):
     key and attribute notation. Selection states cannot be programmatically
     changed or set through Session State.
 
+    This state is derived from ECharts selection events and normalized into a
+    stable snapshot. Exposed field names use ``snake_case``; ECharts values,
+    such as ``brush_type="lineX"``, remain unchanged.
+
     Attributes
     ----------
-    points : list[dict[str, Any]]
-        The selected data items in the chart, including the items selected by
-        the box and lasso modes. Each item identifies its series (through
-        ``series_index`` and ``series_name``) and its ``data_index``, along with
-        the item's ``name`` and ``value``. The per-item ``series_index``
-        disambiguates selections in multi-series charts.
+    selected : list[dict[str, Any]]
+        The union of native and brushed selections, grouped by ECharts series
+        and data type. Each entry contains ``series_index``, ``series_id``,
+        ``series_name``, ``data_type``, and ``data_indices``. Series IDs and
+        names are ``None`` when they weren't explicitly configured.
 
-        Items selected by clicking a point additionally carry
-        ``component_type``, ``series_type``, ``series_name``, ``name``,
-        ``value``, and ``data`` when those can be resolved from the option.
-        Access them with ``dict.get()``: dataset-driven series don't expose
-        per-item names or values, so the keys can be missing. Items derived
-        from a box or lasso selection carry the fields ECharts reports for a
-        brushed data item (``component_type``, ``series_index``, and
-        ``data_index``).
+        ``data_indices`` is series-local. For a dataset without transforms, it
+        addresses ``dataset.source`` rows. For inline series, it addresses
+        ``series.data``. For graph series, ``data_type="node"`` addresses
+        ``data`` and ``data_type="edge"`` addresses ``links``.
 
-    point_indices : list[int]
-        The ``data_index`` values of all selected data items. This is convenient
-        for the common single-series case and mirrors ``PlotlyState``.
-
-        .. note::
-            This is reliable only for single-series charts. ECharts
-            ``data_index`` is series-local, so in multi-series charts the same
-            index can refer to different points across series. For multi-series
-            charts, use ``points[].series_index`` (or ``series_name``) together
-            with ``points[].data_index`` to disambiguate.
-
-    box : list[dict[str, Any]]
-        The metadata related to the box (rectangle) selections. This includes
-        the coordinates of the selected areas.
-
-    lasso : list[dict[str, Any]]
-        The metadata related to the lasso (freeform) selections. This includes
-        the coordinates of the selected areas.
+    areas : list[dict[str, Any]]
+        The active brush regions. Each entry contains ``brush_index``,
+        ``brush_type``, and ``coord_range``. ``coord_range`` is ``None`` when
+        ECharts doesn't provide data-space geometry.
 
     """
 
-    points: list[dict[str, Any]]
-    point_indices: list[int]
-    box: list[dict[str, Any]]
-    lasso: list[dict[str, Any]]
+    selected: list[dict[str, Any]]
+    areas: list[dict[str, Any]]
 
     @overload
-    def __getitem__(self, key: Literal["points"]) -> list[dict[str, Any]]: ...
+    def __getitem__(self, key: Literal["selected"]) -> list[dict[str, Any]]: ...
 
     @overload
-    def __getitem__(self, key: Literal["point_indices"]) -> list[int]: ...
-
-    @overload
-    def __getitem__(self, key: Literal["box"]) -> list[dict[str, Any]]: ...
-
-    @overload
-    def __getitem__(self, key: Literal["lasso"]) -> list[dict[str, Any]]: ...
+    def __getitem__(self, key: Literal["areas"]) -> list[dict[str, Any]]: ...
 
     @overload
     def __getitem__(self, key: Any) -> Any: ...
@@ -232,10 +209,8 @@ class EChartsChartSelectionSerde:
     def deserialize(self, ui_value: str | None) -> EChartsState:
         empty_selection_state: dict[str, Any] = {
             "selection": {
-                "points": [],
-                "point_indices": [],
-                "box": [],
-                "lasso": [],
+                "selected": [],
+                "areas": [],
             },
         }
 
@@ -245,6 +220,9 @@ class EChartsChartSelectionSerde:
 
         if "selection" not in selection_state:  # pragma: no cover - defensive
             selection_state = empty_selection_state
+        else:
+            selection_state["selection"].setdefault("selected", [])
+            selection_state["selection"].setdefault("areas", [])
 
         # Eagerly wrap selection so bracket access returns a stable typed
         # instance instead of creating a shallow copy on every access.
@@ -666,12 +644,13 @@ class EChartsMixin:
             selections you enable in your ``options``. Enable point selection by
             setting ``selectedMode`` on a series (for example,
             ``{"type": "bar", "selectedMode": "multiple", "data": [...]}``), and
-            enable box/lasso selection by adding a
+            enable region selection by adding a
             `brush <https://echarts.apache.org/en/option.html#brush>`_ component.
-            The selected points and brushed regions are returned in the
-            ``EChartsState`` and re-applied visually after reruns. If your
-            ``options`` don't enable any selection, no selection is returned even
-            when ``on_select`` is active.
+            Selected data is grouped by series in ``EChartsState.selection.selected``,
+            and brush geometry is returned in ``EChartsState.selection.areas``.
+            Selections are re-applied visually after reruns. If your ``options``
+            don't enable any selection, no selection is returned even when
+            ``on_select`` is active.
 
         renderer : "canvas" or "svg"
             The renderer passed to ECharts. This can be one of the following:
@@ -714,7 +693,8 @@ class EChartsMixin:
 
         Set ``on_select="rerun"`` to make the chart behave like an input widget,
         and enable point selection in your ``options`` by setting
-        ``selectedMode`` on the series. Streamlit returns the selected points.
+        ``selectedMode`` on the series. Streamlit returns selected indices grouped
+        by series and data type.
 
         .. code-block:: python
            :filename: streamlit_app.py
@@ -738,7 +718,12 @@ class EChartsMixin:
 
            event = st.echarts_chart(options, key="sales", on_select="rerun")
 
-           st.write("You selected:", event.selection.points)
+           rows = (
+               event.selection.selected[0]["data_indices"]
+               if event.selection.selected
+               else []
+           )
+           st.write("You selected:", [options["series"][0]["data"][i] for i in rows])
 
         .. output::
            https://doc-echarts-chart-selection.streamlit.app/

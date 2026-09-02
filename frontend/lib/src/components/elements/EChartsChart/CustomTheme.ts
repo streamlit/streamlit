@@ -165,6 +165,34 @@ export function buildStreamlitEChartsTheme(
     parallelAxis: axisDefaults,
     // Single axis (e.g. themeRiver, single-axis heatmaps/scatter).
     singleAxis: axisDefaults,
+    // ThemeRiver draws its band names beside the stream in a fixed light/dark
+    // gray that ignores the surrounding axis theming.
+    themeRiver: {
+      label: bodyTextStyle,
+    },
+    // Chord (ECharts 6): the ribbons default to `color: "source"`, which tints
+    // them with the (palette-colored) source node — keep that keyword, since a
+    // literal color breaks the lookup and paints them black. Only the default
+    // 0.2 opacity needs lifting, as it leaves them invisible on a dark
+    // background.
+    chord: {
+      lineStyle: {
+        opacity: hasLightBackgroundColor(theme) ? 0.25 : 0.45,
+      },
+      label: bodyTextStyle,
+    },
+    // Matrix coordinate system (ECharts 6): cell dividers and header labels
+    // otherwise come from ECharts' own tokens and read dimmer than every other
+    // themed label.
+    matrix: {
+      x: { label: bodyTextStyle, itemStyle: { borderColor: axisLineColor } },
+      y: { label: bodyTextStyle, itemStyle: { borderColor: axisLineColor } },
+      body: { itemStyle: { borderColor: axisLineColor } },
+      corner: {
+        label: bodyTextStyle,
+        itemStyle: { borderColor: axisLineColor },
+      },
+    },
     // Radar coordinate. ECharts' defaults render bright, near-opaque split
     // areas that clash with the (dark) app background, so theme the rings,
     // spokes, and indicator names explicitly.
@@ -273,10 +301,10 @@ export function buildStreamlitEChartsTheme(
     // Treemap: theme the breadcrumb trail and the parent-node header band
     // (their default light-gray surfaces clash with the app background).
     treemap: {
-      upperLabel: {
-        color: colors.bodyText,
-        fontFamily: genericFonts.bodyFont,
-      },
+      // `upperLabel` (the parent header text) is deliberately absent: ECharts
+      // resolves it from its own defaults and ignores the themed value, so it
+      // stays white. It is only legible on darker tiles, but fixing it would
+      // mean writing a color into the user's series option.
       itemStyle: {
         borderColor: colors.bgColor,
       },
@@ -340,12 +368,18 @@ export function buildStreamlitEChartsTheme(
     dataZoom: {
       borderColor: colors.borderColor,
       fillerColor: transparentize(colors.primary, 0.85),
+      // The slider's mini series preview. It sits on the app background rather
+      // than inside the plot, so the faint gray used for gridlines leaves it
+      // almost invisible in dark mode. Opacity is set explicitly instead of
+      // baked into the color, because ECharts multiplies the two.
       dataBackground: {
         lineStyle: {
-          color: getGray30(theme),
+          color: labelColor,
+          opacity: 0.5,
         },
         areaStyle: {
-          color: getGray30(theme),
+          color: labelColor,
+          opacity: 0.2,
         },
       },
       handleStyle: {
@@ -365,6 +399,19 @@ export function buildStreamlitEChartsTheme(
     toolbox: {
       iconStyle: {
         borderColor: labelColor,
+      },
+      // ECharts' hover state is a fixed light blue for both the icon and the
+      // feature title it reveals underneath, which is hard to read on a dark
+      // background. Brighten the icon relative to its resting color and give
+      // the title a themed chip so it stays legible over the plot.
+      emphasis: {
+        iconStyle: {
+          borderColor: colors.bodyText,
+          textFill: colors.bodyText,
+          textBackgroundColor: colors.secondaryBg,
+          textPadding: convertRemToPx(theme.spacing.twoXS),
+          textBorderRadius: convertRemToPx(theme.radii.sm),
+        },
       },
     },
   }

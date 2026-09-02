@@ -16,7 +16,7 @@
 
 import { useCallback, useMemo, useRef } from "react"
 
-import { debounce, isPlainObject } from "lodash-es"
+import { debounce, isEqual, isPlainObject } from "lodash-es"
 import { getLogger } from "loglevel"
 
 import { EChartsChart as EChartsChartProto } from "@streamlit/protobuf"
@@ -29,21 +29,12 @@ const LOG = getLogger("useEChartsSelections")
 
 /**
  * Debounce time (ms) for widget-state updates. Coalesces a single gesture's
- * point (``selectchanged``) and box/lasso (``brushEnd``) events into exactly
- * one update. ``brushSelected`` only refreshes the hit-test cache so a pause
- * mid-drag cannot emit new points with the previous region's geometry.
+ * native and brush events into one update.
  */
 const DEBOUNCE_TIME_MS = 150
 
-/** Frontend-only element-state key under which raw brush areas are persisted. */
-const BRUSH_AREAS_STATE_KEY = "brushAreas"
-/**
- * Element-state key for the last brush hit-test points (``seriesIndex`` /
- * ``dataIndex`` pairs) so a remount can seed ``latestBrushPoints``. Without
- * this, a post-remount ``selectchanged`` would emit restored ``box``/``lasso``
- * geometry with an empty ``points`` channel.
- */
-const BRUSH_POINTS_STATE_KEY = "brushPoints"
+/** Frontend-only element-state key for exact brush snapshots. */
+const BRUSH_SELECTION_STATE_KEY = "brushSelection"
 /**
  * Frontend-only element-state key under which the natively selected points are
  * persisted (as ECharts ``selectchanged`` ``selected`` entries) so they can be
@@ -52,14 +43,19 @@ const BRUSH_POINTS_STATE_KEY = "brushPoints"
 const SELECTED_POINTS_STATE_KEY = "selectedPoints"
 
 /**
+ * How long after a polygon lands its completing ``dblclick`` may still arrive.
+ * The two fire in the same interaction, so this only has to outlast one event
+ * turn — short enough that a deliberate double-click later still clears.
+ */
+const POLYGON_COMPLETION_WINDOW_MS = 100
+
+/**
  * The shared selection-state contract serialized to the widget state. Keys are
  * snake_case to match the Python serde.
  */
 interface EChartsSelectionState {
-  points: Array<Record<string, unknown>>
-  point_indices: number[]
-  box: Array<Record<string, unknown>>
-  lasso: Array<Record<string, unknown>>
+  selected: Array<Record<string, unknown>>
+  areas: Array<Record<string, unknown>>
 }
 
 /** A minimal view of the ECharts instance used for selection wiring. */
@@ -67,10 +63,6 @@ export interface EChartsSelectionInstance {
   on(eventName: string, handler: (params: unknown) => void): void
   off(eventName: string, handler?: (params: unknown) => void): void
   dispatchAction(payload: Record<string, unknown>): void
-  convertFromPixel(
-    finder: Record<string, unknown> | string,
-    value: number[]
-  ): number | number[]
   getOption(): unknown
   isDisposed(): boolean
   /** The underlying zrender layer, which receives every canvas-level event. */
@@ -92,24 +84,30 @@ interface SelectChangedParams {
 }
 
 interface BrushSelectedItem {
-  seriesIndex?: number
-  dataIndex?: number[]
-}
-
-interface BrushSelectedParams {
-  batch?: Array<{ selected?: BrushSelectedItem[] }>
+  seriesIndex: number
+  dataType?: string
+  dataIndex: number[]
 }
 
 interface BrushArea {
   brushType?: string
   coordRange?: unknown
-  range?: unknown
-  panelId?: string
-  xAxisIndex?: number
-  yAxisIndex?: number
+  [key: string]: unknown
+}
+
+interface BrushSelection {
+  brushId?: string
+  brushIndex: number
+  areas?: BrushArea[]
+  selected?: BrushSelectedItem[]
+}
+
+interface BrushSelectedParams {
+  batch?: BrushSelection[]
 }
 
 interface BrushEndParams {
+  brushId?: string
   areas?: BrushArea[]
 }
 
@@ -146,56 +144,8 @@ export interface UseEChartsSelectionsOutput {
 }
 
 const EMPTY_SELECTION: EChartsSelectionState = {
-  points: [],
-  point_indices: [],
-  box: [],
-  lasso: [],
-}
-
-/**
- * Build a rich point entry for a natively selected data item.
- *
- * ``selectchanged`` only reports ``seriesIndex``/``dataIndex``, so the series
- * type/name and the item's name/value/data are looked up (best effort) from the
- * chart's resolved option. For dataset-driven series (no inline ``data``) the
- * indices are always present while name/value stay ``undefined``.
- */
-function buildPointFromIndex(
-  resolvedOption: Record<string, unknown> | null,
-  seriesIndex: number,
-  dataIndex: number
-): Record<string, unknown> {
-  const seriesList = resolvedOption?.series
-  const series = Array.isArray(seriesList)
-    ? seriesList[seriesIndex]
-    : undefined
-  const seriesObject = isPlainObject(series)
-    ? (series as Record<string, unknown>)
-    : undefined
-
-  const dataArray = seriesObject?.data
-  const dataItem = Array.isArray(dataArray) ? dataArray[dataIndex] : undefined
-
-  let name: unknown
-  let value: unknown
-  if (isPlainObject(dataItem)) {
-    const item = dataItem as Record<string, unknown>
-    name = item.name
-    value = item.value
-  } else if (dataItem !== undefined) {
-    value = dataItem
-  }
-
-  return {
-    component_type: "series",
-    series_type: seriesObject?.type,
-    series_index: seriesIndex,
-    series_name: seriesObject?.name,
-    data_index: dataIndex,
-    name,
-    value,
-    data: dataItem,
-  }
+  selected: [],
+  areas: [],
 }
 
 /** Resolve the chart's current option as a plain object (or ``null``). */
@@ -208,59 +158,191 @@ function resolveChartOption(
     : null
 }
 
-/**
- * Expand ``selectchanged`` ``selected`` entries into enriched point objects and
- * their flat data indices.
- */
-function buildPointsFromEntries(
-  resolvedOption: Record<string, unknown> | null,
-  entries: SelectedEntry[]
-): { points: Array<Record<string, unknown>>; indices: number[] } {
-  const points: Array<Record<string, unknown>> = []
-  const indices: number[] = []
-  for (const entry of entries) {
-    for (const dataIndex of entry.dataIndex ?? []) {
-      points.push(
-        buildPointFromIndex(resolvedOption, entry.seriesIndex, dataIndex)
-      )
-      indices.push(dataIndex)
-    }
-  }
-  return { points, indices }
+const DATA_TYPE_RANK: Readonly<Record<string, number>> = {
+  main: 0,
+  node: 1,
+  edge: 2,
 }
 
-/**
- * Merge the native-selection and brush point channels into a single
- * de-duplicated union keyed by ``series_index`` + ``data_index``. Native
- * (richer) entries win when the same item is both natively selected and inside a
- * brushed region, so ``points`` never contains the same data item twice.
- */
-function mergePointChannels(
-  nativePoints: Array<Record<string, unknown>>,
-  nativeIndices: number[],
-  brushPoints: Array<Record<string, unknown>>,
-  brushIndices: number[]
-): { points: Array<Record<string, unknown>>; pointIndices: number[] } {
-  const points: Array<Record<string, unknown>> = []
-  const pointIndices: number[] = []
-  const seen = new Set<string>()
-  const append = (
-    channelPoints: Array<Record<string, unknown>>,
-    channelIndices: number[]
-  ): void => {
-    channelPoints.forEach((point, index) => {
-      const key = JSON.stringify([point.series_index, point.data_index])
-      if (seen.has(key)) {
-        return
-      }
-      seen.add(key)
-      points.push(point)
-      pointIndices.push(channelIndices[index])
-    })
+interface SelectionGroup {
+  seriesIndex: number
+  dataType: string
+  dataIndices: Set<number>
+}
+
+function normalizeDataType(dataType: string | undefined): string {
+  return dataType ?? "main"
+}
+
+function normalizeSeriesMetadata(value: unknown): string | number | null {
+  if (typeof value === "number") {
+    return value
   }
-  append(nativePoints, nativeIndices)
-  append(brushPoints, brushIndices)
-  return { points, pointIndices }
+  if (typeof value === "string" && value.length > 0 && !value.includes("\0")) {
+    return value
+  }
+  return null
+}
+
+function getSeriesMetadata(
+  resolvedOption: Record<string, unknown> | null,
+  seriesIndex: number
+): { seriesId: string | number | null; seriesName: string | number | null } {
+  const seriesOption = resolvedOption?.series
+  const series = Array.isArray(seriesOption)
+    ? seriesOption[seriesIndex]
+    : seriesIndex === 0
+      ? seriesOption
+      : undefined
+  const seriesObject = isPlainObject(series)
+    ? (series as Record<string, unknown>)
+    : undefined
+
+  return {
+    seriesId: normalizeSeriesMetadata(seriesObject?.id),
+    seriesName: normalizeSeriesMetadata(seriesObject?.name),
+  }
+}
+
+function appendSelectedEntries(
+  groups: Map<string, SelectionGroup>,
+  entries: Array<SelectedEntry | BrushSelectedItem>
+): void {
+  for (const entry of entries) {
+    if (typeof entry.seriesIndex !== "number") {
+      continue
+    }
+    const dataType = normalizeDataType(entry.dataType)
+    const key = JSON.stringify([entry.seriesIndex, dataType])
+    let group = groups.get(key)
+    if (!group) {
+      group = {
+        seriesIndex: entry.seriesIndex,
+        dataType,
+        dataIndices: new Set<number>(),
+      }
+      groups.set(key, group)
+    }
+    for (const dataIndex of entry.dataIndex ?? []) {
+      if (typeof dataIndex === "number") {
+        group.dataIndices.add(dataIndex)
+      }
+    }
+  }
+}
+
+function compareDataTypes(left: string, right: string): number {
+  const leftRank = DATA_TYPE_RANK[left] ?? 3
+  const rightRank = DATA_TYPE_RANK[right] ?? 3
+  return leftRank === rightRank
+    ? left.localeCompare(right)
+    : leftRank - rightRank
+}
+
+function buildSelectedGroups(
+  chart: EChartsSelectionInstance,
+  nativeSelection: SelectedEntry[],
+  brushSelection: BrushSelection[]
+): Array<Record<string, unknown>> {
+  const groups = new Map<string, SelectionGroup>()
+  appendSelectedEntries(groups, nativeSelection)
+  for (const brush of brushSelection) {
+    appendSelectedEntries(groups, brush.selected ?? [])
+  }
+
+  const resolvedOption = resolveChartOption(chart)
+  return Array.from(groups.values())
+    .filter(group => group.dataIndices.size > 0)
+    .sort(
+      (left, right) =>
+        left.seriesIndex - right.seriesIndex ||
+        compareDataTypes(left.dataType, right.dataType)
+    )
+    .map(group => {
+      const { seriesId, seriesName } = getSeriesMetadata(
+        resolvedOption,
+        group.seriesIndex
+      )
+      return {
+        series_index: group.seriesIndex,
+        series_id: seriesId,
+        series_name: seriesName,
+        data_type: group.dataType,
+        data_indices: Array.from(group.dataIndices).sort(
+          (left, right) => left - right
+        ),
+      }
+    })
+}
+
+function buildAreas(
+  brushSelection: BrushSelection[]
+): Array<Record<string, unknown>> {
+  return [...brushSelection]
+    .sort((left, right) => left.brushIndex - right.brushIndex)
+    .flatMap(brush =>
+      (brush.areas ?? [])
+        .filter(area => typeof area.brushType === "string")
+        .map(area => ({
+          brush_index: brush.brushIndex,
+          brush_type: area.brushType,
+          coord_range: Array.isArray(area.coordRange) ? area.coordRange : null,
+        }))
+    )
+}
+
+function buildSelectionState(
+  chart: EChartsSelectionInstance,
+  nativeSelection: SelectedEntry[],
+  brushSelection: BrushSelection[]
+): EChartsSelectionState {
+  return {
+    selected: buildSelectedGroups(chart, nativeSelection, brushSelection),
+    areas: buildAreas(brushSelection),
+  }
+}
+
+function hasNoBrushAreas(brushSelection: BrushSelection[]): boolean {
+  return brushSelection.every(brush => (brush.areas ?? []).length === 0)
+}
+
+function findBrushSelectionForEnd(
+  brushSelection: BrushSelection[],
+  params: BrushEndParams
+): BrushSelection | undefined {
+  return params.brushId === undefined
+    ? brushSelection.length === 1
+      ? brushSelection[0]
+      : undefined
+    : brushSelection.find(item => item.brushId === params.brushId)
+}
+
+function getComparableBrushArea(area: BrushArea): Record<string, unknown> {
+  return {
+    brushType: area.brushType,
+    panelId: area.panelId,
+    range: area.range,
+    coordRange: area.coordRange,
+    coordRanges: area.coordRanges,
+  }
+}
+
+function brushAreasEqual(left: BrushArea[], right: BrushArea[]): boolean {
+  return isEqual(
+    left.map(getComparableBrushArea),
+    right.map(getComparableBrushArea)
+  )
+}
+
+function brushEndMatchesSelection(
+  brushSelection: BrushSelection[],
+  params: BrushEndParams
+): boolean {
+  const brush = findBrushSelectionForEnd(brushSelection, params)
+  return (
+    brush !== undefined &&
+    brushAreasEqual(brush.areas ?? [], params.areas ?? [])
+  )
 }
 
 /**
@@ -288,197 +370,6 @@ function dispatchPointSelection(
 }
 
 /**
- * Try to convert a pixel-space brush range into data-space coordinates. Returns
- * ``null`` when the coordinate system can't be resolved so the caller can fall
- * back to raw pixels.
- *
- * ``gridIndex`` selects the coordinate system to convert against (derived from
- * the brush area's ``panelId`` or axis index), so multi-grid charts convert
- * against the grid the brush was drawn on rather than always the first one.
- */
-function convertPixelRange(
-  chart: EChartsSelectionInstance,
-  area: BrushArea,
-  gridIndex: number
-): { x: number[]; y: number[] } | null {
-  const range = area.range
-  if (!Array.isArray(range)) {
-    return null
-  }
-  const finder = { gridIndex }
-  try {
-    if (area.brushType === "polygon") {
-      const xs: number[] = []
-      const ys: number[] = []
-      for (const point of range as number[][]) {
-        const dataPoint = chart.convertFromPixel(finder, point)
-        if (!Array.isArray(dataPoint)) {
-          return null
-        }
-        xs.push(dataPoint[0])
-        ys.push(dataPoint[1])
-      }
-      return { x: xs, y: ys }
-    }
-
-    if (area.brushType === "lineX" || area.brushType === "lineY") {
-      const range1d = range as number[]
-      if (range1d.length < 2 || typeof range1d[0] !== "number") {
-        return null
-      }
-      if (area.brushType === "lineX") {
-        const start = chart.convertFromPixel(finder, [range1d[0], 0])
-        const end = chart.convertFromPixel(finder, [range1d[1], 0])
-        if (!Array.isArray(start) || !Array.isArray(end)) {
-          return null
-        }
-        return { x: [start[0], end[0]], y: [] }
-      }
-      const start = chart.convertFromPixel(finder, [0, range1d[0]])
-      const end = chart.convertFromPixel(finder, [0, range1d[1]])
-      if (!Array.isArray(start) || !Array.isArray(end)) {
-        return null
-      }
-      return { x: [], y: [start[1], end[1]] }
-    }
-
-    const [xRange, yRange] = range as number[][]
-    const corner0 = chart.convertFromPixel(finder, [xRange[0], yRange[0]])
-    const corner1 = chart.convertFromPixel(finder, [xRange[1], yRange[1]])
-    if (!Array.isArray(corner0) || !Array.isArray(corner1)) {
-      return null
-    }
-    return { x: [corner0[0], corner1[0]], y: [corner0[1], corner1[1]] }
-  } catch (error) {
-    LOG.warn("Failed to convert brush pixel range to data coordinates", error)
-    return null
-  }
-}
-
-/**
- * Look up ``gridIndex`` on the axis at ``axisIndex``. ECharts defaults a
- * missing ``gridIndex`` to 0, so axis index is never used as a grid index.
- * Returns ``undefined`` when the axis list does not contain that index.
- */
-function gridIndexFromAxis(
-  axes: unknown,
-  axisIndex: number
-): number | undefined {
-  const list = Array.isArray(axes) ? axes : axes ? [axes] : []
-  if (axisIndex < 0 || axisIndex >= list.length) {
-    return undefined
-  }
-  const axis = list[axisIndex]
-  if (!isPlainObject(axis)) {
-    return 0
-  }
-  const gridIndex = (axis as Record<string, unknown>).gridIndex
-  return typeof gridIndex === "number" ? gridIndex : 0
-}
-
-/**
- * Resolve the grid a brush area belongs to.
- *
- * Prefer ECharts' ``panelId`` (``"grid--N"``). ``xAxisIndex`` / ``yAxisIndex``
- * are axis indexes, not grid indexes — look up ``gridIndex`` on that axis in
- * the option. Fall back to grid 0 when neither is available.
- */
-function resolveGridIndex(
-  area: BrushArea,
-  chart: EChartsSelectionInstance
-): number {
-  if (typeof area.panelId === "string") {
-    const match = /grid--(\d+)/.exec(area.panelId)
-    if (match) {
-      return Number(match[1])
-    }
-  }
-
-  const option = resolveChartOption(chart)
-  if (option) {
-    if (typeof area.xAxisIndex === "number") {
-      const fromAxis = gridIndexFromAxis(option.xAxis, area.xAxisIndex)
-      if (fromAxis !== undefined) {
-        return fromAxis
-      }
-    }
-    if (typeof area.yAxisIndex === "number") {
-      const fromAxis = gridIndexFromAxis(option.yAxis, area.yAxisIndex)
-      if (fromAxis !== undefined) {
-        return fromAxis
-      }
-    }
-  }
-
-  return 0
-}
-
-/** Convert a single brush area into a serializable selection item. */
-function areaToSelectionItem(
-  chart: EChartsSelectionInstance,
-  area: BrushArea
-): Record<string, unknown> {
-  const gridIndex = resolveGridIndex(area, chart)
-  const coordRange = area.coordRange
-
-  if (Array.isArray(coordRange)) {
-    if (area.brushType === "polygon") {
-      const points = coordRange as number[][]
-      return {
-        x: points.map(point => point[0]),
-        y: points.map(point => point[1]),
-        grid_index: gridIndex,
-      }
-    }
-    if (area.brushType === "rect") {
-      const [xRange, yRange] = coordRange as number[][]
-      return { x: xRange, y: yRange, grid_index: gridIndex }
-    }
-    // lineX / lineY selections carry a single 1D range on that axis.
-    if (area.brushType === "lineY") {
-      return { x: [], y: coordRange as number[], grid_index: gridIndex }
-    }
-    return { x: coordRange as number[], y: [], grid_index: gridIndex }
-  }
-
-  const converted = convertPixelRange(chart, area, gridIndex)
-  if (converted) {
-    return { ...converted, grid_index: gridIndex }
-  }
-
-  // Last resort: keep the raw pixel range so the state stays inspectable.
-  return {
-    range: Array.isArray(area.range) ? area.range : [],
-    grid_index: gridIndex,
-    coordinate_system: "pixel",
-  }
-}
-
-/**
- * Split brush areas into serializable ``box`` (rect / lineX / lineY) and
- * ``lasso`` (polygon) selection items.
- */
-function buildBrushGeometry(
-  chart: EChartsSelectionInstance,
-  areas: BrushArea[]
-): {
-  box: Array<Record<string, unknown>>
-  lasso: Array<Record<string, unknown>>
-} {
-  const box: Array<Record<string, unknown>> = []
-  const lasso: Array<Record<string, unknown>> = []
-  for (const area of areas) {
-    const item = areaToSelectionItem(chart, area)
-    if (area.brushType === "polygon") {
-      lasso.push(item)
-    } else {
-      box.push(item)
-    }
-  }
-  return { box, lasso }
-}
-
-/**
  * Reset each series' cursor to the normal arrow for display-only charts.
  *
  * ECharts defaults series data items to a ``"pointer"`` cursor (and a hover
@@ -487,6 +378,13 @@ function buildBrushGeometry(
  * Streamlit charts. We only reset the cursor (the hover emphasis is left intact,
  * as it's useful alongside tooltips) and leave any series where the user set an
  * explicit ``cursor`` untouched. Legend/dataZoom/toolbox cursors are unaffected.
+ *
+ * This reaches data items only. ECharts applies ``series.cursor`` when it draws
+ * symbols, bars, and candlesticks, but never to a line's polyline or an area's
+ * polygon, which therefore keep zrender's ``"pointer"`` default — so hovering
+ * the line itself (or anywhere in an area fill) still shows a click cursor.
+ * There is no option-level fix: ``silent`` would remove it but also disables
+ * hover emphasis and item tooltips.
  */
 function withDefaultSeriesCursor(
   option: EChartsOptionObject
@@ -512,8 +410,8 @@ function withDefaultSeriesCursor(
 }
 
 /**
- * Hook that wires ECharts selection events (native point selection and box/lasso
- * brush gestures) into Streamlit's widget-state mechanism. Modeled on
+ * Hook that wires ECharts native and brush selection events into Streamlit's
+ * widget-state mechanism. Modeled on
  * ``useVegaLiteSelections``.
  *
  * Streamlit does not inject any selection config into the option: when
@@ -594,15 +492,25 @@ export function useEChartsSelections(
           dispatchPointSelection(chart, selectedPoints, "select")
         }
 
-        const areas = widgetMgr.getElementState<BrushArea[]>(
+        const brushSelection = widgetMgr.getElementState<BrushSelection[]>(
           chartId,
-          BRUSH_AREAS_STATE_KEY
+          BRUSH_SELECTION_STATE_KEY
         )
-        if (Array.isArray(areas) && areas.length > 0) {
-          try {
-            chart.dispatchAction({ type: "brush", areas })
-          } catch (error) {
-            LOG.warn("Failed to restore persisted brush areas", error)
+        if (Array.isArray(brushSelection)) {
+          for (const brush of brushSelection) {
+            const areas = brush.areas ?? []
+            if (areas.length === 0) {
+              continue
+            }
+            try {
+              chart.dispatchAction({
+                type: "brush",
+                brushIndex: brush.brushIndex,
+                areas,
+              })
+            } catch (error) {
+              LOG.warn("Failed to restore persisted brush areas", error)
+            }
           }
         }
       } finally {
@@ -632,11 +540,7 @@ export function useEChartsSelections(
       }
     }
     if (chartId) {
-      widgetMgr.setElementState(chartId, BRUSH_AREAS_STATE_KEY, [])
-      widgetMgr.setElementState(chartId, BRUSH_POINTS_STATE_KEY, {
-        points: [],
-        indices: [],
-      })
+      widgetMgr.setElementState(chartId, BRUSH_SELECTION_STATE_KEY, [])
       widgetMgr.setElementState(chartId, SELECTED_POINTS_STATE_KEY, [])
     }
     writeSelection(EMPTY_SELECTION)
@@ -655,90 +559,60 @@ export function useEChartsSelections(
 
       chartRef.current = chart
 
-      // Latest resolved values for each selection channel. Point selection
-      // (native ``selectchanged``) and box/lasso brush selection are
-      // independent and coexist: the emitted ``points``/``point_indices`` are
-      // the de-duplicated union of natively selected points and brushed points,
-      // while ``box``/``lasso`` carry the brush geometry. Caching lets
-      // brushSelected and brushEnd (which fire in either order) produce a single
-      // update.
-      let latestSelectedPoints: Array<Record<string, unknown>> = []
-      let latestSelectedIndices: number[] = []
-      let latestBrushPoints: Array<Record<string, unknown>> = []
-      let latestBrushIndices: number[] = []
-      let latestBox: Array<Record<string, unknown>> = []
-      let latestLasso: Array<Record<string, unknown>> = []
+      // Native and brush selection are independent ECharts channels. Cache their
+      // full snapshots separately, then expose a deterministic grouped union.
+      let latestNativeSelection: SelectedEntry[] = []
+      let latestBrushSelection: BrushSelection[] = []
+      let committedBrushSelection: BrushSelection[] = []
+      let pendingBrushEnd: BrushEndParams | undefined
 
-      // Seed the caches from the persisted selection so that, after a remount
-      // (theme/renderer change recreates the instance), interacting with a
-      // single channel doesn't drop the other channel's state. ``restoreSelection``
-      // re-applies the visuals but intentionally runs *before* these handlers are
-      // bound, so its events don't hydrate the caches — we do it explicitly here.
+      // Seed both channels so an interaction after a remount cannot drop the
+      // other channel's restored state.
       if (chartId) {
         const persistedPoints = widgetMgr.getElementState<SelectedEntry[]>(
           chartId,
           SELECTED_POINTS_STATE_KEY
         )
-        if (Array.isArray(persistedPoints) && persistedPoints.length > 0) {
-          const { points, indices } = buildPointsFromEntries(
-            resolveChartOption(chart),
-            persistedPoints
-          )
-          latestSelectedPoints = points
-          latestSelectedIndices = indices
+        if (Array.isArray(persistedPoints)) {
+          latestNativeSelection = persistedPoints
         }
 
-        const persistedAreas = widgetMgr.getElementState<BrushArea[]>(
-          chartId,
-          BRUSH_AREAS_STATE_KEY
-        )
-        if (Array.isArray(persistedAreas) && persistedAreas.length > 0) {
-          const { box, lasso } = buildBrushGeometry(chart, persistedAreas)
-          latestBox = box
-          latestLasso = lasso
-        }
-
-        const persistedBrushPoints = widgetMgr.getElementState<{
-          points: Array<Record<string, unknown>>
-          indices: number[]
-        }>(chartId, BRUSH_POINTS_STATE_KEY)
-        if (
-          persistedBrushPoints &&
-          Array.isArray(persistedBrushPoints.points) &&
-          persistedBrushPoints.points.length > 0
-        ) {
-          latestBrushPoints = persistedBrushPoints.points
-          latestBrushIndices = Array.isArray(persistedBrushPoints.indices)
-            ? persistedBrushPoints.indices
-            : []
+        const persistedBrushSelection = widgetMgr.getElementState<
+          BrushSelection[]
+        >(chartId, BRUSH_SELECTION_STATE_KEY)
+        if (Array.isArray(persistedBrushSelection)) {
+          latestBrushSelection = persistedBrushSelection
+          committedBrushSelection = persistedBrushSelection
         }
       }
 
       const emitSelection = debounce((): void => {
-        const { points, pointIndices } = mergePointChannels(
-          latestSelectedPoints,
-          latestSelectedIndices,
-          latestBrushPoints,
-          latestBrushIndices
+        writeSelection(
+          buildSelectionState(
+            chart,
+            latestNativeSelection,
+            latestBrushSelection
+          )
         )
-        writeSelection({
-          points,
-          point_indices: pointIndices,
-          box: latestBox,
-          lasso: latestLasso,
-        })
       }, DEBOUNCE_TIME_MS)
+
+      const commitBrushSelection = (): void => {
+        committedBrushSelection = latestBrushSelection
+        pendingBrushEnd = undefined
+        if (chartId) {
+          widgetMgr.setElementState(
+            chartId,
+            BRUSH_SELECTION_STATE_KEY,
+            latestBrushSelection
+          )
+        }
+        emitSelection()
+      }
 
       const handleSelectChanged = (raw: unknown): void => {
         const params = raw as SelectChangedParams
         const selected = params.selected ?? []
-        // Resolve the (possibly enriched) point entries from the chart's option.
-        const { points, indices } = buildPointsFromEntries(
-          resolveChartOption(chart),
-          selected
-        )
-        latestSelectedPoints = points
-        latestSelectedIndices = indices
+        latestNativeSelection = selected
         // Persist the raw selection so it can be re-applied visually after an
         // option-replacing setOption or a remount.
         if (chartId) {
@@ -755,84 +629,73 @@ export function useEChartsSelections(
 
       const handleBrushSelected = (raw: unknown): void => {
         const params = raw as BrushSelectedParams
-        const points: Array<Record<string, unknown>> = []
-        const indices: number[] = []
-        for (const batchItem of params.batch ?? []) {
-          for (const selected of batchItem.selected ?? []) {
-            for (const dataIndex of selected.dataIndex ?? []) {
-              points.push({
-                component_type: "series",
-                series_index: selected.seriesIndex,
-                data_index: dataIndex,
-              })
-              indices.push(dataIndex)
-            }
-          }
+        latestBrushSelection = params.batch ?? []
+        if (isRestoringRef.current) {
+          return
         }
-        latestBrushPoints = points
-        latestBrushIndices = indices
-        if (chartId) {
-          widgetMgr.setElementState(chartId, BRUSH_POINTS_STATE_KEY, {
-            points,
-            indices,
-          })
+
+        // Toolbox clear emits a full snapshot with one empty-area placeholder
+        // per brush component, but no brushEnd.
+        if (hasNoBrushAreas(latestBrushSelection)) {
+          commitBrushSelection()
+          return
         }
-        // Toolbox ``brush: {type: "clear"}`` fires ``brushSelected`` with an
-        // empty batch and no ``brushEnd``. Drop stale geometry and emit so
-        // Python does not keep the previous region.
+
+        // With throttling, the final brush snapshot can arrive after brushEnd.
         if (
-          points.length === 0 &&
-          (latestBox.length > 0 || latestLasso.length > 0)
+          pendingBrushEnd &&
+          brushEndMatchesSelection(latestBrushSelection, pendingBrushEnd)
         ) {
-          latestBox = []
-          latestLasso = []
-          if (chartId) {
-            widgetMgr.setElementState(chartId, BRUSH_AREAS_STATE_KEY, [])
-          }
-          if (!isRestoringRef.current) {
-            emitSelection()
-          }
+          commitBrushSelection()
         }
-        // Otherwise do not emit: ``brushSelected`` fires throughout a drag, so
-        // a pause longer than the debounce would rerun the app with new points
-        // and the previous ``box``/``lasso``. ``brushEnd`` is the commit; if
-        // it already scheduled an emit (event-order inversion), the pending
-        // debounce still reads these updated caches.
       }
 
-      let polygonBrushJustCompleted = false
+      let polygonCompletedAt = 0
       let deferredClearTimer: ReturnType<typeof setTimeout> | undefined
 
       const handleBrushEnd = (raw: unknown): void => {
         const params = raw as BrushEndParams
         const areas = params.areas ?? []
-        const { box, lasso } = buildBrushGeometry(chart, areas)
-        latestBox = box
-        latestLasso = lasso
-        if (chartId) {
-          widgetMgr.setElementState(chartId, BRUSH_AREAS_STATE_KEY, areas)
-        }
-        // Completing a lasso is a double-click on zrender. Set this before
-        // emitting so a paired ``dblclick`` (same turn) does not clear.
+        // Completing a lasso is itself a double-click on zrender, so record
+        // when one landed and let the paired `dblclick` through without
+        // clearing. Only a *new* polygon arms this: with the polygon tool still
+        // active, double-clicking on top of a finished lasso re-commits the
+        // same areas, and re-arming on that would make the lasso impossible to
+        // clear.
+        const committedBrush = findBrushSelectionForEnd(
+          committedBrushSelection,
+          params
+        )
+        const areasChanged = !brushAreasEqual(
+          committedBrush?.areas ?? [],
+          areas
+        )
         if (
           !isRestoringRef.current &&
+          areasChanged &&
           areas.some(area => area.brushType === "polygon")
         ) {
-          polygonBrushJustCompleted = true
+          polygonCompletedAt = Date.now()
         }
-        if (!isRestoringRef.current) {
-          emitSelection()
+        if (isRestoringRef.current) {
+          return
+        }
+
+        if (brushEndMatchesSelection(latestBrushSelection, params)) {
+          commitBrushSelection()
+        } else {
+          // brushEnd contains only one component's areas. Wait for the full
+          // brushSelected snapshot rather than replacing the other components.
+          pendingBrushEnd = params
         }
       }
 
       const clearBoundSelection = (): void => {
         emitSelection.cancel()
-        latestSelectedPoints = []
-        latestSelectedIndices = []
-        latestBrushPoints = []
-        latestBrushIndices = []
-        latestBox = []
-        latestLasso = []
+        latestNativeSelection = []
+        latestBrushSelection = []
+        committedBrushSelection = []
+        pendingBrushEnd = undefined
         clearSelection()
       }
 
@@ -840,13 +703,16 @@ export function useEChartsSelections(
         if (deferredClearTimer !== undefined) {
           clearTimeout(deferredClearTimer)
         }
-        // Defer so a polygon-complete ``brushEnd`` on the same double-click can
-        // set the guard first, regardless of which zr listener runs first.
+        // Defer so a polygon-complete ``brushEnd`` on the same double-click is
+        // recorded first, regardless of which zr listener runs first.
         // eslint-disable-next-line no-restricted-globals -- Coalesce zr dblclick with ECharts polygon brushEnd; not a React render timer.
         deferredClearTimer = setTimeout(() => {
           deferredClearTimer = undefined
-          if (polygonBrushJustCompleted) {
-            polygonBrushJustCompleted = false
+          // Ignore only the double-click that completed a polygon. The window
+          // expires so a later, deliberate double-click still clears a lasso
+          // that was finished by dragging rather than double-clicking.
+          if (Date.now() - polygonCompletedAt < POLYGON_COMPLETION_WINDOW_MS) {
+            polygonCompletedAt = 0
             return
           }
           clearBoundSelection()

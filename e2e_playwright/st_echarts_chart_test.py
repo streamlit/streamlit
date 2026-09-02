@@ -29,6 +29,7 @@ from e2e_playwright.shared.app_utils import (
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
 # (including the ones inside the collapsed expander and the form).
 _EXPECTED_CHART_COUNT = 15
+_XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 
 
 def _get_chart(page: Page, key: str) -> Locator:
@@ -169,7 +170,7 @@ def test_point_selection_persists_and_toggles(
     same point again deselects it.
     """
     # Initially nothing is selected.
-    expect(app.get_by_text("echarts selection points: 0")).to_be_visible()
+    expect(app.get_by_text("echarts selection groups: 0")).to_be_visible()
 
     chart = _get_chart(app, "selection_chart")
     expect(chart.locator("canvas")).to_be_visible()
@@ -178,7 +179,7 @@ def test_point_selection_persists_and_toggles(
     chart.click()
     wait_for_app_run(app)
 
-    expect(app.get_by_text("echarts selection points: 1")).to_be_visible()
+    expect(app.get_by_text("echarts selection groups: 1")).to_be_visible()
     expect(app.get_by_text("echarts selection indices: [0]")).to_be_visible()
     # Must NOT happen: selecting a point does not error.
     expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
@@ -189,18 +190,18 @@ def test_point_selection_persists_and_toggles(
     # An unrelated rerun must keep the selection (state and visual) intact.
     click_button(app, "rerun helper")
     wait_for_app_run(app)
-    expect(app.get_by_text("echarts selection points: 1")).to_be_visible()
+    expect(app.get_by_text("echarts selection groups: 1")).to_be_visible()
     expect(app.get_by_text("echarts selection indices: [0]")).to_be_visible()
 
     # Clicking the same point again toggles it off (multi-select behavior).
     chart.click()
     wait_for_app_run(app)
-    expect(app.get_by_text("echarts selection points: 0")).to_be_visible()
+    expect(app.get_by_text("echarts selection groups: 0")).to_be_visible()
     expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
 
 
-def test_tooltip_xss_payload_is_not_executed(app: Page):
-    """An HTML/script payload in tooltip content renders safely (no execution)."""
+def test_tooltip_and_label_xss_payloads_are_escaped(app: Page):
+    """HTML/script payloads render as literal tooltip and label text."""
     dialogs: list[str] = []
 
     def _record_dialog(dialog: Dialog) -> None:
@@ -210,9 +211,12 @@ def test_tooltip_xss_payload_is_not_executed(app: Page):
     app.on("dialog", _record_dialog)
 
     chart = _get_chart(app, "c_xss_chart")
-    # A ``lines`` series can add a second zrender canvas layer, so don't require
-    # a unique canvas locator.
-    expect(chart.locator("canvas").first).to_be_visible()
+    expect(chart.locator("svg")).to_be_visible()
+
+    # The SVG-rendered label contains the literal payload as text. If the markup
+    # were interpreted instead, the text node would not contain the tag source.
+    label = chart.locator("svg text").filter(has_text=_XSS_PAYLOAD)
+    expect(label).to_be_visible()
 
     # Must NOT happen at any point: the payload must never create an executing
     # <img onerror=...> element in the DOM.
@@ -220,11 +224,14 @@ def test_tooltip_xss_payload_is_not_executed(app: Page):
 
     # Hover the (chart-filling) bar to trigger the tooltip render path.
     chart.hover()
-    # This is a negative test (we assert that nothing malicious renders), so
-    # there is no positive DOM signal to wait on. The fixed delay gives ECharts'
-    # async tooltip render path time to run, so a malicious payload would already
-    # have executed by the time we assert below that it did not.
-    app.wait_for_timeout(500)
+
+    # ECharts' HTML tooltip must expose the payload as literal text, not as an
+    # image element. This is a positive rendering assertion in addition to the
+    # non-execution checks below.
+    tooltip = chart.locator(".echarts-xss-tooltip")
+    expect(tooltip).to_be_visible()
+    expect(tooltip).to_contain_text(_XSS_PAYLOAD)
+    expect(tooltip.locator("img")).to_have_count(0)
 
     expect(app.locator("img[onerror]")).to_have_count(0)
     assert dialogs == [], f"Unexpected dialog(s) fired from XSS payload: {dialogs}"
@@ -247,6 +254,23 @@ def test_download_as_png(app: Page):
 
     download = download_info.value
     assert download.suggested_filename.endswith(".png")
+
+
+def test_download_as_svg(app: Page):
+    """An SVG-rendered chart exposes an SVG download action and file."""
+    chart_container = get_element_by_key(app, "c_svg_renderer")
+    expect(
+        chart_container.get_by_test_id("stEChartsChart").locator("svg")
+    ).to_be_visible()
+
+    download_button = chart_container.get_by_role("button", name="Download as SVG")
+
+    # See test_download_as_png for why we dispatch the click directly.
+    with app.expect_download() as download_info:
+        download_button.dispatch_event("click")
+
+    download = download_info.value
+    assert download.suggested_filename.endswith(".svg")
 
 
 def test_fullscreen_expands_and_collapses_chart(app: Page):

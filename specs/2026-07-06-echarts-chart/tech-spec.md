@@ -136,14 +136,12 @@ height=...)`.
    `_enqueue` and return the
    `DeltaGenerator`. This follows the existing chart widget registration pattern.
 
-**State types** (mirroring `PlotlySelectionState`/`PlotlyState`):
+**State types** (using the shared Streamlit event envelope with an ECharts-native payload):
 
 ```python
 class EChartsSelectionState(TypedDict, total=False):
-    points: Required[list[dict[str, Any]]]  # rich items incl. series_index/data_index
-    point_indices: Required[list[int]]  # flat data indices (Plotly parity)
-    box: Required[list[dict[str, Any]]]
-    lasso: Required[list[dict[str, Any]]]
+    selected: Required[list[dict[str, Any]]]
+    areas: Required[list[dict[str, Any]]]
 
 
 class EChartsState(TypedDict, total=False):
@@ -151,9 +149,9 @@ class EChartsState(TypedDict, total=False):
 ```
 
 The serde's `deserialize(None)` returns the empty selection
-(`{"selection": {"points": [], "point_indices": [], "box": [], "lasso": []}}`), matching
-`PlotlyChartSelectionSerde`. (`streamlit-echarts` additionally exposes a `series_point_indices`
-map; we fold per-series info into each `points` item instead to keep the schema Plotly-shaped.)
+(`{"selection": {"selected": [], "areas": []}}`). Each `selected` entry always contains
+`series_index`, nullable `series_id`/`series_name`, `data_type`, and `data_indices`. Each `areas`
+entry always contains `brush_index`, `brush_type`, and nullable `coord_range`.
 
 No theme work happens in Python (per repo rule: _theming/layout is computed in the frontend_).
 The backend only forwards the `theme` string.
@@ -287,30 +285,29 @@ therefore returns the option unchanged for selection widgets (it only resets the
 `element.id` (i.e. `on_select != "ignore"`), and all handlers below are bound unconditionally in
 that case — unused ones simply never fire.
 
-- **Points**: register `chart.on("selectchanged", handler)`. This fires only if the user's series
-  set `selectedMode` (`"single"`/`"multiple"`/`"series"`). Its `selected` array
-  (`[{ seriesIndex, dataIndex[] }]`) is the authoritative set of selected points. Each point is
-  **enriched** best-effort from `chart.getOption()` into `{ component_type, series_type,
-series_index, series_name, data_index, name, value, data }`; dataset-driven series (no inline
-  `data`) still yield the indices with the enrichment fields absent. ECharts renders the selected
-  state itself (native `select` visual + any `select` style the user set) — we do not mutate the
-  option to add a highlight.
-- **Box/Lasso**: register `chart.on("brushSelected", …)` and `chart.on("brushEnd", …)`. These fire
-  only if the user's spec includes a `brush` component.
-  - `brushSelected` yields `params.batch[].selected` (series → `dataIndex` arrays) → the brushed
-    `points`/`point_indices` (minimal `{ component_type, series_index, data_index }` items).
-  - `brushEnd` yields the final brush _areas_ → convert pixel ranges to axis coordinates with
-    `chart.convertFromPixel(...)`, storing `box`/`lasso` as
-    `{ x: [...], y: [...], grid_index }`; if a coordinate system can't be converted, fall back to
-    raw pixel coordinates with a `coordinate_system` marker so the state stays inspectable.
-  - **Event-ordering guard**: `brushSelected` and `brushEnd` can fire in either order, so cache
-    the latest batch _and_ the latest areas and emit **exactly one** widget-state update per
-    completed gesture. An empty batch/areas (brush "clear") emits the empty selection.
-- **Union of channels**: native point selection (`selectchanged`) and brush selection
-  (`brushSelected`/`brushEnd`) are independent and **coexist**. The hook caches each channel's
-  latest values and emits `points`/`point_indices` as the **union** of natively selected and
-  brushed points, alongside the brush `box`/`lasso` geometry — so a single combined
-  `{ selection: { points, point_indices, box, lasso } }` update reflects both.
+- **Native selection**: register `chart.on("selectchanged", handler)`. This fires only if a series
+  sets `selectedMode` (`"single"`/`"multiple"`/`"series"`). Its `selected` array is the
+  authoritative full native-selection snapshot, grouped by `seriesIndex` and optional `dataType`.
+  Normalize a missing `dataType` to `"main"`; retain only `seriesIndex` and `dataIndex[]`.
+- **Brush selection**: register `chart.on("brushSelected", …)` and
+  `chart.on("brushEnd", …)`. `brushSelected.batch` is the authoritative full brush snapshot: one
+  entry per brush component containing its `brushIndex`, active `areas`, and selected indices for
+  every series. Omit empty series and component placeholders.
+  - Cache exact raw areas per `brushIndex` for restoration. Build public areas from
+    `brushType` and the primary `coordRange`; use `null` when no data-space range exists. Do not
+    expose pixel `range`, internal `panelId`, or secondary `coordRanges`.
+  - `brushEnd` reports only the component whose gesture ended, so use it only as a commit signal;
+    never replace the component cache from `brushEnd.areas`. A delayed `brushSelected` after
+    `brushEnd` completes the pending commit. Toolbox clear emits only `brushSelected`, so an
+    all-empty-area snapshot commits immediately.
+- **Grouped union**: native and brush channels coexist and are cached independently. Merge their
+  indices by `(series_index, data_type)`, normalize brush entries to `data_type="main"`, de-duplicate
+  and numerically sort `data_indices`, and omit empty groups. Sort groups by series and the fixed
+  type rank `main`, `node`, `edge`; sort areas by `brush_index` while retaining per-component area
+  order. Resolve `series_id`/`series_name` from the top-level resolved series option, mapping
+  missing, empty, or NUL-containing values to `null`; never inspect a data item.
+- **Channel-preserving clears**: native unselection preserves brush state, and brush clear
+  preserves native state. Double-click and form clear explicitly clear both channels.
 - Debounce writes (~150ms, as Vega does), compare against the current JSON state to **skip no-op
   updates** (avoids needless reruns), and serialize via
   `widgetMgr.setStringValue(widgetInfo, json, { fromUi: true }, fragmentId)`.
@@ -318,16 +315,14 @@ series_index, series_name, data_index, name, value, data }`; dataset-driven seri
   the ECharts selection — `dispatchAction({ type: "brush", areas: [] })` **and**
   `dispatchAction({ type: "unselect", … })` for the persisted selected points — and write an empty
   selection — mirroring `PlotlyChart`.
-- **State restore**: persist the raw selection to frontend element state — the selected points as
-  the `selectchanged` `selected` entries (key `selectedPoints`) and the brush areas (key
-  `brushAreas`). When `element.id` is populated, `restoreSelection` re-applies **both** on
+- **State restore**: persist exact raw native entries and component-grouped brush areas to frontend
+  element state. When `element.id` is populated, `restoreSelection` re-applies **both** on
   remount/fullscreen **and after each option-replacing `setOption({ notMerge: true })`**:
   `dispatchAction({ type: "select", seriesIndex, dataIndex })` per persisted point and
-  `dispatchAction({ type: "brush", areas })` — otherwise a full option replacement clears the
-  native `select`/`brush` state and desyncs the chart from the persisted widget selection. This
-  restore runs _before_ the event handlers are (re)bound on instance recreation, and the no-op
-  write guard absorbs the `selectchanged` a restore dispatch triggers when handlers are already
-  bound. Display-only charts should not depend on `widgetMgr.setElementState`.
+  a targeted `dispatchAction({ type: "brush", brushIndex, areas })` per brush component. Otherwise,
+  a full option replacement clears native and brush state and desyncs the chart from the widget
+  value. This restore runs before handlers are bound on instance recreation; the restoring guard
+  suppresses events when handlers are already active. Display-only charts do not use element state.
 - **Display-only**: when selections are inactive (`on_select="ignore"`, i.e. no `element.id`), do not
   bind selection handlers or emit updates. (v1 does not expose a `disabled` parameter, mirroring
   `st.plotly_chart`; see the product spec's Out of Scope.)
@@ -372,11 +367,14 @@ contract as `VegaLiteState`/`PlotlyState`).
   values survive default merging; canvas default vs `renderer="svg"`; `setOption`/`resize`/`dispose`
   lifecycle; display-only charts work with an empty proto ID; theme/renderer change recreates the
   instance; **the option is left untouched for selection widgets** (no injection); a widget binds
-  all selection listeners; `selectchanged` → enriched point widget state; `brushSelected` +
-  `brushEnd` (both orderings) → single box/lasso update; brush clear → empty state;
-  `restoreSelection` re-dispatches persisted `select` + `brush`; no-op selections skip
-  `setStringValue`; double-click/form-clear reset behavior; display-only charts bind no selection
-  handlers; error rendering. Mock `echarts.init`/`getOption` where a real canvas isn't needed.
+  all selection listeners; grouped native/brush union with deterministic ordering; empty ECharts
+  placeholders are omitted; graph `dataType` stays distinct; brush areas retain component identity
+  and primary coordinate geometry; `brushSelected` + `brushEnd` work in both orderings and across
+  multiple brush components; clearing one channel preserves the other; `restoreSelection`
+  re-dispatches persisted `select` + targeted `brush`; no-op selections skip `setStringValue`;
+  double-click/form-clear reset behavior; display-only charts bind no selection handlers; error
+  rendering. Include a focused real-ECharts contract test for raw indices across DataZoom and
+  dataset transforms; mock `echarts.init`/`getOption` where a real instance isn't needed.
 - **Security regression test (required).** A tooltip/label whose content contains an HTML/script
   payload (e.g. `"<img src=x onerror=alert(1)>"`) must render as **escaped text** under
   `theme="streamlit"` and must not execute. Cover this in the frontend unit tests and assert it in

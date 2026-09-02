@@ -400,6 +400,7 @@ describe("EChartsChart", () => {
     await user.click(screen.getByRole("button", { name: "Download as PNG" }))
 
     expect(mockChart.getDataURL).toHaveBeenCalledWith({
+      type: "png",
       pixelRatio: 2,
       backgroundColor: mockTheme.emotion.colors.bgColor,
     })
@@ -419,7 +420,10 @@ describe("EChartsChart", () => {
 
     await user.click(screen.getByRole("button", { name: "Download as PNG" }))
 
-    expect(mockChart.getDataURL).toHaveBeenCalledWith({ pixelRatio: 2 })
+    expect(mockChart.getDataURL).toHaveBeenCalledWith({
+      type: "png",
+      pixelRatio: 2,
+    })
   })
 
   it("exports an SVG renderer chart with an .svg filename", async () => {
@@ -440,6 +444,7 @@ describe("EChartsChart", () => {
 
     await user.click(screen.getByRole("button", { name: "Download as SVG" }))
 
+    expect(mockChart.getDataURL).toHaveBeenCalledWith({ type: "svg" })
     expect(downloadFilename).toMatch(
       /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}_chart\.svg$/
     )

@@ -281,16 +281,19 @@ selection_event = st.echarts_chart(
     on_select="rerun",
     height=_HEIGHT,
 )
-st.write(f"echarts selection points: {len(selection_event['selection']['points'])}")
-st.write(f"echarts selection indices: {selection_event['selection']['point_indices']}")
+selection_groups = selection_event["selection"]["selected"]
+selection_indices = selection_groups[0]["data_indices"] if selection_groups else []
+st.write(f"echarts selection groups: {len(selection_groups)}")
+st.write(f"echarts selection indices: {selection_indices}")
 
-# 12) A tooltip XSS payload: the data item name is an HTML/script payload. Under
-#     theme="streamlit" it must render as escaped text and never execute.
+# 12) A tooltip/label XSS payload: the data item name is an HTML/script payload.
+#     Under theme="streamlit" it must render as escaped text and never execute.
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 with st.container(key="c_xss_chart"):
     st.echarts_chart(
         {
-            "tooltip": {"trigger": "item"},
+            # Give the generated HTML tooltip a stable locator for the E2E test.
+            "tooltip": {"trigger": "item", "className": "echarts-xss-tooltip"},
             "xAxis": {"type": "category", "data": ["payload"]},
             "yAxis": {"type": "value", "max": 100},
             "series": [
@@ -298,6 +301,9 @@ with st.container(key="c_xss_chart"):
                     "type": "bar",
                     "barWidth": "90%",
                     "data": [{"value": 100, "name": _XSS_PAYLOAD}],
+                    # SVG text makes it possible to positively assert that the
+                    # payload is rendered literally instead of interpreted as HTML.
+                    "label": {"show": True, "formatter": "{b}"},
                 },
                 # The advisory that floors the bundled ECharts version lives in
                 # the `series.type="lines"` tooltip path; exercise that too.
@@ -315,6 +321,7 @@ with st.container(key="c_xss_chart"):
             "animation": False,
         },
         theme="streamlit",
+        renderer="svg",
         key="xss_chart",
         height=_HEIGHT,
     )
@@ -354,4 +361,4 @@ with st.form("echarts_form"):
         height=_HEIGHT,
     )
     st.form_submit_button("Submit selection")
-st.write(f"echarts form points: {len(form_event['selection']['points'])}")
+st.write(f"echarts form groups: {len(form_event['selection']['selected'])}")

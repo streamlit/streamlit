@@ -63,12 +63,10 @@ if TYPE_CHECKING:
     echarts_state = echarts_chart(options, on_select="rerun")
     assert_type(echarts_state.selection, EChartsSelectionState)
     assert_type(echarts_state["selection"], EChartsSelectionState)
-    assert_type(echarts_state.selection.points, list[dict[str, Any]])
-    assert_type(echarts_state["selection"]["points"], list[dict[str, Any]])
-    assert_type(echarts_state.selection.point_indices, list[int])
-    assert_type(echarts_state["selection"]["point_indices"], list[int])
-    assert_type(echarts_state.selection.box, list[dict[str, Any]])
-    assert_type(echarts_state.selection.lasso, list[dict[str, Any]])
+    assert_type(echarts_state.selection.selected, list[dict[str, Any]])
+    assert_type(echarts_state["selection"]["selected"], list[dict[str, Any]])
+    assert_type(echarts_state.selection.areas, list[dict[str, Any]])
+    assert_type(echarts_state["selection"]["areas"], list[dict[str, Any]])
 
     # =====================================================================
     # Return type tests with callback function -> EChartsState

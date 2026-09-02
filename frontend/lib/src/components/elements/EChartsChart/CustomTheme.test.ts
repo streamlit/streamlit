@@ -137,12 +137,12 @@ describe("buildStreamlitEChartsTheme", () => {
       breadcrumb: {
         itemStyle: { color: string; textStyle: { color: string } }
       }
-      upperLabel: { color: string }
+      itemStyle: { borderColor: string }
     }
     expect(treemap.breadcrumb.itemStyle.color).toBe(theme.colors.secondaryBg)
     expect(treemap.breadcrumb.itemStyle.textStyle.color).toBe(getGray70(theme))
-    // The parent-node header band defaults to illegible dark-on-white text.
-    expect(treemap.upperLabel.color).toBe(theme.colors.bodyText)
+    // The parent-node header band otherwise renders as an opaque white slab.
+    expect(treemap.itemStyle.borderColor).toBe(theme.colors.bgColor)
   })
 
   it("themes axis names and opt-in split areas", () => {
@@ -192,6 +192,65 @@ describe("buildStreamlitEChartsTheme", () => {
       label: { textBorderWidth: number }
     }
     expect(funnel.label.textBorderWidth).toBeGreaterThan(0)
+  })
+
+  it("themes components that ECharts renders with its own fixed tokens", () => {
+    const echartsTheme = buildStreamlitEChartsTheme(theme)
+
+    // Band names beside a themeRiver ignore the surrounding axis theming.
+    const themeRiver = echartsTheme.themeRiver as { label: { color: string } }
+    expect(themeRiver.label.color).toBe(getGray70(theme))
+
+    // Chord ribbons are too faint on a dark background at ECharts' default 0.2.
+    const chord = echartsTheme.chord as {
+      lineStyle: { color?: string; opacity: number }
+    }
+    expect(chord.lineStyle.opacity).toBeGreaterThan(0.2)
+    // The color must stay unset so ECharts' `"source"` keyword keeps tinting
+    // each ribbon with its palette-colored source node; a literal paints black.
+    expect(chord.lineStyle.color).toBeUndefined()
+
+    // Matrix cell dividers and headers otherwise read dimmer than everything else.
+    const matrix = echartsTheme.matrix as {
+      x: { label: { color: string }; itemStyle: { borderColor: string } }
+      body: { itemStyle: { borderColor: string } }
+    }
+    expect(matrix.x.label.color).toBe(getGray70(theme))
+    expect(matrix.body.itemStyle.borderColor).toBe(getGray30(theme))
+  })
+
+  it("keeps the dataZoom preview visible against the app background", () => {
+    const echartsTheme = buildStreamlitEChartsTheme(theme)
+
+    // The gridline gray is too faint here, since the slider sits outside the plot.
+    const dataZoom = echartsTheme.dataZoom as {
+      dataBackground: { lineStyle: { color: string } }
+    }
+    expect(dataZoom.dataBackground.lineStyle.color).toBe(getGray70(theme))
+    expect(dataZoom.dataBackground.lineStyle.color).not.toBe(getGray30(theme))
+  })
+
+  it("themes the toolbox hover state, not just its resting icons", () => {
+    const echartsTheme = buildStreamlitEChartsTheme(theme)
+
+    const toolbox = echartsTheme.toolbox as {
+      iconStyle: { borderColor: string }
+      emphasis: {
+        iconStyle: {
+          borderColor: string
+          textFill: string
+          textBackgroundColor: string
+        }
+      }
+    }
+    expect(toolbox.iconStyle.borderColor).toBe(getGray70(theme))
+    // ECharts' hover state is a fixed light blue that is hard to read on a dark
+    // background, for both the icon and the feature title it reveals.
+    const hovered = toolbox.emphasis.iconStyle
+    expect(hovered.textFill).toBe(theme.colors.bodyText)
+    expect(hovered.textBackgroundColor).toBe(theme.colors.secondaryBg)
+    // A hovered icon must be distinguishable from a resting one.
+    expect(hovered.borderColor).not.toBe(toolbox.iconStyle.borderColor)
   })
 
   it("adds a readable halo to sunburst labels", () => {
