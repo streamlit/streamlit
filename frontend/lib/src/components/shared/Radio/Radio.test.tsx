@@ -205,6 +205,25 @@ describe("Radio widget", () => {
 
     const optionItems = screen.getAllByTestId("stRadioOption")
     expect(optionItems).toHaveLength(3)
+    // Keep this test id on the <label> that wraps the input, not on
+    // RadioField's wrapper div: e2e helpers click this element
+    // (app_utils.get_radio_option), and clicking the label activates the input
+    // directly rather than relying on the wrapper's box overlapping it.
+    const firstRadio = screen.getAllByRole("radio")[0]
+    expect(firstRadio.closest("label")).toBe(optionItems[0])
+  })
+
+  it("selects an option when its stRadioOption element is clicked", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const props = getProps({ onChange, value: 0 })
+    render(<Radio {...props} />)
+
+    // Exercises the element the e2e helpers click, which the other click tests
+    // do not: they target the hidden input via its `radio` role.
+    await user.click(screen.getAllByTestId("stRadioOption")[1])
+
+    expect(onChange).toHaveBeenCalledWith(1)
   })
 
   it("forwards data-testid to the radio group element", () => {

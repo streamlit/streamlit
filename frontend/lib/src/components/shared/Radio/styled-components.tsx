@@ -16,7 +16,8 @@
 
 import styled from "@emotion/styled"
 import {
-  Radio as RARadio,
+  RadioButton as RARadioButton,
+  RadioField as RARadioField,
   RadioGroup as RARadioGroup,
 } from "react-aria-components"
 
@@ -54,19 +55,32 @@ export const StyledRadioGroup = styled(RARadioGroup, {
 }))
 
 /**
- * Outer `<label>` wrapper for each individual radio option.
+ * `<div>` wrapper for each individual radio option. It exists because
+ * `RadioButton` must be nested inside a `RadioField`: the field declares which
+ * option this is (`value`) and passes the group's selection state down to the
+ * button via context.
+ *
+ * Unstyled: as a flex item it shrink-wraps the label, so `StyledRadioGroup`'s
+ * `alignItems` and `gap` apply to the option's visible box. React Aria also
+ * mirrors `data-selected`/`data-disabled` onto this div, so scope any
+ * state-driven style to the label's class to avoid matching both elements.
+ */
+export const StyledRadioField = styled(RARadioField)()
+
+/**
+ * Clickable `<label>` for each radio option — it wraps the hidden input, the
+ * circle indicator, and the option text, so the whole row is a click target.
+ * Despite the name this is the label, not the indicator: the visual circle is
+ * `StyledRadioOuter`/`StyledRadioInner`.
+ *
  * React Aria sets `data-focus-visible`, `data-disabled`, `data-selected` etc.
  * as data attributes — we use those for state-driven styles.
  *
  * This element is intentionally a plain block container. Layout (circle + text
  * alignment) is handled by the children so that the caption can live outside
  * the circle/text row without requiring any manual offset calculations.
- *
- * Radio is deprecated in favor of RadioField + RadioButton. Keep the current
- * composition until that migration is done as its own a11y/DOM change.
  */
-// eslint-disable-next-line @typescript-eslint/no-deprecated
-export const StyledRadioItem = styled(RARadio)(({ theme }) => ({
+export const StyledRadioButton = styled(RARadioButton)(({ theme }) => ({
   display: "block",
   cursor: "pointer",
   userSelect: "none",

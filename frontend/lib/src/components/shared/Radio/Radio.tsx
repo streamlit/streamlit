@@ -23,11 +23,12 @@ import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/Wi
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import {
+  StyledRadioButton,
   StyledRadioCaption,
   StyledRadioContent,
+  StyledRadioField,
   StyledRadioGroup,
   StyledRadioInner,
-  StyledRadioItem,
   StyledRadioOuter,
   StyledRadioRow,
 } from "./styled-components"
@@ -117,40 +118,45 @@ function Radio({
         $hasCaptions={hasCaptions}
       >
         {cleanedOptions.map((option: string, index: number) => (
-          <StyledRadioItem
+          <StyledRadioField
             // eslint-disable-next-line @eslint-react/no-array-index-key
             key={index}
             value={index.toString()}
-            data-testid="stRadioOption"
           >
-            {({ isSelected, isDisabled }) => (
-              <StyledRadioContent $isDisabled={isDisabled}>
-                <StyledRadioRow>
-                  <StyledRadioOuter
-                    $isSelected={isSelected}
-                    $isDisabled={isDisabled}
-                  >
-                    <StyledRadioInner $isSelected={isSelected} />
-                  </StyledRadioOuter>
-                  <StreamlitMarkdown
-                    source={option}
-                    allowHTML={false}
-                    isLabel
-                  />
-                </StyledRadioRow>
-                {hasCaptions && (
-                  <StyledRadioCaption>
+            <StyledRadioButton data-testid="stRadioOption">
+              {({ isSelected, isDisabled }) => (
+                // Keep this render function on the button, not the field:
+                // RadioFieldRenderProps has no interaction states (hovered,
+                // pressed, focused, focus-visible), so only the button can
+                // drive the indicator from them.
+                <StyledRadioContent $isDisabled={isDisabled}>
+                  <StyledRadioRow>
+                    <StyledRadioOuter
+                      $isSelected={isSelected}
+                      $isDisabled={isDisabled}
+                    >
+                      <StyledRadioInner $isSelected={isSelected} />
+                    </StyledRadioOuter>
                     <StreamlitMarkdown
-                      source={spacerNeeded(captions[index])}
+                      source={option}
                       allowHTML={false}
-                      isCaption
                       isLabel
                     />
-                  </StyledRadioCaption>
-                )}
-              </StyledRadioContent>
-            )}
-          </StyledRadioItem>
+                  </StyledRadioRow>
+                  {hasCaptions && (
+                    <StyledRadioCaption>
+                      <StreamlitMarkdown
+                        source={spacerNeeded(captions[index])}
+                        allowHTML={false}
+                        isCaption
+                        isLabel
+                      />
+                    </StyledRadioCaption>
+                  )}
+                </StyledRadioContent>
+              )}
+            </StyledRadioButton>
+          </StyledRadioField>
         ))}
       </StyledRadioGroup>
     </div>
