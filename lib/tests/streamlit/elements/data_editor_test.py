@@ -53,6 +53,7 @@ from streamlit.elements.widgets.data_editor import (
     _check_column_names,
     _check_type_compatibilities,
     _compute_data_editor_signature,
+    _format_arrow_schema_mismatch,
     _has_pending_edits,
     _parse_value,
     _validate_edited_dataframe_compatibility,
@@ -1959,6 +1960,20 @@ class ValidateEditedDataframeCompatibilityTest(unittest.TestCase):
         assert "'a'" in message
         assert "expected int64" in message
         assert "got string" in message
+        assert "nullable=" in message
+
+    def test_arrow_schema_mismatch_includes_nullability_and_missing_fields(
+        self,
+    ) -> None:
+        """Mismatch details include nullability and missing/extra field names."""
+        detail = _format_arrow_schema_mismatch(
+            result_fields={"a": ("string", True), "extra": ("int64", True)},
+            baseline_fields={"a": ("string", False), "missing": ("int64", True)},
+        )
+        assert "nullable=False" in detail
+        assert "nullable=True" in detail
+        assert "Missing fields: 'missing'" in detail
+        assert "Extra fields: 'extra'" in detail
 
     def test_accepts_equivalent_string_arrow_variants(self) -> None:
         """A large_string baseline and a string result (as produced by a partial

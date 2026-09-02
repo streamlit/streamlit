@@ -20,6 +20,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -862,13 +863,17 @@ function DataFrame({
   // already swapped element.arrowData to the committed frame on this render, so
   // the grid then displays the committed data with an empty editing state.
   //
+  // useLayoutEffect runs before paint so a transforming commit (committed value
+  // differs from the overlay the user just typed) does not flash the stale
+  // overlay for one frame.
+  //
   // The effect is keyed on `element` (a fresh proto every rerun), so it runs
   // exactly once per delivered proto. Keying on `element.clearEdits` instead
   // would miss consecutive value-only commits, whose protos both carry
   // clearEdits=true (and whose stable widget identity keeps
   // clearEditsAndWidgetValue referentially unchanged), so the flag never
   // transitions and the second clear is dropped.
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (element.clearEdits) {
       clearEditsAndWidgetValue()
     }

@@ -866,6 +866,44 @@ def _has_pending_edits(state: DataEditorState) -> bool:
     )
 
 
+def _format_arrow_field(field: tuple[str, bool]) -> str:
+    """Format an Arrow (canonical type, nullable) pair for error messages."""
+    arrow_type, nullable = field
+    return f"{arrow_type}, nullable={nullable}"
+
+
+def _format_arrow_schema_mismatch(
+    result_fields: dict[str, tuple[str, bool]],
+    baseline_fields: dict[str, tuple[str, bool]],
+) -> str:
+    """Build an actionable detail string for Arrow schema differences.
+
+    Includes type **and** nullability for fields present on both sides, plus
+    missing and extra field names. Returns ``""`` when there is nothing to
+    report (should not happen when the caller already detected a mismatch).
+    """
+    parts: list[str] = []
+    mismatched = [
+        (
+            f"{name!r} (expected {_format_arrow_field(baseline_fields[name])}; "
+            f"got {_format_arrow_field(result_fields[name])})"
+        )
+        for name in baseline_fields
+        if name in result_fields and result_fields[name] != baseline_fields[name]
+    ]
+    if mismatched:
+        parts.append(f"Mismatched columns: {', '.join(mismatched)}.")
+
+    missing = [repr(name) for name in baseline_fields if name not in result_fields]
+    extra = [repr(name) for name in result_fields if name not in baseline_fields]
+    if missing:
+        parts.append(f"Missing fields: {', '.join(missing)}.")
+    if extra:
+        parts.append(f"Extra fields: {', '.join(extra)}.")
+
+    return (" " + " ".join(parts)) if parts else ""
+
+
 def _validate_edited_dataframe_compatibility(
     result: Any,
     *,
@@ -931,19 +969,10 @@ def _validate_edited_dataframe_compatibility(
     result_fields = _arrow_fields(result_arrow.schema)
     baseline_fields = _arrow_fields(baseline_arrow_schema)
     if result_fields != baseline_fields:
-        mismatched_columns = [
-            f"{name!r} (expected {baseline_fields[name][0]}, got {result_fields[name][0]})"
-            for name in baseline_fields
-            if name in result_fields and result_fields[name] != baseline_fields[name]
-        ]
-        detail = (
-            f" Mismatched columns: {', '.join(mismatched_columns)}."
-            if mismatched_columns
-            else ""
-        )
         raise StreamlitAPIException(
             "st.data_editor: commit_edits must preserve the column data types and "
-            f"nullability of the source dataframe.{detail}",
+            "nullability of the source dataframe."
+            f"{_format_arrow_schema_mismatch(result_fields, baseline_fields)}",
             error_id="data-editor-commit-edits-column-types",
         )
 
@@ -1839,6 +1868,12 @@ class DataEditorMixin:
         edits = widget_state.value
         # Check for pending edits first so the common no-edit render short-circuits
         # before acquiring the session state lock via `widget_changed`.
+        # After a successful commit the frontend clears edits with
+        # ``fromUser: false``, so `_old_state` still holds the last-committed
+        # batch. Re-submitting that identical batch on the next rerun is a
+        # no-op (`widget_changed` is False) until another interaction changes
+        # the stored value. That is intentional (no auto-retry) and only
+        # noticeable for transforming commits.
         should_commit = _has_pending_edits(edits) and (
             ctx is not None and ctx.session_state.widget_changed(proto.id)
         )
