@@ -135,6 +135,22 @@ with st.expander("Vertical alignment - bottom", expanded=True):
     col3.checkbox("Checkbox 1 (bottom)")
     col3.checkbox("Checkbox 2 (bottom)")
 
+# Fixture for the toggle half of the column vertical-alignment selector.
+# Two toggles per column so `:first-of-type` and `:last-of-type` land on
+# different elements.
+with st.expander("Vertical alignment - toggle", expanded=True):
+    top_col1, top_col2, top_col3 = st.columns(3, vertical_alignment="top")
+    top_col1.text_input("Text input (top toggle)")
+    top_col2.button("Button (top toggle)", width="stretch")
+    top_col3.toggle("Toggle 1 (top)")
+    top_col3.toggle("Toggle 2 (top)")
+
+    bottom_col1, bottom_col2, bottom_col3 = st.columns(3, vertical_alignment="bottom")
+    bottom_col1.text_input("Text input (bottom toggle)")
+    bottom_col2.button("Button (bottom toggle)", width="stretch")
+    bottom_col3.toggle("Toggle 1 (bottom)")
+    bottom_col3.toggle("Toggle 2 (bottom)")
+
 if st.button("Nested columns - two levels"):
     col1, col2 = st.columns(2)
     with col1:
@@ -185,21 +201,3 @@ with st.container(key="columns_wrap_true"):
     wrap_true_cols = st.columns(3, wrap=True, border=True)
     for i, col in enumerate(wrap_true_cols):
         col.write(f"Wrap true {i + 1}")
-
-# Toggles and checkboxes render separate wrapper elements, so the column
-# vertical-alignment margins have to be asserted against a toggle as well —
-# a checkbox-only assertion cannot catch the toggle wrapper being dropped from
-# the alignment selector. Two toggles per column so that the first-of-type and
-# last-of-type halves of that selector are told apart.
-with st.expander("Vertical alignment - toggle", expanded=True):
-    top_col1, top_col2, top_col3 = st.columns(3, vertical_alignment="top")
-    top_col1.text_input("Text input (top toggle)")
-    top_col2.button("Button (top toggle)", width="stretch")
-    top_col3.toggle("Toggle 1 (top)")
-    top_col3.toggle("Toggle 2 (top)")
-
-    bottom_col1, bottom_col2, bottom_col3 = st.columns(3, vertical_alignment="bottom")
-    bottom_col1.text_input("Text input (bottom toggle)")
-    bottom_col2.button("Button (bottom toggle)", width="stretch")
-    bottom_col3.toggle("Toggle 1 (bottom)")
-    bottom_col3.toggle("Toggle 2 (bottom)")

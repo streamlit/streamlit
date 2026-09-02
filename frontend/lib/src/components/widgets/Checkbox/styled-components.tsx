@@ -39,7 +39,8 @@ export const StyledCheckboxField = styled(RACheckboxField)(({ theme }) => ({
 /**
  * Outer wrapper for the toggle variant. Kept separate from `StyledCheckboxField`
  * because `SwitchButton` reads its state from a `SwitchField`, not from a
- * `CheckboxField`.
+ * `CheckboxField`. Layout matches `StyledCheckboxField` so checkbox and toggle
+ * align identically.
  */
 export const StyledSwitchField = styled(RASwitchField)(({ theme }) => ({
   display: "flex",
@@ -85,15 +86,15 @@ export const StyledLabelText = styled.div<StyledLabelTextProps>(
       : { display: "contents" }
 )
 
-interface StyledRootProps {
+interface StyledButtonProps {
   /** When true, the control can shrink within its container so the label can ellipsize. */
   $truncate?: boolean
 }
 
 /** Wrapper around React Aria CheckboxButton — handles layout and keyboard-focus background. */
-export const StyledCheckboxRoot = styled(RACheckboxButton, {
+export const StyledCheckboxButton = styled(RACheckboxButton, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
-})<StyledRootProps>(({ theme, $truncate }) => ({
+})<StyledButtonProps>(({ theme, $truncate }) => ({
   display: "flex",
   alignItems: "flex-start",
   gap: theme.spacing.sm,
@@ -176,9 +177,9 @@ export const StyledCheckboxIndicator =
   )
 
 /** Wrapper around React Aria SwitchButton — handles layout for the toggle variant. */
-export const StyledSwitchRoot = styled(RASwitchButton, {
+export const StyledSwitchButton = styled(RASwitchButton, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
-})<StyledRootProps>(({ theme, $truncate }) => ({
+})<StyledButtonProps>(({ theme, $truncate }) => ({
   display: "flex",
   alignItems: "flex-start",
   gap: theme.spacing.sm,

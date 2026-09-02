@@ -31,13 +31,13 @@ import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
+  StyledCheckboxButton,
   StyledCheckboxField,
   StyledCheckboxIndicator,
-  StyledCheckboxRoot,
   StyledContent,
   StyledLabelText,
+  StyledSwitchButton,
   StyledSwitchField,
-  StyledSwitchRoot,
   StyledToggleThumb,
   StyledToggleTrack,
 } from "./styled-components"
@@ -141,7 +141,7 @@ function Checkbox({
         onChange={handleChange}
         aria-label={element.label}
       >
-        <StyledSwitchRoot $truncate={truncate}>
+        <StyledSwitchButton $truncate={truncate}>
           {({ isSelected, isHovered, isDisabled: isDisab }) => (
             <>
               <StyledToggleTrack
@@ -157,7 +157,7 @@ function Checkbox({
               {labelContent}
             </>
           )}
-        </StyledSwitchRoot>
+        </StyledSwitchButton>
       </StyledSwitchField>
     )
   }
@@ -171,7 +171,7 @@ function Checkbox({
       onChange={handleChange}
       aria-label={element.label}
     >
-      <StyledCheckboxRoot $truncate={truncate}>
+      <StyledCheckboxButton $truncate={truncate}>
         {({ isSelected, isFocusVisible, isDisabled: isDisab }) => (
           <>
             <StyledCheckboxIndicator
@@ -188,7 +188,7 @@ function Checkbox({
             {labelContent}
           </>
         )}
-      </StyledCheckboxRoot>
+      </StyledCheckboxButton>
     </StyledCheckboxField>
   )
 }
