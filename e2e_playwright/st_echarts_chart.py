@@ -257,6 +257,33 @@ st.echarts_chart(
     height=_HEIGHT,
 )
 
+# 11) A selection chart (a widget). Point selection is enabled in the spec via
+#     `selectedMode`, with a `select` style so the selection is visible. A
+#     single, chart-filling bar makes a point-click land reliably on the item.
+selection_event = st.echarts_chart(
+    {
+        "xAxis": {"type": "category", "data": ["Selected"]},
+        "yAxis": {"type": "value", "max": 100},
+        "series": [
+            {
+                "type": "bar",
+                "data": [100],
+                "barWidth": "90%",
+                "selectedMode": "multiple",
+                "select": {"itemStyle": {"color": "#ff4b4b"}},
+            }
+        ],
+        "animation": False,
+    },
+    key="selection_chart",
+    on_select="rerun",
+    height=_HEIGHT,
+)
+selection_groups = selection_event["selection"]["selected"]
+selection_indices = selection_groups[0]["data_indices"] if selection_groups else []
+st.write(f"echarts selection groups: {len(selection_groups)}")
+st.write(f"echarts selection indices: {selection_indices}")
+
 # 12) A tooltip/label XSS payload: the data item name is an HTML/script payload.
 #     Under theme="streamlit" it must render as escaped text and never execute.
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
@@ -332,3 +359,26 @@ with st.expander("Chart in expander", expanded=False):
             key="expander_chart",
             height=_HEIGHT,
         )
+
+# 14) A selection chart inside a form (exercises the form_id / form-clear path).
+with st.form("echarts_form"):
+    form_event = st.echarts_chart(
+        {
+            "xAxis": {"type": "category", "data": ["Selected"]},
+            "yAxis": {"type": "value", "max": 100},
+            "series": [
+                {
+                    "type": "bar",
+                    "data": [100],
+                    "barWidth": "90%",
+                    "selectedMode": "multiple",
+                }
+            ],
+            "animation": False,
+        },
+        key="form_selection_chart",
+        on_select="rerun",
+        height=_HEIGHT,
+    )
+    st.form_submit_button("Submit selection")
+st.write(f"echarts form groups: {len(form_event['selection']['selected'])}")

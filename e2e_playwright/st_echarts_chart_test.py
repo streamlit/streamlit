@@ -19,7 +19,7 @@ from __future__ import annotations
 import pytest
 from playwright.sync_api import Dialog, Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_until
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
@@ -27,8 +27,8 @@ from e2e_playwright.shared.app_utils import (
 )
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
-# (including the one inside the collapsed expander).
-_EXPECTED_CHART_COUNT = 14
+# (including the ones inside the collapsed expander and the form).
+_EXPECTED_CHART_COUNT = 16
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
 
@@ -97,6 +97,8 @@ def test_check_top_level_class(app: Page):
 
 def test_custom_css_class_via_key(app: Page):
     """A chart can be targeted via the st-key-<key> class from its key."""
+    expect(get_element_by_key(app, "selection_chart")).to_be_visible()
+    # A key works for display-only charts too, not just selection widgets.
     expect(get_element_by_key(app, "basic_bar")).to_be_visible()
 
 
@@ -156,6 +158,47 @@ def test_expander_chart_renders_on_expand(app: Page):
 
     # After expanding, the chart renders its canvas without an error.
     expect(expander_chart.locator("canvas")).to_be_visible()
+    expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+
+
+@pytest.mark.only_browser("chromium")
+def test_point_selection_persists_and_toggles(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """A point selection is kept (state + visual) across reruns and toggles off.
+
+    Point selection uses ECharts' native ``selectedMode``, so the clicked point
+    keeps a visible selected state that is re-applied after a rerun. Clicking the
+    same point again deselects it.
+    """
+    # Initially nothing is selected.
+    expect(app.get_by_text("echarts selection groups: 0")).to_be_visible()
+
+    chart = _get_chart(app, "selection_chart")
+    expect(chart.locator("canvas")).to_be_visible()
+
+    # The chart is a single chart-filling bar, so a center click lands on it.
+    chart.click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("echarts selection groups: 1")).to_be_visible()
+    expect(app.get_by_text("echarts selection indices: [0]")).to_be_visible()
+    # Must NOT happen: selecting a point does not error.
+    expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+
+    # The selected point keeps a visible highlight (native select state).
+    assert_snapshot(chart, name="st_echarts_chart-point_selected")
+
+    # An unrelated rerun must keep the selection (state and visual) intact.
+    click_button(app, "rerun helper")
+    wait_for_app_run(app)
+    expect(app.get_by_text("echarts selection groups: 1")).to_be_visible()
+    expect(app.get_by_text("echarts selection indices: [0]")).to_be_visible()
+
+    # Clicking the same point again toggles it off (multi-select behavior).
+    chart.click()
+    wait_for_app_run(app)
+    expect(app.get_by_text("echarts selection groups: 0")).to_be_visible()
     expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
 
 

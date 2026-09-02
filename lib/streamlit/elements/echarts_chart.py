@@ -18,6 +18,7 @@ import copy
 import json
 import re
 from collections.abc import Iterator, Mapping
+from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -26,9 +27,11 @@ from typing import (
     Protocol,
     TypeAlias,
     cast,
+    overload,
 )
 
 from streamlit import dataframe_util
+from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
     LayoutConfig,
@@ -36,6 +39,7 @@ from streamlit.elements.lib.layout_utils import (
     validate_height,
     validate_width,
 )
+from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import (
     StreamlitAPIException,
@@ -45,6 +49,9 @@ from streamlit.errors import (
 from streamlit.logger import get_logger
 from streamlit.proto.EChartsChart_pb2 import EChartsChart as EChartsChartProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.runtime.state import WidgetCallback, register_widget
+from streamlit.util import ReadOnlyAttributeDictionary
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -122,6 +129,139 @@ class EChartsCompatible(Protocol):
 # Input accepted by ``st.echarts_chart``: an option ``Mapping``, a JSON string,
 # or a duck-typed ``pyecharts`` chart.
 EChartsSpec: TypeAlias = Mapping[str, Any] | str | EChartsCompatible
+
+
+class EChartsSelectionState(ReadOnlyAttributeDictionary):
+    """
+    The schema for the ECharts chart selection state.
+
+    The selection state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Selection states cannot be
+    programmatically changed or set through Session State.
+
+    This state is derived from ECharts selection events and normalized into a
+    stable snapshot. Exposed field names use ``snake_case``; ECharts values,
+    such as ``brush_type="lineX"``, remain unchanged.
+
+    Attributes
+    ----------
+    selected : list[dict[str, Any]]
+        The union of native and brushed selections, grouped by ECharts series
+        and data type. Each entry contains ``series_index``, ``series_id``,
+        ``series_name``, ``data_type``, and ``data_indices``. Series IDs and
+        names are ``None`` when they weren't explicitly configured.
+
+        ``data_indices`` is series-local. For a dataset without transforms, it
+        addresses ``dataset.source`` rows. For inline series, it addresses
+        ``series.data``. For graph series, ``data_type="node"`` addresses
+        ``data`` and ``data_type="edge"`` addresses ``links``.
+
+    areas : list[dict[str, Any]]
+        The active brush regions. Each entry contains ``brush_index``,
+        ``brush_type``, and ``coord_range``. Regions that ECharts only
+        describes in pixel space are omitted, since their geometry can't be
+        mapped back to your data.
+
+    """
+
+    selected: list[dict[str, Any]]
+    areas: list[dict[str, Any]]
+
+    @overload
+    def __getitem__(self, key: Literal["selected"]) -> list[dict[str, Any]]: ...
+
+    @overload
+    def __getitem__(self, key: Literal["areas"]) -> list[dict[str, Any]]: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        return super().__getitem__(key)
+
+
+class EChartsState(ReadOnlyAttributeDictionary):
+    """
+    The schema for the ECharts chart event state.
+
+    To use this type in an annotation, import it from ``streamlit.typing``.
+
+    The event state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Event states cannot be
+    programmatically changed or set through Session State.
+
+    Only selection events are supported at this time.
+
+    Attributes
+    ----------
+    selection : dict
+        The state of the ``on_select`` event. This attribute returns a
+        dictionary-like object that supports both key and attribute notation.
+        The attributes are described by the ``EChartsSelectionState`` dictionary
+        schema.
+
+    """
+
+    selection: EChartsSelectionState
+
+    # ReadOnlyAttributeDictionary routes attribute access through __getitem__,
+    # so the override below is enough to return EChartsSelectionState. Use
+    # dict.__getitem__ for the selection key so the read-only base class does
+    # not re-wrap the already-typed nested instance.
+    @overload
+    def __getitem__(self, key: Literal["selection"]) -> EChartsSelectionState: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        if key == "selection":
+            item = dict.__getitem__(self, key)
+            if not isinstance(item, EChartsSelectionState):
+                item = EChartsSelectionState(item)
+                # Cache via dict.__setitem__ — ReadOnlyAttributeDictionary
+                # blocks normal mutation, but storing the wrapped instance
+                # keeps identity stable across accesses.
+                dict.__setitem__(self, key, item)
+            return item
+        return super().__getitem__(key)
+
+
+@dataclass
+class EChartsChartSelectionSerde:
+    """EChartsChartSelectionSerde is used to serialize and deserialize the
+    ECharts chart selection state.
+    """
+
+    def deserialize(self, ui_value: str | None) -> EChartsState:
+        empty_selection_state: dict[str, Any] = {
+            "selection": {
+                "selected": [],
+                "areas": [],
+            },
+        }
+
+        selection_state: Any = (
+            empty_selection_state if ui_value is None else json.loads(ui_value)
+        )
+
+        if "selection" not in selection_state:  # pragma: no cover - defensive
+            selection_state = empty_selection_state
+        else:
+            selection_state["selection"].setdefault("selected", [])
+            selection_state["selection"].setdefault("areas", [])
+
+        # Eagerly wrap selection so bracket access returns a stable typed
+        # instance instead of creating a shallow copy on every access.
+        selection_state["selection"] = EChartsSelectionState(
+            selection_state["selection"]
+        )
+        return EChartsState(selection_state)
+
+    def serialize(self, selection_state: EChartsState) -> str:
+        # The selection state is already JSON-clean (produced by the frontend),
+        # so no ``default`` fallback is needed here.
+        return json.dumps(selection_state)
 
 
 def _js_callback_error() -> StreamlitAPIException:
@@ -209,6 +349,32 @@ def _iter_series(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
             for entry in series:
                 if isinstance(entry, dict):
                     yield entry
+
+
+def _enables_selection(option: dict[str, Any]) -> bool:
+    """Return whether the spec configures a selection ECharts can emit.
+
+    Selection is opt-in through the user's own option keys: ``selectedMode`` on
+    a series for point selection, or a ``brush`` component for region selection.
+    A ``toolbox`` brush feature counts too, since it drives the same brush
+    events. Only ``series`` entries are inspected, so ``legend.selectedMode``
+    (a different feature that happens to share the name) is not mistaken for
+    data selection.
+    """
+    for variant in _iter_option_variants(option):
+        if "brush" in variant:
+            return True
+        toolbox = variant.get("toolbox")
+        # ECharts accepts either a single toolbox or a list of them.
+        for entry in toolbox if isinstance(toolbox, list) else [toolbox]:
+            if (
+                isinstance(entry, dict)
+                and isinstance(feature := entry.get("feature"), dict)
+                and "brush" in feature
+            ):
+                return True
+
+    return any(series.get("selectedMode") for series in _iter_series(option))
 
 
 def _validate_supported_features(option: dict[str, Any]) -> None:
@@ -433,6 +599,33 @@ def _resolve_content_height(height: Height, spec: Any) -> Height:
 
 
 class EChartsMixin:
+    @overload
+    def echarts_chart(
+        self,
+        spec: EChartsSpec,
+        *,
+        width: Width = "stretch",
+        height: Height = "content",
+        theme: Literal["streamlit"] | None = "streamlit",
+        key: Key | None = None,
+        on_select: Literal["ignore"] = "ignore",
+        renderer: Literal["canvas", "svg"] = "canvas",
+    ) -> DeltaGenerator: ...
+
+    @overload
+    def echarts_chart(
+        self,
+        spec: EChartsSpec,
+        *,
+        width: Width = "stretch",
+        height: Height = "content",
+        theme: Literal["streamlit"] | None = "streamlit",
+        key: Key | None = None,
+        # No default: omitted on_select must match the "ignore" overload.
+        on_select: Literal["rerun"] | WidgetCallback,
+        renderer: Literal["canvas", "svg"] = "canvas",
+    ) -> EChartsState: ...
+
     @gather_metrics("echarts_chart")
     def echarts_chart(
         self,
@@ -442,8 +635,9 @@ class EChartsMixin:
         height: Height = "content",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
+        on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         renderer: Literal["canvas", "svg"] = "canvas",
-    ) -> DeltaGenerator:
+    ) -> DeltaGenerator | EChartsState:
         r"""Display an interactive Apache ECharts chart.
 
         `Apache ECharts <https://echarts.apache.org/>`_ is a powerful, open-source
@@ -523,10 +717,10 @@ class EChartsMixin:
             Streamlit falls back to ECharts' built-in default theme and leaves
             your ``spec``'s styling untouched. Two defaults are independent of
             ``theme`` and still apply: accessibility (``aria.enabled``, so the
-            chart keeps a screen-reader description) and the series hover
-            cursor, which is reset to ``"default"`` so the chart does not look
-            clickable. Set ``aria`` or ``series.cursor`` yourself to override
-            either.
+            chart keeps a screen-reader description) and, for display-only
+            charts (``on_select="ignore"``), the series hover cursor, which is
+            reset to ``"default"`` so the chart does not look clickable. Set
+            ``aria`` or ``series.cursor`` yourself to override either.
 
             The ``"streamlit"`` theme can be partially customized through the
             configuration options ``theme.chartCategoricalColors`` and
@@ -536,12 +730,48 @@ class EChartsMixin:
         key : str, int, or None
             An optional string to use for giving this element a stable
             identity. If this is ``None`` (default), the element's identity
-            will be determined based on the values of the other parameters.
+            will be determined based on the values of the other parameters,
+            so any change to the chart resets its selection.
 
-            If ``key`` is provided, it will be used as a CSS class name
-            prefixed with ``st-key-``. The frontend also uses the key as a
-            stable identity across reruns, which keeps ECharts from remounting
-            and replaying its entry animation.
+            If selections are activated and ``key`` is provided, Streamlit
+            will register the key in Session State to store the selection
+            state, and the selection survives changes to your ``spec``,
+            ``theme``, and ``renderer``. The selection state is read-only. For
+            more details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a CSS
+            class name prefixed with ``st-key-``.
+
+        on_select : "ignore", "rerun", or callable
+            How the chart should respond to user selection events. This
+            controls whether or not the chart behaves like an input widget.
+            ``on_select`` can be one of the following:
+
+            - ``"ignore"`` (default): Streamlit will not react to any selection
+              events in the chart. The chart will not behave like an input
+              widget.
+
+            - ``"rerun"``: Streamlit will rerun the app when the user selects
+              data in the chart. In this case, ``st.echarts_chart`` will return
+              the selection data as a dictionary.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+              In this case, ``st.echarts_chart`` will return the selection data
+              as a dictionary.
+
+            When ``on_select`` is not ``"ignore"``, Streamlit returns whatever
+            selections you enable in your ``spec``. Enable point selection by
+            setting ``selectedMode`` on a series (for example,
+            ``{"type": "bar", "selectedMode": "multiple", "data": [...]}``), and
+            enable region selection by adding a
+            `brush <https://echarts.apache.org/en/option.html#brush>`_ component.
+            Selected data is grouped by series in ``EChartsState.selection.selected``,
+            and brush geometry is returned in ``EChartsState.selection.areas``.
+            Selections are re-applied visually after reruns. If your ``spec``
+            enables neither, the chart still renders but never returns a
+            selection, and Streamlit logs a warning.
 
         renderer : "canvas" or "svg"
             The renderer passed to ECharts. This can be one of the following:
@@ -549,6 +779,15 @@ class EChartsMixin:
             - ``"canvas"`` (default): Best for large datasets.
             - ``"svg"``: Produces real DOM nodes that are better for printing,
               sharp scaling, and accessibility.
+
+        Returns
+        -------
+        element or EChartsState
+            If ``on_select`` is ``"ignore"`` (default), this command returns an
+            internal placeholder for the chart element. Otherwise, this command
+            returns an ``EChartsState`` object. This object is dictionary-like
+            and supports both key and attribute notation. To use this type in
+            an annotation, import it from ``streamlit.typing``.
 
         Examples
         --------
@@ -571,6 +810,46 @@ class EChartsMixin:
            https://doc-echarts-chart.streamlit.app/
            height: 400px
 
+        **Example 2: Point selections driving the app**
+
+        Set ``on_select="rerun"`` to make the chart behave like an input widget,
+        and enable point selection in your ``spec`` by setting
+        ``selectedMode`` on the series. Streamlit returns selected indices grouped
+        by series and data type.
+
+        .. code-block:: python
+           :filename: streamlit_app.py
+
+           import streamlit as st
+
+           spec = {
+               "xAxis": {
+                   "type": "category",
+                   "data": ["Mon", "Tue", "Wed", "Thu", "Fri"],
+               },
+               "yAxis": {"type": "value"},
+               "series": [
+                   {
+                       "type": "bar",
+                       "selectedMode": "multiple",
+                       "data": [120, 200, 150, 80, 70],
+                   }
+               ],
+           }
+
+           event = st.echarts_chart(spec, key="sales", on_select="rerun")
+
+           rows = (
+               event.selection.selected[0]["data_indices"]
+               if event.selection.selected
+               else []
+           )
+           st.write("You selected:", [spec["series"][0]["data"][i] for i in rows])
+
+        .. output::
+           https://doc-echarts-chart-selection.streamlit.app/
+           height: 500px
+
         """
         validate_width(width, allow_content=True)
         validate_height(height, allow_content=True)
@@ -581,8 +860,41 @@ class EChartsMixin:
         if renderer not in {"canvas", "svg"}:
             raise StreamlitValueError("renderer", ["'canvas'", "'svg'"])
 
+        if on_select not in {"ignore", "rerun"} and not callable(on_select):
+            raise StreamlitValueError(
+                "on_select", ["'rerun'", "'ignore'", "a callback function"]
+            )
+
         key = to_key(key)
+        is_selection_activated = on_select != "ignore"
+
+        if is_selection_activated:
+            # Run some checks that are only relevant when selections are activated
+            is_callback = callable(on_select)
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=cast("WidgetCallback", on_select)  # ty: ignore[redundant-cast]
+                if is_callback
+                else None,
+                default_value=None,
+                writes_allowed=False,
+                enable_check_callback_rules=is_callback,
+            )
+
         normalized_option = _normalize_spec(spec)
+
+        if is_selection_activated and not _enables_selection(normalized_option):
+            # The chart still renders, but it can never return a selection, and
+            # a chart that silently swallows clicks is hard to debug from the
+            # app alone.
+            _LOGGER.warning(
+                "`st.echarts_chart` has selections activated through `on_select`, "
+                "but the provided spec doesn't enable any: no series sets "
+                "`selectedMode` and there is no `brush` component. The chart will "
+                "render, but it will never return a selection.",
+                stack_info=True,
+            )
 
         echarts_chart_proto = EChartsChartProto()
         echarts_chart_proto.spec = _serialize_option(normalized_option)
@@ -598,17 +910,28 @@ class EChartsMixin:
         final_width = _resolve_content_width(width, spec)
         final_height = _resolve_content_height(height, spec)
 
-        # An element ID is computed when the user gave a key. The frontend
+        ctx = get_script_run_ctx()
+
+        echarts_chart_proto.selection_activated = is_selection_activated
+        if is_selection_activated:
+            # Selections are activated, treat the ECharts chart as a widget.
+            echarts_chart_proto.form_id = current_form_id(self.dg)
+
+        # An element ID is computed for selection widgets and for any chart the
+        # user gave a key. The key case is not only cosmetic: the frontend
         # derives the ``st-key-<key>`` CSS class from the ID and uses the ID as
         # a stable identity across reruns, which keeps ECharts from remounting
-        # and replaying its entry animation. Unkeyed charts skip the ID
-        # entirely so they stay off the widget path.
-        if key is not None:
+        # and replaying its entry animation. Unkeyed display-only charts skip
+        # the ID entirely so they stay off the widget path.
+        if is_selection_activated or key is not None:
             echarts_chart_proto.id = compute_and_register_element_id(
                 "echarts_chart",
                 user_key=key,
                 # A key is the whole identity, so a keyed chart keeps its
-                # frontend instance across data, theme, and renderer changes.
+                # selection across data, theme, and renderer changes (the
+                # frontend re-applies the selection after a re-init). Without a
+                # key, every rendering parameter participates, so any change
+                # makes this a new element and resets the selection.
                 key_as_main_identity=True,
                 dg=self.dg,
                 spec=echarts_chart_proto.spec,
@@ -619,9 +942,25 @@ class EChartsMixin:
             )
 
         layout_config = LayoutConfig(width=final_width, height=final_height)
-        return self.dg._enqueue(
+
+        if not is_selection_activated:
+            return self.dg._enqueue(
+                "echarts_chart", echarts_chart_proto, layout_config=layout_config
+            )
+
+        serde = EChartsChartSelectionSerde()
+        widget_state = register_widget(
+            echarts_chart_proto.id,
+            on_change_handler=on_select if callable(on_select) else None,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
+            ctx=ctx,
+            value_type="string_value",
+        )
+        self.dg._enqueue(
             "echarts_chart", echarts_chart_proto, layout_config=layout_config
         )
+        return widget_state.value
 
     @property
     def dg(self) -> DeltaGenerator:
