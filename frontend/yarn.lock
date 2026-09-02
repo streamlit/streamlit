@@ -3410,7 +3410,6 @@ __metadata:
     "@types/mapbox-gl": "npm:~1.13.10"
     "@types/mdast": "npm:^4.0.0"
     "@types/moment-duration-format": "npm:~2.2.7"
-    "@types/plotly.js": "npm:^3.0.13"
     "@types/react": "npm:^18.2.0"
     "@types/react-color": "npm:^3.0.13"
     "@types/react-dom": "npm:^18.2.0"
@@ -4470,13 +4469,6 @@ __metadata:
   version: 4.0.2
   resolution: "@types/parse-json@npm:4.0.2"
   checksum: 10c0/b1b863ac34a2c2172fbe0807a1ec4d5cb684e48d422d15ec95980b81475fac4fdb3768a8b13eef39130203a7c04340fc167bae057c7ebcafd7dec9fe6c36aeb1
-  languageName: node
-  linkType: hard
-
-"@types/plotly.js@npm:^3.0.13":
-  version: 3.0.13
-  resolution: "@types/plotly.js@npm:3.0.13"
-  checksum: 10c0/10ffe58c172366221b67a85c531218481b6fd40152836b88da1db2e58b90fd4f19bdfe781f89be8b3b656b5c01d459502336d6a7ad3b5b7069f5b7f56a67aa67
   languageName: node
   linkType: hard
 
