@@ -1,0 +1,55 @@
+# Temporary, branch-scoped helper for PR #16740.
+# plotly.js 4 changes production frontend licenses, and this Cloud Agent
+# environment cannot reach the npm registry to run `make update-notices`.
+# GitHub Actions can, so regenerate NOTICES here and push it to the PR branch.
+# Delete this workflow after NOTICES is committed.
+name: Regenerate NOTICES (plotly.js 4)
+
+on:
+  push:
+    branches:
+      - dependabot/npm_and_yarn/frontend/plotly-9092965f93
+
+concurrency:
+  group: regen-notices-plotly
+  cancel-in-progress: true
+
+jobs:
+  update-notices:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: dependabot/npm_and_yarn/frontend/plotly-9092965f93
+          persist-credentials: true
+          fetch-depth: 1
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: "yarn"
+          cache-dependency-path: "**/yarn.lock"
+      - name: Install frontend dependencies
+        run: cd frontend && yarn install --immutable
+      - name: Regenerate NOTICES
+        run: make update-notices
+      - name: Commit NOTICES if changed
+        run: |
+          git_status=$(git status --porcelain -- NOTICES)
+          if [[ -z $git_status ]]; then
+            echo "NOTICES is already up to date."
+            exit 0
+          fi
+          git config user.email "core+streamlitbot-github@streamlit.io"
+          git config user.name "Streamlit Bot"
+          git add NOTICES
+          git commit --no-verify -m "chore: regenerate NOTICES for plotly.js 4"
+          git push origin HEAD:dependabot/npm_and_yarn/frontend/plotly-9092965f93
