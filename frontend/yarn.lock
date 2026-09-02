@@ -5491,13 +5491,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"array-rearrange@npm:^2.2.2":
-  version: 2.2.2
-  resolution: "array-rearrange@npm:2.2.2"
-  checksum: 10c0/3cee3171eaeb364110dba1d9f1ba80c5b37d8284465930482060240097c47bbcc89b659748c515fdf3ac23fc230658a08847c8507c9ffae4f17fa74218716ef2
-  languageName: node
-  linkType: hard
-
 "ast-v8-to-istanbul@npm:^1.0.0":
   version: 1.0.0
   resolution: "ast-v8-to-istanbul@npm:1.0.0"
@@ -6037,7 +6030,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"color-rgba@npm:^2.1.1, color-rgba@npm:^2.2.0":
+"color-rgba@npm:^2.2.0":
   version: 2.4.0
   resolution: "color-rgba@npm:2.4.0"
   dependencies:
@@ -9394,13 +9387,6 @@ __metadata:
   version: 2.0.1
   resolution: "is-hexadecimal@npm:2.0.1"
   checksum: 10c0/3eb60fe2f1e2bbc760b927dcad4d51eaa0c60138cf7fc671803f66353ad90c301605b502c7ea4c6bb0548e1c7e79dfd37b73b632652e3b76030bba603a7e9626
-  languageName: node
-  linkType: hard
-
-"is-iexplorer@npm:^1.0.0":
-  version: 1.0.0
-  resolution: "is-iexplorer@npm:1.0.0"
-  checksum: 10c0/f1e9483fe0675b0a8424f0d4e07fe33508452760f221bad609ff28c8834e8decbdaa080727bb54da8414e0420c5184f761267d86cdddad3897062701f31eb49d
   languageName: node
   linkType: hard
 
