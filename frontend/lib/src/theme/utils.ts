@@ -1592,8 +1592,14 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
       ? CustomThemeConfig.BaseTheme.LIGHT
       : CustomThemeConfig.BaseTheme.DARK
 
-  // If the active theme is a light/dark custom theme, use the expected base
-  if (activeTheme.name === CUSTOM_THEME_LIGHT_NAME) {
+  // If a runtime overlay set an explicit base, follow that variant for the
+  // sidebar even when `name` still identifies the selected menu theme.
+  if (notNullOrUndefined(activeTheme.overlayBase)) {
+    baseTheme =
+      activeTheme.overlayBase === CustomThemeConfig.BaseTheme.DARK
+        ? CustomThemeConfig.BaseTheme.DARK
+        : CustomThemeConfig.BaseTheme.LIGHT
+  } else if (activeTheme.name === CUSTOM_THEME_LIGHT_NAME) {
     baseTheme = CustomThemeConfig.BaseTheme.LIGHT
   } else if (activeTheme.name === CUSTOM_THEME_DARK_NAME) {
     baseTheme = CustomThemeConfig.BaseTheme.DARK

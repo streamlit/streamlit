@@ -190,10 +190,19 @@ def test_accepts_valid_colors(color: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "color", ["hsl(120, 100%, 25%)", "transparent", "primary", "not-a-color"]
+    "color",
+    [
+        "hsl(120, 100%, 25%)",
+        "transparent",
+        "primary",
+        "not-a-color",
+        "#GGG",
+        "rgb(not-a-color)",
+        "rgb(0,0,0); position: fixed; inset: 0",
+    ],
 )
 def test_rejects_invalid_colors(color: str) -> None:
-    """hsl, transparent, semantic-only names, and unknown strings are rejected."""
+    """hsl, transparent, semantic-only names, and malformed CSS are rejected."""
     with pytest.raises(StreamlitValueError, match="primary_color"):
         populate_theme_override({"primary_color": color})
 
@@ -206,7 +215,9 @@ def test_accepts_valid_radii(radius: str) -> None:
     assert override.values.base_radius == radius
 
 
-@pytest.mark.parametrize("radius", ["huge", "10em", "10%", ""])
+@pytest.mark.parametrize(
+    "radius", ["huge", "10em", "10%", "", "nan", "inf", "nanpx", "infrem"]
+)
 def test_rejects_invalid_radii(radius: str) -> None:
     """Unsupported radius strings raise StreamlitValueError."""
     with pytest.raises(StreamlitValueError, match="base_radius"):

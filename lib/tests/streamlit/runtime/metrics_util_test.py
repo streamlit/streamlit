@@ -470,6 +470,9 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             "logout",
             # st.App is a class for creating ASGI applications, not a tracked command
             "App",
+            # TypedDicts exported for annotations; calling them is not a command
+            "ThemeConfig",
+            "ThemeVariantConfig",
         }
 
         # Create a list of all public API names in the `st` module (minus

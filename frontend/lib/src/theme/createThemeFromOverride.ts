@@ -72,8 +72,8 @@ export interface CreateThemeFromOverrideOptions {
   name?: string
   displayName?: string
   /**
-   * Selected-theme tokens merged under the overlay so createSidebarTheme still
-   * sees fonts, radii, and sidebar sections that the overlay does not set.
+   * Fonts, radii, and sidebar tokens from the selected theme. The overlay does
+   * not set these, but createSidebarTheme still needs them.
    */
   parentThemeInput?: Partial<ICustomThemeConfig>
 }
@@ -267,6 +267,7 @@ export function createThemeFromOverride(
   if (notNullOrUndefined(explicitBase)) {
     baseThemeConfig = resolveExplicitBaseTheme(explicitBase, availableThemes)
   } else {
+    // Placeholder name; overwritten below by `name`.
     baseThemeConfig = {
       name: "parent",
       emotion: {
@@ -275,6 +276,11 @@ export function createThemeFromOverride(
       },
     }
   }
+
+  const parentInput =
+    notNullOrUndefined(explicitBase) && baseThemeConfig.themeInput
+      ? baseThemeConfig.themeInput
+      : (options?.parentThemeInput ?? {})
 
   const name = options?.name ?? "Scoped"
   const created = createTheme(
@@ -288,6 +294,7 @@ export function createThemeFromOverride(
     ...created,
     name,
     displayName: options?.displayName ?? created.displayName,
-    themeInput: mergeThemeInputs(options?.parentThemeInput ?? {}, mergedInput),
+    themeInput: mergeThemeInputs(parentInput, mergedInput),
+    ...(notNullOrUndefined(explicitBase) ? { overlayBase: explicitBase } : {}),
   }
 }

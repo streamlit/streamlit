@@ -284,16 +284,21 @@ class LayoutsMixin:
             theme options, including ``primary_color``, ``background_color``,
             ``text_color``, radii, and chart palettes. Optional ``light`` and
             ``dark`` mappings override shared values for the active mode.
-            ``base`` may be ``"inherit"`` (default), ``"light"``, or
-            ``"dark"``.
+            Color strings are CSS Color Module Level 4 names and hex/``rgb()``
+            values, not Streamlit's semantic palette (``"green"`` is CSS
+            ``#008000``).
 
-            The container paints a background only when the mapping sets
-            ``background_color``, and applies a text color only when it sets
-            ``text_color``. A primary-only override does not add an opaque
-            background. If ``base`` is ``"light"`` or ``"dark"``, the container
-            paints that variant's background and text together so ancestor
-            colors cannot leak through. Apps are responsible for color
-            contrast.
+            ``base`` can be one of the following:
+
+            - ``"inherit"`` (default): Start from the parent theme. The
+              container stays transparent unless the mapping also sets
+              ``background_color`` / ``text_color``.
+            - ``"light"``: Start from the light variant and paint its
+              background and text so ancestor colors cannot leak through.
+            - ``"dark"``: Same as ``"light"``, using the dark variant.
+
+            A primary-only override does not add an opaque background. Apps
+            are responsible for color contrast.
 
             Import ``ThemeConfig`` from ``streamlit`` to annotate mappings.
 
@@ -484,7 +489,7 @@ class LayoutsMixin:
         if autoscroll is not None:
             block_proto.autoscroll = autoscroll
 
-        if theme:
+        if theme is not None:
             override = populate_theme_override(theme)
             if override is not None:
                 block_proto.theme.CopyFrom(override)

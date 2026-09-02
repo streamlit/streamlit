@@ -63,12 +63,17 @@ describe("isThemeApiColor", () => {
     expect(isThemeApiColor(color)).toBe(true)
   })
 
-  it.each(["hsl(120, 100%, 25%)", "transparent", "currentColor", "primary"])(
-    "rejects %s",
-    color => {
-      expect(isThemeApiColor(color)).toBe(false)
-    }
-  )
+  it.each([
+    "hsl(120, 100%, 25%)",
+    "transparent",
+    "currentColor",
+    "primary",
+    "#GGG",
+    "rgb(not-a-color)",
+    "rgb(0,0,0); position:fixed; inset:0",
+  ])("rejects %s", color => {
+    expect(isThemeApiColor(color)).toBe(false)
+  })
 
   it("includes CSS Color Module Level 4 named colors", () => {
     expect(CSS_NAMED_COLORS.size).toBe(148)
@@ -228,6 +233,27 @@ describe("createThemeFromOverride", () => {
     expect(theme.emotion.colors.primary).toBe(darkTheme.emotion.colors.primary)
     expect(theme.emotion.colors.primary).not.toBe(PARENT_PRIMARY)
     expect(theme.emotion.colors.bgColor).toBe("#0d1117")
+    expect(theme.overlayBase).toBe(CustomThemeConfig.BaseTheme.DARK)
+    expect(theme.name).toBe("Scoped")
+  })
+
+  it("keeps the selected name while overlayBase follows an explicit dark base", () => {
+    const theme = createThemeFromOverride(
+      { base: CustomThemeConfig.BaseTheme.DARK },
+      parentLight,
+      availableThemes,
+      {
+        name: "Custom Theme Light",
+        displayName: "Light",
+        parentThemeInput: {
+          headingFont: "Inter",
+          sidebar: { backgroundColor: "#f8f8ff" },
+        },
+      }
+    )
+    expect(theme.name).toBe("Custom Theme Light")
+    expect(theme.displayName).toBe("Light")
+    expect(theme.overlayBase).toBe(CustomThemeConfig.BaseTheme.DARK)
   })
 
   it("applies light and dark sections based on the parent mode", () => {

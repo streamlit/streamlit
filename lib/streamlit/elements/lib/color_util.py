@@ -14,10 +14,25 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Collection
 from typing import Any, Final, TypeAlias, cast
 
 from streamlit.errors import StreamlitInvalidColorError
+
+# Anchored hex / rgb() / rgba() patterns for theme override validation.
+# Vega's shape helpers below are intentionally looser and must not be reused
+# for user-facing theme input.
+_THEME_API_HEX_RE: Final[re.Pattern[str]] = re.compile(
+    r"^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+)
+_THEME_API_RGB_RE: Final[re.Pattern[str]] = re.compile(
+    r"^rgba?\(\s*"
+    r"(?:\d+(?:\.\d+)?%?(?:\s*,\s*|\s+)){2}"
+    r"\d+(?:\.\d+)?%?"
+    r"(?:\s*(?:,|/)\s*[\d.]+%?)?"
+    r"\s*\)$"
+)
 
 # Built-in color names that map to Streamlit theme colors.
 # These are resolved to actual color values on the frontend.
@@ -253,7 +268,7 @@ def is_theme_api_color(value: object) -> bool:
     """
     if not isinstance(value, str):
         return False
-    if is_hex_color_like(value) or _is_cssrgb_color_like(value):
+    if _THEME_API_HEX_RE.fullmatch(value) or _THEME_API_RGB_RE.fullmatch(value):
         return True
     return value.lower() in CSS_NAMED_COLORS
 

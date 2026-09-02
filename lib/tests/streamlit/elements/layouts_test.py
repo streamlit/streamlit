@@ -775,6 +775,15 @@ class ContainerTest(DeltaGeneratorTestCase):
         st.container(theme={})
         assert not self.get_delta_from_queue().add_block.HasField("theme")
 
+    def test_theme_falsy_non_mapping_raises(self) -> None:
+        """Falsey non-mappings are validated, not treated as omitted."""
+        with pytest.raises(StreamlitInvalidParameterTypeError, match="theme"):
+            st.container(theme=[])  # type: ignore[arg-type]
+        with pytest.raises(StreamlitInvalidParameterTypeError, match="theme"):
+            st.container(theme=False)  # type: ignore[arg-type]
+        with pytest.raises(StreamlitInvalidParameterTypeError, match="theme"):
+            st.container(theme=0)  # type: ignore[arg-type]
+
     def test_theme_mapping_copied_to_proto(self) -> None:
         """A non-empty theme mapping is copied onto the block proto."""
         st.container(theme={"primary_color": "green", "show_widget_border": False})

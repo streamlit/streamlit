@@ -245,9 +245,13 @@ def set_page_config(
         Keys use snake_case and match an audited subset of ``config.toml``
         theme options. Optional ``light`` and ``dark`` mappings follow the
         active Streamlit theme mode unless ``base`` is ``"light"`` or
-        ``"dark"``. The overlay is not written to ``config.toml`` and is not
-        persisted across a new browser session. Page navigation inherits the
-        overlay until a page replaces it or clears it with ``theme={}``.
+        ``"dark"``. Color strings are CSS Color Module Level 4 names and
+        hex/``rgb()`` values, not Streamlit's semantic palette. The overlay is
+        not written to ``config.toml`` and is not persisted across a new
+        browser session. Page navigation inherits the overlay until a page
+        replaces it or clears it with ``theme={}``. A mapping that resolves
+        to no overlay (for example ``{"base": "inherit"}``) also clears the
+        overlay.
 
         ``st.context.theme.type`` reflects the effective page theme on the
         next client-originated rerun, not the current Python run. Apps are

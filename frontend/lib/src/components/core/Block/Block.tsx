@@ -360,8 +360,9 @@ export const BlockNodeRenderer = (
         themeOverride,
         parentEmotion
       )
-      // Wrapping remounts FlexBoxContainer; token changes on an already-themed
-      // block keep this provider mounted.
+      // Adding this wrapper changes the element tree, so a block that gains or
+      // loses a theme remounts its contents. Changing tokens on a block that is
+      // already themed keeps the provider mounted and only updates the theme.
       containerElement = (
         <ScopedThemeProvider override={themeOverride}>
           <FlexBoxContainer

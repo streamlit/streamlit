@@ -810,5 +810,24 @@ describe("useThemeManager", () => {
         mockCustomThemeConfig.headingFont
       )
     })
+
+    it("keeps activeTheme identity when the overlay payload is unchanged", () => {
+      const { result } = renderHook(() => useThemeManager())
+
+      act(() => {
+        result.current[0].setRuntimeOverride({
+          values: { primaryColor: "#7C3AED" },
+        })
+      })
+      const firstTheme = result.current[0].activeTheme
+
+      act(() => {
+        result.current[0].setRuntimeOverride({
+          values: { primaryColor: "#7C3AED" },
+        })
+      })
+
+      expect(result.current[0].activeTheme).toBe(firstTheme)
+    })
   })
 })

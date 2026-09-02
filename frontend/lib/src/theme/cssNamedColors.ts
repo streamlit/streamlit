@@ -171,6 +171,8 @@ export const CSS_NAMED_COLORS: ReadonlySet<string> = new Set([
 ])
 
 const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
+const CSS_RGB_RE =
+  /^rgba?\(\s*(?:\d+(?:\.\d+)?%?(?:\s*,\s*|\s+)){2}\d+(?:\.\d+)?%?(?:\s*(?:,|\/)\s*[\d.]+%?)?\s*\)$/
 
 /**
  * Return whether a string is an accepted color for theme override APIs.
@@ -179,10 +181,7 @@ const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
  * `isColor` helper, which also allows hsl(), transparent, and currentColor.
  */
 export function isThemeApiColor(value: string): boolean {
-  if (HEX_COLOR_RE.test(value)) {
-    return true
-  }
-  if (value.startsWith("rgb(") || value.startsWith("rgba(")) {
+  if (HEX_COLOR_RE.test(value) || CSS_RGB_RE.test(value)) {
     return true
   }
   return CSS_NAMED_COLORS.has(value.toLowerCase())

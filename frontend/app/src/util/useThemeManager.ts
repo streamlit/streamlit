@@ -16,6 +16,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
+import { isEqual } from "lodash-es"
+
 import {
   AUTO_THEME_NAME,
   createAutoTheme,
@@ -230,7 +232,9 @@ export function useThemeManager(): [
 
   const setRuntimeOverride = useCallback(
     (override: IThemeOverride | undefined): void => {
-      setRuntimeOverrideState(override)
+      setRuntimeOverrideState(prev =>
+        isEqual(prev, override) ? prev : override
+      )
     },
     []
   )

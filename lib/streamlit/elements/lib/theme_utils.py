@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping, Sequence
 from typing import Final, Literal, TypedDict, get_type_hints
 
@@ -83,9 +84,18 @@ _VARIANT_KEYS: Final[frozenset[str]] = frozenset(_VARIANT_HINTS)
 _ROOT_ONLY_KEYS: Final[frozenset[str]] = frozenset({"base", "light", "dark"})
 _ALLOWED_ROOT_KEYS: Final[frozenset[str]] = _VARIANT_KEYS | _ROOT_ONLY_KEYS
 _COLOR_KEYS: Final[frozenset[str]] = frozenset(
-    key
-    for key, annotation in _VARIANT_HINTS.items()
-    if annotation is str and not key.endswith("_radius")
+    {
+        "primary_color",
+        "background_color",
+        "secondary_background_color",
+        "text_color",
+        "link_color",
+        "code_text_color",
+        "code_background_color",
+        "border_color",
+        "dataframe_border_color",
+        "dataframe_header_background_color",
+    }
 )
 _BOOL_KEYS: Final[frozenset[str]] = frozenset(
     key for key, annotation in _VARIANT_HINTS.items() if annotation is bool
@@ -267,10 +277,10 @@ def _is_parseable_number(value: str) -> bool:
     if value == "":
         return False
     try:
-        float(value)
+        number = float(value)
     except ValueError:
         return False
-    return True
+    return math.isfinite(number)
 
 
 def _validate_chart_palette(key: str, value: object) -> list[str]:
