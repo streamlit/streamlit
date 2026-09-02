@@ -58,8 +58,8 @@ def create_temp_directory_with_files(
     str
         Path to the temporary directory
     """
-    # Nested as "upload_dir" so that webkitRelativePath, and the chip titles
-    # asserted against it, carry that prefix.
+    # Nest the files under "upload_dir": the browser reports that name in
+    # webkitRelativePath, and the chip-title assertions expect the prefix.
     temp_path = tmp_path_factory.mktemp("streamlit_e2e_upload") / "upload_dir"
     temp_path.mkdir(parents=True, exist_ok=True)
 
@@ -100,26 +100,20 @@ def verify_uploaded_files_in_widget(
 
 
 def choose_directory(file_chooser: FileChooser, directory: str) -> None:
-    """Point a file chooser at a directory, tolerating a lost acknowledgement.
+    """Select a directory in a file chooser, ignoring a lost Playwright acknowledgement.
 
-    For a directory, Playwright hands the path to the browser to enumerate.
-    The browser sometimes delivers the files without ever answering the
-    protocol call, so `set_files` sits until its timeout even though the upload
-    already finished: in CI the upload requests complete within ~20ms of the
-    call and the app renders the files, and the call then fails 30s later. Seen
-    on webkit and firefox, never chromium, in roughly 5% of runs.
-
-    Waiting on that acknowledgement therefore tells us nothing the callers do
-    not already assert, so a timeout here is ignored. Callers must verify the
-    upload themselves, which they do via auto-retrying expectations - a genuinely
-    failed upload still fails those.
+    Playwright sometimes applies the directory files but never answers
+    `set_files`, so the call times out even though the upload already finished.
+    Ignore that timeout; callers must still assert that the upload succeeded.
+    Drop this helper once Playwright's directory `setInputFiles` reliably
+    resolves (see #16772 for the evidence).
     """
     try:
         file_chooser.set_files(files=[directory], timeout=10000)
     except PlaywrightTimeoutError:
-        # A timeout here is not necessarily the lost acknowledgement, so say so.
-        # pytest only surfaces this if a later assertion fails, which is exactly
-        # when someone needs to know set_files was involved.
+        # Print instead of failing: the timeout may have some other cause, and
+        # pytest surfaces this output only when a later assertion fails, which
+        # is exactly when someone needs to know set_files was involved.
         print(f"set_files timed out for {directory}; continuing to the assertions")
 
 
