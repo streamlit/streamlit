@@ -228,7 +228,7 @@ export function migratePlotlyMapboxFigure(
  * so plotly.js v4 config objects stay valid.
  */
 export function migratePlotlyMapboxConfig<T extends object>(config: T): T {
-  const next: Record<string, unknown> = { ...config }
+  const next = { ...config } as Record<string, unknown>
   delete next.mapboxAccessToken
 
   if (typeof next.scrollZoom === "string") {
