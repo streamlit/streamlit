@@ -17,7 +17,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from playwright.sync_api import FilePayload, Page, Route, expect
+from playwright.sync_api import FileChooser, FilePayload, Page, Route, expect
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -98,6 +99,27 @@ def verify_uploaded_files_in_widget(
                 f'[data-testid="stFileChipName"][title*="{expected_file}"]'
             ).first
         ).to_be_visible()
+
+
+def choose_directory(file_chooser: FileChooser, directory: str) -> None:
+    """Point a file chooser at a directory, tolerating a lost acknowledgement.
+
+    For a directory, Playwright hands the path to the browser to enumerate.
+    The browser sometimes delivers the files without ever answering the
+    protocol call, so `set_files` sits until its timeout even though the upload
+    already finished: in CI the upload requests complete within ~20ms of the
+    call and the app renders the files, and the call then fails 30s later. Seen
+    on webkit and firefox, never chromium, in roughly 5% of runs.
+
+    Waiting on that acknowledgement therefore tells us nothing the callers do
+    not already assert, so a timeout here is ignored. Callers must verify the
+    upload themselves, which they do via auto-retrying expectations - a genuinely
+    failed upload still fails those.
+    """
+    try:
+        file_chooser.set_files(files=[directory], timeout=10000)
+    except PlaywrightTimeoutError:
+        pass
 
 
 def test_file_uploader_render_correctly(
@@ -373,8 +395,7 @@ def test_uploads_directory_with_multiple_files(app: Page):
     with app.expect_file_chooser() as fc_info:
         file_uploader_dropzone.click()
 
-    file_chooser = fc_info.value
-    file_chooser.set_files(files=[temp_dir])
+    choose_directory(fc_info.value, temp_dir)
 
     wait_for_app_run(app, wait_delay=1000)
 
@@ -421,8 +442,7 @@ def test_directory_upload_with_file_type_filtering(app: Page):
     with app.expect_file_chooser() as fc_info:
         file_dropzone.click()
 
-    file_chooser = fc_info.value
-    file_chooser.set_files(files=[temp_dir])
+    choose_directory(fc_info.value, temp_dir)
 
     wait_for_app_run(app, wait_delay=1000)
 
