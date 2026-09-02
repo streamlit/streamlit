@@ -1873,6 +1873,107 @@ describe("TextInput live updates", () => {
     expect(input).toHaveValue("abc")
   })
 
+  it("does not apply a stale echo after an unrelated fragment finish", async () => {
+    const { user, props, rerenderWithContexts } = renderLive(
+      { liveDebounceMs: 0, default: "" },
+      { fragmentId: "search-fragment" }
+    )
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "abc")
+    await user.type(input, "d")
+    expect(input).toHaveValue("abcd")
+
+    rerenderWithContexts(
+      <TextInput
+        {...props}
+        fragmentId="search-fragment"
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "abc",
+        })}
+      />,
+      {
+        scriptRunContext: {
+          scriptRunFinishedSequence: 1,
+          scriptRunFinishedFragmentIds: ["other-fragment"],
+        },
+      }
+    )
+    expect(input).toHaveValue("abcd")
+  })
+
+  it("applies a session_state reset after this fragment finishes", async () => {
+    const { user, props, rerenderWithContexts } = renderLive(
+      { liveDebounceMs: 0, default: "" },
+      { fragmentId: "search-fragment" }
+    )
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "banana")
+    rerenderWithContexts(
+      <TextInput {...props} fragmentId="search-fragment" />,
+      {
+        scriptRunContext: {
+          scriptRunFinishedSequence: 1,
+          scriptRunFinishedFragmentIds: ["search-fragment"],
+        },
+      }
+    )
+    rerenderWithContexts(
+      <TextInput
+        {...props}
+        fragmentId="search-fragment"
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "",
+        })}
+      />,
+      {
+        scriptRunContext: {
+          scriptRunFinishedSequence: 1,
+          scriptRunFinishedFragmentIds: ["search-fragment"],
+        },
+      }
+    )
+    expect(input).toHaveValue("")
+  })
+
+  it("recommits the same string after a dirty setValue was dropped", async () => {
+    const { user, props, setStringValueSpy, rerender } = renderLive({
+      default: "",
+    })
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "abc")
+    advanceMs(300)
+    setStringValueSpy.mockClear()
+
+    await user.type(input, "x")
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "XYZ",
+        })}
+      />
+    )
+    expect(input).toHaveValue("abcx")
+
+    await user.type(input, "{Backspace}")
+    expect(input).toHaveValue("abc")
+    advanceMs(300)
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "abc",
+      fromUserCommit(props)
+    )
+  })
+
   it("does not apply a stale B echo after A then B then A", () => {
     const { props, rerender } = renderLive({
       liveDebounceMs: 0,

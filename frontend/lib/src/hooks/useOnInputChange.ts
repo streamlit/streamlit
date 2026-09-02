@@ -40,10 +40,9 @@ interface OnInputChangeProps {
 }
 
 /**
- * Will return a memoized function that accepts an HTMLInputElement and will call
- * commitWidgetValue and setDirty with its value, unless the value is longer than
- * maxChars. Will also call the setValueWithSource callback if the input is in a form.
- * Can also run an additional action after the main logic.
+ * Returns a memoized change handler that applies `maxChars`, marks the input
+ * dirty, updates the UI value, and optionally runs `additionalAction`.
+ * If the input is in a form, it also calls setValueWithSource.
  *
  * @param formId if is in a form
  * @param maxChars if the input element's value length is greater than this, nothing will be called. Set to 0 to disable.

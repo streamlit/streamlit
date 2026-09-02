@@ -92,6 +92,54 @@ export interface Props {
 
 const LOG = getLogger("TextInput")
 
+function liveFinishAcksWidget(
+  fragmentId: string | undefined,
+  finishedFragmentIds: readonly string[]
+): boolean {
+  // Empty ids means a full-script finish. A non-empty list is a fragment
+  // finish and only acks the widget that belongs to one of those fragments.
+  if (finishedFragmentIds.length === 0) {
+    return true
+  }
+  return (
+    notNullOrUndefined(fragmentId) && finishedFragmentIds.includes(fragmentId)
+  )
+}
+
+/** Subscribes to ScriptRunContext only while live is enabled. */
+function LivePendingCommitAck({
+  fragmentId,
+  dirtyRef,
+  pendingLiveCommitsRef,
+}: {
+  fragmentId?: string
+  dirtyRef: { current: boolean }
+  pendingLiveCommitsRef: { current: Set<string | null> }
+}): null {
+  const { scriptRunFinishedSequence, scriptRunFinishedFragmentIds } =
+    useContext(ScriptRunContext)
+  const lastFinishedSequenceRef = useRef(scriptRunFinishedSequence)
+  useEffect(() => {
+    const runFinished =
+      lastFinishedSequenceRef.current !== scriptRunFinishedSequence
+    lastFinishedSequenceRef.current = scriptRunFinishedSequence
+    if (!runFinished || dirtyRef.current) {
+      return
+    }
+    if (!liveFinishAcksWidget(fragmentId, scriptRunFinishedFragmentIds)) {
+      return
+    }
+    pendingLiveCommitsRef.current.clear()
+  }, [
+    dirtyRef,
+    fragmentId,
+    pendingLiveCommitsRef,
+    scriptRunFinishedFragmentIds,
+    scriptRunFinishedSequence,
+  ])
+  return null
+}
+
 function TextInput({
   disabled,
   element,
@@ -127,13 +175,18 @@ function TextInput({
   )
   // User-committed strings that may still be in flight. Used to recognize
   // stale setValue echoes of older reruns. Ordinary live reruns do not send
-  // setValue and often reuse the same proto, so we ack when
-  // scriptRunFinishedSequence advances and the input is not dirty. A matching
-  // latest-commit setValue also removes that entry. Other authoritative
-  // setValue updates apply without clearing older pending commits, so delayed
-  // stale echoes remain blocked until a finished rerun catches up.
+  // setValue and often reuse the same proto, so we ack when a finished run
+  // belongs to this widget (full-script finish, or this fragmentId) and
+  // the input is not dirty. A matching latest-commit setValue also removes
+  // that entry. Other authoritative setValue updates apply without clearing
+  // older pending commits, so delayed stale echoes remain blocked until a
+  // matching finished rerun catches up.
   const pendingLiveCommitsRef = useRef(new Set<string | null>())
   const isComposingRef = useRef(false)
+  // True after a dirty live input dropped an incoming setValue. The next
+  // pause/blur must commit even if the string still equals lastCommitted,
+  // so Python does not stay on the dropped write.
+  const droppedIncomingWhileDirtyRef = useRef(false)
 
   const setDirtyAndRef = useCallback((nextDirty: boolean): void => {
     dirtyRef.current = nextDirty
@@ -175,6 +228,7 @@ function TextInput({
   const inForm = isInForm({ formId })
   // protobufjs optional uint32 is `null` when unset (prototype default), not
   // `undefined`. `0` is a live-on immediate commit and must not be treated as off.
+  // isLive = configured on the proto. liveEnabled = configured and outside a form.
   const isLive = notNullOrUndefined(element.liveDebounceMs)
   const liveDebounceMs = element.liveDebounceMs ?? 0
   const liveEnabled = isLive && !inForm
@@ -197,6 +251,7 @@ function TextInput({
   const shouldApplyIncomingValue = useCallback(
     (incoming: string | null): boolean => {
       if (dirtyRef.current) {
+        droppedIncomingWhileDirtyRef.current = true
         return false
       }
       if (incoming === lastCommittedValueRef.current) {
@@ -229,18 +284,6 @@ function TextInput({
       ? shouldApplyIncomingValue
       : undefined,
   })
-
-  const { scriptRunFinishedSequence } = useContext(ScriptRunContext)
-  const lastFinishedSequenceRef = useRef(scriptRunFinishedSequence)
-  useEffect(() => {
-    const runFinished =
-      lastFinishedSequenceRef.current !== scriptRunFinishedSequence
-    lastFinishedSequenceRef.current = scriptRunFinishedSequence
-    if (!runFinished || !liveEnabled || dirtyRef.current) {
-      return
-    }
-    pendingLiveCommitsRef.current.clear()
-  }, [liveEnabled, scriptRunFinishedSequence])
 
   // session_state / callback writes update `value` without going through
   // commitWidgetValue; keep lastCommitted aligned so later echoes compare
@@ -347,8 +390,10 @@ function TextInput({
       }
 
       // Skip a second commit of the same value (e.g. a trailing input event
-      // after compositionend already committed).
-      if (valueToCommit === lastCommittedValueRef.current) {
+      // after compositionend already committed), unless a dirty setValue was
+      // dropped and Python may still hold that write.
+      const forceResync = droppedIncomingWhileDirtyRef.current
+      if (valueToCommit === lastCommittedValueRef.current && !forceResync) {
         setDirtyAndRef(false)
         return true
       }
@@ -357,6 +402,7 @@ function TextInput({
         return false
       }
 
+      droppedIncomingWhileDirtyRef.current = false
       commitWidgetValue(valueToCommit)
       return true
     },
@@ -371,8 +417,10 @@ function TextInput({
   // the widget unmounts. If only the delay changes, reschedule so a dirty
   // value still commits after inactivity.
   useEffect(() => {
+    const pendingLiveCommits = pendingLiveCommitsRef.current
     return () => {
       cancelLiveCommit()
+      pendingLiveCommits.clear()
     }
   }, [cancelLiveCommit, liveEnabled])
 
@@ -601,6 +649,13 @@ function TextInput({
       data-testid="stTextInput"
       ref={elementRef}
     >
+      {liveEnabled && (
+        <LivePendingCommitAck
+          fragmentId={fragmentId}
+          dirtyRef={dirtyRef}
+          pendingLiveCommitsRef={pendingLiveCommitsRef}
+        />
+      )}
       <WidgetLabel
         label={element.label}
         disabled={disabled}

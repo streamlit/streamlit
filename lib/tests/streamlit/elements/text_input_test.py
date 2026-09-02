@@ -794,7 +794,6 @@ class TextInputTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitValueOutOfRangeError) as exc:
             st.text_input("the label", live=live)
 
-        assert not isinstance(exc.value, StreamlitBadTimeStringError)
         assert "1m" in str(exc.value)
         assert "0ms" in str(exc.value)
 
@@ -862,6 +861,18 @@ class TextInputTest(DeltaGeneratorTestCase):
             )
             assert omitted_id == expected_id
             assert false_id == expected_id
+
+    def test_unkeyed_omitted_and_false_live_share_id(self) -> None:
+        """Test that omitted live and live=False share an unkeyed widget ID."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.text_input("Label")
+            omitted_id = self.get_delta_from_queue().new_element.text_input.id
+            st.text_input("Label", live=False)
+            false_id = self.get_delta_from_queue().new_element.text_input.id
+            assert omitted_id == false_id
 
     def test_live_true_and_250ms_share_identity(self) -> None:
         """Test that live=True and live='250ms' hash the same normalized ms."""

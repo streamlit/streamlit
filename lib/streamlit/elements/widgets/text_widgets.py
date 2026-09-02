@@ -568,13 +568,14 @@ class TextWidgetsMixin:
 
             - ``False`` (default): Commit on blur, Enter, or clearing a
               ``type="search"`` input.
-            - ``True``: Commit after 250ms of inactivity following an
-              accepted user-originated value change.
+            - ``True``: Commit after 250ms without further input.
             - A duration string (same format as ``ttl`` in
               ``st.cache_data``, for example ``"250ms"`` or ``"0.5s"``):
               Commit after that pause. Must be between 0 and 1 minute.
-              ``"0ms"``, ``"0s"``, and ``"0"`` commit on every accepted
-              user-originated value change.
+              ``"0ms"``, ``"0s"``, and ``"0"`` commit on every change
+              (typing, paste, and so on). Bare numbers and
+              ``datetime.timedelta`` raise; use a duration string
+              (``live=300`` is not milliseconds).
 
             The 250ms default suits most cases. Consider ``"200ms"`` for
             inexpensive fragment-scoped filtering and ``"300ms"`` to
