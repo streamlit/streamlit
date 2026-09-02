@@ -64,7 +64,13 @@ from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.error_util import handle_user_script_exception
-from streamlit.errors import StreamlitAPIException, StreamlitDataframeConversionError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitDataframeConversionError,
+    StreamlitIncompatibleParametersError,
+    StreamlitInvalidLayoutContextError,
+    StreamlitMissingRequiredParameterError,
+)
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.exceptions import ScriptControlException
@@ -884,26 +890,30 @@ def _validate_edited_dataframe_compatibility(
     if not isinstance(result, pd.DataFrame):
         raise StreamlitAPIException(
             "st.data_editor: commit_edits must return a pandas.DataFrame, but it "
-            f"returned an object of type {type(result).__name__}."
+            f"returned an object of type {type(result).__name__}.",
+            error_id="data-editor-commit-edits-not-dataframe",
         )
 
     if list(result.columns) != list(baseline_df.columns):
         raise StreamlitAPIException(
             "st.data_editor: commit_edits must preserve the column order of the "
-            "source dataframe."
+            "source dataframe.",
+            error_id="data-editor-commit-edits-column-order",
         )
 
     if not _indexes_have_compatible_structure(result.index, baseline_df.index):
         raise StreamlitAPIException(
             "st.data_editor: commit_edits must preserve the index structure (kind "
-            "and names) of the source dataframe."
+            "and names) of the source dataframe.",
+            error_id="data-editor-commit-edits-index-structure",
         )
 
     if not _is_supported_index(result.index):
         raise StreamlitAPIException(
             "st.data_editor: commit_edits returned a dataframe with an index type "
             f"({type(result.index).__name__}) that is not supported by the data "
-            "editor."
+            "editor.",
+            error_id="data-editor-unsupported-index-type",
         )
 
     result_arrow = pa.Table.from_pandas(result)
@@ -933,7 +943,8 @@ def _validate_edited_dataframe_compatibility(
         )
         raise StreamlitAPIException(
             "st.data_editor: commit_edits must preserve the column data types and "
-            f"nullability of the source dataframe.{detail}"
+            f"nullability of the source dataframe.{detail}",
+            error_id="data-editor-commit-edits-column-types",
         )
 
     if (
@@ -942,7 +953,8 @@ def _validate_edited_dataframe_compatibility(
     ):
         raise StreamlitAPIException(
             "st.data_editor: commit_edits must preserve the editable data kinds of "
-            "the source dataframe's columns."
+            "the source dataframe's columns.",
+            error_id="data-editor-commit-edits-data-kinds",
         )
 
     return result, result_arrow
@@ -1508,26 +1520,33 @@ class DataEditorMixin:
 
         if commit_edits is not None:
             if key is None:
-                raise StreamlitAPIException(
-                    "st.data_editor: commit_edits requires a stable widget identity. "
-                    "Pass a key= argument so edit state can be preserved across reruns."
+                raise StreamlitMissingRequiredParameterError(
+                    "key",
+                    detail=(
+                        "When using commit_edits, the widget must have a unique "
+                        "'key' parameter specified so edit state can be preserved "
+                        "across reruns."
+                    ),
                 )
             if on_change is not None:
-                raise StreamlitAPIException(
-                    "st.data_editor: commit_edits cannot be combined with on_change. "
-                    "Use commit_edits alone for transactional write-back."
+                raise StreamlitIncompatibleParametersError(
+                    "commit_edits",
+                    "on_change",
+                    explanation="Use `commit_edits` alone for transactional write-back.",
                 )
             if runtime.exists() and is_in_form(self.dg):
-                raise StreamlitAPIException(
-                    "st.data_editor: commit_edits is not supported inside forms."
+                raise StreamlitInvalidLayoutContextError(
+                    "`commit_edits` can't be used in an `st.form()`."
                 )
             if dataframe_util.is_pandas_styler(data):
-                raise StreamlitAPIException(
-                    "st.data_editor: commit_edits does not support pandas.Styler input."
+                raise StreamlitIncompatibleParametersError(
+                    "commit_edits",
+                    "data=pandas.Styler",
                 )
             if _is_async_callable(commit_edits):
                 raise StreamlitAPIException(
-                    "st.data_editor: commit_edits does not support async callbacks."
+                    "st.data_editor: commit_edits does not support async callbacks.",
+                    error_id="data-editor-async-commit-edits",
                 )
 
         validate_width(width, allow_content=True)

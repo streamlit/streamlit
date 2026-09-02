@@ -57,7 +57,12 @@ from streamlit.elements.widgets.data_editor import (
     _parse_value,
     _validate_edited_dataframe_compatibility,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitInvalidLayoutContextError,
+    StreamlitMissingRequiredParameterError,
+)
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime.scriptrunner_utils.exceptions import (
@@ -2023,17 +2028,18 @@ class DataEditorCommitEditsValidationTest(DeltaGeneratorTestCase):
         return source
 
     def test_requires_key(self) -> None:
-        """commit_edits without a key raises with the documented message."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        """commit_edits without a key raises StreamlitMissingRequiredParameterError."""
+        with pytest.raises(StreamlitMissingRequiredParameterError) as exc:
             st.data_editor(pd.DataFrame({"a": [1]}), commit_edits=self._commit)
         assert str(exc.value) == (
-            "st.data_editor: commit_edits requires a stable widget identity. "
-            "Pass a key= argument so edit state can be preserved across reruns."
+            "The `key` parameter is required. When using commit_edits, the "
+            "widget must have a unique 'key' parameter specified so edit "
+            "state can be preserved across reruns."
         )
 
     def test_cannot_combine_with_on_change(self) -> None:
-        """commit_edits combined with on_change raises with the documented message."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        """commit_edits combined with on_change raises StreamlitIncompatibleParametersError."""
+        with pytest.raises(StreamlitIncompatibleParametersError) as exc:
             st.data_editor(
                 pd.DataFrame({"a": [1]}),
                 key="editor",
@@ -2041,27 +2047,25 @@ class DataEditorCommitEditsValidationTest(DeltaGeneratorTestCase):
                 commit_edits=self._commit,
             )
         assert str(exc.value) == (
-            "st.data_editor: commit_edits cannot be combined with on_change. "
-            "Use commit_edits alone for transactional write-back."
+            "`commit_edits` and `on_change` cannot be used together. "
+            "Use `commit_edits` alone for transactional write-back."
         )
 
     def test_not_supported_inside_form(self) -> None:
-        """commit_edits inside a form raises with the documented message."""
-        with pytest.raises(StreamlitAPIException) as exc, st.form("form"):
+        """commit_edits inside a form raises StreamlitInvalidLayoutContextError."""
+        with pytest.raises(StreamlitInvalidLayoutContextError) as exc, st.form("form"):
             st.data_editor(
                 pd.DataFrame({"a": [1]}), key="editor", commit_edits=self._commit
             )
-        assert str(exc.value) == (
-            "st.data_editor: commit_edits is not supported inside forms."
-        )
+        assert str(exc.value) == "`commit_edits` can't be used in an `st.form()`."
 
     def test_not_supported_with_styler(self) -> None:
-        """commit_edits with a Styler input raises with the documented message."""
+        """commit_edits with a Styler input raises StreamlitIncompatibleParametersError."""
         styler = pd.DataFrame({"a": [1]}).style
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitIncompatibleParametersError) as exc:
             st.data_editor(styler, key="editor", commit_edits=self._commit)
         assert str(exc.value) == (
-            "st.data_editor: commit_edits does not support pandas.Styler input."
+            "`commit_edits` and `data=pandas.Styler` cannot be used together."
         )
 
     def test_not_supported_with_async_callback(self) -> None:
@@ -2077,6 +2081,7 @@ class DataEditorCommitEditsValidationTest(DeltaGeneratorTestCase):
         assert str(exc.value) == (
             "st.data_editor: commit_edits does not support async callbacks."
         )
+        assert exc.value.error_id == "data-editor-async-commit-edits"
 
     def test_not_supported_with_async_callable_object(self) -> None:
         """An instance with async ``__call__`` is rejected like an async function."""
@@ -2096,6 +2101,7 @@ class DataEditorCommitEditsValidationTest(DeltaGeneratorTestCase):
         assert str(exc.value) == (
             "st.data_editor: commit_edits does not support async callbacks."
         )
+        assert exc.value.error_id == "data-editor-async-commit-edits"
 
 
 class DataEditorCommitEditsProtoTest(DeltaGeneratorTestCase):
