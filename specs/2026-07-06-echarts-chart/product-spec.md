@@ -63,14 +63,13 @@ interchangeable (principle: *Consistency Over Novelty*).
 
 ```python
 st.echarts_chart(
-    options: Mapping[str, Any] | str | EChartsCompatible,  # option dict, JSON string, or pyecharts chart
+    spec: Mapping[str, Any] | str | EChartsCompatible,  # option dict, JSON string, or pyecharts chart
     *,
     width: "stretch" | "content" | int = "stretch",
     height: "content" | "stretch" | int = "content",
     theme: Literal["streamlit"] | None = "streamlit",
     key: str | int | None = None,
     on_select: Literal["ignore", "rerun"] | Callable[..., None] = "ignore",
-    selection_mode: SelectionMode | Iterable[SelectionMode] = ("points", "box", "lasso"),
     renderer: Literal["canvas", "svg"] = "canvas",
 ) -> DeltaGenerator | EChartsState
 ```
@@ -79,26 +78,35 @@ st.echarts_chart(
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `options` | `dict`, JSON `str`, or `pyecharts` chart | The ECharts option object as a Python dictionary (passed to `echartsInstance.setOption`), a JSON string, or a `pyecharts` chart instance (auto-converted via its `.dump_options()` method). See [Options input](#options-input). |
+| `spec` | `dict`, JSON `str`, or `pyecharts` chart | The ECharts option object as a Python dictionary (passed to `echartsInstance.setOption`), a JSON string, or a `pyecharts` chart instance (auto-converted via its `.dump_options()` method). See [Spec input](#spec-input). |
 | `width` | `"stretch"`, `"content"`, or `int` | Element width. Same semantics as `st.plotly_chart` (default `"stretch"`). |
 | `height` | `"content"`, `"stretch"`, or `int` | Element height. Because ECharts has no intrinsic height, `"content"` resolves to a default of **400px** (or a `pyecharts` chart's own height, if set). See [Sizing](#sizing). |
 | `theme` | `"streamlit"` or `None` | `"streamlit"` (default) applies the Streamlit theme (colors, fonts, dark/light). `None` uses ECharts' built-in default theme. |
-| `key` | `str`, `int`, or `None` | Optional stable identity for the element. When selections are active and a `key` is provided, the selection state is also readable from `st.session_state[key]`; it is not required for display-only charts or for reading the return value. Also emitted as a `st-key-<key>` CSS class. |
-| `on_select` | `"ignore"`, `"rerun"`, or `callable` | Whether the chart behaves like an input widget. `"ignore"` (default) = display only; `"rerun"` = rerun on selection and return selection state; a callable = rerun and invoke it as a callback. |
-| `selection_mode` | `"points"`, `"box"`, `"lasso"`, or an iterable | Which selection interactions are enabled when `on_select` is active. Defaults to all three. |
+| `key` | `str`, `int`, or `None` | Optional stable identity for the element when selections are active. In that mode, the selection state is also readable from `st.session_state[key]`, and the key is emitted as a `st-key-<key>` CSS class. Display-only charts do not compute an element ID, so `key` is ignored when `on_select="ignore"`. |
+| `on_select` | `"ignore"`, `"rerun"`, or `callable` | Whether the chart behaves like an input widget. `"ignore"` (default) = display only; `"rerun"` = rerun on selection and return selection state; a callable = rerun and invoke it as a callback. See [Selections](#selections). |
 | `renderer` | `"canvas"` or `"svg"` | Renderer passed to `echarts.init`. `"canvas"` (default) is best for large datasets; `"svg"` produces real DOM nodes that are better for printing, sharp scaling, and accessibility. |
 
-> **Parameter name.** We use `options` (plural) for continuity with the `streamlit-echarts`
-> component (`st_echarts(options=...)`), easing migration. ECharts' own docs use `option`
-> (singular, matching `setOption`); this is a deliberate, minor divergence for migration parity.
+> **No `selection_mode` in v1.** Unlike `st.plotly_chart`, v1 intentionally omits a
+> `selection_mode` parameter. Because an ECharts spec is a full, user-authored chart definition, selection is
+> enabled *in the spec* (see [Selections](#selections)) and Streamlit returns whatever the user
+> configured. A `selection_mode` convenience that auto-enables/themes point/box/lasso is
+> [future work](#out-of-scope-future-work); adding it later is non-breaking.
+
+> **Parameter name.** We use `spec`, matching `st.vega_lite_chart(data, spec)` — the other
+> Streamlit chart command that takes a declarative dict — and the `spec` field already used in the
+> proto and the frontend. See [Parameter name](#parameter-name-spec-vs-options-vs-option) for why
+> `options` and `option` were rejected.
 
 **Return value** — Identical contract to `st.plotly_chart`:
 
 - `on_select="ignore"` → returns a `DeltaGenerator` (internal element handle).
 - `on_select="rerun"` or a callable → returns an `EChartsState` dict-like object whose
   `selection` attribute holds the current selection (see [Selection state schema](#selection-state-schema)).
+  `EChartsState` is importable from `streamlit.typing` for annotations, alongside `PlotlyState`
+  and `VegaLiteState`. `EChartsCompatible` stays internal — it only exists to type the duck-typed
+  `pyecharts` input.
 
-#### Options input
+#### Spec input
 
 The primary input is a plain Python `dict` matching the ECharts option object structure —
 the same JSON you'd pass to `chart.setOption(...)` in JavaScript:
@@ -106,16 +114,16 @@ the same JSON you'd pass to `chart.setOption(...)` in JavaScript:
 ```python
 import streamlit as st
 
-options = {
+spec = {
     "xAxis": {"type": "category", "data": ["Mon", "Tue", "Wed", "Thu", "Fri"]},
     "yAxis": {"type": "value"},
     "series": [{"data": [120, 200, 150, 80, 70], "type": "bar"}],
 }
 
-st.echarts_chart(options)
+st.echarts_chart(spec)
 ```
 
-`options` also accepts a **JSON string** (handy for copy-pasting an option straight from the
+`spec` also accepts a **JSON string** (handy for copy-pasting an option straight from the
 [ECharts examples gallery](https://echarts.apache.org/examples/)) and a **`pyecharts` chart
 instance** (the most popular Python API for ECharts). `pyecharts` charts are detected via duck
 typing (presence of a `.dump_options()` method) and converted automatically; `pyecharts` is
@@ -149,7 +157,11 @@ import pandas as pd
 import streamlit as st
 
 df = pd.DataFrame(
-    {"product": ["Matcha", "Milk Tea", "Cocoa"], "2015": [43.3, 83.1, 86.4], "2016": [85.8, 73.4, 65.2]}
+    {
+        "product": ["Matcha", "Milk Tea", "Cocoa"],
+        "2015": [43.3, 83.1, 86.4],
+        "2016": [85.8, 73.4, 65.2],
+    }
 )
 
 st.echarts_chart(
@@ -171,6 +183,12 @@ executing arbitrary JS, **v1 does not support JavaScript function values**. Most
 needs are covered by ECharts' [string templates](https://echarts.apache.org/en/option.html#series-bar.label.formatter)
 (e.g. `"formatter": "{b}: {c}"`). JS callbacks are documented as [out of scope](#out-of-scope-future-work).
 
+**Unsupported chart families in v1.** Streamlit raises a `StreamlitAPIException` for `custom`
+series (which require a JavaScript `renderItem` callback), map or geo charts (which require
+registered GeoJSON map data), and 3D or WebGL series from the separate ECharts GL extension.
+These features fail late or silently in ECharts without their required callback, registration,
+or extension, so Streamlit rejects them in Python with an actionable error instead.
+
 ### Behavior
 
 #### Theming
@@ -185,81 +203,153 @@ When `theme="streamlit"` (default), the chart automatically matches the active S
 - **Backgrounds / axes / grid** — transparent chart background over the app background, with
   gridlines, axis lines, and tick labels colored from the Streamlit gray scale. Interaction
   components (`tooltip`, `legend`, `dataZoom`, `brush`, `toolbox`) also get themed defaults.
+- **Plot margins** — for cartesian charts, Streamlit fills in a default `grid` (tighter side
+  margins than ECharts' percentage-based defaults, and axis labels and names kept inside them) so
+  the plot fills its container like other Streamlit charts. Margins on a side that carries a
+  title, legend, or bottom-anchored `dataZoom`/`visualMap`/`timeline` are left to ECharts so those
+  components aren't clipped.
 - **Dark / light mode** — the chart re-themes automatically when the user toggles the theme
   (via ECharts' `darkMode` plus themed colors), with no Python rerun required. Because an ECharts
   theme is fixed at `init` time, re-theming re-initializes the instance (see the tech spec), so a
   brief re-initialization flash (and a possible entry-animation replay) may occur on toggle.
 
-Any color/style the user explicitly sets in `options` is **preserved** and takes precedence
+Any color/style the user explicitly sets in `spec` is **preserved** and takes precedence
 over the Streamlit theme defaults (the theme fills in gaps; it does not override explicit
-values). `theme=None` disables all of this and renders with ECharts' built-in default theme.
+values). `theme=None` disables these theme defaults and renders with ECharts' built-in default
+theme. Independently of theming, display-only charts set a missing `series.cursor` to `"default"`
+so they do not misleadingly appear clickable; an explicitly configured cursor is preserved.
 
 #### Selections
 
-Selections follow the exact `on_select` / `selection_mode` model of `st.plotly_chart`, so users
-who know one know both. When `on_select` is `"rerun"` or a callable, the chart becomes a widget
-and returns an `EChartsState`.
+Setting `on_select` to `"rerun"` or a callable turns the chart into a widget that returns an
+`EChartsState`. Following the `on_select` model of `st.plotly_chart` keeps the widget contract
+familiar.
 
-`selection_mode` maps to ECharts' native selection mechanisms:
+**Enabling selection is done in the spec.** Because an ECharts spec is a full, user-authored chart
+definition (and because which interactions make sense depends on the chart type), Streamlit does **not** inject
+any selection configuration. Instead, you enable selection with ECharts' own option keys, and
+Streamlit listens and returns whatever fires:
 
-| Mode | Interaction | ECharts mechanism |
-|------|-------------|-------------------|
-| `"points"` | Click individual data items | ECharts `click` event (no mutation of the user's option) |
-| `"box"` | Drag a rectangular region | `brush` component (rectangle) + `brushSelected`/`brushEnd` events |
-| `"lasso"` | Draw a freeform region | `brush` component (polygon) + `brushSelected`/`brushEnd` events |
+| Interaction | Enable it in `spec` by… | ECharts event Streamlit listens to |
+|-------------|---------------------------|-------------------------------------|
+| Point selection | Setting `selectedMode` on a series (`"single"`, `"multiple"`, or `"series"`) | `selectchanged` |
+| Box / axis-range / lasso | Adding a [`brush`](https://echarts.apache.org/en/option.html#brush) component (with `rect`, `lineX`, `lineY`, or `polygon`) | `brushSelected` / `brushEnd` |
 
-When selections are enabled, a small brush/selection toolbar is added for the box/lasso modes
-(analogous to Plotly's modebar). Double-click clears the selection.
+```python
+spec = {
+    "xAxis": {"type": "category", "data": ["Mon", "Tue", "Wed", "Thu", "Fri"]},
+    "yAxis": {"type": "value"},
+    # Enable point selection by setting selectedMode on the series:
+    "series": [
+        {"type": "bar", "selectedMode": "multiple", "data": [120, 200, 150, 80, 70]}
+    ],
+}
+event = st.echarts_chart(spec, key="sales", on_select="rerun")
+```
+
+ECharts renders the selected/brushed state itself (the native `select` visual and the brush
+overlay), and any `select` styling the user adds to their series is honored. Streamlit **restores
+the visible selection after reruns** (re-applying the selected points and drawn regions) so the
+on-screen state always matches the returned `EChartsState` (see
+[Reruns & state persistence](#reruns--state-persistence)). Double-click clears the selection.
+
+This "listen to what you configure" model means selection coverage exactly matches what each chart
+type supports (e.g. `selectedMode` works on most series but not `gauge`/`funnel`; `brush` works on
+cartesian `grid` coordinate systems) — there is no phantom UI for interactions a chart can't
+perform. A `selection_mode` convenience that auto-enables and themes these interactions for you is
+[future work](#out-of-scope-future-work).
 
 ##### Selection state schema
 
-`EChartsState` deliberately mirrors `PlotlyState` so the two are learnable together:
+The widget envelope matches other Streamlit chart events, while the nested payload follows
+ECharts' grouped, series-local selection model:
 
 ```python
 {
     "selection": {
-        # Every selected data item across all selection modes.
-        "points": [
+        # Union of native and brushed data, grouped by series and data type.
+        "selected": [
             {
-                "component_type": "series",
-                "series_type": "bar",
                 "series_index": 0,
+                "series_id": "sales",  # None when not explicitly configured
                 "series_name": "Sales",
-                "data_index": 3,
-                "name": "Thu",
-                "value": 80,
-                "data": 80,
+                "data_type": "main",
+                "data_indices": [1, 2, 3],
             },
-            ...
         ],
-        # Flat list of selected data indices (convenient for single-series charts).
-        "point_indices": [3, ...],
-        # Metadata about box (rectangle) selections, if any.
-        "box": [ ... ],
-        # Metadata about lasso (polygon) selections, if any.
-        "lasso": [ ... ],
+        # One entry per active brush area.
+        "areas": [
+            {
+                "brush_index": 0,
+                "brush_type": "rect",
+                "coord_range": [[0, 2], [10, 20]],
+            },
+        ],
     }
 }
 ```
 
-- `points` — flat list of all selected data items (from point, box, and lasso selections),
-  each identifying its series (`series_index`/`series_name`) and `data_index` plus the item's
-  `name`/`value`. The per-item `series_index` disambiguates multi-series charts.
-- `point_indices` — flat list of selected `data_index` values, for parity with
-  `PlotlyState` and convenient access in the common single-series case. **Reliable only for
-  single-series charts**: ECharts `data_index` is series-local, so in multi-series charts the
-  same index can refer to different points across series (and may appear more than once). For
-  multi-series charts, use `points[].series_index` + `points[].data_index` (or `series_name`)
-  to disambiguate.
-- `box` / `lasso` — coordinate metadata for the drawn regions (parallel to Plotly's `box`/`lasso`).
+- `selected` — the de-duplicated union of native (`selectedMode`) and brush selections, grouped
+  by `series_index` and `data_type`. `data_indices` is sorted and series-local; a missing ECharts
+  `dataType` is reported as `"main"` so graph nodes and edges remain distinct. Empty groups that
+  ECharts emits for untouched series are omitted. `series_id` and `series_name` are always
+  present and are `None` unless explicitly set in the series option.
+- `areas` — one entry per active brush region. `brush_index` identifies the brush component, and
+  `brush_type` preserves ECharts' value (`"rect"`, `"lineX"`, `"lineY"`, or `"polygon"`).
+  `coord_range` contains the primary data-space geometry, or `None` when ECharts only has
+  pixel-space geometry. Its shape depends on `brush_type`: `rect` uses
+  `[[x0, x1], [y0, y1]]`; `lineX`/`lineY` use `[start, end]`; and `polygon` uses
+  `[[x, y], ...]`. Category-axis coordinates are ordinal positions and can include half-indices
+  such as `[0.5, 3.5]`.
+
+Both lists are always present and deterministically ordered. `selected` is sorted by series and
+data type (`main`, `node`, `edge`), and `areas` is sorted by brush component while preserving the
+area order within that component. A drawn area remains in `areas` even when it selects no data.
+Clearing one ECharts selection channel preserves the other; double-click and form clear reset both.
+
+For the common single-series, `data_type="main"` case, use:
+
+```python
+rows = event.selection.selected[0]["data_indices"] if event.selection.selected else []
+filtered_df = df.iloc[rows]
+```
+
+For multiple series or graph data, iterate the groups:
+
+```python
+selected_nodes = []
+selected_links = []
+for item in event.selection.selected:
+    series = spec["series"][item["series_index"]]
+    if item["data_type"] == "edge":
+        selected_links += [series["links"][i] for i in item["data_indices"]]
+    else:
+        selected_nodes += [series["data"][i] for i in item["data_indices"]]
+```
+
+`data_indices` addresses the immediate ECharts source: inline `series.data`, graph `data` or
+`links`, or `dataset.source` rows when no transform is present. DataZoom preserves this raw index
+space. A dataset transform creates a new source, so its indices address transformed output rows;
+apps that need to map them back should perform the transform in Python or preserve a source-row ID.
+
+Streamlit does not expose ECharts' pixel `range` or internal `panelId`. For dual-axis charts,
+ECharts may calculate additional coordinate ranges for one area; v1 reports only its primary
+`coord_range`. `brush_index` links an area to the user's brush configuration, and
+`selected[].data_indices` remains authoritative.
 
 Selection state is **read-only** and cannot be set through Session State (same as Plotly/Vega).
+The `EChartsState` envelope and its `selection` payload are attribute dictionaries, so both
+`event.selection.selected` and `event["selection"]["selected"]` work. The entries *inside*
+`selected` and `areas` are plain dicts read by key (`item["series_index"]`), matching
+`st.plotly_chart`'s `selection.points` — the shared attribute-dictionary wrapper descends into
+nested dicts but not into lists.
 
 > **Why not the `streamlit-echarts` `events=` + `JsCode` model?** The community component surfaces
 > interactions through a `dict` of ECharts event names → **JavaScript handler strings** (wrapped in
 > `JsCode`). That's powerful but non-idiomatic for Streamlit (JS in Python), harder to type-check,
-> and executes arbitrary JS. We instead mirror `st.plotly_chart`'s structured `on_select` /
-> `selection_mode` model. Raw JS event handlers are documented as [out of scope](#out-of-scope-future-work).
+> and executes arbitrary JS. We instead mirror `st.plotly_chart`'s structured `on_select` model
+> (activating selection via `on_select` and reading whatever the user enabled in their spec). Raw JS
+> event handlers are documented as [out of scope](#out-of-scope-future-work).
 
 #### Sizing
 
@@ -267,17 +357,17 @@ ECharts renders into a container that needs an explicit height (unlike an auto-s
 diagram). Therefore:
 
 - `width` behaves like `st.plotly_chart` (`"stretch"` by default). For `width="content"`,
-  Streamlit uses a pyecharts chart's own width when available; raw ECharts options otherwise
-  resolve to a fixed default of **700px** because ECharts options do not have intrinsic width.
+  Streamlit uses a pyecharts chart's own width when available; a raw ECharts spec otherwise
+  resolves to a fixed default of **700px** because an ECharts spec has no intrinsic width.
 - `height="content"` (default) resolves to **400px** unless a pyecharts chart exposes its own
-  height. Raw ECharts options otherwise use the default. `height="stretch"` fills the parent
+  height. A raw ECharts spec otherwise uses the default. `height="stretch"` fills the parent
   container; an `int` sets a fixed pixel height.
 - The chart auto-resizes with its container (via a resize observer), matching Plotly behavior.
 
 #### Reruns & state persistence
 
 ECharts plays entry animations when a browser instance is initialized. During ordinary reruns, the
-frontend must keep the existing ECharts instance mounted and update it in place — `setOption` when
+frontend keeps the existing ECharts instance mounted and updates it in place — `setOption` when
 the option changed, `resize` when only dimensions changed — avoiding unnecessary re-initialization
 and repeated entry animations for the common "unrelated widget reran the app" case. Because ECharts
 fixes the **theme** and **renderer** at `init` time, a change to `theme` or `renderer` (e.g. a
@@ -285,33 +375,45 @@ light/dark toggle) cannot be applied via `setOption`; it instead requires dispos
 re-initializing the instance (see the tech spec and [Theming](#theming)), which is why those
 specific changes can briefly re-initialize and replay entry animations.
 
-If Streamlit truly unmounts and remounts the element, ECharts can be recreated from the
-declarative option object; in that case, entry animation may replay. Preserving browser-only
-figure state for display-only charts is not an MVP requirement, but implementation testing should
-verify common interactions such as fullscreen, tabs, expanders, and unrelated widget reruns. If
-those paths commonly remount display-only ECharts charts and produce visible animation replay, the
-implementation should compute a stable non-widget element ID for all ECharts charts, similar to
-Plotly's special-case behavior.
+If Streamlit does unmount and remount the element (for example, opening an expander that was
+collapsed on first render), ECharts is recreated from the declarative option object and the entry
+animation replays. Display-only charts deliberately keep no element ID and no browser-side state,
+so unlike `st.plotly_chart` they have nothing to restore — the declarative option is the whole
+state. Unrelated widget reruns and fullscreen toggles do not remount the chart, so those common
+paths are animation-free.
 
 When `on_select` is active, `st.echarts_chart` becomes a widget. In that mode, Streamlit computes
 a widget ID, persists the read-only selection state, and makes it available as the return value
 and through `st.session_state[key]` when a key is provided. This follows the Vega-Lite selection
 pattern more closely than Plotly's always-compute-ID behavior, which is a special case for
-Plotly's mutable browser-side figure state.
+Plotly's mutable browser-side figure state. Because a deterministic `setOption({ notMerge: true })`
+clears ECharts' native `select`/`brush` state, the frontend **re-applies the visible selection**
+(re-dispatching a `select` action for selected data and re-drawing brush areas) after
+each in-place option update and on remount, keeping the on-screen highlight in sync with the
+persisted state.
 
-Because the widget ID incorporates the normalized option payload when no explicit `key` is provided,
-**any change to the chart's data or options resets the selection state** (the widget is treated as a
-new element). This matches `st.vega_lite_chart`/`st.plotly_chart` behavior. To keep a selection
-stable across data updates, pass a fixed `key` so the widget identity does not depend on the payload.
+Without a `key`, the widget identity is derived from the option payload plus `theme`, `renderer`,
+and the dimensions — so, as with `st.plotly_chart`/`st.vega_lite_chart`, **any change to the
+chart's data or spec resets the selection state** (the widget is treated as a new element). Pass a
+fixed `key` so the identity is the key plus `renderer` and the selection stays stable across data
+updates. `renderer` is the only parameter that stays in the identity alongside a `key` (taking the
+slot Vega-Lite gives `selection_mode`), so switching between `"canvas"` and `"svg"` resets the
+selection even for a keyed chart.
 
 #### Loading & error handling
 
 - **Loading** — while the ECharts library (lazy-loaded) initializes, a skeleton loader reserves
   the chart area to avoid layout shift, consistent with other charts.
-- **Invalid options** — if `options` is not a dict (or convertible object) or is not
+- **Invalid spec** — if `spec` is not a dict (or convertible object) or is not
   JSON-serializable, `st.echarts_chart` raises a `StreamlitAPIException` with a clear message
-  (*Fail Fast, Fail Helpfully*). Runtime rendering errors from ECharts are surfaced as a styled
-  error message in the chart area rather than crashing the app.
+  (*Fail Fast, Fail Helpfully*). Unsupported `custom`, map/geo, and ECharts GL chart families,
+  detected JavaScript callbacks, non-finite numbers (`NaN`/`Infinity`), and a `dataset.source`
+  dataframe whose column labels collide once stringified are rejected with similarly targeted
+  errors. Note that `NaN`/`NaT` *inside* a `dataset.source` dataframe is converted to `null`
+  (ECharts' own "no value" marker) rather than rejected; only non-finite floats the user writes
+  directly into the option raise.
+- **Runtime errors** — rendering errors from ECharts are surfaced as a styled error message in the
+  chart area rather than crashing the app.
 
 ### Toolbar actions
 
@@ -321,9 +423,9 @@ Vega-Lite, and Mermaid):
 | Action | Description |
 |--------|-------------|
 | Fullscreen | Expand the chart to fullscreen. |
-| Download | Export the chart as a PNG image (ECharts `getDataURL`). |
+| Download | Export a canvas-rendered chart as PNG or an SVG-rendered chart as SVG (ECharts `getDataURL`), using a timestamped filename. Because the themed chart background is transparent, PNG export composites the app background color so the file isn't transparent (unless the spec sets its own `backgroundColor`). |
 
-ECharts' own `toolbox` feature (if present in `options`) is respected and rendered by ECharts.
+ECharts' own `toolbox` feature (if present in `spec`) is respected and rendered by ECharts.
 
 ### Design
 
@@ -369,18 +471,23 @@ st.echarts_chart(
 
 #### Selections (point selection driving the app)
 
+Enable point selection in the spec via `selectedMode`, then set `on_select="rerun"`.
+
 ```python
 import streamlit as st
 
-options = {
+spec = {
     "xAxis": {"type": "category", "data": ["Mon", "Tue", "Wed", "Thu", "Fri"]},
     "yAxis": {"type": "value"},
-    "series": [{"type": "bar", "data": [120, 200, 150, 80, 70]}],
+    "series": [
+        {"type": "bar", "selectedMode": "multiple", "data": [120, 200, 150, 80, 70]}
+    ],
 }
 
-event = st.echarts_chart(options, key="sales", on_select="rerun")
+event = st.echarts_chart(spec, key="sales", on_select="rerun")
 
-st.write("You selected:", event.selection.points)
+rows = event.selection.selected[0]["data_indices"] if event.selection.selected else []
+st.write("You selected:", [spec["series"][0]["data"][i] for i in rows])
 ```
 
 #### Chart type not available in Plotly/Vega (gauge)
@@ -419,7 +526,7 @@ st.echarts_chart(pie)
 
 ### Security
 
-- **No JS execution (v1).** Because only JSON-serializable options are accepted (no JS function
+- **No JS execution (v1).** Because only a JSON-serializable spec is accepted (no JS function
   values), there is no arbitrary-code-execution surface beyond what data the app author already
   controls — the same posture as `st.plotly_chart`, `st.vega_lite_chart`, and `st.altair_chart`.
 - **Same-origin rendering.** ECharts renders into a canvas/SVG within the app DOM (no iframe,
@@ -435,12 +542,14 @@ st.echarts_chart(pie)
 
 ### Accessibility
 
-- ECharts supports ARIA descriptions generated from the option (`options["aria"] = {"enabled": True}`).
+- ECharts supports ARIA descriptions generated from the option (`spec["aria"] = {"enabled": True}`).
   Under `theme="streamlit"` (default), Streamlit enables this by default (when not already set) so
-  charts expose a description to screen readers. Consistent with the theme opt-out semantics,
-  `theme=None` leaves the user's `options` untouched, so ARIA is only enabled if the user sets it.
-- The chart container uses an appropriate `role`/`aria-label`, and the loading state uses
-  `aria-busy`, consistent with other Streamlit charts.
+  charts expose a description to screen readers. When ARIA is enabled, ECharts itself puts
+  `role="img"` and a generated `aria-label` (or the user's `aria.label.description`) on the chart
+  container. Consistent with the theme opt-out semantics, `theme=None` does not inject an ARIA
+  configuration, so ARIA — and therefore the generated label — is only present if the user sets it.
+- The chart container carries `role="img"` and uses `aria-busy` while rendering, consistent with
+  other Streamlit charts.
 - Toolbar buttons (fullscreen, download) have accessible labels.
 
 ## Tradeoffs
@@ -449,16 +558,22 @@ st.echarts_chart(pie)
   frontend chunk. Like `mermaid.js`, ECharts is **lazy-loaded in the browser** — it is only
   fetched when the first ECharts chart renders, so app startup bundle size is unaffected. The
   on-disk wheel grows (one-time cost for all users). We bundle the **full** ECharts library
-  (not a tree-shaken subset): because the API accepts *arbitrary* option objects, the set of
-  series/components needed is only known at runtime, so tree-shaking would break charts whose
-  types weren't statically included. Tree-shaking could be revisited only if we later constrain
-  the supported chart types.
-- **JSON-only options.** Power users who rely on JS `formatter`/`renderItem` callbacks are not
+  (not a tree-shaken subset): because the API accepts arbitrary supported core option objects,
+  the set of series/components needed is only known at runtime, so tree-shaking would break
+  charts whose types weren't statically included. ECharts GL and other third-party extensions
+  remain separate and are not bundled.
+- **JSON-only spec.** Power users who rely on JS `formatter`/`renderItem` callbacks are not
   served in v1 (see [Out of Scope](#out-of-scope-future-work)). String-template formatters cover
   the large majority of cases.
 
 ## Out of Scope (Future Work)
 
+- **`selection_mode` parameter** — a `st.plotly_chart`-style `selection_mode=("points","box","lasso")`
+  that *auto-enables and themes* those interactions (injecting `selectedMode`/`select` and a
+  brush/toolbox for you) so `on_select="rerun"` works with zero spec changes. v1 instead activates
+  selection via `on_select` and returns whatever the user enabled in their spec. Adding
+  `selection_mode` later is purely additive (its absence is the "listen to what you configure"
+  default, so it wouldn't change existing behavior).
 - **JavaScript callback support** — `formatter`/`renderItem`/event-handler functions. `streamlit-echarts`
   solves this with a `JsCode` wrapper (a placeholder-encoded JS string the frontend `eval`s) and an
   `events={...}` dict. A native version needs a security-reviewed opt-in (e.g. a `JsCode`-style
@@ -466,9 +581,11 @@ st.echarts_chart(pie)
 - **`setOption` merge control** — `streamlit-echarts` exposes `replace_merge` to opt into ECharts'
   `universalTransition` animations between data shapes. v1 uses deterministic full replacement
   (`notMerge`); smooth cross-update transitions can be added later.
-- **Geo/map registration** — registering custom GeoJSON maps (`streamlit-echarts`' `map=` /
-  `Map(map_name, geo_json, special_areas)`), and ECharts GL / third-party extensions (extra
-  bundles + extension lifecycle). Can be added as follow-ups.
+- **Geo/map registration and extension-backed charts** — registering custom GeoJSON maps
+  (`streamlit-echarts`' `map=` / `Map(map_name, geo_json, special_areas)`), and ECharts GL / other
+  third-party extensions (extra bundles + extension lifecycle). Map/geo and ECharts GL specs are
+  rejected in Python in v1 rather than being sent to ECharts to fail late or render an empty chart.
+  These capabilities can be added as follow-ups.
 - **Custom theme objects / `registerTheme` / `registerMap` / `connect` / arbitrary
   `dispatchAction`** — deferred until native usage shows demand.
 - **Legend / dataZoom / timeline as first-class Streamlit events** — v1 focuses on data-point
@@ -491,7 +608,7 @@ st.echarts_chart(pie)
   duplicate ECharts bundle, and its interaction model relies on app-authored JavaScript
   (`events` + `JsCode`) rather than a structured Streamlit API. Directly the motivation for #12302.
 
-**Option 2: `st.echarts_chart(options=dict)` mirroring `st.plotly_chart`** ✅ PREFERRED
+**Option 2: `st.echarts_chart(spec=dict)` mirroring `st.plotly_chart`** ✅ PREFERRED
 - Pros: Consistent with existing chart commands; discoverable; supports theming + selections;
   familiar return-value/`on_select` contract; accepts `pyecharts` objects for the Python-first crowd.
 - Cons: New frontend dependency (bundle size); JSON-only in v1.
@@ -504,24 +621,86 @@ st.echarts_chart(pie)
   chart object — both render through the same backend/frontend. We follow the same idea by
   accepting `pyecharts` objects *within* `st.echarts_chart` rather than adding a separate command.)
 
+### Parameter name: `spec` vs `options` vs `option`
+
+**`spec`** ✅ PREFERRED
+- Pros: Matches `st.vega_lite_chart(data, spec)`, the other chart command whose input is a
+  declarative dict, and `st.columns(spec)` — in Streamlit, `spec` consistently means "the
+  declarative definition of this element." Already the name of the proto field, the frontend's
+  `element.spec`, and the element-ID parameter, so the public API agrees with its own wire format.
+  Reads naturally across all three accepted input forms (dict, JSON string, `pyecharts` chart).
+- Cons: Not ECharts' own word, so the docstring has to bridge the two (it opens with "The ECharts
+  option object to render" and links to `option.html`).
+
+**`options`** ❌
+- Pros: Matches `st_echarts(options=...)`, easing migration from the community component.
+- Cons: `options` is Streamlit's word for *the sequence of choices a user picks from*
+  (`st.selectbox`, `st.multiselect`, `st.radio`, `st.select_slider`, `st.pills`,
+  `st.segmented_control`, `st.feedback`, `st.menu_button`, `SelectboxColumn`), so it violates
+  *Same Name, Same Behavior* — and most confusingly in the `on_select="rerun"` case, where the
+  chart *is* a selection widget but its selectable data lives inside `series.data`, not in
+  `options`. It is also not ECharts' term (that is singular `option`), and ECharts already uses a
+  nested `options` key for timeline variants. The migration argument is weak: moving off
+  `streamlit-echarts` already means changing the function name, the `width`/`height` format, and
+  the `events`/`JsCode` model, and the argument is almost always passed positionally anyway.
+
+**`option`** ❌
+- Pros: Exactly ECharts' own term (`setOption(option)`, gallery snippets, `option.html`), which
+  follows Streamlit's habit of borrowing the upstream library's noun (`figure_or_dot`,
+  `pydeck_obj`, `altair_chart`). Pairs cleanly with a future `config=` passthrough for
+  `echarts.init`.
+- Cons: One character away from `options`, so it inherits most of the confusion without the
+  migration benefit, and a singular "option" reads to a Python user like a single choice.
+
+Also rejected: `chart_obj`/`echarts_obj` (object-shaped names for what is primarily a dict, and
+"obj" is geeky), `chart` (redundant with the command name), `config` (overloaded with Streamlit's
+`config.toml`, and reserved for the possible `echarts.init` passthrough), and `figure` (Plotly and
+Matplotlib vocabulary; ECharts has no figure).
+
+**Selection payload: grouped ECharts state** ✅ PREFERRED
+- Pros: One filtering path for native and brush selections; unambiguous series/data-type-local
+  indices; preserves ECharts brush types; avoids renderer-specific enrichment and coordinate
+  conversion.
+- Cons: The common single-series path is slightly more verbose than a flat index list. Native
+  versus brush provenance and secondary dual-axis geometry are deferred, but can be added later.
+
+**Selection payload: Plotly-shaped `points`/`point_indices`/`box`/`lasso`** ❌
+- Pros: Familiar to `st.plotly_chart` users and the third-party `streamlit-echarts` component.
+- Cons: A flat index list is incorrect for multiple series and graph node/edge data; `lineX` and
+  `lineY` are not boxes; point enrichment is unavailable for dataset-driven series; and mapping
+  ECharts areas to Plotly geometry requires fragile pixel and panel conversion.
+
+**Selection payload: raw ECharts events or separate native/brush channels** ❌
+- Pros: Preserves event provenance and all upstream fields.
+- Cons: ECharts emits independent transient events rather than one state snapshot, and raw
+  payloads contain generated identifiers and internal geometry. Separate channels also make the
+  common filtering path unnecessarily nested. Channel details can be added later without changing
+  the grouped union.
+
 ## Learnings Adopted from `streamlit-echarts`
 
 Reviewing the current [`streamlit-echarts`](https://github.com/andfanilo/streamlit-echarts)
 implementation informed several decisions:
 
-- **`on_select` / `selection_mode` shape** — it recently added a `plotly_chart`-like
-  `on_select` (`"ignore"`/`"rerun"`/callable) + `selection_mode` (`"points"`/`"box"`/`"lasso"`)
-  API. We adopt the same shape (and it confirms this maps cleanly onto ECharts events + `brush`).
-- **Richer selection schema** — its `EMPTY_SELECTION` exposes `points`, `point_indices`,
-  `series_point_indices`, `box`, and `lasso`. We adopt `points` + `point_indices` (folding
-  per-series info into each point) for Plotly parity.
+- **`on_select` shape** — it recently added a `plotly_chart`-like `on_select`
+  (`"ignore"`/`"rerun"`/callable). We adopt the same widget contract. (It also has a
+  `selection_mode` that auto-enables interactions; we defer that convenience — see
+  [Out of Scope](#out-of-scope-future-work) — and instead read whatever selection the user enables
+  in their spec.)
+- **ECharts-native selection schema** — its `EMPTY_SELECTION` exposes Plotly-shaped `points`,
+  `point_indices`, `series_point_indices`, `box`, and `lasso`. Native support instead keeps the
+  familiar `on_select` envelope but returns grouped `selected` data plus ECharts brush `areas`.
+  This avoids ambiguous flat indices and preserves `lineX`/`lineY`/`polygon` semantics.
 - **`pyecharts` via duck typing** — it converts a `pyecharts` chart with `chart.dump_options()`
   behind an optional extra. We accept `pyecharts` objects the same way, with no hard dependency.
 - **`renderer="canvas"|"svg"`** — adopted into the MVP (cheap `echarts.init` passthrough; SVG
   helps print/accessibility).
-- **Point selection via `click`** — implemented from ECharts `click` events rather than mutating
-  every series' `selectedMode`, which avoids changing the user's option and supports more chart
-  types (see tech spec).
+- **Point selection via native `selectedMode`** — `streamlit-echarts` reports point clicks via a
+  raw `click` event with no visible selected state. A click that leaves no highlight behaves like a
+  one-shot event, not a *stateful* selection: nothing shows as selected and the state isn't
+  reflected after a rerun. We instead listen to ECharts' **native selection** (`selectchanged`),
+  which the user enables with `selectedMode` in their spec, giving a persistent, restorable selected
+  highlight and multi-select. Streamlit re-applies the selection after reruns.
 - **Selection API parity** — it requires a `key` for persistent selection access in
   `st.session_state`; native support should rely on Streamlit's widget state when selections are
   active and avoid adding a Plotly-style always-on element ID for display-only charts.
@@ -537,5 +716,5 @@ implementation informed several decisions:
 | No breaking API changes | ✅ New command; no changes to existing commands. |
 | No new dependencies | ⚠️ No new **backend** (Python) dependency. `echarts` is a new **frontend** dependency (lazy-loaded). `pyecharts` remains optional/user-provided. |
 | Metrics collected | ✅ `st.echarts_chart` tracked via `gather_metrics`. |
-| Any security/legal impact? | ✅ Apache-2.0 (same as Streamlit); JSON-only options → no JS execution. |
+| Any security/legal impact? | ✅ Apache-2.0 (same as Streamlit); JSON-only spec → no JS execution. |
 | Any docs changes needed? | ✅ New API reference page + tutorial; add to charts overview. |
