@@ -289,6 +289,10 @@ that case — unused ones simply never fire.
   sets `selectedMode` (`"single"`/`"multiple"`/`"series"`). Its `selected` array is the
   authoritative full native-selection snapshot, grouped by `seriesIndex` and optional `dataType`.
   Normalize a missing `dataType` to `"main"`; retain only `seriesIndex` and `dataIndex[]`.
+  ECharts 6 stores graph node and edge selection in one internal map and repeats matching indices
+  for both types. For typed graph actions, update the affected cached group from
+  `fromActionPayload.dataType` and the action index instead of accepting the duplicated snapshot;
+  this action metadata remains frontend-only.
 - **Brush selection**: register `chart.on("brushSelected", …)` and
   `chart.on("brushEnd", …)`. `brushSelected.batch` is the authoritative full brush snapshot: one
   entry per brush component containing its `brushIndex`, active `areas`, and selected indices for
@@ -297,9 +301,10 @@ that case — unused ones simply never fire.
     `brushType` and the primary `coordRange`; use `null` when no data-space range exists. Do not
     expose pixel `range`, internal `panelId`, or secondary `coordRanges`.
   - `brushEnd` reports only the component whose gesture ended, so use it only as a commit signal;
-    never replace the component cache from `brushEnd.areas`. A delayed `brushSelected` after
-    `brushEnd` completes the pending commit. Toolbox clear emits only `brushSelected`, so an
-    all-empty-area snapshot commits immediately.
+    never replace the component cache from `brushEnd.areas`. Debounce the commit so a final
+    `brushSelected` snapshot arriving just after `brushEnd` supplies the authoritative geometry
+    and hit indices even when its polygon vertex list differs. Toolbox clear emits only
+    `brushSelected`, so an all-empty-area snapshot commits directly.
 - **Grouped union**: native and brush channels coexist and are cached independently. Merge their
   indices by `(series_index, data_type)`, normalize brush entries to `data_type="main"`, de-duplicate
   and numerically sort `data_indices`, and omit empty groups. Sort groups by series and the fixed

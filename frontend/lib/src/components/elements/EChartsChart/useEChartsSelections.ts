@@ -81,6 +81,14 @@ interface SelectedEntry {
 
 interface SelectChangedParams {
   selected?: SelectedEntry[]
+  fromAction?: string
+  fromActionPayload?: {
+    type?: unknown
+    seriesIndex?: unknown
+    dataType?: unknown
+    dataIndex?: unknown
+    dataIndexInside?: unknown
+  }
 }
 
 interface BrushSelectedItem {
@@ -147,6 +155,7 @@ const EMPTY_SELECTION: EChartsSelectionState = {
   selected: [],
   areas: [],
 }
+const EMPTY_SELECTION_JSON = JSON.stringify({ selection: EMPTY_SELECTION })
 
 /** Resolve the chart's current option as a plain object (or ``null``). */
 function resolveChartOption(
@@ -184,24 +193,152 @@ function normalizeSeriesMetadata(value: unknown): string | number | null {
   return null
 }
 
-function getSeriesMetadata(
+function getSeriesOption(
   resolvedOption: Record<string, unknown> | null,
   seriesIndex: number
-): { seriesId: string | number | null; seriesName: string | number | null } {
+): Record<string, unknown> | null {
   const seriesOption = resolvedOption?.series
   const series = Array.isArray(seriesOption)
     ? seriesOption[seriesIndex]
     : seriesIndex === 0
       ? seriesOption
       : undefined
-  const seriesObject = isPlainObject(series)
-    ? (series as Record<string, unknown>)
-    : undefined
+  return isPlainObject(series) ? (series as Record<string, unknown>) : null
+}
+
+function getSeriesMetadata(
+  resolvedOption: Record<string, unknown> | null,
+  seriesIndex: number
+): { seriesId: string | number | null; seriesName: string | number | null } {
+  const seriesObject = getSeriesOption(resolvedOption, seriesIndex)
 
   return {
     seriesId: normalizeSeriesMetadata(seriesObject?.id),
     seriesName: normalizeSeriesMetadata(seriesObject?.name),
   }
+}
+
+function getNumberArray(value: unknown): number[] {
+  const values = Array.isArray(value) ? value : [value]
+  return values.filter(item => typeof item === "number")
+}
+
+function getGraphSeriesSelection(
+  seriesIndex: number,
+  seriesOption: Record<string, unknown>
+): SelectedEntry[] {
+  const nodes = Array.isArray(seriesOption.data)
+    ? seriesOption.data
+    : Array.isArray(seriesOption.nodes)
+      ? seriesOption.nodes
+      : []
+  const edges = Array.isArray(seriesOption.links)
+    ? seriesOption.links
+    : Array.isArray(seriesOption.edges)
+      ? seriesOption.edges
+      : []
+  return [
+    {
+      seriesIndex,
+      dataType: "node",
+      dataIndex: nodes.map((_, index) => index),
+    },
+    {
+      seriesIndex,
+      dataType: "edge",
+      dataIndex: edges.map((_, index) => index),
+    },
+  ].filter(entry => entry.dataIndex.length > 0)
+}
+
+/**
+ * ECharts 6 stores graph node and edge selection in one internal map, so its
+ * full snapshot repeats matching raw indices for both data types. Apply the
+ * typed action to our previous snapshot instead, preserving independent groups.
+ */
+function normalizeNativeSelection(
+  chart: EChartsSelectionInstance,
+  previous: SelectedEntry[],
+  params: SelectChangedParams
+): SelectedEntry[] {
+  const payload = params.fromActionPayload
+  const seriesIndex = payload?.seriesIndex
+  const dataType = payload?.dataType
+  const resolvedOption = resolveChartOption(chart)
+  const seriesOption =
+    typeof seriesIndex === "number"
+      ? getSeriesOption(resolvedOption, seriesIndex)
+      : null
+  if (
+    typeof seriesIndex !== "number" ||
+    (dataType !== "node" && dataType !== "edge") ||
+    seriesOption?.type !== "graph"
+  ) {
+    return params.selected ?? []
+  }
+
+  const action =
+    params.fromAction ??
+    (typeof payload?.type === "string" ? payload.type : undefined)
+  const keyMatches = (entry: SelectedEntry): boolean =>
+    entry.seriesIndex === seriesIndex &&
+    normalizeDataType(entry.dataType) === dataType
+  const previousIndices = new Set(previous.find(keyMatches)?.dataIndex ?? [])
+  const actionIndices = getNumberArray(
+    payload?.dataIndex ?? payload?.dataIndexInside
+  )
+  const selectedMode = seriesOption.selectedMode
+
+  if (selectedMode === "series") {
+    const next = previous.filter(entry => entry.seriesIndex !== seriesIndex)
+    return action === "unselect"
+      ? next
+      : [...next, ...getGraphSeriesSelection(seriesIndex, seriesOption)]
+  }
+
+  if (selectedMode === "single" || selectedMode === true) {
+    const wasSelected = actionIndices.every(index =>
+      previousIndices.has(index)
+    )
+    previousIndices.clear()
+    if (
+      action !== "unselect" &&
+      !(action?.startsWith("toggle") && wasSelected)
+    ) {
+      actionIndices.forEach(index => previousIndices.add(index))
+    }
+  } else {
+    for (const index of actionIndices) {
+      if (action === "unselect") {
+        previousIndices.delete(index)
+      } else if (action?.startsWith("toggle")) {
+        if (previousIndices.has(index)) {
+          previousIndices.delete(index)
+        } else {
+          previousIndices.add(index)
+        }
+      } else {
+        previousIndices.add(index)
+      }
+    }
+  }
+
+  const replaceWholeSeries = selectedMode === "single" || selectedMode === true
+  const next = previous
+    .filter(
+      entry =>
+        !keyMatches(entry) &&
+        !(replaceWholeSeries && entry.seriesIndex === seriesIndex)
+    )
+    .map(entry => ({ ...entry, dataIndex: [...entry.dataIndex] }))
+  if (previousIndices.size > 0) {
+    next.push({
+      seriesIndex,
+      dataType,
+      dataIndex: Array.from(previousIndices),
+    })
+  }
+  return next
 }
 
 function appendSelectedEntries(
@@ -317,13 +454,30 @@ function findBrushSelectionForEnd(
     : brushSelection.find(item => item.brushId === params.brushId)
 }
 
+function removeDuplicatePolygonEndpoint(value: unknown): unknown {
+  if (
+    !Array.isArray(value) ||
+    value.length < 2 ||
+    !isEqual(value.at(-1), value.at(-2))
+  ) {
+    return value
+  }
+  return value.slice(0, -1)
+}
+
 function getComparableBrushArea(area: BrushArea): Record<string, unknown> {
+  const isPolygon = area.brushType === "polygon"
   return {
     brushType: area.brushType,
     panelId: area.panelId,
-    range: area.range,
-    coordRange: area.coordRange,
-    coordRanges: area.coordRanges,
+    range: isPolygon ? removeDuplicatePolygonEndpoint(area.range) : area.range,
+    coordRange: isPolygon
+      ? removeDuplicatePolygonEndpoint(area.coordRange)
+      : area.coordRange,
+    coordRanges:
+      isPolygon && Array.isArray(area.coordRanges)
+        ? area.coordRanges.map(removeDuplicatePolygonEndpoint)
+        : area.coordRanges,
   }
 }
 
@@ -435,6 +589,9 @@ export function useEChartsSelections(
 
   // Keep the latest bound chart so form-clear resets can clear the visible brush.
   const chartRef = useRef<EChartsSelectionInstance | null>(null)
+  const clearBoundSelectionRef = useRef<((fromUser?: boolean) => void) | null>(
+    null
+  )
   // Suppress widget emits from programmatic restore dispatches so a data-only
   // rerun cannot loop: ``restoreSelection`` runs while handlers are already
   // bound, and ECharts fires ``selectchanged`` for ``dispatchAction("select")``.
@@ -446,16 +603,20 @@ export function useEChartsSelections(
   )
 
   const writeSelection = useCallback(
-    (selection: EChartsSelectionState): void => {
+    (selection: EChartsSelectionState, fromUser = true): void => {
       const json = JSON.stringify({ selection })
       // Skip no-op updates to avoid needless reruns.
-      if (widgetMgr.getStringValue(widgetInfo) === json) {
+      const currentValue = widgetMgr.getStringValue(widgetInfo)
+      if (
+        currentValue === json ||
+        (currentValue === undefined && json === EMPTY_SELECTION_JSON)
+      ) {
         return
       }
       widgetMgr.setStringValue(widgetInfo.id, json, {
         formId: widgetInfo.formId,
         fragmentId,
-        fromUser: true,
+        fromUser,
       })
     },
     [widgetMgr, widgetInfo, fragmentId]
@@ -520,34 +681,44 @@ export function useEChartsSelections(
     [chartId, widgetMgr]
   )
 
-  const clearSelection = useCallback((): void => {
-    const chart = chartRef.current
-    if (chart) {
-      try {
-        chart.dispatchAction({ type: "brush", areas: [] })
-      } catch (error) {
-        LOG.warn("Failed to clear brush selection", error)
+  const clearSelection = useCallback(
+    (fromUser = true): void => {
+      const chart = chartRef.current
+      if (chart) {
+        try {
+          chart.dispatchAction({ type: "brush", areas: [] })
+        } catch (error) {
+          LOG.warn("Failed to clear brush selection", error)
+        }
+        // Deselect any natively selected points as well.
+        const selectedPoints = chartId
+          ? widgetMgr.getElementState<SelectedEntry[]>(
+              chartId,
+              SELECTED_POINTS_STATE_KEY
+            )
+          : undefined
+        if (Array.isArray(selectedPoints)) {
+          dispatchPointSelection(chart, selectedPoints, "unselect")
+        }
       }
-      // Deselect any natively selected points as well.
-      const selectedPoints = chartId
-        ? widgetMgr.getElementState<SelectedEntry[]>(
-            chartId,
-            SELECTED_POINTS_STATE_KEY
-          )
-        : undefined
-      if (Array.isArray(selectedPoints)) {
-        dispatchPointSelection(chart, selectedPoints, "unselect")
+      if (chartId) {
+        widgetMgr.setElementState(chartId, BRUSH_SELECTION_STATE_KEY, [])
+        widgetMgr.setElementState(chartId, SELECTED_POINTS_STATE_KEY, [])
       }
-    }
-    if (chartId) {
-      widgetMgr.setElementState(chartId, BRUSH_SELECTION_STATE_KEY, [])
-      widgetMgr.setElementState(chartId, SELECTED_POINTS_STATE_KEY, [])
-    }
-    writeSelection(EMPTY_SELECTION)
-  }, [chartId, widgetMgr, writeSelection])
+      writeSelection(EMPTY_SELECTION, fromUser)
+    },
+    [chartId, widgetMgr, writeSelection]
+  )
 
   const onFormCleared = useCallback((): void => {
-    clearSelection()
+    // The submitted value has already moved from the form into committed widget
+    // state. Clear that committed value so subsequent unrelated reruns don't
+    // send the stale selection back to Python.
+    if (clearBoundSelectionRef.current) {
+      clearBoundSelectionRef.current(false)
+    } else {
+      clearSelection(false)
+    }
   }, [clearSelection])
 
   const bindSelections = useCallback(
@@ -610,11 +781,18 @@ export function useEChartsSelections(
       }
 
       const handleSelectChanged = (raw: unknown): void => {
+        if (isRestoringRef.current) {
+          return
+        }
         const params = raw as SelectChangedParams
-        const selected = params.selected ?? []
+        const selected = normalizeNativeSelection(
+          chart,
+          latestNativeSelection,
+          params
+        )
         latestNativeSelection = selected
-        // Persist the raw selection so it can be re-applied visually after an
-        // option-replacing setOption or a remount.
+        // Persist the dispatchable native selection so it can be re-applied
+        // visually after an option-replacing setOption or a remount.
         if (chartId) {
           widgetMgr.setElementState(
             chartId,
@@ -622,9 +800,7 @@ export function useEChartsSelections(
             selected
           )
         }
-        if (!isRestoringRef.current) {
-          emitSelection()
-        }
+        emitSelection()
       }
 
       const handleBrushSelected = (raw: unknown): void => {
@@ -684,20 +860,21 @@ export function useEChartsSelections(
         if (brushEndMatchesSelection(latestBrushSelection, params)) {
           commitBrushSelection()
         } else {
-          // brushEnd contains only one component's areas. Wait for the full
-          // brushSelected snapshot rather than replacing the other components.
+          // brushEnd contains only one component's areas. Wait for the
+          // correlated full snapshot, regardless of its configured throttle.
           pendingBrushEnd = params
         }
       }
 
-      const clearBoundSelection = (): void => {
+      const clearBoundSelection = (fromUser = true): void => {
         emitSelection.cancel()
         latestNativeSelection = []
         latestBrushSelection = []
         committedBrushSelection = []
         pendingBrushEnd = undefined
-        clearSelection()
+        clearSelection(fromUser)
       }
+      clearBoundSelectionRef.current = clearBoundSelection
 
       const handleDoubleClick = (): void => {
         if (deferredClearTimer !== undefined) {
@@ -740,6 +917,9 @@ export function useEChartsSelections(
         }
         if (chartRef.current === chart) {
           chartRef.current = null
+        }
+        if (clearBoundSelectionRef.current === clearBoundSelection) {
+          clearBoundSelectionRef.current = null
         }
         // The instance is disposed before this cleanup when the whole chart is
         // torn down; unbinding from a disposed instance logs a console warning.

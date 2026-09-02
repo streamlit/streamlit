@@ -102,6 +102,9 @@ st.echarts_chart(
 - `on_select="ignore"` → returns a `DeltaGenerator` (internal element handle).
 - `on_select="rerun"` or a callable → returns an `EChartsState` dict-like object whose
   `selection` attribute holds the current selection (see [Selection state schema](#selection-state-schema)).
+  `EChartsState` is importable from `streamlit.typing` for annotations, alongside `PlotlyState`
+  and `VegaLiteState`. `EChartsCompatible` stays internal — it only exists to type the duck-typed
+  `pyecharts` input.
 
 #### Spec input
 
@@ -200,6 +203,11 @@ When `theme="streamlit"` (default), the chart automatically matches the active S
 - **Backgrounds / axes / grid** — transparent chart background over the app background, with
   gridlines, axis lines, and tick labels colored from the Streamlit gray scale. Interaction
   components (`tooltip`, `legend`, `dataZoom`, `brush`, `toolbox`) also get themed defaults.
+- **Plot margins** — for cartesian charts, Streamlit fills in a default `grid` (tighter side
+  margins than ECharts' percentage-based defaults, and axis labels and names kept inside them) so
+  the plot fills its container like other Streamlit charts. Margins on a side that carries a
+  title, legend, or bottom-anchored `dataZoom`/`visualMap`/`timeline` are left to ECharts so those
+  components aren't clipped.
 - **Dark / light mode** — the chart re-themes automatically when the user toggles the theme
   (via ECharts' `darkMode` plus themed colors), with no Python rerun required. Because an ECharts
   theme is fixed at `init` time, re-theming re-initializes the instance (see the tech spec), so a
@@ -330,6 +338,11 @@ ECharts may calculate additional coordinate ranges for one area; v1 reports only
 `selected[].data_indices` remains authoritative.
 
 Selection state is **read-only** and cannot be set through Session State (same as Plotly/Vega).
+The `EChartsState` envelope and its `selection` payload are attribute dictionaries, so both
+`event.selection.selected` and `event["selection"]["selected"]` work. The entries *inside*
+`selected` and `areas` are plain dicts read by key (`item["series_index"]`), matching
+`st.plotly_chart`'s `selection.points` — the shared attribute-dictionary wrapper descends into
+nested dicts but not into lists.
 
 > **Why not the `streamlit-echarts` `events=` + `JsCode` model?** The community component surfaces
 > interactions through a `dict` of ECharts event names → **JavaScript handler strings** (wrapped in
@@ -354,7 +367,7 @@ diagram). Therefore:
 #### Reruns & state persistence
 
 ECharts plays entry animations when a browser instance is initialized. During ordinary reruns, the
-frontend must keep the existing ECharts instance mounted and update it in place — `setOption` when
+frontend keeps the existing ECharts instance mounted and updates it in place — `setOption` when
 the option changed, `resize` when only dimensions changed — avoiding unnecessary re-initialization
 and repeated entry animations for the common "unrelated widget reran the app" case. Because ECharts
 fixes the **theme** and **renderer** at `init` time, a change to `theme` or `renderer` (e.g. a
@@ -362,13 +375,12 @@ light/dark toggle) cannot be applied via `setOption`; it instead requires dispos
 re-initializing the instance (see the tech spec and [Theming](#theming)), which is why those
 specific changes can briefly re-initialize and replay entry animations.
 
-If Streamlit truly unmounts and remounts the element, ECharts can be recreated from the
-declarative option object; in that case, entry animation may replay. Preserving browser-only
-figure state for display-only charts is not an MVP requirement, but implementation testing should
-verify common interactions such as fullscreen, tabs, expanders, and unrelated widget reruns. If
-those paths commonly remount display-only ECharts charts and produce visible animation replay, the
-implementation should compute a stable non-widget element ID for all ECharts charts, similar to
-Plotly's special-case behavior.
+If Streamlit does unmount and remount the element (for example, opening an expander that was
+collapsed on first render), ECharts is recreated from the declarative option object and the entry
+animation replays. Display-only charts deliberately keep no element ID and no browser-side state,
+so unlike `st.plotly_chart` they have nothing to restore — the declarative option is the whole
+state. Unrelated widget reruns and fullscreen toggles do not remount the chart, so those common
+paths are animation-free.
 
 When `on_select` is active, `st.echarts_chart` becomes a widget. In that mode, Streamlit computes
 a widget ID, persists the read-only selection state, and makes it available as the return value
@@ -380,12 +392,13 @@ clears ECharts' native `select`/`brush` state, the frontend **re-applies the vis
 each in-place option update and on remount, keeping the on-screen highlight in sync with the
 persisted state.
 
-Because there is no `selection_mode` parameter, the widget identity depends only on the option
-payload and `renderer` (plus `theme`/dimensions when no `key` is set). As with
-`st.plotly_chart`/`st.vega_lite_chart`, **any change to the chart's data or spec resets the
-selection state** without an explicit `key` (the widget is treated as a new element); pass a fixed
-`key` so the identity does not depend on the payload and the selection stays stable across data
-updates.
+Without a `key`, the widget identity is derived from the option payload plus `theme`, `renderer`,
+and the dimensions — so, as with `st.plotly_chart`/`st.vega_lite_chart`, **any change to the
+chart's data or spec resets the selection state** (the widget is treated as a new element). Pass a
+fixed `key` so the identity is the key plus `renderer` and the selection stays stable across data
+updates. `renderer` is the only parameter that stays in the identity alongside a `key` (taking the
+slot Vega-Lite gives `selection_mode`), so switching between `"canvas"` and `"svg"` resets the
+selection even for a keyed chart.
 
 #### Loading & error handling
 
@@ -393,9 +406,14 @@ updates.
   the chart area to avoid layout shift, consistent with other charts.
 - **Invalid spec** — if `spec` is not a dict (or convertible object) or is not
   JSON-serializable, `st.echarts_chart` raises a `StreamlitAPIException` with a clear message
-  (*Fail Fast, Fail Helpfully*). Unsupported `custom`, map/geo, and ECharts GL chart families are
-  rejected with similarly targeted errors. Runtime rendering errors from ECharts are surfaced as
-  a styled error message in the chart area rather than crashing the app.
+  (*Fail Fast, Fail Helpfully*). Unsupported `custom`, map/geo, and ECharts GL chart families,
+  detected JavaScript callbacks, non-finite numbers (`NaN`/`Infinity`), and a `dataset.source`
+  dataframe whose column labels collide once stringified are rejected with similarly targeted
+  errors. Note that `NaN`/`NaT` *inside* a `dataset.source` dataframe is converted to `null`
+  (ECharts' own "no value" marker) rather than rejected; only non-finite floats the user writes
+  directly into the option raise.
+- **Runtime errors** — rendering errors from ECharts are surfaced as a styled error message in the
+  chart area rather than crashing the app.
 
 ### Toolbar actions
 
@@ -405,7 +423,7 @@ Vega-Lite, and Mermaid):
 | Action | Description |
 |--------|-------------|
 | Fullscreen | Expand the chart to fullscreen. |
-| Download | Export a canvas-rendered chart as PNG or an SVG-rendered chart as SVG (ECharts `getDataURL`), using a timestamped filename. |
+| Download | Export a canvas-rendered chart as PNG or an SVG-rendered chart as SVG (ECharts `getDataURL`), using a timestamped filename. Because the themed chart background is transparent, PNG export composites the app background color so the file isn't transparent (unless the spec sets its own `backgroundColor`). |
 
 ECharts' own `toolbox` feature (if present in `spec`) is respected and rendered by ECharts.
 
@@ -526,10 +544,12 @@ st.echarts_chart(pie)
 
 - ECharts supports ARIA descriptions generated from the option (`spec["aria"] = {"enabled": True}`).
   Under `theme="streamlit"` (default), Streamlit enables this by default (when not already set) so
-  charts expose a description to screen readers. Consistent with the theme opt-out semantics,
-  `theme=None` does not inject an ARIA configuration, so ARIA is only enabled if the user sets it.
-- The chart container uses an appropriate `role`/`aria-label`, and the loading state uses
-  `aria-busy`, consistent with other Streamlit charts.
+  charts expose a description to screen readers. When ARIA is enabled, ECharts itself puts
+  `role="img"` and a generated `aria-label` (or the user's `aria.label.description`) on the chart
+  container. Consistent with the theme opt-out semantics, `theme=None` does not inject an ARIA
+  configuration, so ARIA — and therefore the generated label — is only present if the user sets it.
+- The chart container carries `role="img"` and uses `aria-busy` while rendering, consistent with
+  other Streamlit charts.
 - Toolbar buttons (fullscreen, download) have accessible labels.
 
 ## Tradeoffs

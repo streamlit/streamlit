@@ -109,9 +109,9 @@ class EChartsSelectionState(ReadOnlyAttributeDictionary):
     """
     The schema for the ECharts chart selection state.
 
-    The selection state is stored in a dictionary-like object that supports both
-    key and attribute notation. Selection states cannot be programmatically
-    changed or set through Session State.
+    The selection state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Selection states cannot be
+    programmatically changed or set through Session State.
 
     This state is derived from ECharts selection events and normalized into a
     stable snapshot. Exposed field names use ``snake_case``; ECharts values,
@@ -159,9 +159,9 @@ class EChartsState(ReadOnlyAttributeDictionary):
 
     To use this type in an annotation, import it from ``streamlit.typing``.
 
-    The event state is stored in a dictionary-like object that supports both
-    key and attribute notation. Event states cannot be programmatically
-    changed or set through Session State.
+    The event state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Event states cannot be
+    programmatically changed or set through Session State.
 
     Only selection events are supported at this time.
 
