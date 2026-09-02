@@ -62,11 +62,17 @@ interface PlotlySelectionEventWithSelections
  * Plotly's type definitions are incomplete, so we extend PlotDatum
  * with additional properties that exist at runtime.
  */
-interface PlotlySelectionPoint extends Omit<Plotly.PlotDatum, "data"> {
-  data: { legendgroup?: string }
+interface PlotlySelectionPoint extends Plotly.PlotDatum {
   fullData?: unknown
   pointIndices?: number[]
   legendgroup?: string
+}
+
+function getLegendGroup(data: unknown): string | undefined {
+  if (typeof data !== "object" || data === null) {
+    return undefined
+  }
+  return (data as { legendgroup?: string }).legendgroup || undefined
 }
 
 /**
@@ -244,7 +250,7 @@ export function handleSelection(
     points.forEach(function (point: PlotlySelectionPoint) {
       selectedPoints.push({
         ...point,
-        legendgroup: point.data.legendgroup || undefined,
+        legendgroup: getLegendGroup(point.data),
         // Remove data and full data as they have been deemed to be unnecessary data overhead
         data: undefined,
         fullData: undefined,
