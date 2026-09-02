@@ -462,7 +462,7 @@ class ScriptRunner:
                         event=ScriptRunnerEvent.SHUTDOWN,
                         client_state=client_state,
                     )
-                except BaseException:
+                except Exception:
                     if propagating_exception is None:
                         raise
                     _LOGGER.exception(

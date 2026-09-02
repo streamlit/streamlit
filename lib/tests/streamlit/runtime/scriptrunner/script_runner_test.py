@@ -273,6 +273,32 @@ class ScriptRunnerTest(unittest.TestCase):
         finally:
             scriptrunner._test_event_loop.close()
 
+    @parameterized.expand(
+        [
+            ("system_exit", SystemExit),
+            ("keyboard_interrupt", KeyboardInterrupt),
+        ]
+    )
+    def test_user_control_exception_emits_shutdown_once(
+        self, _name: str, exception_type: type[BaseException]
+    ):
+        """User control exceptions escape as primary errors after SHUTDOWN."""
+        scriptrunner = TestScriptRunner("not_a_script.py")
+        user_code = compile(
+            f"raise {exception_type.__name__}('user interrupt')",
+            scriptrunner._main_script_path,
+            "exec",
+        )
+        scriptrunner._script_cache.get_bytecode = MagicMock(return_value=user_code)
+
+        scriptrunner.start()
+        scriptrunner.join()
+
+        assert len(scriptrunner.script_thread_exceptions) == 1
+        assert type(scriptrunner.script_thread_exceptions[0]) is exception_type
+        assert str(scriptrunner.script_thread_exceptions[0]) == "user interrupt"
+        assert scriptrunner.events.count(ScriptRunnerEvent.SHUTDOWN) == 1
+
     def test_context_setup_failure_emits_shutdown_without_client_state(self):
         """Context setup failure emits SHUTDOWN without client state."""
         scriptrunner = TestScriptRunner("not_a_script.py")
@@ -292,7 +318,7 @@ class ScriptRunnerTest(unittest.TestCase):
             scriptrunner._test_event_loop.close()
 
     def test_shutdown_receiver_failure_does_not_mask_primary_exception(self):
-        """SHUTDOWN receiver failure does not replace an escaping runner error."""
+        """Receiver RuntimeError does not replace an escaping runner error."""
         scriptrunner = TestScriptRunner("not_a_script.py")
         primary_error = RuntimeError("primary failure")
         dispatch_error = RuntimeError("dispatch failure")
@@ -320,7 +346,7 @@ class ScriptRunnerTest(unittest.TestCase):
             scriptrunner._test_event_loop.close()
 
     def test_shutdown_receiver_failure_propagates_on_normal_termination(self):
-        """Receiver failure propagates when no runner error is active."""
+        """Receiver RuntimeError propagates when no runner error is active."""
         scriptrunner = TestScriptRunner("not_a_script.py")
         dispatch_error = RuntimeError("dispatch failure")
         scriptrunner.request_stop()
@@ -341,6 +367,32 @@ class ScriptRunnerTest(unittest.TestCase):
             assert scriptrunner.events.count(ScriptRunnerEvent.SHUTDOWN) == 1
         finally:
             scriptrunner._test_event_loop.close()
+
+    def test_shutdown_receiver_base_exception_replaces_primary_exception(self):
+        """A receiver BaseException follows normal propagation semantics."""
+
+        class ReceiverControlFlow(BaseException):
+            pass
+
+        scriptrunner = TestScriptRunner("not_a_script.py")
+        primary_error = RuntimeError("primary failure")
+        dispatch_error = ReceiverControlFlow("dispatch control flow")
+        scriptrunner._requests.on_scriptrunner_ready = MagicMock(
+            side_effect=primary_error
+        )
+
+        def fail_on_shutdown(
+            _sender: ScriptRunner | None, event: ScriptRunnerEvent, **_kwargs: Any
+        ) -> None:
+            if event == ScriptRunnerEvent.SHUTDOWN:
+                raise dispatch_error
+
+        scriptrunner.on_event.connect(fail_on_shutdown, weak=False)
+        scriptrunner.start()
+        scriptrunner.join()
+
+        assert scriptrunner.script_thread_exceptions == [dispatch_error]
+        assert scriptrunner.events.count(ScriptRunnerEvent.SHUTDOWN) == 1
 
     def test_shutdown_notification_follows_event_loop_detachment(self):
         """Receivers run after loop references are cleared."""
