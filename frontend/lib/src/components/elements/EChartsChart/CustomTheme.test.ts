@@ -280,12 +280,28 @@ describe("buildStreamlitEChartsTheme", () => {
 })
 
 describe("applyStreamlitOptionDefaults", () => {
-  it("returns the option untouched when theme is not 'streamlit'", () => {
-    const option = { series: [{ type: "bar", data: [1] }] }
+  it("skips visual defaults but still enables ARIA when theme is not 'streamlit'", () => {
+    const option = {
+      xAxis: {},
+      yAxis: {},
+      series: [{ type: "bar", data: [1] }],
+    }
     const result = applyStreamlitOptionDefaults(option, "")
 
-    expect(result).toBe(option)
-    expect(result.aria).toBeUndefined()
+    // theme=None opts out of visual styling only; the screen-reader
+    // description must not disappear along with it.
+    expect(result.aria).toEqual({ enabled: true })
+    expect(result.grid).toBeUndefined()
+    expect(result.series).toBe(option.series)
+  })
+
+  it("does not enable ARIA when the user explicitly disabled it and theme is None", () => {
+    const result = applyStreamlitOptionDefaults(
+      { aria: { enabled: false }, series: [] },
+      ""
+    )
+
+    expect(result.aria).toEqual({ enabled: false })
   })
 
   it("enables ARIA by default when the user hasn't set it", () => {

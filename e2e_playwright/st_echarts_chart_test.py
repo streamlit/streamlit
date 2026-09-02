@@ -35,9 +35,8 @@ _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 def _get_chart(page: Page, key: str) -> Locator:
     """Return the ECharts canvas/SVG container for the chart in the given container.
 
-    Display-only charts have no element id (and thus no ``st-key-`` class of
-    their own), so they are wrapped in ``st.container(key="c_<name>")`` in the
-    app script; ``key`` is that container key.
+    Charts targeted individually are wrapped in ``st.container(key="c_<name>")``
+    in the app script; ``key`` is that container key.
     """
     return get_element_by_key(page, key).get_by_test_id("stEChartsChart")
 
@@ -98,6 +97,8 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """A chart can be targeted via the st-key-<key> class from its key."""
     expect(get_element_by_key(app, "selection_chart")).to_be_visible()
+    # A key works for display-only charts too, not just selection widgets.
+    expect(get_element_by_key(app, "basic_bar")).to_be_visible()
 
 
 def test_unrelated_rerun_does_not_reset_display_chart(app: Page):

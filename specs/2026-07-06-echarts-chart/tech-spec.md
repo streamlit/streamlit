@@ -51,8 +51,8 @@ message EChartsChart {
   // Theme override; currently only "streamlit" or "" (None).
   string theme = 2;
 
-  // Widget/element ID. Populated only when selections are active
-  // (on_select != "ignore").
+  // Widget/element ID. Populated when selections are active
+  // (on_select != "ignore") or the user provided a key.
   string id = 3;
 
   // Field 4 is reserved for a future `selection_mode` (v1 activates selection
@@ -122,15 +122,19 @@ A new `EChartsMixin` added to `DeltaGenerator` (register in `delta_generator.py`
      conversion can be normalized before serialization, but arbitrary objects, callables,
      `JsCode`-like wrappers, and NaN/Infinity should raise a helpful `StreamlitAPIException`
      explaining that JS callbacks aren't supported natively in v1.
-4. **Proto assembly**: set `spec`, `theme`, and `renderer`. Only compute `id` and `form_id` when
-   `on_select` is active. In that mode, compute `id` via
-   `compute_and_register_element_id("echarts_chart", user_key=key,
-key_as_main_identity={"renderer"}, ..., spec=..., theme=..., renderer=..., width=...,
-height=...)`.
-   When no user key is provided, the normalized option payload should participate in the ID. When
-   `on_select="ignore"`, leave `id` empty and treat the chart as a display element. This follows
-   the Vega-Lite chart pattern; Plotly's always-compute-ID behavior is a special case for Plotly's
-   mutable browser-side figure state.
+4. **Proto assembly**: set `spec`, `theme`, and `renderer`. Set `form_id` only when `on_select` is
+   active. Compute `id` when `on_select` is active **or** the user provided a key, via
+   `compute_and_register_element_id("echarts_chart", user_key=key, key_as_main_identity=True, ...,
+   spec=..., theme=..., renderer=..., width=..., height=...)`.
+   With no user key, the normalized option payload, `theme`, `renderer`, and the dimensions all
+   participate, so any change is a new element and resets the selection. With a key, the key is
+   the whole identity: `theme` and `renderer` are excluded because both merely force a
+   dispose/re-init that the frontend recovers from by re-applying the persisted selection.
+   An unkeyed display-only chart leaves `id` empty and stays a pure display element (the
+   Vega-Lite fast path); a keyed one still gets an ID, which the frontend needs both for the
+   `st-key-<key>` CSS class and as a stable identity that prevents remount-driven animation
+   replay. Plotly computes an ID unconditionally, which is a special case for its mutable
+   browser-side figure state.
 5. **Selections**: when activated, register a widget with an `EChartsChartSelectionSerde` (JSON
    string ⇄ `EChartsState` via `AttributeDictionary`), and return `widget_state.value`. Otherwise
    `_enqueue` and return the
@@ -151,7 +155,9 @@ class EChartsState(TypedDict, total=False):
 The serde's `deserialize(None)` returns the empty selection
 (`{"selection": {"selected": [], "areas": []}}`). Each `selected` entry always contains
 `series_index`, nullable `series_id`/`series_name`, `data_type`, and `data_indices`. Each `areas`
-entry always contains `brush_index`, `brush_type`, and nullable `coord_range`.
+entry always contains `brush_index`, `brush_type`, and a non-null `coord_range` — regions ECharts
+only describes in pixel space are omitted from the public payload (they remain in the privately
+persisted brush geometry so the overlay still restores).
 
 No theme work happens in Python (per repo rule: _theming/layout is computed in the frontend_).
 The backend only forwards the `theme` string.
@@ -252,14 +258,15 @@ colors.borderColor`, text color), and per-axis defaults
 
 Two layers, because the ECharts init theme doesn't reliably cover everything. **Both layers run
 only when `theme="streamlit"`**; when `theme=None` neither is applied, so the user's `spec` is
-left untouched (matching the product spec's opt-out semantics, including ARIA only being enabled if
-the user sets it):
+left untouched, with one exception: `aria.enabled` is filled regardless of the theme, because
+`theme=None` is an opt-out of *visual* styling and should not silently drop the screen-reader
+description (see the product spec's Accessibility section).
 
 1. `buildStreamlitEChartsTheme(emotionTheme)` → the object passed to `echarts.init`.
 2. `applyStreamlitOptionDefaults(option, emotionTheme)` → a light, non-destructive pass that fills
-   a few option-level gaps themes miss (e.g. `grid.containLabel` default, `visualMap`/`dataZoom`
-   colors, and `aria.enabled` — see the product spec's Accessibility section) **only when the user
-   hasn't set them**.
+   a few option-level gaps themes miss (`grid.containLabel` default, `visualMap`/`dataZoom`
+   colors, and `aria.enabled`) **only when the user hasn't set them**. Everything but
+   `aria.enabled` is skipped when the theme is not `"streamlit"`.
 
 Precedence: the user's explicit `spec` values must always win. The init theme applies
 _underneath_ the option passed to `setOption`, and `applyStreamlitOptionDefaults` only writes keys
@@ -363,8 +370,12 @@ contract as `VegaLiteState`/`PlotlyState`).
   `dataset.source` dataframe → records/dimensions conversion, non-serializable/JS-callback input
   raises a helpful error, arbitrary objects are not silently stringified, `theme`/`renderer`/
   `on_select` validation, proto fields set correctly (incl. `renderer`), selection serde
-  round-trip, no ID for display-only charts, and active-selection ID changes when `renderer`/spec
-  change (and is stable with a `key`).
+  round-trip, no ID for unkeyed display-only charts but an ID for keyed ones (including the
+  duplicate-key error), unkeyed IDs change when `renderer`/`theme`/spec change while keyed IDs
+  stay stable across all three, a warning when `on_select` is active but the spec enables no
+  selection (and none when it does, including via `toolbox` brush or a timeline variant), and
+  pyecharts `InitOpts` sizing (library defaults ignored, `"100%"` → stretch, unsupported units
+  warn and fall back).
 - **Typing tests** (`lib/tests/streamlit/typing/echarts_chart_types.py`): `assert_type` that
   `on_select="ignore"` → `DeltaGenerator` and `on_select="rerun"` → `EChartsState`.
 - **Frontend unit tests** (`EChartsChart.test.tsx`, `CustomTheme.test.ts`,

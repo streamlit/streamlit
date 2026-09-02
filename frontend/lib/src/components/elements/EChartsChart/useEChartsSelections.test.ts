@@ -808,12 +808,50 @@ describe("useEChartsSelections", () => {
           brush_type: "rect",
           coord_range: zeroHitArea.coordRange,
         },
-        {
-          brush_index: 2,
-          brush_type: "rect",
-          coord_range: null,
-        },
+        // The pixel-only area of brush 2 is deliberately absent: without a
+        // coordRange there is nothing an app could map back to its data.
       ]
+    )
+  })
+
+  it("keeps a pixel-only brush area out of the public payload but still restores it", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+    const chart = createFakeChart()
+    const pixelOnly = createBrushSelection({
+      brushId: "brush-0",
+      brushIndex: 0,
+      areas: [
+        {
+          brushType: "rect",
+          range: [
+            [10, 20],
+            [30, 40],
+          ],
+        },
+      ],
+    })
+
+    act(() => {
+      result.current.bindSelections(chart)
+      chart.trigger("brushSelected", { batch: [pixelOnly] })
+      chart.trigger("brushEnd", {
+        brushId: pixelOnly.brushId,
+        areas: pixelOnly.areas,
+      })
+    })
+    flush()
+
+    // The public payload stays empty, so there is no rerun for a region the
+    // app could not interpret anyway.
+    expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+    // The geometry is still persisted privately, so the on-screen overlay
+    // survives a rerun even though the app never sees the area.
+    expect(widgetMgr.setElementState).toHaveBeenCalledWith(
+      "chart-id",
+      "brushSelection",
+      [pixelOnly]
     )
   })
 

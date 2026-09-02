@@ -14,12 +14,10 @@
 
 """E2E app script for st.echarts_chart.
 
-Display-only ECharts charts currently do not have a stable element id (the id is
-only computed when selections are active), so they do not emit a ``st-key-<key>``
-CSS class. To keep test locators stable, charts that are targeted individually
-below are wrapped in ``st.container(key=...)`` (the recommended fallback for
-elements that are hard to target). Widget charts (``on_select="rerun"``) get a
-real id and are targeted via their own ``key``.
+Charts that are targeted individually below are wrapped in
+``st.container(key=...)`` so a single locator reaches the chart together with
+the surrounding element, and so the locators stay stable for charts rendered
+without a ``key`` of their own.
 """
 
 from __future__ import annotations

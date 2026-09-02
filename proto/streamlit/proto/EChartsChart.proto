@@ -24,8 +24,8 @@ message EChartsChart {
   // are accepted.
   string theme = 2;
 
-  // The unique element ID of this chart. Populated only when selections are
-  // activated (on_select != "ignore").
+  // The unique element ID of this chart. Populated when selections are
+  // activated (on_select != "ignore") or the user provided a key.
   string id = 3;
 
   // Field 4 is reserved for a future `selection_mode` (v1 activates selection

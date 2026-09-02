@@ -511,41 +511,49 @@ function buildDefaultGrid(
  * Non-destructively fill a small number of option-level gaps that the init
  * theme cannot cover (``aria.enabled`` and the ``grid`` layout).
  *
- * This only runs under ``theme="streamlit"`` and only writes keys the user has
- * not set, so explicit user values (e.g. ``series[0].itemStyle.color`` or a
- * top-level ``color``) always survive. For security, it never injects a
- * tooltip/label ``formatter`` and never changes ``tooltip.renderMode`` — ECharts'
- * default escaping of tooltip/label values is relied upon.
+ * ``aria.enabled`` is filled regardless of the theme: ``theme=None`` opts out of
+ * Streamlit's *visual* styling, and dropping the screen-reader description along
+ * with it would make an accessibility regression a side effect of a styling
+ * choice. The ``grid`` layout is purely visual, so it only runs under
+ * ``theme="streamlit"``.
+ *
+ * Only keys the user has not set are written, so explicit user values (e.g.
+ * ``series[0].itemStyle.color`` or a top-level ``color``) always survive. For
+ * security, it never injects a tooltip/label ``formatter`` and never changes
+ * ``tooltip.renderMode`` — ECharts' default escaping of tooltip/label values is
+ * relied upon.
  *
  * Timeline specs nest the chart under ``baseOption``, which is where ECharts
  * reads ``aria`` and ``grid`` from, so the defaults are filled in there instead.
  *
  * @param option The parsed ECharts option object.
  * @param themeStr The chart's theme string (``"streamlit"`` or ``""``).
- * @returns The option with defaults filled (a new object) or the untouched
- *   option when ``themeStr`` is not ``"streamlit"``.
+ * @returns The option with defaults filled (a new object).
  */
 export function applyStreamlitOptionDefaults(
   option: EChartsOptionObject,
   themeStr: string
 ): EChartsOptionObject {
-  if (themeStr !== STREAMLIT_THEME) {
-    // theme=None: leave the user's options completely untouched.
-    return option
-  }
+  const applyVisualDefaults = themeStr === STREAMLIT_THEME
 
   const baseOption = option.baseOption
   if (isPlainObject(baseOption)) {
     return {
       ...option,
-      baseOption: fillOptionDefaults(baseOption as EChartsOptionObject),
+      baseOption: fillOptionDefaults(
+        baseOption as EChartsOptionObject,
+        applyVisualDefaults
+      ),
     }
   }
-  return fillOptionDefaults(option)
+  return fillOptionDefaults(option, applyVisualDefaults)
 }
 
 /** Fill the ``aria`` and ``grid`` defaults on a single (non-timeline) option. */
-function fillOptionDefaults(option: EChartsOptionObject): EChartsOptionObject {
+function fillOptionDefaults(
+  option: EChartsOptionObject,
+  applyVisualDefaults: boolean
+): EChartsOptionObject {
   const result: EChartsOptionObject = { ...option }
 
   // Enable ARIA descriptions for screen readers when the user hasn't opted out.
@@ -557,6 +565,10 @@ function fillOptionDefaults(option: EChartsOptionObject): EChartsOptionObject {
     if (!("enabled" in ariaObject)) {
       result.aria = { ...ariaObject, enabled: true }
     }
+  }
+
+  if (!applyVisualDefaults) {
+    return result
   }
 
   // For cartesian charts, default the grid so the plot fills its container and

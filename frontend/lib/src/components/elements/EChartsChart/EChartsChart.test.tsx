@@ -250,9 +250,19 @@ describe("EChartsChart", () => {
     render(<Wrapper element={createElement({ theme: "" })} />)
 
     expect(mockInit.mock.calls[0][1]).toBeUndefined()
-    // With theme=None the option is left untouched (no aria default).
+    // theme=None skips visual styling but keeps the accessibility default.
     const [appliedOption] = mockChart.setOption.mock.calls[0]
-    expect(appliedOption.aria).toBeUndefined()
+    expect(appliedOption.aria).toEqual({ enabled: true })
+    expect(appliedOption.grid).toBeUndefined()
+  })
+
+  it("leaves the chart container's role to ECharts", () => {
+    render(<Wrapper element={createElement()} />)
+
+    // ECharts sets role="img" and an aria-label on this same element when
+    // aria.enabled is on, so declaring the role here would strand an
+    // unlabeled image for users who opt out of ARIA.
+    expect(screen.getByTestId("stEChartsChart")).not.toHaveAttribute("role")
   })
 
   it("disposes and re-initializes the instance when the renderer changes", () => {

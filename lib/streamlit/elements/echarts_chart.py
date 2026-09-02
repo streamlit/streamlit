@@ -46,6 +46,7 @@ from streamlit.errors import (
     StreamlitInvalidParameterTypeError,
     StreamlitValueError,
 )
+from streamlit.logger import get_logger
 from streamlit.proto.EChartsChart_pb2 import EChartsChart as EChartsChartProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -58,10 +59,18 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
+_LOGGER: Final = get_logger(__name__)
+
 # ECharts option objects have no intrinsic dimensions, so "content" width/height
 # resolve to these fixed defaults (unless a pyecharts chart exposes its own).
 _DEFAULT_CONTENT_WIDTH: Final = 700
 _DEFAULT_CONTENT_HEIGHT: Final = 400
+
+# pyecharts always populates ``InitOpts`` with these values, even when the author
+# never chose a size. Honoring them would make a pyecharts chart render at a
+# different size than an equivalent dict spec, so they are treated as "unset".
+_PYECHARTS_DEFAULT_WIDTH: Final = "900px"
+_PYECHARTS_DEFAULT_HEIGHT: Final = "500px"
 
 # Series types provided by the separate ECharts GL extension, which is not
 # bundled. ECharts renders an empty chart for these and only logs to the browser
@@ -132,8 +141,9 @@ class EChartsSelectionState(ReadOnlyAttributeDictionary):
 
     areas : list[dict[str, Any]]
         The active brush regions. Each entry contains ``brush_index``,
-        ``brush_type``, and ``coord_range``. ``coord_range`` is ``None`` when
-        ECharts doesn't provide data-space geometry.
+        ``brush_type``, and ``coord_range``. Regions that ECharts only
+        describes in pixel space are omitted, since their geometry can't be
+        mapped back to your data.
 
     """
 
@@ -325,6 +335,32 @@ def _iter_series(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
                     yield entry
 
 
+def _enables_selection(option: dict[str, Any]) -> bool:
+    """Return whether the spec configures a selection ECharts can emit.
+
+    Selection is opt-in through the user's own option keys: ``selectedMode`` on
+    a series for point selection, or a ``brush`` component for region selection.
+    A ``toolbox`` brush feature counts too, since it drives the same brush
+    events. Only ``series`` entries are inspected, so ``legend.selectedMode``
+    (a different feature that happens to share the name) is not mistaken for
+    data selection.
+    """
+    for variant in _iter_option_variants(option):
+        if "brush" in variant:
+            return True
+        toolbox = variant.get("toolbox")
+        # ECharts accepts either a single toolbox or a list of them.
+        for entry in toolbox if isinstance(toolbox, list) else [toolbox]:
+            if (
+                isinstance(entry, dict)
+                and isinstance(feature := entry.get("feature"), dict)
+                and "brush" in feature
+            ):
+                return True
+
+    return any(series.get("selectedMode") for series in _iter_series(option))
+
+
 def _validate_supported_features(option: dict[str, Any]) -> None:
     """Reject option features that v1 cannot render.
 
@@ -434,30 +470,61 @@ def _serialize_option(option: dict[str, Any]) -> str:
         ) from ex
 
 
-def _extract_pixel_dimension(value: Any) -> int | None:
-    """Return a positive pixel dimension from an int/float or a ``"<n>px"`` string."""
+def _extract_chart_dimension(
+    value: Any, library_default: str, parameter: str
+) -> int | Literal["stretch"] | None:
+    """Resolve a pyecharts chart's own ``InitOpts`` width or height.
+
+    Returns a positive pixel size, ``"stretch"`` for a full-width/height value,
+    or ``None`` when Streamlit's own content default should be used instead.
+    """
     if isinstance(value, bool):
         return None
-    if isinstance(value, (int, float)) and value > 0:
-        return int(value)
-    if isinstance(value, str):
-        match = re.match(r"^\s*(\d+(?:\.\d+)?)\s*px\s*$", value)
-        if match:
-            return int(float(match.group(1)))
+    if isinstance(value, (int, float)):
+        return int(value) if value > 0 else None
+    if not isinstance(value, str):
+        return None
+
+    dimension = value.strip()
+    if dimension == library_default:
+        # pyecharts' own default rather than a size the author chose.
+        return None
+    if dimension == "100%":
+        return "stretch"
+
+    match = re.match(r"^\s*(\d+(?:\.\d+)?)\s*px\s*$", dimension)
+    if match:
+        pixels = int(float(match.group(1)))
+        return pixels if pixels > 0 else None
+
+    # Any other CSS unit (em, vh, a non-100 percentage, ...) has no meaningful
+    # translation to Streamlit's sizing, and pyecharts may have set it without
+    # the user's involvement, so fall back to the default instead of raising.
+    _LOGGER.warning(
+        "The pyecharts chart passed to `st.echarts_chart` sets an unsupported "
+        "`%s` of %r. Only pixel values and `100%%` are supported, so Streamlit's "
+        "default is used instead. Set the `%s` parameter of `st.echarts_chart` "
+        "to size the chart explicitly.",
+        parameter,
+        dimension,
+        parameter,
+    )
     return None
 
 
 def _resolve_content_width(width: Width, spec: Any) -> Width:
     """Resolve "content" width, preferring a pyecharts chart's own width.
 
-    For content width, we use a pyecharts chart's own ``width`` (e.g.
-    ``"900px"``) when available; a raw ECharts spec has no intrinsic width, so
-    it resolves to a fixed default of 700 pixels.
+    For content width, we use a pyecharts chart's explicitly chosen ``width``
+    (e.g. ``"640px"``) when there is one; a raw ECharts spec has no intrinsic
+    width, so it resolves to a fixed default of 700 pixels.
     """
     if width != "content":
         return width
 
-    dimension = _extract_pixel_dimension(getattr(spec, "width", None))
+    dimension = _extract_chart_dimension(
+        getattr(spec, "width", None), _PYECHARTS_DEFAULT_WIDTH, "width"
+    )
     if dimension is not None:
         return dimension
 
@@ -467,14 +534,16 @@ def _resolve_content_width(width: Width, spec: Any) -> Width:
 def _resolve_content_height(height: Height, spec: Any) -> Height:
     """Resolve "content" height, preferring a pyecharts chart's own height.
 
-    For content height, we use a pyecharts chart's own ``height`` (e.g.
-    ``"500px"``) when available; a raw ECharts spec has no intrinsic height, so
-    it resolves to a fixed default of 400 pixels.
+    For content height, we use a pyecharts chart's explicitly chosen ``height``
+    (e.g. ``"360px"``) when there is one; a raw ECharts spec has no intrinsic
+    height, so it resolves to a fixed default of 400 pixels.
     """
     if height != "content":
         return height
 
-    dimension = _extract_pixel_dimension(getattr(spec, "height", None))
+    dimension = _extract_chart_dimension(
+        getattr(spec, "height", None), _PYECHARTS_DEFAULT_HEIGHT, "height"
+    )
     if dimension is not None:
         return dimension
 
@@ -567,10 +636,11 @@ class EChartsMixin:
             - ``"stretch"`` (default): The width of the element matches the
               width of the parent container.
             - ``"content"``: The width of the element matches the width of its
-              content, but doesn't exceed the width of the parent container. For
-              ``pyecharts`` charts, the chart's own width is used when available;
-              otherwise, a fixed default of 700 pixels is used because an
-              ECharts spec has no intrinsic width.
+              content, but doesn't exceed the width of the parent container.
+              Because an ECharts spec has no intrinsic width, this is a fixed
+              default of 700 pixels, unless a ``pyecharts`` chart sets its own
+              width through ``InitOpts`` (``pyecharts``' library default is
+              ignored, and ``"100%"`` is treated as ``"stretch"``).
             - An integer specifying the width in pixels: The element has a
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the element matches the width
@@ -580,9 +650,11 @@ class EChartsMixin:
             The height of the chart element. This can be one of the following:
 
             - ``"content"`` (default): The height of the element matches the
-              height of its content. For ``pyecharts`` charts, the chart's own
-              height is used when available; otherwise, a fixed default of 400
-              pixels is used because an ECharts spec has no intrinsic height.
+              height of its content. Because an ECharts spec has no intrinsic
+              height, this is a fixed default of 400 pixels, unless a
+              ``pyecharts`` chart sets its own height through ``InitOpts``
+              (``pyecharts``' library default is ignored, and ``"100%"`` is
+              treated as ``"stretch"``).
             - ``"stretch"``: The height of the element matches the height of
               its content or the height of the parent container, whichever is
               larger. If the element is not in a parent container, the height
@@ -594,11 +666,12 @@ class EChartsMixin:
             The theme of the chart. If ``theme`` is ``"streamlit"`` (default),
             Streamlit uses its own design default. If ``theme`` is ``None``,
             Streamlit falls back to ECharts' built-in default theme and leaves
-            your ``spec`` untouched, except that display-only charts (when
-            ``on_select="ignore"``) still reset the series hover cursor to
-            ``"default"`` so the chart does not look clickable. Set
-            ``series.cursor`` yourself to override that cursor default; it is
-            independent of theming and does not rewrite any other option keys.
+            your ``spec``'s styling untouched. Two defaults are independent of
+            ``theme`` and still apply: accessibility (``aria.enabled``, so the
+            chart keeps a screen-reader description) and, for display-only
+            charts (``on_select="ignore"``), the series hover cursor, which is
+            reset to ``"default"`` so the chart does not look clickable. Set
+            ``aria`` or ``series.cursor`` yourself to override either.
 
             The ``"streamlit"`` theme can be partially customized through the
             configuration options ``theme.chartCategoricalColors`` and
@@ -607,20 +680,19 @@ class EChartsMixin:
 
         key : str, int, or None
             An optional string to use for giving this element a stable
-            identity. ``key`` only affects identity when selections are
-            activated (``on_select`` is ``"rerun"`` or a callback). Display-only
-            charts (``on_select="ignore"``) do not compute an element ID, so
-            ``key`` is ignored.
+            identity. If this is ``None`` (default), the element's identity
+            will be determined based on the values of the other parameters,
+            so any change to the chart resets its selection.
 
             If selections are activated and ``key`` is provided, Streamlit
             will register the key in Session State to store the selection
-            state. The selection state is read-only. For more details, see
-            `Widget behavior
+            state, and the selection survives changes to your ``spec``,
+            ``theme``, and ``renderer``. The selection state is read-only. For
+            more details, see `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
-            Additionally, when selections are activated and ``key`` is
-            provided, it is also emitted as a CSS class name prefixed with
-            ``st-key-``.
+            Additionally, if ``key`` is provided, it will be used as a CSS
+            class name prefixed with ``st-key-``.
 
         on_select : "ignore", "rerun", or callable
             How the chart should respond to user selection events. This
@@ -649,8 +721,8 @@ class EChartsMixin:
             Selected data is grouped by series in ``EChartsState.selection.selected``,
             and brush geometry is returned in ``EChartsState.selection.areas``.
             Selections are re-applied visually after reruns. If your ``spec``
-            doesn't enable any selection, no selection is returned even when
-            ``on_select`` is active.
+            enables neither, the chart still renders but never returns a
+            selection, and Streamlit logs a warning.
 
         renderer : "canvas" or "svg"
             The renderer passed to ECharts. This can be one of the following:
@@ -763,6 +835,18 @@ class EChartsMixin:
 
         normalized_option = _normalize_spec(spec)
 
+        if is_selection_activated and not _enables_selection(normalized_option):
+            # The chart still renders, but it can never return a selection, and
+            # a chart that silently swallows clicks is hard to debug from the
+            # app alone.
+            _LOGGER.warning(
+                "`st.echarts_chart` has selections activated through `on_select`, "
+                "but the provided spec doesn't enable any: no series sets "
+                "`selectedMode` and there is no `brush` component. The chart will "
+                "render, but it will never return a selection.",
+                stack_info=True,
+            )
+
         echarts_chart_proto = EChartsChartProto()
         echarts_chart_proto.spec = _serialize_option(normalized_option)
         echarts_chart_proto.theme = theme or ""
@@ -780,18 +864,25 @@ class EChartsMixin:
         ctx = get_script_run_ctx()
 
         if is_selection_activated:
-            # Selections are activated, treat the ECharts chart as a widget. The
-            # element ID is only computed in this case (following the Vega-Lite
-            # pattern); display-only charts intentionally have no ID.
+            # Selections are activated, treat the ECharts chart as a widget.
             echarts_chart_proto.form_id = current_form_id(self.dg)
+
+        # An element ID is computed for selection widgets and for any chart the
+        # user gave a key. The key case is not only cosmetic: the frontend
+        # derives the ``st-key-<key>`` CSS class from the ID and uses the ID as
+        # a stable identity across reruns, which keeps ECharts from remounting
+        # and replaying its entry animation. Unkeyed display-only charts skip
+        # the ID entirely so they stay off the widget path.
+        if is_selection_activated or key is not None:
             echarts_chart_proto.id = compute_and_register_element_id(
                 "echarts_chart",
                 user_key=key,
-                # With a key, the identity stays stable across data changes; only
-                # the selection-relevant params participate. Without a key, all
-                # params (including the normalized spec) participate, so a data
-                # change resets the selection.
-                key_as_main_identity={"renderer"},
+                # A key is the whole identity, so a keyed chart keeps its
+                # selection across data, theme, and renderer changes (the
+                # frontend re-applies the selection after a re-init). Without a
+                # key, every rendering parameter participates, so any change
+                # makes this a new element and resets the selection.
+                key_as_main_identity=True,
                 dg=self.dg,
                 spec=echarts_chart_proto.spec,
                 theme=theme,
@@ -800,27 +891,26 @@ class EChartsMixin:
                 height=height,
             )
 
-            serde = EChartsChartSelectionSerde()
+        layout_config = LayoutConfig(width=final_width, height=final_height)
 
-            widget_state = register_widget(
-                echarts_chart_proto.id,
-                on_change_handler=on_select if callable(on_select) else None,
-                deserializer=serde.deserialize,
-                serializer=serde.serialize,
-                ctx=ctx,
-                value_type="string_value",
-            )
-
-            layout_config = LayoutConfig(width=final_width, height=final_height)
-            self.dg._enqueue(
+        if not is_selection_activated:
+            return self.dg._enqueue(
                 "echarts_chart", echarts_chart_proto, layout_config=layout_config
             )
-            return widget_state.value
 
-        layout_config = LayoutConfig(width=final_width, height=final_height)
-        return self.dg._enqueue(
+        serde = EChartsChartSelectionSerde()
+        widget_state = register_widget(
+            echarts_chart_proto.id,
+            on_change_handler=on_select if callable(on_select) else None,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
+            ctx=ctx,
+            value_type="string_value",
+        )
+        self.dg._enqueue(
             "echarts_chart", echarts_chart_proto, layout_config=layout_config
         )
+        return widget_state.value
 
     @property
     def dg(self) -> DeltaGenerator:

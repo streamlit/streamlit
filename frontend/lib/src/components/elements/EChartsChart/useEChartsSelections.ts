@@ -412,6 +412,14 @@ function buildSelectedGroups(
     })
 }
 
+/**
+ * Build the public ``areas`` payload from the brushed regions.
+ *
+ * Regions ECharts only describes in pixel space are left out: without a
+ * ``coordRange`` there is nothing an app can map back to its data. They stay in
+ * the privately persisted brush selection, so the on-screen overlay is still
+ * restored after a rerun.
+ */
 function buildAreas(
   brushSelection: BrushSelection[]
 ): Array<Record<string, unknown>> {
@@ -419,11 +427,15 @@ function buildAreas(
     .sort((left, right) => left.brushIndex - right.brushIndex)
     .flatMap(brush =>
       (brush.areas ?? [])
-        .filter(area => typeof area.brushType === "string")
+        .filter(
+          area =>
+            typeof area.brushType === "string" &&
+            Array.isArray(area.coordRange)
+        )
         .map(area => ({
           brush_index: brush.brushIndex,
           brush_type: area.brushType,
-          coord_range: Array.isArray(area.coordRange) ? area.coordRange : null,
+          coord_range: area.coordRange,
         }))
     )
 }

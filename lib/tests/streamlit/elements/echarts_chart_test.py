@@ -23,6 +23,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements import echarts_chart as echarts_chart_module
 from streamlit.elements.echarts_chart import (
     EChartsChartSelectionSerde,
     EChartsMixin,
@@ -35,6 +36,7 @@ from streamlit.elements.echarts_chart import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitDuplicateElementKey,
     StreamlitInvalidHeightError,
     StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
@@ -42,6 +44,8 @@ from streamlit.errors import (
 )
 from streamlit.proto.EChartsChart_pb2 import EChartsChart as EChartsChartProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+
+_ECHARTS_LOGGER = echarts_chart_module._LOGGER.name
 
 _BASIC_SPEC: dict[str, Any] = {
     "xAxis": {"type": "category", "data": ["A", "B", "C"]},
@@ -366,10 +370,46 @@ class EChartsChartTest(DeltaGeneratorTestCase):
             st.echarts_chart({"series": [{"data": [value]}]})
 
     def test_no_id_for_display_only(self):
-        """Display-only charts (on_select='ignore') have no element ID."""
+        """Display-only charts without a key have no element ID."""
         st.echarts_chart(_BASIC_SPEC)
         el = self.get_delta_from_queue().new_element.echarts_chart
         assert el.id == ""
+
+    def test_id_for_display_only_with_key(self):
+        """A key gives a display-only chart an ID (for st-key-* and identity)."""
+        st.echarts_chart(_BASIC_SPEC, key="styled_chart")
+        el = self.get_delta_from_queue().new_element.echarts_chart
+
+        assert el.id.endswith("styled_chart")
+        # A display-only chart is still not a form widget.
+        assert el.form_id == ""
+
+    def test_display_only_key_id_stable_across_spec_changes(self):
+        """A keyed display-only chart keeps its ID when the spec changes.
+
+        The frontend uses the ID as the element identity, so a stable ID is what
+        keeps ECharts from remounting and replaying its entry animation.
+        """
+        st.echarts_chart(_BASIC_SPEC, key="stable_display")
+        id_a = self.get_delta_from_queue().new_element.echarts_chart.id
+
+        self.script_run_ctx.shared.reset()
+        self.clear_queue()
+
+        st.echarts_chart(
+            {**_BASIC_SPEC, "series": [{"type": "bar", "data": [1, 2, 3]}]},
+            key="stable_display",
+        )
+        id_b = self.get_delta_from_queue().new_element.echarts_chart.id
+
+        assert id_a == id_b
+
+    def test_duplicate_key_on_display_only_charts_raises(self):
+        """Two display-only charts cannot share a key."""
+        st.echarts_chart(_BASIC_SPEC, key="duplicated")
+
+        with pytest.raises(StreamlitDuplicateElementKey):
+            st.echarts_chart(_BASIC_SPEC, key="duplicated")
 
     def test_id_present_when_selection_activated(self):
         """A widget ID is computed when selections are activated."""
@@ -386,6 +426,36 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         id_svg = self.get_delta_from_queue().new_element.echarts_chart.id
 
         assert id_canvas != id_svg
+
+    def test_id_changes_when_theme_changes(self):
+        """The widget ID changes when theme changes (no key)."""
+        st.echarts_chart(_BASIC_SPEC, on_select="rerun", theme="streamlit")
+        id_themed = self.get_delta_from_queue().new_element.echarts_chart.id
+
+        st.echarts_chart(_BASIC_SPEC, on_select="rerun", theme=None)
+        id_unthemed = self.get_delta_from_queue().new_element.echarts_chart.id
+
+        assert id_themed != id_unthemed
+
+    @parameterized.expand([("renderer", "svg"), ("theme", None)])
+    def test_id_stable_with_key_across_render_params(self, parameter, other_value):
+        """With a key, neither renderer nor theme participates in the identity.
+
+        Both force a dispose/re-init in the frontend, which re-applies the
+        persisted selection, so neither should be treated as a new widget.
+        """
+        st.echarts_chart(_BASIC_SPEC, on_select="rerun", key="keyed")
+        id_a = self.get_delta_from_queue().new_element.echarts_chart.id
+
+        self.script_run_ctx.shared.reset()
+        self.clear_queue()
+
+        st.echarts_chart(
+            _BASIC_SPEC, on_select="rerun", key="keyed", **{parameter: other_value}
+        )
+        id_b = self.get_delta_from_queue().new_element.echarts_chart.id
+
+        assert id_a == id_b
 
     def test_id_changes_when_spec_changes_without_key(self):
         """The widget ID changes when the option data changes and no key is set."""
@@ -451,6 +521,65 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.width_config.pixel_width == 820
         assert el.height_config.pixel_height == 480
+
+    def test_warns_when_selection_activated_without_spec_selection(self):
+        """A spec that can never emit a selection is logged, not raised.
+
+        Raising would crash apps whose ``series`` list is built from data and is
+        momentarily empty, so this stays a console-only diagnostic.
+        """
+        with self.assertLogs(_ECHARTS_LOGGER, level="WARNING") as logs:
+            st.echarts_chart(_BASIC_SPEC, on_select="rerun")
+
+        assert "doesn't enable any" in logs.output[0]
+        # The chart still renders as a widget.
+        assert self.get_delta_from_queue().new_element.echarts_chart.id != ""
+
+    @parameterized.expand(
+        [
+            (
+                "series_selected_mode",
+                {"series": [{"type": "bar", "selectedMode": "multiple"}]},
+            ),
+            ("brush_component", {"brush": {"toolbox": ["rect"]}, "series": []}),
+            (
+                "toolbox_brush_feature",
+                {"toolbox": {"feature": {"brush": {}}}, "series": []},
+            ),
+            (
+                "timeline_variant",
+                {
+                    "baseOption": {"timeline": {"data": ["2015"]}},
+                    "options": [
+                        {"series": [{"type": "bar", "selectedMode": "single"}]}
+                    ],
+                },
+            ),
+        ]
+    )
+    def test_no_warning_when_spec_enables_selection(self, _name, spec):
+        """Specs that do enable a selection don't log a warning."""
+        with patch.object(echarts_chart_module._LOGGER, "warning") as mock_warning:
+            st.echarts_chart(spec, on_select="rerun")
+
+        mock_warning.assert_not_called()
+
+    def test_legend_selected_mode_is_not_data_selection(self):
+        """``legend.selectedMode`` is a different feature and doesn't count."""
+        with self.assertLogs(_ECHARTS_LOGGER, level="WARNING") as logs:
+            st.echarts_chart(
+                {"legend": {"selectedMode": "multiple"}, "series": [{"type": "bar"}]},
+                on_select="rerun",
+            )
+
+        assert "doesn't enable any" in logs.output[0]
+
+    def test_no_warning_for_display_only_chart_without_selection(self):
+        """A display-only chart never warns about missing selection config."""
+        with patch.object(echarts_chart_module._LOGGER, "warning") as mock_warning:
+            st.echarts_chart(_BASIC_SPEC)
+
+        mock_warning.assert_not_called()
 
     @parameterized.expand([("invalid",), (0,), (-100,)])
     def test_width_validation_errors(self, invalid_value):
@@ -608,6 +737,36 @@ def test_resolve_content_width_uses_pyecharts_width() -> None:
     """A pyecharts chart's own width is used for content width."""
     chart = _FakeEChart(_BASIC_SPEC, width="640px")
     assert _resolve_content_width("content", spec=chart) == 640
+
+
+def test_resolve_content_ignores_pyecharts_library_defaults() -> None:
+    """pyecharts' own InitOpts defaults are not treated as an author's choice.
+
+    pyecharts always fills these in, so honoring them would size a pyecharts
+    chart differently from an equivalent dict spec.
+    """
+    chart = _FakeEChart(_BASIC_SPEC, width="900px", height="500px")
+
+    assert _resolve_content_width("content", spec=chart) == 700
+    assert _resolve_content_height("content", spec=chart) == 400
+
+
+def test_resolve_content_maps_full_size_to_stretch() -> None:
+    """A pyecharts chart sized to ``100%`` stretches to the container."""
+    chart = _FakeEChart(_BASIC_SPEC, width="100%", height="100%")
+
+    assert _resolve_content_width("content", spec=chart) == "stretch"
+    assert _resolve_content_height("content", spec=chart) == "stretch"
+
+
+def test_resolve_content_warns_and_defaults_on_unsupported_unit() -> None:
+    """An unsupported CSS unit falls back to the default with a warning."""
+    chart = _FakeEChart(_BASIC_SPEC, width="30em")
+
+    with patch.object(echarts_chart_module._LOGGER, "warning") as mock_warning:
+        assert _resolve_content_width("content", spec=chart) == 700
+
+    assert "unsupported" in mock_warning.call_args.args[0]
 
 
 def test_resolve_content_height_passthrough() -> None:
