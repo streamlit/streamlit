@@ -986,9 +986,9 @@ def test_upload_put_stores_file_and_returns_204() -> None:
     [
         pytest.param("file", id="static_field_name"),
         pytest.param("foo.txt", id="field_name_matching_filename"),
-        # A duplicated `name` parameter resolves last-wins, so the handler sees
-        # `injected`. This pins that the injected parameter cannot displace
-        # `filename`, not that the handler receives the raw quoted string.
+        # Pins that a second `name` parameter cannot replace `filename`.
+        # Browsers escape quotes in field names, so this models a hand-built
+        # request.
         pytest.param(
             'evil"; name="injected', id="field_name_injecting_extra_name_param"
         ),
@@ -997,15 +997,9 @@ def test_upload_put_stores_file_and_returns_204() -> None:
 def test_upload_put_ignores_form_field_name(field_name: str) -> None:
     """The upload is stored regardless of the multipart form field name.
 
-    The handler takes whichever file part the body carries and reads the name
-    from the part's ``filename``, so the field name carries no meaning. The
-    frontend relies on this to send a static field name instead of repeating the
-    user-controlled filename in ``Content-Disposition``'s ``name``.
-
-    The cases cover the field name the frontend now sends, the filename it used
-    to send (older frontends and host proxies must keep working), and a
-    non-browser client injecting an extra ``name`` parameter -- browsers escape
-    quotes in field names, so the last case models a hand-built request.
+    The handler reads the name from the part's ``filename``, so older frontends
+    that used the filename as the field name, and hand-built requests that
+    inject an extra ``name`` parameter, must keep working.
     """
     runtime = MagicMock()
     runtime.is_active_session.return_value = True

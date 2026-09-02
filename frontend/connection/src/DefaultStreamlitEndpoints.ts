@@ -280,8 +280,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     // For directory uploads, use the relative path as fileName to preserve directory structure
     const fileName = webkitRelativePath || name
     // Keep the user-controlled filename out of the Content-Disposition `name`
-    // parameter; it still travels in `filename`. Upload endpoints read the file
-    // from whichever part the body carries, not from the field name.
+    // parameter; it still travels in `filename`.
     form.append(UPLOAD_FORM_FIELD_NAME, file, fileName)
 
     const headers: Record<string, string> = this.getAdditionalHeaders()

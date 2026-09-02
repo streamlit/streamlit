@@ -416,9 +416,9 @@ describe("DefaultStreamlitEndpoints", () => {
       expect(actualRequestConfig.onUploadProgress).toBe(mockOnUploadProgress)
     })
 
-    // axios-mock-adapter intercepts before the request reaches XHR, so these
-    // cases pin the FormData entry key, not the Content-Disposition line a
-    // browser would write from it.
+    // Assert the FormData entry key is static. axios-mock-adapter never
+    // serializes Content-Disposition, so this does not cover the on-the-wire
+    // header.
     it.each([
       {
         description: "a regular file",
