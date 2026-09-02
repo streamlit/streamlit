@@ -533,7 +533,7 @@ class EChartsChartTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("content", "pixel_height", 400),
+            ("content", "pixel_height", 350),
             ("stretch", "use_stretch", True),
             (300, "pixel_height", 300),
         ]
@@ -793,7 +793,7 @@ def test_resolve_content_ignores_pyecharts_library_defaults() -> None:
     chart = _FakeEChart(_BASIC_SPEC, width="900px", height="500px")
 
     assert _resolve_content_width("content", spec=chart) == 700
-    assert _resolve_content_height("content", spec=chart) == 400
+    assert _resolve_content_height("content", spec=chart) == 350
 
 
 def test_resolve_content_maps_full_size_to_stretch() -> None:
@@ -820,9 +820,13 @@ def test_resolve_content_height_passthrough() -> None:
     assert _resolve_content_height(300, spec={}) == 300
 
 
-def test_resolve_content_height_defaults_to_400() -> None:
-    """A raw spec with no intrinsic height resolves to the 400px default."""
-    assert _resolve_content_height("content", spec={}) == 400
+def test_resolve_content_height_defaults_to_350() -> None:
+    """A raw spec with no intrinsic height resolves to the 350px default.
+
+    350px is the frontend's ``defaultChartHeight`` token, which is also the
+    rendered height of the Vega-based charts.
+    """
+    assert _resolve_content_height("content", spec={}) == 350
 
 
 def test_resolve_content_height_uses_pyecharts_height() -> None:

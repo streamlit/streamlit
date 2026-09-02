@@ -63,8 +63,13 @@ _LOGGER: Final = get_logger(__name__)
 
 # ECharts option objects have no intrinsic dimensions, so "content" width/height
 # resolve to these fixed defaults (unless a pyecharts chart exposes its own).
+# The height mirrors the frontend's ``theme.sizes.defaultChartHeight`` token, so
+# an ECharts chart lines up with the Vega-based charts (``st.line_chart`` and
+# friends) that render at exactly that height. There is no matching width: the
+# ``defaultChartWidth`` token is a Vega *view* dimension and does not correspond
+# to any rendered content width, so this is a plain fallback.
 _DEFAULT_CONTENT_WIDTH: Final = 700
-_DEFAULT_CONTENT_HEIGHT: Final = 400
+_DEFAULT_CONTENT_HEIGHT: Final = 350
 
 # pyecharts always populates ``InitOpts`` with these values, even when the author
 # never chose a size. Honoring them would make a pyecharts chart render at a
@@ -572,7 +577,7 @@ def _resolve_content_height(height: Height, spec: Any) -> Height:
 
     For content height, we use a pyecharts chart's explicitly chosen ``height``
     (e.g. ``"360px"``) when there is one; a raw ECharts spec has no intrinsic
-    height, so it resolves to a fixed default of 400 pixels.
+    height, so it resolves to a fixed default of 350 pixels.
     """
     if height != "content":
         return height
@@ -687,7 +692,8 @@ class EChartsMixin:
 
             - ``"content"`` (default): The height of the element matches the
               height of its content. Because an ECharts spec has no intrinsic
-              height, this is a fixed default of 400 pixels, unless a
+              height, this is a fixed default of 350 pixels — matching
+              ``st.line_chart`` and the other Vega-based charts — unless a
               ``pyecharts`` chart sets its own height through ``InitOpts``
               (``pyecharts``' library default is ignored, and ``"100%"`` is
               treated as ``"stretch"``).
