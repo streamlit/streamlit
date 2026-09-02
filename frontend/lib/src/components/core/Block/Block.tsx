@@ -34,6 +34,7 @@ import {
   MinFlexElementWidth,
   shouldWidthStretch,
 } from "~lib/components/core/Layout/utils"
+import ScopedThemeProvider from "~lib/components/core/ScopedThemeProvider"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import ChatMessage from "~lib/components/elements/ChatMessage/ChatMessage"
 import Dialog from "~lib/components/elements/Dialog/Dialog"
@@ -44,6 +45,10 @@ import type { TabProps } from "~lib/components/elements/Tabs/Tabs"
 import Form from "~lib/components/widgets/Form/Form"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
+import {
+  getThemeOverrideSurfaceFlags,
+  isEmptyThemeOverride,
+} from "~lib/theme/createThemeFromOverride"
 import { notNullOrUndefined } from "~lib/util/utils"
 
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
@@ -155,6 +160,8 @@ export const ContainerContentsWrapper = (
 
 interface FlexBoxContainerProps extends BaseBlockProps {
   node: BlockNode
+  applyBackgroundColor?: boolean
+  applyTextColor?: boolean
 }
 
 export const FlexBoxContainer = (
@@ -197,6 +204,8 @@ export const FlexBoxContainer = (
     flex: "1",
     align: props.node.deltaBlock.flexContainer?.align,
     justify: props.node.deltaBlock.flexContainer?.justify,
+    $applyBackgroundColor: props.applyBackgroundColor,
+    $applyTextColor: props.applyTextColor,
   }
 
   const userKey = getKeyFromId(props.node.deltaBlock.id)
@@ -253,6 +262,7 @@ export const BlockNodeRenderer = (
   props: BlockPropsWithoutWidth
 ): ReactElement => {
   const { node } = props
+  const parentEmotion = useEmotionTheme()
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
   const flexContext = useContext(FlexContext)
@@ -341,7 +351,29 @@ export const BlockNodeRenderer = (
   )
 
   if (checkFlexContainerBackwardsCompatibile(node.deltaBlock)) {
-    containerElement = <FlexBoxContainer {...childProps} />
+    const themeOverride = node.deltaBlock.theme
+    if (
+      notNullOrUndefined(themeOverride) &&
+      !isEmptyThemeOverride(themeOverride)
+    ) {
+      const surfaceFlags = getThemeOverrideSurfaceFlags(
+        themeOverride,
+        parentEmotion
+      )
+      // Wrapping remounts FlexBoxContainer; token changes on an already-themed
+      // block keep this provider mounted.
+      containerElement = (
+        <ScopedThemeProvider override={themeOverride}>
+          <FlexBoxContainer
+            {...childProps}
+            applyBackgroundColor={surfaceFlags.applyBackgroundColor}
+            applyTextColor={surfaceFlags.applyTextColor}
+          />
+        </ScopedThemeProvider>
+      )
+    } else {
+      containerElement = <FlexBoxContainer {...childProps} />
+    }
   }
 
   if (node.deltaBlock.dialog) {

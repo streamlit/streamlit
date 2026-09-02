@@ -216,6 +216,40 @@ class PageConfigTest(DeltaGeneratorTestCase):
 
         assert self.forward_msg_queue._queue == []
 
+    def test_theme_none_omits_field(self) -> None:
+        """``theme=None`` leaves PageConfig.theme unset so the frontend keeps the overlay."""
+        st.set_page_config()
+        assert not self.get_message_from_queue().page_config_changed.HasField("theme")
+
+        st.set_page_config(theme=None)
+        assert not self.get_message_from_queue().page_config_changed.HasField("theme")
+
+    def test_theme_empty_mapping_is_present(self) -> None:
+        """``theme={}`` sends a present empty ThemeOverride to clear the overlay."""
+        st.set_page_config(theme={})
+        page_config = self.get_message_from_queue().page_config_changed
+        assert page_config.HasField("theme")
+        assert not page_config.theme.HasField("base")
+        assert not page_config.theme.HasField("values")
+
+    def test_theme_mapping_replaces_overlay(self) -> None:
+        """A non-empty mapping is copied onto PageConfig.theme."""
+        st.set_page_config(theme={"primary_color": "#7C3AED", "base": "dark"})
+        theme = self.get_message_from_queue().page_config_changed.theme
+        assert theme.values.primary_color == "#7C3AED"
+        assert theme.HasField("base")
+
+    def test_theme_last_call_wins(self) -> None:
+        """Multiple theme arguments in one run enqueue separate messages; last mapping wins."""
+        st.set_page_config(theme={"primary_color": "green"})
+        st.set_page_config(theme={"primary_color": "red"})
+        messages = [
+            msg.page_config_changed
+            for msg in self.forward_msg_queue._queue
+            if msg.HasField("page_config_changed")
+        ]
+        assert messages[-1].theme.values.primary_color == "red"
+
 
 def test_get_favicon_string_material_icon() -> None:
     """A ``:material/...:`` page icon is validated and returned as a Material icon."""

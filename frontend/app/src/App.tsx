@@ -104,6 +104,7 @@ import {
   IMenuItem,
   INITIAL_SCRIPT_RUN_ID,
   isEmbed,
+  isEmptyThemeOverride,
   isInChildFrame,
   isKeyboardEventFromEditableTarget,
   isPaddingDisplayed,
@@ -800,7 +801,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   override componentDidUpdate(
-    _prevProps: Readonly<Props>,
+    prevProps: Readonly<Props>,
     prevState: Readonly<State>
   ): void {
     // @ts-expect-error
@@ -826,6 +827,13 @@ export class App extends PureComponent<Props, State> {
       this.hostCommunicationMgr.sendMessageToHost({
         type: "SCRIPT_RUN_STATE_CHANGED",
         scriptRunState: this.state.scriptRunState,
+      })
+    }
+
+    if (this.props.theme.activeTheme !== prevProps.theme.activeTheme) {
+      this.hostCommunicationMgr.sendMessageToHost({
+        type: "SET_THEME_CONFIG",
+        themeInfo: toExportedTheme(this.props.theme.activeTheme.emotion),
       })
     }
   }
@@ -1171,6 +1179,7 @@ export class App extends PureComponent<Props, State> {
       initialSidebarState,
       initialSidebarWidth,
       menuItems,
+      theme,
     } = pageConfig
 
     this.appNavigation.handlePageConfigChanged(pageConfig)
@@ -1239,6 +1248,12 @@ export class App extends PureComponent<Props, State> {
           menuItems: { ...prevState.menuItems, ...menuItems },
         }
       })
+    }
+
+    if (notNullOrUndefined(theme)) {
+      this.props.theme.setRuntimeOverride(
+        isEmptyThemeOverride(theme) ? undefined : theme
+      )
     }
   }
 
@@ -1854,14 +1869,11 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Both sets the given theme locally and sends it to the host.
+   * Set the selected theme. SET_THEME_CONFIG is sent when `activeTheme`
+   * identity changes so runtime overlays are included.
    */
   setAndSendTheme = (themeConfig: ThemeConfig): void => {
     this.props.theme.setTheme(themeConfig)
-    this.hostCommunicationMgr.sendMessageToHost({
-      type: "SET_THEME_CONFIG",
-      themeInfo: toExportedTheme(themeConfig.emotion),
-    })
   }
 
   createThemeHash = (themeInput?: CustomThemeConfig): string => {

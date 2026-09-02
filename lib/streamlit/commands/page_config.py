@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast
 
 from streamlit.elements.lib.image_utils import AtomicImage, image_to_url
 from streamlit.elements.lib.layout_utils import LayoutConfig
+from streamlit.elements.lib.theme_utils import ThemeConfig, populate_theme_override
 from streamlit.errors import (
     StreamlitInvalidURLError,
     StreamlitValueError,
@@ -122,6 +123,8 @@ def set_page_config(
     layout: Layout | None = None,
     initial_sidebar_state: InitialSideBarState | None = None,
     menu_items: MenuItems | None = None,
+    *,
+    theme: ThemeConfig | None = None,
 ) -> None:
     """
     Configure the default settings of the page.
@@ -224,6 +227,34 @@ def set_page_config(
         item that was specified in a previous call to ``st.set_page_config``,
         set its value to ``None`` in the dictionary.
 
+    theme : dict or None
+        A mapping of theme tokens to apply as a session-local overlay on the
+        selected app theme. Unlike most page settings, ``theme`` may be set
+        after other commands have run.
+
+        Presence differs from ``st.container``:
+
+        =============== ======================== ====================
+        ``theme`` value ``st.set_page_config``   ``st.container``
+        =============== ======================== ====================
+        ``None``        Keep the current overlay No scoped override
+        ``{}``          Clear the overlay        No scoped override
+        ``{...}``       Replace the overlay      Apply scoped override
+        =============== ======================== ====================
+
+        Keys use snake_case and match an audited subset of ``config.toml``
+        theme options. Optional ``light`` and ``dark`` mappings follow the
+        active Streamlit theme mode unless ``base`` is ``"light"`` or
+        ``"dark"``. The overlay is not written to ``config.toml`` and is not
+        persisted across a new browser session. Page navigation inherits the
+        overlay until a page replaces it or clears it with ``theme={}``.
+
+        ``st.context.theme.type`` reflects the effective page theme on the
+        next client-originated rerun, not the current Python run. Apps are
+        responsible for color contrast.
+
+        Import ``ThemeConfig`` from ``streamlit`` to annotate mappings.
+
     Examples
     --------
     >>> import streamlit as st
@@ -239,6 +270,27 @@ def set_page_config(
     ...         'About': "# This is a header. This is an *extremely* cool app!"
     ...     }
     ... )
+
+    **Example 2: Runtime theme overlay**
+
+    Apply a session-local theme overlay. Use ``theme={}`` to clear it.
+
+    >>> import streamlit as st
+    >>>
+    >>> mode = st.segmented_control("Theme", ["light", "dark"], default="light")
+    >>> st.set_page_config(
+    ...     theme={
+    ...         "primary_color": "#7C3AED",
+    ...         "button_radius": "full",
+    ...         "base": mode,
+    ...     }
+    ... )
+    >>> st.button("Themed button", type="primary")
+
+    .. output::
+        https://doc-set-page-config-theme.streamlit.app/
+        height: 200px
+
     """
 
     msg = ForwardProto()
@@ -302,6 +354,14 @@ def set_page_config(
         validate_menu_items(lowercase_menu_items)
         menu_items_proto = msg.page_config_changed.menu_items
         set_menu_items_proto(lowercase_menu_items, menu_items_proto)
+
+    if theme is not None:
+        override = populate_theme_override(theme)
+        if override is None:
+            # theme={} and inherit-only mappings both clear the overlay.
+            msg.page_config_changed.theme.SetInParent()
+        else:
+            msg.page_config_changed.theme.CopyFrom(override)
 
     ctx = get_script_run_ctx()
     if ctx is None:

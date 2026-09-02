@@ -832,6 +832,10 @@ export const createEmotionTheme = (
   if (showWidgetBorder) {
     conditionalOverrides.colors.widgetBorderColor =
       conditionalOverrides.colors.borderColor
+  } else if (showWidgetBorder === false) {
+    // An explicit false must clear a parent theme's widget border rather than
+    // inheriting widgetBorderColor through the generic color spread.
+    delete conditionalOverrides.colors.widgetBorderColor
   }
 
   // Apply background color overrides based on configured background color or main color as fallback
@@ -1385,7 +1389,7 @@ export const convertRemToPx = (cssValue: string): number => {
  * (empty strings, null, empty arrays) to prevent them from overwriting valid values,
  * and replaces non-empty arrays atomically instead of merging by index.
  */
-const skipProtobufDefaults = (
+export const skipProtobufDefaults = (
   objValue: unknown,
   srcValue: unknown
 ): unknown => {

@@ -308,6 +308,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
     addThemes: vi.fn(),
     setFonts: vi.fn(),
     setImportedTheme: vi.fn(),
+    setRuntimeOverride: vi.fn(),
   },
   streamlitExecutionStartedAt: 100,
   isMobileViewport: false,
@@ -1836,6 +1837,52 @@ describe("App", () => {
       })
 
       expect(document.title).toBe("Jabberwocky")
+    })
+
+    it("does not change the runtime overlay when theme is omitted", () => {
+      const props = getProps()
+      renderApp(props)
+      vi.mocked(props.theme.setRuntimeOverride).mockClear()
+
+      sendForwardMessage("pageConfigChanged", {
+        title: "Keep overlay",
+      })
+
+      expect(props.theme.setRuntimeOverride).not.toHaveBeenCalled()
+    })
+
+    it("clears the runtime overlay when theme is an empty mapping", () => {
+      const props = getProps()
+      renderApp(props)
+      vi.mocked(props.theme.setRuntimeOverride).mockClear()
+
+      sendForwardMessage("pageConfigChanged", {
+        theme: {},
+      })
+
+      expect(props.theme.setRuntimeOverride).toHaveBeenCalledWith(undefined)
+    })
+
+    it("replaces the runtime overlay when theme has visual tokens", () => {
+      const props = getProps()
+      renderApp(props)
+      vi.mocked(props.theme.setRuntimeOverride).mockClear()
+
+      sendForwardMessage("pageConfigChanged", {
+        theme: {
+          values: {
+            primaryColor: "#7C3AED",
+          },
+        },
+      })
+
+      expect(props.theme.setRuntimeOverride).toHaveBeenCalledWith(
+        expect.objectContaining({
+          values: expect.objectContaining({
+            primaryColor: "#7C3AED",
+          }),
+        })
+      )
     })
   })
 
@@ -3899,6 +3946,33 @@ describe("App", () => {
       })
     })
 
+    it("uses the active theme background for contextInfo.colorScheme", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(
+        getProps({
+          theme: {
+            ...getProps().theme,
+            activeTheme: darkTheme,
+          },
+        })
+      )
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "myFragmentId",
+        })
+        vi.advanceTimersByTime(1000)
+      })
+
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].toJSON().rerunScript
+          .contextInfo.colorScheme
+      ).toBe("dark")
+    })
+
     it("does not accumulate duplicate timers when a fragment re-registers its auto-rerun", () => {
       vi.mocked(isEmbed).mockReturnValue(false)
       renderApp(getProps())
@@ -4717,6 +4791,46 @@ describe("App", () => {
       expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
         type: "SET_THEME_CONFIG",
         themeInfo: toExportedTheme(lightTheme.emotion),
+      })
+    })
+
+    it("sends overlay colors to the host when the active theme changes", () => {
+      const overlayTheme = {
+        ...lightTheme,
+        emotion: {
+          ...lightTheme.emotion,
+          colors: {
+            ...lightTheme.emotion.colors,
+            primary: "#7C3AED",
+            bgColor: "#FAFAFF",
+          },
+        },
+      }
+      const props = getProps()
+      const { rerender } = renderApp(props)
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      vi.mocked(hostCommunicationMgr.sendMessageToHost).mockClear()
+
+      rerender(
+        <RootStyleProvider theme={getDefaultTheme()}>
+          <WindowDimensionsProvider>
+            <App
+              {...getProps({
+                theme: {
+                  ...props.theme,
+                  activeTheme: overlayTheme,
+                },
+              })}
+            />
+          </WindowDimensionsProvider>
+        </RootStyleProvider>
+      )
+
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "SET_THEME_CONFIG",
+        themeInfo: toExportedTheme(overlayTheme.emotion),
       })
     })
 

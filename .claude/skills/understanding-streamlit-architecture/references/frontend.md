@@ -60,7 +60,7 @@ Central orchestrator managing everything.
 - `scriptFinished`: Clears stale nodes, removes inactive widget state, increments message cache run count
 - `sessionStatusChanged`: Updates script run state
 - `navigation`: Handles MPA page changes
-- `pageConfigChanged`: Updates page title, icon, layout
+- `pageConfigChanged`: Updates page title, icon, layout, and session-local theme overlay
 
 ## Element tree (`frontend/lib/src/render-tree/`)
 
@@ -118,7 +118,7 @@ Maps protobuf element types to React components via a switch statement.
 
 ### BlockNodeRenderer
 
-Handles containers: forms, tabs, columns, chat messages, expanders, dialogs, popovers.
+Handles containers: forms, tabs, columns, chat messages, expanders, dialogs, popovers. Wraps `st.container(theme=)` blocks in `ScopedThemeProvider`.
 
 ## WidgetStateManager (`frontend/lib/src/WidgetStateManager.ts`)
 
@@ -175,7 +175,7 @@ Any state -> DISCONNECTED_FOREVER (on fatal error)
 - `SidebarConfigContext`: Sidebar state, width, logo
 
 **Layer 2: Theme**
-- `ThemeContext`: Active theme, available themes
+- `ThemeContext`: Active app theme, available themes (page-level). Scoped container overrides use a nested Emotion `ThemeProvider` via `ScopedThemeProvider`; read `useEmotionTheme()`, not `ThemeContext`, for the nearest theme.
 
 **Layer 3: Runtime state**
 - `NavigationContext`: Page links, current page, app pages

@@ -16,6 +16,8 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/NewSession.proto";
+
 // Properties of the page that the app creator may configure.
 message PageConfig {
   string title = 1;
@@ -24,6 +26,7 @@ message PageConfig {
   SidebarState initial_sidebar_state = 4;
   MenuItems menu_items = 5;
   optional SidebarWidthConfig initial_sidebar_width = 6;
+  ThemeOverride theme = 7;
 
   message MenuItems {
     string get_help_url = 1;
@@ -75,4 +78,6 @@ message PageConfig {
       uint32 pixel_width = 1;
     }
   }
+
+  // Next ID: 8
 }

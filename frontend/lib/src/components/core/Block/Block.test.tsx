@@ -21,6 +21,7 @@ import { screen, within } from "@testing-library/react"
 import {
   Block as BlockProto,
   Button as ButtonProto,
+  CustomThemeConfig,
   Element,
   ForwardMsgMetadata,
   streamlit,
@@ -32,6 +33,7 @@ import { mockEndpoints } from "~lib/mocks/mocks"
 import { text } from "~lib/render-tree/test-utils"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { renderWithContexts } from "~lib/test_util"
+import { darkTheme } from "~lib/theme/themeConfigs"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { BlockNodeRenderer, FlexBoxContainer, VerticalBlock } from "./Block"
@@ -877,5 +879,72 @@ describe("BlockNodeRenderer container types", () => {
     expect(screen.getByTestId("stTabs")).toBeVisible()
     expect(screen.getByRole("tab", { name: "Tab 0" })).toBeVisible()
     expect(screen.getByTestId("stTabs")).toHaveStyle({ height: "400px" })
+  })
+})
+
+describe("BlockNodeRenderer theme override", () => {
+  const widgetMgr = new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  })
+  const endpoints = mockEndpoints()
+
+  function renderThemedBlock(
+    theme: BlockProto["theme"],
+    children: AppNode[] = [text("scoped child")]
+  ): void {
+    renderWithContexts(
+      <BlockNodeRenderer
+        node={
+          new BlockNode(
+            FAKE_SCRIPT_HASH,
+            children,
+            new BlockProto({
+              allowEmpty: true,
+              flexContainer: {
+                direction: BlockProto.FlexContainer.Direction.VERTICAL,
+              },
+              theme,
+            })
+          )
+        }
+        scriptRunId=""
+        scriptRunState={ScriptRunState.NOT_RUNNING}
+        widgetsDisabled={false}
+        widgetMgr={widgetMgr}
+        endpoints={endpoints}
+        // @ts-expect-error
+        uploadClient={undefined}
+      />
+    )
+  }
+
+  it("does not paint a background for a primary-only override", () => {
+    renderThemedBlock({ values: { primaryColor: "#7c3aed" } })
+    const block = screen.getByTestId("stVerticalBlock")
+    expect(block).toBeVisible()
+    expect(block).not.toHaveStyle("background-color: rgb(124, 58, 237)")
+  })
+
+  it("paints background and text when those tokens are set", () => {
+    renderThemedBlock({
+      values: {
+        backgroundColor: "#abcdef",
+        textColor: "#111111",
+      },
+    })
+    const block = screen.getByTestId("stVerticalBlock")
+    expect(block).toHaveStyle("background-color: #abcdef")
+    expect(block).toHaveStyle("color: #111111")
+  })
+
+  it("paints variant background and text for an explicit base", () => {
+    renderThemedBlock({ base: CustomThemeConfig.BaseTheme.DARK })
+    const block = screen.getByTestId("stVerticalBlock")
+    expect(block).toBeVisible()
+    expect(block).toHaveStyle(
+      `background-color: ${darkTheme.emotion.colors.bgColor}`
+    )
+    expect(block).toHaveStyle(`color: ${darkTheme.emotion.colors.bodyText}`)
   })
 })

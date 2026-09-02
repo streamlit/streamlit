@@ -18,6 +18,7 @@ syntax = "proto3";
 
 import "streamlit/proto/GapSize.proto";
 import "streamlit/proto/HeightConfig.proto";
+import "streamlit/proto/NewSession.proto";
 import "streamlit/proto/WidthConfig.proto";
 
 message Block {
@@ -41,6 +42,7 @@ message Block {
   optional streamlit.HeightConfig height_config = 14;
   optional streamlit.WidthConfig width_config = 15;
   optional bool autoscroll = 16;
+  ThemeOverride theme = 18;
 
   message Vertical {
     bool border = 1;
@@ -204,5 +206,5 @@ message Block {
   // render directly in the parent container's flex context.
   message Transparent {}
 
-  // Next ID: 18
+  // Next ID: 19
 }

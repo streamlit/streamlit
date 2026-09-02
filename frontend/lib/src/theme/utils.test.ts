@@ -1169,6 +1169,19 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.widgetBorderColor).toBe(theme.colors.borderColor)
   })
 
+  it("clears widgetBorderColor when showWidgetBorder is false", () => {
+    const parentWithBorders: ThemeConfig = {
+      ...lightTheme,
+      emotion: createEmotionTheme({ showWidgetBorder: true }, lightTheme),
+    }
+    const theme = createEmotionTheme(
+      { showWidgetBorder: false },
+      parentWithBorders
+    )
+    expect(parentWithBorders.emotion.colors.widgetBorderColor).toBeDefined()
+    expect(theme.colors.widgetBorderColor).toBeUndefined()
+  })
+
   // Background theme colors
   it.each([
     ["#ff0000", "#ff0000"],

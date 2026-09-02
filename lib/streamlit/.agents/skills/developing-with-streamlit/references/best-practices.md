@@ -6,7 +6,7 @@ Use this reference when reviewing an app, starting a new app, or applying the qu
 
 ## Styling and copy
 
-Do not use custom CSS for app styling unless the user actively requests it. Prefer native Streamlit APIs and `.streamlit/config.toml` to customize the appearance.
+Do not use custom CSS for app styling unless the user actively requests it. Prefer native Streamlit APIs, `.streamlit/config.toml`, `st.set_page_config(theme=...)`, and `st.container(theme=...)` to customize the appearance.
 
 ```python
 # BAD: Styling the app with injected CSS
@@ -17,12 +17,18 @@ st.markdown(
 ```
 
 ```toml
-# GOOD: Configure theme tokens in .streamlit/config.toml
+# GOOD: Configure app-wide theme tokens in .streamlit/config.toml
 [theme]
 primaryColor = "#ff4b4b"
 backgroundColor = "#ffffff"
 secondaryBackgroundColor = "#f6f8fa"
 textColor = "#262730"
+```
+
+```python
+# GOOD: Scoped restyle without CSS
+with st.container(theme={"primary_color": "#ff4b4b"}):
+    st.button("Submit", type="primary")
 ```
 
 Prefer Material Symbols icons over emojis in UI labels, and use sentence casing.

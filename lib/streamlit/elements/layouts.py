@@ -41,6 +41,7 @@ from streamlit.elements.lib.layout_utils import (
     validate_wrap,
 )
 from streamlit.elements.lib.policies import check_widget_policies
+from streamlit.elements.lib.theme_utils import ThemeConfig, populate_theme_override
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import (
     StreamlitIncompatibleParametersError,
@@ -119,6 +120,7 @@ class LayoutsMixin:
         vertical_alignment: VerticalAlignment = "top",
         gap: Gap | None = "small",
         autoscroll: bool | None = None,
+        theme: ThemeConfig | None = None,
     ) -> DeltaGenerator:
         """Insert a multi-element container.
 
@@ -271,6 +273,30 @@ class LayoutsMixin:
             .. |st.chat_message| replace:: ``st.chat_message``
             .. _st.chat_message: https://docs.streamlit.io/develop/api-reference/chat/st.chat_message
 
+        theme : dict or None
+            A mapping of theme tokens to apply to this container and its
+            descendants. If this is ``None`` (default) or ``{}``, the container
+            has no scoped theme override. This ``theme`` argument is unrelated
+            to the chart-level ``theme`` argument on ``st.plotly_chart`` and
+            ``st.altair_chart``.
+
+            Keys use snake_case and match an audited subset of ``config.toml``
+            theme options, including ``primary_color``, ``background_color``,
+            ``text_color``, radii, and chart palettes. Optional ``light`` and
+            ``dark`` mappings override shared values for the active mode.
+            ``base`` may be ``"inherit"`` (default), ``"light"``, or
+            ``"dark"``.
+
+            The container paints a background only when the mapping sets
+            ``background_color``, and applies a text color only when it sets
+            ``text_color``. A primary-only override does not add an opaque
+            background. If ``base`` is ``"light"`` or ``"dark"``, the container
+            paints that variant's background and text together so ancestor
+            colors cannot leak through. Apps are responsible for color
+            contrast.
+
+            Import ``ThemeConfig`` from ``streamlit`` to annotate mappings.
+
         Examples
         --------
         **Example 1: Inserting elements using ``with`` notation**
@@ -377,6 +403,21 @@ class LayoutsMixin:
             https://doc-container6.streamlit.app/
             height: 200px
 
+        **Example 7: Scoped theme override**
+
+        Wrap widgets in a container to restyle only that subtree.
+
+        >>> import streamlit as st
+        >>>
+        >>> with st.container(theme={"primary_color": "green"}):
+        ...     st.button("Approve", type="primary")
+        >>>
+        >>> st.button("Unchanged", type="primary")
+
+        .. output::
+            https://doc-container7.streamlit.app/
+            height: 200px
+
         """
         key = to_key(key)
         block_proto = BlockProto()
@@ -442,6 +483,11 @@ class LayoutsMixin:
 
         if autoscroll is not None:
             block_proto.autoscroll = autoscroll
+
+        if theme:
+            override = populate_theme_override(theme)
+            if override is not None:
+                block_proto.theme.CopyFrom(override)
 
         return self.dg._block(block_proto)
 
