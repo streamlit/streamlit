@@ -19,16 +19,16 @@
     "typesync": "typesync"
   },
   "devDependencies": {
-    "@typescript-eslint/rule-tester": "^8.67.0",
-    "@typescript-eslint/utils": "^8.67.0",
-    "eslint": "^10.9.0",
+    "@typescript-eslint/rule-tester": "^8.68.0",
+    "@typescript-eslint/utils": "^8.68.0",
+    "eslint": "^10.9.1",
     "typescript": "^6.0.3",
     "typescript-v7": "npm:typescript@7.0.2",
     "typesync": "^0.14.3",
     "vitest": "^4.1.11"
   },
   "peerDependencies": {
-    "@typescript-eslint/utils": "^8.67.0",
+    "@typescript-eslint/utils": "^8.68.0",
     "eslint": "^10.0.0"
   }
 }
