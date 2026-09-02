@@ -831,7 +831,7 @@ class ConfigTest(unittest.TestCase):
         keys = sorted(config._config_options.keys())
         assert config_options == keys
 
-    def test_no_expired_deprecated_config_options(self):
+    def test_no_expired_deprecated_config_options(self) -> None:
         """Deprecated config options must be removed once expiration_date has passed."""
         expired = [
             opt.key

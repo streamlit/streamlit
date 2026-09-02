@@ -365,14 +365,14 @@ class StMapTest(DeltaGeneratorTestCase):
         ):
             st.map(df)
 
-    def test_mapbox_token_is_set_in_proto(self):
+    def test_mapbox_token_is_set_in_proto(self) -> None:
         """Test that mapbox token is set in proto from MAPBOX_API_KEY."""
         with mock.patch.dict(os.environ, {"MAPBOX_API_KEY": "test_mapbox_token"}):
             st.map(mock_df)
             c = self.get_delta_from_queue().new_element.deck_gl_json_chart
             assert c.mapbox_token == "test_mapbox_token"
 
-    def test_mapbox_token_not_set_without_env_var(self):
+    def test_mapbox_token_not_set_without_env_var(self) -> None:
         """Test that mapbox token is empty when MAPBOX_API_KEY is unset."""
         with mock.patch.dict(os.environ):
             os.environ.pop("MAPBOX_API_KEY", None)
