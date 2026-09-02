@@ -83,7 +83,11 @@ function createFakeChart(): Mocked<FakeChart> {
 }
 
 function createElement(id = "chart-id", formId = ""): EChartsChartProto {
-  return new EChartsChartProto({ id, formId })
+  return new EChartsChartProto({
+    id,
+    formId,
+    selectionActivated: Boolean(id),
+  })
 }
 
 function emptySelectedPlaceholders(): TestSelectedEntry[] {
@@ -204,6 +208,31 @@ describe("useEChartsSelections", () => {
 
     expect(disabledResult.current.isSelectionActivated).toBe(false)
     expect(disabledChart.on).not.toHaveBeenCalled()
+  })
+
+  it("does not treat a keyed display-only chart as a selection widget", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(
+        new EChartsChartProto({
+          id: "styled_chart",
+          formId: "",
+          selectionActivated: false,
+        }),
+        widgetMgr
+      )
+    )
+    const chart = createFakeChart()
+    act(() => {
+      result.current.bindSelections(chart)
+    })
+
+    expect(result.current.isSelectionActivated).toBe(false)
+    expect(chart.on).not.toHaveBeenCalled()
+    expect(
+      result.current.configureSelectionOption({ series: [{ type: "bar" }] })
+    ).toEqual({
+      series: [{ type: "bar", cursor: "default" }],
+    })
   })
 
   it("binds and cleans up all selection listeners", () => {
@@ -853,6 +882,116 @@ describe("useEChartsSelections", () => {
       "brushSelection",
       [pixelOnly]
     )
+  })
+
+  it("does not emit an in-progress brush when a point selection writes", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+    const chart = createFakeChart()
+    const committedArea = {
+      brushType: "lineX" as const,
+      coordRange: [0, 2],
+    }
+    const inProgressArea = {
+      brushType: "lineX" as const,
+      coordRange: [4, 8],
+    }
+    const committedBrush = createBrushSelection({
+      brushId: "brush-0",
+      areas: [committedArea],
+    })
+    const inProgressBrush = createBrushSelection({
+      brushId: "brush-0",
+      areas: [inProgressArea],
+    })
+
+    act(() => {
+      result.current.bindSelections(chart)
+      chart.trigger("brushSelected", { batch: [committedBrush] })
+      chart.trigger("brushEnd", {
+        brushId: committedBrush.brushId,
+        areas: committedBrush.areas,
+      })
+    })
+    flush()
+    ;(widgetMgr.setStringValue as Mock).mockClear()
+
+    act(() => {
+      chart.trigger("brushSelected", { batch: [inProgressBrush] })
+      chart.trigger("selectchanged", {
+        selected: [{ seriesIndex: 0, dataIndex: [1] }],
+      })
+    })
+    flush()
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expectSelectionWrite(
+      [
+        {
+          series_index: 0,
+          series_id: null,
+          series_name: null,
+          data_type: "main",
+          data_indices: [1],
+        },
+      ],
+      [
+        {
+          brush_index: 0,
+          brush_type: "lineX",
+          coord_range: committedArea.coordRange,
+        },
+      ]
+    )
+  })
+
+  it("drops pixel-only brush areas from private state after resize", () => {
+    const pixelOnly = createBrushSelection({
+      brushId: "brush-0",
+      brushIndex: 0,
+      areas: [
+        {
+          brushType: "rect",
+          range: [
+            [10, 20],
+            [30, 40],
+          ],
+        },
+      ],
+    })
+    const withCoord = createBrushSelection({
+      brushId: "brush-1",
+      brushIndex: 1,
+      areas: [{ brushType: "lineX", coordRange: [1, 3] }],
+    })
+    widgetMgr.getElementState.mockImplementation((_id: string, key: string) =>
+      key === "brushSelection" ? [pixelOnly, withCoord] : undefined
+    )
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+    const chart = createFakeChart()
+
+    act(() => {
+      result.current.prunePixelOnlyBrushAfterResize(chart)
+    })
+
+    expect(widgetMgr.setElementState).toHaveBeenCalledWith(
+      "chart-id",
+      "brushSelection",
+      [{ ...pixelOnly, areas: [] }, withCoord]
+    )
+    expect(chart.dispatchAction).toHaveBeenCalledWith({
+      type: "brush",
+      brushIndex: 0,
+      areas: [],
+    })
+    expect(chart.dispatchAction).toHaveBeenCalledWith({
+      type: "brush",
+      brushIndex: 1,
+      areas: withCoord.areas,
+    })
   })
 
   it.each([

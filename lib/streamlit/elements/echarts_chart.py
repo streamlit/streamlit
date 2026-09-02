@@ -267,10 +267,9 @@ class EChartsChartSelectionSerde:
 def _js_callback_error() -> StreamlitAPIException:
     return StreamlitAPIException(
         "The provided ECharts spec contains JavaScript callbacks (e.g. "
-        "`function` values or `JsCode`), which are not supported by "
-        "`st.echarts_chart` in v1. Only JSON-compatible option objects are "
-        "supported. Use ECharts string-template formatters instead of "
-        "JavaScript functions.",
+        "`function` values or `JsCode`), which `st.echarts_chart` does not "
+        "support. Only JSON-compatible option objects are supported. Use "
+        "ECharts string-template formatters instead of JavaScript functions.",
         error_id="echarts-js-callbacks-not-supported",
     )
 
@@ -288,7 +287,7 @@ def _loads_json_option(raw: str) -> Any:
             raise _js_callback_error() from ex
         raise StreamlitAPIException(
             "The provided ECharts spec could not be parsed as JSON. "
-            "`st.echarts_chart` only supports JSON-compatible option objects in v1.",
+            "`st.echarts_chart` only supports JSON-compatible option objects.",
             error_id="echarts-spec-invalid-json",
         ) from ex
 
@@ -440,12 +439,8 @@ def _validate_supported_features(option: dict[str, Any]) -> None:
         )
 
 
-def _convert_dataset_sources(option: dict[str, Any]) -> None:
-    """Convert dataframe-like ``dataset.source`` values into JSON records.
-
-    ECharts' ``dataset`` can be a single object or a list of objects; both are
-    supported here (mirroring how ``st.vega_lite_chart`` ingests dataframes).
-    """
+def _convert_datasets_in_option(option: dict[str, Any]) -> None:
+    """Convert dataframe-like ``dataset.source`` values on a single option."""
     dataset = option.get("dataset")
     if isinstance(dataset, dict):
         _convert_single_dataset(dataset)
@@ -453,6 +448,18 @@ def _convert_dataset_sources(option: dict[str, Any]) -> None:
         for entry in dataset:
             if isinstance(entry, dict):
                 _convert_single_dataset(entry)
+
+
+def _convert_dataset_sources(option: dict[str, Any]) -> None:
+    """Convert dataframe-like ``dataset.source`` values into JSON records.
+
+    ECharts' ``dataset`` can be a single object or a list of objects; both are
+    supported here (mirroring how ``st.vega_lite_chart`` ingests dataframes).
+    Timeline specs nest datasets under ``baseOption`` and per-tick ``options``,
+    so those variants are converted too.
+    """
+    for variant in _iter_option_variants(option):
+        _convert_datasets_in_option(variant)
 
 
 def _normalize_spec(spec: EChartsSpec) -> dict[str, Any]:
@@ -502,8 +509,8 @@ def _serialize_option(option: dict[str, Any]) -> str:
     except (TypeError, ValueError) as ex:
         raise StreamlitAPIException(
             "The provided ECharts spec is not JSON-serializable. "
-            "`st.echarts_chart` only supports JSON-compatible option objects in "
-            "v1: JavaScript callbacks, arbitrary Python objects, and non-finite "
+            "`st.echarts_chart` only supports JSON-compatible option objects: "
+            "JavaScript callbacks, arbitrary Python objects, and non-finite "
             "numbers (NaN/Infinity) are not supported. Dataframes are converted "
             "automatically only inside `dataset.source`; anywhere else (for "
             "example `series.data`) convert them to plain lists first.",
@@ -905,6 +912,7 @@ class EChartsMixin:
 
         ctx = get_script_run_ctx()
 
+        echarts_chart_proto.selection_activated = is_selection_activated
         if is_selection_activated:
             # Selections are activated, treat the ECharts chart as a widget.
             echarts_chart_proto.form_id = current_form_id(self.dg)

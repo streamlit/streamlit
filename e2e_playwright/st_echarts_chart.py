@@ -287,6 +287,7 @@ st.write(f"echarts selection indices: {selection_indices}")
 # 12) A tooltip/label XSS payload: the data item name is an HTML/script payload.
 #     Under theme="streamlit" it must render as escaped text and never execute.
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
+_XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
 with st.container(key="c_xss_chart"):
     st.echarts_chart(
         {
@@ -311,7 +312,7 @@ with st.container(key="c_xss_chart"):
                     "data": [
                         {
                             "coords": [[0, 0], [0, 100]],
-                            "name": _XSS_PAYLOAD,
+                            "name": _XSS_LINES_PAYLOAD,
                         }
                     ],
                 },

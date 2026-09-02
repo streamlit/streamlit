@@ -222,11 +222,42 @@ describe("EChartsChart", () => {
 
   it("does not bind selection handlers when disabled", () => {
     render(
-      <Wrapper element={createElement({ id: "chart-id" })} disabled={true} />
+      <Wrapper
+        element={createElement({ id: "chart-id", selectionActivated: true })}
+        disabled={true}
+      />
     )
 
     expect(mockInit).toHaveBeenCalledTimes(1)
     expect(mockChart.on).not.toHaveBeenCalled()
+  })
+
+  it("does not bind selection handlers for a keyed display-only chart", () => {
+    render(
+      <Wrapper
+        element={createElement({
+          id: "styled_chart",
+          spec: JSON.stringify({
+            xAxis: { type: "category", data: ["A", "B", "C"] },
+            yAxis: { type: "value" },
+            series: [{ type: "bar", data: [1, 2, 3], selectedMode: true }],
+          }),
+        })}
+      />
+    )
+
+    expect(mockInit).toHaveBeenCalledTimes(1)
+    expect(mockChart.on).not.toHaveBeenCalled()
+  })
+
+  it("binds selection handlers when selection is activated", () => {
+    render(
+      <Wrapper
+        element={createElement({ id: "chart-id", selectionActivated: true })}
+      />
+    )
+
+    expect(mockChart.on).toHaveBeenCalled()
   })
 
   it("renders display-only charts (empty id) without binding selection handlers", () => {
@@ -336,6 +367,31 @@ describe("EChartsChart", () => {
     expect(mockChart.dispose).not.toHaveBeenCalled()
   })
 
+  it("retries a failed setTheme and clears the error overlay on recovery", () => {
+    mockChart.setTheme.mockImplementationOnce(() => {
+      throw new Error("theme failed")
+    })
+
+    const { rerender } = render(
+      <Wrapper element={createElement({ id: "chart-a" })} />
+    )
+    expect(screen.queryByTestId("stEChartsChartError")).not.toBeInTheDocument()
+
+    // Keep the option identity stable so a successful setOption cannot mask
+    // the theme error. A settings-menu switch rebuilds the theme object.
+    themeHolder.override = { ...mockTheme.emotion }
+    rerender(<Wrapper element={createElement({ id: "chart-a" })} />)
+    expect(screen.getByTestId("stEChartsChartError")).toBeVisible()
+    expect(mockChart.setTheme).toHaveBeenCalledTimes(1)
+
+    // Same theme object; changing the element id rebuilds restoreSelection,
+    // which re-runs the theme effect. appliedThemeRef must not have been
+    // advanced on the failed attempt, or this retry would be skipped.
+    rerender(<Wrapper element={createElement({ id: "chart-b" })} />)
+    expect(mockChart.setTheme).toHaveBeenCalledTimes(2)
+    expect(screen.queryByTestId("stEChartsChartError")).not.toBeInTheDocument()
+  })
+
   it("skips no-op setOption calls on unrelated reruns", () => {
     const { rerender } = render(<Wrapper element={createElement()} />)
     expect(mockChart.setOption).toHaveBeenCalledTimes(1)
@@ -375,6 +431,20 @@ describe("EChartsChart", () => {
     const error = screen.getByTestId("stEChartsChartError")
     expect(error).toBeVisible()
     expect(error).toHaveTextContent("resize failed")
+  })
+
+  it("clears a resize error after a later successful resize", () => {
+    mockChart.resize.mockImplementationOnce(() => {
+      throw new Error("resize failed")
+    })
+    const { rerender } = render(<Wrapper element={createElement()} />)
+    dimensionsHolder.width = 800
+    rerender(<Wrapper element={createElement()} />)
+    expect(screen.getByTestId("stEChartsChartError")).toBeVisible()
+
+    dimensionsHolder.width = 900
+    rerender(<Wrapper element={createElement()} />)
+    expect(screen.queryByTestId("stEChartsChartError")).not.toBeInTheDocument()
   })
 
   it("renders a styled error for an unparseable spec", () => {

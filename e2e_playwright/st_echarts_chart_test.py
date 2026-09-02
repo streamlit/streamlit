@@ -30,6 +30,7 @@ from e2e_playwright.shared.app_utils import (
 # (including the ones inside the collapsed expander and the form).
 _EXPECTED_CHART_COUNT = 15
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
+_XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
 
 
 def _get_chart(page: Page, key: str) -> Locator:
@@ -127,16 +128,16 @@ def _select_theme(app: Page, label: str) -> None:
 def test_chart_survives_runtime_theme_switch(app: Page):
     """Switching theme at runtime re-themes the chart instead of blanking it.
 
-    Regression test: the chart instance is disposed and recreated on a theme
-    change; a stale render pass previously left the fresh instance blank (canvas
-    removed and never redrawn).
+    Regression test: the chart is re-themed in place via ``setTheme``. A theme
+    switch briefly reports 0x0 dimensions; the chart must stay mounted and
+    redraw rather than going blank.
     """
     basic_bar = _get_chart(app, "c_basic_bar")
     expect(basic_bar.locator("canvas")).to_be_visible()
 
     _select_theme(app, "Dark")
 
-    # The chart is re-created and re-rendered (canvas present), not blanked out.
+    # The chart stays mounted and is re-themed in place (canvas present).
     expect(basic_bar.locator("canvas")).to_be_visible()
     # Must NOT happen: the theme switch does not surface a render error.
     expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
@@ -232,6 +233,13 @@ def test_tooltip_and_label_xss_payloads_are_escaped(app: Page):
     tooltip = chart.locator(".echarts-xss-tooltip")
     expect(tooltip).to_be_visible()
     expect(tooltip).to_contain_text(_XSS_PAYLOAD)
+    expect(tooltip.locator("img")).to_have_count(0)
+
+    # The advisory that floors ECharts 6.1.0 lives on ``series.type="lines"``.
+    # Target a stroked SVG path so this cannot pass by hitting only the bar.
+    chart.locator("svg path[stroke]").last.hover()
+    expect(tooltip).to_be_visible()
+    expect(tooltip).to_contain_text(_XSS_LINES_PAYLOAD)
     expect(tooltip.locator("img")).to_have_count(0)
 
     expect(app.locator("img[onerror]")).to_have_count(0)

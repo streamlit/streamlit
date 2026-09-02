@@ -141,6 +141,43 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         assert spec["dataset"][0]["source"] == [{"x": 1, "y": 2}]
         assert spec["dataset"][0]["dimensions"] == ["x", "y"]
 
+    def test_dataset_source_dataframe_inside_timeline_base_option(self):
+        """A dataframe ``dataset.source`` nested under ``baseOption`` is converted."""
+        df = pd.DataFrame({"product": ["a"], "2015": [43.3]})
+        st.echarts_chart(
+            {
+                "baseOption": {
+                    "timeline": {"data": ["2015"]},
+                    "dataset": {"source": df},
+                    "series": [{"type": "bar"}],
+                },
+                "options": [{"title": {"text": "2015"}}],
+            }
+        )
+
+        spec = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)
+        assert spec["baseOption"]["dataset"]["source"] == [
+            {"product": "a", "2015": 43.3}
+        ]
+        assert spec["baseOption"]["dataset"]["dimensions"] == ["product", "2015"]
+
+    def test_dataset_source_dataframe_inside_timeline_options(self):
+        """A dataframe ``dataset.source`` in a timeline tick is converted."""
+        df = pd.DataFrame({"x": [1], "y": [2]})
+        st.echarts_chart(
+            {
+                "baseOption": {
+                    "timeline": {"data": ["2015"]},
+                    "series": [{"type": "bar"}],
+                },
+                "options": [{"dataset": {"source": df}}],
+            }
+        )
+
+        spec = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)
+        assert spec["options"][0]["dataset"]["source"] == [{"x": 1, "y": 2}]
+        assert spec["options"][0]["dataset"]["dimensions"] == ["x", "y"]
+
     def test_dataset_source_datetime_and_nan_normalized(self):
         """Datetimes become ISO strings and missing values become ``null``."""
         df = pd.DataFrame(
@@ -414,8 +451,9 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element.echarts_chart
 
         assert el.id.endswith("styled_chart")
-        # A display-only chart is still not a form widget.
+        # A display-only chart is still not a selection widget.
         assert el.form_id == ""
+        assert el.selection_activated is False
 
     def test_display_only_key_id_stable_across_spec_changes(self):
         """A keyed display-only chart keeps its ID when the spec changes.
@@ -449,6 +487,7 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         st.echarts_chart(_BASIC_SPEC, on_select="rerun")
         el = self.get_delta_from_queue().new_element.echarts_chart
         assert el.id != ""
+        assert el.selection_activated is True
 
     def test_id_changes_when_renderer_changes(self):
         """The widget ID changes when renderer changes (no key)."""

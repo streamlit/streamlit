@@ -39,6 +39,11 @@ message EChartsChart {
   // Renderer passed to echarts.init.
   Renderer renderer = 6;
 
+  // True when ``on_select`` is not ``"ignore"``. Keyed display-only charts
+  // also receive an element ID (CSS class + remount identity), so the
+  // frontend cannot treat a non-empty ID as "this is a selection widget".
+  bool selection_activated = 7;
+
   // Available renderers:
   enum Renderer {
     CANVAS = 0; // Canvas renderer.

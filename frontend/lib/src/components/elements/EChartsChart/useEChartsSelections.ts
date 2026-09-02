@@ -121,8 +121,9 @@ interface BrushEndParams {
 
 export interface UseEChartsSelectionsOutput {
   /**
-   * Whether the chart is a selection widget (``on_select`` is not ``"ignore"``,
-   * i.e. the element has an ID) and the widget is not disabled.
+   * Whether the chart is a selection widget (``on_select`` is not
+   * ``"ignore"``) and the widget is not disabled. Keyed display-only charts
+   * also have an element ID, so this is not ``Boolean(id)``.
    */
   isSelectionActivated: boolean
   /**
@@ -149,6 +150,12 @@ export interface UseEChartsSelectionsOutput {
   restoreSelection: (chart: EChartsSelectionInstance) => void
   /** Clear the selection (widget state + persisted selection element state). */
   onFormCleared: () => void
+  /**
+   * Drop pixel-only brush overlays after a container resize. Regions without
+   * ``coordRange`` no longer map to the resized chart, so they are removed from
+   * private state and the on-screen overlay.
+   */
+  prunePixelOnlyBrushAfterResize: (chart: EChartsSelectionInstance) => void
 }
 
 const EMPTY_SELECTION: EChartsSelectionState = {
@@ -451,6 +458,15 @@ function buildSelectionState(
   }
 }
 
+function prunePixelOnlyBrushAreas(
+  brushSelection: BrushSelection[]
+): BrushSelection[] {
+  return brushSelection.map(brush => ({
+    ...brush,
+    areas: (brush.areas ?? []).filter(area => Array.isArray(area.coordRange)),
+  }))
+}
+
 function hasNoBrushAreas(brushSelection: BrushSelection[]): boolean {
   return brushSelection.every(brush => (brush.areas ?? []).length === 0)
 }
@@ -595,9 +611,10 @@ export function useEChartsSelections(
   const chartId = element.id
   const formId = element.formId
 
-  // Selection is active whenever the chart is a widget (on_select != "ignore")
-  // and the widget is not disabled (e.g. a disconnected app).
-  const isSelectionActivated = Boolean(chartId) && !disabled
+  // Selection is active only when the backend registered this chart as a
+  // widget (``on_select != "ignore"``). A key also assigns an ID for CSS /
+  // remount identity, so a non-empty ID is not enough.
+  const isSelectionActivated = element.selectionActivated && !disabled
 
   // Keep the latest bound chart so form-clear resets can clear the visible brush.
   const chartRef = useRef<EChartsSelectionInstance | null>(null)
@@ -608,6 +625,8 @@ export function useEChartsSelections(
   // rerun cannot loop: ``restoreSelection`` runs while handlers are already
   // bound, and ECharts fires ``selectchanged`` for ``dispatchAction("select")``.
   const isRestoringRef = useRef(false)
+  const latestBrushSelectionRef = useRef<BrushSelection[]>([])
+  const committedBrushSelectionRef = useRef<BrushSelection[]>([])
 
   const widgetInfo: WidgetInfo = useMemo(
     () => ({ id: chartId, formId }),
@@ -733,6 +752,46 @@ export function useEChartsSelections(
     }
   }, [clearSelection])
 
+  const prunePixelOnlyBrushAfterResize = useCallback(
+    (chart: EChartsSelectionInstance): void => {
+      if (!chartId || !isSelectionActivated) {
+        return
+      }
+      const current = widgetMgr.getElementState<BrushSelection[]>(
+        chartId,
+        BRUSH_SELECTION_STATE_KEY
+      )
+      if (!Array.isArray(current)) {
+        return
+      }
+      const pruned = prunePixelOnlyBrushAreas(current)
+      if (isEqual(pruned, current)) {
+        return
+      }
+      latestBrushSelectionRef.current = pruned
+      committedBrushSelectionRef.current = pruned
+      widgetMgr.setElementState(chartId, BRUSH_SELECTION_STATE_KEY, pruned)
+      for (const brush of current) {
+        const nextAreas =
+          pruned.find(item => item.brushIndex === brush.brushIndex)?.areas ??
+          []
+        try {
+          chart.dispatchAction({
+            type: "brush",
+            brushIndex: brush.brushIndex,
+            areas: nextAreas,
+          })
+        } catch (error) {
+          LOG.warn(
+            "Failed to prune pixel-only brush areas after resize",
+            error
+          )
+        }
+      }
+    },
+    [chartId, isSelectionActivated, widgetMgr]
+  )
+
   const bindSelections = useCallback(
     (chart: EChartsSelectionInstance): (() => void) => {
       if (!isSelectionActivated) {
@@ -745,9 +804,9 @@ export function useEChartsSelections(
       // Native and brush selection are independent ECharts channels. Cache their
       // full snapshots separately, then expose a deterministic grouped union.
       let latestNativeSelection: SelectedEntry[] = []
-      let latestBrushSelection: BrushSelection[] = []
-      let committedBrushSelection: BrushSelection[] = []
       let pendingBrushEnd: BrushEndParams | undefined
+      latestBrushSelectionRef.current = []
+      committedBrushSelectionRef.current = []
 
       // Seed both channels so an interaction after a remount cannot drop the
       // other channel's restored state.
@@ -764,8 +823,8 @@ export function useEChartsSelections(
           BrushSelection[]
         >(chartId, BRUSH_SELECTION_STATE_KEY)
         if (Array.isArray(persistedBrushSelection)) {
-          latestBrushSelection = persistedBrushSelection
-          committedBrushSelection = persistedBrushSelection
+          latestBrushSelectionRef.current = persistedBrushSelection
+          committedBrushSelectionRef.current = persistedBrushSelection
         }
       }
 
@@ -774,19 +833,19 @@ export function useEChartsSelections(
           buildSelectionState(
             chart,
             latestNativeSelection,
-            latestBrushSelection
+            committedBrushSelectionRef.current
           )
         )
       }, DEBOUNCE_TIME_MS)
 
       const commitBrushSelection = (): void => {
-        committedBrushSelection = latestBrushSelection
+        committedBrushSelectionRef.current = latestBrushSelectionRef.current
         pendingBrushEnd = undefined
         if (chartId) {
           widgetMgr.setElementState(
             chartId,
             BRUSH_SELECTION_STATE_KEY,
-            latestBrushSelection
+            latestBrushSelectionRef.current
           )
         }
         emitSelection()
@@ -817,14 +876,14 @@ export function useEChartsSelections(
 
       const handleBrushSelected = (raw: unknown): void => {
         const params = raw as BrushSelectedParams
-        latestBrushSelection = params.batch ?? []
+        latestBrushSelectionRef.current = params.batch ?? []
         if (isRestoringRef.current) {
           return
         }
 
         // Toolbox clear emits a full snapshot with one empty-area placeholder
         // per brush component, but no brushEnd.
-        if (hasNoBrushAreas(latestBrushSelection)) {
+        if (hasNoBrushAreas(latestBrushSelectionRef.current)) {
           commitBrushSelection()
           return
         }
@@ -832,7 +891,10 @@ export function useEChartsSelections(
         // With throttling, the final brush snapshot can arrive after brushEnd.
         if (
           pendingBrushEnd &&
-          brushEndMatchesSelection(latestBrushSelection, pendingBrushEnd)
+          brushEndMatchesSelection(
+            latestBrushSelectionRef.current,
+            pendingBrushEnd
+          )
         ) {
           commitBrushSelection()
         }
@@ -851,7 +913,7 @@ export function useEChartsSelections(
         // same areas, and re-arming on that would make the lasso impossible to
         // clear.
         const committedBrush = findBrushSelectionForEnd(
-          committedBrushSelection,
+          committedBrushSelectionRef.current,
           params
         )
         const areasChanged = !brushAreasEqual(
@@ -869,7 +931,9 @@ export function useEChartsSelections(
           return
         }
 
-        if (brushEndMatchesSelection(latestBrushSelection, params)) {
+        if (
+          brushEndMatchesSelection(latestBrushSelectionRef.current, params)
+        ) {
           commitBrushSelection()
         } else {
           // brushEnd contains only one component's areas. Wait for the
@@ -881,8 +945,8 @@ export function useEChartsSelections(
       const clearBoundSelection = (fromUser = true): void => {
         emitSelection.cancel()
         latestNativeSelection = []
-        latestBrushSelection = []
-        committedBrushSelection = []
+        latestBrushSelectionRef.current = []
+        committedBrushSelectionRef.current = []
         pendingBrushEnd = undefined
         clearSelection(fromUser)
       }
@@ -953,5 +1017,6 @@ export function useEChartsSelections(
     bindSelections,
     restoreSelection,
     onFormCleared,
+    prunePixelOnlyBrushAfterResize,
   }
 }

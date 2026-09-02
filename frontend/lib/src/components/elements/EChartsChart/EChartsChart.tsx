@@ -99,14 +99,14 @@ export function EChartsChart({
   // coincides with (re)creating the instance (see the resize effect below).
   const resizedInstanceRef = useRef<echarts.ECharts | null>(null)
   // The live ECharts instance, tracked in state so recreating it (on a
-  // renderer/theme change) re-runs the option and selection effects.
+  // renderer change) re-runs the option and selection effects.
   const [chartInstance, setChartInstance] = useState<echarts.ECharts | null>(
     null
   )
   const [renderError, setRenderError] = useState<string | null>(null)
   const [hasRendered, setHasRendered] = useState(false)
 
-  // Parse the spec, memoized on the spec string (display-only charts have no id).
+  // Parse the spec, memoized on the spec string.
   const { option, parseError } = useMemo<{
     option: EChartsOptionObject | null
     parseError: string | null
@@ -150,6 +150,7 @@ export function EChartsChart({
     bindSelections,
     restoreSelection,
     onFormCleared,
+    prunePixelOnlyBrushAfterResize,
   } = useEChartsSelections(element, widgetMgr, fragmentId, disabled)
 
   // The option actually handed to setOption: Streamlit theming defaults plus
@@ -170,6 +171,9 @@ export function EChartsChart({
   // but the current measurement is 0), the first positive-size pass must
   // ``resize()`` instead of being treated as the coincident init skip.
   const needsResizeAfterZeroInitRef = useRef(false)
+  const lastPositiveSizeRef = useRef<{ width: number; height: number } | null>(
+    null
+  )
 
   // Latch: once the container has been measured with non-zero dimensions, keep
   // the chart mounted. Dimensions can transiently report 0 during layout
@@ -225,10 +229,11 @@ export function EChartsChart({
     if (appliedThemeRef.current === themeArg) {
       return
     }
-    appliedThemeRef.current = themeArg
 
     try {
       chartInstance.setTheme(themeArg ?? "default")
+      appliedThemeRef.current = themeArg
+      setRenderError(null)
       // Re-theming re-runs the render pipeline, which drops the native
       // select/brush visuals, so put them back.
       restoreSelection(chartInstance)
@@ -240,7 +245,7 @@ export function EChartsChart({
   // Apply the option whenever it (or the underlying instance) changes. Skips
   // no-op setOption calls and re-applies the persisted selection afterwards.
   useEffect(() => {
-    // When the instance is recreated (renderer/theme change), an effect keyed on
+    // When the instance is recreated (renderer change), an effect keyed on
     // the previous `chartInstance` can still run once against the just-disposed
     // instance before the state update lands. Skip it so we don't mark the
     // option as applied against a dead instance (which would make the fresh one
@@ -301,6 +306,7 @@ export function EChartsChart({
     // first positive observation must resize.
     if (resizedInstanceRef.current !== chartInstance) {
       resizedInstanceRef.current = chartInstance
+      lastPositiveSizeRef.current = { width, height }
       if (!needsResizeAfterZeroInitRef.current) {
         return
       }
@@ -308,6 +314,15 @@ export function EChartsChart({
     }
     try {
       chartInstance.resize()
+      setRenderError(null)
+      const previousSize = lastPositiveSizeRef.current
+      lastPositiveSizeRef.current = { width, height }
+      if (
+        previousSize &&
+        (previousSize.width !== width || previousSize.height !== height)
+      ) {
+        prunePixelOnlyBrushAfterResize(chartInstance)
+      }
     } catch (error) {
       // `resize` re-runs the full render pipeline, so an option that already
       // failed in `setOption` throws again here. Surface it as an in-chart
@@ -315,7 +330,7 @@ export function EChartsChart({
       // replace the element with an unrecoverable stack trace.
       setRenderError(ensureError(error).message)
     }
-  }, [chartInstance, width, height])
+  }, [chartInstance, width, height, prunePixelOnlyBrushAfterResize])
 
   // Reset the selection when the surrounding form is cleared.
   useEffect(() => {
