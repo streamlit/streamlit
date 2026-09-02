@@ -67,6 +67,22 @@ const THEME_API_VALUE_KEYS = [
   ...CHART_ARRAY_KEYS,
 ] as const
 
+const COLOR_INPUT_FROM_EMOTION: Record<
+  (typeof COLOR_STRING_KEYS)[number],
+  keyof EmotionTheme["colors"]
+> = {
+  primaryColor: "primary",
+  backgroundColor: "bgColor",
+  secondaryBackgroundColor: "secondaryBg",
+  textColor: "bodyText",
+  linkColor: "link",
+  codeTextColor: "codeTextColor",
+  codeBackgroundColor: "codeBackgroundColor",
+  borderColor: "borderColor",
+  dataframeBorderColor: "dataframeBorderColor",
+  dataframeHeaderBackgroundColor: "dataframeHeaderBackgroundColor",
+}
+
 export interface CreateThemeFromOverrideOptions {
   inSidebar?: boolean
   name?: string
@@ -145,6 +161,47 @@ function mergeThemeInputs(
     overlay,
     skipProtobufDefaults
   )
+}
+
+function pickThemeApiKeys(
+  input: Partial<ICustomThemeConfig>
+): Partial<ICustomThemeConfig> {
+  const result: Partial<ICustomThemeConfig> = {}
+  THEME_API_VALUE_KEYS.forEach(key => {
+    const value = input[key]
+    if (isNullOrUndefined(value) || value === "") {
+      return
+    }
+    if (Array.isArray(value) && value.length === 0) {
+      return
+    }
+    Object.assign(result, { [key]: value })
+  })
+  return result
+}
+
+/**
+ * Rebuild theme-API color and chart tokens from a rendered parent. createTheme
+ * only copies five fields through toThemeInput, then createEmotionColors
+ * resets link, code, border, dataframe, and chart palettes.
+ */
+function themeApiInputFromEmotion(
+  emotion: EmotionTheme
+): Partial<ICustomThemeConfig> {
+  const input: Partial<ICustomThemeConfig> = {}
+  COLOR_STRING_KEYS.forEach(key => {
+    const color = emotion.colors[COLOR_INPUT_FROM_EMOTION[key]]
+    if (typeof color === "string" && color !== "") {
+      Object.assign(input, { [key]: color })
+    }
+  })
+  CHART_ARRAY_KEYS.forEach(key => {
+    const value = emotion.colors[key]
+    if (Array.isArray(value) && value.length > 0) {
+      Object.assign(input, { [key]: value })
+    }
+  })
+  return input
 }
 
 /**
@@ -284,10 +341,20 @@ export function createThemeFromOverride(
     ? (baseThemeConfig.themeInput ?? {})
     : (options?.parentThemeInput ?? {})
 
+  // Pass parent theme-API tokens into createTheme so inherit does not drop
+  // configured link/code/border/dataframe/chart values. Reconstruct from the
+  // parent Emotion theme when parentThemeInput is absent (nested scopes).
+  const parentApiInput = notNullOrUndefined(explicitBase)
+    ? pickThemeApiKeys(baseThemeConfig.themeInput ?? {})
+    : mergeThemeInputs(
+        themeApiInputFromEmotion(parentEmotion),
+        pickThemeApiKeys(options?.parentThemeInput ?? {})
+      )
+
   const name = options?.name ?? "Scoped"
   const created = createTheme(
     name,
-    mergedInput as Partial<CustomThemeConfig>,
+    mergeThemeInputs(parentApiInput, mergedInput),
     baseThemeConfig,
     inSidebar
   )

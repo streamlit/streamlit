@@ -57,6 +57,8 @@ describe("isThemeApiColor", () => {
     "#fff",
     "rgb(0, 128, 0)",
     "rgba(0, 128, 0, 0.5)",
+    "rgb(0 128 0)",
+    "rgb(0 128 0 / 0.5)",
     "green",
     "RebeccaPurple",
   ])("accepts %s", color => {
@@ -70,6 +72,8 @@ describe("isThemeApiColor", () => {
     "primary",
     "#GGG",
     "rgb(not-a-color)",
+    "rgb(0, 0 0)",
+    "rgb(0 0 0 / .)",
     "rgb(0,0,0); position:fixed; inset:0",
   ])("rejects %s", color => {
     expect(isThemeApiColor(color)).toBe(false)
@@ -381,5 +385,59 @@ describe("createThemeFromOverride", () => {
       availableThemes
     )
     expect(theme.emotion.colors.widgetBorderColor).toBeUndefined()
+  })
+
+  it("keeps parent link color and chart palette on a primary-only inherit overlay", () => {
+    const parentLink = "#cc0000"
+    const parentPalette = ["#111111", "#222222", "#333333"]
+    const parentWithTokens = {
+      ...parentLight,
+      colors: {
+        ...parentLight.colors,
+        link: parentLink,
+        chartCategoricalColors: parentPalette,
+      },
+    }
+    const theme = createThemeFromOverride(
+      { values: { primaryColor: OVERRIDE_PRIMARY } },
+      parentWithTokens,
+      availableThemes
+    )
+    expect(theme.emotion.colors.primary).toBe(OVERRIDE_PRIMARY)
+    expect(theme.emotion.colors.link).toBe(parentLink)
+    expect(theme.emotion.colors.chartCategoricalColors).toEqual(parentPalette)
+  })
+
+  it("keeps an outer link color when a nested inherit overlay only sets primary", () => {
+    const outerLink = "#cc0000"
+    const outer = createThemeFromOverride(
+      { values: { linkColor: outerLink } },
+      parentLight,
+      availableThemes
+    )
+    const inner = createThemeFromOverride(
+      { values: { primaryColor: OVERRIDE_PRIMARY } },
+      outer.emotion,
+      availableThemes
+    )
+    expect(inner.emotion.colors.link).toBe(outerLink)
+    expect(inner.emotion.colors.primary).toBe(OVERRIDE_PRIMARY)
+    expect(inner.emotion.colors.link).not.toBe(parentLight.colors.link)
+  })
+
+  it("applies parentThemeInput link color to the derived emotion theme", () => {
+    const configuredLink = "#00aa00"
+    const theme = createThemeFromOverride(
+      { values: { primaryColor: OVERRIDE_PRIMARY } },
+      parentLight,
+      availableThemes,
+      {
+        parentThemeInput: {
+          linkColor: configuredLink,
+        },
+      }
+    )
+    expect(theme.emotion.colors.primary).toBe(OVERRIDE_PRIMARY)
+    expect(theme.emotion.colors.link).toBe(configuredLink)
   })
 })

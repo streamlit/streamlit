@@ -26,12 +26,15 @@ from streamlit.errors import StreamlitInvalidColorError
 _THEME_API_HEX_RE: Final[re.Pattern[str]] = re.compile(
     r"^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
 )
+_THEME_API_RGB_NUM: Final[str] = r"(?:\d+(?:\.\d+)?|\.\d+)%?"
 _THEME_API_RGB_RE: Final[re.Pattern[str]] = re.compile(
-    r"^rgba?\(\s*"
-    r"(?:\d+(?:\.\d+)?%?(?:\s*,\s*|\s+)){2}"
-    r"\d+(?:\.\d+)?%?"
-    r"(?:\s*(?:,|/)\s*[\d.]+%?)?"
-    r"\s*\)$"
+    rf"^rgba?\(\s*(?:"
+    rf"{_THEME_API_RGB_NUM}\s*,\s*{_THEME_API_RGB_NUM}\s*,\s*{_THEME_API_RGB_NUM}"
+    rf"(?:\s*,\s*{_THEME_API_RGB_NUM})?"
+    rf"|"
+    rf"{_THEME_API_RGB_NUM}\s+{_THEME_API_RGB_NUM}\s+{_THEME_API_RGB_NUM}"
+    rf"(?:\s*/\s*{_THEME_API_RGB_NUM})?"
+    rf")\s*\)$"
 )
 
 # Built-in color names that map to Streamlit theme colors.

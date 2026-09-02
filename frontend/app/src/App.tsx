@@ -17,6 +17,7 @@
 import { createRef, PureComponent, ReactNode } from "react"
 
 import { enableMapSet, enablePatches } from "immer"
+import { isEqual } from "lodash-es"
 import { getLogger } from "loglevel"
 import { flushSync } from "react-dom"
 
@@ -831,10 +832,16 @@ export class App extends PureComponent<Props, State> {
     }
 
     if (this.props.theme.activeTheme !== prevProps.theme.activeTheme) {
-      this.hostCommunicationMgr.sendMessageToHost({
-        type: "SET_THEME_CONFIG",
-        themeInfo: toExportedTheme(this.props.theme.activeTheme.emotion),
-      })
+      const themeInfo = toExportedTheme(this.props.theme.activeTheme.emotion)
+      const prevThemeInfo = toExportedTheme(
+        prevProps.theme.activeTheme.emotion
+      )
+      if (!isEqual(themeInfo, prevThemeInfo)) {
+        this.hostCommunicationMgr.sendMessageToHost({
+          type: "SET_THEME_CONFIG",
+          themeInfo,
+        })
+      }
     }
   }
 
@@ -1869,8 +1876,8 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Set the selected theme. SET_THEME_CONFIG is sent when `activeTheme`
-   * identity changes so runtime overlays are included.
+   * Set the selected theme. SET_THEME_CONFIG is sent when the exported
+   * overlay-aware theme payload changes.
    */
   setAndSendTheme = (themeConfig: ThemeConfig): void => {
     this.props.theme.setTheme(themeConfig)

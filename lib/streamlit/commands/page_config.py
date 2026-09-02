@@ -229,18 +229,17 @@ def set_page_config(
 
     theme : dict or None
         A mapping of theme tokens to apply as a session-local overlay on the
-        selected app theme. Unlike most page settings, ``theme`` may be set
-        after other commands have run.
+        selected app theme.
 
         Presence differs from ``st.container``:
 
-        =============== ======================== ====================
+        =============== ======================== =====================
         ``theme`` value ``st.set_page_config``   ``st.container``
-        =============== ======================== ====================
+        =============== ======================== =====================
         ``None``        Keep the current overlay No scoped override
         ``{}``          Clear the overlay        No scoped override
         ``{...}``       Replace the overlay      Apply scoped override
-        =============== ======================== ====================
+        =============== ======================== =====================
 
         Keys use snake_case and match an audited subset of ``config.toml``
         theme options. Optional ``light`` and ``dark`` mappings follow the

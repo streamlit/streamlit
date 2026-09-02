@@ -77,4 +77,31 @@ describe("ScopedThemeProvider", () => {
       OVERRIDE_PRIMARY
     )
   })
+
+  it("keeps an outer link color when an inner scope only sets primary", () => {
+    const outerLink = "#cc0000"
+
+    function LinkAndPrimaryProbe(): ReactElement {
+      const theme = useEmotionTheme()
+      return (
+        <div data-testid="nested-scope">
+          {theme.colors.link}|{theme.colors.primary}
+        </div>
+      )
+    }
+
+    renderWithContexts(
+      <ScopedThemeProvider override={{ values: { linkColor: outerLink } }}>
+        <ScopedThemeProvider
+          override={{ values: { primaryColor: OVERRIDE_PRIMARY } }}
+        >
+          <LinkAndPrimaryProbe />
+        </ScopedThemeProvider>
+      </ScopedThemeProvider>
+    )
+
+    expect(screen.getByTestId("nested-scope")).toHaveTextContent(
+      `${outerLink}|${OVERRIDE_PRIMARY}`
+    )
+  })
 })

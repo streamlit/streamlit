@@ -17,8 +17,9 @@
 from __future__ import annotations
 
 import math
+import re
 from collections.abc import Mapping, Sequence
-from typing import Final, Literal, TypedDict, get_type_hints
+from typing import Final, Literal, TypedDict
 
 from streamlit.elements.lib.color_util import is_theme_api_color
 from streamlit.errors import StreamlitInvalidParameterTypeError, StreamlitValueError
@@ -47,6 +48,7 @@ _RADIUS_FORMAT_VALUES: Final[tuple[str, ...]] = (
     "a px or rem size",
 )
 _CHART_PALETTE_EXACT_LENGTH: Final[int] = 10
+_RADIUS_NUMBER_RE: Final[re.Pattern[str]] = re.compile(r"-?(?:\d+\.\d*|\.\d+|\d+)$")
 
 
 class ThemeVariantConfig(TypedDict, total=False):
@@ -79,8 +81,7 @@ class ThemeConfig(ThemeVariantConfig, total=False):
     dark: ThemeVariantConfig
 
 
-_VARIANT_HINTS: Final = get_type_hints(ThemeVariantConfig)
-_VARIANT_KEYS: Final[frozenset[str]] = frozenset(_VARIANT_HINTS)
+_VARIANT_KEYS: Final[frozenset[str]] = frozenset(ThemeVariantConfig.__annotations__)
 _ROOT_ONLY_KEYS: Final[frozenset[str]] = frozenset({"base", "light", "dark"})
 _ALLOWED_ROOT_KEYS: Final[frozenset[str]] = _VARIANT_KEYS | _ROOT_ONLY_KEYS
 _COLOR_KEYS: Final[frozenset[str]] = frozenset(
@@ -97,9 +98,7 @@ _COLOR_KEYS: Final[frozenset[str]] = frozenset(
         "dataframe_header_background_color",
     }
 )
-_BOOL_KEYS: Final[frozenset[str]] = frozenset(
-    key for key, annotation in _VARIANT_HINTS.items() if annotation is bool
-)
+_BOOL_KEYS: Final[frozenset[str]] = frozenset({"link_underline", "show_widget_border"})
 _RADIUS_KEYS: Final[frozenset[str]] = frozenset({"base_radius", "button_radius"})
 _CHART_KEYS: Final[frozenset[str]] = frozenset(
     {
@@ -274,7 +273,7 @@ def _is_valid_radius(value: str) -> bool:
 
 
 def _is_parseable_number(value: str) -> bool:
-    if value == "":
+    if not _RADIUS_NUMBER_RE.fullmatch(value):
         return False
     try:
         number = float(value)

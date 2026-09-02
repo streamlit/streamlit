@@ -4834,6 +4834,34 @@ describe("App", () => {
       })
     })
 
+    it("does not resend SET_THEME_CONFIG when the exported payload is unchanged", () => {
+      const props = getProps()
+      const { rerender } = renderApp(props)
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      vi.mocked(hostCommunicationMgr.sendMessageToHost).mockClear()
+
+      rerender(
+        <RootStyleProvider theme={getDefaultTheme()}>
+          <WindowDimensionsProvider>
+            <App
+              {...getProps({
+                theme: {
+                  ...props.theme,
+                  activeTheme: { ...props.theme.activeTheme },
+                },
+              })}
+            />
+          </WindowDimensionsProvider>
+        </RootStyleProvider>
+      )
+
+      expect(hostCommunicationMgr.sendMessageToHost).not.toHaveBeenCalledWith(
+        expect.objectContaining({ type: "SET_THEME_CONFIG" })
+      )
+    })
+
     it("closes modals when the modal closure message has been received", async () => {
       vi.useFakeTimers()
       prepareHostCommunicationManager()

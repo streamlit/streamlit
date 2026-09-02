@@ -171,8 +171,17 @@ export const CSS_NAMED_COLORS: ReadonlySet<string> = new Set([
 ])
 
 const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
-const CSS_RGB_RE =
-  /^rgba?\(\s*(?:\d+(?:\.\d+)?%?(?:\s*,\s*|\s+)){2}\d+(?:\.\d+)?%?(?:\s*(?:,|\/)\s*[\d.]+%?)?\s*\)$/
+// Legacy comma-separated and modern space-separated rgb()/rgba(). Mixed
+// separators and a lone "." alpha are rejected.
+const CSS_RGB_NUM = String.raw`(?:\d+(?:\.\d+)?|\.\d+)%?`
+const CSS_RGB_RE = new RegExp(
+  String.raw`^rgba?\(\s*(?:` +
+    `${CSS_RGB_NUM}\\s*,\\s*${CSS_RGB_NUM}\\s*,\\s*${CSS_RGB_NUM}` +
+    `(?:\\s*,\\s*${CSS_RGB_NUM})?|` +
+    `${CSS_RGB_NUM}\\s+${CSS_RGB_NUM}\\s+${CSS_RGB_NUM}` +
+    `(?:\\s*/\\s*${CSS_RGB_NUM})?` +
+    `)\\s*\\)$`
+)
 
 /**
  * Return whether a string is an accepted color for theme override APIs.

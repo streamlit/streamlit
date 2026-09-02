@@ -180,7 +180,14 @@ def test_rejects_excluded_config_tokens(excluded: str) -> None:
 
 @pytest.mark.parametrize(
     "color",
-    ["green", "#7C3AED", "#abc", "rgb(0, 128, 0)", "rgba(0, 128, 0, 0.5)"],
+    [
+        "green",
+        "#7C3AED",
+        "#abc",
+        "rgb(0, 128, 0)",
+        "rgba(0, 128, 0, 0.5)",
+        "rgb(0 128 0)",
+    ],
 )
 def test_accepts_valid_colors(color: str) -> None:
     """Hex, rgb()/rgba(), and CSS named colors are accepted."""
@@ -198,6 +205,8 @@ def test_accepts_valid_colors(color: str) -> None:
         "not-a-color",
         "#GGG",
         "rgb(not-a-color)",
+        "rgb(0, 0 0)",
+        "rgb(0 0 0 / .)",
         "rgb(0,0,0); position: fixed; inset: 0",
     ],
 )
@@ -216,7 +225,8 @@ def test_accepts_valid_radii(radius: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "radius", ["huge", "10em", "10%", "", "nan", "inf", "nanpx", "infrem"]
+    "radius",
+    ["huge", "10em", "10%", "", "nan", "inf", "nanpx", "infrem", "1_000px", "1e2"],
 )
 def test_rejects_invalid_radii(radius: str) -> None:
     """Unsupported radius strings raise StreamlitValueError."""

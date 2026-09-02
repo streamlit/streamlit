@@ -38,10 +38,19 @@ export default function ScopedThemeProvider({
 }: ScopedThemeProviderProps): ReactElement {
   const parentEmotion = useEmotionTheme()
   const { availableThemes } = useContext(ThemeContext)
+  const overrideKey = JSON.stringify({
+    base: override.base ?? null,
+    values: override.values ?? null,
+  })
 
   const scopedTheme = useMemo(
-    () => createThemeFromOverride(override, parentEmotion, availableThemes),
-    [override, parentEmotion, availableThemes]
+    () =>
+      createThemeFromOverride(
+        JSON.parse(overrideKey) as IThemeOverride,
+        parentEmotion,
+        availableThemes
+      ),
+    [overrideKey, parentEmotion, availableThemes]
   )
 
   return <ThemeProvider theme={scopedTheme.emotion}>{children}</ThemeProvider>
