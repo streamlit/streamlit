@@ -53,6 +53,8 @@ def test_container_reduced_viewport(
 ):
     """Test container layouts at the reduced mobile viewport."""
     app.set_viewport_size({"width": _REDUCED_VIEWPORT_WIDTH, "height": 844})
+    # Wait until the browser has applied the viewport so the React-stability
+    # wait does not start (and finish) before the resize.
     app.wait_for_function(f"() => window.innerWidth <= {_REDUCED_VIEWPORT_WIDTH}")
     # Snapshots must wait for the resize-driven rerender. The new width reaches
     # React through a ResizeObserver throttled to 100ms, and canvas-backed
