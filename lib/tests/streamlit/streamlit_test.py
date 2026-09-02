@@ -58,6 +58,8 @@ def get_version() -> str | None:
 NON_ELEMENT_COMMANDS: set[str] = {
     "App",
     "Page",
+    "ThemeConfig",
+    "ThemeVariantConfig",
     "bottom",
     "cache_data",
     "cache_resource",

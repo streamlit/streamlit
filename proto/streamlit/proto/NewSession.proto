@@ -253,6 +253,16 @@ message CustomThemeConfig {
   // Next ID: 66
 }
 
+// Partial theme overlay for st.container(theme=) and st.set_page_config(theme=).
+// Wrapper presence of `base` distinguishes inherited mode from an explicit LIGHT
+// value, because CustomThemeConfig.base is a non-optional proto3 enum.
+message ThemeOverride {
+  optional CustomThemeConfig.BaseTheme base = 1;
+  // Flat values are shared; values.light/dark are optional mode overrides.
+  // Message field has proto3 presence even without `optional`.
+  CustomThemeConfig values = 2;
+}
+
 message FontFace {
   string url = 1;
   // Equivalent to font-family @font-face CSS property.

@@ -283,6 +283,16 @@ export interface StyledFlexContainerBlockProps {
    * (from `overflow`) instead of the `overflow` shorthand.
    */
   overflowX?: React.CSSProperties["overflowX"]
+  /**
+   * Paint `theme.colors.bgColor` when the mapping set `background_color`, or
+   * when `base` is explicit so the container is a light/dark island.
+   */
+  $applyBackgroundColor?: boolean
+  /**
+   * Paint `theme.colors.bodyText` when the mapping set `text_color`, or when
+   * `base` is explicit so ancestor CSS `color` cannot leak through.
+   */
+  $applyTextColor?: boolean
 }
 
 export const StyledFlexContainerBlock =
@@ -299,6 +309,8 @@ export const StyledFlexContainerBlock =
       justify,
       overflow,
       overflowX,
+      $applyBackgroundColor,
+      $applyTextColor,
     }) => {
       let gapWidth
       if (gap !== undefined) {
@@ -317,6 +329,12 @@ export const StyledFlexContainerBlock =
         alignItems: getAlignItems(align),
         justifyContent: getJustifyContent(justify),
         flexWrap: $wrap ? "wrap" : "nowrap",
+        ...($applyBackgroundColor && {
+          backgroundColor: theme.colors.bgColor,
+        }),
+        ...($applyTextColor && {
+          color: theme.colors.bodyText,
+        }),
         ...(border && {
           border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
           borderRadius: theme.radii.default,

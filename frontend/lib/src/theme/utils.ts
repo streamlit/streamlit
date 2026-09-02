@@ -832,6 +832,10 @@ export const createEmotionTheme = (
   if (showWidgetBorder) {
     conditionalOverrides.colors.widgetBorderColor =
       conditionalOverrides.colors.borderColor
+  } else if (showWidgetBorder === false) {
+    // An explicit false must clear a parent theme's widget border rather than
+    // inheriting widgetBorderColor through the generic color spread.
+    delete conditionalOverrides.colors.widgetBorderColor
   }
 
   // Apply background color overrides based on configured background color or main color as fallback
@@ -1385,7 +1389,7 @@ export const convertRemToPx = (cssValue: string): number => {
  * (empty strings, null, empty arrays) to prevent them from overwriting valid values,
  * and replaces non-empty arrays atomically instead of merging by index.
  */
-const skipProtobufDefaults = (
+export const skipProtobufDefaults = (
   objValue: unknown,
   srcValue: unknown
 ): unknown => {
@@ -1588,8 +1592,14 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
       ? CustomThemeConfig.BaseTheme.LIGHT
       : CustomThemeConfig.BaseTheme.DARK
 
-  // If the active theme is a light/dark custom theme, use the expected base
-  if (activeTheme.name === CUSTOM_THEME_LIGHT_NAME) {
+  // If a runtime overlay set an explicit base, follow that variant for the
+  // sidebar even when `name` still identifies the selected menu theme.
+  if (notNullOrUndefined(activeTheme.overlayBase)) {
+    baseTheme =
+      activeTheme.overlayBase === CustomThemeConfig.BaseTheme.DARK
+        ? CustomThemeConfig.BaseTheme.DARK
+        : CustomThemeConfig.BaseTheme.LIGHT
+  } else if (activeTheme.name === CUSTOM_THEME_LIGHT_NAME) {
     baseTheme = CustomThemeConfig.BaseTheme.LIGHT
   } else if (activeTheme.name === CUSTOM_THEME_DARK_NAME) {
     baseTheme = CustomThemeConfig.BaseTheme.DARK

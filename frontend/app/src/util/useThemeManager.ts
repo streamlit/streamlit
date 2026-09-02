@@ -14,13 +14,16 @@
  * limitations under the License.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+
+import { isEqual } from "lodash-es"
 
 import {
   AUTO_THEME_NAME,
   createAutoTheme,
   createPresetThemes,
   createTheme,
+  createThemeFromOverride,
   CUSTOM_THEME_AUTO_NAME,
   CUSTOM_THEME_DARK_NAME,
   CUSTOM_THEME_LIGHT_NAME,
@@ -36,6 +39,7 @@ import {
   CustomThemeConfig,
   ICustomThemeConfig,
   IFontFace,
+  IThemeOverride,
 } from "@streamlit/protobuf"
 
 export type FontSources = Record<string, string>
@@ -75,6 +79,7 @@ export interface ThemeManager {
   ) => void
   setFonts: (themeInfo: ICustomThemeConfig) => void
   setImportedTheme: (themeInfo: ICustomThemeConfig) => void
+  setRuntimeOverride: (override: IThemeOverride | undefined) => void
 }
 
 export function useThemeManager(): [
@@ -83,7 +88,10 @@ export function useThemeManager(): [
   FontSources | null,
 ] {
   const defaultTheme = getDefaultTheme()
-  const [theme, setTheme] = useState<ThemeConfig>(defaultTheme)
+  const [selectedTheme, setSelectedTheme] = useState<ThemeConfig>(defaultTheme)
+  const [runtimeOverride, setRuntimeOverrideState] = useState<
+    IThemeOverride | undefined
+  >(undefined)
   const [fontFaces, setFontFaces] = useState<IFontFace[]>(
     defaultTheme.themeInput?.fontFaces ?? []
   )
@@ -120,7 +128,7 @@ export function useThemeManager(): [
   const applyTheme = useCallback(
     (newTheme: ThemeConfig, options: { persist?: boolean } = {}): void => {
       const { persist = true } = options
-      setTheme(prevTheme => {
+      setSelectedTheme(prevTheme => {
         if (newTheme !== prevTheme) {
           if (persist) {
             setCachedThemeSelection(newTheme)
@@ -157,7 +165,7 @@ export function useThemeManager(): [
 
   const updateAutoTheme = useCallback((): void => {
     const systemTheme = getHostSpecifiedTheme()
-    if (theme.name === AUTO_THEME_NAME) {
+    if (selectedTheme.name === AUTO_THEME_NAME) {
       applyTheme(systemTheme, { persist: false })
     }
 
@@ -168,7 +176,7 @@ export function useThemeManager(): [
       currTheme => currTheme.name === CUSTOM_THEME_AUTO_NAME
     )
 
-    if (hasCustomAutoTheme && theme.name === CUSTOM_THEME_AUTO_NAME) {
+    if (hasCustomAutoTheme && selectedTheme.name === CUSTOM_THEME_AUTO_NAME) {
       const systemCustomTheme = getSystemCustomTheme(constantThemes)
       if (systemCustomTheme) {
         applyTheme(createAutoCustomTheme(systemCustomTheme), {
@@ -182,7 +190,7 @@ export function useThemeManager(): [
         ? constantThemes
         : [createAutoTheme(), ...constantThemes]
     )
-  }, [theme.name, availableThemes, applyTheme])
+  }, [selectedTheme.name, availableThemes, applyTheme])
 
   const setFonts = useCallback((themeInfo: ICustomThemeConfig): void => {
     // If fonts are coming from a URL, they need to be imported through the FontFaceDeclaration
@@ -222,6 +230,33 @@ export function useThemeManager(): [
     [setFonts, updateTheme]
   )
 
+  const setRuntimeOverride = useCallback(
+    (override: IThemeOverride | undefined): void => {
+      setRuntimeOverrideState(prev =>
+        isEqual(prev, override) ? prev : override
+      )
+    },
+    []
+  )
+
+  const activeTheme = useMemo(
+    () =>
+      runtimeOverride
+        ? createThemeFromOverride(
+            runtimeOverride,
+            selectedTheme.emotion,
+            availableThemes,
+            {
+              inSidebar: false,
+              name: selectedTheme.name,
+              displayName: selectedTheme.displayName,
+              parentThemeInput: selectedTheme.themeInput,
+            }
+          )
+        : selectedTheme,
+    [runtimeOverride, selectedTheme, availableThemes]
+  )
+
   useEffect(() => {
     const mediaMatch = window.matchMedia("(prefers-color-scheme: dark)")
     mediaMatch.addEventListener("change", updateAutoTheme)
@@ -237,11 +272,12 @@ export function useThemeManager(): [
   return [
     {
       setTheme: updateTheme,
-      activeTheme: theme,
+      activeTheme,
       addThemes,
       availableThemes,
       setFonts,
       setImportedTheme,
+      setRuntimeOverride,
     },
     fontFaces,
     fontSources,

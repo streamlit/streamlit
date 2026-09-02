@@ -184,6 +184,10 @@ export {
   toThemeInput,
 } from "./theme/utils"
 export {
+  createThemeFromOverride,
+  isEmptyThemeOverride,
+} from "./theme/createThemeFromOverride"
+export {
   baseTheme,
   customTheme,
   darkTheme,

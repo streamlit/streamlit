@@ -25,7 +25,7 @@ Use this file as a quick mental model and navigation index; use `references/back
 | **Caching** | Decorators (`@st.cache_data`, `@st.cache_resource`) that memoize function results to avoid redundant computation. | `lib/streamlit/runtime/caching/` |
 | **Pages** | Multipage app system using `st.navigation()` and `st.Page()` or auto-discovery from `pages/` directory. | `lib/streamlit/navigation/`, `lib/streamlit/runtime/pages_manager.py` |
 | **Config** | App configuration via `.streamlit/config.toml` controlling server, client, and theme settings. | `lib/streamlit/config.py`, `lib/streamlit/config_option.py` |
-| **Theming** | Customizable UI themes (Light/Dark/Custom) defined in config or via theme editor. | `lib/streamlit/runtime/theme_util.py`, `frontend/lib/src/theme/` |
+| **Theming** | Customizable UI themes (Light/Dark/Custom) from config.toml, session-local `PageConfig.theme` overlays, and scoped `Block.theme` on containers. | `lib/streamlit/runtime/theme_util.py`, `lib/streamlit/elements/lib/theme_utils.py`, `frontend/lib/src/theme/`, `frontend/lib/src/components/core/ScopedThemeProvider.tsx` |
 | **Secrets** | Secure credential storage via `.streamlit/secrets.toml` (local) or platform settings (deployed). Accessed via `st.secrets`. | `lib/streamlit/runtime/secrets.py` |
 | **Connection** | Database/service abstraction (`st.connection`) with built-in caching and secrets integration. | `lib/streamlit/connections/` |
 | **Custom Components** | User-built extensions using React/iframe. **v1 (legacy)**: `declare_component()` API. **v2 (current)**: Bidirectional components with improved state management. | `frontend/component-lib/`, `frontend/component-v2-lib/`, `lib/streamlit/components/v1/`, `lib/streamlit/components/v2/` |

@@ -111,6 +111,12 @@ export type ThemeConfig = {
   displayName?: string
   emotion: EmotionTheme
   themeInput?: Partial<CustomThemeConfig>
+  /**
+   * Explicit overlay `base` when `name` still identifies the selected menu
+   * theme. createSidebarTheme uses this instead of the Custom Theme Light/Dark
+   * name heuristic.
+   */
+  overlayBase?: CustomThemeConfig.BaseTheme
 }
 
 export type ThemeSelection = "System" | "Light" | "Dark"

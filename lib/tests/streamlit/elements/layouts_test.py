@@ -25,6 +25,7 @@ from streamlit.errors import (
     FragmentHandledException,
     StreamlitAPIException,
     StreamlitDuplicateElementId,
+    StreamlitDuplicateElementKey,
     StreamlitIncompatibleParametersError,
     StreamlitInvalidFormCallbackError,
     StreamlitInvalidLayoutContextError,
@@ -762,6 +763,40 @@ class ContainerTest(DeltaGeneratorTestCase):
         st.container(key="container_key")
         container_block = self.get_delta_from_queue()
         assert "container_key" in container_block.add_block.id
+
+    def test_theme_none_and_empty_omit_field(self) -> None:
+        """None and empty theme mappings omit Block.theme."""
+        st.container()
+        assert not self.get_delta_from_queue().add_block.HasField("theme")
+
+        st.container(theme=None)
+        assert not self.get_delta_from_queue().add_block.HasField("theme")
+
+        st.container(theme={})
+        assert not self.get_delta_from_queue().add_block.HasField("theme")
+
+    def test_theme_falsy_non_mapping_raises(self) -> None:
+        """Falsey non-mappings are validated, not treated as omitted."""
+        with pytest.raises(StreamlitInvalidParameterTypeError, match="theme"):
+            st.container(theme=[])  # type: ignore[arg-type]
+        with pytest.raises(StreamlitInvalidParameterTypeError, match="theme"):
+            st.container(theme=False)  # type: ignore[arg-type]
+        with pytest.raises(StreamlitInvalidParameterTypeError, match="theme"):
+            st.container(theme=0)  # type: ignore[arg-type]
+
+    def test_theme_mapping_copied_to_proto(self) -> None:
+        """A non-empty theme mapping is copied onto the block proto."""
+        st.container(theme={"primary_color": "green", "show_widget_border": False})
+        theme = self.get_delta_from_queue().add_block.theme
+        assert theme.values.primary_color == "green"
+        assert theme.values.show_widget_border is False
+        assert theme.values.HasField("show_widget_border")
+
+    def test_keyed_container_id_stable_across_themes(self) -> None:
+        """Theme is not an identity input, so the same key still collides."""
+        st.container(key="themed", theme={"primary_color": "green"})
+        with pytest.raises(StreamlitDuplicateElementKey):
+            st.container(key="themed", theme={"primary_color": "red"})
 
     def test_height_parameter(self):
         """Test that it can be called with height parameter"""

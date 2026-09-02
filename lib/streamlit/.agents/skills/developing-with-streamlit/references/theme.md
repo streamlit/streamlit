@@ -221,6 +221,35 @@ backgroundColor = "#010409"
 
 Users can switch between modes in the app settings menu only if both `[theme.light]` and `[theme.dark]` are defined. A custom theme with just `[theme]` locks the app to a single mode.
 
+## Runtime and scoped overrides
+
+Use a `ThemeConfig` mapping with `st.set_page_config(theme=...)` for a session-local page overlay, or `st.container(theme=...)` to restyle one container and its descendants. Look up the current command signatures with `streamlit docs st.set_page_config` and `streamlit docs st.container`.
+
+Keys are snake_case (`primary_color`, not `primaryColor`) and cover an audited subset of `config.toml` visual tokens (colors, radii, borders, chart palettes). Fonts, `fontFaces`, and sidebar sections stay in `config.toml`. Optional `light` / `dark` mappings follow the active mode unless `base` is `"light"` or `"dark"`.
+
+Do **not** use CSS to restyle widgets when these APIs can do it. CSS named colors such as `"green"` are W3C/CSS names (`#008000`), not Streamlit semantic palette tokens (`theme.greenColor`). A container paints a background only when `background_color` is set, and CSS `color` only when `text_color` is set. If `base` is `"light"` or `"dark"`, the container paints that variant's background and text together so ancestor colors cannot leak through. Apps are responsible for contrast; Streamlit does not auto-adjust text against a new background.
+
+Presence differs between the two commands:
+
+| `theme` value | `st.set_page_config` | `st.container` |
+|---|---|---|
+| `None` (default) | Keep the current overlay | No scoped override |
+| `{}` | Clear the overlay | No scoped override |
+| `{...}` | Replace the overlay | Apply scoped override |
+
+```python
+import streamlit as st
+from streamlit import ThemeConfig
+
+overlay: ThemeConfig = {"primary_color": "green"}
+st.set_page_config(theme=overlay)
+
+with st.container(theme={"primary_color": "red"}):
+    st.button("Scoped", type="primary")
+```
+
+`st.context.theme.type` follows the effective page theme on the **next** client-originated rerun, not the current Python run. The overlay is not written to `config.toml` and is not persisted across a new browser session. Page navigation inherits a runtime overlay until a page replaces it or clears it with `theme={}`.
+
 ## Detecting current theme
 
 Use `st.context.theme.type` to adapt your app to the active theme. Useful for:
@@ -393,7 +422,7 @@ borderColor = "#1E6D94"
 - `st.html()` with `<style>` blocks
 - Any HTML/CSS for colors, backgrounds, fonts, or visual styling
 
-**Only use CSS if the user explicitly asks for it** (e.g., "add custom CSS", "use st.html for styling"). For brand colors, theming, and visual identity—always use `config.toml`.
+**Only use CSS if the user explicitly asks for it** (e.g., "add custom CSS", "use st.html for styling"). For brand colors, theming, and visual identity—always use `.streamlit/config.toml`, `st.set_page_config(theme=...)`, or `st.container(theme=...)`.
 
 Native theming is cleaner, more maintainable, and won't break with Streamlit updates.
 
@@ -406,7 +435,7 @@ st.button("Submit", key="submit")
 st.html("""<style>.st-key-submit button { width: 100%; }</style>""")
 ```
 
-**Never use CSS for theming (colors, backgrounds, fonts) unless explicitly asked. Use config.toml instead.**
+**Never use CSS for theming (colors, backgrounds, fonts) unless explicitly asked. Use `.streamlit/config.toml`, `st.set_page_config(theme=...)`, or `st.container(theme=...)` instead.**
 
 ## Development workflow
 

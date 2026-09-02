@@ -25,9 +25,10 @@ function parameters, return annotations, and shared helpers. Import them from
 
     def parse_upload(file: UploadedFile) -> dict[str, str]: ...
 
-The re-exported objects are the same runtime classes returned by the corresponding
-``st.*`` commands, so ``isinstance`` checks and attribute/item access behave normally.
-Values are normally obtained from Streamlit commands rather than constructed directly.
+The re-exported objects include runtime classes returned by ``st.*`` commands
+and TypedDicts that users construct (for example ``ThemeConfig``). Runtime
+classes support ``isinstance`` checks; TypedDicts describe mapping shapes for
+annotations.
 """
 
 from __future__ import annotations
@@ -35,6 +36,7 @@ from __future__ import annotations
 from streamlit.elements.arrow import DataframeState
 from streamlit.elements.deck_gl_json_chart import PydeckState
 from streamlit.elements.lib.column_config_utils import ButtonColumnClickState
+from streamlit.elements.lib.theme_utils import ThemeConfig, ThemeVariantConfig
 from streamlit.elements.plotly_chart import PlotlyState
 from streamlit.elements.vega_charts import VegaLiteState
 from streamlit.elements.widgets.chat import ChatInputValue
@@ -48,6 +50,8 @@ __all__ = [
     "DataframeState",
     "PlotlyState",
     "PydeckState",
+    "ThemeConfig",
+    "ThemeVariantConfig",
     "UploadedFile",
     "VegaLiteState",
 ]

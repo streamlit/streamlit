@@ -189,5 +189,7 @@ from streamlit.typing import DataframeState, UploadedFile
 | `PydeckState` | `st.pydeck_chart` when selection events are enabled |
 | `DataEditorState` | Session State for a keyed `st.data_editor` |
 | `ButtonColumnClickState` | Session State for a keyed `st.column_config.ButtonColumn` click |
+| `st.ThemeConfig` | Mapping constructed by the user for `st.container(theme=...)` and `st.set_page_config(theme=...)` |
+| `st.ThemeVariantConfig` | Nested `light` / `dark` mapping constructed by the user inside `ThemeConfig` |
 
-These are the runtime classes returned by Streamlit, so they work in annotations and `isinstance` checks. Obtain their values from the corresponding command or Session State entry instead of constructing them directly.
+Runtime classes returned by Streamlit work in annotations and `isinstance` checks. Obtain those values from the corresponding command or Session State entry instead of constructing them directly. `ThemeConfig` and `ThemeVariantConfig` are TypedDicts that users construct and pass in; they are also exported from `streamlit` and `streamlit.typing`.

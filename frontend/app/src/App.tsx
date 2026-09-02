@@ -17,6 +17,7 @@
 import { createRef, PureComponent, ReactNode } from "react"
 
 import { enableMapSet, enablePatches } from "immer"
+import { isEqual } from "lodash-es"
 import { getLogger } from "loglevel"
 import { flushSync } from "react-dom"
 
@@ -104,6 +105,7 @@ import {
   IMenuItem,
   INITIAL_SCRIPT_RUN_ID,
   isEmbed,
+  isEmptyThemeOverride,
   isInChildFrame,
   isKeyboardEventFromEditableTarget,
   isPaddingDisplayed,
@@ -800,7 +802,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   override componentDidUpdate(
-    _prevProps: Readonly<Props>,
+    prevProps: Readonly<Props>,
     prevState: Readonly<State>
   ): void {
     // @ts-expect-error
@@ -827,6 +829,19 @@ export class App extends PureComponent<Props, State> {
         type: "SCRIPT_RUN_STATE_CHANGED",
         scriptRunState: this.state.scriptRunState,
       })
+    }
+
+    if (this.props.theme.activeTheme !== prevProps.theme.activeTheme) {
+      const themeInfo = toExportedTheme(this.props.theme.activeTheme.emotion)
+      const prevThemeInfo = toExportedTheme(
+        prevProps.theme.activeTheme.emotion
+      )
+      if (!isEqual(themeInfo, prevThemeInfo)) {
+        this.hostCommunicationMgr.sendMessageToHost({
+          type: "SET_THEME_CONFIG",
+          themeInfo,
+        })
+      }
     }
   }
 
@@ -1171,6 +1186,7 @@ export class App extends PureComponent<Props, State> {
       initialSidebarState,
       initialSidebarWidth,
       menuItems,
+      theme,
     } = pageConfig
 
     this.appNavigation.handlePageConfigChanged(pageConfig)
@@ -1239,6 +1255,12 @@ export class App extends PureComponent<Props, State> {
           menuItems: { ...prevState.menuItems, ...menuItems },
         }
       })
+    }
+
+    if (notNullOrUndefined(theme)) {
+      this.props.theme.setRuntimeOverride(
+        isEmptyThemeOverride(theme) ? undefined : theme
+      )
     }
   }
 
@@ -1854,14 +1876,11 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Both sets the given theme locally and sends it to the host.
+   * Set the selected theme. SET_THEME_CONFIG is sent when the exported
+   * overlay-aware theme payload changes.
    */
   setAndSendTheme = (themeConfig: ThemeConfig): void => {
     this.props.theme.setTheme(themeConfig)
-    this.hostCommunicationMgr.sendMessageToHost({
-      type: "SET_THEME_CONFIG",
-      themeInfo: toExportedTheme(themeConfig.emotion),
-    })
   }
 
   createThemeHash = (themeInput?: CustomThemeConfig): string => {

@@ -14,15 +14,195 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Collection
 from typing import Any, Final, TypeAlias, cast
 
 from streamlit.errors import StreamlitInvalidColorError
 
+# Anchored hex / rgb() / rgba() patterns for theme override validation.
+# Vega's shape helpers below are intentionally looser and must not be reused
+# for user-facing theme input.
+_THEME_API_HEX_RE: Final[re.Pattern[str]] = re.compile(
+    r"^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+)
+# Match Streamlit's patched color2k parseToRgba: comma-separated integer
+# channels (optional decimal alpha), or space-separated number/percent
+# channels (optional / alpha). Comma-separated percentages and decimal
+# channels throw in getLuminance during theme derivation.
+_THEME_API_RGB_INT: Final[str] = r"\d+"
+_THEME_API_RGB_FLOAT_OR_PCT: Final[str] = r"(?:\d+(?:\.\d+)?|\.\d+)%?"
+_THEME_API_RGB_RE: Final[re.Pattern[str]] = re.compile(
+    rf"^rgba?\(\s*(?:"
+    rf"{_THEME_API_RGB_INT}\s*,\s*{_THEME_API_RGB_INT}\s*,\s*{_THEME_API_RGB_INT}"
+    rf"(?:\s*,\s*{_THEME_API_RGB_FLOAT_OR_PCT})?"
+    rf"|"
+    rf"{_THEME_API_RGB_FLOAT_OR_PCT}\s+{_THEME_API_RGB_FLOAT_OR_PCT}\s+"
+    rf"{_THEME_API_RGB_FLOAT_OR_PCT}"
+    rf"(?:\s*/\s*{_THEME_API_RGB_FLOAT_OR_PCT})?"
+    rf")\s*\)$"
+)
+
 # Built-in color names that map to Streamlit theme colors.
 # These are resolved to actual color values on the frontend.
 BUILTIN_COLOR_NAMES: Final[frozenset[str]] = frozenset(
     {"red", "orange", "yellow", "green", "blue", "violet", "gray", "grey", "primary"}
+)
+
+# CSS Color Module Level 4 named colors (148 names, including rebeccapurple).
+# Excludes transparent and currentColor, which this API does not accept.
+# These are W3C/CSS names, not Streamlit's semantic palette (BUILTIN_COLOR_NAMES).
+CSS_NAMED_COLORS: Final[frozenset[str]] = frozenset(
+    {
+        "aliceblue",
+        "antiquewhite",
+        "aqua",
+        "aquamarine",
+        "azure",
+        "beige",
+        "bisque",
+        "black",
+        "blanchedalmond",
+        "blue",
+        "blueviolet",
+        "brown",
+        "burlywood",
+        "cadetblue",
+        "chartreuse",
+        "chocolate",
+        "coral",
+        "cornflowerblue",
+        "cornsilk",
+        "crimson",
+        "cyan",
+        "darkblue",
+        "darkcyan",
+        "darkgoldenrod",
+        "darkgray",
+        "darkgreen",
+        "darkgrey",
+        "darkkhaki",
+        "darkmagenta",
+        "darkolivegreen",
+        "darkorange",
+        "darkorchid",
+        "darkred",
+        "darksalmon",
+        "darkseagreen",
+        "darkslateblue",
+        "darkslategray",
+        "darkslategrey",
+        "darkturquoise",
+        "darkviolet",
+        "deeppink",
+        "deepskyblue",
+        "dimgray",
+        "dimgrey",
+        "dodgerblue",
+        "firebrick",
+        "floralwhite",
+        "forestgreen",
+        "fuchsia",
+        "gainsboro",
+        "ghostwhite",
+        "gold",
+        "goldenrod",
+        "gray",
+        "green",
+        "greenyellow",
+        "grey",
+        "honeydew",
+        "hotpink",
+        "indianred",
+        "indigo",
+        "ivory",
+        "khaki",
+        "lavender",
+        "lavenderblush",
+        "lawngreen",
+        "lemonchiffon",
+        "lightblue",
+        "lightcoral",
+        "lightcyan",
+        "lightgoldenrodyellow",
+        "lightgray",
+        "lightgreen",
+        "lightgrey",
+        "lightpink",
+        "lightsalmon",
+        "lightseagreen",
+        "lightskyblue",
+        "lightslategray",
+        "lightslategrey",
+        "lightsteelblue",
+        "lightyellow",
+        "lime",
+        "limegreen",
+        "linen",
+        "magenta",
+        "maroon",
+        "mediumaquamarine",
+        "mediumblue",
+        "mediumorchid",
+        "mediumpurple",
+        "mediumseagreen",
+        "mediumslateblue",
+        "mediumspringgreen",
+        "mediumturquoise",
+        "mediumvioletred",
+        "midnightblue",
+        "mintcream",
+        "mistyrose",
+        "moccasin",
+        "navajowhite",
+        "navy",
+        "oldlace",
+        "olive",
+        "olivedrab",
+        "orange",
+        "orangered",
+        "orchid",
+        "palegoldenrod",
+        "palegreen",
+        "paleturquoise",
+        "palevioletred",
+        "papayawhip",
+        "peachpuff",
+        "peru",
+        "pink",
+        "plum",
+        "powderblue",
+        "purple",
+        "rebeccapurple",
+        "red",
+        "rosybrown",
+        "royalblue",
+        "saddlebrown",
+        "salmon",
+        "sandybrown",
+        "seagreen",
+        "seashell",
+        "sienna",
+        "silver",
+        "skyblue",
+        "slateblue",
+        "slategray",
+        "slategrey",
+        "snow",
+        "springgreen",
+        "steelblue",
+        "tan",
+        "teal",
+        "thistle",
+        "tomato",
+        "turquoise",
+        "violet",
+        "wheat",
+        "white",
+        "whitesmoke",
+        "yellow",
+        "yellowgreen",
+    }
 )
 
 # components go from 0.0 to 1.0
@@ -84,6 +264,22 @@ def to_css_color(color: MaybeColor) -> Color:
             return f"rgba({c4tuple[0]}, {c4tuple[1]}, {c4tuple[2]}, {c4tuple[3]})"
 
     raise StreamlitInvalidColorError(color)
+
+
+def is_theme_api_color(value: object) -> bool:
+    """Return whether ``value`` is an accepted color for theme override APIs.
+
+    Accepted formats are hex (``#RGB``, ``#RGBA``, ``#RRGGBB``, ``#RRGGBBAA``),
+    ``rgb()`` / ``rgba()``, and CSS Color Module Level 4 named colors (for
+    example ``"green"`` is CSS ``#008000``). ``transparent``, ``currentColor``,
+    ``hsl()``, and Streamlit semantic names that are not CSS names (``primary``)
+    are rejected.
+    """
+    if not isinstance(value, str):
+        return False
+    if _THEME_API_HEX_RE.fullmatch(value) or _THEME_API_RGB_RE.fullmatch(value):
+        return True
+    return value.lower() in CSS_NAMED_COLORS
 
 
 def is_css_color_like(color: object) -> bool:

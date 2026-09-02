@@ -41,3 +41,10 @@ if TYPE_CHECKING:
         ),
         None,
     )
+
+    set_page_config(theme={"primary_color": "green", "base": "dark"})
+    set_page_config(theme={})
+    set_page_config(theme=None)
+
+    # theme is keyword-only; a sixth positional argument must be rejected.
+    set_page_config("title", "icon", "wide", "auto", None, {})  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]

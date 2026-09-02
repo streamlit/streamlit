@@ -70,3 +70,7 @@ if TYPE_CHECKING:
         ),
         DeltaGenerator,
     )
+
+    assert_type(container(theme={"primary_color": "green"}), DeltaGenerator)
+    assert_type(container(theme=None), DeltaGenerator)
+    assert_type(container(theme={}), DeltaGenerator)

@@ -24,6 +24,7 @@ import streamlit.typing
 from streamlit.elements.arrow import DataframeState
 from streamlit.elements.deck_gl_json_chart import PydeckState
 from streamlit.elements.lib.column_config_utils import ButtonColumnClickState
+from streamlit.elements.lib.theme_utils import ThemeConfig, ThemeVariantConfig
 from streamlit.elements.plotly_chart import PlotlyState
 from streamlit.elements.vega_charts import VegaLiteState
 from streamlit.elements.widgets.chat import ChatInputValue
@@ -38,6 +39,8 @@ _EXPECTED_EXPORTS = {
     "DataframeState",
     "PlotlyState",
     "PydeckState",
+    "ThemeConfig",
+    "ThemeVariantConfig",
     "UploadedFile",
     "VegaLiteState",
 }
@@ -82,6 +85,8 @@ def test_exports_preserve_object_identity() -> None:
     assert streamlit.typing.VegaLiteState is VegaLiteState
     assert streamlit.typing.PydeckState is PydeckState
     assert streamlit.typing.ButtonColumnClickState is ButtonColumnClickState
+    assert streamlit.typing.ThemeConfig is ThemeConfig
+    assert streamlit.typing.ThemeVariantConfig is ThemeVariantConfig
 
 
 def test_uploaded_file_isinstance() -> None:

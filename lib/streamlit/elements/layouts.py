@@ -41,6 +41,7 @@ from streamlit.elements.lib.layout_utils import (
     validate_wrap,
 )
 from streamlit.elements.lib.policies import check_widget_policies
+from streamlit.elements.lib.theme_utils import ThemeConfig, populate_theme_override
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import (
     StreamlitIncompatibleParametersError,
@@ -119,6 +120,7 @@ class LayoutsMixin:
         vertical_alignment: VerticalAlignment = "top",
         gap: Gap | None = "small",
         autoscroll: bool | None = None,
+        theme: ThemeConfig | None = None,
     ) -> DeltaGenerator:
         """Insert a multi-element container.
 
@@ -271,6 +273,48 @@ class LayoutsMixin:
             .. |st.chat_message| replace:: ``st.chat_message``
             .. _st.chat_message: https://docs.streamlit.io/develop/api-reference/chat/st.chat_message
 
+        theme : dict or None
+            A mapping of theme tokens to apply to this container and its
+            descendants. If this is ``None`` (default) or ``{}``, the container
+            has no scoped theme override.
+
+            Keys use snake_case and match ``ThemeConfig``: colors, radii,
+            border flags, and chart palettes (categorical palettes must be
+            nonempty; sequential and diverging palettes must have 10 colors).
+            Optional ``light`` and ``dark`` mappings override shared values for
+            the active mode. Color strings are CSS Color Module Level 4 names
+            and hex/``rgb()`` values, not Streamlit's semantic palette
+            (``"green"`` is CSS ``#008000``). Fonts, ``fontFaces``, and sidebar
+            sections stay in ``config.toml``.
+
+            ``base`` can be one of the following:
+
+            - ``"inherit"`` (default): Start from the parent theme. The
+              container stays transparent unless the mapping also sets
+              ``background_color`` / ``text_color``.
+            - ``"light"``: Start from the configured light variant when one
+              exists (``[theme.light]`` or a host Light preset), otherwise
+              Streamlit's Light preset, and paint its background and text so
+              ancestor colors cannot leak through. A single ``[theme]`` block
+              without ``[theme.light]`` is not used.
+            - ``"dark"``: Same as ``"light"``, using the dark variant / Dark
+              preset.
+
+            A primary-only override does not add an opaque background. Apps
+            are responsible for color contrast. Adding or removing ``theme``
+            remounts this container's descendants (uncommitted widget input and
+            focus are lost). Changing tokens while a theme stays set does not
+            remount. Keyed widget Session State is preserved either way because
+            ``theme`` is not part of the block identity.
+
+            Import ``ThemeConfig`` from ``streamlit`` to annotate mappings.
+
+            .. note::
+
+                This ``theme`` argument is unrelated to the chart-level
+                ``theme`` argument on ``st.plotly_chart`` and
+                ``st.altair_chart``.
+
         Examples
         --------
         **Example 1: Inserting elements using ``with`` notation**
@@ -377,6 +421,21 @@ class LayoutsMixin:
             https://doc-container6.streamlit.app/
             height: 200px
 
+        **Example 7: Scoped theme override**
+
+        Wrap widgets in a container to restyle only that subtree.
+
+        >>> import streamlit as st
+        >>>
+        >>> with st.container(theme={"primary_color": "green"}):
+        ...     st.button("Approve", type="primary")
+        >>>
+        >>> st.button("Unchanged", type="primary")
+
+        .. output::
+            https://doc-container7.streamlit.app/
+            height: 200px
+
         """
         key = to_key(key)
         block_proto = BlockProto()
@@ -442,6 +501,11 @@ class LayoutsMixin:
 
         if autoscroll is not None:
             block_proto.autoscroll = autoscroll
+
+        if theme is not None:
+            override = populate_theme_override(theme)
+            if override is not None:
+                block_proto.theme.CopyFrom(override)
 
         return self.dg._block(block_proto)
 

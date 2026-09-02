@@ -709,4 +709,125 @@ describe("useThemeManager", () => {
       })
     })
   })
+
+  describe("runtime overlay", () => {
+    it("replaces the overlay and preserves the selected theme name", () => {
+      const { result } = renderHook(() => useThemeManager())
+      const selectedName = result.current[0].activeTheme.name
+
+      act(() => {
+        result.current[0].setRuntimeOverride({
+          values: { primaryColor: "#7C3AED" },
+        })
+      })
+
+      expect(result.current[0].activeTheme.name).toBe(selectedName)
+      expect(result.current[0].activeTheme.emotion.colors.primary).toBe(
+        "#7C3AED"
+      )
+    })
+
+    it("clears the overlay when setRuntimeOverride is called with undefined", () => {
+      const { result } = renderHook(() => useThemeManager())
+      const originalPrimary =
+        result.current[0].activeTheme.emotion.colors.primary
+
+      act(() => {
+        result.current[0].setRuntimeOverride({
+          values: { primaryColor: "#7C3AED" },
+        })
+      })
+      act(() => {
+        result.current[0].setRuntimeOverride(undefined)
+      })
+
+      expect(result.current[0].activeTheme.emotion.colors.primary).toBe(
+        originalPrimary
+      )
+    })
+
+    it("keeps the overlay when setTheme changes the selected theme", () => {
+      const { result } = renderHook(() => useThemeManager())
+
+      act(() => {
+        result.current[0].setRuntimeOverride({
+          values: { primaryColor: "#7C3AED" },
+        })
+        result.current[0].setTheme(darkTheme)
+      })
+
+      expect(result.current[0].activeTheme.name).toBe("Dark")
+      expect(result.current[0].activeTheme.emotion.colors.primary).toBe(
+        "#7C3AED"
+      )
+    })
+
+    it("does not clear the overlay when addThemes refreshes available themes", () => {
+      const { result } = renderHook(() => useThemeManager())
+
+      act(() => {
+        result.current[0].setRuntimeOverride({
+          values: { primaryColor: "#7C3AED" },
+        })
+        result.current[0].addThemes([lightTheme, darkTheme])
+      })
+
+      expect(result.current[0].activeTheme.emotion.colors.primary).toBe(
+        "#7C3AED"
+      )
+    })
+
+    it("caches the selected theme name rather than overlay colors", () => {
+      const { result } = renderHook(() => useThemeManager())
+
+      act(() => {
+        result.current[0].setTheme(darkTheme)
+        result.current[0].setRuntimeOverride({
+          values: { primaryColor: "#7C3AED" },
+        })
+      })
+
+      expect(
+        JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) || "")
+      ).toBe("Dark")
+    })
+
+    it("keeps selected themeInput tokens that the overlay does not set", () => {
+      const { result } = renderHook(() => useThemeManager())
+      const customTheme = createTheme(CUSTOM_THEME_NAME, mockCustomThemeConfig)
+
+      act(() => {
+        result.current[0].setTheme(customTheme)
+        result.current[0].setRuntimeOverride({
+          values: { primaryColor: "#7C3AED" },
+        })
+      })
+
+      expect(result.current[0].activeTheme.themeInput?.primaryColor).toBe(
+        "#7C3AED"
+      )
+      expect(result.current[0].activeTheme.themeInput?.headingFont).toBe(
+        mockCustomThemeConfig.headingFont
+      )
+    })
+
+    it("keeps activeTheme identity when the overlay payload is unchanged", () => {
+      const { result } = renderHook(() => useThemeManager())
+
+      act(() => {
+        result.current[0].setRuntimeOverride({
+          values: { primaryColor: "#7C3AED" },
+        })
+      })
+      const firstTheme = result.current[0].activeTheme
+
+      act(() => {
+        result.current[0].setRuntimeOverride({
+          values: { primaryColor: "#7C3AED" },
+        })
+      })
+
+      expect(result.current[0].activeTheme).toBe(firstTheme)
+    })
+  })
 })
