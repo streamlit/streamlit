@@ -181,6 +181,12 @@ export function PlotlyChart({
       ]
     }
 
+    // plotly.js v4 shows a "Share chart…" button by default. Hide it unless
+    // the user explicitly enabled sharing via config.
+    if (config.showSendToCloud === undefined) {
+      config.showSendToCloud = false
+    }
+
     if (!config.modeBarButtonsToRemove) {
       // Only modify the mode bar buttons if it's not already set
       // in the config provided by the user.
@@ -188,7 +194,7 @@ export function PlotlyChart({
       // Hide the logo by default
       config.displaylogo = false
 
-      const modeBarButtonsToRemove = ["sendDataToCloud"]
+      const modeBarButtonsToRemove = ["sendChartToCloud"]
 
       if (!isSelectionActivated) {
         // Remove lasso & select buttons in read-only charts:
