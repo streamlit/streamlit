@@ -190,12 +190,12 @@ needs are covered by ECharts' [string templates](https://echarts.apache.org/en/o
 (e.g. `"formatter": "{b}: {c}"`). JS callbacks are documented as [out of scope](#out-of-scope-future-work).
 
 **Unsupported chart families in v1.** Streamlit raises a `StreamlitAPIException` when the
-normalized option uses any of these keys (walked recursively through `series`, `dataset`,
-timeline `options`, and top-level components):
+normalized option uses any of these keys (walked through `series` and top-level components,
+across `baseOption` and each timeline `options` entry):
 
 | Family | Rejected keys |
 |--------|----------------|
-| Custom series | `series.type` / component `"custom"` (needs a JS `renderItem`) |
+| Custom series | `series.type` `"custom"` (needs a JS `renderItem`) |
 | Map / geo | `"map"`, `"geo"` (need registered GeoJSON; includes `geo` / `map` components) |
 | ECharts GL | `"scatter3D"`, `"bar3D"`, `"line3D"`, `"lines3D"`, `"polygons3D"`, `"surface"`, `"map3D"`, `"scatterGL"`, `"linesGL"`, `"flowGL"`, `"graphGL"`, `"grid3D"`, `"geo3D"`, `"globe"` |
 
@@ -481,8 +481,8 @@ and the dimensions — so, as with `st.plotly_chart`/`st.vega_lite_chart`, **any
 chart's data or spec resets the selection state**. Pass a fixed `key` so identity is the key
 alone: the selection stays stable across data updates **and**
 across `"canvas"` / `"svg"` switches. `renderer` is not in the keyed identity because it does
-not change `EChartsState`; the frontend re-applies selection after a dispose/re-init, as with
-`theme`.
+not change `EChartsState`; the frontend re-applies the selection after the dispose/re-init a
+renderer switch requires, just as it does after a `setTheme`.
 
 #### Loading & error handling
 
@@ -834,7 +834,8 @@ implementation informed several decisions:
   highlight and multi-select. Streamlit re-applies the selection after reruns.
 - **Selection API parity** — it requires a `key` for persistent selection access in
   `st.session_state`; native support should rely on Streamlit's widget state when selections are
-  active and avoid adding a Plotly-style always-on element ID for display-only charts.
+  active and avoid Plotly's always-on element ID: an unkeyed display-only chart computes no ID
+  at all, while an explicit `key` opts into one.
 - **Deliberately *not* adopted**: the `events=` + `JsCode` JavaScript-handler model (non-idiomatic
   and executes arbitrary JS) and CSS-string `height`/`width` (we use Streamlit's `width`/`height`
   conventions). Its `replace_merge` and `map`/`registerMap` features are logged as future work.
