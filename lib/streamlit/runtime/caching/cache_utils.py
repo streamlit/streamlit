@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import concurrent.futures
 import contextlib
 import functools
 import inspect
@@ -278,6 +280,12 @@ class Cache(Generic[R]):
     def __init__(self) -> None:
         self._value_locks: dict[str, threading.Lock] = defaultdict(threading.Lock)
         self._value_locks_lock = threading.Lock()
+        # Async computations cannot hold a threading.Lock across an await because
+        # another task on the same event loop would block the thread while waiting.
+        # A loop-independent Future lets same-key callers await one computation from
+        # any thread or event loop.
+        self._async_compute_futures: dict[str, concurrent.futures.Future[None]] = {}
+        self._async_compute_futures_lock = threading.Lock()
         # Whether this cache is still attached to its manager. Set to False when the
         # cache is replaced (param change), or when the owning session / all caches
         # are cleared. A background refresh that completes for a detached cache is
@@ -439,6 +447,29 @@ class Cache(Generic[R]):
         """
         with self._value_locks_lock:
             return self._value_locks[value_key]
+
+    def claim_async_compute(
+        self, value_key: str
+    ) -> tuple[concurrent.futures.Future[None], bool]:
+        """Return the same-key async computation signal and whether this caller owns it."""
+        with self._async_compute_futures_lock:
+            future = self._async_compute_futures.get(value_key)
+            if future is not None:
+                return future, False
+
+            future = concurrent.futures.Future()
+            self._async_compute_futures[value_key] = future
+            return future, True
+
+    def complete_async_compute(
+        self, value_key: str, future: concurrent.futures.Future[None]
+    ) -> None:
+        """Wake callers waiting for an async computation to finish."""
+        with self._async_compute_futures_lock:
+            if self._async_compute_futures.get(value_key) is not future:
+                return
+            del self._async_compute_futures[value_key]
+            future.set_result(None)
 
     def clear(self, key: str | None = None) -> None:
         """Clear values from this cache.
@@ -826,34 +857,46 @@ class CachedFunc(Generic[P, R]):
     ) -> R:
         """Await the underlying coroutine on a miss and cache its awaited result.
 
-        Mirrors ``_handle_cache_miss`` (including the double-checked locking) but
-        awaits the coroutine returned by the cached function before storing it, so the
-        cache holds the inert awaited value rather than a coroutine object.
+        Same-key callers share one computation without blocking an event-loop thread.
+        The shared signal is independent of any one event loop, so callers from
+        different script threads can wait for the same result. A failed or cancelled
+        owner wakes waiters, and one waiter retries the computation.
         """
-        with cache.compute_value_lock(value_key):
-            # We've acquired the lock - but another thread may have acquired it first
-            # and already computed the value. So we need to test for a cache hit again,
-            # before computing.
-            try:
-                cached_result = cache.read_result(value_key)
-                # Another thread computed the value before us. Early exit!
+        while True:
+            compute_future, is_owner = cache.claim_async_compute(value_key)
+            if not is_owner:
+                await asyncio.shield(asyncio.wrap_future(compute_future))
+                try:
+                    cached_result = cache.read_result(value_key)
+                except CacheKeyNotFoundError:
+                    # The owner failed, was cancelled, or its result was cleared.
+                    # Compete to become the owner of the retry.
+                    continue
                 return self._handle_cache_hit(cached_result)
-            except CacheKeyNotFoundError:
-                # No cache hit -> we will await the cached function below.
-                pass
 
-            # We acquired the lock before any other thread. Await the value!
-            with self._info.cached_message_replay_ctx.calling_cached_function(
-                self._info.func
-            ):
-                # `is_async` guarantees the call returns a coroutine; cast so the
-                # type checker allows awaiting it (the wrapper's `R` is the coroutine
-                # type for an `async def`, not the awaited value type).
-                computed_value = await cast(
-                    "Any", self._info.func(*func_args, **func_kwargs)
-                )
+            try:
+                # A result may have been stored after the first optimistic read but
+                # before this caller registered as the owner.
+                try:
+                    cached_result = cache.read_result(value_key)
+                except CacheKeyNotFoundError:
+                    pass
+                else:
+                    return self._handle_cache_hit(cached_result)
 
-            return self._store_computed_value(cache, value_key, computed_value)
+                with self._info.cached_message_replay_ctx.calling_cached_function(
+                    self._info.func
+                ):
+                    # `is_async` guarantees the call returns a coroutine; cast so the
+                    # type checker allows awaiting it (the wrapper's `R` is the coroutine
+                    # type for an `async def`, not the awaited value type).
+                    computed_value = await cast(
+                        "Any", self._info.func(*func_args, **func_kwargs)
+                    )
+
+                return self._store_computed_value(cache, value_key, computed_value)
+            finally:
+                cache.complete_async_compute(value_key, compute_future)
 
     def _maybe_trigger_background_refresh(
         self,

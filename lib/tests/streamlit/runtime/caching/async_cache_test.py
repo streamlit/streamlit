@@ -22,7 +22,9 @@ are driven with ``asyncio.run`` to mirror how a user drives them from a script.
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import inspect
+import threading
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -84,6 +86,111 @@ def test_async_body_runs_once_across_repeated_awaits(
 
     assert asyncio.run(main()) == [7, 7, 7]
     assert calls == [7]
+
+
+@pytest.mark.timeout(5)
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
+def test_async_concurrent_same_key_shares_computation(
+    name: str, decorator: Callable
+) -> None:
+    """Concurrent same-loop callers await one shared same-key computation."""
+    calls: list[int] = []
+
+    @decorator
+    async def load(x: int) -> int:
+        calls.append(x)
+        await asyncio.sleep(0)
+        return x * 10
+
+    async def main() -> list[int]:
+        return await asyncio.gather(load(3), load(3), load(3))
+
+    assert asyncio.run(main()) == [30, 30, 30]
+    assert calls == [3]
+
+
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
+def test_async_concurrent_same_key_across_event_loops(
+    name: str, decorator: Callable
+) -> None:
+    """Callers on different threads and event loops share one computation."""
+    calls: list[int] = []
+    callers_ready = threading.Barrier(2)
+
+    @decorator
+    async def load(x: int) -> int:
+        calls.append(x)
+        await asyncio.sleep(0.05)
+        return x * 10
+
+    def invoke() -> int:
+        callers_ready.wait()
+        return asyncio.run(load(4))
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(lambda _: invoke(), range(2)))
+
+    assert results == [40, 40]
+    assert calls == [4]
+
+
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
+def test_async_failed_owner_wakes_waiter(name: str, decorator: Callable) -> None:
+    """A waiter retries after the owner raises instead of waiting indefinitely."""
+    calls = 0
+
+    @decorator
+    async def load() -> int:
+        nonlocal calls
+        calls += 1
+        await asyncio.sleep(0)
+        if calls == 1:
+            raise ValueError("first computation failed")
+        return 42
+
+    async def main() -> list[int | BaseException]:
+        return await asyncio.gather(load(), load(), return_exceptions=True)
+
+    results = asyncio.run(main())
+    assert any(
+        isinstance(result, ValueError) and str(result) == "first computation failed"
+        for result in results
+    )
+    assert 42 in results
+    assert calls == 2
+
+
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
+def test_async_cancelled_owner_wakes_waiter(name: str, decorator: Callable) -> None:
+    """A waiter retries after the owner is cancelled."""
+    calls = 0
+
+    async def main() -> int:
+        first_call_started = asyncio.Event()
+        keep_first_call_running = asyncio.Event()
+
+        @decorator
+        async def load() -> int:
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                first_call_started.set()
+                await keep_first_call_running.wait()
+            return 42
+
+        owner = asyncio.create_task(load())
+        await first_call_started.wait()
+        waiter = asyncio.create_task(load())
+        await asyncio.sleep(0)
+
+        owner.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await owner
+
+        return await asyncio.wait_for(waiter, timeout=1)
+
+    assert asyncio.run(main()) == 42
+    assert calls == 2
 
 
 @pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
