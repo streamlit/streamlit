@@ -24,7 +24,12 @@ import type { PlotParams } from "~lib/util/reactPlotlyCompat"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { PlotlyChart } from "./PlotlyChart"
-import { applyTheming, handleSelection, sendEmptySelection } from "./utils"
+import {
+  applyTheming,
+  handleClickEvent,
+  handleSelection,
+  sendEmptySelection,
+} from "./utils"
 
 // Mock Plotly component to capture props
 const MockPlot = vi.fn((_props: unknown) => (
@@ -50,15 +55,27 @@ vi.mock("~lib/hooks/useEmotionTheme", () => ({
 vi.mock("./utils", () => ({
   applyTheming: vi.fn(spec => spec),
   handleSelection: vi.fn(),
+  handleClickEvent: vi.fn(),
   sendEmptySelection: vi.fn(),
 }))
 
+const formClearHelperMocks = vi.hoisted(() => ({
+  manageFormClearListener: vi.fn(),
+  disconnect: vi.fn(),
+}))
+
+// PlotlyChart constructs a new FormClearHelper inside an effect, so the
+// shared formClearHelperMocks spies let tests inspect calls across instances.
 vi.mock("~lib/components/widgets/Form/FormClearHelper", () => {
   return {
-    FormClearHelper: vi.fn().mockImplementation(() => ({
-      manageFormClearListener: vi.fn(),
-      disconnect: vi.fn(),
-    })),
+    FormClearHelper: class FormClearHelper {
+      public manageFormClearListener(...args: unknown[]): void {
+        formClearHelperMocks.manageFormClearListener(...args)
+      }
+      public disconnect(): void {
+        formClearHelperMocks.disconnect()
+      }
+    },
   }
 })
 
@@ -387,5 +404,146 @@ describe("PlotlyChart Component", () => {
     })
 
     expect(expandMock).toHaveBeenCalled()
+  })
+
+  it("uses an empty plotly config when the element has no config", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      config: "",
+    })
+    renderComponent({ element })
+
+    const lastCallProps = getLastPlotProps()
+    expect(lastCallProps.config?.modeBarButtonsToAdd).toBeUndefined()
+    expect(lastCallProps.config?.modeBarButtonsToRemove).toBeUndefined()
+  })
+
+  it("collapses fullscreen from the plotly toolbar", () => {
+    const collapseMock = vi.fn()
+    renderComponent({}, { expanded: true, collapse: collapseMock })
+
+    const lastCallProps = getLastPlotProps()
+    const config = lastCallProps.config
+    const fullscreenButton = config?.modeBarButtonsToAdd?.find(
+      b => typeof b === "object" && b.name === "Close fullscreen"
+    )
+
+    act(() => {
+      if (typeof fullscreenButton === "object") {
+        fullscreenButton.click(
+          document.createElement("div") as unknown as Parameters<
+            typeof fullscreenButton.click
+          >[0],
+          new MouseEvent("click")
+        )
+      }
+    })
+
+    expect(collapseMock).toHaveBeenCalled()
+    expect(screen.getByTestId("stPlotlyChartMock")).toBeVisible()
+  })
+
+  it("forwards clicks when point selection is enabled", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      selectionMode: [PlotlyChartProto.SelectionMode.POINTS],
+    })
+    renderComponent({ element })
+
+    const lastCallProps = getLastPlotProps()
+    const mockEvent = {} as Readonly<Plotly.PlotMouseEvent>
+
+    act(() => {
+      lastCallProps.onClick?.(mockEvent)
+    })
+
+    expect(handleClickEvent).toHaveBeenCalledWith(
+      mockEvent,
+      widgetMgr,
+      expect.objectContaining({ id: DEFAULT_ELEMENT.id }),
+      undefined
+    )
+  })
+
+  it("does not attach a click handler when point selection is not enabled", () => {
+    renderComponent()
+
+    expect(getLastPlotProps().onClick).toBeUndefined()
+    expect(handleClickEvent).not.toHaveBeenCalled()
+  })
+
+  it("clears selected points after the reset selection timeout", () => {
+    vi.useFakeTimers()
+    try {
+      const element = new PlotlyChartProto({
+        ...DEFAULT_ELEMENT,
+        selectionMode: [PlotlyChartProto.SelectionMode.POINTS],
+      })
+      renderComponent({ element })
+
+      act(() => {
+        getLastPlotProps().onDoubleClick?.()
+      })
+
+      act(() => {
+        vi.advanceTimersByTime(50)
+      })
+
+      const figureData = getLastPlotProps().data
+      expect(figureData[0]).toEqual(
+        expect.objectContaining({ selectedpoints: null })
+      )
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("registers a form-clear listener that resets selections", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      formId: "plotly-form",
+      selectionMode: [PlotlyChartProto.SelectionMode.POINTS],
+    })
+    const { unmount } = renderComponent({ element })
+
+    expect(formClearHelperMocks.manageFormClearListener).toHaveBeenCalledWith(
+      widgetMgr,
+      "plotly-form",
+      expect.any(Function)
+    )
+
+    const onFormClear = formClearHelperMocks.manageFormClearListener.mock
+      .calls[0][2] as () => void
+    act(() => {
+      onFormClear()
+    })
+
+    expect(sendEmptySelection).toHaveBeenCalledWith(
+      widgetMgr,
+      expect.objectContaining({ id: DEFAULT_ELEMENT.id }),
+      undefined
+    )
+
+    unmount()
+    expect(formClearHelperMocks.disconnect).toHaveBeenCalled()
+  })
+
+  it("saves figure to widget state on initialize", () => {
+    renderComponent()
+
+    const figure = {
+      data: [],
+      layout: { title: { text: "Initial" } },
+      frames: null,
+    }
+    act(() => {
+      getLastPlotProps().onInitialized?.(figure, document.createElement("div"))
+    })
+
+    expect(widgetMgr.setElementState).toHaveBeenCalledWith(
+      DEFAULT_ELEMENT.id,
+      "figure",
+      figure
+    )
   })
 })

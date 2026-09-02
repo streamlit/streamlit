@@ -330,6 +330,38 @@ describe("Widget State Manager", () => {
     expect(widgetMgr.getIntArrayValue(MOCK_WIDGET)).toStrictEqual(values)
   })
 
+  it("returns undefined from typed getters when the widget has no stored value", () => {
+    expect(widgetMgr.getIntArrayValue(MOCK_WIDGET)).toBeUndefined()
+    expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBeUndefined()
+    expect(widgetMgr.getArrowValue(MOCK_WIDGET)).toBeUndefined()
+    expect(widgetMgr.getBytesValue(MOCK_WIDGET)).toBeUndefined()
+  })
+
+  it("flushes a string trigger value to the backend", async () => {
+    widgetMgr.setStringTriggerValue(MOCK_WIDGET.id, "menu-item", {
+      formId: MOCK_WIDGET.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+
+    await waitFor(() => {
+      expect(sendBackMsg).toHaveBeenCalledTimes(1)
+    })
+    expect(sendBackMsg).toHaveBeenCalledWith(
+      {
+        widgets: [
+          {
+            id: MOCK_WIDGET.id,
+            stringTriggerValue: { data: "menu-item" },
+          },
+        ],
+      },
+      undefined,
+      undefined,
+      undefined
+    )
+  })
+
   describe("triggerRerun (on_change=ignore delivery override)", () => {
     it("buffers the value without scheduling a rerun when triggerRerun is false", async () => {
       widgetMgr.setDoubleArrayValue(MOCK_WIDGET.id, [1.1, 2.2], {
@@ -1198,6 +1230,20 @@ describe("Widget State Manager", () => {
       "elementState2"
     )
   })
+
+  it("cleans up inactive form widget states on removeInactive", () => {
+    widgetMgr.setStringValue(MOCK_FORM_WIDGET.id, "pending", {
+      formId: MOCK_FORM_WIDGET.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+
+    expect(widgetMgr.getStringValue(MOCK_FORM_WIDGET)).toEqual("pending")
+
+    widgetMgr.removeInactive(new Set())
+
+    expect(widgetMgr.getStringValue(MOCK_FORM_WIDGET)).toBeUndefined()
+  })
 })
 
 describe("WidgetStateDict", () => {
@@ -1711,6 +1757,28 @@ describe("Trigger JSON payloads (aggregated)", () => {
         )
 
         expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(true)
+      })
+
+      it("normalizes a scalar date default so matching values hide the URL param", () => {
+        const widget = { id: "date_slider_scalar", formId: "" }
+        const defaultMicros = Date.UTC(2024, 5, 15) * 1000
+        widgetMgr.registerQueryParamBinding(
+          "date_slider_scalar",
+          "date",
+          "double_array_value",
+          defaultMicros,
+          false,
+          "repeated",
+          "date"
+        )
+
+        widgetMgr.setDoubleArrayValue(widget.id, [defaultMicros], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
       })
 
       it("registers binding with urlDefault for select_slider", () => {
@@ -2314,6 +2382,66 @@ describe("Trigger JSON payloads (aggregated)", () => {
         expect(mockOnQueryParamsChange).toHaveBeenCalledWith("selected=")
       })
 
+      it("syncs a non-empty int array to repeated URL params", () => {
+        const widget = { id: "pills2", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "pills2",
+          "selected",
+          "int_array_value",
+          [0],
+          true
+        )
+
+        widgetMgr.setIntArrayValue(widget.id, [1, 2], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+          "selected=1&selected=2"
+        )
+      })
+
+      it("hides the URL param when a single-element int array matches a scalar default", () => {
+        const widget = { id: "slider_scalar_default", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "slider_scalar_default",
+          "n",
+          "int_array_value",
+          5,
+          false
+        )
+
+        widgetMgr.setIntArrayValue(widget.id, [5], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
+      })
+
+      it("hides the URL param when a date default matches the selected value", () => {
+        const widget = { id: "date_default", formId: "" }
+        const defaultDate = new Date(2024, 0, 15)
+        widgetMgr.registerQueryParamBinding(
+          "date_default",
+          "d",
+          "string_value",
+          defaultDate,
+          false
+        )
+
+        widgetMgr.setStringValue(widget.id, "2024-01-15", {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
+      })
+
       it("preserves empty value in URL when clearable=true and empty differs from default (selectbox)", () => {
         const widget = { id: "selectbox1", formId: "" }
         widgetMgr.registerQueryParamBinding(
@@ -2592,6 +2720,27 @@ describe("Trigger JSON payloads (aggregated)", () => {
         // Now filter - should preserve the bound param
         const result = widgetMgr.filterParamsForPageChange("")
         expect(result).toBe("my_key=my_value")
+      })
+
+      it("preserves repeated bound params from the current URL", () => {
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "tags",
+          "string_array_value",
+          [],
+          true
+        )
+
+        const widget = { id: "widget1", formId: "" }
+        widgetMgr.setStringArrayValue(widget.id, ["alpha", "beta"], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        const result = widgetMgr.filterParamsForPageChange("")
+        expect(result).toContain("tags=alpha")
+        expect(result).toContain("tags=beta")
       })
 
       describe("date/time slider ISO URL formatting", () => {

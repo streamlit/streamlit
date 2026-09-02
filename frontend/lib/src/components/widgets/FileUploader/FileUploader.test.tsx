@@ -170,6 +170,22 @@ describe("FileUploader widget tests", () => {
     expect(fileNameNode).toBeInTheDocument()
   })
 
+  it("renders the empty dropzone when widget state has no uploaded files", () => {
+    const props = getProps()
+    const { element, widgetMgr } = props
+
+    widgetMgr.setFileUploaderStateValue(
+      element.id,
+      buildFileUploaderStateProto([]),
+      { formId: element.formId, fragmentId: undefined, fromUser: false }
+    )
+
+    render(<FileUploader {...props} />)
+
+    expect(screen.queryByTestId("stFileChip")).not.toBeInTheDocument()
+    expect(screen.getByText("Upload")).toBeVisible()
+  })
+
   it("shows a label", () => {
     const props = getProps({ label: "Test label" })
     render(<FileUploader {...props} />)
