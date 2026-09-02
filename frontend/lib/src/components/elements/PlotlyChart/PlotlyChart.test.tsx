@@ -404,7 +404,9 @@ describe("PlotlyChart Component", () => {
 
     const lastCallProps = getLastPlotProps()
     expect(lastCallProps.config?.showSendToCloud).toBe(true)
-    expect(lastCallProps.config?.modeBarButtonsToRemove).not.toContain("sendChartToCloud")
+    expect(lastCallProps.config?.modeBarButtonsToRemove).not.toContain(
+      "sendChartToCloud"
+    )
   })
 
   it("does not overwrite a user-provided modeBarButtonsToRemove", () => {

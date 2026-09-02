@@ -113,7 +113,8 @@ function migrateMapboxStyle(style: unknown): unknown {
   const mapboxUrl =
     /^mapbox:\/\/styles\/mapbox\/([a-z0-9-]+?)(?:-v\d+)?$/i.exec(style)
   if (mapboxUrl) {
-    const mappedStyle = MAPBOX_URL_STYLE_TO_MAP_STYLE[mapboxUrl[1].toLowerCase()]
+    const mappedStyle =
+      MAPBOX_URL_STYLE_TO_MAP_STYLE[mapboxUrl[1].toLowerCase()]
     if (mappedStyle) {
       return mappedStyle
     }
