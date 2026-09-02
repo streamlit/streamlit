@@ -391,7 +391,7 @@ class HideIndexHideHeaderTest(DeltaGeneratorTestCase):
 
     def test_unevaluated_data_auto_hides_index(self) -> None:
         """Unevaluated inputs collect a preview and hide the synthetic RangeIndex."""
-        df = pd.DataFrame({"a": [1, 2, 3]})
+        df = pd.DataFrame({"a": [1, 2, 3]}, index=["x", "y", "z"])
         with patch(
             "streamlit.elements.table.dataframe_util.is_unevaluated_data_object",
             return_value=True,

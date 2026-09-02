@@ -44,7 +44,6 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitIncompatibleParametersError,
 )
-from tests.testutil import patch_config_options
 
 
 def _make_table(num_rows: int) -> pa.Table:
@@ -494,7 +493,6 @@ def test_materialize_arrow_table_index_avoids_column_name_collision() -> None:
     assert "__index_level_0__" not in result.column_names
 
 
-@patch_config_options({"global.appTest": False})
 def test_resolve_lazy_source_returns_large_native_source() -> None:
     """A native source above the forced-lazy minimum is used when AppTest is off."""
     native = MagicMock()
@@ -506,7 +504,6 @@ def test_resolve_lazy_source_returns_large_native_source() -> None:
     assert result is native
 
 
-@patch_config_options({"global.appTest": False})
 def test_resolve_lazy_source_uses_in_memory_polars_above_auto_threshold() -> None:
     """Large in-memory Polars frames auto-switch to lazy when AppTest is off."""
 
@@ -526,7 +523,6 @@ def test_resolve_lazy_source_uses_in_memory_polars_above_auto_threshold() -> Non
     assert isinstance(result, InMemoryDataframeSource)
 
 
-@patch_config_options({"global.appTest": False})
 def test_resolve_lazy_source_raises_for_unevaluated_object_without_adapter() -> None:
     """``lazy=True`` rejects unevaluated objects that have no native adapter."""
     with (

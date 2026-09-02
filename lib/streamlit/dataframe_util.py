@@ -1223,7 +1223,10 @@ def determine_arrow_column_fix(
             # Get the first non-null value to check if it is a supported list-like type.
             # Using dropna() handles cases where early values are NaN (e.g., from reindexing).
             non_null = column.dropna()
-            if len(non_null) == 0:
+            if len(non_null) == 0:  # pragma: no cover - defensive
+                # ``infer_dtype(..., skipna=True)`` reports all-null object
+                # columns as ``"empty"``, not ``"mixed"``, so this branch is
+                # not reachable with current pandas.
                 return "string"
             first_value = cast("DataFrameGenericAlias[Any]", non_null).iloc[0]  # type: ignore[index] # ty: ignore[not-subscriptable]
 

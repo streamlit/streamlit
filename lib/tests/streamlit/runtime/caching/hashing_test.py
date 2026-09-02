@@ -1533,11 +1533,13 @@ def test_polars_hashing_pickles_on_typeerror(
     obj = factory()
     with mock.patch.object(_LOGGER, "warning") as mock_warning:
         digest = _hash_as_polars_type(obj, type_name)
+    mock_warning.assert_called_once()
+    assert "exc_info" not in mock_warning.call_args.kwargs
     logged_message = mock_warning.call_args.args[0] % mock_warning.call_args.args[1:]
     assert digest == _hash_as_polars_type(obj, type_name)
-    mock_warning.assert_called_once()
     assert label in logged_message
     assert "forced" in logged_message
+    assert "falling back to pickling the object" in logged_message
 
 
 class _FakePydanticV1:
@@ -1573,7 +1575,7 @@ def test_pydantic_v1_model_hashes_via_json_method() -> None:
         assert get_hash(obj) == digest
 
 
-def test_pydantic_model_unhashable_when_json_dump_fails_without_pydantic() -> None:
+def test_pydantic_like_model_is_unhashable_when_json_dump_fails() -> None:
     """Failed Pydantic serialization raises ``UnhashableTypeError``."""
     with mock.patch(
         "streamlit.runtime.caching.hashing.type_util.is_pydantic_model",
