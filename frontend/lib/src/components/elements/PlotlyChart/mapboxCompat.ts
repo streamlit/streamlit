@@ -122,9 +122,9 @@ function migrateMapboxStyle(style: unknown): unknown {
 
   if (style.startsWith("mapbox://")) {
     LOG.warn(
-      `Plotly map style "${style}" is not supported by plotly.js v4 (MapLibre). ` +
-        `Use a built-in style such as "open-street-map", "carto-positron", ` +
-        `"carto-darkmatter", or "carto-voyager".`
+      `Plotly map style "${style}" is not supported by plotly.js v4 ` +
+        `(MapLibre). Use a built-in style such as "open-street-map", ` +
+        `"carto-positron", "carto-darkmatter", or "carto-voyager".`
     )
   }
 
