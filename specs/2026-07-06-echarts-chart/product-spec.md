@@ -82,10 +82,10 @@ st.echarts_chart(
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `spec` | `dict`, JSON `str`, or `pyecharts` chart | The ECharts option object as a Python dictionary (passed to `echartsInstance.setOption`), a JSON string, or a `pyecharts` chart instance (auto-converted via its `.dump_options()` method). See [Spec input](#spec-input). |
-| `width` | `"stretch"`, `"content"`, or `int` | Element width. Same semantics as `st.plotly_chart` (default `"stretch"`). `"content"` is clamped to the parent width. See [Sizing](#sizing). |
+| `width` | `"stretch"`, `"content"`, or `int` | Element width. Same semantics as `st.plotly_chart` (default `"stretch"`). See [Sizing](#sizing). |
 | `height` | `"content"`, `"stretch"`, or `int` | Element height. Because ECharts has no intrinsic height, `"content"` resolves to **400px** unless a `pyecharts` chart sets an explicit pixel height. `"stretch"` uses Streamlit's standard height semantics (see [Sizing](#sizing)). |
 | `theme` | `"streamlit"` or `None` | `"streamlit"` (default) applies the Streamlit theme (colors, fonts, dark/light). `None` uses ECharts' built-in default theme. Accessibility defaults are independent of `theme`. |
-| `key` | `str`, `int`, or `None` | Optional stable identity. When provided, Streamlit emits a `st-key-<key>` CSS class even if `on_select="ignore"`. When selections are active, the selection state is also readable from `st.session_state[key]`. Display-only charts without a `key` skip an element ID (same Vega-Lite fast path). |
+| `key` | `str`, `int`, or `None` | Optional stable identity. When provided, Streamlit emits a `st-key-<key>` CSS class even if `on_select="ignore"`. When selections are active, the selection state is also readable from `st.session_state[key]`, and the selection survives changes to `spec`, `theme`, and `renderer`. Display-only charts without a `key` skip the element ID entirely. |
 | `on_select` | `"ignore"`, `"rerun"`, or `callable` | Whether the chart behaves like an input widget. `"ignore"` (default) = display only; `"rerun"` = rerun on selection and return selection state; a callable = rerun and invoke it as a callback. See [Selections](#selections). |
 | `renderer` | `"canvas"` or `"svg"` | Renderer passed to `echarts.init`. `"canvas"` (default) is best for large datasets; `"svg"` produces real DOM nodes that are better for printing, sharp scaling, and accessibility. |
 
@@ -238,8 +238,13 @@ familiar.
 | Box / axis-range / lasso | Adding a [`brush`](https://echarts.apache.org/en/option.html#brush) component (`rect`, `lineX`, `lineY`, or `polygon`) | `brushEnd` | `brushSelected` (during drag) |
 
 If `on_select` is `"rerun"` or a callable and the spec has neither a series `selectedMode` nor a
-`brush` component, Streamlit raises a `StreamlitAPIException` that names those two option keys
-(or tells the user to drop `on_select`) — the same fail-fast as `st.vega_lite_chart`.
+`brush` component (or a `toolbox` brush feature), the chart still renders but can never return a
+selection, so Streamlit **logs a warning** naming those option keys. It deliberately does not
+raise: unlike Vega-Lite's declarative `params` block, ECharts' `selectedMode` lives on each
+individual series, and series are routinely generated from data — a filtered dataframe that
+yields `series: []` would turn a hard check into a crash on an ordinary rerun. `st.pydeck_chart`
+takes the same position for its `pickable=True` requirement. See
+[Selection-less specs](#selection-less-specs-warn-vs-raise).
 
 **One rerun per gesture.** `brushSelected` updates the overlay while the pointer is down; it
 must not enqueue a widget value. Streamlit records a widget update only on `selectchanged` and
@@ -383,9 +388,7 @@ ECharts renders into a container that needs an explicit height (unlike an auto-s
 diagram). Therefore:
 
 - `width` behaves like `st.plotly_chart` (`"stretch"` by default). `width="content"` uses a
-  **700px** fallback (ECharts has no intrinsic width), **clamped to the parent width** so a
-  narrow column or mobile layout does not overflow. An integer width is also clamped to the
-  parent, matching other elements.
+  **700px** fallback because an ECharts spec has no intrinsic width.
 - `height="content"` (default) resolves to **400px**. `height="stretch"` uses Streamlit's
   standard height semantics: the greater of content height (400px, or an explicit pyecharts
   pixel height) and parent height, falling back to content height when there is no sized
@@ -393,8 +396,9 @@ diagram). Therefore:
 - **`pyecharts` InitOpts.** pyecharts always fills `InitOpts` width/height (library defaults
   `"900px"` / `"500px"`). Streamlit ignores those library defaults so a dict spec and an
   equivalent pyecharts chart get the same content size. It honors only an **explicit** pixel
-  value that differs from those defaults. `"100%"` maps to `"stretch"`. Other CSS units raise
-  a `StreamlitAPIException`.
+  value that differs from those defaults. `"100%"` maps to `"stretch"`. Any other CSS unit
+  falls back to the Streamlit default and logs a warning rather than raising, since pyecharts
+  may have set it without the app author choosing it.
 - The chart auto-resizes with its container (via a resize observer), matching Plotly behavior.
 
 #### Reruns & state persistence
@@ -578,11 +582,13 @@ st.echarts_chart(pie)
 
 - Streamlit sets `spec["aria"] = {"enabled": True}` when the user has not already set `aria`,
   **regardless of `theme`**. `theme=None` only skips visual theming; it does not drop the
-  screen-reader description. When ARIA is enabled, ECharts generates `role="img"` and an
-  `aria-label` (or the user's `aria.label.description`) on its own chart root.
-- The Streamlit wrapper does **not** add a second `role="img"` (that would nest two image
-  roles). It uses `aria-busy` while the library loads. If the user sets `aria.enabled` to
-  `false`, the wrapper also omits `role="img"` so the chart is not an unlabeled image
+  screen-reader description. When ARIA is enabled, ECharts sets `role="img"` and an
+  `aria-label` (or the user's `aria.label.description`) on `zr.dom` — which is the very
+  container Streamlit passes to `echarts.init`, not a nested child.
+- Because ECharts writes the role onto that same element, the Streamlit wrapper does **not**
+  declare `role="img"` itself. It only sets `aria-busy` while the library loads. Declaring the
+  role would otherwise strand an image with no accessible name for users who opt out with
+  `aria: {"enabled": False}`, since ECharts then sets neither the role nor a label
   (WCAG 1.1.1).
 - Toolbar buttons (fullscreen, download) have accessible labels.
 
@@ -691,6 +697,30 @@ Also rejected: `chart_obj`/`echarts_obj` (object-shaped names for what is primar
 `config.toml`, and reserved for the possible `echarts.init` passthrough), and `figure` (Plotly and
 Matplotlib vocabulary; ECharts has no figure).
 
+### Selection-less specs: warn vs. raise
+
+**Log a warning** ✅ PREFERRED
+- Pros: Surfaces the mistake where developers and coding agents actually see it (the console),
+  without a false positive being able to break a running app. Detection is a few lines on the
+  normalized spec, reusing the traversal already written for the unsupported-feature checks.
+- Cons: Silent in the browser, so a developer who only reads the app UI still sees a chart that
+  quietly swallows clicks.
+
+**Raise a `StreamlitAPIException`** ❌
+- Pros: Impossible to miss, and matches `st.vega_lite_chart`, which raises
+  `vega-on-select-without-spec-selections` when a spec declares no selection params.
+- Cons: The Vega analogy doesn't survive contact with ECharts. Vega-Lite selections are a closed
+  declarative `params` block that is enumerable and effectively static; ECharts' `selectedMode`
+  sits on each individual series, and series are commonly built from data. A spec whose series
+  list is momentarily empty (filtered dataframe, data still loading) would raise on an otherwise
+  ordinary rerun. Detection also has to guess about `toolbox.feature.brush`. `st.pydeck_chart`
+  faces the same per-layer situation with `pickable=True` and chooses not to enforce it.
+
+**Stay silent** ❌
+- Pros: Zero risk of noise; the chart simply never returns a selection.
+- Cons: A chart that looks interactive and does nothing gives the developer no thread to pull on,
+  in the one place where an actionable message is nearly free.
+
 **Selection payload: grouped ECharts state** ✅ PREFERRED
 - Pros: One filtering path for native and brush selections; unambiguous series/data-type-local
   indices; preserves ECharts brush types; avoids renderer-specific enrichment and coordinate
@@ -747,13 +777,15 @@ implementation informed several decisions:
 
 Required coverage for the implementation PR (not this spec-only diff):
 
-- Fail-fast: `on_select` with neither `selectedMode` nor `brush` raises; a valid spec does not.
+- Selection-less specs: `on_select` with neither `selectedMode` nor `brush` (nor a toolbox
+  brush) logs a warning; a spec that enables selection does not.
 - Brush: `brushSelected` during drag does not rerun; `brushEnd` reruns once; `selectchanged` +
   `brushEnd` for one gesture coalesce to one widget update.
 - Restore/clear: native and brush channels restore independently; clearing brush does not leave
   native highlights of brush-only points; remount in tabs/expanders restores selection.
 - Tooltip XSS: HTML/script payloads in tooltip/label content render as escaped text.
-- `pyecharts` `JsCode` / non-JSON charts raise; library-default InitOpts size is ignored.
+- `pyecharts` `JsCode` / non-JSON charts raise; library-default InitOpts size is ignored;
+  unsupported CSS units warn and fall back.
 - Display-only `key` still emits `st-key-*`; keyed `renderer` switch does not reset selection.
 
 ## Checklist
