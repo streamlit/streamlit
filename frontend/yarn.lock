@@ -3418,7 +3418,7 @@ __metadata:
     node-emoji: "npm:^2.2.0"
     numbro: "npm:^2.5.0"
     plotly.js: "npm:^3.7.0"
-    protobufjs: "npm:^8.7.2"
+    protobufjs: "npm:^8.8.0"
     query-string: "npm:^9.5.0"
     re-resizable: "npm:^6.11.2"
     react-aria: "npm:^3.51.0"
@@ -3468,8 +3468,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@streamlit/protobuf@workspace:protobuf"
   dependencies:
-    protobufjs: "npm:^8.7.2"
-    protobufjs-cli: "npm:^2.6.2"
+    protobufjs: "npm:^8.8.0"
+    protobufjs-cli: "npm:^2.7.0"
     typesync: "npm:^0.14.3"
   languageName: unknown
   linkType: soft
@@ -12667,9 +12667,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"protobufjs-cli@npm:^2.6.2":
-  version: 2.6.2
-  resolution: "protobufjs-cli@npm:2.6.2"
+"protobufjs-cli@npm:^2.7.0":
+  version: 2.7.0
+  resolution: "protobufjs-cli@npm:2.7.0"
   dependencies:
     escodegen: "npm:^2.0.0"
     espree: "npm:^9.6.1"
@@ -12679,21 +12679,21 @@ __metadata:
     minimist: "npm:^1.2.8"
     tmp: "npm:^0.2.7"
   peerDependencies:
-    protobufjs: ^8.7.2
+    protobufjs: ^8.8.0
   bin:
     pbjs: bin/pbjs
     pbts: bin/pbts
     protoc-gen-pbjs: bin/protoc-gen-pbjs
-  checksum: 10c0/5079b903cb2aa11819904b34e8b7a28a20a1dfa84b58b898379dbdb2036fd30a06df8bdb30ff4031293c01554078918e358eef02294320f6bc18a21804e61e91
+  checksum: 10c0/71a9f02bb75367e07c568247a5edbe6a0907d02f456f2e5b121a16bd18609f98beb5390b3493ddf3d791fe146a1f8ca981a7d3fac2ec316dc46ddb7b0318076a
   languageName: node
   linkType: hard
 
-"protobufjs@npm:^8.7.2":
-  version: 8.7.2
-  resolution: "protobufjs@npm:8.7.2"
+"protobufjs@npm:^8.8.0":
+  version: 8.8.0
+  resolution: "protobufjs@npm:8.8.0"
   dependencies:
     long: "npm:^5.3.2"
-  checksum: 10c0/8bc6837f4a4bb59b63fb07575726274d8ac1ea6dd44cfb1ef517f34465885ce7f3468195142dfbf7c62f2b40497c3a3177f11fe00e0a2fde5268b29349af7f3c
+  checksum: 10c0/2aa7fc766dce41858ce45ad750d9bfb2d30e9121f8c4f581ee3e5deda21440cae6bb23f41ec599d33b34963164e85f38eace687ba025d804fe926ab057c05703
   languageName: node
   linkType: hard
 
