@@ -28,10 +28,10 @@ from streamlit.elements.echarts_chart import (
     EChartsMixin,
     EChartsSelectionState,
     EChartsState,
-    _normalize_options,
+    _normalize_spec,
     _resolve_content_height,
     _resolve_content_width,
-    _serialize_options,
+    _serialize_option,
 )
 from streamlit.errors import (
     StreamlitAPIException,
@@ -43,7 +43,7 @@ from streamlit.errors import (
 from streamlit.proto.EChartsChart_pb2 import EChartsChart as EChartsChartProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
-_BASIC_OPTIONS: dict[str, Any] = {
+_BASIC_SPEC: dict[str, Any] = {
     "xAxis": {"type": "category", "data": ["A", "B", "C"]},
     "yAxis": {"type": "value"},
     "series": [{"type": "bar", "data": [5, 20, 36]}],
@@ -53,13 +53,13 @@ _BASIC_OPTIONS: dict[str, Any] = {
 class _FakeEChart:
     """Duck-typed pyecharts-like chart exposing ``dump_options``."""
 
-    def __init__(self, options: dict[str, Any], width: str = "", height: str = ""):
-        self._options = options
+    def __init__(self, spec: dict[str, Any], width: str = "", height: str = ""):
+        self._spec = spec
         self.width = width
         self.height = height
 
     def dump_options(self) -> str:
-        return json.dumps(self._options)
+        return json.dumps(self._spec)
 
 
 class EChartsChartTest(DeltaGeneratorTestCase):
@@ -67,10 +67,10 @@ class EChartsChartTest(DeltaGeneratorTestCase):
 
     def test_dict_input(self):
         """A dict option is serialized into a JSON spec with theme/renderer set."""
-        st.echarts_chart(_BASIC_OPTIONS)
+        st.echarts_chart(_BASIC_SPEC)
 
         el = self.get_delta_from_queue().new_element.echarts_chart
-        assert json.loads(el.spec) == _BASIC_OPTIONS
+        assert json.loads(el.spec) == _BASIC_SPEC
         assert el.theme == "streamlit"
         assert el.renderer == EChartsChartProto.Renderer.CANVAS
         # Display-only charts do not get an element ID.
@@ -79,10 +79,10 @@ class EChartsChartTest(DeltaGeneratorTestCase):
 
     def test_json_string_input(self):
         """A JSON string option is parsed and re-serialized into the spec."""
-        st.echarts_chart(json.dumps(_BASIC_OPTIONS))
+        st.echarts_chart(json.dumps(_BASIC_SPEC))
 
         el = self.get_delta_from_queue().new_element.echarts_chart
-        assert json.loads(el.spec) == _BASIC_OPTIONS
+        assert json.loads(el.spec) == _BASIC_SPEC
 
     def test_pyecharts_duck_typed_input(self):
         """A duck-typed pyecharts chart is converted via ``dump_options``."""
@@ -158,7 +158,7 @@ class EChartsChartTest(DeltaGeneratorTestCase):
     )
     def test_theme(self, theme_value, proto_value):
         """The theme parameter maps to the proto theme field."""
-        st.echarts_chart(_BASIC_OPTIONS, theme=theme_value)
+        st.echarts_chart(_BASIC_SPEC, theme=theme_value)
 
         el = self.get_delta_from_queue().new_element.echarts_chart
         assert el.theme == proto_value
@@ -166,7 +166,7 @@ class EChartsChartTest(DeltaGeneratorTestCase):
     def test_bad_theme(self):
         """An invalid theme raises StreamlitValueError."""
         with pytest.raises(StreamlitValueError) as exc:
-            st.echarts_chart(_BASIC_OPTIONS, theme="bad_theme")
+            st.echarts_chart(_BASIC_SPEC, theme="bad_theme")
 
         assert (
             str(exc.value)
@@ -181,7 +181,7 @@ class EChartsChartTest(DeltaGeneratorTestCase):
     )
     def test_renderer(self, renderer_value, proto_value):
         """The renderer parameter maps to the proto renderer field."""
-        st.echarts_chart(_BASIC_OPTIONS, renderer=renderer_value)
+        st.echarts_chart(_BASIC_SPEC, renderer=renderer_value)
 
         el = self.get_delta_from_queue().new_element.echarts_chart
         assert el.renderer == proto_value
@@ -189,7 +189,7 @@ class EChartsChartTest(DeltaGeneratorTestCase):
     def test_bad_renderer(self):
         """An invalid renderer raises StreamlitValueError."""
         with pytest.raises(StreamlitValueError) as exc:
-            st.echarts_chart(_BASIC_OPTIONS, renderer="webgl")
+            st.echarts_chart(_BASIC_SPEC, renderer="webgl")
 
         assert (
             str(exc.value)
@@ -199,7 +199,7 @@ class EChartsChartTest(DeltaGeneratorTestCase):
     def test_invalid_on_select(self):
         """An invalid on_select value raises StreamlitValueError."""
         with pytest.raises(StreamlitValueError) as exc:
-            st.echarts_chart(_BASIC_OPTIONS, on_select="invalid")
+            st.echarts_chart(_BASIC_SPEC, on_select="invalid")
 
         assert (
             str(exc.value)
@@ -216,7 +216,7 @@ class EChartsChartTest(DeltaGeneratorTestCase):
     )
     def test_valid_on_select(self, on_select, is_widget):
         """on_select controls whether the chart becomes a selection widget."""
-        st.echarts_chart(_BASIC_OPTIONS, on_select=on_select)
+        st.echarts_chart(_BASIC_SPEC, on_select=on_select)
 
         el = self.get_delta_from_queue().new_element.echarts_chart
         # A widget gets an element ID; a display-only chart does not.
@@ -225,7 +225,7 @@ class EChartsChartTest(DeltaGeneratorTestCase):
     def test_on_select_initial_returns(self):
         """st.echarts_chart returns an empty selection as the initial result."""
         selection = st.echarts_chart(
-            _BASIC_OPTIONS, on_select="rerun", key="echarts_chart"
+            _BASIC_SPEC, on_select="rerun", key="echarts_chart"
         )
 
         assert selection.selection.selected == []
@@ -240,7 +240,7 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         """The form ID is marshalled correctly inside a form."""
         with patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True)):
             with st.form("form"):
-                st.echarts_chart(_BASIC_OPTIONS, on_select=on_select)
+                st.echarts_chart(_BASIC_SPEC, on_select=on_select)
 
         form_proto = self.get_delta_from_queue(0).add_block
         echarts_proto = self.get_delta_from_queue(1).new_element.echarts_chart
@@ -278,7 +278,7 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc:
             st.echarts_chart('{ "title": "my function"')
 
-        assert exc.value.error_id == "echarts-options-invalid-json"
+        assert exc.value.error_id == "echarts-spec-invalid-json"
 
     def test_function_word_in_valid_json_is_allowed(self):
         """A title containing the word ``function`` is still valid JSON."""
@@ -294,7 +294,7 @@ class EChartsChartTest(DeltaGeneratorTestCase):
             st.echarts_chart("{not json")
 
         assert "could not be parsed as JSON" in str(exc.value)
-        assert exc.value.error_id == "echarts-options-invalid-json"
+        assert exc.value.error_id == "echarts-spec-invalid-json"
 
     def test_lambda_in_dict_raises(self):
         """A callable embedded in the option dict raises instead of stringifying."""
@@ -330,15 +330,15 @@ class EChartsChartTest(DeltaGeneratorTestCase):
             ),
         ]
     )
-    def test_map_and_geo_raise(self, _name, options):
+    def test_map_and_geo_raise(self, _name, spec):
         """Map and geo charts raise, since GeoJSON cannot be registered."""
         with pytest.raises(StreamlitAPIException) as exc:
-            st.echarts_chart(options)
+            st.echarts_chart(spec)
 
         assert "map charts" in str(exc.value)
         assert exc.value.error_id == "echarts-map-charts-not-supported"
 
-    def test_unsupported_series_detected_inside_timeline_options(self):
+    def test_unsupported_series_detected_inside_timeline_variants(self):
         """Timeline specs are scanned in ``baseOption`` and per-tick ``options``."""
         with pytest.raises(StreamlitAPIException) as exc:
             st.echarts_chart(
@@ -367,48 +367,48 @@ class EChartsChartTest(DeltaGeneratorTestCase):
 
     def test_no_id_for_display_only(self):
         """Display-only charts (on_select='ignore') have no element ID."""
-        st.echarts_chart(_BASIC_OPTIONS)
+        st.echarts_chart(_BASIC_SPEC)
         el = self.get_delta_from_queue().new_element.echarts_chart
         assert el.id == ""
 
     def test_id_present_when_selection_activated(self):
         """A widget ID is computed when selections are activated."""
-        st.echarts_chart(_BASIC_OPTIONS, on_select="rerun")
+        st.echarts_chart(_BASIC_SPEC, on_select="rerun")
         el = self.get_delta_from_queue().new_element.echarts_chart
         assert el.id != ""
 
     def test_id_changes_when_renderer_changes(self):
         """The widget ID changes when renderer changes (no key)."""
-        st.echarts_chart(_BASIC_OPTIONS, on_select="rerun", renderer="canvas")
+        st.echarts_chart(_BASIC_SPEC, on_select="rerun", renderer="canvas")
         id_canvas = self.get_delta_from_queue().new_element.echarts_chart.id
 
-        st.echarts_chart(_BASIC_OPTIONS, on_select="rerun", renderer="svg")
+        st.echarts_chart(_BASIC_SPEC, on_select="rerun", renderer="svg")
         id_svg = self.get_delta_from_queue().new_element.echarts_chart.id
 
         assert id_canvas != id_svg
 
     def test_id_changes_when_spec_changes_without_key(self):
         """The widget ID changes when the option data changes and no key is set."""
-        st.echarts_chart(_BASIC_OPTIONS, on_select="rerun")
+        st.echarts_chart(_BASIC_SPEC, on_select="rerun")
         id_a = self.get_delta_from_queue().new_element.echarts_chart.id
 
-        other_options = {**_BASIC_OPTIONS, "series": [{"type": "bar", "data": [1]}]}
-        st.echarts_chart(other_options, on_select="rerun")
+        other_spec = {**_BASIC_SPEC, "series": [{"type": "bar", "data": [1]}]}
+        st.echarts_chart(other_spec, on_select="rerun")
         id_b = self.get_delta_from_queue().new_element.echarts_chart.id
 
         assert id_a != id_b
 
     def test_id_stable_with_key_when_only_data_changes(self):
         """With a key, the widget ID is stable across data-only changes."""
-        st.echarts_chart(_BASIC_OPTIONS, on_select="rerun", key="stable")
+        st.echarts_chart(_BASIC_SPEC, on_select="rerun", key="stable")
         id_a = self.get_delta_from_queue().new_element.echarts_chart.id
 
         # Simulate a fresh run so the same key can be reused.
         self.script_run_ctx.shared.reset()
         self.clear_queue()
 
-        other_options = {**_BASIC_OPTIONS, "series": [{"type": "bar", "data": [9, 9]}]}
-        st.echarts_chart(other_options, on_select="rerun", key="stable")
+        other_spec = {**_BASIC_SPEC, "series": [{"type": "bar", "data": [9, 9]}]}
+        st.echarts_chart(other_spec, on_select="rerun", key="stable")
         id_b = self.get_delta_from_queue().new_element.echarts_chart.id
 
         assert id_a == id_b
@@ -422,7 +422,7 @@ class EChartsChartTest(DeltaGeneratorTestCase):
     )
     def test_width_combinations(self, width, expected_spec, expected_value):
         """The width parameter maps to the element width config."""
-        st.echarts_chart(_BASIC_OPTIONS, width=width)
+        st.echarts_chart(_BASIC_SPEC, width=width)
 
         el = self.get_delta_from_queue().new_element
         assert el.width_config.WhichOneof("width_spec") == expected_spec
@@ -437,7 +437,7 @@ class EChartsChartTest(DeltaGeneratorTestCase):
     )
     def test_height_combinations(self, height, expected_spec, expected_value):
         """The height parameter maps to the element height config."""
-        st.echarts_chart(_BASIC_OPTIONS, height=height)
+        st.echarts_chart(_BASIC_SPEC, height=height)
 
         el = self.get_delta_from_queue().new_element
         assert el.height_config.WhichOneof("height_spec") == expected_spec
@@ -445,7 +445,7 @@ class EChartsChartTest(DeltaGeneratorTestCase):
 
     def test_pyecharts_content_dimensions(self):
         """Content sizing uses a pyecharts chart's own width/height when present."""
-        chart = _FakeEChart(_BASIC_OPTIONS, width="820px", height="480px")
+        chart = _FakeEChart(_BASIC_SPEC, width="820px", height="480px")
         st.echarts_chart(chart, width="content", height="content")
 
         el = self.get_delta_from_queue().new_element
@@ -456,13 +456,13 @@ class EChartsChartTest(DeltaGeneratorTestCase):
     def test_width_validation_errors(self, invalid_value):
         """Invalid width values raise StreamlitInvalidWidthError."""
         with pytest.raises(StreamlitInvalidWidthError):
-            st.echarts_chart(_BASIC_OPTIONS, width=invalid_value)
+            st.echarts_chart(_BASIC_SPEC, width=invalid_value)
 
     @parameterized.expand([("invalid",), (0,), (-100,)])
     def test_height_validation_errors(self, invalid_value):
         """Invalid height values raise StreamlitInvalidHeightError."""
         with pytest.raises(StreamlitInvalidHeightError):
-            st.echarts_chart(_BASIC_OPTIONS, height=invalid_value)
+            st.echarts_chart(_BASIC_SPEC, height=invalid_value)
 
 
 @pytest.mark.require_integration
@@ -470,41 +470,41 @@ def test_dataset_source_polars_dataframe() -> None:
     """A Polars dataframe ``dataset.source`` is converted to records + dimensions."""
     import polars as pl
 
-    option = _normalize_options(
+    option = _normalize_spec(
         {"dataset": {"source": pl.DataFrame({"a": [1, 2], "b": [3, 4]})}}
     )
     assert option["dataset"]["source"] == [{"a": 1, "b": 3}, {"a": 2, "b": 4}]
     assert option["dataset"]["dimensions"] == ["a", "b"]
 
 
-def test_normalize_options_deep_copies_mapping() -> None:
+def test_normalize_spec_deep_copies_mapping() -> None:
     """A mapping input is deep-copied so the user's object is left untouched."""
     original = {"series": [{"data": [1, 2, 3]}]}
-    option = _normalize_options(original)
+    option = _normalize_spec(original)
     option["series"][0]["data"].append(4)
 
     assert original["series"][0]["data"] == [1, 2, 3]
 
 
-def test_normalize_options_invalid_type_raises() -> None:
+def test_normalize_spec_invalid_type_raises() -> None:
     """A non-mapping, non-string, non-pyecharts input raises."""
     with pytest.raises(StreamlitInvalidParameterTypeError) as exc:
-        _normalize_options(12345)  # type: ignore[arg-type]
+        _normalize_spec(12345)  # type: ignore[arg-type]
 
-    assert "Invalid `options` type" in str(exc.value)
+    assert "Invalid `spec` type" in str(exc.value)
     assert "int" in str(exc.value)
 
 
-def test_normalize_options_non_object_json_raises() -> None:
+def test_normalize_spec_non_object_json_raises() -> None:
     """A JSON string that is not an object (e.g. a list) raises."""
     with pytest.raises(StreamlitInvalidParameterTypeError) as exc:
-        _normalize_options("[1, 2, 3]")
+        _normalize_spec("[1, 2, 3]")
 
-    assert "Invalid `options` type" in str(exc.value)
+    assert "Invalid `spec` type" in str(exc.value)
     assert "list" in str(exc.value)
 
 
-def test_serialize_options_rejects_arbitrary_object() -> None:
+def test_serialize_option_rejects_arbitrary_object() -> None:
     """Arbitrary objects are not silently stringified into the spec."""
 
     class _Custom:
@@ -512,9 +512,9 @@ def test_serialize_options_rejects_arbitrary_object() -> None:
             return "SHOULD_NOT_APPEAR"
 
     with pytest.raises(StreamlitAPIException) as exc:
-        _serialize_options({"series": _Custom()})
+        _serialize_option({"series": _Custom()})
 
-    assert exc.value.error_id == "echarts-options-not-json-serializable"
+    assert exc.value.error_id == "echarts-spec-not-json-serializable"
 
 
 def test_serde_deserialize_none_returns_empty_selection() -> None:
@@ -595,36 +595,36 @@ def test_deserialize_returns_read_only_state() -> None:
 
 def test_resolve_content_width_passthrough() -> None:
     """Non-content widths pass through unchanged."""
-    assert _resolve_content_width("stretch", options={}) == "stretch"
-    assert _resolve_content_width(500, options={}) == 500
+    assert _resolve_content_width("stretch", spec={}) == "stretch"
+    assert _resolve_content_width(500, spec={}) == 500
 
 
 def test_resolve_content_width_defaults_to_700() -> None:
-    """Raw options with no intrinsic width resolve to the 700px default."""
-    assert _resolve_content_width("content", options={}) == 700
+    """A raw spec with no intrinsic width resolves to the 700px default."""
+    assert _resolve_content_width("content", spec={}) == 700
 
 
 def test_resolve_content_width_uses_pyecharts_width() -> None:
     """A pyecharts chart's own width is used for content width."""
-    chart = _FakeEChart(_BASIC_OPTIONS, width="640px")
-    assert _resolve_content_width("content", options=chart) == 640
+    chart = _FakeEChart(_BASIC_SPEC, width="640px")
+    assert _resolve_content_width("content", spec=chart) == 640
 
 
 def test_resolve_content_height_passthrough() -> None:
     """Non-content heights pass through unchanged."""
-    assert _resolve_content_height("stretch", options={}) == "stretch"
-    assert _resolve_content_height(300, options={}) == 300
+    assert _resolve_content_height("stretch", spec={}) == "stretch"
+    assert _resolve_content_height(300, spec={}) == 300
 
 
 def test_resolve_content_height_defaults_to_400() -> None:
-    """Raw options with no intrinsic height resolve to the 400px default."""
-    assert _resolve_content_height("content", options={}) == 400
+    """A raw spec with no intrinsic height resolves to the 400px default."""
+    assert _resolve_content_height("content", spec={}) == 400
 
 
 def test_resolve_content_height_uses_pyecharts_height() -> None:
     """A pyecharts chart's own height is used for content height."""
-    chart = _FakeEChart(_BASIC_OPTIONS, height="360px")
-    assert _resolve_content_height("content", options=chart) == 360
+    chart = _FakeEChart(_BASIC_SPEC, height="360px")
+    assert _resolve_content_height("content", spec=chart) == 360
 
 
 def test_echarts_mixin_dg_returns_self() -> None:

@@ -102,7 +102,7 @@ class EChartsCompatible(Protocol):
 
 # Input accepted by ``st.echarts_chart``: an option ``Mapping``, a JSON string,
 # or a duck-typed ``pyecharts`` chart.
-EChartsOptions: TypeAlias = Mapping[str, Any] | str | EChartsCompatible
+EChartsSpec: TypeAlias = Mapping[str, Any] | str | EChartsCompatible
 
 
 class EChartsSelectionState(ReadOnlyAttributeDictionary):
@@ -239,7 +239,7 @@ class EChartsChartSelectionSerde:
 
 def _js_callback_error() -> StreamlitAPIException:
     return StreamlitAPIException(
-        "The provided ECharts options contain JavaScript callbacks (e.g. "
+        "The provided ECharts spec contains JavaScript callbacks (e.g. "
         "`function` values or `JsCode`), which are not supported by "
         "`st.echarts_chart` in v1. Only JSON-compatible option objects are "
         "supported. Use ECharts string-template formatters instead of "
@@ -260,9 +260,9 @@ def _loads_json_option(raw: str) -> Any:
         if _BARE_JS_FUNCTION.search(raw) is not None or "=>" in raw:
             raise _js_callback_error() from ex
         raise StreamlitAPIException(
-            "The provided ECharts options could not be parsed as JSON. "
+            "The provided ECharts spec could not be parsed as JSON. "
             "`st.echarts_chart` only supports JSON-compatible option objects in v1.",
-            error_id="echarts-options-invalid-json",
+            error_id="echarts-spec-invalid-json",
         ) from ex
 
 
@@ -340,7 +340,7 @@ def _validate_supported_features(option: dict[str, Any]) -> None:
         series_type = series.get("type")
         if series_type in _GL_SERIES_TYPES:
             raise StreamlitAPIException(
-                f"The provided ECharts options use the `{series_type}` series, which "
+                f"The provided ECharts spec uses the `{series_type}` series, which "
                 "requires the ECharts GL extension. `st.echarts_chart` does not "
                 "support 3D or WebGL charts.",
                 error_id="echarts-gl-series-not-supported",
@@ -349,7 +349,7 @@ def _validate_supported_features(option: dict[str, Any]) -> None:
             uses_geo = True
         if series_type == "custom":
             raise StreamlitAPIException(
-                "The provided ECharts options use a `custom` series, which requires "
+                "The provided ECharts spec uses a `custom` series, which requires "
                 "a JavaScript `renderItem` callback. `st.echarts_chart` only "
                 "supports JSON-compatible option objects, so custom series are not "
                 "supported.",
@@ -358,7 +358,7 @@ def _validate_supported_features(option: dict[str, Any]) -> None:
 
     if uses_geo:
         raise StreamlitAPIException(
-            "The provided ECharts options use a map or geo coordinate system, which "
+            "The provided ECharts spec uses a map or geo coordinate system, which "
             "requires registering GeoJSON map data. `st.echarts_chart` does not "
             "support map charts.",
             error_id="echarts-map-charts-not-supported",
@@ -380,34 +380,34 @@ def _convert_dataset_sources(option: dict[str, Any]) -> None:
                 _convert_single_dataset(entry)
 
 
-def _normalize_options(options: EChartsOptions) -> dict[str, Any]:
-    """Normalize the ``options`` input into a JSON-compatible option dict.
+def _normalize_spec(spec: EChartsSpec) -> dict[str, Any]:
+    """Normalize the ``spec`` input into a JSON-compatible ECharts option dict.
 
     Accepts a Python ``Mapping``, a JSON string, or a duck-typed ``pyecharts``
     chart (an object with a callable ``dump_options`` method). Dataframe-like
     ``dataset.source`` values are converted to JSON records.
     """
-    if isinstance(options, str):
-        option = _loads_json_option(options)
-    elif isinstance(options, Mapping):
+    if isinstance(spec, str):
+        option = _loads_json_option(spec)
+    elif isinstance(spec, Mapping):
         # Deep-copy before any mutation so the user's object is left untouched.
-        option = copy.deepcopy(dict(options))
-    elif callable(getattr(options, "dump_options", None)):
+        option = copy.deepcopy(dict(spec))
+    elif callable(getattr(spec, "dump_options", None)):
         # Duck-typed pyecharts chart (detected without importing pyecharts).
-        option = _loads_json_option(options.dump_options())
+        option = _loads_json_option(spec.dump_options())
     else:
         raise StreamlitInvalidParameterTypeError(
-            "options",
-            type(options).__name__,
+            "spec",
+            type(spec).__name__,
             ["dict", "str", "pyecharts chart"],
         )
 
     if not isinstance(option, dict):
         raise StreamlitInvalidParameterTypeError(
-            "options",
+            "spec",
             type(option).__name__,
             ["dict"],
-            detail="ECharts options must be a JSON object (mapping).",
+            detail="An ECharts spec must be a JSON object (mapping).",
         )
 
     _validate_supported_features(option)
@@ -415,7 +415,7 @@ def _normalize_options(options: EChartsOptions) -> dict[str, Any]:
     return option
 
 
-def _serialize_options(option: dict[str, Any]) -> str:
+def _serialize_option(option: dict[str, Any]) -> str:
     """Strictly serialize the option dict to JSON for ``proto.spec``.
 
     ``allow_nan=False`` and the absence of a ``default`` fallback ensure that JS
@@ -426,11 +426,11 @@ def _serialize_options(option: dict[str, Any]) -> str:
         return json.dumps(option, allow_nan=False)
     except (TypeError, ValueError) as ex:
         raise StreamlitAPIException(
-            "The provided ECharts options are not JSON-serializable. "
+            "The provided ECharts spec is not JSON-serializable. "
             "`st.echarts_chart` only supports JSON-compatible option objects in "
             "v1: JavaScript callbacks, arbitrary Python objects, and non-finite "
             "numbers (NaN/Infinity) are not supported.",
-            error_id="echarts-options-not-json-serializable",
+            error_id="echarts-spec-not-json-serializable",
         ) from ex
 
 
@@ -447,34 +447,34 @@ def _extract_pixel_dimension(value: Any) -> int | None:
     return None
 
 
-def _resolve_content_width(width: Width, options: Any) -> Width:
+def _resolve_content_width(width: Width, spec: Any) -> Width:
     """Resolve "content" width, preferring a pyecharts chart's own width.
 
     For content width, we use a pyecharts chart's own ``width`` (e.g.
-    ``"900px"``) when available; raw ECharts options have no intrinsic width, so
-    they resolve to a fixed default of 700 pixels.
+    ``"900px"``) when available; a raw ECharts spec has no intrinsic width, so
+    it resolves to a fixed default of 700 pixels.
     """
     if width != "content":
         return width
 
-    dimension = _extract_pixel_dimension(getattr(options, "width", None))
+    dimension = _extract_pixel_dimension(getattr(spec, "width", None))
     if dimension is not None:
         return dimension
 
     return _DEFAULT_CONTENT_WIDTH
 
 
-def _resolve_content_height(height: Height, options: Any) -> Height:
+def _resolve_content_height(height: Height, spec: Any) -> Height:
     """Resolve "content" height, preferring a pyecharts chart's own height.
 
     For content height, we use a pyecharts chart's own ``height`` (e.g.
-    ``"500px"``) when available; raw ECharts options have no intrinsic height, so
-    they resolve to a fixed default of 400 pixels.
+    ``"500px"``) when available; a raw ECharts spec has no intrinsic height, so
+    it resolves to a fixed default of 400 pixels.
     """
     if height != "content":
         return height
 
-    dimension = _extract_pixel_dimension(getattr(options, "height", None))
+    dimension = _extract_pixel_dimension(getattr(spec, "height", None))
     if dimension is not None:
         return dimension
 
@@ -485,7 +485,7 @@ class EChartsMixin:
     @overload
     def echarts_chart(
         self,
-        options: EChartsOptions,
+        spec: EChartsSpec,
         *,
         width: Width = "stretch",
         height: Height = "content",
@@ -498,7 +498,7 @@ class EChartsMixin:
     @overload
     def echarts_chart(
         self,
-        options: EChartsOptions,
+        spec: EChartsSpec,
         *,
         width: Width = "stretch",
         height: Height = "content",
@@ -512,7 +512,7 @@ class EChartsMixin:
     @gather_metrics("echarts_chart")
     def echarts_chart(
         self,
-        options: EChartsOptions,
+        spec: EChartsSpec,
         *,
         width: Width = "stretch",
         height: Height = "content",
@@ -546,7 +546,7 @@ class EChartsMixin:
 
         Parameters
         ----------
-        options : dict, str, or pyecharts chart
+        spec : dict, str, or pyecharts chart
             The ECharts option object to render. This can be one of the following:
 
             - A Python ``dict`` matching the ECharts option object structure.
@@ -569,8 +569,8 @@ class EChartsMixin:
             - ``"content"``: The width of the element matches the width of its
               content, but doesn't exceed the width of the parent container. For
               ``pyecharts`` charts, the chart's own width is used when available;
-              otherwise, a fixed default of 700 pixels is used because ECharts
-              options have no intrinsic width.
+              otherwise, a fixed default of 700 pixels is used because an
+              ECharts spec has no intrinsic width.
             - An integer specifying the width in pixels: The element has a
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the element matches the width
@@ -582,7 +582,7 @@ class EChartsMixin:
             - ``"content"`` (default): The height of the element matches the
               height of its content. For ``pyecharts`` charts, the chart's own
               height is used when available; otherwise, a fixed default of 400
-              pixels is used because ECharts options have no intrinsic height.
+              pixels is used because an ECharts spec has no intrinsic height.
             - ``"stretch"``: The height of the element matches the height of
               its content or the height of the parent container, whichever is
               larger. If the element is not in a parent container, the height
@@ -594,7 +594,7 @@ class EChartsMixin:
             The theme of the chart. If ``theme`` is ``"streamlit"`` (default),
             Streamlit uses its own design default. If ``theme`` is ``None``,
             Streamlit falls back to ECharts' built-in default theme and leaves
-            your ``options`` untouched, except that display-only charts (when
+            your ``spec`` untouched, except that display-only charts (when
             ``on_select="ignore"``) still reset the series hover cursor to
             ``"default"`` so the chart does not look clickable. Set
             ``series.cursor`` yourself to override that cursor default; it is
@@ -641,15 +641,15 @@ class EChartsMixin:
               as a dictionary.
 
             When ``on_select`` is not ``"ignore"``, Streamlit returns whatever
-            selections you enable in your ``options``. Enable point selection by
+            selections you enable in your ``spec``. Enable point selection by
             setting ``selectedMode`` on a series (for example,
             ``{"type": "bar", "selectedMode": "multiple", "data": [...]}``), and
             enable region selection by adding a
             `brush <https://echarts.apache.org/en/option.html#brush>`_ component.
             Selected data is grouped by series in ``EChartsState.selection.selected``,
             and brush geometry is returned in ``EChartsState.selection.areas``.
-            Selections are re-applied visually after reruns. If your ``options``
-            don't enable any selection, no selection is returned even when
+            Selections are re-applied visually after reruns. If your ``spec``
+            doesn't enable any selection, no selection is returned even when
             ``on_select`` is active.
 
         renderer : "canvas" or "svg"
@@ -692,7 +692,7 @@ class EChartsMixin:
         **Example 2: Point selections driving the app**
 
         Set ``on_select="rerun"`` to make the chart behave like an input widget,
-        and enable point selection in your ``options`` by setting
+        and enable point selection in your ``spec`` by setting
         ``selectedMode`` on the series. Streamlit returns selected indices grouped
         by series and data type.
 
@@ -701,7 +701,7 @@ class EChartsMixin:
 
            import streamlit as st
 
-           options = {
+           spec = {
                "xAxis": {
                    "type": "category",
                    "data": ["Mon", "Tue", "Wed", "Thu", "Fri"],
@@ -716,14 +716,14 @@ class EChartsMixin:
                ],
            }
 
-           event = st.echarts_chart(options, key="sales", on_select="rerun")
+           event = st.echarts_chart(spec, key="sales", on_select="rerun")
 
            rows = (
                event.selection.selected[0]["data_indices"]
                if event.selection.selected
                else []
            )
-           st.write("You selected:", [options["series"][0]["data"][i] for i in rows])
+           st.write("You selected:", [spec["series"][0]["data"][i] for i in rows])
 
         .. output::
            https://doc-echarts-chart-selection.streamlit.app/
@@ -761,10 +761,10 @@ class EChartsMixin:
                 enable_check_callback_rules=is_callback,
             )
 
-        normalized_options = _normalize_options(options)
+        normalized_option = _normalize_spec(spec)
 
         echarts_chart_proto = EChartsChartProto()
-        echarts_chart_proto.spec = _serialize_options(normalized_options)
+        echarts_chart_proto.spec = _serialize_option(normalized_option)
         echarts_chart_proto.theme = theme or ""
         echarts_chart_proto.renderer = (
             EChartsChartProto.Renderer.SVG
@@ -774,8 +774,8 @@ class EChartsMixin:
 
         # The backend only resolves the "content" default; the frontend handles
         # the actual layout.
-        final_width = _resolve_content_width(width, options)
-        final_height = _resolve_content_height(height, options)
+        final_width = _resolve_content_width(width, spec)
+        final_height = _resolve_content_height(height, spec)
 
         ctx = get_script_run_ctx()
 

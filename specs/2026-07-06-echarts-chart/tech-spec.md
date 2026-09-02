@@ -98,12 +98,12 @@ A new `EChartsMixin` added to `DeltaGenerator` (register in `delta_generator.py`
    - `theme` must be `"streamlit"` or `None`.
    - `renderer` must be `"canvas"` or `"svg"`.
    - `on_select` must be `"ignore"`, `"rerun"`, or callable.
-3. **Options normalization** (`_normalize_options`) — input type is
-   `Mapping[str, Any] | str | EChartsCompatible`, where `EChartsCompatible` is a `Protocol` with
-   `dump_options() -> str`:
-   - If `options` is a `Mapping`, deep-copy before any mutation.
-   - If `options` is a `str`, `json.loads` it into a dict.
-   - If `options` has a callable `dump_options` attribute (duck-typed `pyecharts` chart), call it
+3. **Spec normalization** (`_normalize_spec`) — the `spec` parameter is typed as
+   `EChartsSpec = Mapping[str, Any] | str | EChartsCompatible`, where `EChartsCompatible` is a
+   `Protocol` with `dump_options() -> str`:
+   - If `spec` is a `Mapping`, deep-copy before any mutation.
+   - If `spec` is a `str`, `json.loads` it into a dict.
+   - If `spec` has a callable `dump_options` attribute (duck-typed `pyecharts` chart), call it
      and `json.loads` the result. Detected without importing `pyecharts` (no hard dependency).
      Note: `pyecharts`' `dump_options()` emits **raw, unquoted** `function () { … }` values for any
      `JsCode` options, which makes `json.loads` fail with a cryptic `JSONDecodeError`. Wrap the
@@ -178,7 +178,7 @@ notes (link the GitHub Security Advisory in `package.json` and the PR descriptio
 `6.1.x` is not yet available, pin the specific patched `6.0.x` release that contains the fix instead
 and record the reasoning. Import the **full** bundle (`import * as echarts from "echarts"`), _not_ the tree-shakable
 `echarts/core` registry. Tree-shaking requires statically selecting the series/components at build
-time, which is impossible for an API that accepts arbitrary user options — a chart type the user
+time, which is impossible for an API that accepts an arbitrary user spec — a chart type the user
 picks at runtime would silently fail to render. Because the component is lazy-loaded, ECharts lives
 in the `EChartsChart` chunk and is only fetched on first use (same strategy as `mermaid`), so the
 initial app bundle is unaffected. Tree-shaking could be revisited only if we later constrain the
@@ -192,7 +192,7 @@ supported chart types.
   `echarts.init(dom, themeArg, { renderer: element.renderer === SVG ? "svg" : "canvas", width, height })`
   and `chart.setOption(option, { notMerge: true })`. `themeArg` is the Streamlit-built theme object
   **only when `element.theme === "streamlit"`**; when `theme=None` it is `undefined` so ECharts uses
-  its built-in default theme and the user's `options` stay untouched (see [Theming](#theming-frontend)).
+  its built-in default theme and the user's `spec` stays untouched (see [Theming](#theming-frontend)).
   - Only initialize once the container has valid positive dimensions (ECharts renders incorrectly
     into zero-sized/hidden containers); otherwise defer init rather than throw.
   - On renderer **or** theme change, dispose and recreate the instance (both are fixed at `init`),
@@ -251,7 +251,7 @@ colors.borderColor`, text color), and per-axis defaults
   `toolbox.iconStyle`, and `darkMode` (from the active theme type).
 
 Two layers, because the ECharts init theme doesn't reliably cover everything. **Both layers run
-only when `theme="streamlit"`**; when `theme=None` neither is applied, so the user's `options` are
+only when `theme="streamlit"`**; when `theme=None` neither is applied, so the user's `spec` is
 left untouched (matching the product spec's opt-out semantics, including ARIA only being enabled if
 the user sets it):
 
@@ -261,7 +261,7 @@ the user sets it):
    colors, and `aria.enabled` — see the product spec's Accessibility section) **only when the user
    hasn't set them**.
 
-Precedence: the user's explicit `options` values must always win. The init theme applies
+Precedence: the user's explicit `spec` values must always win. The init theme applies
 _underneath_ the option passed to `setOption`, and `applyStreamlitOptionDefaults` only writes keys
 that are absent — so we **never** clobber explicit values (e.g. `series[0].itemStyle.color` or a
 top-level `color`). We do **not** deep-merge the theme into the user option. This is cleaner than
@@ -333,7 +333,7 @@ contract as `VegaLiteState`/`PlotlyState`).
 ### Security
 
 - Bundle ECharts from npm (no CDN script loading); parse option **strings as JSON**, never as JS
-  object literals; and use **no** `eval`/`new Function`/script injection. JSON-only options mean no
+  object literals; and use **no** `eval`/`new Function`/script injection. A JSON-only spec means no
   app-provided JavaScript executes (the differentiator from `streamlit-echarts`' `JsCode`/`events`).
 - **Tooltip/label content (MVP-safe behavior, not a deferred review item).** ECharts tooltips and
   rich labels can render app-provided strings, and ECharts has had tooltip XSS advisories. The MVP
@@ -439,7 +439,7 @@ can be a later optimization.
 arbitrary-JS-execution surface that needs a dedicated security review and API design; not required
 for the common cases (string-template formatters). Listed as future work in the product spec.
 `streamlit-echarts` implements this by wrapping JS in a `JsCode` object that encodes the source
-between placeholder sentinels (`--x_x--0_0--`), recursively substituting them into the options
+between placeholder sentinels (`--x_x--0_0--`), recursively substituting them into the spec
 JSON, and `eval`-ing them on the frontend — plus an `events={name: JsCode}` dict (with a `zr:`
 prefix for canvas-wide zrender events, and reruns skipped when a handler returns `undefined`). If
 we add native JS support, this placeholder-encoding approach is the reference design, but it must

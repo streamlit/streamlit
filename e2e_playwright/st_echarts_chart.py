@@ -51,11 +51,11 @@ class _FakeEChart:
     it (pyecharts is not installed in this environment).
     """
 
-    def __init__(self, options: dict[str, Any]) -> None:
-        self._options = options
+    def __init__(self, spec: dict[str, Any]) -> None:
+        self._spec = spec
 
     def dump_options(self) -> str:
-        return json.dumps(self._options)
+        return json.dumps(self._spec)
 
 
 # 1) Basic bar chart with the Streamlit theme (display only).
@@ -76,8 +76,8 @@ with st.container(key="c_basic_bar"):
 if st.button("rerun helper"):
     st.write("rerun helper clicked")
 
-# 2) A chart with theme=None (uses ECharts' built-in default theme; the options
-#    are left untouched).
+# 2) A chart with theme=None (uses ECharts' built-in default theme; the spec is
+#    left untouched).
 st.echarts_chart(
     {
         "xAxis": {"type": "category", "data": ["A", "B", "C", "D", "E"]},

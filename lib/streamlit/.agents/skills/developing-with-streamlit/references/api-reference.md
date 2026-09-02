@@ -62,7 +62,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.dialog` | Function decorator to create a modal dialog. Use it to isolate short workflows while preserving Streamlit's rerun model. |
 | `st.divider` | Display a horizontal rule. Use it to separate sections without adding a heavy layout container. |
 | `st.download_button` | Display a download button widget. Use it for generated files, reports, transformed data, or other app outputs. |
-| `st.echarts_chart` | Display an interactive Apache ECharts chart from an option object, JSON string, or pyecharts chart. Use it for ECharts-specific chart types (gauges, sunbursts, sankey, graph/network, candlestick, radar) or to migrate from the `streamlit-echarts` component. Options must be JSON-compatible, so JavaScript callbacks, `custom` series, map/geo charts, and ECharts GL (3D) charts are not supported. |
+| `st.echarts_chart` | Display an interactive Apache ECharts chart from an option object, JSON string, or pyecharts chart. Use it for ECharts-specific chart types (gauges, sunbursts, sankey, graph/network, candlestick, radar) or to migrate from the `streamlit-echarts` component. The spec must be JSON-compatible, so JavaScript callbacks, `custom` series, map/geo charts, and ECharts GL (3D) charts are not supported. |
 | `st.echo` | Use in a `with` block to draw some code on the app, then execute it. Useful for tutorials, examples, and educational apps. |
 | `st.empty` | Insert a single-element container. Use it as a placeholder when you need to replace, update, or clear one element later. |
 | `st.error` | Display error message. Use it for failures or blocking conditions that require user attention. |
