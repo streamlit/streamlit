@@ -431,7 +431,7 @@ def test_select_slider_query_param_empty_value_rejected(page: Page, app_base_url
     expect(page).not_to_have_url(re.compile(r"[?&]bound_color="))
 
 
-def test_select_slider_on_change_ignore(app: Page):
+def test_select_slider_on_change_ignore(app: Page) -> None:
     """Test that on_change='ignore' suppresses rerun and sends value on next rerun."""
     expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
     expect_prefixed_markdown(app, "Ignore select slider value:", "red")

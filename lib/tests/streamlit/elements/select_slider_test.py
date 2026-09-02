@@ -880,14 +880,14 @@ class SelectSliderOnChangeModeTest(DeltaGeneratorTestCase):
     )
     def test_on_change_mode_sets_ignore_rerun_proto_field(
         self, _name: str, on_change: Any, expected_ignore_rerun: bool
-    ):
+    ) -> None:
         """Test that on_change modes correctly set the ignore_rerun proto field."""
         st.select_slider("the label", options=["a", "b", "c"], on_change=on_change)
 
         c = self.get_delta_from_queue().new_element.slider
         assert c.ignore_rerun is expected_ignore_rerun
 
-    def test_on_change_invalid_mode_raises_exception(self):
+    def test_on_change_invalid_mode_raises_exception(self) -> None:
         """Test that invalid on_change mode raises StreamlitValueError."""
         with pytest.raises(st.errors.StreamlitValueError) as exc_info:
             st.select_slider("the label", options=["a", "b", "c"], on_change="invalid")
@@ -897,7 +897,7 @@ class SelectSliderOnChangeModeTest(DeltaGeneratorTestCase):
         assert "'ignore'" in str(exc_info.value)
         assert "a callback function" in str(exc_info.value)
 
-    def test_on_change_non_string_value_raises_exception(self):
+    def test_on_change_non_string_value_raises_exception(self) -> None:
         """Test that a non-string, non-callable on_change raises StreamlitValueError."""
         with pytest.raises(st.errors.StreamlitValueError) as exc_info:
             st.select_slider("the label", options=["a", "b", "c"], on_change=[])  # type: ignore[arg-type]
@@ -905,7 +905,7 @@ class SelectSliderOnChangeModeTest(DeltaGeneratorTestCase):
         assert "on_change" in str(exc_info.value)
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
-    def test_on_change_ignore_allowed_inside_form(self):
+    def test_on_change_ignore_allowed_inside_form(self) -> None:
         """Test that on_change='ignore' inside a form does not raise."""
         with st.form("form"):
             st.select_slider("the label", options=["a", "b", "c"], on_change="ignore")
