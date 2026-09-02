@@ -303,12 +303,8 @@ live_validate = st.text_input(
 )
 st.write("Live validate value:", live_validate)
 
-live_search = st.text_input(
-    "Live search input", type="search", live=True, key="live_search_q"
-)
+live_search = st.text_input("Live search input", type="search", live=True)
 st.write("Live search value:", live_search)
-if st.button("Reset live search"):
-    st.session_state.live_search_q = ""
 
 if "outside_fragment_counter" not in st.session_state:
     st.session_state.outside_fragment_counter = 0
