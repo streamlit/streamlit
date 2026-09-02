@@ -161,9 +161,23 @@ def _parse_text_input_live(live: object) -> int | None:
     # Duration strings always parse to a finite number of seconds.
     seconds = time_to_seconds(live)
     debounce_ms = round(seconds * 1000.0)
+    # Only a true zero-length duration is immediate-commit. A positive
+    # sub-millisecond value would otherwise round to 0 and silently become
+    # the most expensive rerun mode.
+    if seconds > 0 and debounce_ms == 0:
+        debounce_ms = 1
     # Use ``seconds < 0`` so a sub-millisecond negative does not round to 0.
     if seconds < 0 or debounce_ms > _MAX_LIVE_DEBOUNCE_MS:
-        raise StreamlitValueOutOfRangeError("live", live, "0", "1 minute")
+        raise StreamlitValueOutOfRangeError(
+            "live",
+            live,
+            "0ms",
+            "1m",
+            detail=(
+                "Use `True` for the 250ms default, `'0ms'` to commit on every "
+                "change, or a duration string up to `'1m'`."
+            ),
+        )
     return debounce_ms
 
 

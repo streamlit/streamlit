@@ -726,6 +726,7 @@ class TextInputTest(DeltaGeneratorTestCase):
             ("0ms", 0),
             ("0s", 0),
             ("0", 0),
+            ("0.4ms", 1),
         ]
     )
     def test_live_duration_string_sets_debounce_ms(
@@ -794,7 +795,8 @@ class TextInputTest(DeltaGeneratorTestCase):
             st.text_input("the label", live=live)
 
         assert not isinstance(exc.value, StreamlitBadTimeStringError)
-        assert "1 minute" in str(exc.value)
+        assert "1m" in str(exc.value)
+        assert "0ms" in str(exc.value)
 
     @parameterized.expand(
         [
@@ -814,8 +816,8 @@ class TextInputTest(DeltaGeneratorTestCase):
 
         assert "live" in str(exc.value)
 
-    def test_falsy_live_preserves_backwards_compatible_id(self) -> None:
-        """Test that omitted or False live keep the same keyed widget ID.
+    def test_omitted_and_false_live_share_id(self) -> None:
+        """Test that omitted live and live=False produce the same widget ID.
 
         ``live`` is not in ``key_as_main_identity``, so enabling it later
         does not reset a keyed input.

@@ -236,8 +236,8 @@ interface UseBasicWidgetStateBaseArgs<
   /**
    * Optional gate for proto `setValue` updates (session_state / script-driven).
    * Return false to keep the current value; `setValue` is still consumed so
-   * the event is not retried. Keep the callback referentially stable
-   * (`useCallback` + refs).
+   * the event is not retried. Important: this callback needs a stable
+   * reference (`useCallback` + refs).
    */
   shouldApplyIncomingValue?: (incoming: T) => boolean
 }

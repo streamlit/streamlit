@@ -301,11 +301,10 @@ if email:
     history entry per pause — so the Back button doesn't step through every partial query the
     user typed. A shared/reloaded URL therefore reflects the value as of the last live commit.
 
-11. **Widget identity**: An optional `False` default is not enough for compatibility. Unkeyed
-    `text_input` IDs hash kwargs passed to `compute_and_register_element_id`. `live` must be
-    identity-neutral when omitted or `False` (same pattern as unset `validate`), otherwise
-    upgrading Streamlit resets every existing text input's state. A non-default `live` value may
-    be part of identity so that toggling live mode can reset the widget.
+11. **Widget identity:** `live` omitted and `False` share an ID. A non-default delay is part of
+    unkeyed identity so toggling live mode remounts the widget. Keyed widgets keep their ID when
+    `live` changes (`live` is not in `key_as_main_identity`). Always pass identity kwargs,
+    including `None` when off; matching hashes from a previous Streamlit version is not required.
 
 ## Alternatives Considered
 
@@ -428,7 +427,7 @@ contradiction.
 | Item                         | ✅ or comment |
 | ---------------------------- | ------------- |
 | Works on SiS, Cloud, etc?    | ✅ coordinated Python + protobuf + frontend; live commits use the widget's existing rerun scope |
-| No breaking API changes      | ✅ new optional parameter; `live` omitted or `False` must be identity-neutral so existing unkeyed text inputs keep their state |
+| No breaking API changes      | ✅ new optional parameter; omitted and `False` share an ID; keyed widgets stay stable when `live` changes |
 | No new dependencies          | ✅ |
 | Metrics collected            | ✅ existing text_input metrics apply |
 | Any security/legal impact?   | ✅ None |
