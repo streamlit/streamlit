@@ -31,6 +31,7 @@ from streamlit.errors import (
     StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
     StreamlitValueError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.TextInput_pb2 import TextInput
@@ -770,10 +771,11 @@ class TextInputTest(DeltaGeneratorTestCase):
         self, live: int | float | timedelta
     ) -> None:
         """Test that numbers and timedelta point users to valid alternatives."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitInvalidParameterTypeError) as exc:
             st.text_input("the label", live=live)
 
         message = str(exc.value)
+        assert "live" in message
         assert "True" in message
         assert "250ms" in message
         assert "300ms" in message
@@ -787,8 +789,8 @@ class TextInputTest(DeltaGeneratorTestCase):
         ]
     )
     def test_live_duration_out_of_range_raises(self, live: str) -> None:
-        """Test that delays outside 0-1 minute raise StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        """Test that delays outside 0-1 minute raise StreamlitValueOutOfRangeError."""
+        with pytest.raises(StreamlitValueOutOfRangeError) as exc:
             st.text_input("the label", live=live)
 
         assert not isinstance(exc.value, StreamlitBadTimeStringError)

@@ -39,6 +39,7 @@ from streamlit.errors import (
     StreamlitIncompatibleParametersError,
     StreamlitInvalidParameterTypeError,
     StreamlitValueError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
@@ -137,12 +138,17 @@ def _parse_text_input_live(live: object) -> int | None:
 
     # bool is a subclass of int — True/False must be handled before this.
     if isinstance(live, (int, float, timedelta)):
-        raise StreamlitAPIException(
-            "The `live` parameter does not accept a number or "
-            "`datetime.timedelta`. Use `True` for a 250ms pause, "
-            "or a duration string like `'300ms'` or `'0.5s'`. "
-            "`live=300` is not milliseconds (and `live=0.3` is not "
-            "seconds); duration units must be explicit."
+        raise StreamlitInvalidParameterTypeError(
+            "live",
+            type(live).__name__,
+            ["bool", "str"],
+            detail=(
+                "A number or `datetime.timedelta` is not accepted. "
+                "Use `True` for a 250ms pause, or a duration string like "
+                "`'300ms'` or `'0.5s'`. `live=300` is not milliseconds "
+                "(and `live=0.3` is not seconds); duration units must be "
+                "explicit."
+            ),
         )
 
     if not isinstance(live, str):
@@ -157,9 +163,7 @@ def _parse_text_input_live(live: object) -> int | None:
     debounce_ms = round(seconds * 1000.0)
     # Use ``seconds < 0`` so a sub-millisecond negative does not round to 0.
     if seconds < 0 or debounce_ms > _MAX_LIVE_DEBOUNCE_MS:
-        raise StreamlitAPIException(
-            f"The `live` duration must be between 0 and 1 minute. Got: `{live}`."
-        )
+        raise StreamlitValueOutOfRangeError("live", live, "0", "1 minute")
     return debounce_ms
 
 
