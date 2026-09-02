@@ -680,19 +680,26 @@ class TextWidgetsMixin:
 
         >>> import streamlit as st
         >>>
-        >>> products = ["Apple", "Banana", "Cherry", "Date"]
+        >>> products = [
+        ...     {"Product": "Apple", "Category": "Fruit", "Price": 1.20},
+        ...     {"Product": "Banana", "Category": "Fruit", "Price": 0.50},
+        ...     {"Product": "Cherry", "Category": "Fruit", "Price": 2.50},
+        ...     {"Product": "Date", "Category": "Dried fruit", "Price": 3.00},
+        ... ]
         >>>
         >>> @st.fragment
         >>> def product_search():
         ...     query = st.text_input("Search products", type="search", live=True)
-        ...     matches = [p for p in products if query.lower() in p.lower()]
-        ...     st.write(matches)
+        ...     matches = [
+        ...         p for p in products if query.lower() in p["Product"].lower()
+        ...     ]
+        ...     st.dataframe(matches, hide_index=True)
         >>>
         >>> product_search()
 
         .. output::
            https://doc-text-input-live.streamlit.app/
-           height: 320px
+           height: 450px
 
         """
         ctx = get_script_run_ctx()
