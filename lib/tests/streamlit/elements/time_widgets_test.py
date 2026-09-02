@@ -29,7 +29,11 @@ from streamlit.elements.widgets.time_widgets import (
     _parse_max_date,
     _parse_min_date,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidMinMaxError,
+    StreamlitInvalidParameterTypeError,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -76,14 +80,20 @@ def test_convert_datetimelike_rejects_unparseable_string() -> None:
 
 
 def test_date_input_values_rejects_min_after_max() -> None:
-    """Test that constructing date bounds with min > max raises an exception."""
-    with pytest.raises(StreamlitAPIException, match="min_value"):
+    """min after max raises StreamlitInvalidMinMaxError; equal bounds are allowed."""
+    with pytest.raises(StreamlitInvalidMinMaxError, match="cannot be greater than"):
         _DateInputValues(
             value=None,
             is_range=False,
             min=date(2022, 1, 1),
             max=date(2020, 1, 1),
         )
+    _DateInputValues(
+        value=None,
+        is_range=False,
+        min=date(2022, 1, 1),
+        max=date(2022, 1, 1),
+    )
 
 
 @pytest.mark.parametrize(

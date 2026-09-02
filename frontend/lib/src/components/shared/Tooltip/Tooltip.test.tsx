@@ -111,6 +111,33 @@ describe("Tooltip element", () => {
     expect(screen.getByText("Child Element")).toBeInTheDocument()
   })
 
+  it("does not constrain trigger width by default", () => {
+    renderTooltip()
+
+    const trigger = screen.getByTestId("stTooltipHoverTarget")
+    expect(trigger.style.maxWidth).toBe("")
+    expect(trigger.style.minWidth).toBe("")
+    expect(trigger.style.width).toBe("auto")
+  })
+
+  it("constrains trigger width when constrainWidth is set", () => {
+    renderTooltip({ constrainWidth: true })
+
+    const trigger = screen.getByTestId("stTooltipHoverTarget")
+    expect(trigger.style.maxWidth).toBe("100%")
+    expect(trigger.style.minWidth).toBe("0")
+    expect(trigger.style.width).toBe("auto")
+  })
+
+  it("stretches the trigger when containerWidth is set", () => {
+    renderTooltip({ containerWidth: true })
+
+    const trigger = screen.getByTestId("stTooltipHoverTarget")
+    expect(trigger.style.width).toBe("100%")
+    expect(trigger.style.maxWidth).toBe("")
+    expect(trigger.style.minWidth).toBe("")
+  })
+
   it("sets the same content", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const content = <span>Help Text</span>
@@ -181,7 +208,7 @@ describe("Tooltip element", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
 
     render(
-      // eslint-disable-next-line jsx-a11y/no-static-element-interactions
+      // oxlint-disable-next-line jsx-a11y/no-static-element-interactions
       <div onKeyDown={outerKeyDown}>
         <Tooltip {...getProps()}>
           <button>trigger</button>

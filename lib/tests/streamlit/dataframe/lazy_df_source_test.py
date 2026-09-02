@@ -39,7 +39,10 @@ from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
     convert_arrow_table_to_arrow_bytes,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+)
 
 
 def _make_table(num_rows: int) -> pa.Table:
@@ -326,7 +329,10 @@ def test_resolve_styler_lazy_none_eager() -> None:
 def test_resolve_selection_lazy_true_raises() -> None:
     """``lazy=True`` raises when selections are activated."""
     df = pd.DataFrame({"a": np.arange(FORCED_LAZY_MIN_ROWS + 1)})
-    with pytest.raises(StreamlitAPIException, match="on_select"):
+    with pytest.raises(
+        StreamlitIncompatibleParametersError,
+        match=r"`on_select` cannot be used together",
+    ):
         resolve_lazy_source(df, True, is_selection_activated=True)
 
 

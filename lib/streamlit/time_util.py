@@ -42,7 +42,8 @@ def adjust_years(input_date: date, years: int) -> date:
 
         raise StreamlitAPIException(  # pragma: no cover - defensive
             f"Date {input_date} does not exist in the target year {target_year}. "
-            "This should never happen. Please report this bug."
+            "This should never happen. Please report this bug.",
+            error_id="date-does-not-exist-in-year",
         ) from err
 
 

@@ -128,6 +128,8 @@ with st.chat_message("assistant"):
 
 - Keep `type="step"` containers consecutive. Any other element between them—including an invisible `st.empty()`—starts a new timeline segment.
 - A step with no content also ends the timeline, which is useful to split a chain into segments—not as a dummy "done" node before the answer.
+- `state` must be `"running"` (default), `"complete"`, or `"error"`—any other value raises an error, including via `status.update(state=...)`.
+- Put the status where the work runs so its steps appear as the task runs. Don't gate it behind a button whose only job is to launch the task—running it in response to real input, for example `if prompt := st.chat_input(...)`, is the normal case.
 
 ## Chat message avatars
 

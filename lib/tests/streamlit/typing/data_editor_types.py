@@ -24,6 +24,8 @@ from typing_extensions import assert_type
 # - list/dict/set -> returns the same type with preserved generics
 # - Other types (pd.Index, np.ndarray, tuple, etc.) -> returns pd.DataFrame
 if TYPE_CHECKING:
+    from collections import defaultdict
+
     import numpy as np
     import pandas as pd
 
@@ -74,6 +76,18 @@ if TYPE_CHECKING:
     assert_type(data_editor(((1, 2), (3, 4))), pd.DataFrame)
     tuple_data: tuple[int, int, int] = (1, 2, 3)
     assert_type(data_editor(tuple_data), pd.DataFrame)
+
+    # Subclasses of list/dict/set type as the plain builtin, matching runtime.
+    dd: defaultdict[str, list[int]] = defaultdict(list)
+    assert_type(data_editor(dd), dict[str, list[int]])
+
+    # Non-str dict keys do not match dict[str, T] and fall through to DataFrame.
+    int_keyed: dict[int, str] = {1: "a"}
+    assert_type(data_editor(int_keyed), pd.DataFrame)
+
+    # Checkers echo inner types; runtime converts these tuples to lists.
+    assert_type(data_editor([(1, 2)]), list[tuple[int, int]])
+    assert_type(data_editor({"col": (1, 2)}), dict[str, tuple[int, int]])
 
     # =====================================================================
     # Test with various optional parameters (return type unchanged)

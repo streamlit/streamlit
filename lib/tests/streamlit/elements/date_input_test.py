@@ -24,7 +24,11 @@ import streamlit as st
 from streamlit.elements.widgets.time_widgets import DateInputSerde, _DateInputValues
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidMinMaxError,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
+    StreamlitValueAboveMaxError,
+    StreamlitValueBelowMinError,
     StreamlitValueError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
@@ -153,42 +157,39 @@ class DateInputTest(DeltaGeneratorTestCase):
                 TODAY,
                 TODAY + timedelta(days=7),
                 TODAY + timedelta(days=14),
+                StreamlitValueBelowMinError,
             ),
             (
                 TODAY + timedelta(days=8),
                 TODAY,
                 TODAY + timedelta(days=7),
+                StreamlitValueAboveMaxError,
             ),
             (
                 [TODAY, TODAY + timedelta(2)],
                 TODAY + timedelta(days=7),
                 TODAY + timedelta(days=14),
+                StreamlitValueBelowMinError,
             ),
             (
                 [TODAY, TODAY + timedelta(8)],
                 TODAY + timedelta(days=7),
                 TODAY + timedelta(days=14),
+                StreamlitValueBelowMinError,
             ),
             (
                 [TODAY, TODAY + timedelta(8)],
                 TODAY,
                 TODAY + timedelta(days=7),
+                StreamlitValueAboveMaxError,
             ),
         ]
     )
-    def test_value_out_of_range(self, value, min_date, max_date):
-        with pytest.raises(StreamlitAPIException) as exc_message:
+    def test_value_out_of_range(self, value, min_date, max_date, expected_error):
+        with pytest.raises(expected_error):
             st.date_input(
                 "the label", value=value, min_value=min_date, max_value=max_date
             )
-        if isinstance(value, (date, datetime)):
-            value = [value]
-        value = [v.date() if isinstance(v, datetime) else v for v in value]
-        assert (
-            f"The default `value` of {value} must lie between the `min_value` of {min_date.date()} "
-            f"and the `max_value` of {max_date.date()}, inclusively."
-            == str(exc_message.value)
-        )
 
     @parameterized.expand(
         [
@@ -213,11 +214,21 @@ class DateInputTest(DeltaGeneratorTestCase):
                 TODAY,
                 TODAY + timedelta(days=14),
             ),
+            (TODAY, TODAY, TODAY),
         ]
     )
     def test_value_in_range(self, value, min_date, max_date):
         st.date_input("the label", value=value, min_value=min_date, max_value=max_date)
         # No need to assert anything. Testing if not throwing an error.
+
+    def test_min_max_exception(self):
+        """min_value after max_value raises StreamlitInvalidMinMaxError."""
+        with pytest.raises(StreamlitInvalidMinMaxError, match="cannot be greater than"):
+            st.date_input(
+                "the label",
+                min_value=date(2022, 1, 1),
+                max_value=date(2020, 1, 1),
+            )
 
     def test_default_min_if_today_is_before_min(self):
         min_date = date(9998, 2, 28)
@@ -323,14 +334,19 @@ class DateInputTest(DeltaGeneratorTestCase):
             ("YYYY/QQ/DD"),  # Unsupported format
             ("YYYY/Q/DD"),  # Unsupported format
             ("YYYY/MM/DD HH:mm:ss"),  # Unsupported format
+            ("YYYY/MM-DD"),  # Mixed separators are not supported
             (""),  # Empty not allowed
         ]
     )
     def test_invalid_date_format_values(self, format: str):
         """Test that it raises an exception for invalid date formats."""
-        with pytest.raises(StreamlitAPIException) as ex:
+        with pytest.raises(StreamlitValueError):
             st.date_input("the label", format=format)
-        assert str(ex.value).startswith("The provided format")
+
+    def test_invalid_date_format_type(self) -> None:
+        """Non-string format values raise StreamlitInvalidParameterTypeError."""
+        with pytest.raises(StreamlitInvalidParameterTypeError):
+            st.date_input("the label", format=123)  # type: ignore[arg-type]
 
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""

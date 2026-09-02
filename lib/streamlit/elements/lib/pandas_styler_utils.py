@@ -54,7 +54,8 @@ def marshall_styler(proto: ArrowDataProto, styler: Styler, default_uuid: str) ->
             "of cells allowed to be rendered by Pandas Styler is configured to "
             f"`{pd.options.styler.render.max_elements}`. To allow more cells to be "
             'styled, you can change the `"styler.render.max_elements"` config. For example: '
-            f'`pd.set_option("styler.render.max_elements", {styler_data_df.size})`'
+            f'`pd.set_option("styler.render.max_elements", {styler_data_df.size})`',
+            error_id="styler-exceeds-max-elements",
         )
 
     # pandas.Styler uuid should be set before _compute is called.

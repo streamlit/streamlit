@@ -46,6 +46,7 @@ class LocalScriptRunner(ScriptRunner):
         pages_manager: PagesManager,
         args: Any = None,
         kwargs: Any = None,
+        fragment_storage: MemoryFragmentStorage | None = None,
     ) -> None:
         """Initializes the ScriptRunner for the given script_path."""
 
@@ -66,7 +67,11 @@ class LocalScriptRunner(ScriptRunner):
             script_cache=ScriptCache(),
             initial_rerun_data=RerunData(),
             user_info={"email": "test@example.com"},
-            fragment_storage=MemoryFragmentStorage(),
+            fragment_storage=(
+                fragment_storage
+                if fragment_storage is not None
+                else MemoryFragmentStorage()
+            ),
             pages_manager=pages_manager,
         )
 
@@ -165,10 +170,16 @@ class LocalScriptRunner(ScriptRunner):
     def _on_script_finished(
         self, ctx: ScriptRunContext, event: ScriptRunnerEvent, premature_stop: bool
     ) -> None:
+        # Do not drop unseen widgets when the script stopped for a rerun
+        # (later widgets never registered). Keep this gate in sync with
+        # ScriptRunner._on_script_finished.
         if not premature_stop:
             self._session_state.on_script_finished(
                 ctx.shared.widget_ids_this_run.snapshot(),
-                remove_stale_widgets=ctx.has_script_started,
+                remove_stale_widgets=(
+                    ctx.has_script_started
+                    and event != ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
+                ),
             )
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS

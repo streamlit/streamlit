@@ -267,7 +267,8 @@ def _process_avatar_input(
         )
     except Exception as ex:
         raise StreamlitAPIException(
-            "Failed to load the provided avatar value as an image."
+            "Failed to load the provided avatar value as an image.",
+            error_id="chat-failed-loading-avatar-image",
         ) from ex
 
 
@@ -359,14 +360,16 @@ def _pop_audio_file(
     if not uploaded_file.name.lower().endswith(_ACCEPTED_AUDIO_EXTENSION):
         raise StreamlitAPIException(
             f"Invalid file extension for audio input: `{uploaded_file.name}`. "
-            f"Only WAV files ({_ACCEPTED_AUDIO_EXTENSION}) are accepted."
+            f"Only WAV files ({_ACCEPTED_AUDIO_EXTENSION}) are accepted.",
+            error_id="audio-input-invalid-file-extension",
         )
 
     # Validate MIME type (browsers may send different variations of WAV MIME types)
     if uploaded_file.type not in _ACCEPTED_AUDIO_MIME_TYPES:
         raise StreamlitAPIException(
             f"Invalid MIME type for audio input: `{uploaded_file.type}`. "
-            f"Expected one of {_ACCEPTED_AUDIO_MIME_TYPES}."
+            f"Expected one of {_ACCEPTED_AUDIO_MIME_TYPES}.",
+            error_id="audio-input-invalid-mime-type",
         )
 
     # Remove the file from the manager after creating the UploadedFile object.
@@ -990,7 +993,9 @@ class ChatMixin:
 
         if accept_file not in {True, False, "multiple", "directory"}:
             raise StreamlitValueError(
-                "accept_file", ["True", "False", "'multiple'", "'directory'"]
+                "accept_file",
+                ["True", "False", "'multiple'", "'directory'"],
+                detail=f"Got {accept_file!r}.",
             )
 
         if submit_mode not in {"submit", "disable", "stop"}:
@@ -999,12 +1004,17 @@ class ChatMixin:
             )
 
         if max_upload_size is not None and (
-            not isinstance(max_upload_size, int) or max_upload_size <= 0
+            isinstance(max_upload_size, bool)
+            or not isinstance(max_upload_size, int)
+            or max_upload_size < 1
         ):
-            raise StreamlitAPIException(
-                "The `max_upload_size` parameter must be a positive integer "
-                "representing the maximum file size in megabytes, or None "
-                "to fall back to the `server.maxUploadSize` configuration option."
+            raise StreamlitValueError(
+                "max_upload_size",
+                ["a positive integer"],
+                detail=(
+                    "Set it to None to fall back to the `server.maxUploadSize` "
+                    "configuration option."
+                ),
             )
 
         ctx = get_script_run_ctx()

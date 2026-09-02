@@ -968,7 +968,7 @@ function RangeDateInput({
                   placement="bottom end"
                   data-testid="stDateInputQuickSelectPopover"
                 >
-                  {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+                  {/* oxlint-disable-next-line jsx-a11y/no-static-element-interactions */}
                   <div onKeyDown={handleQuickSelectKeyDown}>
                     <StyledDropdownListBox
                       aria-label="Quick select a date range"

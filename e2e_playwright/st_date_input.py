@@ -205,3 +205,19 @@ else:
         format="YYYY/MM/DD",
     )
     st.write("Initial date input value:", dval)
+
+# --- Year-crossing bounds (see GitHub issue #16686) ---
+# `max_value`'s month/day precedes `min_value`'s, so the calendar header's year
+# dropdown must still offer the later year.
+st.date_input(
+    "Year-crossing single",
+    value=date(2025, 2, 1),
+    min_value=date(2024, 8, 3),
+    max_value=date(2025, 2, 3),
+)
+st.date_input(
+    "Year-crossing range",
+    value=[date(2025, 2, 1), date(2025, 2, 2)],
+    min_value=date(2024, 8, 3),
+    max_value=date(2025, 2, 3),
+)

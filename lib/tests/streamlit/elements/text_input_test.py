@@ -387,16 +387,16 @@ class TextInputTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("wrong_tuple_length", ("only-one",)),
-            ("non_string_regex", (1, "msg")),
-            ("non_string_message", ("rx", 1)),
-            ("list_shape", ["rx", "msg"]),
-            ("callable", lambda _value: True),
+            ("wrong_tuple_length", ("only-one",), StreamlitValueError),
+            ("non_string_regex", (1, "msg"), StreamlitValueError),
+            ("non_string_message", ("rx", 1), StreamlitValueError),
+            ("list_shape", ["rx", "msg"], StreamlitInvalidParameterTypeError),
+            ("callable", lambda _value: True, StreamlitInvalidParameterTypeError),
         ]
     )
-    def test_invalid_validate_shapes_raise(self, _name, validate):
-        """Test that invalid validate values raise StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as exc:
+    def test_invalid_validate_shapes_raise(self, _name, validate, error_type):
+        """Malformed tuples are value errors; unsupported outer types are type errors."""
+        with pytest.raises(error_type) as exc:
             st.text_input("the label", validate=validate)
 
         assert "validate" in str(exc.value)

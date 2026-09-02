@@ -397,20 +397,21 @@ class DeltaGenerator(
         def wrapper(*args: Any, **kwargs: Any) -> NoReturn:
             if name in streamlit_methods:
                 if self._root_container == RootContainer.SIDEBAR:
-                    message = (
+                    raise StreamlitAPIException(
                         f"Method `{name}()` does not exist for "
-                        f"`st.sidebar`. Did you mean `st.{name}()`?"
+                        f"`st.sidebar`. Did you mean `st.{name}()`?",
+                        error_id="sidebar-method-does-not-exist",
                     )
-                else:
-                    message = (
-                        f"Method `{name}()` does not exist for "
-                        "`DeltaGenerator` objects. Did you mean "
-                        f"`st.{name}()`?"
-                    )
-            else:
-                message = f"`{name}()` is not a valid Streamlit command."
-
-            raise StreamlitAPIException(message)
+                raise StreamlitAPIException(
+                    f"Method `{name}()` does not exist for "
+                    "`DeltaGenerator` objects. Did you mean "
+                    f"`st.{name}()`?",
+                    error_id="delta-generator-method-does-not-exist",
+                )
+            raise StreamlitAPIException(
+                f"`{name}()` is not a valid Streamlit command.",
+                error_id="invalid-streamlit-command",
+            )
 
         return wrapper
 

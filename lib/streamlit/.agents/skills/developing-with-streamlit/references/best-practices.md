@@ -322,6 +322,18 @@ query = st.text_input(f"Search {category}")
 query = st.text_input(f"Search {category}", key="search_query")
 ```
 
+Sync a widget to the URL with `bind="query-params"` rather than hand-rolling `st.query_params`.
+
+```python
+# BAD: Manual read/write plumbing that crashes on an unexpected URL value
+default = st.query_params.get("sort", SORTS[0])
+sort = st.selectbox("Sort", SORTS, index=SORTS.index(default))
+st.query_params["sort"] = sort
+
+# GOOD: Streamlit keeps the widget and the URL in sync
+sort = st.selectbox("Sort", SORTS, key="sort", bind="query-params")
+```
+
 ## Secrets and queries
 
 Store credentials in `st.secrets`, keep `.streamlit/secrets.toml` out of git, and use parameterized queries for user-provided values.

@@ -72,7 +72,10 @@ if TYPE_CHECKING:
 
     # Non-literal on_select returns the union of both result types.
     on_select: Literal["ignore", "rerun"] = "rerun"
-    assert_type(pydeck_chart(deck, on_select=on_select), DeltaGenerator | PydeckState)
+    # ty infers `PydeckState` rather than the union of both overloads.
+    assert_type(  # ty: ignore[type-assertion-failure]
+        pydeck_chart(deck, on_select=on_select), DeltaGenerator | PydeckState
+    )
 
     # =====================================================================
     # Return type tests with callback function -> PydeckState
@@ -187,11 +190,11 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Invalid width / height values (only int or "stretch")
-    pydeck_chart(deck, width="invalid")  # type: ignore[call-overload]
-    pydeck_chart(deck, height=None)  # type: ignore[call-overload]
+    pydeck_chart(deck, width="invalid")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
+    pydeck_chart(deck, height=None)  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
 
     # Invalid selection_mode value
-    pydeck_chart(deck, on_select="rerun", selection_mode="invalid")  # type: ignore[call-overload]
+    pydeck_chart(deck, on_select="rerun", selection_mode="invalid")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
     # Invalid on_select value
-    pydeck_chart(deck, on_select="invalid")  # type: ignore[call-overload]
+    pydeck_chart(deck, on_select="invalid")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]

@@ -1874,7 +1874,8 @@ def marshall_file(
     data_as_bytes, inferred_mime_type = convert_data_to_bytes_and_infer_mime(
         data,
         unsupported_error=StreamlitAPIException(
-            f"Invalid binary data format: {type(data)}"
+            f"Invalid binary data format: {type(data)}",
+            error_id="download-button-invalid-binary-data-format",
         ),
     )
     if mimetype is None:

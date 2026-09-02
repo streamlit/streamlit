@@ -22,6 +22,7 @@ from streamlit import url_util
 from streamlit.elements.lib.layout_utils import validate_height
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
     StreamlitMissingRequiredParameterError,
 )
 from streamlit.runtime.metrics_util import gather_metrics
@@ -145,7 +146,8 @@ class PdfMixin:
                         file_param = file.read()
                 except (FileNotFoundError, PermissionError) as e:
                     raise StreamlitAPIException(
-                        f"Unable to read file '{data_str}': {e}"
+                        f"Unable to read file '{data_str}': {e}",
+                        error_id="pdf-unable-to-read-file",
                     )
 
         elif isinstance(data, bytes):
@@ -158,11 +160,11 @@ class PdfMixin:
             # Handle other file-like objects
             file_param = data.read()
         else:
-            # Provide a more helpful error message
-            raise StreamlitAPIException(
-                f"Unsupported data type for PDF: {type(data).__name__}. "
-                f"Please provide a file path (str or Path), URL (str), bytes data, "
-                f"or file-like object (such as BytesIO or UploadedFile)."
+            raise StreamlitInvalidParameterTypeError(
+                "data",
+                type(data).__name__,
+                ["str", "Path", "bytes", "file-like object"],
+                detail="A str can be a file path or a URL.",
             )
 
         # Convert to component-compatible format
@@ -186,8 +188,9 @@ class PdfMixin:
             "The PDF viewer requires the `streamlit-pdf` component to be installed.\n\n"
             "Please run `pip install streamlit[pdf]` to install it.\n\n"
             "For more information, see the Streamlit PDF documentation at "
-            "https://docs.streamlit.io/develop/api-reference/media/st.pdf."
             # TODO: Update this URL when docs are updated
+            "https://docs.streamlit.io/develop/api-reference/media/st.pdf.",
+            error_id="pdf-component-not-installed",
         )
 
     @property

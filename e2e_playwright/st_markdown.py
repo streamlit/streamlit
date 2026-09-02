@@ -607,7 +607,6 @@ this is not valid mermaid syntax
 """
     )
 
-
 # Appended at the end on purpose: inserting an element mid-script shifts every
 # fixture below it, which perturbs the sub-pixel placement of their snapshots.
 with st.container(border=True, width=150, key="long_word_in_list"):
@@ -619,3 +618,38 @@ with st.container(border=True, width=150, key="long_word_in_list"):
 1. bucket2/folder1/folder2/lenna.png
 """
     )
+
+_WRAP_TEXT = "Quarterly revenue versus plan for the complete fiscal year dashboard"
+
+with st.container(key="wrap_false_markdown", width=200):
+    st.markdown(_WRAP_TEXT, wrap=False)
+with st.container(key="wrap_true_markdown", width=200):
+    st.markdown(_WRAP_TEXT, wrap=True)
+with st.container(key="badge_help", width=200):
+    st.badge(_WRAP_TEXT, width="stretch", help="wrap help text")
+with st.container(
+    key="wrap_false_horizontal_markdown",
+    horizontal=True,
+    wrap=False,
+    width=200,
+):
+    st.markdown(_WRAP_TEXT, wrap=False, width="stretch")
+
+_WRAP_BLOCK_MD = """# Heading
+
+- item
+
+| a | b |
+| - | - |
+| 1 | 2 |
+
+```
+code block
+```
+"""
+
+with st.container(key="wrap_false_block_markdown", width=200):
+    st.markdown(_WRAP_BLOCK_MD, wrap=False)
+
+with st.container(key="wrap_false_markdown_help", width=200):
+    st.markdown(_WRAP_TEXT, wrap=False, help="wrap help text")

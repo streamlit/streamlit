@@ -25,7 +25,11 @@ from streamlit.elements.lib.utils import (
     LabelVisibility,
     get_label_visibility_proto_value,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import (
@@ -442,7 +446,8 @@ class MetricMixin:
                     raise StreamlitAPIException(
                         "Only numeric values are supported for chart data sequence. The "
                         f"value '{val}' is of type {type(val)} and "
-                        "cannot be converted to float."
+                        "cannot be converted to float.",
+                        error_id="metric-chart-data-not-numeric",
                     ) from ex
             if len(prepared_data) > 0:
                 metric_proto.chart_data.extend(prepared_data)
@@ -486,12 +491,27 @@ def _parse_delta_arrow(delta_arrow: DeltaArrow) -> DeltaArrow:
     return delta_arrow
 
 
+def _parse_metric_number(value: AnyNumber, parameter: str) -> str:
+    """Render ``value`` for display. Invalid types raise StreamlitInvalidParameterTypeError."""
+    try:
+        return from_number(value)
+    except TypeError as ex:
+        # from_number is a generic helper and raises a native TypeError, which
+        # would bypass Streamlit's user-facing error types.
+        raise StreamlitInvalidParameterTypeError(
+            parameter,
+            type(value).__name__,
+            ["int", "float", "Decimal", "NumPy number"],
+            detail="Convert the value to a number type.",
+        ) from ex
+
+
 def _parse_value(value: Value) -> str:
     if value is None:
         return "—"
     if isinstance(value, str):
         return value
-    return from_number(value)
+    return _parse_metric_number(value, "value")
 
 
 def _parse_delta(delta: Delta) -> str:
@@ -499,7 +519,7 @@ def _parse_delta(delta: Delta) -> str:
         return ""
     if isinstance(delta, str):
         return dedent(delta)
-    return from_number(delta)
+    return _parse_metric_number(delta, "delta")
 
 
 def _determine_delta_color_and_direction(

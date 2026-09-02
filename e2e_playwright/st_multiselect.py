@@ -281,6 +281,62 @@ i23 = st.multiselect(
 )
 st.text(f"value 23: {i23}")
 
+# --- select_all parameter ---
+
+selected_false = st.multiselect(
+    "select_all False",
+    ["apple", "apricot", "banana"],
+    select_all=False,
+    key="select_all_false",
+)
+st.text(f"select_all False: {selected_false}")
+
+selected_true = st.multiselect(
+    "select_all True",
+    [f"item {i}" for i in range(8)],
+    select_all=True,
+    key="select_all_true",
+)
+st.text(f"select_all True: {selected_true}")
+
+selected_threshold = st.multiselect(
+    "select_all threshold",
+    [
+        "alpha",
+        "alpine",
+        "alta",
+        "beta",
+        "gamma",
+        "delta",
+        "epsilon",
+        "zeta",
+        "eta",
+        "theta",
+    ],
+    select_all=3,
+    filter_mode="contains",
+    key="select_all_threshold",
+)
+st.text(f"select_all threshold: {selected_threshold}")
+
+selected_max = st.multiselect(
+    "select_all with max_selections",
+    ["red", "green", "blue", "yellow", "purple"],
+    select_all=True,
+    max_selections=2,
+    key="select_all_max",
+)
+st.text(f"select_all with max_selections: {selected_max}")
+
+selected_chips = st.multiselect(
+    "select_all custom chips",
+    ["one", "two", "three"],
+    select_all=2,
+    accept_new_options=True,
+    key="select_all_chips",
+)
+st.text(f"select_all custom chips: {selected_chips}")
+
 # --- Bound multiselect widgets ---
 
 bound_multi = st.multiselect(

@@ -302,33 +302,30 @@ describe("Dialog container", () => {
   })
 
   describe("keyboard handling", () => {
-    it.each(["keydown", "keyup"] as const)(
-      "prevents R %s from triggering rerun when dialog is non-dismissible",
-      eventType => {
-        const props = getProps({ dismissible: false })
+    it("prevents R keydown from triggering rerun when dialog is non-dismissible", () => {
+      const props = getProps({ dismissible: false })
 
-        render(
-          <Dialog {...props}>
-            <div>test content</div>
-          </Dialog>
-        )
+      render(
+        <Dialog {...props}>
+          <div>test content</div>
+        </Dialog>
+      )
 
-        // react-hot-keys fires its handler on both keydown and keyup, so both
-        // must be suppressed for non-dismissible dialogs.
-        const event = new KeyboardEvent(eventType, {
-          key: "r",
-          bubbles: true,
-          cancelable: true,
-        })
-        const stopImmediateSpy = vi.spyOn(event, "stopImmediatePropagation")
+      // Capture-phase keydown suppresses R so the app-level shortcut cannot
+      // rerun (and close) a non-dismissible dialog.
+      const event = new KeyboardEvent("keydown", {
+        key: "r",
+        bubbles: true,
+        cancelable: true,
+      })
+      const stopImmediateSpy = vi.spyOn(event, "stopImmediatePropagation")
 
-        const wasDefaultPrevented = !document.dispatchEvent(event)
+      const wasDefaultPrevented = !document.dispatchEvent(event)
 
-        expect(wasDefaultPrevented).toBe(true)
-        expect(stopImmediateSpy).toHaveBeenCalled()
-        expect(screen.getByText("test content")).toBeVisible()
-      }
-    )
+      expect(wasDefaultPrevented).toBe(true)
+      expect(stopImmediateSpy).toHaveBeenCalled()
+      expect(screen.getByText("test content")).toBeVisible()
+    })
 
     it("does not prevent R key when dialog is dismissible", () => {
       const props = getProps({ dismissible: true })

@@ -31,6 +31,7 @@ from streamlit.elements.lib.layout_utils import (
     validate_space_size,
     validate_vertical_alignment,
     validate_width,
+    validate_wrap,
 )
 from streamlit.errors import (
     StreamlitInvalidHeightError,
@@ -394,3 +395,14 @@ class LayoutUtilsTest(unittest.TestCase):
         assert not config.use_content
         assert not config.use_stretch
         assert config.pixel_height == 0
+
+    def test_validate_wrap_valid(self):
+        """validate_wrap accepts True and False."""
+        validate_wrap(True)
+        validate_wrap(False)
+
+    @parameterized.expand(["yes", None, 1])
+    def test_validate_wrap_invalid(self, wrap: object):
+        """validate_wrap raises for non-bool values."""
+        with pytest.raises(StreamlitValueError):
+            validate_wrap(wrap)  # type: ignore[arg-type]

@@ -81,7 +81,10 @@ if TYPE_CHECKING:
 
     # Non-literal on_select returns the union of both result types.
     on_select: Literal["ignore", "rerun"] = "rerun"
-    assert_type(plotly_chart(fig, on_select=on_select), DeltaGenerator | PlotlyState)
+    # ty infers `PlotlyState` rather than the union of both overloads.
+    assert_type(  # ty: ignore[type-assertion-failure]
+        plotly_chart(fig, on_select=on_select), DeltaGenerator | PlotlyState
+    )
 
     # =====================================================================
     # Return type tests with callback function -> PlotlyState
@@ -252,11 +255,11 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Invalid theme value (only "streamlit" or None)
-    plotly_chart(fig, theme="dark")  # type: ignore[call-overload]
+    plotly_chart(fig, theme="dark")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
 
     # Invalid width / height values (only int or "stretch" / "content")
-    plotly_chart(fig, width="invalid")  # type: ignore[call-overload]
-    plotly_chart(fig, height=None)  # type: ignore[call-overload]
+    plotly_chart(fig, width="invalid")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
+    plotly_chart(fig, height=None)  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
 
     # Invalid selection_mode value
-    plotly_chart(fig, on_select="rerun", selection_mode="invalid")  # type: ignore[call-overload]
+    plotly_chart(fig, on_select="rerun", selection_mode="invalid")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]

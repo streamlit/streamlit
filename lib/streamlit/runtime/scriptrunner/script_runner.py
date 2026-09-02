@@ -699,11 +699,15 @@ class ScriptRunner:
                     # Run callbacks for widgets whose values have changed.
                     if rerun_data.widget_states is not None:
                         self._session_state.on_script_will_rerun(
-                            rerun_data.widget_states
+                            rerun_data.widget_states,
+                            suppress_callbacks=rerun_data.suppress_callbacks,
                         )
-                        # Callbacks above may have queued an st.rerun(). Honor it before
-                        # on_script_start() below: leaving has_script_started False is
-                        # what tells on_script_finished to keep this run's widget values.
+                        # Check for pending rerun/stop requests while
+                        # has_script_started is still False so on_script_finished
+                        # preserves this run's widget values.  On the normal path a
+                        # callback may have queued st.rerun(); on the suppressed path
+                        # an external request (e.g. new client interaction) may have
+                        # arrived during state application.
                         self._maybe_handle_execution_control_request()
 
                     ctx.on_script_start()
@@ -898,11 +902,17 @@ class ScriptRunner:
         with self._join_wake_lock:
             self._join_wake_coordinator = None
 
-        # Tell session_state to update itself in response
         if not premature_stop:
             self._session_state.on_script_finished(
                 ctx.shared.widget_ids_this_run.snapshot(),
-                remove_stale_widgets=ctx.has_script_started,
+                # Skip stale-widget cleanup when this run stopped for a rerun.
+                # st.rerun() can interrupt before later widgets register, so
+                # widget_ids_this_run would treat them as stale. The next run
+                # that completes still drops widgets that were not re-registered.
+                remove_stale_widgets=(
+                    ctx.has_script_started
+                    and event != ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
+                ),
             )
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS

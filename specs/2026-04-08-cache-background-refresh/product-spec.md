@@ -11,9 +11,10 @@ Add a `refresh_mode` parameter to `st.cache_data` and `st.cache_resource` that e
 cache entries to be refreshed in the background while immediately returning stale data. This
 eliminates blocking waits for users hitting expired cache entries, providing a significantly
 better experience for slow functions (expensive database queries, ML model predictions, API
-calls). Staleness and memory stay bounded: stale data is only served within a grace window of
-one extra `ttl` period (users never see data older than `2 × ttl`); after that, entries are
-evicted and calls block exactly as they do today.
+calls). Staleness and memory stay bounded: stale data is only served until a configurable
+hard-expiration bound. The default preserves a grace window of one extra `ttl` period (users
+never see data older than `2 × ttl`); after that, entries are evicted and calls block exactly
+as they do today.
 
 ## Problem
 
@@ -76,12 +77,16 @@ Background refresh separates *freshness* from *eviction* — a bounded variant o
 [stale-while-revalidate](https://datatracker.ietf.org/doc/html/rfc5861) pattern:
 
 ```
-0 ────────────── ttl ────────────── 2 × ttl
+0 ────────────── ttl ────────────── M × ttl
        fresh     │   stale grace    │   evicted
 ```
 
+Here, `M` is `runner.cacheBackgroundRefreshTTLMultiplier`, which defaults to `2.0` and
+must be a finite number greater than `1.0`. Invalid values fall back to `2.0` with a
+warning. The option applies process-wide to both cache decorators.
+
 1. Before `ttl`: cache hit -> return the fresh value (unchanged behavior)
-2. Between `ttl` and `2 × ttl` (stale grace window), a call:
+2. Between `ttl` and `M × ttl` (stale grace window), a call:
    - Returns the stale value immediately (no blocking)
    - Triggers a single background refresh in a separate thread — unless one is already
      running for this key, or a recent failure's per-key cooldown is still active (see
@@ -103,7 +108,7 @@ Background refresh separates *freshness* from *eviction* — a bounded variant o
    - **Failure:** Log warning, keep serving the stale value, and retry on a later
      access with a per-key cooldown (so a failing upstream isn't retried on every
      rerun)
-4. After `2 × ttl` (hard expiry): the entry is evicted -> next call is a normal
+4. After `M × ttl` (hard expiry): the entry is evicted -> next call is a normal
    blocking cache miss, identical to foreground behavior. If refreshes kept failing,
    the error surfaces to the user here.
 
@@ -118,13 +123,13 @@ Background completes:
   * Failure -> log warning, keep stale value, retry (with cooldown) on later access
                 |
 Time=1h+2s    : Call -> fresh value (success case) or stale value (failure case)
-Time=2h       : Hard expiry -> entry evicted (if no refresh succeeded)
+Time=2h       : Hard expiry -> entry evicted (if no refresh succeeded; default M=2.0)
 Time=2h+1s    : Call -> cache miss -> blocking foreground compute (errors surface here)
 ```
 
 **Key behaviors:**
 
-- **Bounded staleness & memory**: Users never see data older than `2 × ttl` — past hard
+- **Bounded staleness & memory**: Users never see data older than `M × ttl` — past hard
   expiry a stale entry is treated as absent (a miss) on the next access, exactly like an
   expired foreground entry. Memory stays bounded too, but reclamation is lazy: the
   internal cache reaps expired entries on the next write, `expire()`, or size query
@@ -132,9 +137,8 @@ Time=2h+1s    : Call -> cache miss -> blocking foreground compute (errors surfac
   freed the next time some cache operation touches it. A lightweight periodic sweep to
   bound that worst case is an implementation detail for the tech spec. Stale entries
   count against `max_entries` and follow the same LRU eviction as fresh entries. The
-  grace window equals `ttl` (mirroring the equal fresh/stale windows in the RFC 5861
-  example): it is easy to explain and scales automatically with the freshness
-  requirement the user already expressed via `ttl`.
+  grace window defaults to `ttl` (mirroring the equal fresh/stale windows in the RFC 5861
+  example) and is `(M - 1) × ttl` when the process-wide multiplier is customized.
 - **Deduplicated refreshes**: Only one background refresh runs per cache key at a time
   (reusing the existing per-key computation locks). Concurrent requests for the same
   stale key all receive stale data while a single background refresh runs. Deduplication
@@ -147,16 +151,16 @@ Time=2h+1s    : Call -> cache miss -> blocking foreground compute (errors surfac
   backlog of potentially never-needed work during mass expiry. Implementation details
   (pool size) will be determined in the tech spec.
 - **Cleanup guarantee**: A stale entry is removed by whichever comes first: a successful
-  refresh (replaced with the fresh value), hard expiry (`2 × ttl`), or `max_entries` LRU
-  eviction. Past `2 × ttl` an untouched entry is already treated as a miss on read; its
+  refresh (replaced with the fresh value), hard expiry (`M × ttl`), or `max_entries` LRU
+  eviction. Past `M × ttl` an untouched entry is already treated as a miss on read; its
   memory is reclaimed lazily on the next cache operation that reaps expired entries (or a
   periodic sweep), since the internal cache has no timer-driven reaper — so a
-  never-again-requested entry may briefly linger in memory past `2 × ttl` even though it
+  never-again-requested entry may briefly linger in memory past `M × ttl` even though it
   is never served again. Since stale entries participate in LRU eviction like any other
   entry, a stale key can also be evicted before hard expiry under memory pressure; the
   next access is then a normal blocking cache miss rather than a stale serve.
 - **Late / orphaned refreshes**: A refresh that finishes *after* its entry was already
-  hard-evicted (`2 × ttl`), cleared via `.clear()`, or otherwise invalidated (cache
+  hard-evicted (`M × ttl`), cleared via `.clear()`, or otherwise invalidated (cache
   generation changed, or the owning session ended for `scope="session"`) is discarded
   rather than written back — the next access is a normal blocking cache miss. This keeps a
   slow refresh from repopulating a cache the user deliberately cleared or that no longer
@@ -167,7 +171,7 @@ Time=2h+1s    : Call -> cache miss -> blocking foreground compute (errors surfac
   degrades gracefully to foreground semantics without breaking the stale-first contract:
   stale hits are still returned immediately (non-blocking), the background refresh is
   skipped, and recomputation happens via a blocking foreground call only at hard expiry
-  (`2 × ttl`) — never on the stale-hit path.
+  (`M × ttl`) — never on the stale-hit path.
 - **Error surfacing**: Background refresh errors log a warning but don't crash the app
   and don't evict the stale entry. Users keep seeing (bounded) stale data while
   refreshes fail; the error only surfaces to a user after hard expiry, when the next
@@ -196,8 +200,8 @@ Time=2h+1s    : Call -> cache miss -> blocking foreground compute (errors surfac
 
 **Implementation note**: The storage layer builds on Streamlit's internal `TTLCache`
 ([#16014](https://github.com/streamlit/streamlit/pull/16014)), which we fully control —
-tracking per-entry freshness (`ttl`) separately from hard eviction (`2 × ttl`) requires
-no third-party changes. Details belong in the tech spec.
+tracking per-entry freshness (`ttl`) separately from configurable hard eviction
+(`M × ttl`) requires no third-party changes. Details belong in the tech spec.
 
 ### Validation
 
@@ -301,16 +305,16 @@ import streamlit as st
 @st.cache_data(ttl="6h", refresh_mode="background")
 def fetch_daily_report():
     """
-    Data updates at 6am daily. As long as the app is accessed at least
-    once per 2 x ttl, background refresh keeps responses instant right
-    after the update. After a longer idle gap (> 2 x ttl) the entry
+    Data updates at 6am daily. As long as the app is accessed within the
+    configured hard-expiration window, background refresh keeps responses
+    instant right after the update. After a longer idle gap the entry
     hard-expires, so the next access blocks on a foreground recompute
-    (see the out-of-scope `max_stale` option for bridging long idle gaps).
+    (increase the process-wide TTL multiplier to bridge longer idle gaps).
     """
     return download_and_process_csv()  # Takes 60+ seconds
 
 
-# Instant responses while the app is used at least once per 2 x ttl
+# Instant responses while the app is used within the hard-expiration window
 report = fetch_daily_report()
 st.dataframe(report)
 ```
@@ -325,7 +329,7 @@ def slow_query_foreground():
     return fetch_data()
 
 
-# Users don't wait, as long as the app is used at least once per 2 x ttl
+# Users don't wait while the entry remains within its hard-expiration window
 @st.cache_data(ttl="1h", refresh_mode="background")
 def slow_query_background():
     time.sleep(5)  # Runs in background
@@ -455,17 +459,18 @@ them at once — every strategy sacrifices at least one:
 3. **Bounded resources**: memory and compute stay proportional to what users actually
    request
 
-| Strategy                              | Blocking                        | Staleness   | Extra compute         | Extra memory      |
-|---------------------------------------|---------------------------------|-------------|-----------------------|-------------------|
-| Foreground (today)                    | Every expiry                    | ≤ `ttl`     | None                  | None              |
-| **Bounded stale-while-revalidate (chosen)** | Only after idle gap > `2 × ttl` | ≤ `2 × ttl` | None                  | ≤ one extra `ttl` |
-| Unbounded stale retention             | Never                           | Unbounded   | None                  | Unbounded         |
-| Refresh-ahead (`ttl` hard limit)      | After idle gaps                 | ≤ `ttl`     | Up to 2× for hot keys | None              |
-| Eager/proactive refresh               | Never                           | ≤ `ttl`     | Unbounded (refreshes keys nobody requests) | High (tracks all keys) |
+| Strategy                              | Blocking                        | Staleness   | Extra compute         | Extra retention                            |
+|---------------------------------------|---------------------------------|-------------|-----------------------|--------------------------------------------|
+| Foreground (today)                    | Every expiry                    | ≤ `ttl`     | None                  | None                                       |
+| **Bounded stale-while-revalidate (chosen)** | Only after idle gap > `M × ttl` | ≤ `M × ttl` | None                  | Stale entries kept `(M - 1) × ttl` longer |
+| Unbounded stale retention             | Never                           | Unbounded   | None                  | Unbounded                                  |
+| Refresh-ahead (`ttl` hard limit)      | After idle gaps                 | ≤ `ttl`     | Up to 2× for hot keys | None                                       |
+| Eager/proactive refresh               | Never                           | ≤ `ttl`     | Unbounded (refreshes keys nobody requests) | High (tracks all keys)                    |
 
 The chosen design keeps everything bounded and relaxes "never block" only minimally:
-requests block solely after an idle gap longer than `2 × ttl` — exactly the case where
-blocking is also today's behavior. Notably, it adds **zero compute** over foreground
+requests block solely after an idle gap longer than the configured `M × ttl`
+hard-expiration bound — exactly the case where blocking is also today's behavior. Notably,
+it adds **zero compute** over foreground
 mode: background refreshes fire at precisely the moments a foreground miss would have
 executed the function; the work just moves off the user's thread. The sections below
 detail the rejected strategies.
@@ -521,8 +526,8 @@ how much later.
   `max_entries`, which defaults to unlimited — parameterized functions could accumulate
   stale entries forever
 - **Unbounded staleness**: A dashboard untouched for a week would instantly serve
-  week-old data to the next visitor; with the `2 × ttl` bound, that visitor waits for a
-  fresh foreground compute instead (today's predictable behavior)
+  week-old data to the next visitor; with the configured `M × ttl` bound, that visitor
+  waits for a fresh foreground compute instead (today's predictable behavior)
 
 ### Refresh-Ahead (`ttl` as a hard accuracy limit)
 
@@ -587,9 +592,9 @@ fetch_stock_prices.warm("AAPL", "GOOGL", "MSFT")
 - **Stale data indicator**: Visual indicator that displayed data is stale while refreshing
 - **Priority-based refresh**: Prioritize some cache keys over others
 - **Refresh timeout**: Limit how long background refresh can run
-- **`max_stale` parameter**: Explicitly configure the stale grace window (default: equal
-  to `ttl`), e.g. `ttl="1h", max_stale="12h"` to serve stale data across an overnight
-  idle gap without blocking the first morning user
+- **Per-function `max_stale` parameter**: Configure the stale grace window independently
+  for one cached function, e.g. `ttl="1h", max_stale="12h"`, instead of using the
+  process-wide `runner.cacheBackgroundRefreshTTLMultiplier` option
 - **Smarter eviction under memory pressure**: Prefer evicting stale entries that were
   never requested again (a SIEVE-style reuse hint) before recently served ones — plain
   LRU already approximates this, so it's deferred until there's evidence it's needed
@@ -603,4 +608,4 @@ fetch_stock_prices.warm("AAPL", "GOOGL", "MSFT")
 | No new dependencies        | ✅ Uses stdlib `concurrent.futures`; builds on the internal `TTLCache` introduced in [#16014](https://github.com/streamlit/streamlit/pull/16014) |
 | Metrics collected          | ✅ Cache API usage is already tracked via the existing `gather_metrics` decorator. Distinguishing `refresh_mode="background"` adoption specifically needs explicit instrumentation — `gather_metrics` records argument names/types but not string values (and `"background"`/`"foreground"` even share the same length) — added as part of the tech spec. |
 | Any security/legal impact? | ✅ No new security concerns                                          |
-| Any docs changes needed?   | ✅ Document `refresh_mode` param, note that `st.*` display output isn't replayed on cache hits in background mode (and that Streamlit warns when display commands are used), and that background-refreshed functions must be context-free (no `st.session_state` or other session-bound APIs during refresh) |
+| Any docs changes needed?   | ✅ Document `refresh_mode`, `runner.cacheBackgroundRefreshTTLMultiplier`, that `st.*` display output isn't replayed on cache hits in background mode (and that Streamlit warns when display commands are used), and that background-refreshed functions must be context-free (no `st.session_state` or other session-bound APIs during refresh) |

@@ -31,6 +31,7 @@ from streamlit.elements.lib.utils import (
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidLayoutContextError,
+    StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
 from streamlit.proto.Common_pb2 import StringTriggerValue
@@ -360,8 +361,8 @@ class MenuButtonMixin:
         opt = convert_anything_to_list(options)
 
         if len(opt) == 0:
-            raise StreamlitAPIException(
-                "The options argument to st.menu_button must contain at least one option."
+            raise StreamlitMissingRequiredParameterError(
+                "options", detail="Provide at least one option."
             )
 
         check_python_comparable(opt)
@@ -375,7 +376,8 @@ class MenuButtonMixin:
         if len(formatted_options) != len(formatted_option_to_option_index):
             raise StreamlitAPIException(
                 "The `format_func` produced duplicate labels for the menu button "
-                "options. Each formatted option label must be unique."
+                "options. Each formatted option label must be unique.",
+                error_id="menu-button-duplicate-format-labels",
             )
 
         element_id = compute_and_register_element_id(

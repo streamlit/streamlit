@@ -37,7 +37,10 @@ from streamlit.elements.lib.column_types import (
 from streamlit.elements.lib.dicttools import remove_none_values
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import compute_and_register_element_id
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+)
 from streamlit.runtime.state import register_widget
 from streamlit.util import ReadOnlyAttributeDictionary
 
@@ -496,14 +499,16 @@ class ButtonClickSerde:
             or not isinstance(parsed.get("label"), str)
         ):
             raise StreamlitAPIException(
-                "Invalid button click state: expected {row: int, label: str}."
+                "Invalid button click state: expected {row: int, label: str}.",
+                error_id="button-column-invalid-click-state",
             )
 
         # Validate row is non-negative (bounds check - row < num_rows is
         # checked downstream when accessing the data)
         if parsed["row"] < 0:
             raise StreamlitAPIException(
-                f"Invalid button click row index: {parsed['row']}. Row must be >= 0."
+                f"Invalid button click row index: {parsed['row']}. Row must be >= 0.",
+                error_id="button-column-invalid-click-row",
             )
 
         return ButtonColumnClickState(parsed)
@@ -605,9 +610,11 @@ def process_config_mapping(
             # since we will apply in-place changes to it.
             transformed_column_config[column] = copy.deepcopy(config)
         else:
-            raise StreamlitAPIException(
-                f"Invalid column config for column `{column}`. "
-                f"Expected `None`, `str` or `dict`, but got `{type(config)}`."
+            raise StreamlitInvalidParameterTypeError(
+                "column_config",
+                type(config).__name__,
+                ["None", "str", "dict"],
+                detail=f"Invalid configuration for column `{column}`.",
             )
     return transformed_column_config
 
@@ -691,7 +698,8 @@ def _convert_column_config_to_json(column_config_mapping: ColumnConfigMapping) -
         )
     except ValueError as ex:
         raise StreamlitAPIException(
-            f"The provided column config cannot be serialized into JSON: {ex}"
+            f"The provided column config cannot be serialized into JSON: {ex}",
+            error_id="column-config-json-serialize-failed",
         ) from ex
 
 

@@ -19,6 +19,7 @@ import os
 import sqlite3
 import unittest
 from collections.abc import Iterator, Mapping
+from contextlib import closing
 from datetime import date
 from decimal import Decimal
 from typing import Any
@@ -747,28 +748,27 @@ class DataframeUtilTest(unittest.TestCase):
     def test_verify_sqlite3_integration(self):
         """Verify that sqlite3 cursor can be used as a data source."""
 
-        con = sqlite3.connect("file::memory:", uri=True)
-        cur = con.cursor()
-        cur.execute("CREATE TABLE movie(title, year, score)")
-        cur.execute("""
-            INSERT INTO movie VALUES
-                ('Monty Python and the Holy Grail', 1975, 8.2),
-                ('And Now for Something Completely Different', 1971, 7.5)
-        """)
-        con.commit()
-        db_cursor = cur.execute("SELECT * FROM movie")
-        assert dataframe_util.is_dbapi_cursor(db_cursor) is True
-        assert (
-            dataframe_util.determine_data_format(db_cursor)
-            is dataframe_util.DataFormat.DBAPI_CURSOR
-        )
-        converted_df = dataframe_util.convert_anything_to_pandas_df(db_cursor)
-        assert isinstance(
-            converted_df,
-            pd.DataFrame,
-        )
-        assert converted_df.shape == (2, 3)
-        con.close()
+        with closing(sqlite3.connect("file::memory:", uri=True)) as con:
+            cur = con.cursor()
+            cur.execute("CREATE TABLE movie(title, year, score)")
+            cur.execute("""
+                INSERT INTO movie VALUES
+                    ('Monty Python and the Holy Grail', 1975, 8.2),
+                    ('And Now for Something Completely Different', 1971, 7.5)
+            """)
+            con.commit()
+            db_cursor = cur.execute("SELECT * FROM movie")
+            assert dataframe_util.is_dbapi_cursor(db_cursor) is True
+            assert (
+                dataframe_util.determine_data_format(db_cursor)
+                is dataframe_util.DataFormat.DBAPI_CURSOR
+            )
+            converted_df = dataframe_util.convert_anything_to_pandas_df(db_cursor)
+            assert isinstance(
+                converted_df,
+                pd.DataFrame,
+            )
+            assert converted_df.shape == (2, 3)
 
     @pytest.mark.require_integration
     def test_verify_duckdb_db_api_integration(self):
@@ -933,7 +933,8 @@ class DataframeUtilTest(unittest.TestCase):
 
         if metadata.expected_data_format == dataframe_util.DataFormat.UNKNOWN:
             with pytest.raises(
-                ValueError, match=r"Unsupported input data format: DataFormat.UNKNOWN"
+                StreamlitDataframeConversionError,
+                match=r"Unsupported input data format: DataFormat.UNKNOWN",
             ):
                 dataframe_util.convert_pandas_df_to_data_format(
                     converted_df, metadata.expected_data_format
@@ -976,7 +977,8 @@ class DataframeUtilTest(unittest.TestCase):
         passed an unknown data format.
         """
         with pytest.raises(
-            ValueError, match=r"Unsupported input data format: DataFormat.UNKNOWN"
+            StreamlitDataframeConversionError,
+            match=r"Unsupported input data format: DataFormat.UNKNOWN",
         ):
             dataframe_util.convert_pandas_df_to_data_format(
                 pd.DataFrame({"a": [1, 2, 3]}), dataframe_util.DataFormat.UNKNOWN
@@ -1271,7 +1273,7 @@ def test_convert_duckdb_relation_row_cap_triggers_caption() -> None:
 
 def test_convert_dbapi_cursor_row_cap_triggers_caption() -> None:
     """DB-API cursors that return a full fetchmany batch may show a row-limit caption."""
-    with sqlite3.connect("file::memory:", uri=True) as con:
+    with closing(sqlite3.connect("file::memory:", uri=True)) as con:
         cur = con.cursor()
         cur.execute("CREATE TABLE t(x INTEGER)")
         cur.executemany("INSERT INTO t VALUES (?)", [(i,) for i in range(6)])
@@ -1299,7 +1301,7 @@ def test_convert_pandas_df_to_data_format_requires_single_column_for_series_like
 ) -> None:
     """Series-like targets reject multi-column frames."""
     df = pd.DataFrame({"a": [1], "b": [2]})
-    with pytest.raises(ValueError, match="single column"):
+    with pytest.raises(StreamlitDataframeConversionError, match="single column"):
         dataframe_util.convert_pandas_df_to_data_format(df, fmt)
 
 
@@ -1636,9 +1638,9 @@ def test_downcast_large_list_schema_replaces_large_list() -> None:
 
 
 def test_pandas_df_to_series_raises_on_multi_column() -> None:
-    """``_pandas_df_to_series`` raises ValueError on multi-column inputs."""
+    """``_pandas_df_to_series`` raises StreamlitDataframeConversionError on multi-column inputs."""
     df = pd.DataFrame({"a": [1], "b": [2]})
-    with pytest.raises(ValueError, match="single column"):
+    with pytest.raises(StreamlitDataframeConversionError, match="single column"):
         dataframe_util._pandas_df_to_series(df)
 
 

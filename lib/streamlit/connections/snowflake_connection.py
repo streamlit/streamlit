@@ -682,7 +682,8 @@ class SnowflakeConnection(BaseSnowflakeConnection):
                     "or as kwargs to `st.connection`? "
                     "See the [SnowflakeConnection configuration documentation]"
                     "(https://docs.streamlit.io/st.connections.snowflakeconnection-configuration) "
-                    "for more details and examples."
+                    "for more details and examples.",
+                    error_id="snowflake-missing-connection-config",
                 )
             raise
 
@@ -745,7 +746,8 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
             if value is None:
                 raise StreamlitAPIException(
                     f"Environment variable `{env_var_name}` not found. Is this app "
-                    "running in a Snowflake container environment?"
+                    "running in a Snowflake container environment?",
+                    error_id="snowflake-env-var-not-found",
                 )
             params[param_name] = value
 
@@ -753,7 +755,8 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
         if not os.path.exists(SNOWPARK_CONNECTION_TOKEN_FILE):
             raise StreamlitAPIException(
                 f"Token file `{SNOWPARK_CONNECTION_TOKEN_FILE}` not found. Is this app "
-                "running in a Snowflake container environment?"
+                "running in a Snowflake container environment?",
+                error_id="snowflake-token-file-not-found",
             )
         login_token = cls._read_token_file()
 
@@ -762,7 +765,8 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
             raise StreamlitAPIException(
                 "Token header not found. Is this app running with caller's "
                 "rights enabled, and is this connection being created in an app "
-                "execution thread?"
+                "execution thread?",
+                error_id="snowflake-token-header-not-found",
             )
         user_token = st_context.headers[SNOWPARK_USER_TOKEN_HEADER_NAME]
 
