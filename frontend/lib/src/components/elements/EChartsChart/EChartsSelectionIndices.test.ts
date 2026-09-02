@@ -14,6 +14,16 @@
  * limitations under the License.
  */
 
+/**
+ * Upstream-contract tests for the `data_indices` semantics documented on
+ * `st.echarts_chart`.
+ *
+ * These cases talk to ECharts directly (not Streamlit wrappers) to pin how
+ * raw indices behave under `dataZoom` and dataset transforms. If an ECharts
+ * upgrade changes that contract, update the Python docs and selection
+ * mapping together with this file rather than "fixing" the assertions to
+ * match the new library behavior in isolation.
+ */
 import * as echarts from "echarts"
 import type { EChartsOption, EChartsType, SelectChangedEvent } from "echarts"
 

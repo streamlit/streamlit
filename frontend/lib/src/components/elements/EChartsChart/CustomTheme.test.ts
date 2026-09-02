@@ -397,6 +397,15 @@ describe("applyStreamlitOptionDefaults", () => {
     const hiddenLegendGrid = hiddenLegend.grid as Record<string, unknown>
     expect(hiddenLegendGrid.top).toBe(16)
     expect(hiddenLegendGrid.bottom).toBe(8)
+
+    // A hidden title is the same: don't treat it as occupying the top strip.
+    const hiddenTitle = applyStreamlitOptionDefaults(
+      { xAxis: {}, yAxis: {}, title: { show: false }, series: [] },
+      STREAMLIT_THEME
+    )
+    const hiddenTitleGrid = hiddenTitle.grid as Record<string, unknown>
+    expect(hiddenTitleGrid.top).toBe(16)
+    expect(hiddenTitleGrid.bottom).toBe(8)
   })
 
   it("fills only the grid gaps the user left unset (user values win)", () => {

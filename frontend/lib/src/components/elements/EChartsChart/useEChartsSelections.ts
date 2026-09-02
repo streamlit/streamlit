@@ -298,7 +298,11 @@ function normalizeNativeSelection(
 
   if (selectedMode === "series") {
     const next = previous.filter(entry => entry.seriesIndex !== seriesIndex)
-    return action === "unselect"
+    const isToggleOff =
+      action === "unselect" ||
+      (action?.startsWith("toggle") &&
+        previous.some(entry => entry.seriesIndex === seriesIndex))
+    return isToggleOff
       ? next
       : [...next, ...getGraphSeriesSelection(seriesIndex, seriesOption)]
   }
@@ -571,7 +575,6 @@ function dispatchPointSelection(
 function withDefaultSeriesCursor(
   option: EChartsOptionObject
 ): EChartsOptionObject {
-  const { series } = option
   const withCursor = (entry: unknown): unknown => {
     if (!isPlainObject(entry)) {
       return entry
@@ -582,13 +585,41 @@ function withDefaultSeriesCursor(
     }
     return { ...seriesObject, cursor: "default" }
   }
-  if (Array.isArray(series)) {
-    return { ...option, series: series.map(withCursor) }
+  const applyCursorToSeries = (
+    target: EChartsOptionObject
+  ): EChartsOptionObject => {
+    const { series } = target
+    if (Array.isArray(series)) {
+      return { ...target, series: series.map(withCursor) }
+    }
+    if (isPlainObject(series)) {
+      return { ...target, series: withCursor(series) }
+    }
+    return target
   }
-  if (isPlainObject(series)) {
-    return { ...option, series: withCursor(series) }
+
+  // Timeline specs nest series under ``baseOption`` and per-tick ``options``.
+  // Apply the cursor default there too so display-only timelines don't keep
+  // ECharts' pointer cursor.
+  let result = applyCursorToSeries(option)
+  const baseOption = result.baseOption
+  if (isPlainObject(baseOption)) {
+    result = {
+      ...result,
+      baseOption: applyCursorToSeries(baseOption as EChartsOptionObject),
+    }
   }
-  return option
+  if (Array.isArray(result.options)) {
+    result = {
+      ...result,
+      options: result.options.map(tick =>
+        isPlainObject(tick)
+          ? applyCursorToSeries(tick as EChartsOptionObject)
+          : tick
+      ),
+    }
+  }
+  return result
 }
 
 /**

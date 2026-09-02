@@ -479,7 +479,11 @@ function hasBottomAnchoredComponent(option: EChartsOptionObject): boolean {
 function buildDefaultGrid(
   option: EChartsOptionObject
 ): Record<string, unknown> {
-  const hasTitle = option.title !== undefined
+  const title = option.title
+  const hasTitle =
+    title !== undefined &&
+    (!isPlainObject(title) ||
+      (title as Record<string, unknown>).show !== false)
   const legend = option.legend
   const legendObject = isPlainObject(legend)
     ? (legend as Record<string, unknown>)

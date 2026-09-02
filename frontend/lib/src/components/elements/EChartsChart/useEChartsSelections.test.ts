@@ -320,6 +320,31 @@ describe("useEChartsSelections", () => {
     expect(result.current.configureSelectionOption(noSeries)).toBe(noSeries)
   })
 
+  it("applies the default cursor inside timeline baseOption and options", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(""), widgetMgr)
+    )
+
+    const configured = result.current.configureSelectionOption({
+      baseOption: { series: [{ type: "bar", data: [1] }] },
+      options: [{ series: [{ type: "line", data: [2] }] }],
+    })
+
+    expect(
+      (
+        (configured.baseOption as Record<string, unknown>).series as Array<
+          Record<string, unknown>
+        >
+      )[0].cursor
+    ).toBe("default")
+    expect(
+      (
+        (configured.options as Array<Record<string, unknown>>)[0]
+          .series as Array<Record<string, unknown>>
+      )[0].cursor
+    ).toBe("default")
+  })
+
   it("reports explicit series metadata and sanitizes invalid metadata", () => {
     const { result } = renderHook(() =>
       useEChartsSelections(createElement(), widgetMgr)
@@ -681,6 +706,91 @@ describe("useEChartsSelections", () => {
       ],
       []
     )
+  })
+
+  it("toggles a graph series selection off on a second click", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+    const chart = createFakeChart()
+    chart.getOption.mockReturnValue({
+      series: [
+        {
+          type: "graph",
+          selectedMode: "series",
+          data: [{ id: "a" }, { id: "b" }],
+          links: [{ source: "a", target: "b" }],
+        },
+      ],
+    })
+    const toggleEvent = {
+      fromAction: "toggleSelect",
+      fromActionPayload: {
+        seriesIndex: 0,
+        dataType: "node",
+        dataIndexInside: 0,
+      },
+      selected: [
+        { seriesIndex: 0, dataType: "node", dataIndex: [0, 1] },
+        { seriesIndex: 0, dataType: "edge", dataIndex: [0] },
+      ],
+    }
+    act(() => {
+      result.current.bindSelections(chart)
+      chart.trigger("selectchanged", toggleEvent)
+    })
+    flush()
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expectSelectionWrite(
+      [
+        {
+          series_index: 0,
+          series_id: null,
+          series_name: null,
+          data_type: "node",
+          data_indices: [0, 1],
+        },
+        {
+          series_index: 0,
+          series_id: null,
+          series_name: null,
+          data_type: "edge",
+          data_indices: [0],
+        },
+      ],
+      []
+    )
+
+    widgetMgr.getStringValue.mockReturnValue(
+      JSON.stringify({
+        selection: {
+          selected: [
+            {
+              series_index: 0,
+              series_id: null,
+              series_name: null,
+              data_type: "node",
+              data_indices: [0, 1],
+            },
+            {
+              series_index: 0,
+              series_id: null,
+              series_name: null,
+              data_type: "edge",
+              data_indices: [0],
+            },
+          ],
+          areas: [],
+        },
+      })
+    )
+    ;(widgetMgr.setStringValue as Mock).mockClear()
+    act(() => {
+      chart.trigger("selectchanged", toggleEvent)
+    })
+    flush()
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expectSelectionWrite([], [])
   })
 
   it("persists native points without clearing the brush cache", () => {

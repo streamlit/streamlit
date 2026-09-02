@@ -366,7 +366,7 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         assert "3D or WebGL charts" in str(exc.value)
         assert exc.value.error_id == "echarts-gl-series-not-supported"
 
-    @parameterized.expand([("grid3D",), ("geo3D",)])
+    @parameterized.expand([("grid3D",), ("geo3D",), ("globe",)])
     def test_gl_components_raise(self, component):
         """ECharts GL components are rejected like their series counterparts."""
         with pytest.raises(StreamlitAPIException) as exc:
