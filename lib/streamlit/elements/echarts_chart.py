@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import copy
 import json
 import re
 from collections.abc import Iterator, Mapping
@@ -184,31 +183,48 @@ def _convert_single_dataset(dataset: dict[str, Any]) -> None:
         dataset["dimensions"] = labels
 
 
+def _iter_media_options(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
+    """Yield each ``media[*].option`` override on an option object."""
+    for media_entry in option.get("media") or []:
+        if isinstance(media_entry, dict):
+            media_option = media_entry.get("option")
+            if isinstance(media_option, dict):
+                yield media_option
+
+
 def _iter_option_variants(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
-    """Yield the option itself plus the variants of a timeline spec.
+    """Yield the option itself plus timeline and media variants.
 
     Timeline specs keep the chart under ``baseOption`` and per-tick overrides
-    under ``options``, so series can live in any of the three places.
+    under ``options``. Responsive specs keep breakpoint overrides under
+    ``media[*].option``. Series and datasets can live in any of those places.
     """
     yield option
+    yield from _iter_media_options(option)
     base_option = option.get("baseOption")
     if isinstance(base_option, dict):
         yield base_option
+        yield from _iter_media_options(base_option)
     for timeline_option in option.get("options") or []:
         if isinstance(timeline_option, dict):
             yield timeline_option
+            yield from _iter_media_options(timeline_option)
+
+
+def _iter_series_entries(series: Any) -> Iterator[dict[str, Any]]:
+    """Yield series configs from a ``series`` value (object, list, or tuple)."""
+    if isinstance(series, dict):
+        yield series
+    elif isinstance(series, (list, tuple)):
+        for entry in series:
+            if isinstance(entry, dict):
+                yield entry
 
 
 def _iter_series(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
     """Yield every series config in an option, across all timeline variants."""
     for variant in _iter_option_variants(option):
-        series = variant.get("series")
-        if isinstance(series, dict):
-            yield series
-        elif isinstance(series, list):
-            for entry in series:
-                if isinstance(entry, dict):
-                    yield entry
+        yield from _iter_series_entries(variant.get("series"))
 
 
 def _validate_supported_features(option: dict[str, Any]) -> None:
@@ -290,10 +306,38 @@ def _convert_dataset_sources(option: dict[str, Any]) -> None:
     ECharts' ``dataset`` can be a single object or a list of objects; both are
     supported here (mirroring how ``st.vega_lite_chart`` ingests dataframes).
     Timeline specs nest datasets under ``baseOption`` and per-tick ``options``,
-    so those variants are converted too.
+    and responsive specs nest them under ``media[*].option``, so those variants
+    are converted too.
     """
     for variant in _iter_option_variants(option):
         _convert_datasets_in_option(variant)
+
+
+def _copy_option_for_normalization(value: Any) -> Any:
+    """Copy option dicts we may mutate, leaving dataframe sources in place.
+
+    A full ``deepcopy`` would copy ``dataset.source`` dataframes (wasted work on
+    the conversion path) and fail on deepcopy-unsafe sources that
+    ``is_dataframe_like`` otherwise accepts. Primitive arrays such as
+    ``series.data`` are shared with the input.
+    """
+    if isinstance(value, dict):
+        copied: dict[str, Any] = {}
+        for key, item in value.items():
+            if key == "source" and dataframe_util.is_dataframe_like(item):
+                copied[key] = item
+            else:
+                copied[key] = _copy_option_for_normalization(item)
+        return copied
+    if isinstance(value, list):
+        if value and isinstance(value[0], dict):
+            return [_copy_option_for_normalization(item) for item in value]
+        return value
+    if isinstance(value, tuple):
+        if value and isinstance(value[0], dict):
+            return tuple(_copy_option_for_normalization(item) for item in value)
+        return value
+    return value
 
 
 def _normalize_spec(spec: EChartsSpec) -> dict[str, Any]:
@@ -306,8 +350,9 @@ def _normalize_spec(spec: EChartsSpec) -> dict[str, Any]:
     if isinstance(spec, str):
         option = _loads_json_option(spec)
     elif isinstance(spec, Mapping):
-        # Deep-copy before any mutation so the user's object is left untouched.
-        option = copy.deepcopy(dict(spec))
+        # Copy option/dataset dicts before mutation so the user's object is
+        # left untouched, without deepcopying dataframe sources.
+        option = _copy_option_for_normalization(dict(spec))
     elif callable(getattr(spec, "dump_options", None)):
         # Duck-typed pyecharts chart (detected without importing pyecharts).
         option = _loads_json_option(spec.dump_options())
@@ -339,7 +384,7 @@ def _serialize_option(option: dict[str, Any]) -> str:
     error instead of being silently stringified.
     """
     try:
-        return json.dumps(option, allow_nan=False)
+        return json.dumps(option, allow_nan=False, separators=(",", ":"))
     except (TypeError, ValueError) as ex:
         raise StreamlitAPIException(
             "The provided ECharts spec is not JSON-serializable. "
@@ -390,6 +435,7 @@ def _extract_chart_dimension(
         parameter,
         dimension,
         parameter,
+        stack_info=True,
     )
     return None
 
@@ -535,8 +581,8 @@ class EChartsMixin:
 
         key : str, int, or None
             An optional string to use for giving this element a stable
-            identity. If this is ``None`` (default), the element's identity
-            will be determined based on the values of the other parameters.
+            identity. If this is ``None`` (default), the chart is not given
+            an element ID and uses positional identity.
 
             If ``key`` is provided, it will be used as a CSS class name
             prefixed with ``st-key-``. The frontend also uses the key as a

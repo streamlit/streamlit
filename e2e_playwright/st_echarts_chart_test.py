@@ -28,7 +28,7 @@ from e2e_playwright.shared.app_utils import (
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
 # (including the one inside the collapsed expander).
-_EXPECTED_CHART_COUNT = 14
+_EXPECTED_CHART_COUNT = 15
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
 
@@ -271,6 +271,23 @@ def test_fullscreen_expands_and_collapses_chart(app: Page):
 
     close_button.dispatch_event("click")
     expect(close_button).not_to_be_visible()
+
+
+def test_stretch_height_has_content_fallback_outside_sized_parent(app: Page):
+    """height="stretch" outside a sized parent uses the 350px content floor."""
+    chart = _get_chart(app, "c_stretch_height")
+    expect(chart.locator("canvas")).to_be_visible()
+    expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+
+    def _has_content_height() -> bool:
+        box = chart.bounding_box()
+        return box is not None and box["height"] >= 300
+
+    wait_until(app, _has_content_height)
+    box = chart.bounding_box()
+    assert box is not None
+    # Must NOT collapse to a blank zero-height chart.
+    assert box["height"] >= 300
 
 
 @pytest.mark.only_browser("chromium")

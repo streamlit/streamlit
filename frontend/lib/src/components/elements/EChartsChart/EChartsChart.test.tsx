@@ -99,6 +99,34 @@ function createElement(
   })
 }
 
+function applyMockEchartsAria(option: Record<string, unknown>): void {
+  const dom = mockContainerRef.current
+  if (!dom) {
+    return
+  }
+  const aria = option.aria as { enabled?: boolean } | undefined
+  const enabled = aria?.enabled !== false
+  if (!enabled) {
+    // ECharts 6.1 leaves stale role/aria-label behind when ARIA is disabled.
+    return
+  }
+  dom.setAttribute("role", "img")
+  const series = option.series
+  const seriesList = Array.isArray(series) ? series : series ? [series] : []
+  const hasPoints = seriesList.some(entry => {
+    if (!entry || typeof entry !== "object") {
+      return false
+    }
+    const data = (entry as { data?: unknown }).data
+    return Array.isArray(data) && data.length > 0
+  })
+  if (hasPoints) {
+    dom.setAttribute("aria-label", "This is a chart.")
+  } else {
+    dom.removeAttribute("aria-label")
+  }
+}
+
 describe("EChartsChart", () => {
   const Wrapper = ({
     element,
@@ -133,6 +161,11 @@ describe("EChartsChart", () => {
     // Restore the shared-instance default; a test below overrides it locally.
     mockInit.mockImplementation(() => mockChart)
     mockChart.isDisposed.mockReturnValue(false)
+    mockChart.setOption.mockImplementation(
+      (option: Record<string, unknown>) => {
+        applyMockEchartsAria(option)
+      }
+    )
   })
 
   it("initializes an ECharts instance and applies the option", () => {
@@ -224,8 +257,36 @@ describe("EChartsChart", () => {
     render(<Wrapper element={createElement()} />)
 
     // ECharts sets role="img" and an aria-label on this same element when
-    // aria.enabled is on, so declaring the role here would strand an
-    // unlabeled image for users who opt out of ARIA.
+    // aria.enabled is on. We do not declare the role in JSX, so users who
+    // opt out can have those attributes reconciled away.
+    const chart = screen.getByTestId("stEChartsChart")
+    expect(chart).toHaveAttribute("role", "img")
+    expect(chart).toHaveAttribute("aria-label")
+  })
+
+  it("clears stale ECharts ARIA when a later option disables it", () => {
+    const { rerender } = render(<Wrapper element={createElement()} />)
+    const chart = screen.getByTestId("stEChartsChart")
+    expect(chart).toHaveAttribute("role", "img")
+
+    const spec = JSON.stringify({
+      ...JSON.parse(DEFAULT_SPEC),
+      aria: { enabled: false },
+    })
+    rerender(<Wrapper element={createElement({ spec })} />)
+
+    expect(chart).not.toHaveAttribute("role")
+    expect(chart).not.toHaveAttribute("aria-label")
+  })
+
+  it("drops an unnamed role=img on an empty series", () => {
+    const spec = JSON.stringify({
+      xAxis: { type: "category", data: [] },
+      yAxis: { type: "value" },
+      series: [{ type: "bar", data: [] }],
+    })
+    render(<Wrapper element={createElement({ spec })} />)
+
     expect(screen.getByTestId("stEChartsChart")).not.toHaveAttribute("role")
   })
 
@@ -244,7 +305,7 @@ describe("EChartsChart", () => {
     expect(mockInit.mock.calls[1][2]).toEqual({ renderer: "svg" })
   })
 
-  it("re-applies the option to the fresh instance after a runtime theme switch", () => {
+  it("re-themes in place instead of recreating the instance on a runtime theme switch", () => {
     // Return a distinct instance per init call, each tracking its own disposed
     // state, so we can assert the new instance (not the disposed old one) is the
     // one that receives the option.
@@ -320,6 +381,25 @@ describe("EChartsChart", () => {
     rerender(<Wrapper element={createElement()} />)
     expect(mockChart.setTheme).toHaveBeenCalledTimes(2)
     expect(screen.queryByTestId("stEChartsChartError")).not.toBeInTheDocument()
+  })
+
+  it("does not clear a theme error when a later resize succeeds", () => {
+    mockChart.setTheme.mockImplementationOnce(() => {
+      throw new Error("theme failed")
+    })
+
+    const { rerender } = render(<Wrapper element={createElement()} />)
+    themeHolder.override = { ...mockTheme.emotion }
+    rerender(<Wrapper element={createElement()} />)
+    expect(screen.getByTestId("stEChartsChartError")).toHaveTextContent(
+      "theme failed"
+    )
+
+    dimensionsHolder.width = 800
+    rerender(<Wrapper element={createElement()} />)
+    expect(screen.getByTestId("stEChartsChartError")).toHaveTextContent(
+      "theme failed"
+    )
   })
 
   it("skips no-op setOption calls on unrelated reruns", () => {

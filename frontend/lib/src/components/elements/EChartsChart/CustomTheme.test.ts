@@ -407,6 +407,34 @@ describe("applyStreamlitOptionDefaults", () => {
     const hiddenTitleGrid = hiddenTitle.grid as Record<string, unknown>
     expect(hiddenTitleGrid.top).toBe(16)
     expect(hiddenTitleGrid.bottom).toBe(8)
+
+    // A bottom-placed title occupies the bottom strip, not the top.
+    const bottomTitle = applyStreamlitOptionDefaults(
+      {
+        xAxis: {},
+        yAxis: {},
+        title: { text: "Sales", bottom: 0 },
+        series: [],
+      },
+      STREAMLIT_THEME
+    )
+    const bottomTitleGrid = bottomTitle.grid as Record<string, unknown>
+    expect(bottomTitleGrid.top).toBe(16)
+    expect(bottomTitleGrid.bottom).toBeUndefined()
+
+    // Title arrays can occupy both strips independently.
+    const titleArray = applyStreamlitOptionDefaults(
+      {
+        xAxis: {},
+        yAxis: {},
+        title: [{ text: "Top" }, { text: "Bottom", bottom: 0 }],
+        series: [],
+      },
+      STREAMLIT_THEME
+    )
+    const titleArrayGrid = titleArray.grid as Record<string, unknown>
+    expect(titleArrayGrid.top).toBeUndefined()
+    expect(titleArrayGrid.bottom).toBeUndefined()
   })
 
   it("fills only the grid gaps the user left unset (user values win)", () => {

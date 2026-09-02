@@ -17,6 +17,18 @@
 import styled from "@emotion/styled"
 
 /**
+ * Outermost chart chrome. Stretch height uses the content-size floor so
+ * `height: 100%` does not collapse to 0 outside a sized parent.
+ */
+export const StyledEChartsChartRoot = styled.div<{
+  isStretchHeight?: boolean
+}>(({ theme, isStretchHeight }) => ({
+  width: "100%",
+  height: "100%",
+  ...(isStretchHeight && { minHeight: theme.sizes.defaultChartHeight }),
+}))
+
+/**
  * The container that ECharts renders its canvas/SVG into. It fills its parent so
  * ECharts can read valid, non-zero dimensions from the DOM element.
  */
