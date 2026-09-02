@@ -863,6 +863,10 @@ def test_text_input_live_commits_while_typing(app: Page):
     live_slow = get_text_input(app, "Live 1s input").locator("input").first
     live_slow.type("slow")
     expect(app.get_by_text("Live 1s value: slow")).to_have_count(0)
+    # Custom 1s delay: still absent after 750ms so a fallback to the 250ms
+    # default would fail. The remaining wait covers the rest of the 1s pause.
+    app.wait_for_timeout(750)
+    expect(app.get_by_text("Live 1s value: slow")).to_have_count(0)
     wait_until(
         app,
         lambda: app.get_by_text("Live 1s value: slow").is_visible(),

@@ -483,6 +483,13 @@ function TextInput({
       // A trailing input event with the same value is deduped by
       // tryCommitOutsideForm.
       onChange({ target: { value: e.currentTarget.value } })
+      // IME confirmation writes the native value before React. If maxChars
+      // rejected it, state is unchanged so React will not re-render — snap
+      // the input back to the last accepted string.
+      const accepted = uiValueRef.current ?? ""
+      if (e.currentTarget.value !== accepted) {
+        e.currentTarget.value = accepted
+      }
     },
     [onChange]
   )

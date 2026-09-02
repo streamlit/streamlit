@@ -1506,9 +1506,11 @@ describe("TextInput live updates", () => {
     sendRerunBackMsg.mockClear()
 
     await user.type(screen.getByRole("textbox"), "ab")
+    const callsAfterTyping = setStringValueSpy.mock.calls.length
+    expect(callsAfterTyping).toBeGreaterThan(0)
     advanceMs(300)
     expect(sendRerunBackMsg).not.toHaveBeenCalled()
-    expect(setStringValueSpy).toHaveBeenCalled()
+    expect(setStringValueSpy).toHaveBeenCalledTimes(callsAfterTyping)
   })
 
   it("stages with triggerRerun false when ignoreRerun is set", async () => {
@@ -1629,6 +1631,7 @@ describe("TextInput live updates", () => {
     /* eslint-enable testing-library/prefer-user-event */
 
     expect(setStringValueSpy).not.toHaveBeenCalled()
+    expect(input).toHaveValue("a")
   })
 
   it("syncs uiValue on IME confirmation before a 0ms live commit", () => {
@@ -1641,6 +1644,9 @@ describe("TextInput live updates", () => {
     expect(input).toHaveValue("a")
     expect(setStringValueSpy).not.toHaveBeenCalled()
     fireEvent.compositionEnd(input, { target: { value: "あ" } })
+    // Browsers emit a trailing input event after compositionend; the same
+    // value must not schedule a second live commit.
+    fireEvent.change(input, { target: { value: "あ" } })
     /* eslint-enable testing-library/prefer-user-event */
 
     expect(input).toHaveValue("あ")
