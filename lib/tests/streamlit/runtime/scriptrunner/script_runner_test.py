@@ -1731,6 +1731,7 @@ class ScriptRunnerTest(unittest.TestCase):
         self._assert_no_exceptions(scriptrunner)
         captured = scriptrunner._session_state["captured_loops"]
         assert isinstance(captured[0], asyncio.AbstractEventLoop)
+        assert captured[0] is scriptrunner._test_event_loop
         # The installed loop is initially idle and can run library async work.
         assert scriptrunner._session_state["loop_running"] is False
         assert scriptrunner._session_state["sync_library_result"] == 42
@@ -1761,20 +1762,29 @@ class ScriptRunnerTest(unittest.TestCase):
         captured = scriptrunner._session_state["captured_loops"]
         assert len(captured) == 2
         assert captured[0] is captured[1]
+        assert captured[0] is scriptrunner._test_event_loop
 
     def test_asyncio_run_uses_temporary_loop_without_closing_persistent_loop(self):
         """User code calling asyncio.run() keeps working: our loop never runs,
         so there is no nested-loop conflict, and asyncio.run() closes its own
         temporary loop rather than ours."""
-        scriptrunner = TestScriptRunner("asyncio_event_loop.py")
-        scriptrunner.request_rerun(RerunData())
-        scriptrunner.start()
-        scriptrunner.join()
+        loop = asyncio.new_event_loop()
+        try:
+            scriptrunner = TestScriptRunner("asyncio_event_loop.py", event_loop=loop)
+            scriptrunner.request_rerun(RerunData())
+            scriptrunner.start()
+            scriptrunner.join()
 
-        self._assert_no_exceptions(scriptrunner)
-        assert scriptrunner._session_state["asyncio_run_result"] == 42
-        # asyncio.run() must not have closed the persistent loop.
-        assert scriptrunner._session_state["persistent_loop_closed_mid_run"] is False
+            self._assert_no_exceptions(scriptrunner)
+            assert scriptrunner._session_state["asyncio_run_result"] == 42
+            # asyncio.run() must not have closed the persistent loop during
+            # the script, and ScriptRunner must not close a caller-owned loop.
+            assert (
+                scriptrunner._session_state["persistent_loop_closed_mid_run"] is False
+            )
+            assert not loop.is_closed()
+        finally:
+            loop.close()
 
     def test_event_loop_detached_after_scriptrunner_shutdown(self):
         """After the script thread stops the runner's loop reference is cleared,

@@ -1691,6 +1691,8 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
                 event=ScriptRunnerEvent.SHUTDOWN,
                 client_state=None,
             )
+            # Runner replacement SHUTDOWN must not close the session-owned loop.
+            assert not session._script_event_loop.is_closed()
         finally:
             session._script_event_loop.close()
 
@@ -3404,3 +3406,20 @@ def test_close_script_event_loop_propagates_unrelated_runtime_error() -> None:
         pytest.raises(RuntimeError, match="unrelated close failure"),
     ):
         _close_script_event_loop(script_loop)
+
+
+def test_close_script_event_loop_cancels_pending_tasks() -> None:
+    """When no other loop is running on this thread, pending tasks are cancelled
+    and drained before the script loop is closed."""
+    script_loop = asyncio.new_event_loop()
+
+    async def _linger() -> None:
+        await asyncio.sleep(3600)
+
+    task = script_loop.create_task(_linger())
+
+    _close_script_event_loop(script_loop)
+
+    assert script_loop.is_closed()
+    assert task.done()
+    assert task.cancelled() or isinstance(task.exception(), asyncio.CancelledError)

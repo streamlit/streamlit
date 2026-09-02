@@ -59,13 +59,21 @@ def test_each_run_closes_its_local_script_runner_event_loop(
 
     monkeypatch.setattr(asyncio, "new_event_loop", track_new_event_loop)
 
-    at = AppTest.from_string("import asyncio; asyncio.get_event_loop()")
+    at = AppTest.from_string(
+        "import asyncio\nimport streamlit as st\nst.text(str(id(asyncio.get_event_loop())))"
+    )
     at.run()
+    assert len(at.exception) == 0
+    first_loop_id = at.text[0].value
     at.run()
+    assert len(at.exception) == 0
+    second_loop_id = at.text[0].value
 
     assert len(created_loops) == 2
     assert created_loops[0] is not created_loops[1]
     assert all(loop.is_closed() for loop in created_loops)
+    assert first_loop_id == str(id(created_loops[0]))
+    assert second_loop_id == str(id(created_loops[1]))
 
 
 def test_from_file_str():
