@@ -19,7 +19,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import get_element_by_key
 from e2e_playwright.shared.react18_utils import wait_for_react_stability
 
-REDUCED_VIEWPORT_WIDTH = 390
+_REDUCED_VIEWPORT_WIDTH = 390
 
 CONTAINER_KEYS = [
     "layout-horizontal-markdown",
@@ -52,17 +52,13 @@ def test_container_reduced_viewport(
     app: Page, assert_snapshot: ImageCompareFunction, container_key: str
 ):
     """Test container layouts at the reduced mobile viewport."""
-    app.set_viewport_size({"width": REDUCED_VIEWPORT_WIDTH, "height": 844})
-    app.wait_for_function(f"() => window.innerWidth <= {REDUCED_VIEWPORT_WIDTH}")
-    # The new width reaches React through a ResizeObserver throttled to 100ms.
-    # The throttle fires on the leading edge, so when the resize produces more
-    # than one notification the first (intermediate) width is rendered and the
-    # real one only arrives with the trailing call 100ms later. Canvas-backed
-    # elements repaint from that second render, and because their boxes are
-    # already at the final size throughout, Playwright's screenshot stability
-    # check cannot see the stale pixels. Without waiting for the re-render, the
-    # dataframe and chart containers intermittently snapshot columns and axes
-    # still sized for the wide viewport.
+    app.set_viewport_size({"width": _REDUCED_VIEWPORT_WIDTH, "height": 844})
+    app.wait_for_function(f"() => window.innerWidth <= {_REDUCED_VIEWPORT_WIDTH}")
+    # Snapshots must wait for the resize-driven rerender. The new width reaches
+    # React through a ResizeObserver throttled to 100ms, and canvas-backed
+    # elements repaint only after that. Their boxes are already at the final
+    # size meanwhile, so Playwright's screenshot stability check cannot detect
+    # the stale pixels.
     wait_for_react_stability(app)
     container_element = get_element_by_key(app, container_key)
     assert_snapshot(
