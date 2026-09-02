@@ -36,6 +36,7 @@ import { TextField } from "react-aria-components"
 
 import { TextInput as TextInputProto } from "@streamlit/protobuf"
 
+import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import {
   DynamicIcon,
   isMaterialIcon,
@@ -43,7 +44,6 @@ import {
 import Icon from "~lib/components/shared/Icon/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
-import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
