@@ -602,6 +602,7 @@ class CacheDataAPI:
               value. To change how long expired values can be returned, use the
               ``runner.cacheBackgroundRefreshTTLMultiplier`` configuration option.
               This mode requires a ``ttl`` and can't be used with ``persist``.
+              It is not supported for coroutine functions.
 
             .. note::
                 A function that refreshes in the background can't use session-specific

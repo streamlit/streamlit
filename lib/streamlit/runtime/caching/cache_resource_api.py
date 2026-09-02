@@ -527,6 +527,7 @@ class CacheResourceAPI:
               the ``runner.cacheBackgroundRefreshTTLMultiplier`` configuration option.
               This mode requires a ``ttl``. If you set ``on_release``,
               Streamlit calls it for the old resource after a successful update.
+              It is not supported for coroutine functions.
 
             .. note::
                 A function that refreshes in the background can't use session-specific
