@@ -981,6 +981,54 @@ def test_upload_put_stores_file_and_returns_204() -> None:
     assert stored[0].name == "foo.txt"
 
 
+@pytest.mark.parametrize(
+    "field_name",
+    [
+        pytest.param("file", id="static_field_name"),
+        pytest.param("foo.txt", id="field_name_matching_filename"),
+        # A duplicated `name` parameter resolves last-wins, so the handler sees
+        # `injected`. This pins that the injected parameter cannot displace
+        # `filename`, not that the handler receives the raw quoted string.
+        pytest.param(
+            'evil"; name="injected', id="field_name_injecting_extra_name_param"
+        ),
+    ],
+)
+def test_upload_put_ignores_form_field_name(field_name: str) -> None:
+    """The upload is stored regardless of the multipart form field name.
+
+    The handler takes whichever file part the body carries and reads the name
+    from the part's ``filename``, so the field name carries no meaning. The
+    frontend relies on this to send a static field name instead of repeating the
+    user-controlled filename in ``Content-Disposition``'s ``name``.
+
+    The cases cover the field name the frontend now sends, the filename it used
+    to send (older frontends and host proxies must keep working), and a
+    non-browser client injecting an extra ``name`` parameter -- browsers escape
+    quotes in field names, so the last case models a hand-built request.
+    """
+    runtime = MagicMock()
+    runtime.is_active_session.return_value = True
+    upload_mgr = MemoryUploadedFileManager("/_stcore/upload_file")
+    endpoint = _endpoint_for(create_upload_routes(runtime, upload_mgr, ""), "PUT")
+
+    body, boundary = _multipart_body(b"hello world", field_name=field_name)
+    request = _make_upload_request(
+        [{"type": "http.request", "body": body, "more_body": False}],
+        boundary=boundary,
+    )
+
+    with patch_config_options({"server.enableXsrfProtection": False}):
+        response = asyncio.run(endpoint(request))
+
+    assert response.status_code == 204
+    stored = upload_mgr.get_files("session123", ["fileid"])
+    assert len(stored) == 1
+    assert stored[0].data == b"hello world"
+    # The name comes from `filename`, never from the field name.
+    assert stored[0].name == "foo.txt"
+
+
 def test_upload_put_max_size_file_succeeds() -> None:
     """A file of exactly ``maxUploadSize`` is accepted, not rejected by the cap.
 

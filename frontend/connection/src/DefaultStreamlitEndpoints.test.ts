@@ -332,16 +332,12 @@ describe("DefaultStreamlitEndpoints", () => {
       expect(axiosMock.history.put.length).toBe(1)
       const actualRequestConfig = axiosMock.history.put[0]
 
-      const expectedData = new FormData()
-      expectedData.append("file", MOCK_FILE)
-
       expect(actualRequestConfig.url).toBe(
         "http://streamlit.mock:80/mock/base/path/_stcore/upload_file/file_1"
       )
       // method is implied by history.put, but can be checked if present in config
       // expect(actualRequestConfig.method?.toUpperCase()).toBe("PUT");
       expect(actualRequestConfig.responseType).toBe("text")
-      expect(actualRequestConfig.data).toEqual(expectedData)
       expect(actualRequestConfig.signal).toBe(mockAbortController.signal)
       expect(actualRequestConfig.onUploadProgress).toBe(mockOnUploadProgress)
     })
@@ -367,14 +363,10 @@ describe("DefaultStreamlitEndpoints", () => {
       expect(axiosMock.history.put.length).toBe(1)
       const actualRequestConfig = axiosMock.history.put[0]
 
-      const expectedData = new FormData()
-      expectedData.append("file", MOCK_FILE)
-
       expect(actualRequestConfig.url).toBe(
         "http://example.com/upload_file/file_2"
       )
       expect(actualRequestConfig.responseType).toBe("text")
-      expect(actualRequestConfig.data).toEqual(expectedData)
       expect(actualRequestConfig.signal).toBe(mockAbortController.signal)
       expect(actualRequestConfig.onUploadProgress).toBe(mockOnUploadProgress)
     })
@@ -408,14 +400,10 @@ describe("DefaultStreamlitEndpoints", () => {
       expect(axiosMock.history.put.length).toBe(1)
       const actualRequestConfig = axiosMock.history.put[0]
 
-      const expectedData = new FormData()
-      expectedData.append("file", MOCK_FILE)
-
       expect(actualRequestConfig.url).toBe(
         "http://example.com/someprefix/upload_file/file_2"
       )
       expect(actualRequestConfig.responseType).toBe("text")
-      expect(actualRequestConfig.data).toEqual(expectedData)
       expect(actualRequestConfig.headers).toEqual(
         new AxiosHeaders({
           Accept: "application/json, text/plain, */*",
@@ -428,6 +416,9 @@ describe("DefaultStreamlitEndpoints", () => {
       expect(actualRequestConfig.onUploadProgress).toBe(mockOnUploadProgress)
     })
 
+    // axios-mock-adapter intercepts before the request reaches XHR, so these
+    // cases pin the FormData entry key, not the Content-Disposition line a
+    // browser would write from it.
     it.each([
       {
         description: "a regular file",
@@ -461,13 +452,14 @@ describe("DefaultStreamlitEndpoints", () => {
           )
         ).resolves.toBeUndefined()
 
+        expect(axiosMock.history.put.length).toBe(1)
         const formData = axiosMock.history.put[0].data as FormData
         const entries = Array.from(formData.entries())
 
         expect(entries).toHaveLength(1)
         const [fieldName, uploadedFile] = entries[0]
         expect(fieldName).toBe("file")
-        expect(fieldName).not.toBe(file.name)
+        expect(uploadedFile).toBeInstanceOf(File)
         expect((uploadedFile as File).name).toBe(expectedFileName)
       }
     )

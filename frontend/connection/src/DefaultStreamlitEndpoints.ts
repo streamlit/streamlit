@@ -55,7 +55,6 @@ const UPLOAD_FILE_ENDPOINT = "/_stcore/upload_file"
 const COMPONENT_ENDPOINT_BASE = "/component"
 const BIDI_COMPONENT_ENDPOINT_BASE = "/_stcore/bidi-components"
 
-/** Multipart form-data field name used for file uploads. */
 const UPLOAD_FORM_FIELD_NAME = "file"
 
 /** Default Streamlit server implementation of the StreamlitEndpoints interface. */
@@ -280,10 +279,9 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     const { name, webkitRelativePath } = file
     // For directory uploads, use the relative path as fileName to preserve directory structure
     const fileName = webkitRelativePath || name
-    // The field name is intentionally static: the server reads the file from
-    // whichever form entry is present and only uses the filename, so keeping
-    // user-controlled input out of the field name avoids putting arbitrary
-    // strings into the multipart Content-Disposition header.
+    // Keep the user-controlled filename out of the Content-Disposition `name`
+    // parameter; it still travels in `filename`. Upload endpoints read the file
+    // from whichever part the body carries, not from the field name.
     form.append(UPLOAD_FORM_FIELD_NAME, file, fileName)
 
     const headers: Record<string, string> = this.getAdditionalHeaders()
