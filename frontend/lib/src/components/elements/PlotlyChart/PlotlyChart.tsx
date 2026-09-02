@@ -40,6 +40,10 @@ import Plot, {
 } from "~lib/util/reactPlotlyCompat"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
+import {
+  migratePlotlyMapboxConfig,
+  migratePlotlyMapboxFigure,
+} from "./mapboxCompat"
 import { StyledPlotlyChartContainer } from "./styled-components"
 import {
   applyTheming,
@@ -117,7 +121,7 @@ export function PlotlyChart({
       }
     }
 
-    return JSON.parse(element.spec)
+    return migratePlotlyMapboxFigure(JSON.parse(element.spec))
     // We want to reload the initialFigureSpec object whenever the element id changes
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [element.id, element.spec])
@@ -131,7 +135,7 @@ export function PlotlyChart({
       "figure"
     )
     if (initialFigureState) {
-      return initialFigureState
+      return migratePlotlyMapboxFigure(initialFigureState)
     }
     return applyTheming(initialFigureSpec, element.theme, theme)
   })
@@ -153,7 +157,7 @@ export function PlotlyChart({
       return {}
     }
 
-    const config = JSON.parse(element.config)
+    const config = migratePlotlyMapboxConfig(JSON.parse(element.config))
 
     // Customize the plotly toolbar:
     if (!disableFullscreenMode) {

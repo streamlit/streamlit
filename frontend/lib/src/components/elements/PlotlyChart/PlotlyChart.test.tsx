@@ -388,4 +388,39 @@ describe("PlotlyChart Component", () => {
 
     expect(expandMock).toHaveBeenCalled()
   })
+
+  it("migrates plotly.js v3 mapbox figures so they render on v4", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      spec: JSON.stringify({
+        data: [{ type: "scattermapbox", lon: [0], lat: [51.5] }],
+        layout: {
+          mapbox: {
+            style: "mapbox://styles/mapbox/light-v10",
+            accesstoken: "secret",
+          },
+        },
+      }),
+      config: JSON.stringify({ mapboxAccessToken: "secret" }),
+    })
+
+    renderComponent({ element })
+
+    const lastCallProps = getLastPlotProps()
+    expect(lastCallProps.data).toEqual([
+      { type: "scattermap", lon: [0], lat: [51.5] },
+    ])
+    expect(lastCallProps.layout).toEqual(
+      expect.objectContaining({
+        map: { style: "light" },
+      })
+    )
+    expect(
+      (lastCallProps.layout as { mapbox?: unknown }).mapbox
+    ).toBeUndefined()
+    expect(
+      (lastCallProps.config as { mapboxAccessToken?: string } | undefined)
+        ?.mapboxAccessToken
+    ).toBeUndefined()
+  })
 })
