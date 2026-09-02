@@ -1186,30 +1186,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@humanfs/core@npm:^0.19.2":
-  version: 0.19.2
-  resolution: "@humanfs/core@npm:0.19.2"
-  dependencies:
-    "@humanfs/types": "npm:^0.15.0"
-  checksum: 10c0/d0a1d52d7b30c27d49475a53072d1510b81c5803e44b342fb8faf3887f1aa27593a1e6dc76a45268e7892d3f4e198146659281f6b6d55eacf3fd5a38bac30c5c
+"@humanfs/core@npm:^0.19.1":
+  version: 0.19.1
+  resolution: "@humanfs/core@npm:0.19.1"
+  checksum: 10c0/aa4e0152171c07879b458d0e8a704b8c3a89a8c0541726c6b65b81e84fd8b7564b5d6c633feadc6598307d34564bd53294b533491424e8e313d7ab6c7bc5dc67
   languageName: node
   linkType: hard
 
 "@humanfs/node@npm:^0.16.6":
-  version: 0.16.8
-  resolution: "@humanfs/node@npm:0.16.8"
+  version: 0.16.6
+  resolution: "@humanfs/node@npm:0.16.6"
   dependencies:
-    "@humanfs/core": "npm:^0.19.2"
-    "@humanfs/types": "npm:^0.15.0"
-    "@humanwhocodes/retry": "npm:^0.4.0"
-  checksum: 10c0/56140579db811af4e160b195d45d0f29acf644d192c93fe24c9e594ebf06f19dfc157494a07c84540b8a071c0e4b37209c2362765d31734f4d0be869c2422e25
-  languageName: node
-  linkType: hard
-
-"@humanfs/types@npm:^0.15.0":
-  version: 0.15.0
-  resolution: "@humanfs/types@npm:0.15.0"
-  checksum: 10c0/fc26b9a024b0e55f7eaf64036df94345bf5d36d6a41ef80ef38e78f1f7430ce26cf435af736adae58913baae18eac3f38c18739054a3d379102015978eae862e
+    "@humanfs/core": "npm:^0.19.1"
+    "@humanwhocodes/retry": "npm:^0.3.0"
+  checksum: 10c0/8356359c9f60108ec204cbd249ecd0356667359b2524886b357617c4a7c3b6aace0fd5a369f63747b926a762a88f8a25bc066fa1778508d110195ce7686243e1
   languageName: node
   linkType: hard
 
@@ -1220,7 +1210,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@humanwhocodes/retry@npm:^0.4.0, @humanwhocodes/retry@npm:^0.4.2":
+"@humanwhocodes/retry@npm:^0.3.0":
+  version: 0.3.1
+  resolution: "@humanwhocodes/retry@npm:0.3.1"
+  checksum: 10c0/f0da1282dfb45e8120480b9e2e275e2ac9bbe1cf016d046fdad8e27cc1285c45bb9e711681237944445157b430093412b4446c1ab3fc4bb037861b5904101d3b
+  languageName: node
+  linkType: hard
+
+"@humanwhocodes/retry@npm:^0.4.2":
   version: 0.4.3
   resolution: "@humanwhocodes/retry@npm:0.4.3"
   checksum: 10c0/3775bb30087d4440b3f7406d5a057777d90e4b9f435af488a4923ef249e93615fb78565a85f173a186a076c7706a81d0d57d563a2624e4de2c5c9c66c486ce42
@@ -3402,6 +3399,7 @@ __metadata:
     d3-graphviz: "npm:^5.6.0"
     d3-selection: "npm:^3.0.0"
     dompurify: "npm:^3.4.14"
+    echarts: "npm:^6.1.0"
     hoist-non-react-statics: "npm:^3.3.2"
     hotkeys-js: "npm:^4.0.7"
     immer: "npm:^11.1.18"
@@ -7350,6 +7348,16 @@ __metadata:
   version: 0.2.0
   resolution: "eastasianwidth@npm:0.2.0"
   checksum: 10c0/26f364ebcdb6395f95124fda411f63137a4bfb5d3a06453f7f23dfe52502905bd84e0488172e0f9ec295fdc45f05c23d5d91baf16bd26f0fe9acd777a188dc39
+  languageName: node
+  linkType: hard
+
+"echarts@npm:^6.1.0":
+  version: 6.1.0
+  resolution: "echarts@npm:6.1.0"
+  dependencies:
+    tslib: "npm:2.3.0"
+    zrender: "npm:6.1.0"
+  checksum: 10c0/a0911a9d75969ff946d0bce998e95e1924cdec7f5ca6be13ded376e2a47067c70b264ee8d04ba84345aa7895363e202f54c87d2bae114859bd154d565babc09c
   languageName: node
   linkType: hard
 
@@ -14721,6 +14729,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"tslib@npm:2.3.0":
+  version: 2.3.0
+  resolution: "tslib@npm:2.3.0"
+  checksum: 10c0/a845aed84e7e7dbb4c774582da60d7030ea39d67307250442d35c4c5dd77e4b44007098c37dd079e100029c76055f2a362734b8442ba828f8cc934f15ed9be61
+  languageName: node
+  linkType: hard
+
 "type-check@npm:^0.4.0, type-check@npm:~0.4.0":
   version: 0.4.0
   resolution: "type-check@npm:0.4.0"
@@ -16472,6 +16487,15 @@ __metadata:
   version: 4.4.3
   resolution: "zod@npm:4.4.3"
   checksum: 10c0/7ea31b558e88f9faf44f31dd185e2e1cbf51fed3081787fb96cc2534749b50c0acfc6da7f0922a7353ed092dd358c7d50c28ea96c94d04af64191bd33152eca3
+  languageName: node
+  linkType: hard
+
+"zrender@npm:6.1.0":
+  version: 6.1.0
+  resolution: "zrender@npm:6.1.0"
+  dependencies:
+    tslib: "npm:2.3.0"
+  checksum: 10c0/bfdb5e2ccd70893a9e2c7f33959749a6a1abc8912c2b1af301a05593d677a2f6f6087cdc4f0bf73883b99eea2f2d11d1922c71c3bf0bd4e9e5b362fd32129bce
   languageName: node
   linkType: hard
 
