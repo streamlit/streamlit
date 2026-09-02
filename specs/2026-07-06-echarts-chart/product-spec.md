@@ -82,8 +82,8 @@ st.echarts_chart(
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `spec` | `dict`, JSON `str`, or `pyecharts` chart | The ECharts option object as a Python dictionary (passed to `echartsInstance.setOption`), a JSON string, or a `pyecharts` chart instance (auto-converted via its `.dump_options()` method). See [Spec input](#spec-input). |
-| `width` | `"stretch"`, `"content"`, or `int` | Element width. Same semantics as `st.plotly_chart` (default `"stretch"`). See [Sizing](#sizing). |
-| `height` | `"content"`, `"stretch"`, or `int` | Element height. Because ECharts has no intrinsic height, `"content"` resolves to **400px** unless a `pyecharts` chart sets an explicit pixel height. `"stretch"` uses Streamlit's standard height semantics (see [Sizing](#sizing)). |
+| `width` | `"stretch"`, `"content"`, or `int` | Element width. Same semantics as `st.plotly_chart` (default `"stretch"`). `"content"` is **700px**, not the `defaultChartWidth` theme token. See [Sizing](#sizing). |
+| `height` | `"content"`, `"stretch"`, or `int` | Element height. Because ECharts has no intrinsic height, `"content"` resolves to **350px** (the `defaultChartHeight` theme token, matching the Vega-based charts) unless a `pyecharts` chart sets an explicit pixel height. `"stretch"` uses Streamlit's standard height semantics (see [Sizing](#sizing)). |
 | `theme` | `"streamlit"` or `None` | `"streamlit"` (default) applies the Streamlit theme (colors, fonts, dark/light). `None` uses ECharts' built-in default theme. Accessibility defaults are independent of `theme`. |
 | `key` | `str`, `int`, or `None` | Optional stable identity. When provided, Streamlit emits a `st-key-<key>` CSS class even if `on_select="ignore"`. When selections are active, the selection state is also readable from `st.session_state[key]`, and the selection survives changes to `spec`, `theme`, and `renderer`. Display-only charts without a `key` skip the element ID entirely. |
 | `on_select` | `"ignore"`, `"rerun"`, or `callable` | Whether the chart behaves like an input widget. `"ignore"` (default) = display only; `"rerun"` = rerun on selection and return selection state; a callable = rerun and invoke it as a callback. See [Selections](#selections). |
@@ -427,15 +427,22 @@ ECharts renders into a container that needs an explicit height (unlike an auto-s
 diagram). Therefore:
 
 - `width` behaves like `st.plotly_chart` (`"stretch"` by default). `width="content"` uses a
-  **700px** fallback because an ECharts spec has no intrinsic width.
-- `height="content"` (default) resolves to **400px** (intentional; not Plotly's 450px).
+  **700px** fallback because an ECharts spec has no intrinsic width. There is deliberately no
+  token for this: the `defaultChartWidth` token is a Vega *view* dimension, and a Vega chart at
+  `width="content"` actually collapses to roughly 180px, so there is no rendered width to match.
+- `height="content"` (default) resolves to **350px**, the frontend's `defaultChartHeight` theme
+  token. That token is what the Vega-based charts (`st.line_chart`, `st.bar_chart`,
+  `st.area_chart`, `st.scatter_chart`, `st.vega_lite_chart`, `st.altair_chart`) actually render
+  at, so an ECharts chart lines up with them pixel-for-pixel beside one another in columns.
+  Chart types that benefit from more room (sunburst and treemap labels, most visibly) are what
+  the `height` parameter is for.
   `height="stretch"` uses Streamlit's standard height semantics: the greater of content
-  height (400px, or an explicit pyecharts pixel height) and parent height, falling back to
+  height (350px, or an explicit pyecharts pixel height) and parent height, falling back to
   content height when there is no sized parent. An `int` sets a fixed pixel height.
 - **`pyecharts` InitOpts.** pyecharts always writes `InitOpts` width/height, using library
   defaults `"900px"` / `"500px"` even when the author never set them. Streamlit therefore
   treats those two default strings as unspecified so a dict spec and an equivalent pyecharts
-  chart get the same 700×400 content size. A user who actually wants 500px (or 900px) should
+  chart get the same 700×350 content size. A user who actually wants 500px (or 900px) should
   pass Streamlit `height=500` / `width=900` — `InitOpts(height="500px")` cannot be distinguished
   from the library default. Any other **pixel** value is honored. `"100%"` maps to `"stretch"`.
   Any other CSS unit falls back to the Streamlit default and logs a warning rather than
@@ -691,6 +698,11 @@ st.echarts_chart(pie)
   `disabled` parameter, so v1 omits it too. Selection handlers are simply not bound when the chart is
   display-only (`on_select="ignore"`). Can be revisited if selection-capable charts adopt `disabled`
   broadly.
+- **Resolve content size from the frontend theme token** — v1's 350px content-height fallback
+  lives as a Python constant that mirrors `defaultChartHeight`. Retuning that token would
+  silently desync `st.echarts_chart`. Moving the resolution into the frontend component, where
+  `theme.sizes` is available, matches the repo's "sizing belongs in the frontend" rule, but it
+  is a real refactor against the zero-size init latch and is deferred.
 
 ## Alternatives Considered
 
