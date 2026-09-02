@@ -861,29 +861,17 @@ class BootstrapPydeckMapboxTest(TestCase):
     """Tests for _fix_pydeck_mapbox_api_warning."""
 
     def test_sets_mapbox_env_var_when_missing(self):
-        """Sets MAPBOX_API_KEY from config when env var is absent."""
-        env_without_key = {k: v for k, v in os.environ.items() if k != "MAPBOX_API_KEY"}
-        with (
-            patch.dict(os.environ, env_without_key, clear=True),
-            patch.object(
-                bootstrap.config, "get_option", return_value="cfg-token"
-            ) as mock_get_option,
-        ):
+        """Sets MAPBOX_API_KEY to empty when it is unset."""
+        with patch.dict(os.environ):
+            os.environ.pop("MAPBOX_API_KEY", None)
             bootstrap._fix_pydeck_mapbox_api_warning()
-            assert os.environ["MAPBOX_API_KEY"] == "cfg-token"
-
-        mock_get_option.assert_called_once_with("mapbox.token")
+            assert os.environ["MAPBOX_API_KEY"] == ""
 
     def test_does_not_overwrite_existing_mapbox_env_var(self):
         """Preserves an externally-set MAPBOX_API_KEY value."""
-        with (
-            patch.dict(os.environ, {"MAPBOX_API_KEY": "external"}, clear=False),
-            patch.object(bootstrap.config, "get_option") as mock_get_option,
-        ):
+        with patch.dict(os.environ, {"MAPBOX_API_KEY": "external"}):
             bootstrap._fix_pydeck_mapbox_api_warning()
             assert os.environ["MAPBOX_API_KEY"] == "external"
-
-        mock_get_option.assert_not_called()
 
 
 @patch("streamlit.web.bootstrap.prepare_streamlit_environment", Mock())

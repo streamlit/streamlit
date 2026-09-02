@@ -42,6 +42,10 @@ from streamlit.web import cli
 from streamlit.web.cli import _convert_config_option_to_click_option
 from tests import testutil
 
+_SENSITIVE_CONFIG_OPTIONS = [
+    key for key, opt in config._config_options_template.items() if opt.sensitive
+]
+
 
 class CliTest(unittest.TestCase):
     """Unit tests for the cli."""
@@ -263,8 +267,14 @@ class CliTest(unittest.TestCase):
         )
         assert result.exit_code == 0
 
-    @parameterized.expand(["mapbox.token", "server.cookieSecret"])
-    def test_run_command_with_sensitive_options_as_flag(self, sensitive_option):
+    def test_sensitive_config_options_are_registered(self) -> None:
+        """Fail if parameterization of sensitive CLI flags would expand to no cases."""
+        assert _SENSITIVE_CONFIG_OPTIONS
+
+    @parameterized.expand([(key,) for key in _SENSITIVE_CONFIG_OPTIONS])
+    def test_run_command_with_sensitive_option_as_flag(
+        self, sensitive_option: str
+    ) -> None:
         with (
             patch("streamlit.url_util.is_url", return_value=False),
             patch("streamlit.web.cli._main_run"),
