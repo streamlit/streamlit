@@ -521,10 +521,9 @@ def marshall(
     pydeck_proto.json = pydeck_json
     pydeck_proto.id = ""
 
-    # st.map builds Deck JSON itself and has no Deck.mapbox_key. Copy
-    # MAPBOX_API_KEY onto the proto for parity with the former mapbox.token
-    # path. Default st.map styles are Carto, so the frontend only uses this
-    # token if a Mapbox style is set.
+    # st.map builds Deck JSON itself and never constructs a PyDeck Deck, so
+    # copy MAPBOX_API_KEY onto the proto. Default styles are Carto; the
+    # frontend uses this token only if the spec selects a Mapbox style.
     mapbox_token = os.environ.get("MAPBOX_API_KEY")
     if mapbox_token:
         pydeck_proto.mapbox_token = mapbox_token
