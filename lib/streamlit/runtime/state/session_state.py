@@ -1267,11 +1267,15 @@ class SessionState:
             run. Any widget state whose ID does *not* appear in this set
             is considered "stale" and will be removed.
         remove_stale_widgets: bool
-            Whether to drop the stale widget state. Pass False when the run
-            never executed its body, since no widget re-registered and every
-            widget would look stale. The next run that renders cleans up
-            instead. Triggers still reset either way, so a fired callback's
-            event is never delivered twice.
+            Whether to drop stale widget state. Pass False when
+            ``widget_ids_this_run`` is incomplete:
+
+            - the body never ran, or
+            - ``st.rerun()`` interrupted the run before later widgets registered.
+
+            The next completed run removes stale widgets instead. SessionState
+            still resets triggers either way, so a fired callback's event is
+            never delivered twice.
         """
         self._reset_triggers()
         if remove_stale_widgets:

@@ -52,7 +52,7 @@
   "devDependencies": {
     "@streamlit/typescript-config": "workspace:^",
     "@testing-library/dom": "^10.4.1",
-    "@testing-library/react": "^16.3.2",
+    "@testing-library/react": "^16.3.3",
     "@types/hoist-non-react-statics": "^3.3.7",
     "@types/node": ">=24 <25",
     "@types/react": "^18.2.0",
