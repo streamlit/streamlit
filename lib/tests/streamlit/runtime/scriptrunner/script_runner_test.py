@@ -1334,6 +1334,50 @@ class ScriptRunnerTest(unittest.TestCase):
         Runtime._instance.media_file_mgr.remove_orphaned_files.assert_called_once()
         Runtime._instance.dataframe_source_mgr.remove_orphaned_sources.assert_called_once()
 
+    def test_stale_widget_removal_skipped_when_stopped_for_rerun(self):
+        """A run stopped for rerun must reset triggers without dropping widgets.
+
+        Later widgets never registered, so ``widget_ids_this_run`` is incomplete.
+        ``on_script_finished`` still runs so button triggers reset.
+        """
+        scriptrunner = TestScriptRunner("good_script.py")
+        with patch.object(
+            SessionState, "on_script_finished"
+        ) as mock_on_script_finished:
+            scriptrunner._on_script_finished(
+                _finished_run_ctx(has_script_started=True),
+                ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN,
+                premature_stop=False,
+            )
+
+        mock_on_script_finished.assert_called_once()
+        assert mock_on_script_finished.call_args.kwargs["remove_stale_widgets"] is False
+
+    @parameterized.expand(
+        [
+            (ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,),
+            (ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,),
+        ]
+    )
+    def test_stale_widget_removal_runs_when_script_completes(self, event):
+        """The counterpart to the skip case above.
+
+        Without this, a gate stuck at False would leak stale widget state after
+        every completed run while the skip test kept passing.
+        """
+        scriptrunner = TestScriptRunner("good_script.py")
+        with patch.object(
+            SessionState, "on_script_finished"
+        ) as mock_on_script_finished:
+            scriptrunner._on_script_finished(
+                _finished_run_ctx(has_script_started=True),
+                event,
+                premature_stop=False,
+            )
+
+        mock_on_script_finished.assert_called_once()
+        assert mock_on_script_finished.call_args.kwargs["remove_stale_widgets"] is True
+
     def test_dg_stack_preserved_for_fragment_rerun(self):
         """Tests that the dg_stack and cursor are preserved for a fragment rerun.
 

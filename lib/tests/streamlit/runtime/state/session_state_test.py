@@ -642,6 +642,123 @@ def test_callback_rerun_resets_triggers() -> None:
     assert at.session_state["clicks"] == 2
 
 
+def test_body_level_rerun_keeps_widget_values() -> None:
+    """Widgets after a body-level st.rerun() must keep the values set this run.
+
+    ``st.rerun()`` stops the script before later widgets register, so
+    ``widget_ids_this_run`` is incomplete. Dropping those ids would re-seed
+    them from defaults on the follow-up run (GitHub issue #3533).
+    """
+
+    def script():
+        import streamlit as st
+
+        st.radio("Select1", ["Egg", "Spam", "Bacon", "Sausage"], key="select1")
+        if st.button("Rerun"):
+            st.rerun()
+        st.radio("Select2", ["Egg", "Spam", "Bacon", "Sausage"], key="select2")
+        st.radio("Select3", ["Egg", "Spam", "Bacon", "Sausage"], key="select3")
+        st.toggle("Toggle after rerun", key="toggle_after")
+
+    at = AppTest.from_function(script).run()
+    at.radio(key="select1").set_value("Spam").run()
+    at.radio(key="select2").set_value("Bacon").run()
+    at.radio(key="select3").set_value("Sausage").run()
+    at.toggle(key="toggle_after").set_value(True).run()
+
+    at.button[0].click().run()
+
+    assert at.radio(key="select1").value == "Spam"
+    assert at.radio(key="select2").value == "Bacon"
+    assert at.radio(key="select3").value == "Sausage"
+    assert at.toggle(key="toggle_after").value is True
+    assert at.session_state["select1"] == "Spam"
+    assert at.session_state["select2"] == "Bacon"
+    assert at.session_state["select3"] == "Sausage"
+    assert at.session_state["toggle_after"] is True
+
+
+def test_body_level_rerun_resets_triggers() -> None:
+    """A body-level st.rerun() from a button must not loop.
+
+    ``st.rerun()`` counts as a script completion so triggers reset (see
+    ``exec_func_with_error_handling``). The follow-up body belongs to a new
+    interaction and must see the button as False.
+    """
+
+    def script():
+        import streamlit as st
+
+        st.session_state["body_runs"] = st.session_state.get("body_runs", 0) + 1
+        clicked = st.button("Rerun")
+        st.session_state["body_saw_click"] = clicked
+        if clicked:
+            st.rerun()
+
+    at = AppTest.from_function(script).run()
+    assert at.session_state["body_runs"] == 1
+
+    at.button[0].click().run()
+    # Click runs the body once, then st.rerun() runs it again.
+    assert at.session_state["body_runs"] == 3
+    assert at.session_state["body_saw_click"] is False
+
+    # The trigger is not stuck: a second click still advances the body.
+    at.button[0].click().run()
+    assert at.session_state["body_runs"] == 5
+
+
+def test_st_rerun_inside_fragment_keeps_widget_values() -> None:
+    """A widget after st.rerun() inside a fragment must keep its value.
+
+    Same incomplete ``widget_ids_this_run`` as the body-level case; the
+    rerun originates inside a fragment (GitHub issue #11266).
+    """
+
+    def script():
+        import streamlit as st
+
+        @st.fragment
+        def my_fragment():
+            if st.button("Rerun"):
+                st.rerun()
+            st.text_input("t", value="foo", key="t")
+
+        my_fragment()
+
+    at = AppTest.from_function(script).run()
+    at.text_input(key="t").input("bar").run()
+    assert at.text_input(key="t").value == "bar"
+
+    at.button[0].click().run()
+    assert at.text_input(key="t").value == "bar"
+    assert at.session_state["t"] == "bar"
+
+
+def test_follow_up_completed_run_drops_unrendered_widgets() -> None:
+    """A widget hidden on the follow-up completed run is still dropped.
+
+    The interrupted ``st.rerun()`` defers stale cleanup; the next run that
+    completes must still remove widgets that were not re-registered.
+    """
+
+    def script():
+        import streamlit as st
+
+        if not st.session_state.get("hide"):
+            st.text_input("hidden", key="hidden")
+            if st.button("Rerun"):
+                st.session_state["hide"] = True
+                st.rerun()
+
+    at = AppTest.from_function(script).run()
+    at.text_input(key="hidden").input("keep?").run()
+    assert at.session_state["hidden"] == "keep?"
+
+    at.button[0].click().run()
+    assert "hidden" not in at.session_state
+
+
 def test_callback_rerun_does_not_abort_other_callbacks() -> None:
     """One callback's st.rerun() must not silently kill the others in the interaction.
 

@@ -149,7 +149,7 @@ register_widget(
 
 **Lifecycle hooks**:
 - `on_script_will_rerun()`: Process widget states from browser, run callbacks
-- `on_script_finished()`: Clean up stale widgets not seen this run
+- `on_script_finished()`: Reset trigger widgets. Drop stale widgets not seen this run, except on `SCRIPT_STOPPED_FOR_RERUN`: `st.rerun()` can interrupt before later widgets register, so stale cleanup is deferred until the next completed run.
 
 **Disabled widget enforcement**: `WidgetMetadata` carries a `disabled` flag (set via `register_widget(..., disabled=...)`). Because a disabled widget cannot be interacted with in the browser, this is enforced server-side to guard against a stale UI or a forged `BackMsg`: `SessionState.register_widget()` discards any incoming frontend value for a disabled widget (falling back to its previous value, or its default on first registration), and `_call_callbacks()` suppresses its `on_change`/`on_click` callback. Programmatic `st.session_state` assignments are still honored.
 
