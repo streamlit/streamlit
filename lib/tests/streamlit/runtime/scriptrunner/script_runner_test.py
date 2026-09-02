@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 import sys
 import time
@@ -30,6 +31,7 @@ import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.delta_generator_singletons import context_dg_stack
 from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
+from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
@@ -252,6 +254,174 @@ class ScriptRunnerTest(unittest.TestCase):
         # RERUN request.
         self._assert_no_exceptions(scriptrunner)
         assert run_script_mock.call_count == 3
+
+    def test_internal_base_exception_emits_shutdown_once(self):
+        """An unexpected BaseException emits exactly one SHUTDOWN."""
+        scriptrunner = TestScriptRunner("not_a_script.py")
+        primary_error = BaseException("internal failure")
+        scriptrunner._requests.on_scriptrunner_ready = MagicMock(
+            side_effect=primary_error
+        )
+
+        try:
+            scriptrunner.start()
+            scriptrunner.join()
+
+            assert scriptrunner.script_thread_exceptions == [primary_error]
+            assert scriptrunner.events == [ScriptRunnerEvent.SHUTDOWN]
+            assert isinstance(scriptrunner.event_data[0]["client_state"], ClientState)
+        finally:
+            scriptrunner._test_event_loop.close()
+
+    @parameterized.expand(
+        [
+            ("system_exit", SystemExit),
+            ("keyboard_interrupt", KeyboardInterrupt),
+        ]
+    )
+    def test_user_control_exception_emits_shutdown_once(
+        self, _name: str, exception_type: type[BaseException]
+    ):
+        """User control exceptions escape as primary errors after SHUTDOWN."""
+        scriptrunner = TestScriptRunner("not_a_script.py")
+        user_code = compile(
+            f"raise {exception_type.__name__}('user interrupt')",
+            scriptrunner._main_script_path,
+            "exec",
+        )
+        scriptrunner._script_cache.get_bytecode = MagicMock(return_value=user_code)
+
+        scriptrunner.start()
+        scriptrunner.join()
+
+        assert len(scriptrunner.script_thread_exceptions) == 1
+        assert type(scriptrunner.script_thread_exceptions[0]) is exception_type
+        assert str(scriptrunner.script_thread_exceptions[0]) == "user interrupt"
+        assert scriptrunner.events.count(ScriptRunnerEvent.SHUTDOWN) == 1
+
+    def test_context_setup_failure_emits_shutdown_without_client_state(self):
+        """Context setup failure emits SHUTDOWN without client state."""
+        scriptrunner = TestScriptRunner("not_a_script.py")
+        setup_error = RuntimeError("context setup failed")
+
+        try:
+            with patch.object(
+                script_runner_module, "ScriptRunContext", side_effect=setup_error
+            ):
+                scriptrunner.start()
+                scriptrunner.join()
+
+            assert scriptrunner.script_thread_exceptions == [setup_error]
+            assert scriptrunner.events == [ScriptRunnerEvent.SHUTDOWN]
+            assert scriptrunner.event_data[0]["client_state"] is None
+        finally:
+            scriptrunner._test_event_loop.close()
+
+    def test_shutdown_receiver_failure_does_not_mask_primary_exception(self):
+        """Receiver RuntimeError does not replace an escaping runner error."""
+        scriptrunner = TestScriptRunner("not_a_script.py")
+        primary_error = RuntimeError("primary failure")
+        dispatch_error = RuntimeError("dispatch failure")
+        scriptrunner._requests.on_scriptrunner_ready = MagicMock(
+            side_effect=primary_error
+        )
+
+        def fail_on_shutdown(
+            _sender: ScriptRunner | None, event: ScriptRunnerEvent, **_kwargs: Any
+        ) -> None:
+            if event == ScriptRunnerEvent.SHUTDOWN:
+                raise dispatch_error
+
+        scriptrunner.on_event.connect(fail_on_shutdown, weak=False)
+
+        try:
+            with patch.object(script_runner_module, "_LOGGER") as patched_logger:
+                scriptrunner.start()
+                scriptrunner.join()
+
+            assert scriptrunner.script_thread_exceptions == [primary_error]
+            assert scriptrunner.events.count(ScriptRunnerEvent.SHUTDOWN) == 1
+            patched_logger.exception.assert_called_once()
+        finally:
+            scriptrunner._test_event_loop.close()
+
+    def test_shutdown_receiver_failure_propagates_on_normal_termination(self):
+        """Receiver RuntimeError propagates when no runner error is active."""
+        scriptrunner = TestScriptRunner("not_a_script.py")
+        dispatch_error = RuntimeError("dispatch failure")
+        scriptrunner.request_stop()
+
+        def fail_on_shutdown(
+            _sender: ScriptRunner | None, event: ScriptRunnerEvent, **_kwargs: Any
+        ) -> None:
+            if event == ScriptRunnerEvent.SHUTDOWN:
+                raise dispatch_error
+
+        scriptrunner.on_event.connect(fail_on_shutdown, weak=False)
+
+        try:
+            scriptrunner.start()
+            scriptrunner.join()
+
+            assert scriptrunner.script_thread_exceptions == [dispatch_error]
+            assert scriptrunner.events.count(ScriptRunnerEvent.SHUTDOWN) == 1
+        finally:
+            scriptrunner._test_event_loop.close()
+
+    def test_shutdown_receiver_base_exception_replaces_primary_exception(self):
+        """A receiver BaseException follows normal propagation semantics."""
+
+        class ReceiverControlFlow(BaseException):
+            pass
+
+        scriptrunner = TestScriptRunner("not_a_script.py")
+        primary_error = RuntimeError("primary failure")
+        dispatch_error = ReceiverControlFlow("dispatch control flow")
+        scriptrunner._requests.on_scriptrunner_ready = MagicMock(
+            side_effect=primary_error
+        )
+
+        def fail_on_shutdown(
+            _sender: ScriptRunner | None, event: ScriptRunnerEvent, **_kwargs: Any
+        ) -> None:
+            if event == ScriptRunnerEvent.SHUTDOWN:
+                raise dispatch_error
+
+        scriptrunner.on_event.connect(fail_on_shutdown, weak=False)
+        scriptrunner.start()
+        scriptrunner.join()
+
+        assert scriptrunner.script_thread_exceptions == [dispatch_error]
+        assert scriptrunner.events.count(ScriptRunnerEvent.SHUTDOWN) == 1
+
+    def test_shutdown_notification_follows_event_loop_detachment(self):
+        """Receivers run after loop references are cleared."""
+        scriptrunner = TestScriptRunner("not_a_script.py")
+        scriptrunner.request_stop()
+        loop_references: list[asyncio.AbstractEventLoop | None] = []
+        current_loop_is_detached: list[bool] = []
+
+        def inspect_shutdown(
+            _sender: ScriptRunner | None, event: ScriptRunnerEvent, **_kwargs: Any
+        ) -> None:
+            if event != ScriptRunnerEvent.SHUTDOWN:
+                return
+            loop_references.append(scriptrunner._event_loop)
+            with pytest.raises(RuntimeError):
+                asyncio.get_event_loop()
+            current_loop_is_detached.append(True)
+
+        scriptrunner.on_event.connect(inspect_shutdown, weak=False)
+
+        try:
+            scriptrunner.start()
+            scriptrunner.join()
+
+            self._assert_no_exceptions(scriptrunner)
+            assert loop_references == [None]
+            assert current_loop_is_detached == [True]
+        finally:
+            scriptrunner._test_event_loop.close()
 
     @parameterized.expand(
         [
@@ -1646,6 +1816,118 @@ class ScriptRunnerTest(unittest.TestCase):
             == "74c2683ab3d8427292ef911e1e05a630"
         )
 
+    def test_event_loop_installed_on_script_thread(self):
+        """asyncio.get_event_loop() succeeds on the script thread because a
+        persistent, non-running loop is installed for the session."""
+        scriptrunner = TestScriptRunner("asyncio_event_loop.py")
+        scriptrunner.request_rerun(RerunData())
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        captured = scriptrunner._session_state["captured_loops"]
+        assert isinstance(captured[0], asyncio.AbstractEventLoop)
+        assert captured[0] is scriptrunner._test_event_loop
+        # The installed loop is initially idle and can run library async work.
+        assert scriptrunner._session_state["loop_running"] is False
+        assert scriptrunner._session_state["sync_library_result"] == 42
+
+    def test_closed_caller_loop_fails_without_replacement(self):
+        """ScriptRunner does not replace a closed caller-owned loop."""
+        loop = asyncio.new_event_loop()
+        loop.close()
+        scriptrunner = TestScriptRunner("asyncio_event_loop.py", event_loop=loop)
+        scriptrunner.start()
+        scriptrunner.join()
+
+        assert len(scriptrunner.script_thread_exceptions) == 1
+        assert str(scriptrunner.script_thread_exceptions[0]) == (
+            "ScriptRunner event loop is closed"
+        )
+        assert scriptrunner.events == [ScriptRunnerEvent.SHUTDOWN]
+        assert scriptrunner._event_loop is None
+
+    def test_event_loop_persists_across_reruns(self):
+        """The same loop object is current on every rerun of a session."""
+        scriptrunner = TestScriptRunner("asyncio_event_loop.py")
+        scriptrunner.request_rerun(RerunData())
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        captured = scriptrunner._session_state["captured_loops"]
+        assert len(captured) == 2
+        assert captured[0] is captured[1]
+        assert captured[0] is scriptrunner._test_event_loop
+
+    def test_asyncio_run_uses_temporary_loop_without_closing_persistent_loop(self):
+        """User code calling asyncio.run() keeps working: our loop never runs,
+        so there is no nested-loop conflict, and asyncio.run() closes its own
+        temporary loop rather than ours."""
+        loop = asyncio.new_event_loop()
+        try:
+            scriptrunner = TestScriptRunner("asyncio_event_loop.py", event_loop=loop)
+            scriptrunner.request_rerun(RerunData())
+            scriptrunner.start()
+            scriptrunner.join()
+
+            self._assert_no_exceptions(scriptrunner)
+            assert scriptrunner._session_state["asyncio_run_result"] == 42
+            # asyncio.run() must not have closed the persistent loop during
+            # the script, and ScriptRunner must not close a caller-owned loop.
+            assert (
+                scriptrunner._session_state["persistent_loop_closed_mid_run"] is False
+            )
+            assert not loop.is_closed()
+        finally:
+            loop.close()
+
+    def test_event_loop_detached_after_scriptrunner_shutdown(self):
+        """After the script thread stops the runner's loop reference is cleared,
+        but the loop itself remains open — it is owned by AppSession (or the
+        test harness) and must survive runner churn."""
+        loop = asyncio.new_event_loop()
+        try:
+            scriptrunner = TestScriptRunner("asyncio_event_loop.py", event_loop=loop)
+            scriptrunner.request_rerun(RerunData())
+            scriptrunner.start()
+            scriptrunner.join()
+
+            # ScriptRunner cleared its own reference but did not close the loop.
+            assert scriptrunner._event_loop is None
+            assert not loop.is_closed()
+        finally:
+            loop.close()
+
+    def test_same_loop_across_sequential_scriptrunners(self):
+        """A loop shared across multiple sequential ScriptRunners (simulating
+        AppSession fastRerun churn) remains the same object throughout."""
+        shared_loop = asyncio.new_event_loop()
+        try:
+            first = TestScriptRunner("asyncio_event_loop.py", event_loop=shared_loop)
+            first.request_rerun(RerunData())
+            first.start()
+            first.join()
+            self._assert_no_exceptions(first)
+
+            # First runner captured the loop; it must be our shared_loop.
+            first_captured = first._session_state["captured_loops"][0]
+            assert first_captured is shared_loop
+
+            # Start a second runner with the same loop (simulates a fastRerun
+            # or reconnect where AppSession creates a new ScriptRunner but
+            # passes the same _script_event_loop).
+            second = TestScriptRunner("asyncio_event_loop.py", event_loop=shared_loop)
+            second.request_rerun(RerunData())
+            second.start()
+            second.join()
+            self._assert_no_exceptions(second)
+
+            second_captured = second._session_state["captured_loops"][0]
+            assert second_captured is shared_loop
+        finally:
+            shared_loop.close()
+
     def _assert_no_exceptions(self, scriptrunner: TestScriptRunner) -> None:
         """Assert that no uncaught exceptions were thrown in the
         scriptrunner's run thread.
@@ -1712,11 +1994,19 @@ class TestScriptRunner(ScriptRunner):
     # To prevent PytestCollectionWarning we set __test__ property to False
     __test__ = False
 
-    def __init__(self, script_name: str, initial_rerun_data: RerunData | None = None):
+    def __init__(
+        self,
+        script_name: str,
+        initial_rerun_data: RerunData | None = None,
+        event_loop: asyncio.AbstractEventLoop | None = None,
+    ):
         """Initialize the ScriptRunner for the given script_name.
 
-        ``initial_rerun_data`` defaults to a full-app rerun; pass a
-        ``fragment_id_queue`` to start the runner in a fragment run.
+        ``initial_rerun_data`` defaults to a full-app rerun; supply data with a
+        ``fragment_id_queue`` to begin with a fragment run.
+
+        A supplied ``event_loop`` remains caller-owned. Otherwise, this helper
+        creates a loop and closes it when the script thread exits.
         """
         # DeltaGenerator deltas will be enqueued into self.forward_msg_queue.
         self.forward_msg_queue = ForwardMsgQueue()
@@ -1724,6 +2014,11 @@ class TestScriptRunner(ScriptRunner):
         main_script_path = os.path.join(
             os.path.dirname(__file__), "test_data", script_name
         )
+
+        self._owns_test_event_loop = event_loop is None
+        if event_loop is None:
+            event_loop = asyncio.new_event_loop()
+        self._test_event_loop = event_loop
 
         script_cache = ScriptCache()
         super().__init__(
@@ -1738,10 +2033,11 @@ class TestScriptRunner(ScriptRunner):
             user_info={"email": "test@example.com"},
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=PagesManager(main_script_path, script_cache),
+            event_loop=event_loop,
         )
 
         # Accumulates uncaught exceptions thrown by our run thread.
-        self.script_thread_exceptions: list[Exception] = []
+        self.script_thread_exceptions: list[BaseException] = []
 
         # Accumulates all ScriptRunnerEvents emitted by us.
         self.events: list[ScriptRunnerEvent] = []
@@ -1769,8 +2065,11 @@ class TestScriptRunner(ScriptRunner):
     def _run_script_thread(self) -> None:
         try:
             super()._run_script_thread()
-        except Exception as e:
+        except BaseException as e:
             self.script_thread_exceptions.append(e)
+        finally:
+            if self._owns_test_event_loop and not self._test_event_loop.is_closed():
+                self._test_event_loop.close()
 
     def _run_script(self, rerun_data: RerunData) -> None:
         self.clear_forward_msgs()
