@@ -1753,6 +1753,31 @@ describe("TextInput live updates", () => {
     expect(input).toHaveValue("ABC")
   })
 
+  it("does not rewrite widget state when a latest-commit echo is acked", async () => {
+    const { user, props, setStringValueSpy, rerender } = renderLive({
+      liveDebounceMs: 0,
+      default: "",
+    })
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "abc")
+    expect(input).toHaveValue("abc")
+    setStringValueSpy.mockClear()
+
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "abc",
+        })}
+      />
+    )
+    expect(input).toHaveValue("abc")
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+  })
+
   it("applies a session_state restore of an earlier committed string after ack", async () => {
     const { user, props, rerender } = renderLive({
       liveDebounceMs: 0,

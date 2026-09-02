@@ -180,9 +180,11 @@ function TextInput({
   // - dirty: keystrokes not yet committed
   // - an in-flight user-committed string that is not the latest: a stale
   //   echo of an older rerun, including after blur
-  // Matching the latest commit acks only that value so a later stale echo of
-  // an earlier commit (A then B then A, then a late B) is still dropped.
-  // Any other incoming value (callback / session_state write) applies,
+  // Matching the latest commit acks only that pending entry so a later stale
+  // echo of an earlier commit (A then B then A, then a late B) is still
+  // dropped. Return false after the delete: setValue is already consumed, and
+  // reapplying the current value would only rewrite React / WidgetStateManager
+  // state. Any other incoming value (callback / session_state write) applies,
   // including while focused. Keep pending commits so a later echo of an
   // older in-flight value cannot overwrite that authoritative write.
   const shouldApplyIncomingValue = useCallback(
@@ -192,7 +194,7 @@ function TextInput({
       }
       if (incoming === lastCommittedValueRef.current) {
         pendingLiveCommitsRef.current.delete(incoming)
-        return true
+        return false
       }
       if (pendingLiveCommitsRef.current.has(incoming)) {
         return false
