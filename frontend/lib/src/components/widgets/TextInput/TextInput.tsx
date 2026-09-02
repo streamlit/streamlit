@@ -125,10 +125,12 @@ function TextInput({
   )
   // User-committed strings that may still be in flight. Used to recognize
   // stale setValue echoes of older reruns. Ordinary live reruns do not send
-  // setValue, so this set is only an ack stand-in: a matching latest-commit
-  // echo removes that one value, and a non-echo setValue clears the rest.
-  // A restore of an earlier unacked string is indistinguishable from a stale
-  // echo without a commit generation on the wire.
+  // setValue, so this set is only an acknowledgement stand-in. A matching
+  // latest-commit value removes that entry. Other authoritative setValue
+  // updates apply without clearing older pending commits, so delayed stale
+  // echoes remain blocked. A restore of an earlier unacked string is
+  // indistinguishable from a stale echo without a commit generation on the
+  // wire.
   const pendingLiveCommitsRef = useRef(new Set<string | null>())
   const isComposingRef = useRef(false)
 
