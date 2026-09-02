@@ -20,7 +20,7 @@ from pathlib import Path
 import pytest
 
 from streamlit.runtime.pages_manager import PagesManager
-from streamlit.testing.v1 import AppTest
+from streamlit.testing.v1 import AppTest, local_script_runner
 from streamlit.util import calc_hash
 
 
@@ -74,6 +74,40 @@ def test_each_run_closes_its_local_script_runner_event_loop(
     assert all(loop.is_closed() for loop in created_loops)
     assert first_loop_id == str(id(created_loops[0]))
     assert second_loop_id == str(id(created_loops[1]))
+
+
+def test_local_script_runner_closes_loop_when_initialization_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """LocalScriptRunner closes its loop after an ordinary initialization error."""
+    created_loops: list[asyncio.AbstractEventLoop] = []
+    original_new_event_loop = asyncio.new_event_loop
+    initialization_error = RuntimeError("initialization failed")
+
+    def track_new_event_loop() -> asyncio.AbstractEventLoop:
+        loop = original_new_event_loop()
+        created_loops.append(loop)
+        return loop
+
+    def fail_initialization(*_args: object, **_kwargs: object) -> None:
+        raise initialization_error
+
+    monkeypatch.setattr(asyncio, "new_event_loop", track_new_event_loop)
+    monkeypatch.setattr(
+        local_script_runner.ScriptRunner, "__init__", fail_initialization
+    )
+
+    try:
+        with pytest.raises(RuntimeError) as exc_info:
+            AppTest.from_string("pass").run()
+
+        assert exc_info.value is initialization_error
+        assert len(created_loops) == 1
+        assert created_loops[0].is_closed()
+    finally:
+        for loop in created_loops:
+            if not loop.is_closed():
+                loop.close()
 
 
 def test_from_file_str():

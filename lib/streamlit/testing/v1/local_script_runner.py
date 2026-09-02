@@ -78,7 +78,7 @@ class LocalScriptRunner(ScriptRunner):
                 pages_manager=pages_manager,
                 event_loop=self._owned_event_loop,
             )
-        except BaseException:
+        except Exception:
             self._owned_event_loop.close()
             raise
 
