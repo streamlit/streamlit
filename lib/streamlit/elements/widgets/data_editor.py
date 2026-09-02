@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import functools
 import inspect
 import json
 from collections.abc import Callable
@@ -283,6 +284,10 @@ def _indexes_have_compatible_structure(
 
 def _is_async_callable(callback: Any) -> bool:
     """True for async functions and callable instances with async ``__call__``."""
+    # Unwrap ``functools.partial`` so a partial around an async function or an
+    # instance with async ``__call__`` is still rejected at call time.
+    while isinstance(callback, functools.partial):
+        callback = callback.func
     if inspect.iscoroutinefunction(callback):
         return True
     # ``inspect.iscoroutinefunction`` misses instances whose ``__call__`` is

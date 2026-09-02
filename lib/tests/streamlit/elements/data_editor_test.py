@@ -2118,6 +2118,50 @@ class DataEditorCommitEditsValidationTest(DeltaGeneratorTestCase):
         )
         assert exc.value.error_id == "data-editor-async-commit-edits"
 
+    def test_not_supported_with_partial_async_callback(self) -> None:
+        """functools.partial around an async function is rejected at call time."""
+        import functools
+
+        async def commit(
+            source: pd.DataFrame,
+            edited: pd.DataFrame,
+            edits: Any,
+            unused: int = 0,
+        ) -> pd.DataFrame:
+            return source
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.data_editor(
+                pd.DataFrame({"a": [1]}),
+                key="editor",
+                commit_edits=functools.partial(commit, unused=1),
+            )
+        assert str(exc.value) == (
+            "st.data_editor: commit_edits does not support async callbacks."
+        )
+        assert exc.value.error_id == "data-editor-async-commit-edits"
+
+    def test_not_supported_with_partial_async_callable_object(self) -> None:
+        """functools.partial around an async callable instance is rejected at call time."""
+        import functools
+
+        class AsyncCommit:
+            async def __call__(
+                self, source: pd.DataFrame, edited: pd.DataFrame, edits: Any
+            ) -> pd.DataFrame:
+                return source
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.data_editor(
+                pd.DataFrame({"a": [1]}),
+                key="editor",
+                commit_edits=functools.partial(AsyncCommit()),
+            )
+        assert str(exc.value) == (
+            "st.data_editor: commit_edits does not support async callbacks."
+        )
+        assert exc.value.error_id == "data-editor-async-commit-edits"
+
 
 class DataEditorCommitEditsProtoTest(DeltaGeneratorTestCase):
     """Tests for the commit_edits/clear_edits proto flags."""
