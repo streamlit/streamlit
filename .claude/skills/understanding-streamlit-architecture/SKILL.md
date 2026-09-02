@@ -162,7 +162,7 @@ Streamlit's execution model differs from traditional web frameworks:
 - **Delta path** controls where a node is placed in the render tree.
 - **Element ID** controls whether a stateful element can reconnect to prior state after remounts.
 - **Widgets** use the ID to connect frontend `WidgetStateManager` state, `BackMsg.WidgetStates`, backend `SessionState`, callbacks, and `st.session_state`.
-- **Always pass identity-affecting kwargs, including `None` when the feature is off.** Upgrading Streamlit already wipes session state, so omitting a kwarg to keep a pre-upgrade hash is not useful.
+- **Do not omit ID kwargs to preserve widget state across Streamlit upgrades.** Upgrades already wipe session state. Always pass identity-affecting kwargs, including `None` when the feature is off.
 - **Some non-widgets** also use IDs for frontend-only reconstruction (for example chart view state or media autoplay guards).
 - **Delta-path changes can remount elements**, but a stable `element.id` can still let React preserve a leaf when it remains under the same rendered parent list.
 

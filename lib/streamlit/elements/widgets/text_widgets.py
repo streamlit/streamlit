@@ -669,6 +669,10 @@ class TextWidgetsMixin:
         >>> if email:
         ...     st.write("We'll reach you at", email)
 
+        .. output::
+           https://doc-text-input-email.streamlit.app/
+           height: 260px
+
         Use ``live=True`` with ``type="search"`` for live search. Prefer a
         fragment around the live UI so typing does not rerun the rest of
         the app:
@@ -684,6 +688,10 @@ class TextWidgetsMixin:
         ...     st.write(matches)
         >>>
         >>> product_search()
+
+        .. output::
+           https://doc-text-input-live.streamlit.app/
+           height: 320px
 
         """
         ctx = get_script_run_ctx()
