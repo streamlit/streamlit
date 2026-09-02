@@ -62,8 +62,8 @@ interface PlotlySelectionEventWithSelections
  * Plotly's type definitions are incomplete, so we extend PlotDatum
  * with additional properties that exist at runtime.
  */
-interface PlotlySelectionPoint extends Plotly.PlotDatum {
-  data: Plotly.Data & { legendgroup?: string }
+interface PlotlySelectionPoint extends Omit<Plotly.PlotDatum, "data"> {
+  data: { legendgroup?: string }
   fullData?: unknown
   pointIndices?: number[]
   legendgroup?: string

@@ -381,13 +381,13 @@ export function PlotlyChart({
       setPlotlyFigure((prevFigure: PlotlyFigureType) => {
         return {
           ...prevFigure,
-          data: prevFigure.data.map((trace: Plotly.Data) => {
+          data: prevFigure.data.map(trace => {
             return {
               ...trace,
               // Set to null to clear the selection an empty
               // array here would still show everything as opaque
               selectedpoints: null,
-            } as Plotly.Data
+            }
           }),
           layout: {
             ...prevFigure.layout,
