@@ -304,14 +304,35 @@ with st.container(key="c_xss_chart"):
                     # payload is rendered literally instead of interpreted as HTML.
                     "label": {"show": True, "formatter": "{b}"},
                 },
-                # The advisory that floors the bundled ECharts version lives in
-                # the `series.type="lines"` tooltip path; exercise that too.
+            ],
+            "animation": False,
+        },
+        theme="streamlit",
+        renderer="svg",
+        key="xss_chart",
+        height=_HEIGHT,
+    )
+
+# 12b) The echarts@^6.1.0 advisory is in the ``series.type="lines"`` tooltip
+#      path; exercise it on its own chart so hover cannot hit a bar instead.
+with st.container(key="c_xss_lines_chart"):
+    st.echarts_chart(
+        {
+            "tooltip": {
+                "trigger": "item",
+                "className": "echarts-xss-lines-tooltip",
+            },
+            "xAxis": {"type": "value", "min": 0, "max": 100, "show": False},
+            "yAxis": {"type": "value", "min": 0, "max": 100, "show": False},
+            "series": [
                 {
                     "type": "lines",
                     "coordinateSystem": "cartesian2d",
+                    "polyline": True,
+                    "lineStyle": {"width": 24, "opacity": 1},
                     "data": [
                         {
-                            "coords": [[0, 0], [0, 100]],
+                            "coords": [[0, 0], [100, 100]],
                             "name": _XSS_LINES_PAYLOAD,
                         }
                     ],
@@ -321,7 +342,7 @@ with st.container(key="c_xss_chart"):
         },
         theme="streamlit",
         renderer="svg",
-        key="xss_chart",
+        key="xss_lines_chart",
         height=_HEIGHT,
     )
 

@@ -28,7 +28,7 @@ from e2e_playwright.shared.app_utils import (
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
 # (including the ones inside the collapsed expander and the form).
-_EXPECTED_CHART_COUNT = 15
+_EXPECTED_CHART_COUNT = 16
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
 
@@ -236,11 +236,14 @@ def test_tooltip_and_label_xss_payloads_are_escaped(app: Page):
     expect(tooltip.locator("img")).to_have_count(0)
 
     # The advisory that floors ECharts 6.1.0 lives on ``series.type="lines"``.
-    # Target a stroked SVG path so this cannot pass by hitting only the bar.
-    chart.locator("svg path[stroke]").last.hover()
-    expect(tooltip).to_be_visible()
-    expect(tooltip).to_contain_text(_XSS_LINES_PAYLOAD)
-    expect(tooltip.locator("img")).to_have_count(0)
+    # A dedicated chart means this hover cannot pass by hitting only a bar.
+    lines_chart = _get_chart(app, "c_xss_lines_chart")
+    expect(lines_chart.locator("svg")).to_be_visible()
+    lines_chart.hover()
+    lines_tooltip = lines_chart.locator(".echarts-xss-lines-tooltip")
+    expect(lines_tooltip).to_be_visible()
+    expect(lines_tooltip).to_contain_text(_XSS_LINES_PAYLOAD)
+    expect(lines_tooltip.locator("img")).to_have_count(0)
 
     expect(app.locator("img[onerror]")).to_have_count(0)
     assert dialogs == [], f"Unexpected dialog(s) fired from XSS payload: {dialogs}"
