@@ -691,11 +691,8 @@ class SessionState:
         default_factory=PersistedWidgetTracker
     )
 
-    # The widget_states proto for the current interaction.
-    # on_script_will_rerun stashes this so _build_full_app_rerun can forward
-    # active triggers in its follow-up rerun. Without the
-    # stash the proto would be a local variable unreachable by the time the
-    # escalation is built. Cleared after callbacks finish.
+    # Preserve fresh browser state through callback dispatch so full-app escalation
+    # can replay active triggers if the body is preempted. Cleared after callbacks.
     _current_interaction_widget_states: WidgetStatesProto | None = field(
         default=None, repr=False
     )
@@ -902,35 +899,32 @@ class SessionState:
 
     def on_script_will_rerun(
         self,
-        latest_widget_states: WidgetStatesProto | None,
+        fresh_widget_states: WidgetStatesProto | None,
         replay_trigger_states: WidgetStatesProto | None = None,
     ) -> None:
-        """Called by ScriptRunner before its script re-runs.
+        """Prepare widget state before a script rerun.
 
-        Update widget data and call callbacks on widgets whose value changed
-        between the previous and current script runs.
-
+        Dispatch callbacks for fresh browser input, then overlay replay triggers whose
+        callbacks already ran so the script body can still observe them.
         """
         self._reset_triggers()
         self._compact_state()
-        if latest_widget_states is not None:
-            self.set_widgets_from_proto(latest_widget_states)
-            self._current_interaction_widget_states = latest_widget_states
+        if fresh_widget_states is not None:
+            self.set_widgets_from_proto(fresh_widget_states)
+            self._current_interaction_widget_states = fresh_widget_states
             try:
                 self._call_callbacks(replay_trigger_states)
             finally:
                 self._current_interaction_widget_states = None
         if replay_trigger_states is not None:
             self._overlay_replay_trigger_states(
-                replay_trigger_states, latest_widget_states
+                replay_trigger_states, fresh_widget_states
             )
 
     def _call_callbacks(
         self, incoming_replay_trigger_states: WidgetStatesProto | None = None
     ) -> None:
-        """Call callbacks for widgets whose value changed or whose trigger fired,
-        then queue the reruns they asked for.
-        """
+        """Run changed-widget callbacks, collect rerun votes, and submit reruns atomically."""
         votes = _CallbackRerunVotes()
 
         # Skip callbacks for disabled widgets: a reported change can only come
@@ -995,14 +989,14 @@ class SessionState:
         #
         # No try/finally: if a callback raised, the interaction errored and queueing a
         # rerun anyway would clear the exception element on the next SCRIPT_STARTED.
-        callback_batch: list[RerunData] = []
+        rerun_batch: list[RerunData] = []
         if ctx and ctx.script_requests:
             # Queue a navigating request last: request_rerun takes page_script_hash
             # (and query_string) from the newest request, so an st.rerun() coalesced
             # after an st.switch_page() would point the rerun back at the page the
             # user asked to leave.
             current_page = ctx.page_script_hash
-            callback_batch.extend(
+            rerun_batch.extend(
                 sorted(
                     votes.pending_reruns,
                     key=lambda data: data.page_script_hash != current_page,
@@ -1022,26 +1016,26 @@ class SessionState:
             #
             # A pending navigation already reruns the whole app, so this request would
             # add nothing but its own page — the one being navigated away from.
-            callback_batch.append(self._build_full_app_rerun())
+            rerun_batch.append(self._build_full_app_rerun())
 
-        if ctx and ctx.script_requests and callback_batch:
+        if ctx and ctx.script_requests and rerun_batch:
             replay_trigger_states = incoming_replay_trigger_states
             if votes.requested_targeted:
                 replay_trigger_states = _coalesce_replay_trigger_states(
                     replay_trigger_states,
-                    self._filter_trigger_widget_states(
+                    self._filter_active_trigger_widget_states(
                         self._current_interaction_widget_states
                     ),
                 )
             if replay_trigger_states is not None:
-                callback_batch[0] = replace(
-                    callback_batch[0],
+                rerun_batch[0] = replace(
+                    rerun_batch[0],
                     replay_trigger_states=_coalesce_replay_trigger_states(
-                        callback_batch[0].replay_trigger_states,
+                        rerun_batch[0].replay_trigger_states,
                         replay_trigger_states,
                     ),
                 )
-            ctx.script_requests.request_rerun_batch(callback_batch)
+            ctx.script_requests.request_rerun_batch(rerun_batch)
 
     def _execute_widget_callback(
         self,
@@ -1107,22 +1101,20 @@ class SessionState:
             query_string=ctx.query_string,
             page_script_hash=ctx.page_script_hash,
             widget_states=None,
-            replay_trigger_states=self._filter_trigger_widget_states(
+            replay_trigger_states=self._filter_active_trigger_widget_states(
                 self._current_interaction_widget_states
             ),
             cached_message_hashes=ctx.cached_message_hashes,
             context_info=ctx.context_info,
         )
 
-    def _filter_trigger_widget_states(
+    def _filter_active_trigger_widget_states(
         self, widget_states: WidgetStatesProto | None
     ) -> WidgetStatesProto | None:
-        """Return a new WidgetStatesProto containing only trigger-type entries.
+        """Return only active trigger entries from ``widget_states``.
 
-        Trigger widgets have ephemeral values that reset after each run, so
-        they must be replayed for the script body to observe them. Non-trigger
-        values persist in session state and replaying them would overwrite
-        any callback mutations.
+        Inactive triggers need not be replayed, and non-trigger values already persist
+        in session state; replaying either could overwrite callback mutations.
         """
         if widget_states is None:
             return None
@@ -1150,7 +1142,9 @@ class SessionState:
         fresh_widget_states: WidgetStatesProto | None,
     ) -> None:
         """Apply replay triggers without replacing an active fresh trigger."""
-        active_fresh_states = self._filter_trigger_widget_states(fresh_widget_states)
+        active_fresh_states = self._filter_active_trigger_widget_states(
+            fresh_widget_states
+        )
         active_fresh_ids = (
             {widget.id for widget in active_fresh_states.widgets}
             if active_fresh_states is not None

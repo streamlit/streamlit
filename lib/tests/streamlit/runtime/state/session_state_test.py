@@ -1125,12 +1125,10 @@ def test_changed_widgets_without_callbacks_queue_no_rerun() -> None:
 
 
 def test_forced_full_app_rerun_carries_only_replay_trigger_states() -> None:
-    """The forced full-app rerun separates replay triggers from fresh state.
+    """Only ephemeral triggers are replayed by a forced full-app rerun.
 
-    The forced full-app rerun that escalates a targeted rerun carries only trigger-type
-    widget states (whose values are ephemeral and must be replayed for the body). Non-
-    trigger values already live in session state from callback execution; replaying them
-    would overwrite callback mutations.
+    Non-trigger state already contains callback mutations, so replaying fresh browser
+    values could overwrite them.
 
     Escalation requires a callback that explicitly wants the default (returns normally)
     alongside a targeted rerun.
@@ -1200,12 +1198,11 @@ def test_forced_full_app_rerun_carries_only_replay_trigger_states() -> None:
 
 
 def test_callback_session_state_mutation_survives_escalation_replay() -> None:
-    """Callback writes to st.session_state are not overwritten by the escalated rerun.
+    """Escalation does not overwrite callback mutations with stale browser state.
 
-    Scenario: A form has a text_input (on_change strips whitespace via
-    st.session_state["name"] = stripped) and a submit button (on_click targets a
-    fragment). The escalated full-app rerun must NOT replay the original un-stripped
-    value from the proto — only trigger values should be replayed.
+    A text input callback normalizes its value while a submit callback targets a
+    fragment. The full-app rerun replays only the submit trigger, not the original
+    unnormalized input from the browser.
     """
 
     requeue_calls: list[RerunData] = []
@@ -1279,10 +1276,7 @@ def test_callback_session_state_mutation_survives_escalation_replay() -> None:
 
 
 def test_replay_only_state_applies_values_without_callbacks() -> None:
-    """on_script_will_rerun applies replay values without callbacks.
-
-    The trigger value is set (so the body sees it) but no callback fires.
-    """
+    """Consumed replay triggers remain visible without dispatching callbacks again."""
     ss = SessionState()
     trigger_wid = "submit_btn"
     meta = WidgetMetadata(

@@ -182,7 +182,7 @@ _REPLAY_TRIGGER_VALUE_TYPES = frozenset(
 )
 
 
-def _is_active_trigger_state(state: WidgetState) -> bool:
+def _has_active_trigger_value(state: WidgetState) -> bool:
     value_type = state.WhichOneof("value")
     if value_type not in _REPLAY_TRIGGER_VALUE_TYPES:
         return False
@@ -203,7 +203,7 @@ def _coalesce_replay_trigger_states(
         if states is None:
             continue
         for state in states.widgets:
-            if _is_active_trigger_state(state):
+            if _has_active_trigger_value(state):
                 states_by_id[state.id] = state
 
     if not states_by_id:
@@ -246,26 +246,24 @@ class ScriptRequests:
         with self._lock:
             return self._request_rerun_locked(new_data)
 
-    def request_rerun_batch(self, new_data: list[RerunData]) -> bool:
-        """Atomically fold an ordered batch of reruns into the pending request."""
+    def request_rerun_batch(self, rerun_batch: list[RerunData]) -> bool:
+        """Submit an ordered rerun batch under one lock so requests cannot interleave."""
         with self._lock:
             return all(
-                self._request_rerun_locked(rerun_data) for rerun_data in new_data
+                self._request_rerun_locked(rerun_data) for rerun_data in rerun_batch
             )
 
     def _request_rerun_locked(self, new_data: RerunData) -> bool:
-        """Fold one rerun request while ``self._lock`` is held."""
+        """Fold one rerun into the pending request.
+
+        The caller must hold ``self._lock`` so batch requests cannot interleave.
+        """
         if self._state == ScriptRequestType.STOP:
-            # We can't rerun after being stopped.
             return False
 
         if self._state == ScriptRequestType.CONTINUE:
-            # The script is currently running, and we haven't received a request to
-            # rerun it as of yet. We can handle a rerun request unconditionally so
-            # just change self._state and set self._rerun_data.
             self._state = ScriptRequestType.RERUN
 
-            # Convert from a single fragment_id into fragment_id_queue.
             if new_data.fragment_id:
                 new_data = replace(
                     new_data,
@@ -283,9 +281,6 @@ class ScriptRequests:
             return True
 
         if self._state == ScriptRequestType.RERUN:
-            # We already have an existing Rerun request, so we can coalesce the new
-            # rerun request into the existing one.
-
             coalesced_states = _coalesce_widget_states(
                 self._rerun_data.widget_states,
                 new_data.widget_states,
@@ -342,7 +337,7 @@ class ScriptRequests:
 
             return True
 
-        # We'll never get here
+        # STOP, CONTINUE, and RERUN are all handled above.
         raise RuntimeError(f"Unrecognized ScriptRunnerState: {self._state}")
 
     def on_scriptrunner_yield(self) -> ScriptRequest | None:

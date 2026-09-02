@@ -26,20 +26,22 @@ def app_server_extra_args() -> list[str]:
 
 
 def test_fresh_input_coalesces_with_main_script_callback_replay(app: Page) -> None:
-    app.get_by_label("Race name").fill("  Laura  ")
-    app.get_by_role("button", name="Submit race form").click()
+    app.get_by_label("Submitted name").fill("  Laura  ")
+    app.get_by_role("button", name="Submit coalescing form").click()
     expect(app.get_by_text("Form callback waiting for fresh input")).to_be_visible()
 
     app.get_by_role("button", name="Fresh interaction").click()
 
-    expect(get_element_by_key(app, "race_results")).to_contain_text("Form callbacks: 1")
-    expect(get_element_by_key(app, "race_results")).to_contain_text(
+    expect(get_element_by_key(app, "coalescing_results")).to_contain_text(
+        "Form callbacks: 1"
+    )
+    expect(get_element_by_key(app, "coalescing_results")).to_contain_text(
         "Fresh callbacks: 1"
     )
-    expect(get_element_by_key(app, "race_results")).to_contain_text(
+    expect(get_element_by_key(app, "coalescing_results")).to_contain_text(
         "Normalized name: Laura"
     )
-    expect(get_element_by_key(app, "race_results")).to_contain_text(
+    expect(get_element_by_key(app, "coalescing_results")).to_contain_text(
         "Body saw submit: True"
     )
     expect_no_exception(app)

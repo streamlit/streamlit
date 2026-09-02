@@ -60,7 +60,7 @@ class SafeSessionState:
 
     def on_script_will_rerun(
         self,
-        latest_widget_states: WidgetStatesProto | None,
+        fresh_widget_states: WidgetStatesProto | None,
         replay_trigger_states: WidgetStatesProto | None = None,
     ) -> None:
         self._yield_callback()
@@ -69,9 +69,7 @@ class SafeSessionState:
             #  variable so that we don't need to hold our lock for the
             #  duration. (This will also allow us to downgrade our RLock
             #  to a Lock.)
-            self._state.on_script_will_rerun(
-                latest_widget_states, replay_trigger_states
-            )
+            self._state.on_script_will_rerun(fresh_widget_states, replay_trigger_states)
 
     def on_script_finished(
         self,

@@ -269,7 +269,7 @@ class ScriptRequestsTest(unittest.TestCase):
         assert reqs._rerun_data.fragment_id_queue == []
         assert reqs._rerun_data.is_fragment_scoped_rerun is False
 
-    def test_replay_state_survives_state_less_coalescing(self):
+    def test_replay_state_survives_coalescing_with_stateless_request(self):
         reqs = ScriptRequests()
         replay = WidgetStates()
         _create_widget("btn_a", replay).trigger_value = True
@@ -280,11 +280,8 @@ class ScriptRequestsTest(unittest.TestCase):
         assert result is not None
         assert _get_widget("btn_a", result).trigger_value is True
 
-    def test_normal_old_triggers_preserved_during_coalescing(self):
-        """Old triggers from a non-suppressed request are still preserved.
-
-        Rapid clicks continue preserving both triggers.
-        """
+    def test_older_fresh_triggers_remain_active_when_coalesced(self):
+        """The fresh channel preserves active triggers from rapid interactions."""
         reqs = ScriptRequests()
 
         old_states = WidgetStates()
@@ -301,32 +298,34 @@ class ScriptRequestsTest(unittest.TestCase):
 
     def test_fresh_and_replay_channels_coalesce_independently(self):
         reqs = ScriptRequests()
-        old_fresh = WidgetStates()
-        _create_widget("scalar", old_fresh).int_value = 1
-        old_replay = WidgetStates()
-        _create_widget("bool", old_replay).trigger_value = True
-        _create_widget("string", old_replay).string_trigger_value.CopyFrom(
+        older_fresh_states = WidgetStates()
+        _create_widget("scalar", older_fresh_states).int_value = 1
+        older_replay_states = WidgetStates()
+        _create_widget("bool", older_replay_states).trigger_value = True
+        _create_widget("string", older_replay_states).string_trigger_value.CopyFrom(
             StringTriggerValue(data="old")
         )
         reqs.request_rerun(
             RerunData(
-                widget_states=old_fresh,
-                replay_trigger_states=old_replay,
+                widget_states=older_fresh_states,
+                replay_trigger_states=older_replay_states,
             )
         )
 
-        new_fresh = WidgetStates()
-        _create_widget("scalar", new_fresh).int_value = 2
-        new_replay = WidgetStates()
-        _create_widget("chat", new_replay).chat_input_value.CopyFrom(
+        newer_fresh_states = WidgetStates()
+        _create_widget("scalar", newer_fresh_states).int_value = 2
+        newer_replay_states = WidgetStates()
+        _create_widget("chat", newer_replay_states).chat_input_value.CopyFrom(
             ChatInputValue(data="hello")
         )
-        _create_widget("json", new_replay).json_trigger_value = '{"event":"go"}'
-        _create_widget("invalid", new_replay).int_value = 99
+        _create_widget(
+            "json", newer_replay_states
+        ).json_trigger_value = '{"event":"go"}'
+        _create_widget("non_trigger", newer_replay_states).int_value = 99
         reqs.request_rerun(
             RerunData(
-                widget_states=new_fresh,
-                replay_trigger_states=new_replay,
+                widget_states=newer_fresh_states,
+                replay_trigger_states=newer_replay_states,
             )
         )
 
@@ -340,7 +339,7 @@ class ScriptRequestsTest(unittest.TestCase):
             "json",
         ]
 
-    def test_request_rerun_batch_folds_all_requests_under_one_lock(self):
+    def test_request_rerun_batch_coalesces_fragment_targets(self):
         reqs = ScriptRequests()
         reqs.request_rerun_batch(
             [

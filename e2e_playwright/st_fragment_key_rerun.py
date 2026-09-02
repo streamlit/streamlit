@@ -135,7 +135,7 @@ def record_fresh_callback() -> None:
 
 @st.fragment(key="source_fragment")
 def coalescing_source_fragment() -> None:
-    with st.container(key="fast_source_uuid"):
+    with st.container(key="coalescing_source_uuid"):
         st.write(str(uuid4()))
     callback_marker = st.empty()
 
@@ -153,7 +153,7 @@ def coalescing_source_fragment() -> None:
             sleep(0.01)
         st.rerun("result_fragment")
 
-    with st.form("fast_source_form"):
+    with st.form("coalescing_source_form"):
         st.text_input(
             "Source value",
             key="source_value",
@@ -167,7 +167,7 @@ def coalescing_source_fragment() -> None:
 
 @st.fragment(key="fresh_fragment")
 def coalescing_fresh_fragment() -> None:
-    with st.container(key="fast_fresh_uuid"):
+    with st.container(key="coalescing_fresh_uuid"):
         st.write(str(uuid4()))
     st.button(
         "Fresh fragment interaction",
@@ -178,9 +178,9 @@ def coalescing_fresh_fragment() -> None:
 
 @st.fragment(key="result_fragment")
 def coalescing_result_fragment() -> None:
-    with st.container(key="fast_result_uuid"):
+    with st.container(key="coalescing_result_uuid"):
         st.write(str(uuid4()))
-    with st.container(key="fast_results"):
+    with st.container(key="coalescing_results"):
         st.write(f"Source callbacks: {st.session_state.source_callbacks}")
         st.write(f"Fresh callbacks: {st.session_state.fresh_callbacks}")
         st.write(f"Normalized value: {st.session_state.get('normalized_value', '')}")
