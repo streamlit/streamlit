@@ -122,6 +122,7 @@ filtering can use `live="200ms"`, while expensive or remote work should generall
 | `timedelta` | Raises `StreamlitAPIException` in v1 (deferred; see Alternatives). |
 | negative duration string (e.g. `"-1s"`) | Raises `StreamlitAPIException` — `time_to_seconds` / `pd.Timedelta` parse negatives successfully, so the implementation must reject them explicitly rather than relying on `ttl` validation. |
 | invalid string (e.g. `"soon"`) | Raises `StreamlitAPIException` (`StreamlitBadTimeStringError`) — same unparseable-string path as `ttl` |
+| duration above 1 minute (e.g. `"2m"`, `"61s"`) | Raises `StreamlitAPIException` (`StreamlitValueOutOfRangeError`) — live debounce is capped at 1 minute so a typo like `"60m"` or `"2h"` cannot schedule a multi-day pause. |
 
 **What starts the timer:** Accepted user-originated value changes (typing, paste, cut, drop,
 autofill, voice/assistive input). Programmatic updates (script-driven `value` / session-state

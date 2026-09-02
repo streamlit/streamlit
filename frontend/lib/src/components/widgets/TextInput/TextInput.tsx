@@ -125,12 +125,12 @@ function TextInput({
   )
   // User-committed strings that may still be in flight. Used to recognize
   // stale setValue echoes of older reruns. Ordinary live reruns do not send
-  // setValue, so this set is only an acknowledgement stand-in. A matching
-  // latest-commit value removes that entry. Other authoritative setValue
-  // updates apply without clearing older pending commits, so delayed stale
-  // echoes remain blocked. A restore of an earlier unacked string is
-  // indistinguishable from a stale echo without a commit generation on the
-  // wire.
+  // setValue; when such a rerun arrives and the input is not dirty, the set
+  // is cleared so a later session_state write of an earlier string is not
+  // mistaken for an echo. A matching latest-commit setValue also removes
+  // that entry. Other authoritative setValue updates apply without clearing
+  // older pending commits, so delayed stale echoes remain blocked until an
+  // ordinary rerun catches up.
   const pendingLiveCommitsRef = useRef(new Set<string | null>())
   const isComposingRef = useRef(false)
 
@@ -179,7 +179,10 @@ function TextInput({
   const liveEnabled = isLive && !inForm
 
   // Skip script-driven setValue that would clobber live edits:
-  // - dirty: keystrokes not yet committed
+  // - dirty: keystrokes not yet committed. Drop the write entirely rather
+  //   than applying it only to WidgetStateManager: a live commit of the
+  //   dirty string would overwrite it, and Python would briefly see a value
+  //   the user has already typed past.
   // - an in-flight user-committed string that is not the latest: a stale
   //   echo of an older rerun, including after blur
   // Matching the latest commit acks only that pending entry so a later stale
@@ -188,7 +191,8 @@ function TextInput({
   // reapplying the current value would only rewrite React / WidgetStateManager
   // state. Any other incoming value (callback / session_state write) applies,
   // including while focused. Keep pending commits so a later echo of an
-  // older in-flight value cannot overwrite that authoritative write.
+  // older in-flight value cannot overwrite that authoritative write. An
+  // ordinary live rerun (no setValue) later clears the set.
   const shouldApplyIncomingValue = useCallback(
     (incoming: string | null): boolean => {
       if (dirtyRef.current) {
@@ -224,6 +228,26 @@ function TextInput({
       ? shouldApplyIncomingValue
       : undefined,
   })
+
+  // Capture before useBasicWidgetState consumes `setValue` on the proto.
+  // Only ack when the element *reference* changes: after a setValue is
+  // consumed the proto mutates to setValue=false and React re-renders, which
+  // must not look like an ordinary live rerun or pending echoes are dropped.
+  const lastSeenElementRef = useRef(element)
+  const incomingIsSetValue = Boolean(element.setValue)
+  useEffect(() => {
+    const elementChanged = lastSeenElementRef.current !== element
+    lastSeenElementRef.current = element
+    if (
+      !elementChanged ||
+      !liveEnabled ||
+      incomingIsSetValue ||
+      dirtyRef.current
+    ) {
+      return
+    }
+    pendingLiveCommitsRef.current.clear()
+  }, [element, incomingIsSetValue, liveEnabled])
 
   // session_state / callback writes update `value` without going through
   // commitWidgetValue; keep lastCommitted aligned so later echoes compare

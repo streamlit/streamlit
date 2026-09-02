@@ -895,6 +895,12 @@ def test_text_input_live_search_clear_and_form(app: Page):
     expect(app.get_by_text("Live search value: query")).to_have_count(0)
     expect(live_search).to_have_value("")
 
+    live_search.type("banana")
+    wait_until(app, lambda: app.get_by_text("Live search value: banana").is_visible())
+    click_button(app, "Reset live search")
+    expect(live_search).to_have_value("")
+    expect(app.get_by_text("Live search value: banana")).to_have_count(0)
+
     live_form = get_text_input(app, "Live form input").locator("input").first
     live_form.type("inside")
     # Default live debounce is 250ms; wait past it to prove forms don't live-commit.

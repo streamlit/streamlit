@@ -1784,6 +1784,58 @@ describe("TextInput live updates", () => {
     expect(setStringValueSpy).not.toHaveBeenCalled()
   })
 
+  it("applies a session_state reset to empty after ordinary live reruns", async () => {
+    const { user, props, rerender } = renderLive({
+      liveDebounceMs: 0,
+      default: "",
+    })
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "a")
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: false,
+        })}
+      />
+    )
+    await user.clear(input)
+    expect(input).toHaveValue("")
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: false,
+        })}
+      />
+    )
+    await user.type(input, "banana")
+    expect(input).toHaveValue("banana")
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: false,
+        })}
+      />
+    )
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "",
+        })}
+      />
+    )
+    expect(input).toHaveValue("")
+  })
+
   it("applies a session_state restore of an earlier committed string after ack", async () => {
     const { user, props, rerender } = renderLive({
       liveDebounceMs: 0,
