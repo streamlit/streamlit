@@ -889,7 +889,7 @@ class SelectSliderOnChangeModeTest(DeltaGeneratorTestCase):
 
     def test_on_change_invalid_mode_raises_exception(self) -> None:
         """Test that invalid on_change mode raises StreamlitValueError."""
-        with pytest.raises(st.errors.StreamlitValueError) as exc_info:
+        with pytest.raises(StreamlitValueError) as exc_info:
             st.select_slider("the label", options=["a", "b", "c"], on_change="invalid")
 
         assert "on_change" in str(exc_info.value)
@@ -897,9 +897,9 @@ class SelectSliderOnChangeModeTest(DeltaGeneratorTestCase):
         assert "'ignore'" in str(exc_info.value)
         assert "a callback function" in str(exc_info.value)
 
-    def test_on_change_non_string_value_raises_exception(self) -> None:
+    def test_on_change_list_value_raises_exception(self) -> None:
         """Test that a non-string, non-callable on_change raises StreamlitValueError."""
-        with pytest.raises(st.errors.StreamlitValueError) as exc_info:
+        with pytest.raises(StreamlitValueError) as exc_info:
             st.select_slider("the label", options=["a", "b", "c"], on_change=[])  # type: ignore[arg-type]
 
         assert "on_change" in str(exc_info.value)
