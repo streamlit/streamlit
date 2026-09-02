@@ -49,7 +49,9 @@ from streamlit.runtime.runtime_util import (
     get_max_widget_state_size_bytes,
 )
 from streamlit.runtime.scriptrunner_utils.script_requests import (
+    _TRIGGER_PROTO_FIELDS,
     _coalesce_replay_trigger_states,
+    _has_active_trigger_value,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     RunLocation,
@@ -91,15 +93,6 @@ if TYPE_CHECKING:
 STREAMLIT_INTERNAL_KEY_PREFIX: Final = "$$STREAMLIT_INTERNAL_KEY"
 SCRIPT_RUN_WITHOUT_ERRORS_KEY: Final = (
     f"{STREAMLIT_INTERNAL_KEY_PREFIX}_SCRIPT_RUN_WITHOUT_ERRORS"
-)
-
-_TRIGGER_PROTO_FIELDS: Final = frozenset(
-    {
-        "trigger_value",
-        "string_trigger_value",
-        "chat_input_value",
-        "json_trigger_value",
-    }
 )
 
 
@@ -1121,19 +1114,8 @@ class SessionState:
 
         filtered = WidgetStatesProto()
         for widget in widget_states.widgets:
-            value_type = widget.WhichOneof("value")
-            if value_type not in _TRIGGER_PROTO_FIELDS:
-                continue
-            if value_type == "trigger_value" and not widget.trigger_value:
-                continue
-            if value_type == "json_trigger_value" and not widget.json_trigger_value:
-                continue
-            if (
-                value_type in {"string_trigger_value", "chat_input_value"}
-                and not getattr(widget, value_type).data
-            ):
-                continue
-            filtered.widgets.append(widget)
+            if _has_active_trigger_value(widget):
+                filtered.widgets.append(widget)
         return filtered if filtered.widgets else None
 
     def _overlay_replay_trigger_states(

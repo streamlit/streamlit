@@ -355,7 +355,7 @@ class ScriptRequestsTest(unittest.TestCase):
         replay = WidgetStates()
         _create_widget("bool", replay).trigger_value = False
         _create_widget("string", replay).string_trigger_value.CopyFrom(
-            StringTriggerValue(data="")
+            StringTriggerValue(data=None)
         )
         _create_widget("chat", replay).chat_input_value.CopyFrom(
             ChatInputValue(data=None)
@@ -366,6 +366,29 @@ class ScriptRequestsTest(unittest.TestCase):
         reqs.request_rerun(RerunData(replay_trigger_states=replay))
 
         assert reqs._rerun_data.replay_trigger_states is None
+
+    def test_present_message_fields_are_replayed_even_when_data_is_empty(self):
+        reqs = ScriptRequests()
+        replay = WidgetStates()
+        _create_widget("string", replay).string_trigger_value.CopyFrom(
+            StringTriggerValue(data="")
+        )
+        file_chat = _create_widget("file_chat", replay).chat_input_value
+        file_chat.data = ""
+        file_chat.file_uploader_state.uploaded_file_info.add().file_id = "file"
+        audio_chat = _create_widget("audio_chat", replay).chat_input_value
+        audio_chat.data = ""
+        audio_chat.audio_file_info.file_id = "audio"
+
+        reqs.request_rerun(RerunData(replay_trigger_states=replay))
+
+        replayed = reqs._rerun_data.replay_trigger_states
+        assert replayed is not None
+        assert [state.id for state in replayed.widgets] == [
+            "string",
+            "file_chat",
+            "audio_chat",
+        ]
 
     def test_request_rerun_batch_coalesces_fragment_targets(self):
         reqs = ScriptRequests()

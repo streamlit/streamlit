@@ -19,6 +19,8 @@ from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import TYPE_CHECKING, cast
 
+from google.protobuf.message import Message
+
 from streamlit import util
 from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
@@ -172,7 +174,7 @@ def _coalesce_widget_states(
     return coalesced
 
 
-_REPLAY_TRIGGER_VALUE_TYPES = frozenset(
+_TRIGGER_PROTO_FIELDS = frozenset(
     {
         "trigger_value",
         "string_trigger_value",
@@ -184,13 +186,13 @@ _REPLAY_TRIGGER_VALUE_TYPES = frozenset(
 
 def _has_active_trigger_value(state: WidgetState) -> bool:
     value_type = state.WhichOneof("value")
-    if value_type not in _REPLAY_TRIGGER_VALUE_TYPES:
+    if value_type not in _TRIGGER_PROTO_FIELDS:
         return False
-    if value_type == "trigger_value":
-        return state.trigger_value
-    if value_type == "json_trigger_value":
-        return bool(state.json_trigger_value)
-    return bool(getattr(state, value_type).data)
+
+    value = getattr(state, value_type)
+    if isinstance(value, Message):
+        return bool(value.ListFields())
+    return bool(value)
 
 
 def _coalesce_replay_trigger_states(

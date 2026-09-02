@@ -1170,6 +1170,10 @@ def test_forced_full_app_rerun_carries_only_replay_trigger_states() -> None:
     nontrigger_ws = proto_states.widgets.add()
     nontrigger_ws.id = "normal_btn"
     nontrigger_ws.int_value = 1
+    file_chat_ws = proto_states.widgets.add()
+    file_chat_ws.id = "file_chat"
+    file_chat_ws.chat_input_value.data = ""
+    file_chat_ws.chat_input_value.file_uploader_state.uploaded_file_info.add().file_id = "file"
     ss._current_interaction_widget_states = proto_states
 
     mock_ctx = MagicMock()
@@ -1192,8 +1196,10 @@ def test_forced_full_app_rerun_carries_only_replay_trigger_states() -> None:
     assert not forced.is_fragment_scoped_rerun
     assert forced.widget_states is None
     assert forced.replay_trigger_states is not None
-    assert len(forced.replay_trigger_states.widgets) == 1
-    assert forced.replay_trigger_states.widgets[0].id == "targeted_btn"
+    assert [state.id for state in forced.replay_trigger_states.widgets] == [
+        "targeted_btn",
+        "file_chat",
+    ]
     assert forced.replay_trigger_states.widgets[0].trigger_value is True
 
 
