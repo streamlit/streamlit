@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen, waitFor } from "@testing-library/react"
+import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
@@ -23,7 +23,26 @@ import { render } from "~lib/components/shared/ElementFullscreen/testUtils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { DeckGlJsonChart } from "./DeckGlJsonChart"
-import type { DeckGLProps } from "./types"
+import type { DeckGlElementState, DeckGLProps } from "./types"
+
+type MockPickingInfo = {
+  index: number
+  object?: unknown
+  layer?: { id?: string }
+}
+
+const { deckGlOnClickRef } = vi.hoisted(() => ({
+  deckGlOnClickRef: {
+    current: undefined as ((info: MockPickingInfo) => void) | undefined,
+  },
+}))
+
+vi.mock("@deck.gl/react", () => ({
+  DeckGL: ({ onClick }: { onClick?: (info: MockPickingInfo) => void }) => {
+    deckGlOnClickRef.current = onClick
+    return <div data-testid="mockDeckGL" />
+  },
+}))
 
 const mockLayerId = "0533490f-fcf9-4dc0-8c94-ae4fbd42eb6f"
 
@@ -229,6 +248,231 @@ describe("DeckGlJsonChart", () => {
       // to not appear" - we need to give sufficient time for it to potentially render.
       await new Promise(resolve => setTimeout(resolve, 100))
       expect(screen.queryByLabelText("Fullscreen")).not.toBeInTheDocument()
+    })
+  })
+
+  describe("object selection", () => {
+    const EMPTY_SELECTION: DeckGlElementState["selection"] = {
+      indices: {},
+      objects: {},
+    }
+
+    beforeEach(() => {
+      deckGlOnClickRef.current = undefined
+    })
+
+    const getStoredSelection = (
+      props: DeckGLProps
+    ): DeckGlElementState["selection"] | undefined => {
+      const raw = props.widgetMgr.getStringValue({ id: props.element.id })
+      if (!raw) {
+        return undefined
+      }
+      return (JSON.parse(raw) as DeckGlElementState).selection
+    }
+
+    const clickMapObject = async (info: MockPickingInfo): Promise<void> => {
+      await waitFor(() => {
+        expect(deckGlOnClickRef.current).toBeDefined()
+      })
+      act(() => {
+        deckGlOnClickRef.current?.({
+          layer: { id: mockLayerId },
+          ...info,
+        })
+      })
+    }
+
+    const seedSelection = (
+      props: DeckGLProps,
+      selection: DeckGlElementState["selection"]
+    ): void => {
+      props.widgetMgr.setStringValue(
+        props.element.id,
+        JSON.stringify({ selection }),
+        {
+          formId: props.element.formId,
+          fragmentId: props.fragmentId,
+          fromUser: true,
+        }
+      )
+    }
+
+    it("does not attach a click handler when selection is not activated", async () => {
+      render(<DeckGlJsonChart {...getProps()} />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId("mockDeckGL")).toBeVisible()
+      })
+      expect(deckGlOnClickRef.current).toBeUndefined()
+    })
+
+    it("does not attach a click handler when the chart is disabled", async () => {
+      const props = getProps({
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+        id: "disabled-selection",
+      })
+      render(<DeckGlJsonChart {...props} disabled />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId("mockDeckGL")).toBeVisible()
+      })
+      expect(deckGlOnClickRef.current).toBeUndefined()
+      expect(
+        screen.queryByLabelText("Clear selection")
+      ).not.toBeInTheDocument()
+    })
+
+    it("selects a single object on click", async () => {
+      const props = getProps({
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+        id: "single-select",
+      })
+      render(<DeckGlJsonChart {...props} />)
+
+      await clickMapObject({
+        index: 2,
+        object: { name: "hex" },
+      })
+
+      expect(getStoredSelection(props)).toEqual({
+        indices: { [mockLayerId]: [2] },
+        objects: { [mockLayerId]: [{ name: "hex" }] },
+      })
+    })
+
+    it("unselects the same object when clicked again in single-object mode", async () => {
+      const props = getProps({
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+        id: "single-unselect",
+      })
+      seedSelection(props, {
+        indices: { [mockLayerId]: [2] },
+        objects: { [mockLayerId]: [{ name: "hex" }] },
+      })
+      render(<DeckGlJsonChart {...props} />)
+
+      await clickMapObject({
+        index: 2,
+        object: { name: "hex" },
+      })
+
+      expect(getStoredSelection(props)).toEqual(EMPTY_SELECTION)
+    })
+
+    it("does not update selection when clicking empty map space with nothing selected", async () => {
+      const props = getProps({
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+        id: "empty-reset-click",
+      })
+      render(<DeckGlJsonChart {...props} />)
+
+      const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+      setStringValueSpy.mockClear()
+
+      await clickMapObject({ index: -1 })
+
+      expect(setStringValueSpy).not.toHaveBeenCalled()
+    })
+
+    it("clears selection when the user clicks empty map space", async () => {
+      const props = getProps({
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+        id: "reset-click",
+      })
+      seedSelection(props, {
+        indices: { [mockLayerId]: [1] },
+        objects: { [mockLayerId]: [{ name: "hex" }] },
+      })
+      render(<DeckGlJsonChart {...props} />)
+
+      await clickMapObject({ index: -1 })
+
+      expect(getStoredSelection(props)).toEqual(EMPTY_SELECTION)
+    })
+
+    it("adds objects in multi-object mode", async () => {
+      const props = getProps({
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT],
+        id: "multi-add",
+      })
+      seedSelection(props, {
+        indices: { [mockLayerId]: [0] },
+        objects: { [mockLayerId]: [{ id: 0 }] },
+      })
+      render(<DeckGlJsonChart {...props} />)
+
+      await clickMapObject({
+        index: 3,
+        object: { id: 3 },
+      })
+
+      expect(getStoredSelection(props)).toEqual({
+        indices: { [mockLayerId]: [0, 3] },
+        objects: { [mockLayerId]: [{ id: 0 }, { id: 3 }] },
+      })
+    })
+
+    it("removes a clicked object from a multi-object selection", async () => {
+      const props = getProps({
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT],
+        id: "multi-remove",
+      })
+      seedSelection(props, {
+        indices: { [mockLayerId]: [0, 3] },
+        objects: { [mockLayerId]: [{ id: 0 }, { id: 3 }] },
+      })
+      render(<DeckGlJsonChart {...props} />)
+
+      await clickMapObject({
+        index: 0,
+        object: { id: 0 },
+      })
+
+      expect(getStoredSelection(props)).toEqual({
+        indices: { [mockLayerId]: [3] },
+        objects: { [mockLayerId]: [{ id: 3 }] },
+      })
+    })
+
+    it("drops a layer from multi-object selection when its last object is unselected", async () => {
+      const otherLayerId = "other-layer"
+      const props = getProps({
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT],
+        id: "multi-drop-layer",
+      })
+      seedSelection(props, {
+        indices: { [mockLayerId]: [1], [otherLayerId]: [4] },
+        objects: { [mockLayerId]: [{ id: 1 }], [otherLayerId]: [{ id: 4 }] },
+      })
+      render(<DeckGlJsonChart {...props} />)
+
+      await clickMapObject({
+        index: 1,
+        object: { id: 1 },
+      })
+
+      expect(getStoredSelection(props)).toEqual({
+        indices: { [otherLayerId]: [4] },
+        objects: { [otherLayerId]: [{ id: 4 }] },
+      })
+    })
+
+    it("clears selection from the toolbar button", async () => {
+      const props = getProps({
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+        id: "clear-button",
+      })
+      seedSelection(props, {
+        indices: { [mockLayerId]: [0] },
+        objects: { [mockLayerId]: [{ testProp: "value" }] },
+      })
+      render(<DeckGlJsonChart {...props} />)
+
+      await userEvent.hover(screen.getByTestId("stDeckGlJsonChart"))
+      await userEvent.click(await screen.findByLabelText("Clear selection"))
+
+      expect(getStoredSelection(props)).toEqual(EMPTY_SELECTION)
     })
   })
 })
