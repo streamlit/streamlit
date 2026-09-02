@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { type ReactNode } from "react"
+
 import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
@@ -37,10 +39,20 @@ const { deckGlOnClickRef } = vi.hoisted(() => ({
   },
 }))
 
+// deck.gl needs a WebGL context that jsdom does not provide, so the real
+// DeckGL never dispatches map clicks. Capture `onClick` and invoke it
+// directly to exercise selection logic. Render children so StaticMap and
+// navigation controls still mount.
 vi.mock("@deck.gl/react", () => ({
-  DeckGL: ({ onClick }: { onClick?: (info: MockPickingInfo) => void }) => {
+  DeckGL: ({
+    onClick,
+    children,
+  }: {
+    onClick?: (info: MockPickingInfo) => void
+    children?: ReactNode
+  }) => {
     deckGlOnClickRef.current = onClick
-    return <div data-testid="mockDeckGL" />
+    return <div data-testid="mockDeckGL">{children}</div>
   },
 }))
 
@@ -271,7 +283,7 @@ describe("DeckGlJsonChart", () => {
       return (JSON.parse(raw) as DeckGlElementState).selection
     }
 
-    const clickMapObject = async (info: MockPickingInfo): Promise<void> => {
+    const clickMap = async (info: MockPickingInfo): Promise<void> => {
       await waitFor(() => {
         expect(deckGlOnClickRef.current).toBeDefined()
       })
@@ -330,7 +342,7 @@ describe("DeckGlJsonChart", () => {
       })
       render(<DeckGlJsonChart {...props} />)
 
-      await clickMapObject({
+      await clickMap({
         index: 2,
         object: { name: "hex" },
       })
@@ -352,7 +364,7 @@ describe("DeckGlJsonChart", () => {
       })
       render(<DeckGlJsonChart {...props} />)
 
-      await clickMapObject({
+      await clickMap({
         index: 2,
         object: { name: "hex" },
       })
@@ -368,9 +380,8 @@ describe("DeckGlJsonChart", () => {
       render(<DeckGlJsonChart {...props} />)
 
       const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
-      setStringValueSpy.mockClear()
 
-      await clickMapObject({ index: -1 })
+      await clickMap({ index: -1 })
 
       expect(setStringValueSpy).not.toHaveBeenCalled()
     })
@@ -386,7 +397,7 @@ describe("DeckGlJsonChart", () => {
       })
       render(<DeckGlJsonChart {...props} />)
 
-      await clickMapObject({ index: -1 })
+      await clickMap({ index: -1 })
 
       expect(getStoredSelection(props)).toEqual(EMPTY_SELECTION)
     })
@@ -402,7 +413,7 @@ describe("DeckGlJsonChart", () => {
       })
       render(<DeckGlJsonChart {...props} />)
 
-      await clickMapObject({
+      await clickMap({
         index: 3,
         object: { id: 3 },
       })
@@ -424,7 +435,7 @@ describe("DeckGlJsonChart", () => {
       })
       render(<DeckGlJsonChart {...props} />)
 
-      await clickMapObject({
+      await clickMap({
         index: 0,
         object: { id: 0 },
       })
@@ -447,7 +458,7 @@ describe("DeckGlJsonChart", () => {
       })
       render(<DeckGlJsonChart {...props} />)
 
-      await clickMapObject({
+      await clickMap({
         index: 1,
         object: { id: 1 },
       })

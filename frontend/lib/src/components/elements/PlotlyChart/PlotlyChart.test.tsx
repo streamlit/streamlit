@@ -64,6 +64,8 @@ const formClearHelperMocks = vi.hoisted(() => ({
   disconnect: vi.fn(),
 }))
 
+// PlotlyChart constructs a new FormClearHelper inside an effect, so the
+// shared formClearHelperMocks spies let tests inspect calls across instances.
 vi.mock("~lib/components/widgets/Form/FormClearHelper", () => {
   return {
     FormClearHelper: class FormClearHelper {
@@ -502,7 +504,7 @@ describe("PlotlyChart Component", () => {
       formId: "plotly-form",
       selectionMode: [PlotlyChartProto.SelectionMode.POINTS],
     })
-    renderComponent({ element })
+    const { unmount } = renderComponent({ element })
 
     expect(formClearHelperMocks.manageFormClearListener).toHaveBeenCalledWith(
       widgetMgr,
@@ -521,6 +523,9 @@ describe("PlotlyChart Component", () => {
       expect.objectContaining({ id: DEFAULT_ELEMENT.id }),
       undefined
     )
+
+    unmount()
+    expect(formClearHelperMocks.disconnect).toHaveBeenCalled()
   })
 
   it("saves figure to widget state on initialize", () => {

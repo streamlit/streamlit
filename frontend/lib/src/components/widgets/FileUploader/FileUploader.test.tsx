@@ -170,7 +170,7 @@ describe("FileUploader widget tests", () => {
     expect(fileNameNode).toBeInTheDocument()
   })
 
-  it("renders empty when widget state has no uploaded files", () => {
+  it("renders the empty dropzone when widget state has no uploaded files", () => {
     const props = getProps()
     const { element, widgetMgr } = props
 

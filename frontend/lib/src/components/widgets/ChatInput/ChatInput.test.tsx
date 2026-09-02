@@ -143,6 +143,7 @@ const createRecordingController = (): WaveformController => ({
   state: "recording",
 })
 
+/** Returns the controller events from the most recent useWaveformController call. */
 const getWaveformEvents = (): WaveformControllerEvents => {
   const lastCall =
     useWaveformControllerMock.mock.calls[
@@ -1020,11 +1021,7 @@ describe("ChatInput widget", () => {
     // We need to trigger the recording flow and get the approve callback
     // Instead, let's directly test by triggering the onApprove event from the mock
 
-    // Find the calls to useWaveformController and get the onApprove callback
-    const mockCalls = useWaveformControllerMock.mock.calls
-    const lastCallArgs = mockCalls[mockCalls.length - 1]
-    const { events } = lastCallArgs[0]
-    const onApprove = events?.onApprove
+    const onApprove = getWaveformEvents().onApprove
 
     // Create a mock audio blob
     const audioBlob = new Blob(["audio data"], { type: "audio/wav" })
@@ -1835,8 +1832,11 @@ describe("ChatInput widget", () => {
     expect(await screen.findByText("Recording failed")).toBeVisible()
 
     await user.type(screen.getByTestId("stChatInputTextArea"), "hello")
-    await user.hover(screen.getByTestId("stChatInputMicButton"))
-    expect(screen.queryByText("Recording failed")).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stTooltipErrorHoverTarget")
+      ).not.toBeInTheDocument()
+    })
   })
 
   it("shows a recording error when audio upload URL fetch returns nothing", async () => {
@@ -1891,6 +1891,12 @@ describe("ChatInput widget", () => {
 
     await waitFor(() => {
       expect(props.uploadClient.fetchFileURLs).toHaveBeenCalledTimes(2)
+    })
+    expect(props.uploadClient.uploadFile).toHaveBeenCalled()
+    await waitFor(() => {
+      expect(
+        screen.queryByTitle("Click to retry upload")
+      ).not.toBeInTheDocument()
     })
   })
 

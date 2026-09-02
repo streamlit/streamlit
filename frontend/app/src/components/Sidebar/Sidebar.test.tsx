@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen, within } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import {
@@ -740,39 +740,27 @@ describe("Sidebar Component", () => {
       window.localStorage.clear()
     })
 
-    const getResizeHandle = (): HTMLElement => {
-      const sidebar = screen.getByTestId("stSidebar")
-      // re-resizable and the styled handle both use col-resize; the last
-      // match is StyledResizeHandle, which owns onDoubleClick.
-      const handles = Array.from(sidebar.querySelectorAll("div")).filter(
-        el => window.getComputedStyle(el).cursor === "col-resize"
-      )
-      const handle = handles.at(-1)
-      if (!handle) {
-        throw new Error("Could not find sidebar resize handle")
-      }
-      return handle
-    }
-
-    it("resets to the default width on double-click and persists it", () => {
+    it("resets to the default width on double-click and persists it", async () => {
+      const user = userEvent.setup()
       window.localStorage.setItem("sidebarWidth", "450")
       renderSidebar()
 
       expect(screen.getByTestId("stSidebar")).toHaveStyle("width: 450px")
 
-      fireEvent.doubleClick(getResizeHandle())
+      await user.dblClick(screen.getByTestId("stSidebarResizeHandle"))
 
       expect(screen.getByTestId("stSidebar")).toHaveStyle("width: 300px")
       expect(window.localStorage.getItem("sidebarWidth")).toBe("300")
     })
 
-    it("resets to the configured initial width on double-click", () => {
+    it("resets to the configured initial width on double-click", async () => {
+      const user = userEvent.setup()
       window.localStorage.setItem("sidebarWidth", "500")
       renderSidebar({}, { sidebarConfigContext: { initialSidebarWidth: 400 } })
 
       expect(screen.getByTestId("stSidebar")).toHaveStyle("width: 500px")
 
-      fireEvent.doubleClick(getResizeHandle())
+      await user.dblClick(screen.getByTestId("stSidebarResizeHandle"))
 
       expect(screen.getByTestId("stSidebar")).toHaveStyle("width: 400px")
       expect(window.localStorage.getItem("sidebarWidth")).toBe("400")

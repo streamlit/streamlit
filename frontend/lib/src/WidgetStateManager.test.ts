@@ -330,14 +330,14 @@ describe("Widget State Manager", () => {
     expect(widgetMgr.getIntArrayValue(MOCK_WIDGET)).toStrictEqual(values)
   })
 
-  it("returns undefined from typed getters when the widget has no matching value", () => {
+  it("returns undefined from typed getters when the widget has no stored value", () => {
     expect(widgetMgr.getIntArrayValue(MOCK_WIDGET)).toBeUndefined()
     expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBeUndefined()
     expect(widgetMgr.getArrowValue(MOCK_WIDGET)).toBeUndefined()
     expect(widgetMgr.getBytesValue(MOCK_WIDGET)).toBeUndefined()
   })
 
-  it("sets string trigger value correctly", async () => {
+  it("flushes a string trigger value to the backend", async () => {
     widgetMgr.setStringTriggerValue(MOCK_WIDGET.id, "menu-item", {
       formId: MOCK_WIDGET.formId,
       fragmentId: undefined,
