@@ -26,9 +26,9 @@ import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 /**
- * Outer wrapper for the checkbox variant. React Aria's `CheckboxField` owns the
- * widget state (`isSelected`, `isDisabled`, `onChange`) and renders the `<div>`
- * that wraps the clickable `CheckboxButton` label.
+ * React Aria field that passes the controlled selection state to
+ * `CheckboxButton` and renders the outer wrapper `<div>`. Column alignment CSS,
+ * `data-testid="stCheckbox"` and the `stCheckbox` class all target this element.
  */
 export const StyledCheckboxField = styled(RACheckboxField)(({ theme }) => ({
   display: "flex",

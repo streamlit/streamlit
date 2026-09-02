@@ -134,6 +134,21 @@ describe("Checkbox widget", () => {
     ).toBeVisible()
   })
 
+  // The visible label is removed from the accessibility tree in both of these
+  // cases, so `aria-label` on the field is the only remaining source of the
+  // accessible name.
+  it.each([
+    ["hidden", LabelVisibilityProto.LabelVisibilityOptions.HIDDEN],
+    ["collapsed", LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED],
+  ])("keeps an accessible name when the label is %s", (_, visibility) => {
+    const props = getProps({ labelVisibility: { value: visibility } })
+    render(<Checkbox {...props} />)
+
+    expect(
+      screen.getByRole("checkbox", { name: props.element.label })
+    ).toBeVisible()
+  })
+
   it("toggles via keyboard Space key", async () => {
     const user = userEvent.setup()
     const props = getProps()
@@ -266,6 +281,21 @@ describe("Checkbox TOGGLE type", () => {
 
   it("has an accessible name matching the label", () => {
     const props = getToggleProps()
+    render(<Checkbox {...props} />)
+
+    expect(
+      screen.getByRole("switch", { name: props.element.label })
+    ).toBeVisible()
+  })
+
+  // The visible label is removed from the accessibility tree in both of these
+  // cases, so `aria-label` on the field is the only remaining source of the
+  // accessible name.
+  it.each([
+    ["hidden", LabelVisibilityProto.LabelVisibilityOptions.HIDDEN],
+    ["collapsed", LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED],
+  ])("keeps an accessible name when the label is %s", (_, visibility) => {
+    const props = getToggleProps({ labelVisibility: { value: visibility } })
     render(<Checkbox {...props} />)
 
     expect(
