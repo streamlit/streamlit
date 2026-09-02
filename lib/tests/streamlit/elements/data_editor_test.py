@@ -1644,3 +1644,39 @@ class DataEditorTest(DeltaGeneratorTestCase):
             == HeightConfigFields.USE_CONTENT.value
         )
         assert el.height_config.use_content is True
+
+
+def test_apply_row_additions_is_noop_for_empty_added_rows() -> None:
+    """An empty additions list leaves the dataframe unchanged."""
+    df = pd.DataFrame({"a": [1, 2]})
+    original = df.copy()
+    schema = determine_dataframe_schema(df, pa.Table.from_pandas(df).schema)
+    _apply_row_additions(df, [], schema)
+    pd.testing.assert_frame_equal(df, original)
+
+
+def test_check_type_compatibilities_skips_type_config_without_type() -> None:
+    """A type_config mapping with no ``type`` is ignored rather than raising."""
+    df = pd.DataFrame({"col1": [1, 2, 3]})
+    schema = {
+        INDEX_IDENTIFIER: ColumnDataKind.INTEGER,
+        "col1": ColumnDataKind.INTEGER,
+    }
+    _check_type_compatibilities(df, {"col1": {"type_config": {}}}, schema)
+
+
+def test_data_editor_signature_falls_back_when_index_hash_raises() -> None:
+    """Unhashable index values fall back to a string encoding of the index."""
+    df_a = pd.DataFrame({"a": [1, 2]})
+    df_a.index = pd.Index([[1], [2]], dtype=object)
+    df_b = pd.DataFrame({"a": [1, 2]})
+    df_b.index = pd.Index([[9], [8]], dtype=object)
+    with patch(
+        "pandas.util.hash_pandas_object",
+        side_effect=TypeError("unhashable"),
+    ):
+        sig_a = _get_data_editor_signature(df_a)
+        sig_a_again = _get_data_editor_signature(df_a)
+        sig_b = _get_data_editor_signature(df_b)
+    assert sig_a == sig_a_again
+    assert sig_a != sig_b

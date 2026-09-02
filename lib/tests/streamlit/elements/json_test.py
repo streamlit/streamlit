@@ -205,3 +205,37 @@ class StJsonAPITest(DeltaGeneratorTestCase):
             assert body["email"] == "test@example.com"
             assert body["name"] == "Test User"
             assert "tokens" not in body
+
+    def test_st_json_dumps_sequence_of_pydantic_models(self) -> None:
+        """A sequence of Pydantic models is dumped before JSON serialization."""
+        with (
+            patch(
+                "streamlit.elements.json.is_sequence_of_pydantic_models",
+                return_value=True,
+            ),
+            patch(
+                "streamlit.elements.json.dump_pydantic_sequence",
+                return_value=[{"x": 1}, {"x": 2}],
+            ),
+        ):
+            st.json([object(), object()])
+
+        el = self.get_delta_from_queue().new_element
+        assert json.loads(el.json.body) == [{"x": 1}, {"x": 2}]
+
+    def test_st_json_pydantic_sequence_attribute_error_falls_back_to_list(self) -> None:
+        """``AttributeError`` while dumping Pydantic models falls back to ``list()``."""
+        with (
+            patch(
+                "streamlit.elements.json.is_sequence_of_pydantic_models",
+                return_value=True,
+            ),
+            patch(
+                "streamlit.elements.json.dump_pydantic_sequence",
+                side_effect=AttributeError("not a model"),
+            ),
+        ):
+            st.json((1, 2, 3))
+
+        el = self.get_delta_from_queue().new_element
+        assert json.loads(el.json.body) == [1, 2, 3]

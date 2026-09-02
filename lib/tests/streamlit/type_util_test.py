@@ -270,6 +270,20 @@ def test_dump_pydantic_sequence_model_dump_v2() -> None:
     ]
 
 
+def test_dump_pydantic_sequence_uses_model_dump_without_pydantic() -> None:
+    """``model_dump(mode='json')`` is used when that method is present."""
+
+    class _V2Model:
+        def model_dump(self, mode: str = "json") -> dict[str, int]:
+            assert mode == "json"
+            return {"x": 1}
+
+    assert type_util.dump_pydantic_sequence([_V2Model(), _V2Model()]) == [
+        {"x": 1},
+        {"x": 1},
+    ]
+
+
 @pytest.mark.parametrize(
     ("obj", "expected"),
     [

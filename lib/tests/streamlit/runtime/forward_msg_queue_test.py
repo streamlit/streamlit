@@ -25,7 +25,10 @@ from streamlit.cursor import make_delta_path
 from streamlit.elements import arrow
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.RootContainer_pb2 import RootContainer
-from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.forward_msg_queue import (
+    ForwardMsgQueue,
+    _maybe_compose_delta_msgs,
+)
 
 # For the messages below, we don't really care about their contents so much as
 # their general type.
@@ -430,3 +433,28 @@ class ForwardMsgQueueTest(unittest.TestCase):
         fmq.enqueue(TEXT_DELTA_MSG2)
 
         assert count == 0
+
+
+def test_get_debug_includes_queued_messages_and_delta_ids() -> None:
+    """``get_debug`` serializes queued messages and their delta-path indexes."""
+    fmq = ForwardMsgQueue()
+    fmq.enqueue(TEXT_DELTA_MSG1)
+    debug = fmq.get_debug()
+    assert len(debug["queue"]) == 1
+    assert debug["ids"] == [tuple(TEXT_DELTA_MSG1.metadata.delta_path)]
+
+
+def test_maybe_compose_delta_msgs_returns_ref_hash_and_uncomposable_types() -> None:
+    """Reference messages replace the old delta; ``new_transient`` deltas do not compose."""
+    old_msg = ForwardMsg()
+    old_msg.delta.new_element.text.body = "old"
+    old_msg.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
+
+    ref_msg = ForwardMsg()
+    ref_msg.ref_hash = "abc123"
+    assert _maybe_compose_delta_msgs(old_msg, ref_msg) is ref_msg
+
+    transient_msg = ForwardMsg()
+    transient_msg.delta.new_transient.SetInParent()
+    transient_msg.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
+    assert _maybe_compose_delta_msgs(old_msg, transient_msg) is None

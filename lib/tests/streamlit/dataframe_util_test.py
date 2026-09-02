@@ -19,7 +19,7 @@ import os
 import sqlite3
 import unittest
 from collections.abc import Iterator, Mapping
-from contextlib import closing
+from contextlib import closing, contextmanager
 from datetime import date
 from decimal import Decimal
 from typing import Any
@@ -1658,3 +1658,248 @@ def test_unify_missing_values_replaces_nan_with_none() -> None:
     df = pd.DataFrame({"a": ["x", np.nan, "y"]})
     result = dataframe_util._unify_missing_values(df)
     assert result["a"].tolist() == ["x", None, "y"]
+
+
+class _FakePolarsDataFrame:
+    """Stand-in for a Polars DataFrame used to exercise conversion branches."""
+
+    def __init__(self, df: pd.DataFrame, *, fail_arrow: bool = False) -> None:
+        self._df = df
+        self._fail_arrow = fail_arrow
+
+    def clone(self) -> _FakePolarsDataFrame:
+        return _FakePolarsDataFrame(self._df.copy(), fail_arrow=self._fail_arrow)
+
+    def to_pandas(self) -> pd.DataFrame:
+        return self._df.copy()
+
+    def to_arrow(self) -> pa.Table:
+        if self._fail_arrow:
+            raise RuntimeError("arrow conversion failed")
+        return pa.Table.from_pandas(self._df)
+
+
+class _FakePolarsSeries:
+    """Stand-in for a Polars Series (pandas conversion uses ``to_pandas``)."""
+
+    def __init__(self, values: list[int]) -> None:
+        self._values = values
+
+    def clone(self) -> _FakePolarsSeries:
+        return _FakePolarsSeries(list(self._values))
+
+    def to_pandas(self) -> pd.Series:
+        return pd.Series(self._values, name="s")
+
+    def to_frame(self) -> _FakePolarsDataFrame:
+        return _FakePolarsDataFrame(pd.DataFrame({"s": self._values}))
+
+
+class _FakePolarsLazyFrame:
+    """Stand-in for a Polars LazyFrame used to exercise row-limit conversion."""
+
+    def __init__(self, n: int) -> None:
+        self._n = n
+        self.height = n
+
+    def limit(self, n: int) -> _FakePolarsLazyFrame:
+        return _FakePolarsLazyFrame(min(self._n, n))
+
+    def collect(self) -> _FakePolarsLazyFrame:
+        return _FakePolarsLazyFrame(self._n)
+
+    def head(self, n: int) -> _FakePolarsLazyFrame:
+        return _FakePolarsLazyFrame(min(self._n, n))
+
+    def to_pandas(self) -> pd.DataFrame:
+        return pd.DataFrame({"a": list(range(self._n))})
+
+    def to_arrow(self) -> pa.Table:
+        return pa.table({"a": list(range(self._n))})
+
+
+class _FakeXarrayDataset:
+    """Stand-in for an xarray Dataset used to exercise pandas conversion."""
+
+    def copy(self, deep: bool = True) -> _FakeXarrayDataset:
+        return _FakeXarrayDataset()
+
+    def to_dataframe(self) -> pd.DataFrame:
+        return pd.DataFrame({"a": [1, 2]})
+
+
+class _FakeXarrayDataArray:
+    """Stand-in for an xarray DataArray used to exercise pandas conversion."""
+
+    def copy(self, deep: bool = True) -> _FakeXarrayDataArray:
+        return _FakeXarrayDataArray()
+
+    def to_series(self) -> pd.Series:
+        return pd.Series([1, 2], name="a")
+
+
+@contextmanager
+def _as_polars(
+    *, dataframe: bool = False, series: bool = False, lazyframe: bool = False
+) -> Iterator[None]:
+    """Treat objects as the given Polars type for conversion helpers."""
+    with (
+        patch.object(dataframe_util, "is_polars_dataframe", return_value=dataframe),
+        patch.object(dataframe_util, "is_polars_series", return_value=series),
+        patch.object(dataframe_util, "is_polars_lazyframe", return_value=lazyframe),
+    ):
+        yield
+
+
+def test_convert_polars_dataframe_to_pandas_with_ensure_copy() -> None:
+    """Polars DataFrame conversion clones when ``ensure_copy`` is True."""
+    fake = _FakePolarsDataFrame(pd.DataFrame({"a": [1, 2, 3]}))
+    with (
+        patch.object(fake, "clone", wraps=fake.clone) as mock_clone,
+        _as_polars(dataframe=True),
+    ):
+        out = dataframe_util.convert_anything_to_pandas_df(fake, ensure_copy=True)
+    mock_clone.assert_called_once()
+    assert list(out["a"]) == [1, 2, 3]
+
+
+def test_convert_polars_series_to_pandas() -> None:
+    """Polars Series conversion yields a one-column pandas DataFrame."""
+    fake = _FakePolarsSeries([10, 20])
+    with _as_polars(series=True):
+        out = dataframe_util.convert_anything_to_pandas_df(fake, ensure_copy=True)
+    assert out.shape[1] == 1
+    assert list(out.iloc[:, 0]) == [10, 20]
+
+
+def test_convert_polars_lazyframe_to_pandas_shows_truncation_message() -> None:
+    """LazyFrame conversion caps rows and surfaces a truncation caption."""
+    fake = _FakePolarsLazyFrame(n=8)
+    with (
+        _as_polars(lazyframe=True),
+        patch.object(dataframe_util, "_show_data_information") as mock_info,
+    ):
+        out = dataframe_util.convert_anything_to_pandas_df(fake, max_unevaluated_rows=5)
+    assert len(out) == 5
+    mock_info.assert_called_once()
+
+
+def test_convert_xarray_dataset_and_data_array_to_pandas() -> None:
+    """xarray Dataset and DataArray conversion honor ``ensure_copy``."""
+    dataset = _FakeXarrayDataset()
+    with (
+        patch.object(dataset, "copy", wraps=dataset.copy) as mock_dataset_copy,
+        patch.object(dataframe_util, "is_xarray_dataset", return_value=True),
+        patch.object(dataframe_util, "is_xarray_data_array", return_value=False),
+    ):
+        out = dataframe_util.convert_anything_to_pandas_df(dataset, ensure_copy=True)
+    mock_dataset_copy.assert_called_once_with(deep=True)
+    assert list(out["a"]) == [1, 2]
+
+    array = _FakeXarrayDataArray()
+    with (
+        patch.object(array, "copy", wraps=array.copy) as mock_array_copy,
+        patch.object(dataframe_util, "is_xarray_dataset", return_value=False),
+        patch.object(dataframe_util, "is_xarray_data_array", return_value=True),
+    ):
+        out_arr = dataframe_util.convert_anything_to_pandas_df(array, ensure_copy=True)
+    mock_array_copy.assert_called_once_with(deep=True)
+    assert list(out_arr.iloc[:, 0]) == [1, 2]
+
+
+@pytest.mark.parametrize(
+    ("checker", "expected"),
+    [
+        ("is_polars_series", dataframe_util.DataFormat.POLARS_SERIES),
+        ("is_polars_dataframe", dataframe_util.DataFormat.POLARS_DATAFRAME),
+        ("is_polars_lazyframe", dataframe_util.DataFormat.POLARS_LAZYFRAME),
+        ("is_xarray_dataset", dataframe_util.DataFormat.XARRAY_DATASET),
+        ("is_xarray_data_array", dataframe_util.DataFormat.XARRAY_DATA_ARRAY),
+    ],
+    ids=[
+        "polars_series",
+        "polars_dataframe",
+        "polars_lazyframe",
+        "xarray_dataset",
+        "xarray_data_array",
+    ],
+)
+def test_determine_data_format_optional_dataframe_types(
+    checker: str, expected: dataframe_util.DataFormat
+) -> None:
+    """``determine_data_format`` recognizes optional dataframe-like types."""
+    with patch.object(dataframe_util, checker, return_value=True):
+        assert dataframe_util.determine_data_format(object()) is expected
+
+
+def test_convert_anything_to_arrow_bytes_uses_polars_fast_path() -> None:
+    """Polars DataFrame Arrow conversion uses ``to_arrow`` without pandas."""
+    fake = _FakePolarsDataFrame(pd.DataFrame({"a": [1, 2]}))
+    with patch.object(dataframe_util, "is_polars_dataframe", return_value=True):
+        result = dataframe_util.convert_anything_to_arrow_bytes(fake)
+    table = pa.RecordBatchStreamReader(result).read_all()
+    assert table.column("a").to_pylist() == [1, 2]
+
+
+def test_convert_anything_to_arrow_bytes_falls_back_when_polars_arrow_fails() -> None:
+    """A failing Polars ``to_arrow`` path falls back to pandas conversion."""
+    fake = _FakePolarsDataFrame(pd.DataFrame({"a": [3, 4]}), fail_arrow=True)
+    with _as_polars(dataframe=True):
+        result = dataframe_util.convert_anything_to_arrow_bytes(fake)
+    table = pa.RecordBatchStreamReader(result).read_all()
+    assert table.column("a").to_pylist() == [3, 4]
+
+
+def test_convert_anything_to_arrow_bytes_polars_series_and_lazyframe() -> None:
+    """Polars Series and truncated LazyFrame convert directly to Arrow bytes."""
+    series = _FakePolarsSeries([1])
+    with _as_polars(series=True):
+        series_bytes = dataframe_util.convert_anything_to_arrow_bytes(series)
+    series_table = pa.RecordBatchStreamReader(series_bytes).read_all()
+    assert series_table.column("s").to_pylist() == [1]
+
+    lazy = _FakePolarsLazyFrame(n=6)
+    with (
+        _as_polars(lazyframe=True),
+        patch.object(dataframe_util, "_show_data_information") as mock_info,
+    ):
+        lazy_bytes = dataframe_util.convert_anything_to_arrow_bytes(
+            lazy, max_unevaluated_rows=3
+        )
+    lazy_table = pa.RecordBatchStreamReader(lazy_bytes).read_all()
+    assert lazy_table.column("a").to_pylist() == [0, 1, 2]
+    mock_info.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("data_format", "expected"),
+    [
+        (dataframe_util.DataFormat.POLARS_DATAFRAME, "polars-obj"),
+        (dataframe_util.DataFormat.POLARS_SERIES, "polars-obj"),
+        (dataframe_util.DataFormat.XARRAY_DATASET, "xr-dataset"),
+        (dataframe_util.DataFormat.XARRAY_DATA_ARRAY, "xr-array"),
+    ],
+    ids=["polars_dataframe", "polars_series", "xarray_dataset", "xarray_data_array"],
+)
+def test_convert_pandas_df_to_polars_and_xarray_formats_with_mocked_backends(
+    data_format: dataframe_util.DataFormat, expected: str
+) -> None:
+    """Optional Polars/xarray output formats import those backends at conversion time."""
+    pdf = pd.DataFrame({"c": [1.0, 2.0]})
+    fake_pl = MagicMock()
+    fake_pl.from_pandas.return_value = "polars-obj"
+    fake_xr = MagicMock()
+    fake_xr.Dataset.from_dataframe.return_value = "xr-dataset"
+    fake_xr.DataArray.from_series.return_value = "xr-array"
+    with patch.dict("sys.modules", {"polars": fake_pl, "xarray": fake_xr}):
+        assert (
+            dataframe_util.convert_pandas_df_to_data_format(pdf, data_format)
+            == expected
+        )
+
+
+def test_determine_arrow_column_fix_mixed_column_with_only_nulls() -> None:
+    """A mixed object column whose non-null values are gone is treated as string."""
+    column = pd.Series([None, None], dtype=object)
+    with patch("pandas.api.types.infer_dtype", return_value="mixed"):
+        assert dataframe_util.determine_arrow_column_fix(column) == "string"

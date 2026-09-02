@@ -468,6 +468,28 @@ def test_get_stack_trace_no_traceback() -> None:
     assert result == []
 
 
+def test_get_stack_trace_streamlit_api_warning_without_tacked_stack() -> None:
+    """A ``StreamlitAPIWarning`` with no tacked stack reports that extraction failed."""
+    warning = errors.StreamlitAPIWarning("msg")
+    warning.tacked_on_stack = None
+    result = _get_stack_trace_str_list(warning)
+    assert result == [
+        (
+            "Cannot extract the stack trace for this exception. "
+            "Try calling exception() within the `catch` block."
+        )
+    ]
+
+
+def test_is_in_package_returns_false_when_commonprefix_raises() -> None:
+    """Incomparable paths (e.g. different Windows drives) are treated as outside."""
+    with patch(
+        "streamlit.elements.exception.os.path.commonprefix",
+        side_effect=ValueError("different drives"),
+    ):
+        assert exception._is_in_package("/a.py", "/pkg") is False
+
+
 @patch("streamlit.elements.exception.get_script_run_ctx")
 def test_split_internal_frames_no_ctx(mock_ctx: MagicMock) -> None:
     """Test _split_internal_streamlit_frames returns all frames when no ctx."""
