@@ -117,7 +117,10 @@ def choose_directory(file_chooser: FileChooser, directory: str) -> None:
     try:
         file_chooser.set_files(files=[directory], timeout=10000)
     except PlaywrightTimeoutError:
-        pass
+        # A timeout here is not necessarily the lost acknowledgement, so say so.
+        # pytest only surfaces this if a later assertion fails, which is exactly
+        # when someone needs to know set_files was involved.
+        print(f"set_files timed out for {directory}; continuing to the assertions")
 
 
 def test_file_uploader_render_correctly(
