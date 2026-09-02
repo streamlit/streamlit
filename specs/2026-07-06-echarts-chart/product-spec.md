@@ -83,7 +83,7 @@ st.echarts_chart(
 |-----------|------|-------------|
 | `spec` | `dict`, JSON `str`, or `pyecharts` chart | The ECharts option object as a Python dictionary (passed to `echartsInstance.setOption`), a JSON string, or a `pyecharts` chart instance (auto-converted via its `.dump_options()` method). See [Spec input](#spec-input). |
 | `width` | `"stretch"`, `"content"`, or `int` | Element width. Same semantics as `st.plotly_chart` (default `"stretch"`). See [Sizing](#sizing). |
-| `height` | `"content"`, `"stretch"`, or `int` | Element height. Because ECharts has no intrinsic height, `"content"` resolves to **400px** unless a `pyecharts` chart sets an explicit pixel height. The 400px default is intentional (a round ECharts-style content height), not Plotly's 450px. `"stretch"` uses Streamlit's standard height semantics (see [Sizing](#sizing)). |
+| `height` | `"content"`, `"stretch"`, or `int` | Element height. Because ECharts has no intrinsic height, `"content"` resolves to **400px** unless a `pyecharts` chart sets an explicit pixel height. `"stretch"` uses Streamlit's standard height semantics (see [Sizing](#sizing)). |
 | `theme` | `"streamlit"` or `None` | `"streamlit"` (default) applies the Streamlit theme (colors, fonts, dark/light). `None` uses ECharts' built-in default theme. Accessibility defaults are independent of `theme`. |
 | `key` | `str`, `int`, or `None` | Optional stable identity. When provided, Streamlit emits a `st-key-<key>` CSS class even if `on_select="ignore"`. When selections are active, the selection state is also readable from `st.session_state[key]`, and the selection survives changes to `spec`, `theme`, and `renderer`. Display-only charts without a `key` skip the element ID entirely. |
 | `on_select` | `"ignore"`, `"rerun"`, or `callable` | Whether the chart behaves like an input widget. `"ignore"` (default) = display only; `"rerun"` = rerun on selection and return selection state; a callable = rerun and invoke it as a callback. See [Selections](#selections). |
@@ -199,10 +199,14 @@ timeline `options`, and top-level components):
 | Map / geo | `"map"`, `"geo"` (need registered GeoJSON; includes `geo` / `map` components) |
 | ECharts GL | `"scatter3D"`, `"bar3D"`, `"line3D"`, `"lines3D"`, `"polygons3D"`, `"surface"`, `"map3D"`, `"scatterGL"`, `"linesGL"`, `"flowGL"`, `"graphGL"`, `"grid3D"`, `"geo3D"`, `"globe"` |
 
-JSON-serializable `pyecharts` charts that still need an **unbundled** extension (for example
-`WordCloud`, `Liquid`) are rejected the same way: they serialize, miss the GL/map/custom list,
-and would otherwise render empty. Other core series types are passed through even if they are
-not named in this spec.
+JSON-serializable `pyecharts` charts that still need an **unbundled** extension are rejected the
+same way, since they serialize cleanly and would otherwise render empty: `wordCloud`
+(`echarts-wordcloud`) and `liquidFill` (`echarts-liquidfill`). That list is **best-effort**, not a
+guarantee — the third-party ECharts series ecosystem is open-ended (`echarts-stat`,
+`echarts-graph-modularity`, arbitrary third-party series), and a denylist always lags. Other
+core series types are passed through even if they are not named in this spec, so an
+unrecognized third-party series still renders as an empty chart rather than raising. We cannot
+invert this to an allowlist without breaking that pass-through promise.
 
 ### Behavior
 
@@ -224,10 +228,10 @@ When `theme="streamlit"` (default), the chart automatically matches the active S
   title, legend, or bottom-anchored `dataZoom`/`visualMap`/`timeline` are left to ECharts so those
   components aren't clipped.
 - **Dark / light mode** — the chart re-themes automatically when the user toggles the theme
-  (via ECharts' `darkMode` plus themed colors), with no Python rerun required. Prefer
-  `chart.setTheme(...)` on the bundled ECharts `^6.1.0` when that preserves the current option;
-  dispose and re-initialize only if `setTheme` drops options on that version, or when `renderer`
-  changes (still fixed at `init`). A dispose path may briefly flash and replay entry animations.
+  (via ECharts' `darkMode` plus themed colors), with no Python rerun required. Light/dark
+  re-theming uses `chart.setTheme(...)` on the bundled ECharts `^6.1.0`, which preserves the
+  current option. A `renderer` change still disposes and re-initializes (renderer is fixed at
+  `init`).
 
 These defaults (`grid`, colors, fonts, `aria`, `series.cursor`) are merged **in the frontend**
 before `setOption`. The wire payload stays the user's spec verbatim — the backend does not
@@ -274,8 +278,12 @@ on **commit** of a completed brush. `brushEnd` is the commit signal but does not
 indices (those arrive on separately throttled `brushSelected` events, which can land after
 `brushEnd` and have no shared gesture ID). The frontend therefore caches the latest
 `brushSelected` snapshot — honoring the user's `brush.throttleDelay` — and flushes one widget
-update after `brushEnd`, waiting briefly so a late `brushSelected` can replace a stale cache.
-Either event order yields exactly one rerun with the final indices.
+update once it holds the `brushSelected` snapshot correlated with that `brushEnd`. Waiting for
+the correlated snapshot rather than a fixed grace period is deliberate: any fixed wait shorter
+than a user-configured `brush.throttleDelay` would flush the stale cache and defeat the throttle.
+The wait is unbounded — a snapshot that never arrives never flushes — but ECharts always emits
+one; a timeout would reintroduce the stale-flush risk. Either event order yields exactly one
+rerun with the final indices.
 
 ```python
 spec = {
@@ -294,11 +302,10 @@ overlay), and any `select` styling the user adds to their series is honored. Str
 the visible selection after reruns** from privately persisted native and brush channels (see
 [Reruns & state persistence](#reruns--state-persistence)). Double-click clears the selection.
 
-**Option-defined selection is widget state.** Marks the user pre-selects in the option
-(`data[].selected`, or an equivalent native selected snapshot after the first `setOption`) are
-seeded into the initial `EChartsState` so the return value matches the visible selection before
-the first pointer gesture. ECharts does not emit `selectchanged` for those marks on its own.
-If the option defines no selection, the widget starts empty.
+**Option-defined selection is not seeded in v1.** Marks the user pre-selects in the option
+(`data[].selected`) are visible but are not reflected in the initial `EChartsState`, so the
+widget starts empty until the first pointer gesture — the same as `st.plotly_chart` and
+`st.vega_lite_chart`. Seeding them is [future work](#out-of-scope-future-work).
 
 v1 selection is **pointer-first**, matching `st.plotly_chart`: ECharts has no built-in keyboard
 navigation for data points or brushes, and double-click clear has no keyboard equivalent.
@@ -442,9 +449,8 @@ frontend keeps the existing ECharts instance mounted and updates it in place —
 the option changed, `resize` when only dimensions changed — avoiding unnecessary re-initialization
 and repeated entry animations for the common "unrelated widget reran the app" case.
 `renderer` is fixed at `init` time, so a renderer change still requires disposing and
-re-initializing the instance. Light/dark re-theming prefers `setTheme` (see [Theming](#theming))
-and only disposes if that path drops the current option — which is why a theme toggle can
-briefly re-initialize and replay entry animations.
+re-initializing the instance. Light/dark re-theming uses `setTheme` (see [Theming](#theming))
+and does not dispose the instance.
 
 If Streamlit does unmount and remount the element (for example, opening an expander that was
 collapsed on first render), ECharts is recreated from the declarative option object and the entry
@@ -650,6 +656,12 @@ st.echarts_chart(pie)
 
 ## Out of Scope (Future Work)
 
+- **Seeding option-defined selection into `EChartsState`** — reflecting marks pre-selected via
+  `data[].selected` in the initial widget value. It reads like a one-line read but is a state
+  machine: seed only when there is no persisted widget state, don't re-seed after the user clears
+  the selection, and decide what a changed pre-selection means for a keyed chart whose whole point
+  is that its selection survives spec changes. Neither `st.plotly_chart` nor `st.vega_lite_chart`
+  seeds pre-selected marks, so there is no pattern to borrow. Revisit if users ask for it.
 - **`selection_mode` parameter** — a `st.plotly_chart`-style `selection_mode=("points","box","lasso")`
   that *auto-enables and themes* those interactions (injecting `selectedMode`/`select` and a
   brush/toolbox for you) so `on_select="rerun"` works with zero spec changes. v1 instead activates
@@ -825,7 +837,8 @@ Required coverage for the implementation PR (not this spec-only diff):
   latest `brushSelected` snapshot) reruns once with final indices.
 - Restore/clear: native and brush channels restore independently; clearing brush does not leave
   native highlights of brush-only points; remount in tabs/expanders restores selection.
-- Option-defined `data[].selected` is seeded into the initial `EChartsState`.
+- Re-theming: a light/dark switch calls `setTheme` and does not dispose the instance; a
+  `renderer` switch still disposes and re-initializes.
 - Tooltip XSS: HTML/script payloads in tooltip/label content render as escaped text.
 - `pyecharts` `JsCode` / non-JSON charts raise; library-default InitOpts size is ignored;
   unsupported CSS units warn and fall back.
