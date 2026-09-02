@@ -1336,7 +1336,7 @@ describe("TextInput live updates", () => {
   const renderLive = (
     elementProps: Partial<TextInputProto> = {},
     widgetProps: Partial<Props> = {}
-  ): ReturnType<typeof render> & {
+  ): ReturnType<typeof renderWithContexts> & {
     user: ReturnType<typeof userEvent.setup>
     props: Props
     setStringValueSpy: MockInstance
@@ -1347,7 +1347,7 @@ describe("TextInput live updates", () => {
       widgetProps
     )
     const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
-    const view = render(<TextInput {...props} />)
+    const view = renderWithContexts(<TextInput {...props} />)
     setStringValueSpy.mockClear()
     return { user, props, setStringValueSpy, ...view }
   }
@@ -1785,11 +1785,10 @@ describe("TextInput live updates", () => {
   })
 
   it("applies a session_state reset to empty after ordinary live reruns", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    const props = getProps({ liveDebounceMs: 0, default: "" })
-    const { rerenderWithContexts } = renderWithContexts(
-      <TextInput {...props} />
-    )
+    const { user, props, rerenderWithContexts } = renderLive({
+      liveDebounceMs: 0,
+      default: "",
+    })
 
     const input = screen.getByRole("textbox")
     await user.type(input, "a")
@@ -1820,7 +1819,7 @@ describe("TextInput live updates", () => {
     expect(input).toHaveValue("")
   })
 
-  it("applies a session_state restore of an earlier committed string after ack", async () => {
+  it("does not restore an earlier committed string before the live rerun finishes", async () => {
     const { user, props, rerender } = renderLive({
       liveDebounceMs: 0,
       default: "",
@@ -1828,28 +1827,9 @@ describe("TextInput live updates", () => {
 
     const input = screen.getByRole("textbox")
     await user.type(input, "abc")
-    rerender(
-      <TextInput
-        {...props}
-        element={TextInputProto.create({
-          ...props.element,
-          setValue: true,
-          value: "abc",
-        })}
-      />
-    )
     await user.type(input, "d")
     expect(input).toHaveValue("abcd")
-    rerender(
-      <TextInput
-        {...props}
-        element={TextInputProto.create({
-          ...props.element,
-          setValue: true,
-          value: "abcd",
-        })}
-      />
-    )
+
     rerender(
       <TextInput
         {...props}
@@ -1859,6 +1839,36 @@ describe("TextInput live updates", () => {
           value: "abc",
         })}
       />
+    )
+    expect(input).toHaveValue("abcd")
+  })
+
+  it("applies a session_state restore of an earlier committed string after a live rerun finishes", async () => {
+    const { user, props, rerenderWithContexts } = renderLive({
+      liveDebounceMs: 0,
+      default: "",
+    })
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "abc")
+    rerenderWithContexts(<TextInput {...props} />, {
+      scriptRunContext: { scriptRunFinishedSequence: 1 },
+    })
+    await user.type(input, "d")
+    expect(input).toHaveValue("abcd")
+    rerenderWithContexts(<TextInput {...props} />, {
+      scriptRunContext: { scriptRunFinishedSequence: 2 },
+    })
+    rerenderWithContexts(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "abc",
+        })}
+      />,
+      { scriptRunContext: { scriptRunFinishedSequence: 2 } }
     )
     expect(input).toHaveValue("abc")
   })
