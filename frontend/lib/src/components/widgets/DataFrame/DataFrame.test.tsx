@@ -570,10 +570,13 @@ describe("DataFrame widget", () => {
       // The edit was written to the widget manager as a UI submission
       // (immediately, without any debounce timer advancing).
       expect(setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "commit-editor" }),
+        "commit-editor",
         expect.any(String),
-        { fromUi: true },
-        undefined
+        {
+          formId: "",
+          fragmentId: undefined,
+          fromUser: true,
+        }
       )
       // The editor is now disabled: editing handlers are no longer wired.
       expect(dataEditorMockFn.mock.lastCall?.[0].onCellEdited).toBeUndefined()
@@ -674,17 +677,19 @@ describe("DataFrame widget", () => {
 
       // Empty edits are persisted without triggering a rerun.
       expect(setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "commit-editor" }),
+        "commit-editor",
         EMPTY_EDITS_JSON,
-        { fromUi: false },
-        undefined
+        {
+          formId: "",
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
-      // The clear must never write with fromUi: true (which would rerun).
+      // The clear must never write with fromUser: true (which would rerun).
       expect(setStringValue).not.toHaveBeenCalledWith(
         expect.anything(),
         expect.anything(),
-        { fromUi: true },
-        expect.anything()
+        expect.objectContaining({ fromUser: true })
       )
 
       // Re-rendering with the same element proto must not reprocess the clear.
@@ -698,7 +703,7 @@ describe("DataFrame widget", () => {
 
       const clearCalls = (): number =>
         setStringValue.mock.calls.filter(
-          call => call[1] === EMPTY_EDITS_JSON && call[2]?.fromUi === false
+          call => call[1] === EMPTY_EDITS_JSON && call[2]?.fromUser === false
         ).length
 
       // First successful commit delivers a clearEdits proto -> clear runs once.

@@ -1992,6 +1992,28 @@ class TestConflictError:
         assert "already exist." in message
         assert "Remove them and try again." in message
 
+    def test_path_containing_a_parenthetical_still_collapses(self) -> None:
+        """A directory name containing " (" must not truncate the collapse.
+
+        The reason is appended as the last parenthetical, so the split has to come
+        from the right. Splitting from the left cuts the path at the directory's
+        own " (", leaving too few components for the last-three-parts collapse —
+        which then emits the leading directories verbatim, i.e. the user's home
+        path and username.
+        """
+        err = skills._conflict_error(
+            [
+                (
+                    "/Users/alice/My App (old)/.claude/skills/"
+                    "developing-with-streamlit (existing file or directory)"
+                )
+            ]
+        )
+        message = err.format_message()
+        assert "/Users/alice" not in message
+        assert "alice" not in message
+        assert ".claude/skills/developing-with-streamlit already exists." in message
+
     def test_single_conflict_reads_singular(self) -> None:
         """A lone conflict uses singular phrasing ("exists" / "it")."""
         err = skills._conflict_error(
@@ -3286,14 +3308,15 @@ class TestMetaSkillPackaging:
     """Guards that the vendored meta-skill files actually ship in the wheel."""
 
     def test_package_data_globs_cover_vendored_meta_skill(self) -> None:
-        """The setuptools ``package-data`` globs must match both vendored files.
+        """The setuptools ``package-data`` globs must match the published skill trees.
 
         Every other test reads the vendored files straight from the on-disk
         checkout, so they stay green even if the ``package-data`` globs were
         wrong or removed — the failure would only surface for real pip-installed
         users, exactly the "global install broken on a real machine" class this
         change exists to prevent. This asserts the declared globs, applied to the
-        real package dir, include ``SKILL.md`` and ``scripts/discover.py``.
+        real package dir, include ``SKILL.md`` and ``scripts/discover.py`` and do
+        not match files outside the published skill trees.
         """
         import glob as globmod
 
@@ -3319,23 +3342,41 @@ class TestMetaSkillPackaging:
             ".agents/meta-skill/developing-with-streamlit/scripts/discover.py"
             in matched
         )
+        assert ".agents/skills/developing-with-streamlit/SKILL.md" in matched
+
+        allowed_prefixes = (
+            ".agents/meta-skill/developing-with-streamlit/",
+            ".agents/skills/developing-with-streamlit/",
+        )
+        unexpected = [
+            path
+            for path in matched
+            if path.startswith(".agents/") and not path.startswith(allowed_prefixes)
+        ]
+        assert unexpected == []
 
     @pytest.mark.slow
     def test_built_wheel_contains_vendored_meta_skill(self, tmp_path: Path) -> None:
-        """A real built wheel must contain SKILL.md AND scripts/discover.py.
+        """A real built wheel must contain the published skill trees only.
 
         The glob-match test above checks the declared package-data patterns
         against on-disk files, but not that the build backend actually ships
         them in the wheel (MANIFEST/include-package-data/backend quirks could
         still drop a file). A missing ``discover.py`` would break every global
         install deterministically — the exact failure this change removes — so
-        build the wheel and assert both files are inside it.
+        build the wheel and assert both files are inside it, and that
+        repo-only files under ``.agents`` are not.
         """
+        import shutil
         import zipfile
 
         lib_dir = Path(__file__).resolve().parents[3]  # .../lib
         if not (lib_dir / "pyproject.toml").is_file():  # pragma: no cover
             pytest.skip("lib/pyproject.toml not found in this layout")
+
+        # A stale lib/build from a previous wheel can leak files that the
+        # current MANIFEST/package-data no longer include.
+        shutil.rmtree(lib_dir / "build", ignore_errors=True)
 
         out_dir = tmp_path / "dist"
         # --no-isolation reuses the current env's build backend (setuptools is
@@ -3363,8 +3404,20 @@ class TestMetaSkillPackaging:
         assert wheels, "no wheel was produced"
         names = zipfile.ZipFile(wheels[0]).namelist()
         meta = "streamlit/.agents/meta-skill/developing-with-streamlit"
+        content = "streamlit/.agents/skills/developing-with-streamlit"
         assert f"{meta}/SKILL.md" in names
         assert f"{meta}/scripts/discover.py" in names
+        assert f"{content}/SKILL.md" in names
+
+        allowed_prefixes = (f"{meta}/", f"{content}/")
+        unexpected = [
+            name
+            for name in names
+            if name.startswith("streamlit/.agents/")
+            and not name.endswith("/")
+            and not name.startswith(allowed_prefixes)
+        ]
+        assert unexpected == []
 
 
 class TestVendoredMetaSkillDiscovery:

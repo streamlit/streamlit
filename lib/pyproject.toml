@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "streamlit"
-version = "1.61.1"
+version = "1.62.0"
 description = "A faster way to build and share data apps"
 # Note: README.md is in the repo root. The build process copies it to lib/
 # before building. See .github/workflows/release.yml.
@@ -60,7 +60,6 @@ dependencies = [
   # (alt.XOffset/alt.YOffset) and the alt.selection_point/selection_interval
   # API that our built-in charts rely on.
   "altair>=5.0.0,<7,!=5.4.0,!=5.4.1",
-  "blinker>=1.5.0,<2",
   "click>=7.0,<9",
   "numpy>=1.23,<3",
   # The "packaging" package isn't version-capped because they use calendar-based
@@ -76,9 +75,8 @@ dependencies = [
   "protobuf>=5.26.1,<8",
   # PyArrow 25.0.0 can segfault when first imported from a short-lived worker thread.
   # See https://github.com/apache/arrow/issues/50471.
-  "pyarrow>=7.0,<25",
+  "pyarrow>=7.0,!=25.0.0,<26",
   "requests>=2.27,<3",
-  "tenacity>=8.1.0,<10",
   # Starting from Python 3.11, Python has built in support for reading TOML files.
   # Let's make sure to remove this "toml" library when we stop supporting Python 3.10.
   "toml>=0.10.1,<2",
@@ -165,10 +163,13 @@ exclude = ["tests", "tests.*"]
 [tool.setuptools.package-data]
 streamlit = [
     "py.typed",
-    ".agents/**/*.md",
-    ".agents/skills/**/assets/templates/**/*.py",
-    ".agents/skills/**/assets/templates/**/*.toml",
-    ".agents/meta-skill/**/*.py",
+    # Published skill trees only. Other files under .agents are repo-local
+    # (authoring guidance) and are not part of the package.
+    ".agents/meta-skill/developing-with-streamlit/**/*.md",
+    ".agents/meta-skill/developing-with-streamlit/**/*.py",
+    ".agents/skills/developing-with-streamlit/**/*.md",
+    ".agents/skills/developing-with-streamlit/assets/templates/**/*.py",
+    ".agents/skills/developing-with-streamlit/assets/templates/**/*.toml",
     "hello/**/*.py",
 ]
 

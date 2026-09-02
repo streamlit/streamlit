@@ -195,8 +195,11 @@ const REFUSED_REASON_PREFIX = "refused:"
  * refusals get their own event so they never inflate the genuine failure rate.
  * Either way the server's machine-readable reason becomes a label suffix,
  * mirroring `skillsNudgeSuppressedNonLocal:<locality>`, so outcomes split by cause
- * (e.g. `skillsNudgeInstallFailed:write_denied`). Reasons are a fixed server-side
- * vocabulary, never user input, so they are safe to emit verbatim.
+ * (e.g. `skillsNudgeInstallFailed:write_denied`). Reasons come from a fixed
+ * server-side vocabulary, plus `unexpected_<Class>_in_<function>` when no entry
+ * covers the failure — code identifiers from Streamlit's own source that the
+ * server bounds and sanitizes, never user input and never a frame from the
+ * user's app, so either form is safe to emit verbatim.
  *
  * Callers must check {@link isSkillsNudgeDroppedConnection} first — a dropped
  * connection is neither outcome and is counted separately.

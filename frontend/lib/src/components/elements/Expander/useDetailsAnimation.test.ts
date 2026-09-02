@@ -49,6 +49,37 @@ function TestHarness(
   )
 }
 
+/**
+ * Mirrors how a step renders: without content there is no <details> at all, and
+ * one is mounted only once the first child arrives.
+ */
+function StepHarness(
+  props: UseDetailsAnimationOptions & { collapsible: boolean }
+): ReturnType<typeof createElement> {
+  const result = useDetailsAnimation(props)
+  if (!props.collapsible) {
+    return createElement("div", { "data-testid": "header" }, props.label)
+  }
+  return createElement(
+    "details",
+    { ref: result.detailsRef, "data-testid": "details" },
+    createElement(
+      "summary",
+      {
+        ref: result.summaryRef,
+        "data-testid": "summary",
+        onClick: result.handleToggle,
+      },
+      props.label
+    ),
+    createElement(
+      "div",
+      { ref: result.contentRef, "data-testid": "content" },
+      "Content"
+    )
+  )
+}
+
 describe("useDetailsAnimation", () => {
   describe("initial state", () => {
     it("returns isOpen=true when backendExpanded is true", () => {
@@ -425,6 +456,41 @@ describe("useDetailsAnimation", () => {
       expect(Element.prototype.animate).not.toHaveBeenCalled()
     })
 
+    it("observes content that only appears after the first render", () => {
+      const { rerender } = render(
+        createElement(StepHarness, {
+          backendExpanded: true,
+          label: "Test",
+          collapsible: false,
+        })
+      )
+
+      expect(mockObserve).not.toHaveBeenCalled()
+
+      rerender(
+        createElement(StepHarness, {
+          backendExpanded: true,
+          label: "Test",
+          collapsible: true,
+        })
+      )
+
+      const details = screen.getByTestId("details")
+      const summary = screen.getByTestId("summary")
+      const content = screen.getByTestId("content")
+      mockElementHeight(details, 100)
+      mockElementHeight(summary, 40)
+      mockElementHeight(content, 200)
+      ;(Element.prototype.animate as ReturnType<typeof vi.fn>).mockClear()
+
+      expect(mockObserve).toHaveBeenCalledWith(content)
+
+      fireResize()
+      vi.advanceTimersByTime(50)
+
+      expect(Element.prototype.animate).toHaveBeenCalledTimes(1)
+    })
+
     it("debounces rapid resize events into a single animation", () => {
       render(
         createElement(TestHarness, {
@@ -511,6 +577,34 @@ describe("useDetailsAnimation", () => {
       vi.advanceTimersByTime(50)
 
       expect(Element.prototype.animate).not.toHaveBeenCalled()
+    })
+
+    // The target height is summary (40) + content (200), plus the border for
+    // the default style. The compact and step styles draw no border.
+    it.each<[string, boolean | undefined, string]>([
+      ["includes the border in the target height", undefined, "242px"],
+      ["omits the border for borderless styles", false, "240px"],
+    ])("%s", (_description, hasBorder, expectedHeight) => {
+      render(
+        createElement(TestHarness, {
+          backendExpanded: true,
+          label: "Test",
+          hasBorder,
+        })
+      )
+
+      mockElementHeight(screen.getByTestId("details"), 100)
+      mockElementHeight(screen.getByTestId("summary"), 40)
+      mockElementHeight(screen.getByTestId("content"), 200)
+      ;(Element.prototype.animate as ReturnType<typeof vi.fn>).mockClear()
+
+      fireResize()
+      vi.advanceTimersByTime(50)
+
+      expect(Element.prototype.animate).toHaveBeenCalledWith(
+        { height: ["100px", expectedHeight] },
+        expect.anything()
+      )
     })
 
     it("animates when height difference exceeds threshold", () => {

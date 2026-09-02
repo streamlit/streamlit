@@ -27,7 +27,7 @@ from functools import lru_cache, wraps
 from typing import Any, Final, TypeVar, cast, overload
 
 from streamlit import config, file_util, type_util, util
-from streamlit.errors import StreamlitValueError
+from streamlit.errors import LocalizableStreamlitException, StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
@@ -246,6 +246,54 @@ _DBUS_MACHINE_ID_PATH = "/var/lib/dbus/machine-id"
 # Matches CPython's ``got an unexpected keyword argument 'name'`` TypeError.
 _UNEXPECTED_KWARG_RE: Final = re.compile(
     r"got an unexpected keyword argument '([^']+)'"
+)
+# ``foo() missing 1 required positional argument: 'bar'`` (also keyword-only).
+_MISSING_ARG_RE: Final = re.compile(
+    r"missing \d+ required (?:positional |keyword-only )?arguments?: '(\w+)'"
+)
+_NO_MODULE_RE: Final = re.compile(r"No module named ['\"]([^'\"]+)['\"]")
+_CANNOT_IMPORT_FROM_RE: Final = re.compile(r"cannot import name '[^']+' from '([^']+)'")
+_STREAMLIT_ATTRIBUTE_RE: Final = re.compile(
+    r"module 'streamlit' has no attribute '([^']+)'"
+)
+# Import namespaces used by Streamlit itself or by its optional features. Only
+# these names are appended to telemetry to avoid recording private app modules.
+_STREAMLIT_IMPORT_MODULE_PREFIXES: Final = frozenset(
+    {
+        "altair",
+        "anyio",
+        "authlib",
+        "click",
+        "google.protobuf",
+        "graphviz",
+        "httptools",
+        "httpx",
+        "itsdangerous",
+        "matplotlib",
+        "multipart",
+        "numpy",
+        "orjson",
+        "packaging",
+        "pandas",
+        "PIL",
+        "plotly",
+        "pyarrow",
+        "pydeck",
+        "python_multipart",
+        "requests",
+        "rich",
+        "snowflake",
+        "sqlalchemy",
+        "starlette",
+        "streamlit",
+        "streamlit_pdf",
+        "toml",
+        "typing_extensions",
+        "uvicorn",
+        "uvloop",
+        "watchdog",
+        "websockets",
+    }
 )
 
 
@@ -488,28 +536,77 @@ def to_microseconds(seconds: float) -> int:
     return int(seconds * 1_000_000)
 
 
+def _is_streamlit_import_module(module: str) -> bool:
+    """Return whether an import namespace is relevant to Streamlit internals."""
+    return any(
+        module == prefix or module.startswith(f"{prefix}.")
+        for prefix in _STREAMLIT_IMPORT_MODULE_PREFIXES
+    )
+
+
 def format_uncaught_exception(exc: BaseException) -> str:
     """Return a page-profile label for an uncaught exception.
 
-    Uses the exception type name, appending ``:<param>`` when the failing
-    parameter is known:
+    Uses the exception type name, appending a short suffix when a stable
+    category is known:
 
     - unexpected-keyword ``TypeError`` → ``"TypeError:<param>"``
-    - ``StreamlitValueError`` → ``"StreamlitValueError:<param>"``
+    - missing required argument ``TypeError`` → ``"TypeError:missing:<param>"``
+    - allowlisted ``ImportError`` / ``ModuleNotFoundError``
+      → ``"<Type>:<module>"``
+    - missing top-level ``streamlit`` attributes → ``"AttributeError:<attribute>"``
+    - ``LocalizableStreamlitException`` with a ``parameter`` kwarg
+      → ``"<Type>:<parameter>"``
+    - ``StreamlitAPIException`` with ``error_id`` (when there is no
+      ``parameter``) → ``"<Type>:<error_id>"``
 
+    Does not append user values such as widget keys or file paths.
     Enrichment failures are swallowed so telemetry cannot interrupt script
     execution or drop the page-profile payload.
     """
     name = type(exc).__name__
     with contextlib.suppress(Exception):
         if isinstance(exc, TypeError):
-            match = _UNEXPECTED_KWARG_RE.search(str(exc))
+            msg = str(exc)
+            match = _UNEXPECTED_KWARG_RE.search(msg)
             if match:
                 return f"{name}:{match.group(1)}"
-        elif isinstance(exc, StreamlitValueError):
-            parameter = exc.exec_kwargs.get("parameter")
-            if isinstance(parameter, str) and parameter:
-                return f"{name}:{parameter}"
+            match = _MISSING_ARG_RE.search(msg)
+            if match:
+                return f"{name}:missing:{match.group(1)}"
+        elif isinstance(exc, ImportError):
+            module = getattr(exc, "name", None)
+            if not isinstance(module, str) or not module:
+                msg = str(exc)
+                match = _NO_MODULE_RE.search(msg) or _CANNOT_IMPORT_FROM_RE.search(msg)
+                module = match.group(1) if match else None
+            if (
+                isinstance(module, str)
+                and module
+                and _is_streamlit_import_module(module)
+            ):
+                return f"{name}:{module}"
+        elif isinstance(exc, AttributeError):
+            attribute = getattr(exc, "name", None)
+            obj = getattr(exc, "obj", None)
+            if (
+                obj is sys.modules.get("streamlit")
+                and isinstance(attribute, str)
+                and attribute
+            ):
+                return f"{name}:{attribute}"
+            if obj is None and attribute is None:
+                match = _STREAMLIT_ATTRIBUTE_RE.fullmatch(str(exc))
+                if match:
+                    return f"{name}:{match.group(1)}"
+        elif isinstance(exc, StreamlitAPIException):
+            if isinstance(exc, LocalizableStreamlitException):
+                parameter = exc.exec_kwargs.get("parameter")
+                if isinstance(parameter, str) and parameter:
+                    return f"{name}:{parameter}"
+            error_id = exc.error_id
+            if isinstance(error_id, str) and error_id:
+                return f"{name}:{error_id}"
     return name
 
 

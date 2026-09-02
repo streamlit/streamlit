@@ -292,10 +292,9 @@ describe("useWidgetState hook", () => {
       })
 
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         expect.stringContaining('"rows":[0]'),
-        expect.anything(),
-        "test-fragment"
+        expect.objectContaining({ fragmentId: "test-fragment" })
       )
     })
 
@@ -339,10 +338,9 @@ describe("useWidgetState hook", () => {
       })
 
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         expect.stringContaining('"columns":["col2"]'),
-        expect.anything(),
-        "test-fragment"
+        expect.objectContaining({ fragmentId: "test-fragment" })
       )
     })
 
@@ -390,10 +388,9 @@ describe("useWidgetState hook", () => {
       })
 
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         expect.stringContaining('"cells":[[2,"col2"]]'),
-        expect.anything(),
-        "test-fragment"
+        expect.objectContaining({ fragmentId: "test-fragment" })
       )
     })
 
@@ -437,10 +434,9 @@ describe("useWidgetState hook", () => {
       })
 
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         expect.stringContaining('"cells":[]'),
-        expect.anything(),
-        "test-fragment"
+        expect.objectContaining({ fragmentId: "test-fragment" })
       )
     })
 
@@ -482,10 +478,12 @@ describe("useWidgetState hook", () => {
 
       // Should use the mapped index (5) instead of visual index (0)
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.anything(),
+        "test-id",
         expect.stringContaining('"rows":[5]'),
-        expect.anything(),
-        expect.anything()
+        expect.objectContaining({
+          fragmentId: "test-fragment",
+          fromUser: true,
+        })
       )
     })
 
@@ -536,10 +534,12 @@ describe("useWidgetState hook", () => {
       // order and does not trigger a spurious rerun when only the display order
       // changes.
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.anything(),
+        "test-id",
         expect.stringContaining('"rows":[2,5]'),
-        expect.anything(),
-        expect.anything()
+        expect.objectContaining({
+          fragmentId: "test-fragment",
+          fromUser: true,
+        })
       )
     })
   })
@@ -710,10 +710,12 @@ describe("useWidgetState hook", () => {
       expect(initialSelection?.columns.length).toBe(0)
       expect(initialSelection?.current).toBeUndefined()
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         selectionDefault,
-        { fromUi: false },
-        "test-fragment"
+        expect.objectContaining({
+          fragmentId: "test-fragment",
+          fromUser: false,
+        })
       )
     })
 
@@ -844,7 +846,7 @@ describe("useWidgetState hook", () => {
       expect(initialSelection?.current).toBeUndefined()
       // Verify the selection was synced to the widget manager
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         JSON.stringify({
           selection: {
             rows: [0],
@@ -852,8 +854,10 @@ describe("useWidgetState hook", () => {
             cells: [],
           },
         }),
-        { fromUi: false },
-        "test-fragment"
+        expect.objectContaining({
+          fragmentId: "test-fragment",
+          fromUser: false,
+        })
       )
     })
 
@@ -1180,10 +1184,12 @@ describe("useWidgetState hook", () => {
 
       // Should have synced to widget manager
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         selectionStateStr,
-        expect.objectContaining({ fromUi: false }),
-        "test-fragment"
+        expect.objectContaining({
+          fragmentId: "test-fragment",
+          fromUser: false,
+        })
       )
     })
 
@@ -1612,10 +1618,13 @@ describe("useWidgetState hook", () => {
       // The write happens immediately, without advancing the debounce timer.
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledTimes(1)
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         expect.any(String),
-        { fromUi: true },
-        "test-fragment"
+        {
+          formId: "",
+          fragmentId: "test-fragment",
+          fromUser: true,
+        }
       )
       expect(onEditsSubmitted).toHaveBeenCalledTimes(1)
     })
@@ -1655,10 +1664,13 @@ describe("useWidgetState hook", () => {
 
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledTimes(1)
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         expect.any(String),
-        { fromUi: false },
-        "test-fragment"
+        {
+          formId: "",
+          fragmentId: "test-fragment",
+          fromUser: false,
+        }
       )
       expect(onEditsSubmitted).not.toHaveBeenCalled()
     })
@@ -1733,17 +1745,19 @@ describe("useWidgetState hook", () => {
       expect(result.current.numRows).toBe(5)
       // Empty edits are persisted without triggering a rerun.
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         EMPTY_EDITS_JSON,
-        { fromUi: false },
-        "test-fragment"
+        {
+          formId: "",
+          fragmentId: "test-fragment",
+          fromUser: false,
+        }
       )
-      // The clear must never write with fromUi: true (which would rerun).
+      // The clear must never write with fromUser: true (which would rerun).
       expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalledWith(
         expect.anything(),
         expect.anything(),
-        { fromUi: true },
-        expect.anything()
+        expect.objectContaining({ fromUser: true })
       )
     })
 

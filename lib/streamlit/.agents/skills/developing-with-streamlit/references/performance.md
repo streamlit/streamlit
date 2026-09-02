@@ -75,6 +75,20 @@ combined with `persist`. The function can't use session-specific features (e.g.
 `st.session_state`) or render Streamlit elements—pass any needed values as arguments. Works
 with both `st.cache_data` and `st.cache_resource`.
 
+By default Streamlit hard-expires a background-refresh entry at `2 × ttl`, serving
+it stale for one extra `ttl`. Set `runner.cacheBackgroundRefreshTTLMultiplier` to a
+finite number greater than `1.0` to move that bound: a multiplier of `M`
+hard-expires at `M × ttl`, giving a stale window of `(M - 1) × ttl`. Invalid
+values warn and fall back to `2.0`. Raising it avoids blocking recomputes after
+idle periods or failed refreshes; lowering it serves fresher data and frees
+memory sooner.
+
+```toml
+# .streamlit/config.toml
+[runner]
+cacheBackgroundRefreshTTLMultiplier = 4.0
+```
+
 Background refresh is access-driven: it starts only after a call observes an expired entry,
 so the caller may briefly receive stale data. For advanced cases that need the server to
 initiate background refreshes for specific global cache keys even without user traffic, use
@@ -140,6 +154,32 @@ auto_refresh_metrics()
 ```
 
 Use for: live metrics, refresh buttons, interactive charts that don't affect global state.
+
+### Keyed reruns — target a fragment from a callback
+
+Use this when a widget *outside* a fragment should trigger only that fragment's rerun — not a full-app rerun. Give the fragment a stable name with `@st.fragment(key=...)` and call `st.rerun("<key>")` from the widget's callback.
+
+```python
+@st.fragment(key="charts")
+def charts():
+    st.line_chart(st.session_state.data)
+
+
+charts()
+# Button lives outside the fragment; clicking it reruns only "charts".
+st.button("Refresh charts", on_click=lambda: st.rerun("charts"))
+```
+
+To rerun multiple fragments at once, pass a list:
+
+```python
+st.button("Refresh all", on_click=lambda: st.rerun(["charts", "table"]))
+```
+
+**Constraints:**
+
+- `st.rerun("<key>")` is **only valid inside a widget callback** (`on_change`, `on_click`, etc.). Calling it from the main script body or a fragment body raises an error.
+- The named fragment must have been rendered during the **most recently completed full-app run**. Fragments evicted because they were behind a `False` conditional in that run are no longer in storage and raise an error.
 
 ### Parallel fragments
 

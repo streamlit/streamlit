@@ -35,7 +35,11 @@ import streamlit as st
 from streamlit import type_util
 from streamlit.elements.write import StreamingOutput, WriteMixin
 from streamlit.error_util import handle_uncaught_app_exception
-from streamlit.errors import NoSessionContext, StreamlitAPIException
+from streamlit.errors import (
+    NoSessionContext,
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+)
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -376,6 +380,24 @@ class StreamlitWriteTest(unittest.TestCase):
 
             p.assert_called_once_with(my_instance)
 
+    def test_obj_instance_with_uppercase_hex_repr(self):
+        """An address repr reaches the help view whatever hex casing it uses.
+
+        Windows CPython formats addresses with uppercase digits, so this pins
+        the routing on hosts whose own reprs are lowercase.
+        """
+
+        class SomeClass:
+            def __repr__(self) -> str:
+                return "<__main__.SomeClass object at 0x0000027B0C1B1550>"
+
+        my_instance = SomeClass()
+
+        with patch("streamlit.delta_generator.DeltaGenerator.help") as p:
+            st.write(my_instance)
+
+            p.assert_called_once_with(my_instance)
+
     def test_dataclass_instance(self):
         """Test st.write with a dataclass instance."""
 
@@ -390,8 +412,8 @@ class StreamlitWriteTest(unittest.TestCase):
 
             p.assert_called_once_with(my_instance)
 
-    # We use "looks like a memory address" as a test inside st.write, so here we're
-    # checking that that logic isn't broken.
+    # A string argument takes st.write's string branch, so an address-looking
+    # string must render as markdown rather than reaching the help view.
     def test_str_looking_like_mem_address(self):
         """Test calling st.write on a string that looks like a memory address."""
 
@@ -598,10 +620,13 @@ class StreamlitStreamTest(unittest.TestCase):
     def test_with_wrong_input(self):
         """Test st.write_stream with string or dataframe input generates exception."""
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError,
+            match=r"Expected one of: generator, stream-like object",
+        ):
             st.write_stream("Hello World")
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.write_stream(pd.DataFrame([[1, 2], [3, 4]]))
 
     def test_with_generator_misc(self):
@@ -746,18 +771,18 @@ class WriteStreamEdgeCasesTest(DeltaGeneratorTestCase):
     def test_write_stream_with_dataframe_raises_exception(self):
         """Test st.write_stream raises error for dataframe input."""
 
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitInvalidParameterTypeError) as exc:
             st.write_stream(pd.DataFrame({"a": [1, 2, 3]}))
 
-        assert "expects a generator or stream-like object" in str(exc.value)
+        assert "Invalid `stream` type" in str(exc.value)
 
     def test_write_stream_with_string_raises_exception(self):
         """Test st.write_stream raises error for string input."""
 
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitInvalidParameterTypeError) as exc:
             st.write_stream("test string")
 
-        assert "expects a generator or stream-like object" in str(exc.value)
+        assert "Invalid `stream` type" in str(exc.value)
 
     def test_write_stream_with_callable_chunks(self):
         """Test st.write_stream handles callable chunks."""

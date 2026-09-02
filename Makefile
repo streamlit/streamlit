@@ -490,7 +490,7 @@ frontend-tests:
 	cd frontend; TESTPATH=$(TESTPATH) yarn testCoverage
 
 .PHONY: frontend-knip
-# Run Knip with default reporter.
+# Run Knip unused-export and unused-dependency analysis.
 frontend-knip:
 	cd frontend/ ; yarn knip
 
@@ -544,6 +544,7 @@ update-notices:
 	./scripts/append_license.sh frontend/lib/src/vendor/react-bootstrap-LICENSE.txt
 	./scripts/append_license.sh frontend/lib/src/vendor/fzy.js/fzyjs-LICENSE.txt
 	./scripts/append_license.sh frontend/lib/src/vendor/sprintf.js/sprintfjs-LICENSE.txt
+	./scripts/append_license.sh frontend/lib/src/vendor/decamelize/decamelize-LICENSE.txt
 
 .PHONY: update-headers
 # Update all license headers.

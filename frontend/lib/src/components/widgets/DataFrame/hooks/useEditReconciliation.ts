@@ -142,7 +142,7 @@ function useEditReconciliation({
     // reconciled source values.
     if (hasClearedCells) {
       // Passive sync: do not submit a new commit_edits batch for reconciled
-      // clears (fromUi: false / no onEditsSubmitted).
+      // clears (fromUser: false / no onEditsSubmitted).
       syncEditState({ submit: false })
     }
     // `isEditingEnabled` is watched so that reconciliation also runs when

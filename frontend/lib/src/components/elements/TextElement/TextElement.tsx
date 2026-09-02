@@ -20,21 +20,54 @@ import { Text as TextProto } from "@streamlit/protobuf"
 
 import { StyledLabelHelpWrapper } from "~lib/components/shared/TooltipIcon/styled-components"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
+import { useLabelTitleTooltip } from "~lib/hooks/useLabelTitleTooltip"
 
-import { StyledInlineHelpIcon, StyledText } from "./styled-components"
+import {
+  StyledInlineHelpIcon,
+  StyledText,
+  StyledTextBody,
+} from "./styled-components"
 
 export interface TextProps {
   element: TextProto
 }
 
 /**
+ * Replace newlines with spaces so wrap=False stays on one line.
+ *
+ * wrap=False uses nowrap + white-space-collapse:preserve so extra spaces
+ * stay visible (GH#10062). That combination computes to white-space:pre,
+ * which would otherwise honor newlines as extra rows.
+ */
+function collapseNewlines(body: string): string {
+  return body.replace(/\r\n|\r|\n/g, " ")
+}
+
+/**
  * Functional element representing preformatted (plain) text.
  */
 function TextElement({ element }: Readonly<TextProps>): ReactElement {
+  const truncate = element.wrap === false
+  const { titleRef, labelTextRef } = useLabelTitleTooltip<HTMLSpanElement>(
+    truncate,
+    element.body
+  )
+  const displayedBody = truncate
+    ? collapseNewlines(element.body)
+    : element.body
+
   return (
     <StyledLabelHelpWrapper className="stText" data-testid="stText">
-      <StyledText>
-        {element.body}
+      <StyledText $truncate={truncate}>
+        {truncate ? (
+          <StyledTextBody ref={titleRef}>
+            <span ref={labelTextRef} style={{ display: "contents" }}>
+              {displayedBody}
+            </span>
+          </StyledTextBody>
+        ) : (
+          displayedBody
+        )}
         {element.help && (
           <StyledInlineHelpIcon>
             <InlineTooltipIcon content={element.help} />

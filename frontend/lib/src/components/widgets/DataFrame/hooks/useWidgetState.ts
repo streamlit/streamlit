@@ -178,7 +178,7 @@ interface UseWidgetStateParams {
   commitEditsActive?: boolean
   /**
    * Called right after an edit batch has been written to the widget manager
-   * (fromUi: true) in commit-edits mode. Only invoked when an actual widget
+   * (fromUser: true) in commit-edits mode. Only invoked when an actual widget
    * update was written.
    */
   onEditsSubmitted?: () => void
@@ -204,7 +204,7 @@ interface UseWidgetStateReturn {
   // Immediately syncs a pending edit and cancels its debounce timeout
   flushEditState: () => void
   // Resets the editing state and persists an empty editing state to the widget
-  // manager without triggering a rerun (fromUi: false). Used by the commit-edits
+  // manager without triggering a rerun (fromUser: false). Used by the commit-edits
   // clear signal after a successful commit.
   clearEditsAndWidgetValue: () => void
   // Creates a sync selection state callback for the given columns and getOriginalIndex
@@ -342,12 +342,12 @@ function useWidgetState({
    * Inner function to sync editing state with widget manager.
    * This is wrapped with debounce below.
    *
-   * @param fromUi - Whether the write should trigger a widget-driven rerun.
+   * @param fromUser - Whether the write should trigger a widget-driven rerun.
    * @returns True if the widget value was actually updated (i.e. the editing
    * state differed from the stored widget value), false otherwise.
    */
   const innerSyncEditState = useCallback(
-    (fromUi: boolean = true): boolean => {
+    (fromUser: boolean = true): boolean => {
       if (!widgetMgr) {
         return false
       }
@@ -366,17 +366,11 @@ function useWidgetState({
 
       // Only update if there is actually a difference between editing and widget state
       if (currentEditingState !== currentWidgetState) {
-        widgetMgr.setStringValue(
-          {
-            id: element.id,
-            formId: element.formId ?? undefined,
-          },
-          currentEditingState,
-          {
-            fromUi,
-          },
-          fragmentId
-        )
+        widgetMgr.setStringValue(element.id, currentEditingState, {
+          formId: element.formId ?? undefined,
+          fragmentId,
+          fromUser,
+        })
         return true
       }
 
@@ -403,7 +397,7 @@ function useWidgetState({
    * into one backend rerun by the widget manager's macrotask-level batching.
    *
    * Pass `{ submit: false }` for passive persistence (edit reconciliation): the
-   * reduced edit set is written with `fromUi: false` and does not call
+   * reduced edit set is written with `fromUser: false` and does not call
    * `onEditsSubmitted`, so a partial clear never auto-retries `commit_edits`.
    */
   const syncEditState = useCallback(
@@ -427,7 +421,7 @@ function useWidgetState({
 
   /**
    * Resets the editing state and persists an empty editing state to the widget
-   * manager without triggering a rerun (fromUi: false). Called in response to
+   * manager without triggering a rerun (fromUser: false). Called in response to
    * the one-shot commit-edits clear signal after a successful commit, so the
    * freshly committed data is shown with no lingering pending edits.
    */
@@ -438,17 +432,11 @@ function useWidgetState({
       return
     }
 
-    widgetMgr.setStringValue(
-      {
-        id: element.id,
-        formId: element.formId ?? undefined,
-      },
-      new EditingState(0).toJson([]),
-      {
-        fromUi: false,
-      },
-      fragmentId
-    )
+    widgetMgr.setStringValue(element.id, new EditingState(0).toJson([]), {
+      formId: element.formId ?? undefined,
+      fragmentId,
+      fromUser: false,
+    })
   }, [resetEditingState, widgetMgr, element.id, element.formId, fragmentId])
 
   /**
@@ -531,17 +519,11 @@ function useWidgetState({
           currentWidgetState === undefined ||
           currentWidgetState !== newWidgetState
         ) {
-          widgetMgr.setStringValue(
-            {
-              id: element.id,
-              formId: element.formId ?? undefined,
-            },
-            newWidgetState,
-            {
-              fromUi: true,
-            },
-            fragmentId
-          )
+          widgetMgr.setStringValue(element.id, newWidgetState, {
+            formId: element.formId ?? undefined,
+            fragmentId,
+            fromUser: true,
+          })
         }
       }
     },
@@ -607,17 +589,11 @@ function useWidgetState({
         )
 
         if (defaultSelection !== undefined) {
-          widgetMgr.setStringValue(
-            {
-              id: element.id,
-              formId: element.formId ?? undefined,
-            },
-            element.selectionDefault,
-            {
-              fromUi: false,
-            },
-            fragmentId
-          )
+          widgetMgr.setStringValue(element.id, element.selectionDefault, {
+            formId: element.formId ?? undefined,
+            fragmentId,
+            fromUser: false,
+          })
         }
 
         return defaultSelection
@@ -640,17 +616,11 @@ function useWidgetState({
             cells: [],
           },
         })
-        widgetMgr.setStringValue(
-          {
-            id: element.id,
-            formId: element.formId ?? undefined,
-          },
-          selectionState,
-          {
-            fromUi: false,
-          },
-          fragmentId
-        )
+        widgetMgr.setStringValue(element.id, selectionState, {
+          formId: element.formId ?? undefined,
+          fragmentId,
+          fromUser: false,
+        })
 
         return defaultRequiredSelection
       }
@@ -733,17 +703,11 @@ function useWidgetState({
       // This avoids overwriting a previously valid persisted selection with
       // malformed JSON.
       if (selection !== undefined) {
-        widgetMgr.setStringValue(
-          {
-            id: element.id,
-            formId: element.formId ?? undefined,
-          },
-          selectionState,
-          {
-            fromUi: false,
-          },
-          fragmentId
-        )
+        widgetMgr.setStringValue(element.id, selectionState, {
+          formId: element.formId ?? undefined,
+          fragmentId,
+          fromUser: false,
+        })
       }
 
       return selection

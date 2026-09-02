@@ -28,7 +28,11 @@ from google.protobuf.message import Message
 
 from streamlit import config, util
 from streamlit.elements.lib.form_utils import current_form_id
-from streamlit.errors import StreamlitDuplicateElementId, StreamlitDuplicateElementKey
+from streamlit.errors import (
+    StreamlitDuplicateElementId,
+    StreamlitDuplicateElementKey,
+    StreamlitValueError,
+)
 from streamlit.proto.ChatInput_pb2 import ChatInput
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility as LabelVisibilityProto
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -78,7 +82,11 @@ def get_label_visibility_proto_value(
     if label_visibility_string == "collapsed":
         return LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED
 
-    raise ValueError(f"Unknown label visibility value: {label_visibility_string}")
+    raise StreamlitValueError(
+        "label_visibility",
+        ["'visible'", "'hidden'", "'collapsed'"],
+        detail=f"Got {label_visibility_string!r}.",
+    )
 
 
 def get_chat_input_accept_file_proto_value(
@@ -95,7 +103,11 @@ def get_chat_input_accept_file_proto_value(
     if accept_file_value == "directory":
         return ChatInput.AcceptFile.DIRECTORY
 
-    raise ValueError(f"Unknown accept file value: {accept_file_value}")
+    raise StreamlitValueError(
+        "accept_file",
+        ["True", "False", "'multiple'", "'directory'"],
+        detail=f"Got {accept_file_value!r}.",
+    )
 
 
 @overload

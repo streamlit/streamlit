@@ -58,4 +58,11 @@ message TextInput {
   optional string query_param_key = 15;
   optional string validate_regex = 16;
   optional string validate_message = 17;
+
+  // Set by on_change="ignore": do not schedule a rerun; buffer the value until
+  // the next rerun. Bound widgets still update the URL when the value is
+  // committed. Inside a form, this flag has no effect because the form batches
+  // values until submit.
+  bool ignore_rerun = 18;
+  // Next: 19
 }

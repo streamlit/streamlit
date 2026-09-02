@@ -36,7 +36,6 @@ import {
   notNullOrUndefined,
 } from "~lib/util/utils"
 
-import { createBaseUiTheme } from "./createBaseUiTheme"
 import { computeDerivedColors, createEmotionColors } from "./getColors"
 import { createShadows } from "./getShadows"
 import { fonts } from "./primitives/typography"
@@ -1167,18 +1166,10 @@ export const createTheme = (
 
   const emotion = createEmotionTheme(completedThemeInput, startingTheme)
 
-  // We need to deep clone the theme object to prevent a bug in BaseWeb that causes
-  // primitives to be modified globally. This cloning decouples our BaseWeb theme
-  // object from the shared primitive objects and prevents unintended side effects.
-  const basewebTheme = cloneDeep(
-    createBaseUiTheme(emotion, startingTheme.primitives)
-  )
-
   return {
     ...startingTheme,
     name: themeName,
     emotion,
-    basewebTheme,
     themeInput,
   }
 }

@@ -362,6 +362,10 @@ class StatsManager:
                 self._providers_by_family[family] = []
             self._providers_by_family[family].append(provider)
 
+    def registered_families(self) -> Sequence[str]:
+        """Return registered metric family names in registration order."""
+        return list(self._providers_by_family.keys())
+
     def get_stats(
         self, family_names: Sequence[str] | None = None
     ) -> Mapping[str, Sequence[Stat]]:

@@ -379,7 +379,7 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
       expect(updateWidgetMgrState).toHaveBeenCalledWith(
         element,
         widgetMgr,
-        { value: "default-value", fromUi: true },
+        { value: "default-value", fromUser: true },
         undefined
       )
     })
@@ -410,13 +410,13 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
       updateWidgetMgrState.mockClear()
 
       act(() => {
-        result.current[1]({ value: "new-value", fromUi: true })
+        result.current[1]({ value: "new-value", fromUser: true })
       })
 
       expect(updateWidgetMgrState).toHaveBeenCalledWith(
         element,
         widgetMgr,
-        { value: "new-value", fromUi: true },
+        { value: "new-value", fromUser: true },
         fragmentId
       )
     })
