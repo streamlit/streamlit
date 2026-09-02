@@ -1951,7 +1951,7 @@ describe("TextInput live updates", () => {
     expect(setStringValueSpy).not.toHaveBeenCalled()
   })
 
-  it("cancels a pending debounce when the delay changes", async () => {
+  it("reschedules a pending debounce when the delay changes", async () => {
     const { user, props, setStringValueSpy, rerender } = renderLive()
 
     await user.type(screen.getByRole("textbox"), "abc")
@@ -1968,7 +1968,11 @@ describe("TextInput live updates", () => {
     advanceMs(100)
     expect(setStringValueSpy).not.toHaveBeenCalled()
     advanceMs(500)
-    expect(setStringValueSpy).not.toHaveBeenCalled()
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "abc",
+      fromUserCommit(props)
+    )
   })
 
   it("commits live values for password inputs", async () => {

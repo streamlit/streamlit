@@ -366,14 +366,29 @@ function TextInput({
   const { debouncedCallback: scheduleLiveCommit, cancel: cancelLiveCommit } =
     useDebouncedCallback(tryCommitOutsideForm, liveDebounceMs)
 
-  // useDebouncedCallback does not cancel a manually started timer when the
-  // delay changes. Drop pending work if live is toggled or the delay changes
-  // on a keyed widget; blur/Enter still flush if the user confirms.
+  // useDebouncedCallback (autoStart: false) does not cancel a manually
+  // started timer when the delay changes. Cancel when live is disabled or
+  // the widget unmounts. If only the delay changes, reschedule so a dirty
+  // value still commits after inactivity.
   useEffect(() => {
     return () => {
       cancelLiveCommit()
     }
-  }, [cancelLiveCommit, liveDebounceMs, liveEnabled])
+  }, [cancelLiveCommit, liveEnabled])
+
+  const prevLiveDebounceMsRef = useRef(liveDebounceMs)
+  useEffect(() => {
+    const delayChanged = prevLiveDebounceMsRef.current !== liveDebounceMs
+    prevLiveDebounceMsRef.current = liveDebounceMs
+    if (!delayChanged || !liveEnabled || !dirtyRef.current) {
+      return
+    }
+    if (liveDebounceMs === 0) {
+      tryCommitOutsideForm()
+      return
+    }
+    scheduleLiveCommit()
+  }, [liveDebounceMs, liveEnabled, scheduleLiveCommit, tryCommitOutsideForm])
 
   const commitOrScheduleLive = useCallback(
     (valueToCommit: string | null = uiValueRef.current): void => {

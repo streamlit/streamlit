@@ -158,7 +158,7 @@ def _parse_text_input_live(live: object) -> int | None:
             ["bool", "str"],
         )
 
-    # Duration strings always parse to a finite number of seconds.
+    # Valid duration strings convert to a finite number of seconds.
     seconds = time_to_seconds(live)
     debounce_ms = round(seconds * 1000.0)
     # Only a true zero-length duration is immediate-commit. A positive
