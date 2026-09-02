@@ -141,7 +141,7 @@ class CachedMessageReplayContext:
         self._most_recent_messages_var: contextvars.ContextVar[list[MsgData] | None] = (
             contextvars.ContextVar(f"most_recent_messages_{cache_type}", default=None)
         )
-        self._media_data: contextvars.ContextVar[tuple[MediaMsgData, ...]] = (
+        self._media_data_var: contextvars.ContextVar[tuple[MediaMsgData, ...]] = (
             contextvars.ContextVar(f"media_data_{cache_type}", default=())
         )
         self._cache_type = cache_type
@@ -150,6 +150,10 @@ class CachedMessageReplayContext:
     def _most_recent_messages(self) -> list[MsgData]:
         messages = self._most_recent_messages_var.get()
         return messages if messages is not None else []
+
+    @property
+    def _media_data(self) -> list[MediaMsgData]:
+        return list(self._media_data_var.get())
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -200,7 +204,7 @@ class CachedMessageReplayContext:
         if message_stack:
             id_to_save = self.select_dg_to_save(invoked_dg_id, used_dg_id)
 
-            media_data = list(self._media_data.get())
+            media_data = self._media_data
 
             element_msg_data = ElementMsgData(
                 delta_type,
@@ -215,7 +219,7 @@ class CachedMessageReplayContext:
 
         # Reset instance state, now that it has been used for the
         # associated element.
-        self._media_data.set(())
+        self._media_data_var.set(())
 
         for s in self._seen_dg_stack.get():
             s.add(returned_dg_id)
@@ -257,8 +261,8 @@ class CachedMessageReplayContext:
         if not in_cached_function.get():
             return
 
-        self._media_data.set(
-            (*self._media_data.get(), MediaMsgData(media_data, mimetype, media_id))
+        self._media_data_var.set(
+            (*self._media_data_var.get(), MediaMsgData(media_data, mimetype, media_id))
         )
 
 
