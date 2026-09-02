@@ -390,8 +390,9 @@ describe("PlotlyChart Component", () => {
 
     expect(config?.showSendToCloud).toBe(false)
     expect(config?.modeBarButtonsToRemove).toEqual(
-      expect.arrayContaining(["sendChartToCloud", "lasso2d", "select2d"])
+      expect.arrayContaining(["lasso2d", "select2d"])
     )
+    expect(config?.modeBarButtonsToRemove).not.toContain("sendChartToCloud")
   })
 
   it("respects an explicit showSendToCloud config", () => {
@@ -403,6 +404,9 @@ describe("PlotlyChart Component", () => {
 
     const lastCallProps = getLastPlotProps()
     expect(lastCallProps.config?.showSendToCloud).toBe(true)
+    expect(lastCallProps.config?.modeBarButtonsToRemove).not.toContain(
+      "sendChartToCloud"
+    )
   })
 
   it("does not overwrite a user-provided modeBarButtonsToRemove", () => {

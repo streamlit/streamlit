@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import type { Figure as PlotlyFigureType } from "~lib/util/reactPlotlyCompat"
-
 /**
  * plotly.js v4 removed Mapbox traces, subplots, and `mapboxAccessToken`.
  * Python Plotly (and older figure JSON) still emits those names, so rewrite
@@ -25,6 +23,12 @@ import type { Figure as PlotlyFigureType } from "~lib/util/reactPlotlyCompat"
  *
  * @see https://plotly.com/javascript/guides/migrating-to-v4/
  */
+
+import { getLogger } from "loglevel"
+
+import type { Figure as PlotlyFigureType } from "~lib/util/reactPlotlyCompat"
+
+const LOG = getLogger("PlotlyChart:mapboxCompat")
 
 /** Figure JSON that may still use plotly.js v3 Mapbox field names. */
 type LoosePlotlyFigure = {
@@ -39,7 +43,12 @@ const MAPBOX_TRACE_TYPES: Record<string, string> = {
   densitymapbox: "densitymap",
 }
 
-const MAPBOX_STYLE_ALIASES: Record<string, string> = {
+/**
+ * Mapbox Studio style slugs from `mapbox://styles/mapbox/<slug>[-vN]` URLs.
+ * Identity rows are the v4 built-in allowlist; navigation entries are the
+ * closest MapLibre fallbacks.
+ */
+const MAPBOX_URL_STYLE_TO_MAP_STYLE: Record<string, string> = {
   basic: "basic",
   streets: "streets",
   outdoors: "outdoors",
@@ -49,6 +58,13 @@ const MAPBOX_STYLE_ALIASES: Record<string, string> = {
   "satellite-streets": "satellite-streets",
   "navigation-day": "streets",
   "navigation-night": "dark",
+}
+
+/** v3 named styles that plotly.js v4 / MapLibre no longer ships. */
+const STAMEN_STYLE_ALIASES: Record<string, string> = {
+  "stamen-terrain": "carto-voyager",
+  "stamen-toner": "carto-positron",
+  "stamen-watercolor": "carto-voyager",
 }
 
 const MAPBOX_MODEBAR_BUTTONS: Record<string, string> = {
@@ -80,24 +96,45 @@ function migrateMapboxSubplotId(id: unknown): unknown {
 }
 
 /**
- * Map official Mapbox style URLs to the built-in MapLibre style names that
- * plotly.js v4 still ships. Custom style URLs are left unchanged.
+ * Map official Mapbox style URLs and v3-only Stamen names to built-in
+ * MapLibre styles. Custom `mapbox://` URLs and unknown removed names are
+ * left unchanged, with a warning because MapLibre treats them as style URLs.
  */
 function migrateMapboxStyle(style: unknown): unknown {
   if (typeof style !== "string") {
     return style
   }
 
-  const mapboxUrl =
-    /^mapbox:\/\/styles\/mapbox\/([a-z0-9-]+?)(?:-v\d+)?$/i.exec(style)
-  if (!mapboxUrl) {
-    return style
+  const lowered = style.toLowerCase()
+  const stamenAlias = STAMEN_STYLE_ALIASES[lowered]
+  let next = style
+  if (stamenAlias) {
+    next = stamenAlias
+  } else {
+    const mapboxUrl =
+      /^mapbox:\/\/styles\/mapbox\/([a-z0-9-]+?)(?:-v\d+)?$/i.exec(style)
+    if (mapboxUrl) {
+      next =
+        MAPBOX_URL_STYLE_TO_MAP_STYLE[mapboxUrl[1].toLowerCase()] ?? style
+    }
   }
 
-  return MAPBOX_STYLE_ALIASES[mapboxUrl[1].toLowerCase()] ?? style
+  if (
+    typeof next === "string" &&
+    (next.startsWith("mapbox://") || next.toLowerCase() in STAMEN_STYLE_ALIASES)
+  ) {
+    LOG.warn(
+      `Plotly map style "${style}" is not supported by plotly.js v4 (MapLibre). ` +
+        `Use a built-in style such as "open-street-map", "carto-positron", ` +
+        `"carto-darkmatter", or "carto-voyager".`
+    )
+  }
+
+  return next
 }
 
-function migrateMapLayout(value: unknown): Record<string, unknown> {
+/** Drop the Mapbox access token and rewrite the subplot style. */
+function migrateMapboxSubplot(value: unknown): Record<string, unknown> {
   const mapLayout = isRecord(value) ? { ...value } : {}
   delete mapLayout.accesstoken
   delete mapLayout.accessToken
@@ -146,8 +183,10 @@ function migratePlotlyMapboxLayout(
     next[key] = value
   }
 
+  // Apply renamed map* keys last so an existing layout.map wins over a
+  // migrated layout.mapbox, regardless of key order.
   for (const [mapKey, value] of pendingMaps) {
-    const migrated = migrateMapLayout(value)
+    const migrated = migrateMapboxSubplot(value)
     const existing = next[mapKey]
     next[mapKey] = isRecord(existing) ? { ...migrated, ...existing } : migrated
   }
@@ -203,8 +242,8 @@ function migrateModeBarButton(button: unknown): unknown {
 }
 
 /**
- * Rewrite a plotly.js v3 Mapbox figure to the v4 MapLibre `map` API.
- * Already-migrated figures are returned unchanged.
+ * Rewrite a plotly.js v3 Mapbox figure to the v4 MapLibre `map` API
+ * while preserving already-migrated values.
  */
 export function migratePlotlyMapboxFigure(
   figure: LoosePlotlyFigure

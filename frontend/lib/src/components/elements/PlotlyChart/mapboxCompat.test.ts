@@ -14,12 +14,16 @@
  * limitations under the License.
  */
 
+import { getLogger } from "loglevel"
+
 import type { Figure as PlotlyFigureType } from "~lib/util/reactPlotlyCompat"
 
 import {
   migratePlotlyMapboxConfig,
   migratePlotlyMapboxFigure,
 } from "./mapboxCompat"
+
+const LOG = getLogger("PlotlyChart:mapboxCompat")
 
 describe("migratePlotlyMapboxFigure", () => {
   it("renames mapbox traces, subplots, and layout keys", () => {
@@ -95,6 +99,43 @@ describe("migratePlotlyMapboxFigure", () => {
     expect(figure.layout).toEqual({
       map: { style: "satellite-streets" },
     })
+  })
+
+  it.each([
+    ["stamen-terrain", "carto-voyager"],
+    ["stamen-toner", "carto-positron"],
+    ["stamen-watercolor", "carto-voyager"],
+  ])("rewrites v3 %s style to %s", (fromStyle, toStyle) => {
+    const figure = migratePlotlyMapboxFigure({
+      data: [{ type: "scattermapbox" }],
+      layout: { mapbox: { style: fromStyle } },
+      frames: null,
+    })
+
+    expect(figure.layout).toEqual({
+      map: { style: toStyle },
+    })
+  })
+
+  it("warns when a custom Mapbox style URL cannot be migrated", () => {
+    const warnSpy = vi.spyOn(LOG, "warn").mockImplementation(() => {})
+
+    const figure = migratePlotlyMapboxFigure({
+      data: [{ type: "scattermapbox" }],
+      layout: {
+        mapbox: { style: "mapbox://styles/myuser/custom-style" },
+      },
+      frames: null,
+    })
+
+    expect(figure.layout).toEqual({
+      map: { style: "mapbox://styles/myuser/custom-style" },
+    })
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("mapbox://styles/myuser/custom-style")
+    )
+
+    warnSpy.mockRestore()
   })
 
   it("prefers an existing layout.map over a migrated mapbox layout", () => {
