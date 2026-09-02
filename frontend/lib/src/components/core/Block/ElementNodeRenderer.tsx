@@ -1111,9 +1111,9 @@ const RawElementNodeRenderer = (
           isStale={isStale}
         >
           <EChartsChart
-            // ECharts charts can be used as a widget (when selections are
-            // activated) or a display-only element. We only set the key when
-            // it's a widget; display-only charts intentionally have no id.
+            // An ECharts chart only has an id when selections are activated or
+            // the user gave it a key. An unkeyed display-only chart has none,
+            // so it falls back to positional identity like other elements.
             key={echartsProto.id || undefined}
             element={echartsProto}
             {...widgetProps}
