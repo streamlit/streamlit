@@ -12,11 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import tempfile
-from pathlib import Path
 from typing import Any
 
+import pytest
 from playwright.sync_api import FileChooser, FilePayload, Page, Route, expect
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
@@ -39,12 +37,19 @@ from e2e_playwright.shared.app_utils import (
 NUM_FILE_UPLOADERS = 21
 
 
-def create_temp_directory_with_files(file_data: list[dict[str, Any]]) -> str:
+def create_temp_directory_with_files(
+    tmp_path_factory: pytest.TempPathFactory, file_data: list[dict[str, Any]]
+) -> str:
     """
     Create a temporary directory with files for directory upload testing.
 
     Parameters
     ----------
+    tmp_path_factory : pytest.TempPathFactory
+        Supplies a base directory that is unique per call, so that callers
+        running concurrently in separate xdist workers cannot clobber each
+        other's files. Also lets pytest garbage-collect the trees.
+
     file_data : list[dict[str, Any]]
         List of dict with 'path' and 'content' keys
 
@@ -53,16 +58,9 @@ def create_temp_directory_with_files(file_data: list[dict[str, Any]]) -> str:
     str
         Path to the temporary directory
     """
-    # The base directory must be unique per call. Callers can run concurrently in
-    # separate xdist workers, and a shared base made each one delete and rebuild
-    # the other's directory mid-test, so a single upload picked up both sets of
-    # files. The uploaded directory itself stays named "upload_dir" so that
-    # webkitRelativePath, and the chip titles asserted against it, are unchanged.
-    test_base_dir = tempfile.mkdtemp(prefix="streamlit_e2e_upload_")
-    temp_dir = os.path.join(test_base_dir, "upload_dir")
-    temp_path = Path(temp_dir)
-
-    # Create a nested structure so the uploaded directory preserves relative paths
+    # Nested as "upload_dir" so that webkitRelativePath, and the chip titles
+    # asserted against it, carry that prefix.
+    temp_path = tmp_path_factory.mktemp("streamlit_e2e_upload") / "upload_dir"
     temp_path.mkdir(parents=True, exist_ok=True)
 
     for file_info in file_data:
@@ -70,7 +68,7 @@ def create_temp_directory_with_files(file_data: list[dict[str, Any]]) -> str:
         file_path.parent.mkdir(parents=True, exist_ok=True)
         file_path.write_bytes(file_info["content"])
 
-    return str(temp_dir)
+    return str(temp_path)
 
 
 def verify_uploaded_files_in_widget(
@@ -369,7 +367,9 @@ def test_compact_uploader_with_files_snapshot(
     assert_snapshot(file_uploader, name="st_file_uploader-compact_with_files")
 
 
-def test_uploads_directory_with_multiple_files(app: Page):
+def test_uploads_directory_with_multiple_files(
+    app: Page, tmp_path_factory: pytest.TempPathFactory
+):
     """Test that directory upload works correctly with multiple files.
 
     Note: We don't test the visual order of files in the widget because
@@ -383,7 +383,7 @@ def test_uploads_directory_with_multiple_files(app: Page):
         {"path": "folder/subfolder/file3.md", "content": b"# Markdown"},
     ]
 
-    temp_dir = create_temp_directory_with_files(directory_data)
+    temp_dir = create_temp_directory_with_files(tmp_path_factory, directory_data)
 
     uploader_index = 3  # Directory uploader index
 
@@ -418,7 +418,9 @@ def test_uploads_directory_with_multiple_files(app: Page):
     expect(uploader_text).to_contain_text("Directory contains 2 files:")
 
 
-def test_directory_upload_with_file_type_filtering(app: Page):
+def test_directory_upload_with_file_type_filtering(
+    app: Page, tmp_path_factory: pytest.TempPathFactory
+):
     """Test that directory upload correctly filters files by type.
 
     Note: We don't test the visual order of files in the widget because
@@ -435,7 +437,7 @@ def test_directory_upload_with_file_type_filtering(app: Page):
         {"path": "nested/deep/file.txt", "content": b"nested file"},
     ]
 
-    temp_dir = create_temp_directory_with_files(directory_data)
+    temp_dir = create_temp_directory_with_files(tmp_path_factory, directory_data)
     file_dropzone = app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index)
     expect(file_dropzone).to_be_visible()
 
