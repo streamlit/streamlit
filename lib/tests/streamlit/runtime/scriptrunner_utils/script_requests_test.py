@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -318,6 +318,9 @@ class ScriptRequestsTest(unittest.TestCase):
         _create_widget("chat", newer_replay_states).chat_input_value.CopyFrom(
             ChatInputValue(data="hello")
         )
+        _create_widget("string", newer_replay_states).string_trigger_value.CopyFrom(
+            StringTriggerValue(data="new")
+        )
         _create_widget(
             "json", newer_replay_states
         ).json_trigger_value = '{"event":"go"}'
@@ -329,7 +332,11 @@ class ScriptRequestsTest(unittest.TestCase):
             )
         )
 
-        assert _get_widget("scalar", reqs._rerun_data.widget_states).int_value == 2
+        fresh = reqs._rerun_data.widget_states
+        assert fresh is not None
+        assert [(state.id, state.int_value) for state in fresh.widgets] == [
+            ("scalar", 2)
+        ]
         replay = reqs._rerun_data.replay_trigger_states
         assert replay is not None
         assert [state.id for state in replay.widgets] == [
@@ -338,6 +345,27 @@ class ScriptRequestsTest(unittest.TestCase):
             "chat",
             "json",
         ]
+        assert _get_widget("string", replay).string_trigger_value.data == "new"
+        assert _get_widget("chat", replay).chat_input_value.data == "hello"
+        assert _get_widget("json", replay).json_trigger_value == '{"event":"go"}'
+        assert _get_widget("scalar", replay) is None
+
+    def test_inactive_and_non_trigger_values_are_not_replayed(self):
+        reqs = ScriptRequests()
+        replay = WidgetStates()
+        _create_widget("bool", replay).trigger_value = False
+        _create_widget("string", replay).string_trigger_value.CopyFrom(
+            StringTriggerValue(data="")
+        )
+        _create_widget("chat", replay).chat_input_value.CopyFrom(
+            ChatInputValue(data=None)
+        )
+        _create_widget("json", replay).json_trigger_value = ""
+        _create_widget("scalar", replay).int_value = 1
+
+        reqs.request_rerun(RerunData(replay_trigger_states=replay))
+
+        assert reqs._rerun_data.replay_trigger_states is None
 
     def test_request_rerun_batch_coalesces_fragment_targets(self):
         reqs = ScriptRequests()
@@ -349,6 +377,21 @@ class ScriptRequestsTest(unittest.TestCase):
         )
 
         assert reqs._rerun_data.fragment_id_queue == ["frag-a", "frag-b"]
+
+    def test_request_rerun_batch_acquires_lock_once(self):
+        reqs = ScriptRequests()
+        lock = MagicMock()
+        reqs._lock = lock
+
+        reqs.request_rerun_batch(
+            [
+                RerunData(fragment_id_queue=["frag-a"]),
+                RerunData(fragment_id_queue=["frag-b"]),
+            ]
+        )
+
+        lock.__enter__.assert_called_once_with()
+        lock.__exit__.assert_called_once()
 
     def test_on_script_yield_with_no_request(self):
         """Return None; remain in the CONTINUE state."""

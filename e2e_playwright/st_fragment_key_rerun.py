@@ -124,7 +124,13 @@ st.button(
 # ------------------------------------------------------------------ #
 st.header("Scenario 5: fragment callback replay coalescing")
 
-for key in ("source_callbacks", "fresh_callbacks"):
+for key in (
+    "source_callbacks",
+    "fresh_callbacks",
+    "coalescing_source_runs",
+    "coalescing_fresh_runs",
+    "coalescing_result_runs",
+):
     if key not in st.session_state:
         st.session_state[key] = 0
 
@@ -135,8 +141,11 @@ def record_fresh_callback() -> None:
 
 @st.fragment(key="source_fragment")
 def coalescing_source_fragment() -> None:
+    st.session_state.coalescing_source_runs += 1
     with st.container(key="coalescing_source_uuid"):
         st.write(str(uuid4()))
+    with st.container(key="coalescing_source_runs"):
+        st.write(f"Source runs: {st.session_state.coalescing_source_runs}")
     callback_marker = st.empty()
 
     def wait_for_fresh_fragment_request() -> None:
@@ -167,8 +176,11 @@ def coalescing_source_fragment() -> None:
 
 @st.fragment(key="fresh_fragment")
 def coalescing_fresh_fragment() -> None:
+    st.session_state.coalescing_fresh_runs += 1
     with st.container(key="coalescing_fresh_uuid"):
         st.write(str(uuid4()))
+    with st.container(key="coalescing_fresh_runs"):
+        st.write(f"Fresh runs: {st.session_state.coalescing_fresh_runs}")
     st.button(
         "Fresh fragment interaction",
         key="fresh_fragment_button",
@@ -178,8 +190,11 @@ def coalescing_fresh_fragment() -> None:
 
 @st.fragment(key="result_fragment")
 def coalescing_result_fragment() -> None:
+    st.session_state.coalescing_result_runs += 1
     with st.container(key="coalescing_result_uuid"):
         st.write(str(uuid4()))
+    with st.container(key="coalescing_result_runs"):
+        st.write(f"Result runs: {st.session_state.coalescing_result_runs}")
     with st.container(key="coalescing_results"):
         st.write(f"Source callbacks: {st.session_state.source_callbacks}")
         st.write(f"Fresh callbacks: {st.session_state.fresh_callbacks}")

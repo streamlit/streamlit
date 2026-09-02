@@ -20,9 +20,11 @@ import streamlit as st
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequestType
 
-for key in ("form_callbacks", "fresh_callbacks"):
+for key in ("form_callbacks", "fresh_callbacks", "body_runs"):
     if key not in st.session_state:
         st.session_state[key] = 0
+
+st.session_state.body_runs += 1
 
 
 def wait_for_fresh_request() -> None:
@@ -60,6 +62,7 @@ with st.form("coalescing_form"):
 st.button("Fresh interaction", key="fresh_interaction", on_click=record_fresh_callback)
 
 with st.container(key="coalescing_results"):
+    st.write(f"Body runs: {st.session_state.body_runs}")
     st.write(f"Form callbacks: {st.session_state.form_callbacks}")
     st.write(f"Fresh callbacks: {st.session_state.fresh_callbacks}")
     st.write(f"Normalized name: {st.session_state.get('normalized_name', '')}")

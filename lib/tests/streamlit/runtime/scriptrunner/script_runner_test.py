@@ -952,6 +952,36 @@ class ScriptRunnerTest(unittest.TestCase):
 
         patched_on_script_will_rerun.assert_called_once_with(None, replay)
 
+    @patch(
+        "streamlit.runtime.state.safe_session_state.SafeSessionState.on_script_finished"
+    )
+    @patch("streamlit.runtime.state.session_state.SessionState.on_script_will_rerun")
+    def test_replay_only_preemption_happens_before_script_start(
+        self,
+        patched_on_script_will_rerun: MagicMock,
+        patched_on_script_finished: MagicMock,
+    ) -> None:
+        replay = WidgetStates()
+        _create_widget("button", replay).trigger_value = True
+        scriptrunner = TestScriptRunner(
+            "good_script.py",
+            RerunData(widget_states=None, replay_trigger_states=replay),
+        )
+        patched_on_script_will_rerun.side_effect = lambda *_: (
+            scriptrunner.request_rerun(RerunData())
+        )
+
+        scriptrunner.start()
+        scriptrunner.join()
+
+        assert not scriptrunner.script_thread_exceptions
+        assert [
+            call.kwargs["remove_stale_widgets"]
+            for call in patched_on_script_finished.call_args_list
+            if "remove_stale_widgets" in call.kwargs
+        ] == [False, True]
+        assert scriptrunner.text_deltas() == [text_utf]
+
     @patch("streamlit.elements.exception._exception")
     @patch("streamlit.runtime.state.session_state.SessionState._call_callbacks")
     def test_calls_widget_callbacks_error(

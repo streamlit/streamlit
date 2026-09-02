@@ -14,6 +14,7 @@
 
 """Playwright tests for @st.fragment(key=...) and st.rerun(scope=<key>)."""
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.shared.app_utils import (
@@ -24,11 +25,20 @@ from e2e_playwright.shared.app_utils import (
 )
 
 
+@pytest.fixture(scope="module")
+def app_server_extra_args() -> list[str]:
+    return ["--runner.fastReruns=true"]
+
+
 def _text(app: Page, key: str) -> str:
     """Return the text content of a container identified by its Streamlit key."""
     content = get_element_by_key(app, key).text_content()
     assert content is not None
     return content
+
+
+def _run_count(app: Page, key: str) -> int:
+    return int(_text(app, key).rsplit(": ", 1)[1])
 
 
 def test_single_key_rerun_updates_only_fragment(app: Page) -> None:
@@ -101,6 +111,9 @@ def test_fresh_fragment_interaction_preserves_pending_callback_replay(
     source_uuid = _text(app, "coalescing_source_uuid")
     fresh_uuid = _text(app, "coalescing_fresh_uuid")
     result_uuid = _text(app, "coalescing_result_uuid")
+    source_runs = _run_count(app, "coalescing_source_runs")
+    fresh_runs = _run_count(app, "coalescing_fresh_runs")
+    result_runs = _run_count(app, "coalescing_result_runs")
 
     app.get_by_label("Source value").fill("  retained  ")
     app.get_by_role("button", name="Submit source").click()
@@ -109,23 +122,27 @@ def test_fresh_fragment_interaction_preserves_pending_callback_replay(
     ).to_be_visible()
     app.get_by_role("button", name="Fresh fragment interaction").click()
 
-    expect(get_element_by_key(app, "coalescing_results")).to_contain_text(
-        "Source callbacks: 1"
-    )
-    expect(get_element_by_key(app, "coalescing_results")).to_contain_text(
-        "Fresh callbacks: 1"
-    )
-    expect(get_element_by_key(app, "coalescing_results")).to_contain_text(
-        "Normalized value: retained"
-    )
-    expect(get_element_by_key(app, "coalescing_results")).to_contain_text(
-        "Result saw submit: True"
-    )
+    results = get_element_by_key(app, "coalescing_results")
+    expect(results.get_by_text("Source callbacks: 1", exact=True)).to_be_visible()
+    expect(results.get_by_text("Fresh callbacks: 1", exact=True)).to_be_visible()
+    expect(
+        results.get_by_text("Normalized value: retained", exact=True)
+    ).to_be_visible()
+    expect(results.get_by_text("Result saw submit: True", exact=True)).to_be_visible()
     expect(get_element_by_key(app, "coalescing_source_uuid")).to_have_text(source_uuid)
     expect(get_element_by_key(app, "coalescing_fresh_uuid")).not_to_have_text(
         fresh_uuid
     )
     expect(get_element_by_key(app, "coalescing_result_uuid")).not_to_have_text(
         result_uuid
+    )
+    expect(get_element_by_key(app, "coalescing_source_runs")).to_have_text(
+        f"Source runs: {source_runs}"
+    )
+    expect(get_element_by_key(app, "coalescing_fresh_runs")).to_have_text(
+        f"Fresh runs: {fresh_runs + 1}"
+    )
+    expect(get_element_by_key(app, "coalescing_result_runs")).to_have_text(
+        f"Result runs: {result_runs + 1}"
     )
     expect_no_exception(app)

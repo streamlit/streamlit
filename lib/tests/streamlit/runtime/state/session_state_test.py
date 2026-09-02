@@ -1367,6 +1367,18 @@ def test_callback_mutation_survives_replay_overlay() -> None:
         )
     )
     ss._old_state["fresh"] = False
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="replay",
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="trigger_value",
+            callback=lambda: (_ for _ in ()).throw(
+                AssertionError("replay callback should not run")
+            ),
+        )
+    )
+    ss._old_state["replay"] = False
     fresh = WidgetStatesProto()
     fresh.widgets.add(id="fresh", trigger_value=True)
     replay = WidgetStatesProto()
@@ -1375,6 +1387,7 @@ def test_callback_mutation_survives_replay_overlay() -> None:
     ss.on_script_will_rerun(fresh, replay)
 
     assert ss["result"] == "after"
+    assert ss["replay"] is True
 
 
 def test_preempting_callback_batch_carries_incoming_replay_state() -> None:
@@ -1416,6 +1429,33 @@ def test_targeted_callback_batch_replays_current_interaction_trigger() -> None:
 
     batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
     assert batch[0].replay_trigger_states == interaction
+
+
+def test_targeted_preemption_combines_incoming_and_current_replay_triggers() -> None:
+    ss = _state_with_changed_widgets([("target", _raise_targeted_rerun)])
+    incoming_replay = WidgetStatesProto()
+    incoming_replay.widgets.add(id="already-processed", trigger_value=True)
+    current_interaction = WidgetStatesProto()
+    current_interaction.widgets.add(id="submit", trigger_value=True)
+    ss._current_interaction_widget_states = current_interaction
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = ["source"]
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks(incoming_replay)
+
+    batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
+    replay = batch[0].replay_trigger_states
+    assert replay is not None
+    assert [(state.id, state.trigger_value) for state in replay.widgets] == [
+        ("already-processed", True),
+        ("submit", True),
+    ]
 
 
 def test_disabled_widget_change_does_not_force_app_wide_rerun() -> None:
