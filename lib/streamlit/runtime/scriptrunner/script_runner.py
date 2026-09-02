@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import gc
 import sys
 import threading
@@ -96,8 +97,9 @@ class ScriptRunnerEvent(Enum):
     # by the user.
     FRAGMENT_STOPPED_WITH_SUCCESS = "FRAGMENT_STOPPED_WITH_SUCCESS"
 
-    # The ScriptRunner is done processing the ScriptEventQueue and
-    # is shut down.
+    # Terminal event: The ScriptRunner will process no more requests. Script
+    # execution has unwound or setup failed, the runner's event loop is detached,
+    # and its script thread is about to exit.
     SHUTDOWN = "SHUTDOWN"
 
     # "Data" events. These are emitted when the ScriptRunner's script has
@@ -180,6 +182,7 @@ class ScriptRunner:
         user_info: UserInfoType,
         fragment_storage: FragmentStorage,
         pages_manager: PagesManager,
+        event_loop: asyncio.AbstractEventLoop,
         on_script_error: OnScriptErrorHandler | None = None,
         local_sources_watcher: LocalSourcesWatcher | None = None,
     ) -> None:
@@ -230,6 +233,13 @@ class ScriptRunner:
             The session's file watcher, if any.  Its ``on_script_run`` hook is
             called at the start of each script run (on the script thread)
             before any user code executes.
+
+        event_loop
+            A persistent, non-running asyncio event loop owned by the caller
+            (typically ``AppSession``). The runner installs and detaches it but
+            never closes it. After this runner emits ``SHUTDOWN``, it no longer
+            uses the loop. The caller determines when no other runner is using
+            the loop and it is safe to close.
         """
         self._session_id = session_id
         self._main_script_path = main_script_path
@@ -254,7 +264,7 @@ class ScriptRunner:
         # no payload:
         # - ENQUEUE_FORWARD_MSG: forward_msg
         # - SCRIPT_STOPPED_WITH_COMPILE_ERROR: exception
-        # - SHUTDOWN: client_state
+        # - SHUTDOWN: client_state (None if setup failed before context creation)
         # - SCRIPT_STARTED: page_script_hash, fragment_ids_this_run, pages
         self.on_event = Signal()
 
@@ -264,6 +274,16 @@ class ScriptRunner:
 
         # This is initialized in the start() method
         self._script_thread: threading.Thread | None = None
+
+        # Persistent, non-running asyncio event loop for the script thread.
+        # Many libraries call asyncio.get_event_loop() at import or
+        # construction time, which raises on a non-main thread without a loop
+        # (see #744). Keeping it non-running means asyncio.run() and
+        # run_until_complete() continue to work without a nested-loop conflict.
+        #
+        # The caller owns the loop lifetime. This runner only installs,
+        # re-asserts, and detaches it.
+        self._event_loop: asyncio.AbstractEventLoop | None = event_loop
 
         # Coordinator blocking the script thread in join(); other threads poke
         # notify_yield_waiters() when rerun/stop is enqueued during that window.
@@ -372,52 +392,103 @@ class ScriptRunner:
 
         _LOGGER.debug("Beginning script thread")
 
-        # Create and attach the thread's ScriptRunContext
-        ctx = ScriptRunContext(
-            session_id=self._session_id,
-            _enqueue=self._enqueue_forward_msg,
-            script_requests=self._requests,
-            query_string="",
-            session_state=self._session_state,
-            uploaded_file_mgr=self._uploaded_file_mgr,
-            main_script_path=self._main_script_path,
-            user_info=self._user_info,
-            gather_usage_stats=bool(config.get_option("browser.gatherUsageStats")),
-            fragment_storage=self._fragment_storage,
-            pages_manager=self._pages_manager,
-            context_info=None,
-            on_script_error=self._on_script_error,
-        )
-        add_script_run_ctx(threading.current_thread(), ctx)
-
-        request = self._requests.on_scriptrunner_ready()
-        while request.type == ScriptRequestType.RERUN:
-            # When the script thread starts, we'll have a pending rerun
-            # request that we'll handle immediately. When the script finishes,
-            # it's possible that another request has come in that we need to
-            # handle, which is why we call _run_script in a loop.
-            self._run_script(request.rerun_data)
-            request = self._requests.on_scriptrunner_ready()
-
-        if request.type != ScriptRequestType.STOP:  # pragma: no cover - defensive
-            raise RuntimeError(
-                f"Unrecognized ScriptRequestType: {request.type}. This should never happen."
+        ctx: ScriptRunContext | None = None
+        try:
+            # Create and attach the thread's ScriptRunContext.
+            ctx = ScriptRunContext(
+                session_id=self._session_id,
+                _enqueue=self._enqueue_forward_msg,
+                script_requests=self._requests,
+                query_string="",
+                session_state=self._session_state,
+                uploaded_file_mgr=self._uploaded_file_mgr,
+                main_script_path=self._main_script_path,
+                user_info=self._user_info,
+                gather_usage_stats=bool(config.get_option("browser.gatherUsageStats")),
+                fragment_storage=self._fragment_storage,
+                pages_manager=self._pages_manager,
+                context_info=None,
+                on_script_error=self._on_script_error,
             )
+            add_script_run_ctx(threading.current_thread(), ctx)
 
-        # Send a SHUTDOWN event before exiting, so some state can be saved
-        # for use in a future script run when not triggered by the client.
-        client_state = ClientState()
-        client_state.query_string = ctx.query_string
-        client_state.page_script_hash = ctx.page_script_hash
-        if ctx.context_info:
-            client_state.context_info.CopyFrom(ctx.context_info)
-        self.on_event.send(
-            self, event=ScriptRunnerEvent.SHUTDOWN, client_state=client_state
-        )
+            self._install_event_loop()
+
+            request = self._requests.on_scriptrunner_ready()
+            while request.type == ScriptRequestType.RERUN:
+                # When the script thread starts, we'll have a pending rerun
+                # request that we'll handle immediately. When the script finishes,
+                # it's possible that another request has come in that we need to
+                # handle, which is why we call _run_script in a loop.
+                self._run_script(request.rerun_data)
+                request = self._requests.on_scriptrunner_ready()
+
+            if request.type != ScriptRequestType.STOP:  # pragma: no cover - defensive
+                raise RuntimeError(
+                    f"Unrecognized ScriptRequestType: {request.type}. This should never happen."
+                )
+        finally:
+            # Keep cleanup nested so loop detachment and exactly one SHUTDOWN
+            # dispatch attempt both occur even if an earlier cleanup step
+            # fails. Receiver dispatch may itself raise.
+            try:
+                try:
+                    # Detach the loop before notifying AppSession, which may
+                    # later close its session-owned loop when handling SHUTDOWN.
+                    asyncio.set_event_loop(None)
+                finally:
+                    self._event_loop = None
+            finally:
+                # Save state for a future script run when enough context was
+                # created to provide an authoritative snapshot.
+                client_state: ClientState | None = None
+                if ctx is not None:
+                    try:
+                        final_client_state = ClientState()
+                        final_client_state.query_string = ctx.query_string
+                        final_client_state.page_script_hash = ctx.page_script_hash
+                        if ctx.context_info:
+                            final_client_state.context_info.CopyFrom(ctx.context_info)
+                        client_state = final_client_state
+                    except Exception:
+                        _LOGGER.exception(
+                            "Failed to build client state during ScriptRunner shutdown"
+                        )
+
+                propagating_exception = sys.exc_info()[1]
+                try:
+                    self.on_event.send(
+                        self,
+                        event=ScriptRunnerEvent.SHUTDOWN,
+                        client_state=client_state,
+                    )
+                except Exception:
+                    if propagating_exception is None:
+                        raise
+                    _LOGGER.exception(
+                        "Failed to dispatch ScriptRunner shutdown while preserving "
+                        "the original exception"
+                    )
 
     def _is_in_script_thread(self) -> bool:
         """True if the calling function is running in the script thread."""
         return self._script_thread == threading.current_thread()
+
+    def _install_event_loop(self) -> None:
+        """Reinstall the loop at each run boundary after ``asyncio.run()`` clears it.
+
+        The caller-owned loop supplied at construction is installed but not
+        run here. User or library code may explicitly drive this same loop with
+        ``run_until_complete()``. By contrast, ``asyncio.run()`` creates a
+        temporary loop and clears the thread's current-loop reference
+        afterward.
+        """
+        loop = self._event_loop
+        if loop is None:
+            raise RuntimeError("ScriptRunner event loop is no longer available")
+        if loop.is_closed():
+            raise RuntimeError("ScriptRunner event loop is closed")
+        asyncio.set_event_loop(loop)
 
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a ForwardMsg to our browser queue.
@@ -523,6 +594,13 @@ class ScriptRunner:
 
         # An explicit loop instead of recursion to avoid stack overflows
         while True:
+            # asyncio.run() clears the thread's current-loop reference. The
+            # persistent loop is reinstated at each subsequent run boundary,
+            # but not later within the same run after asyncio.run() returns.
+            # This still addresses #744, where get_event_loop() is called
+            # during import or object construction.
+            self._install_event_loop()
+
             if self._local_sources_watcher is not None:
                 self._local_sources_watcher.on_script_run()
 
