@@ -227,6 +227,30 @@ def test_column_vertical_alignment_bottom(
     )
 
 
+def test_column_vertical_alignment_applies_to_toggles(app: Page):
+    """Test that toggles get the same alignment margins as checkboxes.
+
+    Toggles and checkboxes render separate wrapper elements, so the alignment
+    selector has to name both. The checkbox-only assertions above cannot catch
+    the toggle wrapper being dropped from it.
+    """
+    expander = get_expander(app, "Vertical alignment - toggle")
+
+    top_column = expander.get_by_test_id("stHorizontalBlock").nth(0)
+    top_toggles = top_column.get_by_test_id("stCheckbox")
+    expect(top_toggles).to_have_count(2)
+    expect(top_toggles.first).to_have_css("margin-top", "8px")
+    # The top rule must not also apply a bottom margin.
+    expect(top_toggles.last).to_have_css("margin-bottom", "0px")
+
+    bottom_column = expander.get_by_test_id("stHorizontalBlock").nth(1)
+    bottom_toggles = bottom_column.get_by_test_id("stCheckbox")
+    expect(bottom_toggles).to_have_count(2)
+    expect(bottom_toggles.last).to_have_css("margin-bottom", "8px")
+    # The bottom rule must not also apply a top margin.
+    expect(bottom_toggles.first).to_have_css("margin-top", "0px")
+
+
 def test_nesting_columns_is_allowed(app: Page):
     """Checks that nesting columns is allowed."""
 
