@@ -107,6 +107,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
     showPadding: false,
     disableScrolling: false,
     navigationPosition: Navigation.Position.SIDEBAR,
+    sidebarPageChangeSequence: 0,
     addScriptFinishedHandler: vi.fn(),
     removeScriptFinishedHandler: vi.fn(),
     componentRegistry: new ComponentRegistry(mockEndpointProp),
@@ -1593,6 +1594,188 @@ describe("AppView element", () => {
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
       expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+    })
+
+    it("applies explicit sidebar config when entering a different page", () => {
+      window.localStorage.setItem("stSidebarCollapsed-", "false")
+
+      const initialProps = getProps({
+        elements: elementsWithSidebar,
+        sidebarPageChangeSequence: 0,
+      })
+      const { rerenderWithContexts } = renderWithContexts(
+        <AppView {...initialProps} />,
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.EXPANDED,
+          },
+          navigationContext: { currentPageScriptHash: "page-1" },
+        }
+      )
+
+      expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+        "aria-expanded",
+        "true"
+      )
+
+      rerenderWithContexts(
+        <AppView {...initialProps} sidebarPageChangeSequence={1} />,
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.COLLAPSED,
+          },
+          navigationContext: { currentPageScriptHash: "page-2" },
+        }
+      )
+
+      expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+        "aria-expanded",
+        "false"
+      )
+      // Page config is an in-memory entry override, not a user preference.
+      expect(window.localStorage.getItem("stSidebarCollapsed-")).toBe("false")
+
+      // A same-page rerender must not restore the older stored preference.
+      rerenderWithContexts(
+        <AppView {...initialProps} sidebarPageChangeSequence={1} />,
+        {
+          navigationContext: { currentPageScriptHash: "page-2" },
+        }
+      )
+      expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+        "aria-expanded",
+        "false"
+      )
+    })
+
+    it("keeps a locked desktop sidebar open when entering a page", () => {
+      // A stored collapsed preference must not win, and neither should the
+      // page-entry override path collapse a locked sidebar.
+      window.localStorage.setItem("stSidebarCollapsed-", "true")
+
+      const initialProps = getProps({
+        elements: elementsWithSidebar,
+        sidebarPageChangeSequence: 0,
+      })
+      const { rerenderWithContexts } = renderWithContexts(
+        <AppView {...initialProps} />,
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.LOCKED,
+          },
+          navigationContext: { currentPageScriptHash: "page-1" },
+        }
+      )
+
+      expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+        "aria-expanded",
+        "true"
+      )
+
+      // Entering a new page bumps the sequence; the locked sidebar must stay
+      // open through the page-entry branch instead of being collapsed.
+      rerenderWithContexts(
+        <AppView {...initialProps} sidebarPageChangeSequence={1} />,
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.LOCKED,
+          },
+          navigationContext: { currentPageScriptHash: "page-2" },
+        }
+      )
+
+      expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+        "aria-expanded",
+        "true"
+      )
+    })
+
+    it("uses persisted state on a later page without explicit sidebar config", () => {
+      window.localStorage.setItem("stSidebarCollapsed-", "false")
+
+      const initialProps = getProps({
+        elements: elementsWithSidebar,
+        sidebarPageChangeSequence: 0,
+      })
+      const { rerenderWithContexts } = renderWithContexts(
+        <AppView {...initialProps} />,
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.EXPANDED,
+          },
+          navigationContext: { currentPageScriptHash: "page-1" },
+        }
+      )
+
+      rerenderWithContexts(
+        <AppView {...initialProps} sidebarPageChangeSequence={1} />,
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.COLLAPSED,
+          },
+          navigationContext: { currentPageScriptHash: "page-2" },
+        }
+      )
+      expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+        "aria-expanded",
+        "false"
+      )
+
+      // No new sequence means page 3 did not explicitly configure its state.
+      rerenderWithContexts(
+        <AppView {...initialProps} sidebarPageChangeSequence={1} />,
+        {
+          navigationContext: { currentPageScriptHash: "page-3" },
+        }
+      )
+      expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+        "aria-expanded",
+        "true"
+      )
+    })
+
+    it("retains page-entry config received before sidebar content", () => {
+      window.localStorage.setItem("stSidebarCollapsed-", "false")
+
+      const initialProps = getProps({
+        sidebarPageChangeSequence: 0,
+        navigationPosition: Navigation.Position.HIDDEN,
+      })
+      const { rerenderWithContexts } = renderWithContexts(
+        <AppView {...initialProps} />,
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.EXPANDED,
+            hideSidebarNav: true,
+          },
+          navigationContext: { currentPageScriptHash: "page-1" },
+        }
+      )
+
+      expect(screen.queryByTestId("stSidebar")).not.toBeInTheDocument()
+
+      rerenderWithContexts(
+        <AppView {...initialProps} sidebarPageChangeSequence={1} />,
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.COLLAPSED,
+          },
+          navigationContext: { currentPageScriptHash: "page-2" },
+        }
+      )
+
+      rerenderWithContexts(
+        <AppView
+          {...initialProps}
+          elements={elementsWithSidebar}
+          sidebarPageChangeSequence={1}
+        />
+      )
+
+      expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+        "aria-expanded",
+        "false"
+      )
     })
 
     it("handles invalid localStorage values gracefully", () => {

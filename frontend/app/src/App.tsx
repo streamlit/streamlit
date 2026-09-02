@@ -196,6 +196,9 @@ interface State {
   connectionErrorDismissed: boolean
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
+  // Bumped when an explicit sidebar state is received while entering a
+  // different page. AppView uses this to distinguish page entry from reruns.
+  sidebarPageChangeSequence: number
   initialSidebarWidth?: number
   menuItems?: PageConfig.IMenuItems | null
   allowRunOnSave: boolean
@@ -336,6 +339,11 @@ export class App extends PureComponent<Props, State> {
   // This will allow us to ignore finished messages from previous script runs.
   private hasReceivedNewSession: boolean = false
 
+  // The page whose explicit sidebar config should be applied on entry. This is
+  // intentionally imperative: it only lives while messages for that page's
+  // first full run are arriving.
+  private pendingSidebarPageScriptHash: string | null = null
+
   // Active `run_every` auto-rerun timers, keyed by fragment id. These are
   // imperative resources (setInterval handles), so they live outside of React
   // state. Keying by fragment id lets us keep a single timer per fragment: we
@@ -417,6 +425,7 @@ export class App extends PureComponent<Props, State> {
       connectionErrorDismissed: false,
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
+      sidebarPageChangeSequence: 0,
       initialSidebarWidth: undefined,
       menuItems: undefined,
       allowRunOnSave: true,
@@ -1108,7 +1117,10 @@ export class App extends PureComponent<Props, State> {
             msgProto.hash
           ),
         pageConfigChanged: (pageConfig: PageConfig) =>
-          this.handlePageConfigChanged(pageConfig),
+          this.handlePageConfigChanged(
+            pageConfig,
+            msgProto.metadata as ForwardMsgMetadata
+          ),
         pageInfoChanged: (pageInfo: PageInfo) =>
           this.handlePageInfoChanged(pageInfo),
         pageNotFound: (pageNotFound: PageNotFound) =>
@@ -1163,7 +1175,10 @@ export class App extends PureComponent<Props, State> {
     })
   }
 
-  handlePageConfigChanged = (pageConfig: PageConfig): void => {
+  handlePageConfigChanged = (
+    pageConfig: PageConfig,
+    metadata?: ForwardMsgMetadata
+  ): void => {
     const {
       title,
       favicon,
@@ -1203,13 +1218,31 @@ export class App extends PureComponent<Props, State> {
       }))
     }
 
-    if (
-      initialSidebarState !== this.state.initialSidebarState &&
-      initialSidebarState !== PageConfig.SidebarState.SIDEBAR_UNSET
-    ) {
-      this.setState(() => ({
-        initialSidebarState,
-      }))
+    if (initialSidebarState !== PageConfig.SidebarState.SIDEBAR_UNSET) {
+      // Only treat this config as a page-entry override when it originates from
+      // the body of the page being entered (its activeScriptHash matches the
+      // pending page). Config emitted from the shared main script runs on every
+      // page and would report a different activeScriptHash, so it is
+      // intentionally excluded and falls back to the value-change handling below.
+      const appliesOnPageChange =
+        this.pendingSidebarPageScriptHash !== null &&
+        metadata?.activeScriptHash === this.pendingSidebarPageScriptHash
+
+      if (
+        initialSidebarState !== this.state.initialSidebarState ||
+        appliesOnPageChange
+      ) {
+        this.setState(prevState => ({
+          initialSidebarState,
+          sidebarPageChangeSequence: appliesOnPageChange
+            ? prevState.sidebarPageChangeSequence + 1
+            : prevState.sidebarPageChangeSequence,
+        }))
+      }
+
+      if (appliesOnPageChange) {
+        this.pendingSidebarPageScriptHash = null
+      }
     }
 
     // Extract pixelWidth from SidebarWidthConfig message
@@ -1560,6 +1593,16 @@ export class App extends PureComponent<Props, State> {
     const newSessionHash = hashString(
       this.sessionInfo.current.installationId + mainScriptPath
     )
+
+    if (
+      !fragmentIdsThisRun.length &&
+      appHash === newSessionHash &&
+      prevPageScriptHash !== "" &&
+      newPageScriptHash !== "" &&
+      prevPageScriptHash !== newPageScriptHash
+    ) {
+      this.pendingSidebarPageScriptHash = newPageScriptHash
+    }
 
     this.metricsMgr.setMetadata(this.state.deployedAppMetadata)
     this.metricsMgr.setAppHash(newSessionHash)
@@ -1967,6 +2010,14 @@ export class App extends PureComponent<Props, State> {
       scriptRunFinishedSequence: prevState.scriptRunFinishedSequence + 1,
       scriptRunFinishedFragmentIds: prevState.fragmentIdsThisRun,
     }))
+
+    if (
+      this.hasReceivedNewSession &&
+      (status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
+        status === ForwardMsg.ScriptFinishedStatus.FINISHED_WITH_COMPILE_ERROR)
+    ) {
+      this.pendingSidebarPageScriptHash = null
+    }
 
     if (
       status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
@@ -2784,6 +2835,7 @@ export class App extends PureComponent<Props, State> {
       appPages,
       navSections,
       navigationPosition,
+      sidebarPageChangeSequence,
       scriptChangedOnDisk,
     } = this.state
 
@@ -2902,6 +2954,7 @@ export class App extends PureComponent<Props, State> {
               widgetMgr={this.widgetMgr}
               uploadClient={this.uploadClient}
               navigationPosition={effectiveNavigationPosition}
+              sidebarPageChangeSequence={sidebarPageChangeSequence}
               wideMode={userSettings.wideMode}
               embedded={isEmbed()}
               showPadding={showPadding}
