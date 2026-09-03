@@ -55,23 +55,21 @@ export const StyledRadioGroup = styled(RARadioGroup, {
 }))
 
 /**
- * `<div>` wrapper for each individual radio option. It exists because
- * `RadioButton` must be nested inside a `RadioField`: the field declares which
- * option this is (`value`) and passes the group's selection state down to the
- * button via context.
+ * Required `RadioField` wrapper around each option. `RadioButton` must nest
+ * inside it: the field declares which option this is (`value`) and passes the
+ * group's selection state to the button via context.
  *
- * Unstyled: as a flex item it shrink-wraps the label, so `StyledRadioGroup`'s
- * `alignItems` and `gap` apply to the option's visible box. React Aria also
- * mirrors `data-selected`/`data-disabled` onto this div, so scope any
- * state-driven style to the label's class to avoid matching both elements.
+ * Unstyled so it shrink-wraps the label as a flex item, and `StyledRadioGroup`'s
+ * `alignItems` and `gap` apply to the option's visible box. React Aria mirrors
+ * `data-selected`/`data-disabled` onto this div, so keep state-driven styles on
+ * the label's class to avoid matching both elements.
  */
 export const StyledRadioField = styled(RARadioField)()
 
 /**
  * Clickable `<label>` for each radio option — it wraps the hidden input, the
- * circle indicator, and the option text, so the whole row is a click target.
- * Despite the name this is the label, not the indicator: the visual circle is
- * `StyledRadioOuter`/`StyledRadioInner`.
+ * circle indicator (`StyledRadioOuter`/`StyledRadioInner`), and the option text,
+ * so the whole row is a click target.
  *
  * React Aria sets `data-focus-visible`, `data-disabled`, `data-selected` etc.
  * as data attributes — we use those for state-driven styles.

@@ -199,16 +199,14 @@ describe("Radio widget", () => {
     })
   })
 
-  it("renders each option with data-testid stRadioOption", () => {
+  it("puts the stRadioOption test id on each option's label", () => {
     const props = getProps()
     render(<Radio {...props} />)
 
     const optionItems = screen.getAllByTestId("stRadioOption")
     expect(optionItems).toHaveLength(3)
-    // Keep this test id on the <label> that wraps the input, not on
-    // RadioField's wrapper div: e2e helpers click this element
-    // (app_utils.get_radio_option), and clicking the label activates the input
-    // directly rather than relying on the wrapper's box overlapping it.
+    // Pin stRadioOption to the input's <label>. e2e helpers click this node
+    // (app_utils.get_radio_option); the Field wrapper is not a click target.
     const firstRadio = screen.getAllByRole("radio")[0]
     expect(firstRadio.closest("label")).toBe(optionItems[0])
   })
@@ -219,11 +217,14 @@ describe("Radio widget", () => {
     const props = getProps({ onChange, value: 0 })
     render(<Radio {...props} />)
 
-    // Exercises the element the e2e helpers click, which the other click tests
-    // do not: they target the hidden input via its `radio` role.
+    // Click the e2e target (stRadioOption), not the hidden input the other tests use.
+    const radioOptions = screen.getAllByRole("radio")
     await user.click(screen.getAllByTestId("stRadioOption")[1])
 
+    expect(onChange).toHaveBeenCalledTimes(1)
     expect(onChange).toHaveBeenCalledWith(1)
+    expect(radioOptions[1]).toBeChecked()
+    expect(radioOptions[0]).not.toBeChecked()
   })
 
   it("forwards data-testid to the radio group element", () => {
