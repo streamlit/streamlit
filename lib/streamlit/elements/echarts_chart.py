@@ -182,12 +182,15 @@ def _dataframe_to_records(df: pd.DataFrame) -> list[dict[str, Any]]:
     for infinities, which would surface as a raw ``JSONDecodeError``. Replacing
     them with NaN first makes every supported pandas version emit ``null``.
     The copy is skipped when no numeric column contains an infinity.
+    Numeric columns are coerced to ``float64`` first because nullable or
+    mixed extension dtypes can yield an object array that ``np.isinf``
+    cannot scan.
     """
     numeric = df.select_dtypes(include="number")
     if not numeric.empty:
         import numpy as np
 
-        if np.isinf(numeric.to_numpy()).any():
+        if np.isinf(numeric.to_numpy(dtype=float, na_value=np.nan)).any():
             df = df.replace([float("inf"), float("-inf")], float("nan"))
     records = json.loads(
         df.to_json(orient="records", date_format="iso", double_precision=15)

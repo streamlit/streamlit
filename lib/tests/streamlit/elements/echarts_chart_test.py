@@ -216,6 +216,33 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         assert source[1]["x"] is None
         assert source[2]["x"] is None
 
+    def test_dataset_source_nullable_numeric_dtypes(self):
+        """Nullable and mixed numeric dtypes convert without crashing the inf check."""
+        df = pd.DataFrame(
+            {
+                "i": pd.Series([1, None], dtype="Int64"),
+                "f": pd.Series([2.5, 3.5], dtype="Float64"),
+            }
+        )
+        st.echarts_chart({"dataset": {"source": df}})
+
+        source = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)[
+            "dataset"
+        ]["source"]
+        assert source == [{"i": 1, "f": 2.5}, {"i": None, "f": 3.5}]
+
+    def test_dataset_source_nullable_float_infinities_become_null(self):
+        """Infinities in a nullable float column become ``null``."""
+        df = pd.DataFrame({"x": pd.Series([1.0, float("inf"), None], dtype="Float64")})
+        st.echarts_chart({"dataset": {"source": df}})
+
+        source = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)[
+            "dataset"
+        ]["source"]
+        assert source[0]["x"] == 1.0
+        assert source[1]["x"] is None
+        assert source[2]["x"] is None
+
     def test_dataset_source_preserves_high_precision_floats(self):
         """Dataframe floats keep more than pandas' default 10 significant digits."""
         value = 1.23456789012345
