@@ -255,7 +255,7 @@ export default defineConfig([
       "no-console": "error",
       // Prevent unintentional use of `debugger`
       "no-debugger": "error",
-      // Oxlint owns this check (and the other zero-hit eslint/* lock-ins).
+      // Oxlint eslint/preserve-caught-error owns this check.
       "preserve-caught-error": "off",
       // We do want to discourage the usage of flushSync
       "@eslint-react/dom-no-flush-sync": "error",
