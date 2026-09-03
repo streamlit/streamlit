@@ -419,6 +419,15 @@ class CacheResourceAPI:
             cached result is returned without re-running the function. The caller
             is responsible for driving the coroutine (e.g. with ``asyncio.run``).
 
+        .. note::
+            Calls to a decorated coroutine function remain awaitable, but
+            ``inspect.iscoroutinefunction`` does not identify the decorated callable
+            as a coroutine function. Callback frameworks that rely on this check
+            should receive a separate ``async def`` adapter that awaits the cached
+            function. ``inspect.unwrap`` bypasses caching. For details, see GitHub
+            issue `#16803
+            <https://github.com/streamlit/streamlit/issues/16803>`_.
+
         .. warning::
             Caching a live, event-loop-bound async object (such as an async
             client) is not supported. Streamlit may close event loops in its

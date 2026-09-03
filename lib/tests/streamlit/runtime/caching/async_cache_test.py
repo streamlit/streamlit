@@ -30,11 +30,11 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import streamlit as st
-from streamlit.errors import StreamlitIncompatibleParametersError
+from streamlit.errors import StreamlitAPIException, StreamlitIncompatibleParametersError
 from streamlit.testing.v1 import AppTest
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import AsyncIterator, Callable
 
 # Both cache decorators, so shared behavior can be parametrized across them.
 CACHE_DECORATORS: list[tuple[str, Any]] = [
@@ -64,6 +64,25 @@ def test_async_background_refresh_raises(name: str, decorator: Callable) -> None
         @decorator(ttl=60, refresh_mode="background")
         async def load() -> int:
             return 42
+
+
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
+def test_async_generator_function_raises_at_decoration_time(
+    name: str, decorator: Callable
+) -> None:
+    """Async-generator functions are rejected with actionable guidance."""
+    with pytest.raises(
+        StreamlitAPIException,
+        match=(
+            r"Async-generator functions cannot be cached.*streams that are one-shot "
+            r"iterators.*Consume the async generator and return a materialized result "
+            r"from an ordinary coroutine function"
+        ),
+    ):
+
+        @decorator
+        async def stream() -> AsyncIterator[int]:
+            yield 42
 
 
 @pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)

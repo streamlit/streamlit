@@ -525,6 +525,13 @@ class CachedFuncInfo(Generic[P, R]):
         self.show_time = show_time
         self.scope = scope
         self.refresh_mode = refresh_mode
+        if inspect.isasyncgenfunction(func):
+            raise StreamlitAPIException(
+                "Async-generator functions cannot be cached. Async generators produce "
+                "streams that are one-shot iterators, rather than a single cacheable "
+                "result. Consume the async generator and return a materialized result "
+                "from an ordinary coroutine function if appropriate."
+            )
         self.is_async = inspect.iscoroutinefunction(func)
         if self.is_async and refresh_mode == "background":
             raise StreamlitIncompatibleParametersError(
