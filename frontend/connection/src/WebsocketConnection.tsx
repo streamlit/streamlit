@@ -16,7 +16,7 @@
 
 import { getLogger } from "loglevel"
 
-import { BackMsg, ForwardMsg, IBackMsg } from "@streamlit/protobuf"
+import { BackMsg, ForwardMsg } from "@streamlit/protobuf"
 import {
   getCookie,
   isNullOrUndefined,
@@ -811,7 +811,7 @@ export class WebsocketConnection {
    * Encodes the message with the outgoingMessageType and sends it over the
    * wire.
    */
-  public sendMessage(obj: IBackMsg): void {
+  public sendMessage(obj: BackMsg.$Properties): void {
     if (!this.websocket) {
       return
     }

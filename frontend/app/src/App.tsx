@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { createRef, PureComponent, ReactNode } from "react"
+import { createRef, type JSX, PureComponent, ReactNode } from "react"
 
 import { enableMapSet, enablePatches } from "immer"
 import { getLogger } from "loglevel"
@@ -125,6 +125,7 @@ import {
   WidgetStateManager,
 } from "@streamlit/lib"
 import {
+  type AppPage,
   AuthRedirect,
   AutoRerun,
   BackendOperationResponse,
@@ -136,9 +137,6 @@ import {
   ForwardMsg,
   ForwardMsgMetadata,
   GitInfo,
-  IAppPage,
-  ICustomThemeConfig,
-  IGitInfo,
   Initialize,
   Logo,
   Navigation,
@@ -197,21 +195,21 @@ interface State {
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
   initialSidebarWidth?: number
-  menuItems?: PageConfig.IMenuItems | null
+  menuItems?: PageConfig.MenuItems.$Properties | null
   allowRunOnSave: boolean
   scriptFinishedHandlers: (() => void)[]
   toolbarMode: Config.ToolbarMode
   showErrorLinks: Config.ShowErrorLinks
   disableDataExport: boolean
   themeHash: string
-  gitInfo: IGitInfo | null
+  gitInfo: GitInfo.$Properties | null
   formsData: FormsData
   hideTopBar: boolean
   hideSidebarNav: boolean
   expandSidebarNav: boolean
   sidebarNavVisibleItems?: number
   navigationPosition: Navigation.Position
-  appPages: IAppPage[]
+  appPages: AppPage.$Properties[]
   navSections: string[]
   // The hash of the current page executing
   currentPageScriptHash: string
@@ -951,7 +949,7 @@ export class App extends PureComponent<Props, State> {
    */
   handleThemeMessage = (
     themeName?: PresetThemeName,
-    theme?: ICustomThemeConfig
+    theme?: CustomThemeConfig.$Properties
   ): void => {
     const [, lightTheme, darkTheme] = createPresetThemes()
     const isUsingPresetTheme = isPresetTheme(this.props.theme.activeTheme)
@@ -1051,7 +1049,7 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  handleGitInfoChanged = (gitInfo: IGitInfo): void => {
+  handleGitInfoChanged = (gitInfo: GitInfo.$Properties): void => {
     this.setState({
       gitInfo,
     })

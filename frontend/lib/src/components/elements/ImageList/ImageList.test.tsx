@@ -42,7 +42,7 @@ describe("ImageList Element", () => {
 
   const getProps = (
     elementProps: Partial<ImageListProto> = {},
-    widthConfig?: streamlit.IWidthConfig | null
+    widthConfig?: streamlit.WidthConfig.$Properties | null
   ): ImageListProps => ({
     element: ImageListProto.create({
       imgs: [

@@ -16,7 +16,7 @@
 
 import { getLogger } from "loglevel"
 
-import { ICustomThemeConfig, WidgetStates } from "@streamlit/protobuf"
+import { type CustomThemeConfig, WidgetStates } from "@streamlit/protobuf"
 
 import { PresetThemeName } from "~lib/theme/types"
 import { isValidOrigin } from "~lib/util/UriUtil"
@@ -73,7 +73,7 @@ interface HostCommunicationProps {
   readonly setInputsDisabled: (inputsDisabled: boolean) => void
   readonly themeChanged: (
     themeName?: PresetThemeName,
-    themeInfo?: ICustomThemeConfig
+    themeInfo?: CustomThemeConfig.$Properties
   ) => void
   readonly pageChanged: (pageScriptHash: string) => void
   readonly isOwnerChanged: (isOwner: boolean) => void

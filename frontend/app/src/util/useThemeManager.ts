@@ -34,8 +34,7 @@ import {
 } from "@streamlit/lib"
 import {
   CustomThemeConfig,
-  ICustomThemeConfig,
-  IFontFace,
+  type FontFace as FontFaceProto,
 } from "@streamlit/protobuf"
 
 export type FontSources = Record<string, string>
@@ -73,8 +72,8 @@ export interface ThemeManager {
     themes: ThemeConfig[],
     options?: { keepPresetThemes?: boolean }
   ) => void
-  setFonts: (themeInfo: ICustomThemeConfig) => void
-  setImportedTheme: (themeInfo: ICustomThemeConfig) => void
+  setFonts: (themeInfo: CustomThemeConfig.$Properties) => void
+  setImportedTheme: (themeInfo: CustomThemeConfig.$Properties) => void
 }
 
 export function useThemeManager(): [
@@ -84,7 +83,7 @@ export function useThemeManager(): [
 ] {
   const defaultTheme = getDefaultTheme()
   const [theme, setTheme] = useState<ThemeConfig>(defaultTheme)
-  const [fontFaces, setFontFaces] = useState<IFontFace[]>(
+  const [fontFaces, setFontFaces] = useState<FontFaceProto.$Properties[]>(
     defaultTheme.themeInput?.fontFaces ?? []
   )
   const [fontSources, setFontSources] = useState<FontSources | null>(null)
@@ -184,35 +183,38 @@ export function useThemeManager(): [
     )
   }, [theme.name, availableThemes, applyTheme])
 
-  const setFonts = useCallback((themeInfo: ICustomThemeConfig): void => {
-    // If fonts are coming from a URL, they need to be imported through the FontFaceDeclaration
-    // component. So let's store them in state so we can pass them as props.
-    if (themeInfo.fontFaces) {
-      setFontFaces(themeInfo.fontFaces)
-    }
-
-    // Collect and process font sources from both main theme and sidebar theme
-    const allFontSources = [
-      ...(themeInfo.fontSources || []),
-      ...(themeInfo.sidebar?.fontSources || []),
-    ]
-
-    const newFontSources: FontSources = {}
-    allFontSources.forEach(fontSource => {
-      // Should never be the case that configName or sourceUrl is undefined
-      if (fontSource.sourceUrl && fontSource.configName) {
-        newFontSources[fontSource.configName] = fontSource.sourceUrl
+  const setFonts = useCallback(
+    (themeInfo: CustomThemeConfig.$Properties): void => {
+      // If fonts are coming from a URL, they need to be imported through the FontFaceDeclaration
+      // component. So let's store them in state so we can pass them as props.
+      if (themeInfo.fontFaces) {
+        setFontFaces(themeInfo.fontFaces)
       }
-    })
 
-    // Set valid font sources if there are any
-    setFontSources(
-      Object.keys(newFontSources).length > 0 ? newFontSources : null
-    )
-  }, [])
+      // Collect and process font sources from both main theme and sidebar theme
+      const allFontSources = [
+        ...(themeInfo.fontSources || []),
+        ...(themeInfo.sidebar?.fontSources || []),
+      ]
+
+      const newFontSources: FontSources = {}
+      allFontSources.forEach(fontSource => {
+        // Should never be the case that configName or sourceUrl is undefined
+        if (fontSource.sourceUrl && fontSource.configName) {
+          newFontSources[fontSource.configName] = fontSource.sourceUrl
+        }
+      })
+
+      // Set valid font sources if there are any
+      setFontSources(
+        Object.keys(newFontSources).length > 0 ? newFontSources : null
+      )
+    },
+    []
+  )
 
   const setImportedTheme = useCallback(
-    (themeInfo: ICustomThemeConfig): void => {
+    (themeInfo: CustomThemeConfig.$Properties): void => {
       setFonts(themeInfo)
 
       const themeConfigProto = new CustomThemeConfig(themeInfo)
