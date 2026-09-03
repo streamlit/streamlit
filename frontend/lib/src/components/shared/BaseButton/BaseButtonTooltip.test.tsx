@@ -25,6 +25,10 @@ import {
   HELP_TOOLTIP_HOVER_DELAY_MS,
 } from "./BaseButtonTooltip"
 
+// React Aria's shared tooltip cooldown (independent of
+// HELP_TOOLTIP_HOVER_DELAY_MS even when the values match).
+const REACT_ARIA_TOOLTIP_COOLDOWN_MS = 500
+
 function renderHelpButton(): void {
   render(
     <BaseButtonTooltip help="Button help" containerWidth={false}>
@@ -51,7 +55,8 @@ describe("BaseButtonTooltip", () => {
     let user: ReturnType<typeof userEvent.setup>
 
     beforeAll(() => {
-      // See Tooltip.test.tsx for why hover tests need this React Aria setup.
+      // Register React Aria's document pointer listener so hover counts as
+      // pointer modality. See Tooltip.test.tsx for the full setup.
       renderHook(() => useFocusVisible())
     })
 
@@ -62,17 +67,14 @@ describe("BaseButtonTooltip", () => {
     })
 
     afterEach(async () => {
-      // Unhover first so React Aria starts its cooldown. Unmounting while
-      // warmup is still armed would skip the delay on the next hover.
+      // Unhover before unmount. If a tooltip is still in React Aria's warmup
+      // window, the next hover skips the open delay.
       const tooltipTarget = screen.queryByTestId("stTooltipHoverTarget")
       if (tooltipTarget) {
         await user.unhover(tooltipTarget)
       }
       act(() => {
-        // Expire React Aria's global tooltip cooldown (not
-        // HELP_TOOLTIP_HOVER_DELAY_MS) so the next test still honors the
-        // open delay.
-        vi.advanceTimersByTime(500)
+        vi.advanceTimersByTime(REACT_ARIA_TOOLTIP_COOLDOWN_MS)
         cleanup()
       })
       vi.useRealTimers()
@@ -86,7 +88,8 @@ describe("BaseButtonTooltip", () => {
       expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
 
       act(() => {
-        vi.advanceTimersByTime(HELP_TOOLTIP_HOVER_DELAY_MS - 1)
+        // Literal 499ms locks the 500ms contract; the next 1ms step opens it.
+        vi.advanceTimersByTime(499)
       })
       expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
 
@@ -110,6 +113,16 @@ describe("BaseButtonTooltip", () => {
         vi.advanceTimersByTime(HELP_TOOLTIP_HOVER_DELAY_MS + 100)
       })
       expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
+    })
+
+    it("shows the tooltip immediately on keyboard focus", async () => {
+      renderHelpButton()
+
+      await user.tab()
+      expect(screen.getByRole("button", { name: "Click me" })).toHaveFocus()
+      expect(screen.getByTestId("stTooltipContent")).toHaveTextContent(
+        "Button help"
+      )
     })
   })
 })

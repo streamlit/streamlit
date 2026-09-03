@@ -22,8 +22,9 @@ import TooltipIcon from "~lib/components/shared/TooltipIcon/TooltipIcon"
 import { StyledTooltipMobile, StyledTooltipNormal } from "./styled-components"
 
 /**
- * Hover delay for help that wraps a control. The Tooltip default (200ms) is
- * too fast: accidental hover while aiming to click would cover nearby widgets.
+ * Hover delay for help attached to a whole element (button, popover, badge)
+ * so a pass toward a click does not cover nearby widgets. The Tooltip
+ * default (200ms) is too fast here.
  */
 export const HELP_TOOLTIP_HOVER_DELAY_MS = 500
 
