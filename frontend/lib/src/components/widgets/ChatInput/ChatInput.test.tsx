@@ -807,12 +807,11 @@ describe("ChatInput widget", () => {
     // Wait for files to be displayed (order-agnostic check)
     await waitFor(() => {
       expect(
-        new Set(
-          screen
-            .getAllByTestId("stFileChipName")
-            .map(el => el.getAttribute("title"))
-        )
-      ).toEqual(new Set(["folder/file1.txt", "folder/file2.txt"]))
+        screen
+          .getAllByTestId("stFileChipName")
+          .map(el => el.getAttribute("title"))
+          .sort()
+      ).toEqual(["folder/file1.txt", "folder/file2.txt"])
     })
 
     // Find and delete file1

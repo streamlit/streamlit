@@ -467,16 +467,15 @@ export default defineConfig([
   // Test files specific configuration
   {
     files: ["**/*.test.ts", "**/*.test.tsx"],
-    ...testingLibrary.configs["flat/react"],
     plugins: {
       ...testingLibrary.configs["flat/react"].plugins,
       "testing-library": testingLibrary,
       vitest,
     },
     rules: {
-      // Recommended Testing Library + vitest configuration. The preset must be
-      // spread *inside* `rules` — replacing `rules` after spreading the config
-      // object discards every recommended testing-library rule.
+      // Spread Testing Library recommended rules inside `rules`. A sibling
+      // `rules` key replaces the preset's own and silently drops every
+      // recommended testing-library rule.
       ...testingLibrary.configs["flat/react"].rules,
       ...vitest.configs.recommended.rules,
       // Allow hardcoded styles in test files
@@ -487,7 +486,6 @@ export default defineConfig([
       // Recommended rules with large existing debt; enable in later cleanups.
       "testing-library/no-node-access": "off",
       "testing-library/no-container": "off",
-      "testing-library/prefer-implicit-assert": "off",
       "testing-library/prefer-presence-queries": "off",
       "testing-library/no-unnecessary-act": "off",
       "testing-library/no-manual-cleanup": "off",
