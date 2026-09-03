@@ -286,12 +286,14 @@ const Selectbox: FC<Props> = ({
   const inputValueRef = useRef(inputValue)
   inputValueRef.current = inputValue
 
-  // Set by handleSelectionChange when RAC commits a new selection (arrow-nav +
-  // Enter). Checked by handleInputKeyDown to avoid double-committing.
+  // Set by handleSelectionChange when RAC's onChange commits a new selection
+  // (arrow-nav + Enter). Checked by handleInputKeyDown to avoid
+  // double-committing.
   const racHandledEnterRef = useRef(false)
 
-  // Tracks whether the dropdown is open. RAC can fire deferred onChange
-  // callbacks after the dropdown closes; those are discarded via this ref.
+  // Tracks whether the dropdown is open. RAC can fire deferred ComboBox
+  // onChange callbacks after the dropdown closes; those are discarded via
+  // this ref.
   const isOpenRef = useRef(false)
 
   // Records isOpenRef at the moment Enter is pressed (capture phase) before
@@ -350,8 +352,9 @@ const Selectbox: FC<Props> = ({
     [theme.sizes.dropdownItemHeight]
   )
 
-  // Controlled value so RAC always knows the committed item and doesn't
-  // revert the input to "" on blur before handleBlur can restore it.
+  // Controlled ComboBox `value` (selected option id) so RAC always knows the
+  // committed item and doesn't revert the input to "" on blur before
+  // handleBlur can restore it.
   const localSelectedKey = useMemo<string | null>(() => {
     if (isNullOrUndefined(value)) return null
     const found = selectOptions.find(o => o.value === value)
@@ -379,10 +382,10 @@ const Selectbox: FC<Props> = ({
    * Commit a selection: update local state and notify the parent.
    * Does NOT close the dropdown — callers on the manual paths (keydown,
    * clear button) close explicitly; RAC-triggered paths (option click,
-   * arrow-nav + Enter) let RAC close the dropdown naturally after
-   * onChange returns. Calling state.close() inside
-   * onChange causes RAC to fire onInputChange with the old
-   * committed label, overwriting our setInputValue update.
+   * arrow-nav + Enter) let RAC close the dropdown naturally after RAC's
+   * onChange returns. Calling state.close() inside RAC's onChange causes
+   * RAC to fire onInputChange with the old committed label, overwriting
+   * our setInputValue update.
    */
   const commitSelection = useCallback(
     (newValue: string | null): void => {
@@ -398,7 +401,7 @@ const Selectbox: FC<Props> = ({
 
   const handleSelectionChange = useCallback(
     (key: Key | null): void => {
-      // Discard callbacks when the dropdown is closed. RAC fires
+      // Discard callbacks when the dropdown is closed. RAC fires its
       // onChange(currentKey) on close and via deferred pointerup
       // listeners — both arrive after the real selection is already handled.
       // Genuine selections always fire BEFORE onOpenChange(false), so this

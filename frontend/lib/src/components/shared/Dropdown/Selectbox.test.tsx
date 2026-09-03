@@ -217,7 +217,7 @@ describe("Selectbox widget", () => {
 
   it("selects an option via arrow-nav + Enter (racHandledEnterRef path)", async () => {
     // Exercises the most complex keyboard path: ArrowDown navigates to "b"
-    // which RAC commits via onChange (setting racHandledEnterRef),
+    // which RAC commits via its onChange (setting racHandledEnterRef),
     // then Enter fires our bubble-phase handler which must NOT double-commit.
     const user = userEvent.setup()
     render(<Selectbox {...props} />)
@@ -225,9 +225,10 @@ describe("Selectbox widget", () => {
 
     await user.click(input)
     // With initial value "a" (index 0), ArrowDown navigates to "b" (index 1).
-    // RAC fires onChange("1") which commits "b" and sets racHandledEnterRef.
+    // RAC's onChange("1") commits "b" and sets racHandledEnterRef.
     // Press Enter immediately after — our handler sees racHandledEnterRef=true
-    // and skips, so onChange is called exactly once total (not twice).
+    // and skips, so the Streamlit onChange prop is called exactly once
+    // total (not twice).
     await user.keyboard("{ArrowDown}{Enter}")
 
     await waitFor(() => {
@@ -290,6 +291,46 @@ describe("Selectbox widget", () => {
     options = screen.getAllByRole("option")
     expect(options).toHaveLength(1)
     expect(options[0]).toHaveTextContent("b")
+  })
+
+  it("restores the committed label when the already-selected option is clicked after filtering", async () => {
+    // ComboBox `onChange` is not a pure alias of `onSelectionChange`:
+    // react-stately skips `onChange` when the selected key is unchanged
+    // (`useControlledState` bails on Object.is), so re-selecting the
+    // committed option relies on RAC's resetInputValue() → onInputChange
+    // path to restore the input and clear the filter.
+    const user = userEvent.setup()
+    const currProps = getProps({
+      options: ["Apple", "Apricot", "Banana"],
+      value: "Apple",
+    })
+    render(<Selectbox {...currProps} />)
+    const input = screen.getByRole("combobox")
+    expect(input).toHaveValue("Apple")
+
+    await user.click(input)
+    await user.keyboard("Ap")
+
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: "Apple" })).toBeVisible()
+      expect(screen.getByRole("option", { name: "Apricot" })).toBeVisible()
+    })
+    expect(
+      screen.queryByRole("option", { name: "Banana" })
+    ).not.toBeInTheDocument()
+    expect(input).toHaveValue("Ap")
+
+    await user.click(screen.getByRole("option", { name: "Apple" }))
+
+    await waitFor(() => {
+      expect(input).toHaveValue("Apple")
+    })
+    expect(currProps.onChange).not.toHaveBeenCalled()
+
+    await openDropdown(user)
+    await waitFor(() => {
+      expect(screen.getAllByRole("option")).toHaveLength(3)
+    })
   })
 
   it("filters options with fuzzy (non-contiguous) matches", async () => {
@@ -696,7 +737,7 @@ describe("Selectbox widget", () => {
 
   it("committedValueRef blur regression: selecting then tabbing shows selected value", async () => {
     // Validates that the committedValueRef pattern prevents the input from
-    // reverting to the stale propValue when onBlur fires after onChange.
+    // reverting to the stale propValue when onBlur fires after RAC's onChange.
     const user = userEvent.setup()
     render(<Selectbox {...props} />)
 
