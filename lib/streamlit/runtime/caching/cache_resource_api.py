@@ -126,14 +126,7 @@ class ResourceCaches(StatsProvider):
         if max_entries is None:
             max_entries = math.inf
 
-        # The user-facing freshness ttl. In background mode the underlying cache uses a
-        # hard-eviction ttl of 2*ttl and tracks freshness separately via stored_at.
         fresh_ttl_seconds = time_to_seconds(ttl)
-        hard_ttl_seconds = (
-            fresh_ttl_seconds * cache_utils.BACKGROUND_REFRESH_TTL_MULTIPLIER
-            if refresh_mode == "background"
-            else fresh_ttl_seconds
-        )
 
         # Fetch the session ID. Note that this will throw an exception if there is no
         # session associated with the current thread.
@@ -164,6 +157,11 @@ class ResourceCaches(StatsProvider):
             # refresh is discarded rather than written back to a replaced cache.
             if cache is not None:
                 cache.mark_detached()
+
+            # Resolved after the reuse check so the hot path never reads config.
+            hard_ttl_seconds = cache_utils.get_hard_ttl_seconds(
+                refresh_mode, fresh_ttl_seconds
+            )
 
             # Create a new cache object and put it in our dict
             _LOGGER.debug("Creating new ResourceCache (key=%s)", key)
@@ -519,9 +517,11 @@ class CacheResourceAPI:
               runs the cached function synchronously. The app rerun waits until the new
               resource is ready.
             - ``"background"``: Return the expired resource immediately and update it
-              in the background. Streamlit can keep returning the expired resource for
-              up to one additional ``ttl``. After that, the next call waits for a new
-              resource. This mode requires a ``ttl``. If you set ``on_release``,
+              in the background. By default, Streamlit can keep returning the expired
+              resource for one extra ``ttl``; after that, the next call waits for a
+              new resource. To change how long expired resources can be returned, use
+              the ``runner.cacheBackgroundRefreshTTLMultiplier`` configuration option.
+              This mode requires a ``ttl``. If you set ``on_release``,
               Streamlit calls it for the old resource after a successful update.
 
             .. note::
@@ -642,7 +642,8 @@ class CacheResourceAPI:
             raise StreamlitValueError("scope", ["'global'", "'session'"])
 
         validate_refresh_mode(
-            refresh_mode, time_to_seconds(ttl, coerce_none_to_inf=False)
+            refresh_mode,
+            time_to_seconds(ttl, coerce_none_to_inf=False),
         )
 
         # Support passing the params via function decorator, e.g.
@@ -711,7 +712,7 @@ class ResourceCache(Cache[R]):
         self.display_name = display_name
         self._mem_cache: TTLCleanupCache[str, CachedResult[R]] = TTLCleanupCache(
             maxsize=max_entries,
-            # In background mode this is the hard-eviction bound (2*ttl); freshness
+            # In background mode this is the configured hard-expiration bound; freshness
             # within the fresh window is tracked separately via stored_at.
             ttl=ttl_seconds,
             timer=cache_utils.TTLCACHE_TIMER,
@@ -738,7 +739,11 @@ class ResourceCache(Cache[R]):
         return self._mem_cache.ttl
 
     def _is_stale(self, result: CachedResult[R]) -> bool:
-        """Whether a present entry is in the stale grace window ``[ttl, 2*ttl)``."""
+        """Whether a present entry is past its freshness TTL.
+
+        Hard-expired keys never reach this method: the storage layer treats them as
+        missing.
+        """
         # Unlike DataCache, no ``fresh_ttl_seconds is None`` guard is needed here:
         # resource caches always resolve it to a float (ttl uses coerce_none_to_inf).
         if self.refresh_mode != "background" or result.stored_at is None:

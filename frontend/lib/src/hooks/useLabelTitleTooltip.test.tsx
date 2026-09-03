@@ -69,6 +69,26 @@ describe("useLabelTitleTooltip", () => {
     expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
   })
 
+  it("inserts spaces between leftover paragraphs and hard breaks in the title", () => {
+    function BlockGapHarness(): ReactElement {
+      const { titleRef, labelTextRef } = useLabelTitleTooltip(true, "one two")
+      return (
+        <div ref={titleRef} data-testid="title-host">
+          <span ref={labelTextRef} data-testid="label-text">
+            <p>one</p>
+            <p>two</p>
+            <br />
+            three
+          </span>
+        </div>
+      )
+    }
+
+    render(<BlockGapHarness />)
+
+    expect(screen.getByTitle("one two three")).toBeVisible()
+  })
+
   it("removes the title and stops observing when addTitleTooltip flips to false", () => {
     const observe = vi.fn()
     // disconnect() clears the stored callback so a later fire() is a no-op, matching

@@ -19,10 +19,11 @@ import os
 import sqlite3
 import unittest
 from collections.abc import Iterator, Mapping
+from contextlib import closing, contextmanager
 from datetime import date
 from decimal import Decimal
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
@@ -32,7 +33,7 @@ from pandas.api.types import infer_dtype
 from parameterized import parameterized
 
 from streamlit import dataframe_util
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitDataframeConversionError
 from streamlit.type_util import get_fqn_type
 from tests.streamlit.data_mocks.snowpandas_mocks import DataFrame as SnowpandasDataFrame
 from tests.streamlit.data_mocks.snowpandas_mocks import Index as SnowpandasIndex
@@ -111,6 +112,29 @@ class DataframeUtilTest(unittest.TestCase):
 
         table = dataframe_util.convert_pandas_df_to_arrow_table(df)
         assert isinstance(table, pa.Table)
+
+    def test_convert_pandas_df_to_arrow_table_retry_failure_raises(self):
+        """A second from_pandas failure raises StreamlitDataframeConversionError."""
+        df = pd.DataFrame({"col": [1, 2, 3]})
+        arrow_error = pa.ArrowInvalid("still incompatible")
+        fake_pa = MagicMock()
+        fake_pa.ArrowTypeError = pa.ArrowTypeError
+        fake_pa.ArrowInvalid = pa.ArrowInvalid
+        fake_pa.ArrowNotImplementedError = pa.ArrowNotImplementedError
+        fake_pa.Table.from_pandas.side_effect = arrow_error
+
+        with (
+            # pa.Table is a C-extension type, so from_pandas cannot be patched
+            # on the class. Replace the local ``import pyarrow`` instead.
+            patch.dict("sys.modules", {"pyarrow": fake_pa}),
+            pytest.raises(
+                StreamlitDataframeConversionError,
+                match="Unable to convert dataframe to Arrow table",
+            ) as exc_info,
+        ):
+            dataframe_util.convert_pandas_df_to_arrow_table(df)
+
+        assert exc_info.value.__cause__ is arrow_error
 
     def test_convert_arrow_table_to_arrow_bytes_downcasts_large_list(self):
         """Test that convert_arrow_table_to_arrow_bytes downcasts large_list to list."""
@@ -368,7 +392,6 @@ class DataframeUtilTest(unittest.TestCase):
         """Test that ArrowInvalid from __arrow_c_stream__ causes fallback to
         later conversion methods (interchange protocol or pandas constructor).
         """
-        from streamlit.errors import StreamlitAPIException
 
         class PyCapsuleOnlyObject:
             """Object with only __arrow_c_stream__ (no to_pandas or __dataframe__).
@@ -389,7 +412,9 @@ class DataframeUtilTest(unittest.TestCase):
         obj = PyCapsuleOnlyObject()
 
         # Should raise because there's no fallback after PyCapsule fails
-        with pytest.raises(StreamlitAPIException, match="Unable to convert"):
+        with pytest.raises(
+            StreamlitDataframeConversionError, match="Unable to convert"
+        ):
             dataframe_util.convert_anything_to_pandas_df(obj)
 
         # Verify the PyCapsule path was attempted
@@ -723,28 +748,27 @@ class DataframeUtilTest(unittest.TestCase):
     def test_verify_sqlite3_integration(self):
         """Verify that sqlite3 cursor can be used as a data source."""
 
-        con = sqlite3.connect("file::memory:", uri=True)
-        cur = con.cursor()
-        cur.execute("CREATE TABLE movie(title, year, score)")
-        cur.execute("""
-            INSERT INTO movie VALUES
-                ('Monty Python and the Holy Grail', 1975, 8.2),
-                ('And Now for Something Completely Different', 1971, 7.5)
-        """)
-        con.commit()
-        db_cursor = cur.execute("SELECT * FROM movie")
-        assert dataframe_util.is_dbapi_cursor(db_cursor) is True
-        assert (
-            dataframe_util.determine_data_format(db_cursor)
-            is dataframe_util.DataFormat.DBAPI_CURSOR
-        )
-        converted_df = dataframe_util.convert_anything_to_pandas_df(db_cursor)
-        assert isinstance(
-            converted_df,
-            pd.DataFrame,
-        )
-        assert converted_df.shape == (2, 3)
-        con.close()
+        with closing(sqlite3.connect("file::memory:", uri=True)) as con:
+            cur = con.cursor()
+            cur.execute("CREATE TABLE movie(title, year, score)")
+            cur.execute("""
+                INSERT INTO movie VALUES
+                    ('Monty Python and the Holy Grail', 1975, 8.2),
+                    ('And Now for Something Completely Different', 1971, 7.5)
+            """)
+            con.commit()
+            db_cursor = cur.execute("SELECT * FROM movie")
+            assert dataframe_util.is_dbapi_cursor(db_cursor) is True
+            assert (
+                dataframe_util.determine_data_format(db_cursor)
+                is dataframe_util.DataFormat.DBAPI_CURSOR
+            )
+            converted_df = dataframe_util.convert_anything_to_pandas_df(db_cursor)
+            assert isinstance(
+                converted_df,
+                pd.DataFrame,
+            )
+            assert converted_df.shape == (2, 3)
 
     @pytest.mark.require_integration
     def test_verify_duckdb_db_api_integration(self):
@@ -909,7 +933,8 @@ class DataframeUtilTest(unittest.TestCase):
 
         if metadata.expected_data_format == dataframe_util.DataFormat.UNKNOWN:
             with pytest.raises(
-                ValueError, match=r"Unsupported input data format: DataFormat.UNKNOWN"
+                StreamlitDataframeConversionError,
+                match=r"Unsupported input data format: DataFormat.UNKNOWN",
             ):
                 dataframe_util.convert_pandas_df_to_data_format(
                     converted_df, metadata.expected_data_format
@@ -952,7 +977,8 @@ class DataframeUtilTest(unittest.TestCase):
         passed an unknown data format.
         """
         with pytest.raises(
-            ValueError, match=r"Unsupported input data format: DataFormat.UNKNOWN"
+            StreamlitDataframeConversionError,
+            match=r"Unsupported input data format: DataFormat.UNKNOWN",
         ):
             dataframe_util.convert_pandas_df_to_data_format(
                 pd.DataFrame({"a": [1, 2, 3]}), dataframe_util.DataFormat.UNKNOWN
@@ -1160,11 +1186,13 @@ def test_fix_arrow_incompatible_column_types_stringifies_mixed_index_only() -> N
     assert infer_dtype(fixed.index) == "string"
 
 
-def test_convert_dict_fallback_failure_raises_streamlit_api_exception() -> None:
+def test_convert_dict_fallback_failure_raises_dataframe_conversion_error() -> None:
     """If both the default and key-value dict conversions fail, raise a clear error."""
     bad: dict[int, list[int]] = {0: [1], 1: [2, 3]}
     with (
-        pytest.raises(StreamlitAPIException, match="Unable to convert object"),
+        pytest.raises(
+            StreamlitDataframeConversionError, match="Unable to convert object"
+        ),
         patch.object(
             dataframe_util,
             "_dict_to_pandas_df",
@@ -1245,7 +1273,7 @@ def test_convert_duckdb_relation_row_cap_triggers_caption() -> None:
 
 def test_convert_dbapi_cursor_row_cap_triggers_caption() -> None:
     """DB-API cursors that return a full fetchmany batch may show a row-limit caption."""
-    with sqlite3.connect("file::memory:", uri=True) as con:
+    with closing(sqlite3.connect("file::memory:", uri=True)) as con:
         cur = con.cursor()
         cur.execute("CREATE TABLE t(x INTEGER)")
         cur.executemany("INSERT INTO t VALUES (?)", [(i,) for i in range(6)])
@@ -1273,7 +1301,7 @@ def test_convert_pandas_df_to_data_format_requires_single_column_for_series_like
 ) -> None:
     """Series-like targets reject multi-column frames."""
     df = pd.DataFrame({"a": [1], "b": [2]})
-    with pytest.raises(ValueError, match="single column"):
+    with pytest.raises(StreamlitDataframeConversionError, match="single column"):
         dataframe_util.convert_pandas_df_to_data_format(df, fmt)
 
 
@@ -1610,9 +1638,9 @@ def test_downcast_large_list_schema_replaces_large_list() -> None:
 
 
 def test_pandas_df_to_series_raises_on_multi_column() -> None:
-    """``_pandas_df_to_series`` raises ValueError on multi-column inputs."""
+    """``_pandas_df_to_series`` raises StreamlitDataframeConversionError on multi-column inputs."""
     df = pd.DataFrame({"a": [1], "b": [2]})
-    with pytest.raises(ValueError, match="single column"):
+    with pytest.raises(StreamlitDataframeConversionError, match="single column"):
         dataframe_util._pandas_df_to_series(df)
 
 
@@ -1630,3 +1658,256 @@ def test_unify_missing_values_replaces_nan_with_none() -> None:
     df = pd.DataFrame({"a": ["x", np.nan, "y"]})
     result = dataframe_util._unify_missing_values(df)
     assert result["a"].tolist() == ["x", None, "y"]
+
+
+class _FakePolarsDataFrame:
+    """Stand-in for a Polars DataFrame used to exercise conversion branches."""
+
+    def __init__(self, df: pd.DataFrame, *, fail_arrow: bool = False) -> None:
+        self._df = df
+        self._fail_arrow = fail_arrow
+        self.height = len(df)
+
+    def clone(self) -> _FakePolarsDataFrame:
+        return _FakePolarsDataFrame(self._df.copy(), fail_arrow=self._fail_arrow)
+
+    def head(self, n: int) -> _FakePolarsDataFrame:
+        return _FakePolarsDataFrame(self._df.head(n), fail_arrow=self._fail_arrow)
+
+    def to_pandas(self) -> pd.DataFrame:
+        return self._df.copy()
+
+    def to_arrow(self) -> pa.Table:
+        if self._fail_arrow:
+            raise RuntimeError("arrow conversion failed")
+        return pa.Table.from_pandas(self._df)
+
+
+class _FakePolarsSeries:
+    """Stand-in for a Polars Series (pandas conversion uses ``to_pandas``)."""
+
+    def __init__(self, values: list[int]) -> None:
+        self._values = values
+
+    def clone(self) -> _FakePolarsSeries:
+        return _FakePolarsSeries(list(self._values))
+
+    def to_pandas(self) -> pd.Series:
+        return pd.Series(self._values, name="s")
+
+    def to_frame(self) -> _FakePolarsDataFrame:
+        return _FakePolarsDataFrame(pd.DataFrame({"s": self._values}))
+
+
+class _FakePolarsLazyFrame:
+    """Stand-in for a Polars LazyFrame: only ``limit`` / ``collect`` exist."""
+
+    def __init__(self, n: int) -> None:
+        self._n = n
+
+    def limit(self, n: int) -> _FakePolarsLazyFrame:
+        return _FakePolarsLazyFrame(min(self._n, n))
+
+    def collect(self) -> _FakePolarsDataFrame:
+        return _FakePolarsDataFrame(pd.DataFrame({"a": list(range(self._n))}))
+
+
+class _FakeXarrayDataset:
+    """Stand-in for an xarray Dataset used to exercise pandas conversion."""
+
+    def copy(self, deep: bool = True) -> _FakeXarrayDataset:
+        return _FakeXarrayDataset()
+
+    def to_dataframe(self) -> pd.DataFrame:
+        return pd.DataFrame({"a": [1, 2]})
+
+
+class _FakeXarrayDataArray:
+    """Stand-in for an xarray DataArray used to exercise pandas conversion."""
+
+    def copy(self, deep: bool = True) -> _FakeXarrayDataArray:
+        return _FakeXarrayDataArray()
+
+    def to_series(self) -> pd.Series:
+        return pd.Series([1, 2], name="a")
+
+
+@contextmanager
+def _as_polars(
+    *, dataframe: bool = False, series: bool = False, lazyframe: bool = False
+) -> Iterator[None]:
+    """Treat objects as the given Polars type for conversion helpers."""
+    with (
+        patch.object(dataframe_util, "is_polars_dataframe", return_value=dataframe),
+        patch.object(dataframe_util, "is_polars_series", return_value=series),
+        patch.object(dataframe_util, "is_polars_lazyframe", return_value=lazyframe),
+    ):
+        yield
+
+
+def test_convert_polars_dataframe_to_pandas_with_ensure_copy() -> None:
+    """Polars DataFrame conversion clones when ``ensure_copy`` is True."""
+    fake = _FakePolarsDataFrame(pd.DataFrame({"a": [1, 2, 3]}))
+    with (
+        patch.object(fake, "clone", wraps=fake.clone) as mock_clone,
+        _as_polars(dataframe=True),
+    ):
+        out = dataframe_util.convert_anything_to_pandas_df(fake, ensure_copy=True)
+    mock_clone.assert_called_once()
+    assert list(out["a"]) == [1, 2, 3]
+
+
+def test_convert_polars_series_to_pandas() -> None:
+    """Polars Series conversion yields a one-column pandas DataFrame."""
+    fake = _FakePolarsSeries([10, 20])
+    with _as_polars(series=True):
+        out = dataframe_util.convert_anything_to_pandas_df(fake, ensure_copy=True)
+    assert out.shape[1] == 1
+    assert list(out.iloc[:, 0]) == [10, 20]
+
+
+def test_convert_polars_lazyframe_to_pandas_shows_truncation_message() -> None:
+    """LazyFrame conversion caps rows and surfaces a truncation caption."""
+    fake = _FakePolarsLazyFrame(n=8)
+    with (
+        _as_polars(lazyframe=True),
+        patch.object(dataframe_util, "_show_data_information") as mock_info,
+    ):
+        out = dataframe_util.convert_anything_to_pandas_df(fake, max_unevaluated_rows=5)
+    assert len(out) == 5
+    mock_info.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("factory", "is_dataset"),
+    [
+        (_FakeXarrayDataset, True),
+        (_FakeXarrayDataArray, False),
+    ],
+    ids=["dataset", "data_array"],
+)
+def test_convert_xarray_to_pandas(
+    factory: type[_FakeXarrayDataset | _FakeXarrayDataArray], is_dataset: bool
+) -> None:
+    """xarray Dataset and DataArray conversion honor ``ensure_copy``."""
+    obj: _FakeXarrayDataset | _FakeXarrayDataArray = factory()
+    with (
+        patch.object(obj, "copy", wraps=obj.copy) as mock_copy,
+        patch.object(dataframe_util, "is_xarray_dataset", return_value=is_dataset),
+        patch.object(
+            dataframe_util, "is_xarray_data_array", return_value=not is_dataset
+        ),
+    ):
+        out = dataframe_util.convert_anything_to_pandas_df(obj, ensure_copy=True)
+    mock_copy.assert_called_once_with(deep=True)
+    assert list(out.iloc[:, 0]) == [1, 2]
+
+
+@pytest.mark.parametrize(
+    ("checker", "expected"),
+    [
+        ("is_polars_series", dataframe_util.DataFormat.POLARS_SERIES),
+        ("is_polars_dataframe", dataframe_util.DataFormat.POLARS_DATAFRAME),
+        ("is_polars_lazyframe", dataframe_util.DataFormat.POLARS_LAZYFRAME),
+        ("is_xarray_dataset", dataframe_util.DataFormat.XARRAY_DATASET),
+        ("is_xarray_data_array", dataframe_util.DataFormat.XARRAY_DATA_ARRAY),
+    ],
+    ids=[
+        "polars_series",
+        "polars_dataframe",
+        "polars_lazyframe",
+        "xarray_dataset",
+        "xarray_data_array",
+    ],
+)
+def test_determine_data_format_optional_dataframe_types(
+    checker: str, expected: dataframe_util.DataFormat
+) -> None:
+    """``determine_data_format`` recognizes optional dataframe-like types."""
+    with patch.object(dataframe_util, checker, return_value=True):
+        assert dataframe_util.determine_data_format(object()) is expected
+
+
+def test_convert_anything_to_arrow_bytes_uses_polars_fast_path() -> None:
+    """Polars DataFrame Arrow conversion uses ``to_arrow`` without pandas."""
+    fake = _FakePolarsDataFrame(pd.DataFrame({"a": [1, 2]}))
+    with patch.object(dataframe_util, "is_polars_dataframe", return_value=True):
+        result = dataframe_util.convert_anything_to_arrow_bytes(fake)
+    table = pa.RecordBatchStreamReader(result).read_all()
+    assert table.column("a").to_pylist() == [1, 2]
+
+
+def test_convert_anything_to_arrow_bytes_falls_back_when_polars_arrow_fails() -> None:
+    """A failing Polars ``to_arrow`` path falls back to pandas conversion."""
+    fake = _FakePolarsDataFrame(pd.DataFrame({"a": [3, 4]}), fail_arrow=True)
+    with _as_polars(dataframe=True):
+        result = dataframe_util.convert_anything_to_arrow_bytes(fake)
+    table = pa.RecordBatchStreamReader(result).read_all()
+    assert table.column("a").to_pylist() == [3, 4]
+
+
+def test_convert_anything_to_arrow_bytes_uses_polars_series_fast_path() -> None:
+    """Polars Series Arrow conversion uses ``to_frame`` then ``to_arrow``."""
+    series = _FakePolarsSeries([1])
+    with _as_polars(series=True):
+        series_bytes = dataframe_util.convert_anything_to_arrow_bytes(series)
+    series_table = pa.RecordBatchStreamReader(series_bytes).read_all()
+    assert series_table.column("s").to_pylist() == [1]
+
+
+def test_convert_anything_to_arrow_bytes_truncates_polars_lazyframe() -> None:
+    """Polars LazyFrame Arrow conversion collects a truncated DataFrame."""
+    lazy = _FakePolarsLazyFrame(n=6)
+    with (
+        _as_polars(lazyframe=True),
+        patch.object(dataframe_util, "_show_data_information") as mock_info,
+    ):
+        lazy_bytes = dataframe_util.convert_anything_to_arrow_bytes(
+            lazy, max_unevaluated_rows=3
+        )
+    lazy_table = pa.RecordBatchStreamReader(lazy_bytes).read_all()
+    assert lazy_table.column("a").to_pylist() == [0, 1, 2]
+    mock_info.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("data_format", "expected"),
+    [
+        (dataframe_util.DataFormat.POLARS_DATAFRAME, "polars-df"),
+        (dataframe_util.DataFormat.POLARS_SERIES, "polars-series"),
+        (dataframe_util.DataFormat.XARRAY_DATASET, "xr-dataset"),
+        (dataframe_util.DataFormat.XARRAY_DATA_ARRAY, "xr-array"),
+    ],
+    ids=["polars_dataframe", "polars_series", "xarray_dataset", "xarray_data_array"],
+)
+def test_convert_pandas_df_to_polars_and_xarray_formats_with_mocked_backends(
+    data_format: dataframe_util.DataFormat, expected: str
+) -> None:
+    """Optional Polars/xarray output formats import those backends at conversion time."""
+    pdf = pd.DataFrame({"c": [1.0, 2.0]})
+    fake_pl = MagicMock()
+    fake_pl.from_pandas.side_effect = lambda obj: (
+        "polars-series" if isinstance(obj, pd.Series) else "polars-df"
+    )
+    fake_xr = MagicMock()
+    fake_xr.Dataset.from_dataframe.return_value = "xr-dataset"
+    fake_xr.DataArray.from_series.return_value = "xr-array"
+    with patch.dict("sys.modules", {"polars": fake_pl, "xarray": fake_xr}):
+        result = dataframe_util.convert_pandas_df_to_data_format(pdf, data_format)
+    assert result == expected
+    if data_format == dataframe_util.DataFormat.POLARS_DATAFRAME:
+        fake_pl.from_pandas.assert_called_once()
+        (arg,) = fake_pl.from_pandas.call_args.args
+        pd.testing.assert_frame_equal(arg, pdf)
+    elif data_format == dataframe_util.DataFormat.POLARS_SERIES:
+        fake_pl.from_pandas.assert_called_once()
+        (arg,) = fake_pl.from_pandas.call_args.args
+        assert isinstance(arg, pd.Series)
+        pd.testing.assert_series_equal(arg, pdf.iloc[:, 0])
+    elif data_format == dataframe_util.DataFormat.XARRAY_DATASET:
+        fake_xr.Dataset.from_dataframe.assert_called_once_with(pdf)
+    else:
+        fake_xr.DataArray.from_series.assert_called_once()
+        (arg,) = fake_xr.DataArray.from_series.call_args.args
+        assert isinstance(arg, pd.Series)
+        pd.testing.assert_series_equal(arg, pdf.iloc[:, 0])

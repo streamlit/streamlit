@@ -18,7 +18,7 @@ import { ReactNode } from "react"
 import { renderHook } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { Element, IAlert, streamlit } from "@streamlit/protobuf"
+import { type Alert, Element, streamlit } from "@streamlit/protobuf"
 
 import { FlexContextProvider } from "./FlexContext"
 import {
@@ -710,7 +710,7 @@ describe("#useLayoutStyles", () => {
           // Use type assertion to bypass TypeScript checks
           const subElement = {
             widthConfig: props.subElementWidthConfig,
-          } as IAlert
+          } as Alert.$Properties
 
           const { result } = renderHook(() =>
             useLayoutStyles({

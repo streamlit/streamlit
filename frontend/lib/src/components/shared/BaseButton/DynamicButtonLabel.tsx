@@ -91,6 +91,7 @@ export const DynamicButtonLabel = ({
               isLabel
               disableLinks
               truncate={truncate}
+              inheritLineHeight
             />
           </span>
         )}

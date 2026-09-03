@@ -79,7 +79,7 @@ function Radio({
     (selectedIndex: number): void => {
       // Convert index to string option value
       const selectedValue = options[selectedIndex] ?? null
-      setValueWithSource({ value: selectedValue, fromUi: true })
+      setValueWithSource({ value: selectedValue, fromUser: true })
     },
     [setValueWithSource, options]
   )
@@ -133,12 +133,11 @@ function updateWidgetMgrState(
   vws: ValueWithSource<RadioValue>,
   fragmentId: string | undefined
 ): void {
-  widgetMgr.setStringValue(
-    element,
-    vws.value,
-    { fromUi: vws.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, vws.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: vws.fromUser,
+  })
 }
 
 export default memo(Radio)

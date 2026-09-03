@@ -18,6 +18,7 @@ import { memo, ReactElement, useCallback, useEffect, useRef } from "react"
 
 import { FloatingPortal } from "@floating-ui/react"
 
+import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
@@ -144,7 +145,7 @@ function JsonPathTooltip({
   }, [copyToClipboard, path])
 
   return (
-    <FloatingPortal>
+    <FloatingPortal id={FLOATING_OVERLAY_PORTAL_ID}>
       <StyledJsonPathTooltipBody
         ref={setFloatingRef}
         data-testid="stJsonPathTooltipBody"

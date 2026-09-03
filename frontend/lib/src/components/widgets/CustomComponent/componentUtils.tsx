@@ -18,9 +18,8 @@ import { getLogger } from "loglevel"
 
 import {
   ArrowDataframe,
+  type ArrowTable,
   ComponentInstance as ComponentInstanceProto,
-  IArrowTable,
-  ISpecialArg,
   SpecialArg as SpecialArgProto,
 } from "@streamlit/protobuf"
 
@@ -145,7 +144,7 @@ export function createIframeMessageHandler(
           handleSetComponentValue(
             tryGetValue(data, "value"),
             (data as ComponentValueMessage).dataType,
-            { fromUi: true },
+            { fromUser: true },
             element,
             widgetMgr,
             fragmentId
@@ -189,7 +188,7 @@ export function createIframeMessageHandler(
  */
 export function parseArgs(
   jsonArgs: string,
-  specialArgs: ISpecialArg[]
+  specialArgs: SpecialArgProto.$Properties[]
 ): [newArgs: Args, dataframeArgs: DataframeArg[]] {
   // Parse arguments. Our JSON arguments are just stored in a JSON string.
   const newArgs: Args = JSON.parse(jsonArgs)
@@ -302,18 +301,25 @@ function handleSetComponentValue(
 
   switch (dataType) {
     case "dataframe":
-      widgetMgr.setArrowValue(
-        element,
-        value as IArrowTable,
-        source,
-        fragmentId
-      )
+      widgetMgr.setArrowValue(element.id, value as ArrowTable.$Properties, {
+        ...source,
+        formId: element.formId,
+        fragmentId,
+      })
       break
     case "bytes":
-      widgetMgr.setBytesValue(element, value as Uint8Array, source, fragmentId)
+      widgetMgr.setBytesValue(element.id, value as Uint8Array, {
+        ...source,
+        formId: element.formId,
+        fragmentId,
+      })
       break
     default:
-      widgetMgr.setJsonValue(element, value, source, fragmentId)
+      widgetMgr.setJsonValue(element.id, value, {
+        ...source,
+        formId: element.formId,
+        fragmentId,
+      })
   }
 }
 

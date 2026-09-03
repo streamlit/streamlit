@@ -32,17 +32,23 @@ function Probe({ wrap }: { wrap: boolean | null | undefined }): ReactElement {
   return <span data-testid="out">{String(resolved)}</span>
 }
 
-const horizontalContext: IFlexContext = {
-  direction: Direction.HORIZONTAL,
-  isInHorizontalLayout: true,
+const verticalContext: IFlexContext = {
+  direction: Direction.VERTICAL,
+  isInHorizontalLayout: false,
+  isDirectlyInColumn: false,
   isInRoot: false,
   isInContentWidthContainer: false,
 }
 
-const verticalContext: IFlexContext = {
-  ...horizontalContext,
-  direction: Direction.VERTICAL,
-  isInHorizontalLayout: false,
+const horizontalContext: IFlexContext = {
+  ...verticalContext,
+  direction: Direction.HORIZONTAL,
+  isInHorizontalLayout: true,
+}
+
+const directColumnContext: IFlexContext = {
+  ...verticalContext,
+  isDirectlyInColumn: true,
 }
 
 describe("useResolvedWrap", () => {
@@ -69,9 +75,24 @@ describe("useResolvedWrap", () => {
     expect(screen.getByTestId("out")).toHaveTextContent("true")
   })
 
-  it("explicit true overrides a horizontal layout", () => {
+  it.each([null, undefined])(
+    "auto (%s) does not wrap when directly placed in a column",
+    wrap => {
+      render(
+        <FlexContext.Provider value={directColumnContext}>
+          <Probe wrap={wrap} />
+        </FlexContext.Provider>
+      )
+      expect(screen.getByTestId("out")).toHaveTextContent("false")
+    }
+  )
+
+  it.each([
+    ["a horizontal layout", horizontalContext],
+    ["direct column placement", directColumnContext],
+  ])("explicit true overrides %s", (_name, context) => {
     render(
-      <FlexContext.Provider value={horizontalContext}>
+      <FlexContext.Provider value={context}>
         <Probe wrap={true} />
       </FlexContext.Provider>
     )

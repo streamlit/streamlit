@@ -18,9 +18,10 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 from typing import TYPE_CHECKING, Any, Final, cast
 
-from streamlit import config, dataframe_util
+from streamlit import dataframe_util
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
@@ -376,7 +377,8 @@ def _get_lat_or_lon_col_name(
 
             raise StreamlitAPIException(
                 f"Map data must contain a {human_readable_name} column named: "
-                f"{formatted_allowed_col_name}. Existing columns: {formmated_col_names}"
+                f"{formatted_allowed_col_name}. Existing columns: {formmated_col_names}",
+                error_id="map-missing-lat-lon-column",
             )
         col_name = candidate_col_name
 
@@ -389,7 +391,8 @@ def _get_lat_or_lon_col_name(
     if any(data[col_name].isna().array):
         raise StreamlitAPIException(
             f"Column {col_name} is not allowed to contain null values, such "
-            "as NaN, NaT, or None."
+            "as NaN, NaT, or None.",
+            error_id="map-column-contains-nulls",
         )
 
     return col_name
@@ -450,7 +453,8 @@ def _convert_color_arg_or_column(
             data[color_col_name] = data[color_col_name].map(to_int_color_tuple)
         else:
             raise StreamlitAPIException(
-                f'Column "{color_col_name}" does not appear to contain valid colors.'
+                f'Column "{color_col_name}" does not appear to contain valid colors.',
+                error_id="map-invalid-color-column",
             )
 
         color_arg_out = color_arg
@@ -517,6 +521,9 @@ def marshall(
     pydeck_proto.json = pydeck_json
     pydeck_proto.id = ""
 
-    mapbox_token = config.get_option("mapbox.token")
+    # st.map builds Deck JSON itself and never constructs a PyDeck Deck, so
+    # copy MAPBOX_API_KEY onto the proto. Default styles are Carto; the
+    # frontend uses this token only if the spec selects a Mapbox style.
+    mapbox_token = os.environ.get("MAPBOX_API_KEY")
     if mapbox_token:
         pydeck_proto.mapbox_token = mapbox_token

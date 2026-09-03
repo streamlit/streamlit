@@ -85,6 +85,35 @@ describe("Dynamic icon", () => {
     expect(testId).toBeInTheDocument()
     expect(srcAttr).toEqual(getFilledStarIconSrc())
   })
+
+  it("uses 1em when size is inherit", () => {
+    render(<DynamicIcon iconValue=":material/flag:" size="inherit" />)
+
+    expect(screen.getByTestId("stIconMaterial")).toHaveStyle({
+      fontSize: "1em",
+      width: "1em",
+      height: "1em",
+    })
+  })
+
+  it("sizes the spinner from 1em when size is inherit", () => {
+    render(<DynamicIcon iconValue="spinner" size="inherit" />)
+
+    expect(screen.getByTestId("stSpinnerIcon")).toHaveStyle({
+      width: "calc(1em * 0.80)",
+      height: "calc(1em * 0.80)",
+    })
+  })
+
+  it("scales inherit emoji via font-size without compounding the box", () => {
+    render(<DynamicIcon iconValue="🔥" size="inherit" />)
+
+    expect(screen.getByTestId("stIconEmoji")).toHaveStyle({
+      fontSize: "calc(1em * 0.90)",
+      width: "1em",
+      height: "1em",
+    })
+  })
 })
 
 describe("isMaterialIcon", () => {

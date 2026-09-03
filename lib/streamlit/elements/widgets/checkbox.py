@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from textwrap import dedent
 from typing import TYPE_CHECKING, cast
 
 from streamlit.elements.lib.form_utils import current_form_id
@@ -45,6 +44,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.string_util import to_help_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -171,10 +171,10 @@ class CheckboxMixin:
             one of the following:
 
             - ``None`` (default): Streamlit decides based on the surrounding
-              layout. Inside a horizontal container, the checkbox keeps its
-              standard, single-row height and truncates an overflowing label
-              with an ellipsis; in other layouts, the label wraps onto
-              additional lines.
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the checkbox keeps its standard, single-row height
+              and truncates an overflowing label with an ellipsis; in other
+              layouts, the label wraps onto additional lines.
             - ``True``: If the label is too wide for the checkbox, it wraps onto
               additional lines and the widget grows taller.
             - ``False``: The checkbox keeps its standard, single-row height. A
@@ -361,10 +361,10 @@ class CheckboxMixin:
             one of the following:
 
             - ``None`` (default): Streamlit decides based on the surrounding
-              layout. Inside a horizontal container, the toggle keeps its
-              standard, single-row height and truncates an overflowing label
-              with an ellipsis; in other layouts, the label wraps onto
-              additional lines.
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the toggle keeps its standard, single-row height
+              and truncates an overflowing label with an ellipsis; in other
+              layouts, the label wraps onto additional lines.
             - ``True``: If the label is too wide for the toggle, it wraps onto
               additional lines and the widget grows taller.
             - ``False``: The toggle keeps its standard, single-row height. A
@@ -469,7 +469,7 @@ class CheckboxMixin:
             on_change,
             default_value=None if value is False else value,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         element_id = compute_and_register_element_id(
             "toggle" if type == CheckboxProto.StyleType.TOGGLE else "checkbox",
@@ -494,7 +494,7 @@ class CheckboxMixin:
         )
 
         if help is not None:
-            checkbox_proto.help = dedent(help)
+            checkbox_proto.help = to_help_str(help)
 
         # wrap is layout-only, so it is intentionally excluded from the element
         # id above. Leaving it unset lets the frontend resolve the auto default

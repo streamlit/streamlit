@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
@@ -39,7 +40,10 @@ from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
     convert_arrow_table_to_arrow_bytes,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+)
 
 
 def _make_table(num_rows: int) -> pa.Table:
@@ -326,7 +330,10 @@ def test_resolve_styler_lazy_none_eager() -> None:
 def test_resolve_selection_lazy_true_raises() -> None:
     """``lazy=True`` raises when selections are activated."""
     df = pd.DataFrame({"a": np.arange(FORCED_LAZY_MIN_ROWS + 1)})
-    with pytest.raises(StreamlitAPIException, match="on_select"):
+    with pytest.raises(
+        StreamlitIncompatibleParametersError,
+        match=r"`on_select` cannot be used together",
+    ):
         resolve_lazy_source(df, True, is_selection_activated=True)
 
 
@@ -436,3 +443,98 @@ def test_default_page_size() -> None:
     """The default page size balances initial payload size and scrolling runway."""
     assert dataframe_source.DEFAULT_PAGE_SIZE == 1_000
     assert dataframe_source.MAX_CHUNK_ROWS >= dataframe_source.DEFAULT_PAGE_SIZE
+
+
+def test_should_lazy_load_in_memory_is_false_when_lazy_disabled() -> None:
+    """Explicit ``lazy=False`` never switches an in-memory table to lazy delivery."""
+    assert dataframe_source._should_lazy_load_in_memory(False, 10**9) is False
+
+
+def test_in_memory_source_from_polars_wraps_arrow_table() -> None:
+    """Polars in-memory sources wrap the table returned by ``to_arrow()``."""
+    table = pa.table({"a": [1, 2, 3]})
+    fake_df = MagicMock()
+    fake_df.to_arrow.return_value = table
+    source = dataframe_source._in_memory_source_from_polars(fake_df)
+    assert isinstance(source, InMemoryDataframeSource)
+    assert source.row_count == 3
+    fake_df.to_arrow.assert_called_once()
+
+
+class _BoomSource:
+    """Dataframe source whose ``row_count`` always fails."""
+
+    @property
+    def row_count(self) -> int:
+        raise RuntimeError("cannot count")
+
+
+def test_get_native_row_count_raises_when_lazy_is_forced() -> None:
+    """``lazy=True`` surfaces a row-count failure as a user-facing API error."""
+    with pytest.raises(StreamlitAPIException, match="could not determine"):
+        dataframe_source._get_native_row_count(_BoomSource(), lazy=True)  # type: ignore[arg-type]
+
+
+def test_get_native_row_count_returns_none_when_lazy_is_not_forced() -> None:
+    """Default lazy mode falls back to the preview path if the count fails."""
+    assert (
+        dataframe_source._get_native_row_count(_BoomSource(), lazy=None)  # type: ignore[arg-type]
+        is None
+    )
+
+
+def test_materialize_arrow_table_index_avoids_column_name_collision() -> None:
+    """A RangeIndex is materialized under a unique name when the default is taken."""
+    df = pd.DataFrame({"__streamlit_lazy_index__": [10, 20], "b": [1, 2]})
+    table = pa.Table.from_pandas(df)  # RangeIndex stays in pandas metadata.
+    result = dataframe_source._materialize_arrow_table_index(table)
+    assert result.column("__streamlit_lazy_index__").to_pylist() == [10, 20]
+    assert result.column("___streamlit_lazy_index__").to_pylist() == [0, 1]
+    assert "__index_level_0__" not in result.column_names
+
+
+def test_resolve_lazy_source_returns_large_native_source() -> None:
+    """A native source above the forced-lazy minimum is used when AppTest is off."""
+    native = MagicMock()
+    native.row_count = FORCED_LAZY_MIN_ROWS + 1
+    with patch.object(
+        dataframe_source, "_try_create_native_source", return_value=native
+    ):
+        result = resolve_lazy_source(object(), True, is_selection_activated=False)
+    assert result is native
+
+
+def test_resolve_lazy_source_uses_in_memory_polars_above_auto_threshold() -> None:
+    """Large in-memory Polars frames auto-switch to lazy when AppTest is off."""
+
+    class _FakePolars:
+        height = AUTO_LAZY_ROW_THRESHOLD + 1
+
+        def to_arrow(self) -> pa.Table:
+            return pa.table({"a": [0]})
+
+    with (
+        patch.object(dataframe_source, "_try_create_native_source", return_value=None),
+        patch.object(
+            dataframe_source.dataframe_util, "is_polars_dataframe", return_value=True
+        ),
+    ):
+        result = resolve_lazy_source(_FakePolars(), None, is_selection_activated=False)
+    assert isinstance(result, InMemoryDataframeSource)
+
+
+def test_resolve_lazy_source_raises_for_unevaluated_object_without_adapter() -> None:
+    """``lazy=True`` rejects unevaluated objects that have no native adapter."""
+    with (
+        patch.object(dataframe_source, "_try_create_native_source", return_value=None),
+        patch.object(
+            dataframe_source.dataframe_util,
+            "is_unevaluated_data_object",
+            return_value=True,
+        ),
+        patch.object(
+            dataframe_source.dataframe_util, "is_polars_dataframe", return_value=False
+        ),
+    ):
+        with pytest.raises(StreamlitAPIException, match="no lazy adapter"):
+            resolve_lazy_source(object(), True, is_selection_activated=False)

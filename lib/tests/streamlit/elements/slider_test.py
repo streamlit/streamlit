@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta, timezone
+from typing import Any
 from unittest.mock import MagicMock, patch
 from zoneinfo import ZoneInfo
 
@@ -33,7 +34,10 @@ from streamlit.elements.widgets.slider import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidMinMaxError,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
+    StreamlitJSNumberBoundsError,
     StreamlitValueAboveMaxError,
     StreamlitValueBelowMinError,
     StreamlitValueError,
@@ -134,7 +138,7 @@ class SliderTest(DeltaGeneratorTestCase):
     )
     def test_invalid_types(self, value):
         """Test that it rejects invalid types, specifically things that are *almost* numbers"""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.slider("the label", value=value)
 
     @parameterized.expand(
@@ -218,21 +222,21 @@ class SliderTest(DeltaGeneratorTestCase):
         assert c.max == 101
 
     def test_min_equals_max(self):
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidMinMaxError, match="must not be equal"):
             st.slider("oh no", min_value=10, max_value=10)
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidMinMaxError, match="must not be equal"):
             date = datetime(2024, 4, 3)
             st.slider("datetime", min_value=date, max_value=date)
 
     def test_value_out_of_bounds(self):
         # Max int
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitJSNumberBoundsError) as exc:
             max_value = JSNumber.MAX_SAFE_INTEGER + 1
             st.slider("Label", max_value=max_value)
         assert f"`max_value` ({max_value}) must be <= (1 << 53) - 1" == str(exc.value)
 
         # Min int
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitJSNumberBoundsError) as exc:
             min_value = JSNumber.MIN_SAFE_INTEGER - 1
             st.slider("Label", min_value=min_value)
         assert f"`min_value` ({min_value}) must be >= -((1 << 53) - 1)" == str(
@@ -240,13 +244,13 @@ class SliderTest(DeltaGeneratorTestCase):
         )
 
         # Max float
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitJSNumberBoundsError) as exc:
             max_value = 2e308
             st.slider("Label", value=0.5, max_value=max_value)
         assert f"`max_value` ({max_value}) must be <= 1.797e+308" == str(exc.value)
 
         # Min float
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitJSNumberBoundsError) as exc:
             min_value = -2e308
             st.slider("Label", value=0.5, min_value=min_value)
         assert f"`min_value` ({min_value}) must be >= -1.797e+308" == str(exc.value)
@@ -271,7 +275,7 @@ class SliderTest(DeltaGeneratorTestCase):
         in a JavaScript number. Past MAX_SAFE_INTEGER the value cannot round-trip, so
         it has to fail rather than silently shift to a different instant.
         """
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitJSNumberBoundsError) as exc:
             st.slider(
                 "Label", min_value=min_value, max_value=max_value, value=min_value
             )
@@ -381,11 +385,11 @@ class SliderTest(DeltaGeneratorTestCase):
         just_above = datetime.combine(_MAX_SAFE_DAY + timedelta(days=1), time(23, 59))
         in_range = datetime.combine(_MIN_SAFE_DAY, time(12))
 
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitJSNumberBoundsError) as exc:
             st.slider("Label", min_value=just_below, max_value=in_range, value=in_range)
         assert "`min_value` is too far from 1970" in str(exc.value)
 
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitJSNumberBoundsError) as exc:
             st.slider("Label", min_value=in_range, max_value=just_above, value=in_range)
         assert "`max_value` is too far from 1970" in str(exc.value)
 
@@ -423,14 +427,22 @@ class SliderTest(DeltaGeneratorTestCase):
         surfacing as a bare ``OverflowError``. It should report the representable range
         instead.
         """
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitJSNumberBoundsError) as exc:
             st.slider("Label", value=value)
         assert "too far from 1970" in str(exc.value)
 
     def test_step_zero(self):
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.slider("Label", min_value=0, max_value=10, step=0)
-        assert str(exc.value) == "Slider components cannot be passed a `step` of 0."
+        assert "Zero is not allowed" in str(exc.value)
+        with pytest.raises(StreamlitValueError) as exc:
+            st.slider(
+                "Label",
+                min_value=datetime(2020, 1, 1),
+                max_value=datetime(2020, 1, 2),
+                step=timedelta(0),
+            )
+        assert "Zero is not allowed" in str(exc.value)
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""
@@ -663,6 +675,23 @@ def test_id_stability():
     assert s1.id == s2.id
 
 
+def test_slider_on_change_callback_is_invoked() -> None:
+    """Test that a callable on_change runs when the slider value changes."""
+
+    def script() -> None:
+        import streamlit as st
+
+        def on_change() -> None:
+            st.session_state["called"] = True
+
+        st.slider("slider", value=0, key="slider", on_change=on_change)
+
+    at = AppTest.from_function(script).run()
+    assert "called" not in at.session_state
+    at = at.slider[0].set_value(5).run()
+    assert at.session_state["called"] is True
+
+
 class SliderStableIdTest(DeltaGeneratorTestCase):
     def test_stable_id_with_key(self):
         """Test that the widget ID is stable when a stable key is provided, unless whitelisted kwargs change."""
@@ -835,6 +864,46 @@ class SliderBindQueryParamsTest(DeltaGeneratorTestCase):
         assert list(c.default) == [25, 75]
 
 
+class SliderOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ):
+        """Test that on_change modes correctly set the ignore_rerun proto field."""
+        st.slider("the label", on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self):
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(st.errors.StreamlitValueError) as exc_info:
+            st.slider("the label", on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_unhashable_value_raises_exception(self):
+        """Test that unhashable on_change value raises StreamlitValueError."""
+        # Passing a list (unhashable) should raise StreamlitValueError,
+        # not TypeError from a membership test.
+        with pytest.raises(st.errors.StreamlitValueError) as exc_info:
+            st.slider("the label", on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+
 def _make_int_serde(
     value: list[float],
     *,
@@ -943,24 +1012,33 @@ def test_slider_serde_deserialize_passes_through_in_range_value() -> None:
 class SliderEdgeCasesTest(DeltaGeneratorTestCase):
     """Tests for slider parameter validation edge cases."""
 
+    def test_overlong_value_sequence_raises(self):
+        """A list or tuple longer than two items raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match="containing up to two"):
+            st.slider("the label", value=[1, 2, 3])
+
     def test_mixed_types_in_value_raises(self):
-        """A list with mixed numeric types raises StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException, match="must be of the same type"):
+        """A list with mixed numeric types raises StreamlitInvalidParameterTypeError."""
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError,
+            match="list or tuple containing values of the same type",
+        ):
             st.slider("the label", value=[1, 2.5])
 
     def test_mismatched_arg_types_raises(self):
-        """Mismatched min/max/step types raise StreamlitAPIException."""
+        """Mismatched min/max/step types raise StreamlitInvalidParameterTypeError."""
         with pytest.raises(
-            StreamlitAPIException, match="arguments must be of matching types"
+            StreamlitInvalidParameterTypeError,
+            match="matching numeric types",
         ):
             # min/max are float but step is int, so the args-type-mismatch error fires.
             st.slider("label", min_value=0.0, max_value=10.0, value=5.0, step=1)
 
     def test_value_type_mismatch_with_args(self):
-        """Value type that doesn't match arg types raises StreamlitAPIException."""
+        """Value type that doesn't match arg types raises StreamlitInvalidParameterTypeError."""
         with pytest.raises(
-            StreamlitAPIException,
-            match="value and arguments must be of the same type",
+            StreamlitInvalidParameterTypeError,
+            match="value and arguments with matching types",
         ):
             # min/max/step are float but value is int, so data_type is INT and
             # the value-vs-args matching-type check fails.

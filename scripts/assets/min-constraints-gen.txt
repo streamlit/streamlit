@@ -1,6 +1,5 @@
 altair==5.0.0
 anyio==4.0.0
-blinker==1.5.0
 click==7.0
 httptools==0.6.3
 itsdangerous==2.1.2

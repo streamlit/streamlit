@@ -65,6 +65,7 @@ Reusable composite actions in `.github/actions/` encapsulate common setup steps.
 | `playwright_install` | Installs Playwright browsers with caching (by OS/arch/version). Call after `make_init` for E2E tests. |
 | `apt_mirror_fix` | Fixes slow Azure apt mirrors on Ubuntu runners. Called automatically by `playwright_install`. |
 | `preview_branch` | Sets `PREVIEW_BRANCH` and `BRANCH` env vars for PR preview deployments. Uses action inputs to mitigate script injection. |
+| `find_latest_workflow_artifact` | Selects the newest unexpired artifact from a successful branch push. Avoids GitHub REST run filters, which can return stale results. |
 
 ### Typical Usage Pattern
 
@@ -91,7 +92,7 @@ runner's system Python.
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
 | `python-tests.yml` | Push/PR to `develop` | Python unit tests, linting, type checking across all supported Python versions |
-| `js-tests.yml` | Push/PR to `develop` | Frontend TypeScript linting, type checking, Knip dependency analysis (PR-blocking), and Vitest unit tests with coverage |
+| `js-tests.yml` | Push/PR to `develop` | Frontend TypeScript linting, type checking, Knip unused-export and unused-dependency analysis (PR-blocking), and Vitest unit tests with coverage |
 | `js-unit-tests.yml` | `workflow_call` | Reusable JS unit test workflow (called by other workflows) |
 | `playwright.yml` | Push/PR to `develop` | Full E2E test suite across webkit, chromium, and firefox |
 | `playwright-changed-files.yml` | PR | Runs E2E tests only for changed test files (faster feedback) |
@@ -150,7 +151,7 @@ runner's system Python.
 | `ai-pr-review.yml` | `ai-review`/`ai-final-review` label or manual | AI-powered code and product-alignment review using Cursor CLI |
 | `ai-qa-testing.yml` | `ai-qa-test` label or manual | AI-powered QA testing on PR branches |
 | `ai-issue-triage.yml` | `ai-review` label on issue or manual | AI-powered issue triage (duplicates, labels) |
-| `ai-update-docs.yml` | Weekly (Tuesdays) or manual | AI-powered documentation review and updates |
+| `ai-update-docs.yml` | Weekly (Tuesdays) or manual | AI-powered documentation review; weekly/full mode uses recently merged PRs as leads, including bundled skills |
 | `ai-fix-flaky-e2e-tests.yml` | Weekly (Fridays) or manual | AI-powered flaky E2E test diagnosis and fixing |
 | `ai-test-coverage.yml` | Weekly (Wednesdays) or manual | AI-powered test coverage improvement for frontend and Python |
 

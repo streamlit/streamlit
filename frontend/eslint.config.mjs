@@ -31,7 +31,6 @@ import testingLibrary from "eslint-plugin-testing-library"
 import noRelativeImportPaths from "eslint-plugin-no-relative-import-paths"
 import globals from "globals"
 import { defineConfig, globalIgnores } from "eslint/config"
-import jsxA11y from "eslint-plugin-jsx-a11y"
 
 // Import other configs
 // Note: Some configs may need to be applied differently in flat config
@@ -42,10 +41,9 @@ const __dirname = path.dirname(__filename)
 // This is to support our custom rules, which are written in TypeScript,
 // but need to be imported as JS to work in ESLint.
 const jiti = createJiti(import.meta.url)
-const streamlitCustom = await jiti.import(
-  path.resolve(__dirname, "./eslint-plugin-streamlit-custom/src/index.ts"),
-  { default: true }
-)
+const streamlitCustom = await jiti.import("eslint-plugin-streamlit-custom", {
+  default: true,
+})
 
 /**
  * Helper to create the no-restricted-imports rule config.
@@ -72,6 +70,11 @@ export const getNoRestrictedImports = (
       name: "axios",
       importNames: ["CancelToken"],
       message: "Please use the `AbortController` API instead of `CancelToken`",
+    },
+    {
+      // lodash only provides downstream peer/types; runtime imports use lodash-es.
+      name: "lodash",
+      message: "Please import from `lodash-es` for tree-shaking.",
     },
     {
       name: "react",
@@ -240,7 +243,6 @@ export default defineConfig([
   {
     files: ["**/*.ts", "**/*.tsx"],
     plugins: {
-      ...jsxA11y.flatConfigs.recommended.plugins,
       lodash,
       "no-relative-import-paths": fixupPluginRules(noRelativeImportPaths),
       "streamlit-custom": streamlitCustom,
@@ -298,7 +300,10 @@ export default defineConfig([
         },
       ],
       // It's safe to use functions before they're defined
-      "@typescript-eslint/no-use-before-define": ["warn", { functions: false }],
+      "@typescript-eslint/no-use-before-define": [
+        "warn",
+        { functions: false },
+      ],
       // Functions must have return types, but we allow inline function expressions to omit them
       "@typescript-eslint/explicit-function-return-type": [
         "warn",
@@ -329,6 +334,8 @@ export default defineConfig([
       "@typescript-eslint/prefer-readonly": "warn",
       // Ensure return await is used in try/catch for proper error stack traces
       "@typescript-eslint/return-await": ["error", "in-try-catch"],
+      // Treat @deprecated API usage as errors
+      "@typescript-eslint/no-deprecated": "error",
       // Permit for-of loops
       "no-restricted-syntax": [
         "error",
@@ -435,18 +442,6 @@ export default defineConfig([
       "react-hooks/set-state-in-effect": "off",
       // Enforce "You Might Not Need an Effect" pattern - don't derive state in effects
       "react-hooks/no-deriving-state-in-effects": "error",
-      // jsx-a11y rules
-      ...jsxA11y.flatConfigs.recommended.rules,
-      // prohibit autoFocus prop
-      // https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/main/docs/rules/no-autofocus.md
-      "jsx-a11y/no-autofocus": ["error", { ignoreNonDOM: true }],
-      // Stricter a11y enforcement beyond the recommended ruleset:
-      // - Require accessible names for icon-only controls
-      "jsx-a11y/control-has-associated-label": "error",
-      // - Do not hide focusable controls from assistive technology
-      "jsx-a11y/no-aria-hidden-on-focusable": "error",
-      // - Avoid making non-interactive elements keyboard-focusable via tabIndex>=0
-      "jsx-a11y/no-noninteractive-tabindex": "error",
     },
     settings: {
       "import-x/resolver": {
@@ -546,7 +541,7 @@ export default defineConfig([
   globalIgnores([
     "eslint.config.mjs",
     "app/eslint.config.mjs",
-    "vitest.config.ts",
+    "vitest.config.mts",
     "vitest.setup.ts",
     "**/vite.config.ts",
     "lib/src/proto.js",

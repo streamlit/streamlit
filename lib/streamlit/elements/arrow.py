@@ -54,7 +54,11 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitValueError,
+)
 from streamlit.proto.Dataframe_pb2 import (
     Dataframe as DataframeProto,
 )
@@ -393,19 +397,22 @@ def _normalize_selection_mode(
     # Ensure at most one row selection mode is specified.
     row_modes = selection_mode_set & _ROW_SELECTION_MODES
     if len(row_modes) > 1:
-        raise StreamlitAPIException(
-            "Only one row selection mode can be specified. "
-            f"Found: {', '.join(f'`{m}`' for m in sorted(row_modes))}."
+        mode_uses = [f"selection_mode='{mode}'" for mode in sorted(row_modes)]
+        raise StreamlitIncompatibleParametersError(
+            *mode_uses,
+            explanation="Only one row selection mode can be specified.",
         )
 
     if selection_mode_set.issuperset({"single-column", "multi-column"}):
-        raise StreamlitAPIException(
-            "Only one of `single-column` or `multi-column` can be selected as selection mode."
+        raise StreamlitIncompatibleParametersError(
+            "selection_mode='single-column'",
+            "selection_mode='multi-column'",
         )
 
     if selection_mode_set.issuperset({"single-cell", "multi-cell"}):
-        raise StreamlitAPIException(
-            "Only one of `single-cell` or `multi-cell` can be selected as selection mode."
+        raise StreamlitIncompatibleParametersError(
+            "selection_mode='single-cell'",
+            "selection_mode='multi-cell'",
         )
 
     return selection_mode_set
@@ -474,7 +481,8 @@ def _validate_selection_state(
     if not isinstance(value, dict) or not isinstance(value.get("selection"), dict):
         raise StreamlitAPIException(
             "Selection state must be a dictionary with a 'selection' key "
-            "containing 'rows', 'columns', and 'cells' arrays."
+            "containing 'rows', 'columns', and 'cells' arrays.",
+            error_id="dataframe-invalid-selection-state",
         )
 
     selection = value["selection"]
@@ -710,9 +718,12 @@ class ArrowMixin:
             underlying ``pandas.DataFrame``. Streamlit supports custom cell
             values, colors, and font weights. It does not support some of the
             more exotic styling options, like bar charts, hovering, and
-            captions. For these styling options, use column configuration
-            instead. Text and number formatting from ``column_config`` always
-            takes precedence over text and number formatting from ``pandas.Styler``.
+            captions. For these options, use column configuration where an
+            equivalent exists (for example, ``BarChartColumn`` or
+            ``ProgressColumn`` instead of Styler bars), or use ``st.table``
+            for small, static tables that need fuller Pandas Styler support.
+            Text and number formatting from ``column_config`` always takes
+            precedence over text and number formatting from ``pandas.Styler``.
 
             Collection-like objects include all Python-native ``Collection``
             types, such as ``dict``, ``list``, and ``set``.
@@ -1058,8 +1069,13 @@ class ArrowMixin:
         selection_mode_set: set[SelectionMode] = set()
 
         if selection_default is not None and not is_selection_activated:
-            raise StreamlitAPIException(
-                "selection_default can only be used when on_select is not 'ignore'."
+            raise StreamlitIncompatibleParametersError(
+                "selection_default",
+                "on_select='ignore'",
+                explanation=(
+                    "Set `on_select` to `'rerun'` or a callback to use "
+                    "`selection_default`."
+                ),
             )
 
         if is_selection_activated:
@@ -1350,7 +1366,8 @@ def marshall(
         # and `None` otherwise.
         if not isinstance(default_uuid, str):
             raise StreamlitAPIException(
-                "Default UUID must be a string for Styler data."
+                "Default UUID must be a string for Styler data.",
+                error_id="styler-default-uuid-must-be-string",
             )
         marshall_styler(proto, data, default_uuid)
 

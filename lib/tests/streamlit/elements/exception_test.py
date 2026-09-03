@@ -341,6 +341,88 @@ def test_marshall_with_alternate_name() -> None:
     assert proto.type == "PrettyErrorName"
 
 
+@pytest.mark.parametrize(
+    ("show_error_details", "expected_type", "expected_flag"),
+    [
+        ("full", "streamlit.errors.StreamlitAPIException", True),
+        ("stacktrace", "streamlit.errors.StreamlitAPIException", True),
+        ("type", "streamlit.errors.StreamlitAPIException", True),
+        # "none" withholds the type as well, leaving nothing to offer help about.
+        ("none", "", False),
+    ],
+)
+def test_marshall_is_streamlit_exception_follows_type_redaction(
+    show_error_details: str, expected_type: str, expected_flag: bool
+) -> None:
+    """The provenance flag is withheld exactly when the type is.
+
+    ``client.showErrorDetails="none"`` redacts the type, message and trace, so a
+    surface keyed off this flag would otherwise offer to fix an error the box
+    refused to describe. Every less-strict level keeps the flag, so redaction
+    must not over-clear it either.
+    """
+    with testutil.patch_config_options({"client.showErrorDetails": show_error_details}):
+        proto = ExceptionProto()
+        exception.marshall(
+            proto, StreamlitAPIException("boom"), apply_show_error_details=True
+        )
+        assert proto.type == expected_type
+        assert proto.is_streamlit_exception is expected_flag
+
+
+def test_marshall_is_streamlit_exception_survives_redaction_for_direct_calls() -> None:
+    """``st.exception()`` is not an uncaught app exception, so redaction is moot.
+
+    ``showErrorDetails`` only governs errors Streamlit caught itself; a direct
+    call is the developer choosing to display something, so the flag stands even
+    at the strictest level.
+    """
+    with testutil.patch_config_options({"client.showErrorDetails": "none"}):
+        proto = ExceptionProto()
+        exception.marshall(proto, StreamlitAPIException("boom"))
+        assert proto.is_streamlit_exception is True
+
+
+@pytest.mark.parametrize(
+    ("err", "expected"),
+    [
+        (errors.Error("base"), True),
+        (StreamlitAPIException("boom"), True),
+        (errors.DuplicateWidgetID("dup"), True),
+        (StreamlitInvalidWidthError("bad"), True),
+        (ValueError("v"), False),
+        (ZeroDivisionError(), False),
+        (KeyError("k"), False),
+    ],
+)
+def test_marshall_is_streamlit_exception(err: BaseException, expected: bool) -> None:
+    """is_streamlit_exception is True only for streamlit.errors.Error subclasses.
+
+    This flag scopes the in-error "Install skills" callout to Streamlit API
+    misuse; arbitrary user/runtime errors must not set it.
+    """
+    proto = ExceptionProto()
+    exception.marshall(proto, err)
+    assert proto.is_streamlit_exception is expected
+
+
+def test_marshall_is_streamlit_exception_ignores_alternate_name() -> None:
+    """A non-Streamlit exception is not flagged even if it spoofs its type name.
+
+    The flag is computed from the class (isinstance of streamlit.errors.Error),
+    not the reported type string, so an ``alternate_name`` that mimics a
+    Streamlit type cannot make a foreign error qualify.
+    """
+
+    class DuplicateWidgetID(Exception):  # Same name as a real Streamlit error.
+        alternate_name = "DuplicateWidgetID"
+
+    proto = ExceptionProto()
+    exception.marshall(proto, DuplicateWidgetID("nope"))
+    assert proto.type == "DuplicateWidgetID"
+    assert proto.is_streamlit_exception is False
+
+
 def test_marshall_syntax_error() -> None:
     """Test that SyntaxErrors are formatted with _format_syntax_error_message."""
     err = SyntaxError(
@@ -384,6 +466,19 @@ def test_get_stack_trace_no_traceback() -> None:
     err.__traceback__ = None
     result = _get_stack_trace_str_list(err)
     assert result == []
+
+
+def test_get_stack_trace_streamlit_api_warning_without_tacked_stack() -> None:
+    """A ``StreamlitAPIWarning`` with no tacked stack reports that extraction failed."""
+    warning = errors.StreamlitAPIWarning("msg")
+    warning.tacked_on_stack = None
+    result = _get_stack_trace_str_list(warning)
+    assert result == [
+        (
+            "Cannot extract the stack trace for this exception. "
+            "Try calling exception() within the `catch` block."
+        )
+    ]
 
 
 @patch("streamlit.elements.exception.get_script_run_ctx")

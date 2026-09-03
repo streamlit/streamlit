@@ -800,12 +800,12 @@ def convert_anything_to_pandas_df(
     # compatible with the pandas.DataFrame constructor.
     try:
         return _fix_column_naming(pd.DataFrame(data))
-    except ValueError as ex:
+    except (ValueError, TypeError) as ex:
         if isinstance(data, dict):
-            with contextlib.suppress(ValueError):
+            with contextlib.suppress(ValueError, TypeError):
                 # Try to use index orient as back-up to support key-value dicts
                 return _dict_to_pandas_df(data)
-        raise errors.StreamlitAPIException(
+        raise errors.StreamlitDataframeConversionError(
             f"""
 Unable to convert object of type `{type(data)}` to `pandas.DataFrame`.
 Offending object:
@@ -938,9 +938,14 @@ def convert_pandas_df_to_arrow_table(
     """
     import pyarrow as pa
 
+    arrow_conversion_errors = (
+        pa.ArrowTypeError,
+        pa.ArrowInvalid,
+        pa.ArrowNotImplementedError,
+    )
     try:
         return pa.Table.from_pandas(df, preserve_index=preserve_index)
-    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError) as ex:
+    except arrow_conversion_errors as ex:
         _LOGGER.info(
             "Serialization of dataframe to Arrow table was unsuccessful. "
             "Applying automatic fixes for column types to make the dataframe "
@@ -948,7 +953,12 @@ def convert_pandas_df_to_arrow_table(
             exc_info=ex,
         )
         fixed_df = fix_arrow_incompatible_column_types(df)
-        return pa.Table.from_pandas(fixed_df, preserve_index=preserve_index)
+        try:
+            return pa.Table.from_pandas(fixed_df, preserve_index=preserve_index)
+        except arrow_conversion_errors as retry_ex:
+            raise errors.StreamlitDataframeConversionError(
+                f"Unable to convert dataframe to Arrow table.\n{retry_ex}"
+            ) from retry_ex
 
 
 def convert_pandas_df_to_arrow_bytes(
@@ -1213,7 +1223,10 @@ def determine_arrow_column_fix(
             # Get the first non-null value to check if it is a supported list-like type.
             # Using dropna() handles cases where early values are NaN (e.g., from reindexing).
             non_null = column.dropna()
-            if len(non_null) == 0:
+            if len(non_null) == 0:  # pragma: no cover - defensive
+                # ``infer_dtype(..., skipna=True)`` reports all-null object
+                # columns as ``"empty"``, not ``"mixed"``, so this branch is
+                # not reachable with current pandas.
                 return "string"
             first_value = cast("DataFrameGenericAlias[Any]", non_null).iloc[0]  # type: ignore[index] # ty: ignore[not-subscriptable]
 
@@ -1437,12 +1450,12 @@ def _pandas_df_to_series(df: DataFrame) -> Series[Any]:
 
     Raises
     ------
-    ValueError
+    StreamlitDataframeConversionError
         If the DataFrame has more than one column.
     """
     # Select first column in dataframe and create a new series based on the values
     if len(df.columns) != 1:
-        raise ValueError(
+        raise errors.StreamlitDataframeConversionError(
             f"DataFrame is expected to have a single column but has {len(df.columns)}."
         )
     return df.iloc[:, 0]
@@ -1553,7 +1566,7 @@ def convert_pandas_df_to_data_format(
             #  Get the first column and convert to list
             return_list = df.iloc[:, 0].tolist()
         elif len(df.columns) >= 1:
-            raise ValueError(
+            raise errors.StreamlitDataframeConversionError(
                 "DataFrame is expected to have a single column but "
                 f"has {len(df.columns)}."
             )
@@ -1568,4 +1581,6 @@ def convert_pandas_df_to_data_format(
         # as a dict with index as key.
         return {} if df.empty else df.iloc[:, 0].to_dict()
 
-    raise ValueError(f"Unsupported input data format: {data_format}")
+    raise errors.StreamlitDataframeConversionError(
+        f"Unsupported input data format: {data_format}"
+    )

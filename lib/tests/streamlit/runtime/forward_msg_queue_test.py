@@ -25,7 +25,9 @@ from streamlit.cursor import make_delta_path
 from streamlit.elements import arrow
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.RootContainer_pb2 import RootContainer
-from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.forward_msg_queue import (
+    ForwardMsgQueue,
+)
 
 # For the messages below, we don't really care about their contents so much as
 # their general type.
@@ -430,3 +432,47 @@ class ForwardMsgQueueTest(unittest.TestCase):
         fmq.enqueue(TEXT_DELTA_MSG2)
 
         assert count == 0
+
+
+def test_get_debug_includes_queued_messages_and_delta_ids() -> None:
+    """``get_debug`` serializes queued messages and their delta-path indexes."""
+    fmq = ForwardMsgQueue()
+    fmq.enqueue(TEXT_DELTA_MSG1)
+    debug = fmq.get_debug()
+    assert len(debug["queue"]) == 1
+    assert debug["ids"] == [tuple(TEXT_DELTA_MSG1.metadata.delta_path)]
+
+
+def test_enqueue_composes_ref_hash_onto_existing_delta() -> None:
+    """A ``ref_hash`` message replaces the previous delta at the same path."""
+    fmq = ForwardMsgQueue()
+    old_msg = copy.deepcopy(TEXT_DELTA_MSG1)
+    old_msg.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
+    fmq.enqueue(old_msg)
+
+    ref_msg = ForwardMsg()
+    ref_msg.ref_hash = "abc123"
+    ref_msg.metadata.delta_path[:] = list(old_msg.metadata.delta_path)
+    fmq.enqueue(ref_msg)
+
+    queue = fmq.flush()
+    assert len(queue) == 1
+    assert queue[0].ref_hash == "abc123"
+
+
+def test_enqueue_keeps_same_path_transient_messages() -> None:
+    """Same-path ``new_transient`` deltas stay individually queued."""
+    fmq = ForwardMsgQueue()
+    old_msg = copy.deepcopy(TEXT_DELTA_MSG1)
+    old_msg.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
+    fmq.enqueue(old_msg)
+
+    transient_msg = ForwardMsg()
+    transient_msg.delta.new_transient.SetInParent()
+    transient_msg.metadata.delta_path[:] = list(old_msg.metadata.delta_path)
+    fmq.enqueue(transient_msg)
+
+    queue = fmq.flush()
+    assert len(queue) == 2
+    assert queue[0].delta.new_element.text.body == "text1"
+    assert queue[1].delta.WhichOneof("type") == "new_transient"

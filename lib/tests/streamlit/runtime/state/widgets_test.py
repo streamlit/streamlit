@@ -31,7 +31,10 @@ from streamlit.elements.lib.utils import (
 from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.scriptrunner_utils.script_requests import _coalesce_widget_states
-from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ThreadState,
+    get_script_run_ctx,
+)
 from streamlit.runtime.state.common import (
     GENERATED_ELEMENT_ID_PREFIX,
     ValueFieldName,
@@ -60,6 +63,11 @@ def identity(x):
 
 
 class WidgetManagerTests(unittest.TestCase):
+    def setUp(self) -> None:
+        # call_callback uses ThreadState.scoped(), which requires an initialized
+        # FragmentThreadState on this thread.
+        ThreadState.initialize()
+
     def test_get(self):
         states = WidgetStates()
 
@@ -461,15 +469,8 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         sig = inspect.signature(widget_func)
         expected_sig = self.signature_to_expected_kwargs(sig)
 
-        # `validate` only contributes to the text_input element ID when a
-        # validation regex is actually configured. Since this test calls the
-        # widget without `validate`, it isn't passed to the ID computation.
-        if widget_func == st.text_input:
-            del expected_sig["validate"]
-
-        # time_input intentionally excludes format from ID computation because
-        # it's a display-only setting (React Aria handles format changes without
-        # needing a widget reset, unlike BaseWeb-based date_input).
+        # time_input excludes format from the ID because format is display-only
+        # and does not require a widget reset.
         if widget_func == st.time_input:
             del expected_sig["format"]
 
@@ -636,7 +637,7 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
         """Test that `register_widget` raises an exception when both `on_change`
         and `callbacks` are provided.
         """
-        with pytest.raises(errors.StreamlitAPIException):
+        with pytest.raises(errors.StreamlitIncompatibleParametersError):
             register_widget(
                 "el_id",
                 deserializer=lambda x: x,
@@ -705,10 +706,8 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
             )
 
     def test_bind_invalid_value_raises(self) -> None:
-        """Invalid bind values raise StreamlitInvalidBindValueError."""
-        with pytest.raises(
-            errors.StreamlitInvalidBindValueError, match="Invalid `bind` value"
-        ):
+        """Invalid bind values raise StreamlitValueError."""
+        with pytest.raises(errors.StreamlitValueError, match="Invalid `bind` value"):
             register_widget(
                 element_id="$$ID-some_hash-my_widget_key",
                 ctx=None,
@@ -756,9 +755,9 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
             )
 
     def test_register_widget_invalid_persist_state_raises(self) -> None:
-        """Invalid persist_state values raise StreamlitInvalidPersistStateError."""
+        """Invalid persist_state values raise StreamlitValueError."""
         with pytest.raises(
-            errors.StreamlitInvalidPersistStateError,
+            errors.StreamlitValueError,
             match="Invalid `persist_state` value",
         ):
             register_widget(

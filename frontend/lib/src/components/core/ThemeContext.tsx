@@ -22,7 +22,7 @@ import { getDefaultTheme } from "~lib/theme/utils"
 export interface ThemeContextProps {
   /**
    * The currently active app theme. Contains the full theme configuration
-   * including emotion styles, baseui theme, and custom theme input.
+   * including emotion styles and custom theme input.
    *
    * Used for theme-dependent styling, responsive breakpoints, and visual
    * customization throughout the app.

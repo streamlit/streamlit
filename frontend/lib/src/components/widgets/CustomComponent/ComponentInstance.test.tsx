@@ -19,7 +19,6 @@ import { Mock, MockInstance } from "vitest"
 
 import {
   ComponentInstance as ComponentInstanceProto,
-  IComponentInstance as IComponentInstanceProto,
   SpecialArg,
 } from "@streamlit/protobuf"
 
@@ -705,12 +704,9 @@ describe("ComponentInstance", () => {
       )
       const widgetMgr = vi.mocked(WidgetStateManager).mock.instances[0]
       expect(widgetMgr.setJsonValue).toHaveBeenCalledWith(
-        element,
+        element.id,
         jsonValue,
-        {
-          fromUi: true,
-        },
-        undefined
+        { formId: element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -766,10 +762,9 @@ describe("ComponentInstance", () => {
       )
       const widgetMgr = vi.mocked(WidgetStateManager).mock.instances[0]
       expect(widgetMgr.setBytesValue).toHaveBeenCalledWith(
-        element,
+        element.id,
         bytesValue,
-        { fromUi: true },
-        "myFragmentId"
+        { formId: element.formId, fragmentId: "myFragmentId", fromUser: true }
       )
     })
 
@@ -947,7 +942,7 @@ describe("ComponentInstance", () => {
   function createElementProp(
     jsonArgs: Record<string, unknown> = {},
     specialArgs: SpecialArg[] = [],
-    overrides: Partial<IComponentInstanceProto> = {}
+    overrides: Partial<ComponentInstanceProto.$Properties> = {}
   ): ComponentInstanceProto {
     return ComponentInstanceProto.create({
       jsonArgs: JSON.stringify(jsonArgs),

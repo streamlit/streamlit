@@ -24,7 +24,7 @@ from streamlit.deprecation_util import (
     show_deprecation_warning,
 )
 from streamlit.elements.lib.layout_utils import create_layout_config
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitInvalidParameterTypeError
 from streamlit.proto.GraphVizChart_pb2 import GraphVizChart as GraphVizChartProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.util import calc_hash
@@ -213,8 +213,10 @@ def marshall(
         dot = figure_or_dot
         engine = "dot"
     else:
-        raise StreamlitAPIException(
-            f"Unhandled type for graphviz chart: {type(figure_or_dot)}"
+        raise StreamlitInvalidParameterTypeError(
+            "figure_or_dot",
+            type(figure_or_dot).__name__,
+            ["graphviz.Graph", "graphviz.Digraph", "graphviz.Source", "str"],
         )
 
     proto.spec = dot

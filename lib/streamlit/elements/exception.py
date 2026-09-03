@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Final, TypeVar, cast
 from streamlit import config
 from streamlit.elements.lib.layout_utils import validate_width
 from streamlit.errors import (
+    Error,
     MarkdownFormattedException,
     StreamlitAPIWarning,
 )
@@ -152,6 +153,12 @@ def marshall(
     exception_proto.stack_trace.extend(stack_trace)
     exception_proto.is_warning = isinstance(exception, Warning)
 
+    # Flag exceptions Streamlit itself raised (subclasses of streamlit.errors.Error)
+    # so the frontend can scope the in-error "Install skills" callout to Streamlit
+    # API misuse — the class of mistake the agent skills can actually fix — rather
+    # than arbitrary user/runtime errors like ZeroDivisionError.
+    exception_proto.is_streamlit_exception = isinstance(exception, Error)
+
     width_config = WidthConfig()
 
     if isinstance(width, int):
@@ -224,6 +231,11 @@ Traceback:
             exception_proto.message = _GENERIC_UNCAUGHT_EXCEPTION_TEXT
         if not show_type:
             exception_proto.ClearField("type")
+            # Provenance is only meaningful beside a visible type. With the type,
+            # message and trace all withheld, the frontend has nothing to offer
+            # help *about* — so don't let the in-error "install skills" callout
+            # claim it can fix an error the box just refused to describe.
+            exception_proto.ClearField("is_streamlit_exception")
         else:
             type_str = str(type(exception))
             exception_proto.type = type_str.replace("<class '", "").replace("'>", "")
@@ -310,8 +322,9 @@ def _is_in_package(file: str, package_path: str) -> bool:
     """True if the given file is part of package_path."""
     try:
         common_prefix = os.path.commonprefix([os.path.realpath(file), package_path])  # noqa: RUF071
-    except ValueError:
-        # Raised if paths are on different drives.
+    except ValueError:  # pragma: no cover - defensive
+        # ``commonprefix`` does not raise for cross-drive paths (that is
+        # ``commonpath``); keep a safe fallback if a future stdlib change does.
         return False
 
     return common_prefix == package_path

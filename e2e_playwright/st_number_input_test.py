@@ -35,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-NUMBER_INPUT_COUNT = 24
+NUMBER_INPUT_COUNT = 25
 
 
 def test_number_input_widget_display(
@@ -735,3 +735,71 @@ def test_number_input_query_param_non_clearable_empty_value(
     # Non-clearable number input should reject empty value, show default 3.14
     expect_prefixed_markdown(page, "bound float value:", "3.14")
     expect(page).not_to_have_url(re.compile(r"[?&]bound_float="))
+
+
+def test_number_input_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun and sends value on next rerun."""
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore number value:", "25")
+
+    number_input = get_number_input(app, "Ignore change number input")
+    number_input_field = number_input.locator("input").first
+
+    # Fill without committing - URL should not update until Enter.
+    number_input_field.fill("30")
+    expect(number_input_field).to_have_value("30")
+    wait_for_app_run(app)
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_number="))
+
+    # Commit with Enter - should NOT trigger a rerun, but should update the URL
+    number_input_field.press("Enter")
+
+    # Give a spurious rerun a chance to land before asserting the counter.
+    wait_for_app_run(app)
+
+    # Verify no rerun occurred (run count should still be 1)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(number_input_field).to_have_value("30")
+    expect_prefixed_markdown(app, "Ignore number value:", "25")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_number=30"))
+
+    # Click button to trigger a rerun - buffered value should be sent
+    app.get_by_role("button", name="Apply ignore number", exact=True).click()
+    wait_for_app_run(app)
+
+    # Verify the updated value is now visible
+    expect(app.get_by_text("Ignore number value: 30", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore number value: 30", exact=True)
+    ).to_be_visible()
+
+    # Type-then-click: blur commits the dirty value, then the button reruns.
+    number_input_field.fill("40")
+    expect(number_input_field).to_have_value("40")
+    app.get_by_role("button", name="Apply ignore number", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Ignore number value: 40", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore number value: 40", exact=True)
+    ).to_be_visible()
+
+    # Stepper commits immediately without a rerun, and updates the bound URL.
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    number_input.get_by_test_id("stNumberInputStepUp").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+    expect(number_input_field).to_have_value("41")
+    expect(app.get_by_text("Ignore number value: 40", exact=True)).to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_number=41"))
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(
+        get_number_input(app, "Ignore change number input").locator("input").first
+    ).to_have_value("41")
+    expect_prefixed_markdown(app, "Ignore number value:", "41")

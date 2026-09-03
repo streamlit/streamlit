@@ -58,18 +58,32 @@ class SafeSessionState:
         with self._lock:
             return self._state.register_widget(metadata, user_key)
 
-    def on_script_will_rerun(self, latest_widget_states: WidgetStatesProto) -> None:
+    def on_script_will_rerun(
+        self,
+        latest_widget_states: WidgetStatesProto,
+        *,
+        suppress_callbacks: bool = False,
+    ) -> None:
         self._yield_callback()
         with self._lock:
             # TODO: rewrite this to copy the callbacks list into a local
             #  variable so that we don't need to hold our lock for the
             #  duration. (This will also allow us to downgrade our RLock
             #  to a Lock.)
-            self._state.on_script_will_rerun(latest_widget_states)
+            self._state.on_script_will_rerun(
+                latest_widget_states, suppress_callbacks=suppress_callbacks
+            )
 
-    def on_script_finished(self, widget_ids_this_run: frozenset[str]) -> None:
+    def on_script_finished(
+        self,
+        widget_ids_this_run: frozenset[str],
+        *,
+        remove_stale_widgets: bool = True,
+    ) -> None:
         with self._lock:
-            self._state.on_script_finished(widget_ids_this_run)
+            self._state.on_script_finished(
+                widget_ids_this_run, remove_stale_widgets=remove_stale_widgets
+            )
 
     def maybe_check_serializable(self) -> None:
         with self._lock:

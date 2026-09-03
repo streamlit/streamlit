@@ -52,7 +52,11 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.proto.VegaLiteChart_pb2 import (
     VegaLiteChart as VegaLiteChartProto,
 )
@@ -316,7 +320,10 @@ def _prepare_vega_lite_spec(
     spec = dict(spec)
 
     if len(spec) == 0:
-        raise StreamlitAPIException("Vega-Lite charts require a non-empty spec dict.")
+        raise StreamlitMissingRequiredParameterError(
+            "spec",
+            detail="Vega-Lite charts require a non-empty spec dict.",
+        )
 
     if "autosize" not in spec:
         # type fit does not work for many chart types. This change focuses
@@ -553,7 +560,8 @@ def _parse_selection_mode(
             "have any selections defined. To add selections to `st.altair_chart`, check out the documentation "
             "[here](https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions)."
             " For adding selections to `st.vega_lite_chart`, take a look "
-            "at the specification [here](https://vega.github.io/vega-lite/docs/selection.html)."
+            "at the specification [here](https://vega.github.io/vega-lite/docs/selection.html).",
+            error_id="vega-on-select-without-spec-selections",
         )
 
     if selection_mode is None:
@@ -569,7 +577,8 @@ def _parse_selection_mode(
         if selection_name not in all_selection_params:
             raise StreamlitAPIException(
                 f"Selection parameter '{selection_name}' is not defined in the chart "
-                f"spec. Available selection parameters are: {all_selection_params}."
+                f"spec. Available selection parameters are: {all_selection_params}.",
+                error_id="vega-selection-parameter-not-defined",
             )
     return sorted(selection_mode)
 
@@ -1486,7 +1495,8 @@ class VegaChartsMixin:
         if type_util.is_altair_version_less_than("5.0.0") and stack is False:
             raise StreamlitAPIException(
                 "Streamlit does not support non-stacked (grouped) bar charts with "
-                "Altair 4.x. Please upgrade to Version 5."
+                "Altair 4.x. Please upgrade to Version 5.",
+                error_id="altair4-grouped-bar-not-supported",
             )
 
         bar_chart_type = (
@@ -2255,7 +2265,8 @@ class VegaChartsMixin:
                 "Streamlit does not support selections with Altair 4.x. Please upgrade "
                 "to Version 5. "
                 "If you would like to use Altair 4.x with selections, please upvote "
-                "this [Github issue](https://github.com/streamlit/streamlit/issues/8516)."
+                "this [Github issue](https://github.com/streamlit/streamlit/issues/8516).",
+                error_id="altair4-selections-not-supported",
             )
 
         vega_lite_spec = _convert_altair_to_vega_lite_spec(altair_chart)

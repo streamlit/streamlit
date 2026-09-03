@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import asyncio
 import os
 import time
 import types
@@ -37,7 +38,7 @@ if TYPE_CHECKING:
 
 
 class LocalScriptRunner(ScriptRunner):
-    """Subclasses ScriptRunner to provide some testing features."""
+    """AppTest adapter that captures events and owns each run's event loop."""
 
     def __init__(
         self,
@@ -46,6 +47,7 @@ class LocalScriptRunner(ScriptRunner):
         pages_manager: PagesManager,
         args: Any = None,
         kwargs: Any = None,
+        fragment_storage: MemoryFragmentStorage | None = None,
     ) -> None:
         """Initializes the ScriptRunner for the given script_path."""
 
@@ -57,18 +59,28 @@ class LocalScriptRunner(ScriptRunner):
         self.session_state = session_state
         self.args = args if args is not None else ()
         self.kwargs = kwargs if kwargs is not None else {}
+        self._owned_event_loop = asyncio.new_event_loop()
 
-        super().__init__(
-            session_id="test session id",
-            main_script_path=script_path,
-            session_state=self.session_state._state,
-            uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
-            script_cache=ScriptCache(),
-            initial_rerun_data=RerunData(),
-            user_info={"email": "test@example.com"},
-            fragment_storage=MemoryFragmentStorage(),
-            pages_manager=pages_manager,
-        )
+        try:
+            super().__init__(
+                session_id="test session id",
+                main_script_path=script_path,
+                session_state=self.session_state._state,
+                uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
+                script_cache=ScriptCache(),
+                initial_rerun_data=RerunData(),
+                user_info={"email": "test@example.com"},
+                fragment_storage=(
+                    fragment_storage
+                    if fragment_storage is not None
+                    else MemoryFragmentStorage()
+                ),
+                pages_manager=pages_manager,
+                event_loop=self._owned_event_loop,
+            )
+        except Exception:
+            self._owned_event_loop.close()
+            raise
 
         # Accumulates all ScriptRunnerEvents emitted by us.
         self.events: list[ScriptRunnerEvent] = []
@@ -125,6 +137,18 @@ class LocalScriptRunner(ScriptRunner):
         """Wait for the script thread to finish, if it is running."""
         if self._script_thread is not None:
             self._script_thread.join()
+        self._close_owned_event_loop()
+
+    def _run_script_thread(self) -> None:
+        try:
+            super()._run_script_thread()
+        finally:
+            self._close_owned_event_loop()
+
+    def _close_owned_event_loop(self) -> None:
+        """Close the test-owned loop after the script thread releases it."""
+        if not self._owned_event_loop.is_closed():
+            self._owned_event_loop.close()
 
     def forward_msgs(self) -> list[ForwardMsg]:
         """Return all messages in our ForwardMsgQueue."""
@@ -153,9 +177,14 @@ class LocalScriptRunner(ScriptRunner):
             page_script_hash=page_hash,
         )
         self.request_rerun(rerun_data)
-        if not self._script_thread:
-            self.start()
-        require_widgets_deltas(self, timeout)
+        try:
+            if not self._script_thread:
+                self.start()
+            require_widgets_deltas(self, timeout)
+        finally:
+            # SHUTDOWN is emitted before the script thread returns. Joining
+            # ensures AppTest never observes completion before loop cleanup.
+            self.join()
 
         return parse_tree_from_messages(self.forward_msgs())
 
@@ -165,9 +194,16 @@ class LocalScriptRunner(ScriptRunner):
     def _on_script_finished(
         self, ctx: ScriptRunContext, event: ScriptRunnerEvent, premature_stop: bool
     ) -> None:
+        # Do not drop unseen widgets when the script stopped for a rerun
+        # (later widgets never registered). Keep this gate in sync with
+        # ScriptRunner._on_script_finished.
         if not premature_stop:
             self._session_state.on_script_finished(
-                ctx.shared.widget_ids_this_run.snapshot()
+                ctx.shared.widget_ids_this_run.snapshot(),
+                remove_stale_widgets=(
+                    ctx.has_script_started
+                    and event != ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
+                ),
             )
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
@@ -175,8 +211,10 @@ class LocalScriptRunner(ScriptRunner):
         self.on_event.send(self, event=event)
 
         # Remove orphaned files now that the script has run and files in use
-        # are marked as active.
-        runtime.get_instance().media_file_mgr.remove_orphaned_files()
+        # are marked as active. Skipped for a run that never reached its body, which
+        # re-registered nothing and would look like everything is orphaned.
+        if ctx.has_script_started:
+            runtime.get_instance().media_file_mgr.remove_orphaned_files()
 
     def _new_module(self, name: str) -> types.ModuleType:
         module = types.ModuleType(name)

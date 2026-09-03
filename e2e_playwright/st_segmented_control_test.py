@@ -21,6 +21,7 @@ from e2e_playwright.conftest import (
     build_app_url,
     wait_for_app_loaded,
     wait_for_app_run,
+    wait_until,
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
@@ -28,11 +29,14 @@ from e2e_playwright.shared.app_utils import (
     click_checkbox,
     click_form_button,
     click_toggle,
+    expect_button_group_overflows,
     expect_help_tooltip,
     expect_markdown,
     expect_prefixed_markdown,
+    expect_selected_option_in_view,
     expect_text,
     get_button_group,
+    get_button_group_options,
     get_element_by_key,
     get_markdown,
     get_segment_button,
@@ -561,3 +565,41 @@ def test_required_segmented_control_behavior(app: Page):
 
     # Value should be None - deselection is allowed
     expect_text(app, "not_required_sc: None")
+
+
+def test_segmented_control_wrap_behavior(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test wrap layout and state behavior for segmented control.
+
+    Covers:
+    - wrap=False stays one row with local horizontal overflow
+    - auto inside a horizontal container stays one row
+    - selected option scrolls into view when wrap=False
+    - toggling wrap preserves selection
+    """
+    false_group = get_button_group_options(app, "sc_wrap_false")
+    auto_h_group = get_button_group_options(app, "sc_wrap_auto_h")
+    selected_group = get_button_group_options(app, "sc_wrap_selected_into_view")
+
+    expect_button_group_overflows(false_group)
+    # Overflow is local — the app scroll container must not gain horizontal scroll
+    main = app.get_by_test_id("stMain")
+    wait_until(
+        app,
+        lambda: main.evaluate("el => el.scrollWidth <= el.clientWidth") is True,
+    )
+
+    expect_button_group_overflows(auto_h_group)
+    expect_selected_option_in_view(selected_group)
+
+    assert_snapshot(
+        get_element_by_key(app, "sc_wrap_false"),
+        name="st_segmented_control-wrap_false_scroll",
+    )
+
+    # Changing wrap must not reset widget state
+    expect_text(app, "sc_wrap_preserve: Beta")
+    click_toggle(app, "Enable SC wrap")
+    wait_for_app_run(app)
+    expect_text(app, "sc_wrap_preserve: Beta")

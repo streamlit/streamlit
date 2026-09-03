@@ -455,9 +455,8 @@ def test_mixed_empty_and_named_sections(app: Page):
 def test_top_nav_section_keyboard_and_aria(app: Page):
     """Test keyboard dismissal and ARIA state for top nav section popovers.
 
-    Covers behavior introduced when replacing BaseWeb's popover with a custom
-    FloatingPortal + useEffect dismissal handler: Escape closes the popover and
-    returns focus to the trigger, and aria-expanded reflects open/closed state.
+    Escape must close the popover and return focus to the trigger, while
+    aria-expanded reflects the open or closed state.
     """
     app.set_viewport_size({"width": 1280, "height": 800})
 

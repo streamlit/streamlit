@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement, useContext, useMemo } from "react"
-
-import classNames from "classnames"
+import { type JSX, ReactElement, useContext, useMemo } from "react"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
@@ -25,6 +23,7 @@ import {
   FlexContext,
   FlexContextProvider,
 } from "~lib/components/core/Layout/FlexContext"
+import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
 import {
   extractLayoutSubElement,
   useLayoutStyles,
@@ -135,6 +134,12 @@ export const ContainerContentsWrapper = (
     <FlexContextProvider
       direction={Direction.VERTICAL}
       isRoot={props.isRoot}
+      // True only when this node is itself an `st.columns` column, so auto wrap
+      // stays compact for the column's direct children. Deliberately not inherited
+      // from parentContext. Nested providers that use this wrapper (form, expander,
+      // tabs, …) are not columns, so the flag resets to false. Nested st.container
+      // resets the same way because FlexBoxContainer omits this prop.
+      isDirectlyInColumn={notNullOrUndefined(props.node.deltaBlock.column)}
       parentContext={parentContext}
     >
       <StyledFlexContainerBlock
@@ -218,10 +223,12 @@ export const FlexBoxContainer = (
     >
       <StyledFlexContainerBlock
         {...styles}
-        className={classNames(
+        className={[
           getClassnamePrefix(direction),
-          convertKeyToClassName(userKey)
-        )}
+          convertKeyToClassName(userKey),
+        ]
+          .filter(Boolean)
+          .join(" ")}
         data-testid={getClassnamePrefix(direction)}
         data-test-wrap={String(wrap)}
         ref={scrollContainerRef as React.RefObject<HTMLDivElement>}
@@ -316,6 +323,14 @@ export const BlockNodeRenderer = (
   // and popover only.
   let keyClassOnWrapper = false
 
+  // Marks the wrapper as a timeline step so the parent flex container can let
+  // the step's connector line bridge the gap to an adjacent step. Empty steps
+  // must be marked too: they draw no connector of their own, but the preceding
+  // step extends its line to whatever step follows it, which is how a trailing
+  // empty step terminates a timeline at its icon.
+  const isStepBlock =
+    node.deltaBlock.expandable?.type === BlockProto.Expandable.Type.STEP
+
   const userKey = getKeyFromId(node.deltaBlock.id)
   const child: ReactElement = (
     <ContainerContentsWrapper
@@ -348,6 +363,7 @@ export const BlockNodeRenderer = (
       <Expander
         isStale={isStale}
         element={node.deltaBlock.expandable as BlockProto.Expandable}
+        empty={node.isEmpty}
         widgetMgr={props.widgetMgr}
         blockId={node.deltaBlock.id || undefined}
         fragmentId={node.fragmentId}
@@ -460,6 +476,7 @@ export const BlockNodeRenderer = (
     return (
       <StyledLayoutWrapper
         data-testid="stLayoutWrapper"
+        {...{ [STEP_BLOCK_ATTRIBUTE]: isStepBlock ? "true" : undefined }}
         className={convertKeyToClassName(
           keyClassOnWrapper ? userKey : undefined
         )}

@@ -14,23 +14,12 @@
  * limitations under the License.
  */
 
-import {
-  darkThemePrimitives as baseuiDarkThemePrimitives,
-  lightThemePrimitives as baseuiLightThemePrimitives,
-} from "baseui"
+import styled from "@emotion/styled"
 
-import { createBaseUiTheme } from "./createBaseUiTheme"
-import emotionDarkTheme from "./emotionDarkTheme"
-import emotionLightTheme from "./emotionLightTheme"
-
-export const baseuiLightTheme = createBaseUiTheme(
-  emotionLightTheme,
-  baseuiLightThemePrimitives
-)
-
-export const baseuiDarkTheme = createBaseUiTheme(
-  emotionDarkTheme,
-  baseuiDarkThemePrimitives
-)
-
-export type BaseUILightTheme = typeof baseuiLightTheme
+// Real box for the native `title` so help icons can sit as untitled siblings.
+// display:contents cannot carry `title`.
+export const StyledMarkdownTitleTarget = styled.div({
+  minWidth: 0,
+  flex: 1,
+  overflow: "hidden",
+})

@@ -28,6 +28,7 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitDuplicateElementId,
     StreamlitInvalidWidthError,
+    StreamlitMissingRequiredParameterError,
 )
 from streamlit.proto.Common_pb2 import StringTriggerValue
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -48,6 +49,18 @@ class MenuButtonTest(DeltaGeneratorTestCase):
         assert not c.disabled
         assert c.help == ""
         assert c.icon == ""
+
+    def test_non_string_label_is_coerced(self) -> None:
+        """Non-string labels are coerced to strings for protobuf assignment."""
+        st.menu_button(123, ["Option A"])  # type: ignore[arg-type]
+        c = self.get_delta_from_queue().new_element.menu_button
+        assert c.label == "123"
+
+    def test_none_label_is_coerced_to_empty(self) -> None:
+        """None labels become an empty string instead of raising TypeError."""
+        st.menu_button(None, ["Option A"])  # type: ignore[arg-type]
+        c = self.get_delta_from_queue().new_element.menu_button
+        assert c.label == ""
 
     def test_disabled(self):
         """Test that disabled param is set correctly."""
@@ -148,9 +161,10 @@ class MenuButtonTest(DeltaGeneratorTestCase):
 
     def test_empty_options_raises(self):
         """Test that empty options raises an exception."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitMissingRequiredParameterError) as exc:
             st.menu_button("the label", [])
-        assert "must contain at least one option" in str(exc.value)
+        assert "The `options` parameter is required" in str(exc.value)
+        assert "Provide at least one option" in str(exc.value)
 
     def test_duplicate_formatted_labels_raises(self):
         """Test that duplicate formatted labels raise an exception."""

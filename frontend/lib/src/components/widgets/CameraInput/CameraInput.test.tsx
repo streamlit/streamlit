@@ -24,7 +24,6 @@ import {
   CameraInput as CameraInputProto,
   FileUploaderState as FileUploaderStateProto,
   FileURLs as FileURLsProto,
-  IFileURLs,
   LabelVisibility as LabelVisibilityProto,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
@@ -61,7 +60,7 @@ vi.mock("react-webcam", () => {
 const fetchMocker = createFetchMock(vi)
 
 const buildFileUploaderStateProto = (
-  fileUrlsArray: IFileURLs[]
+  fileUrlsArray: FileURLsProto.$Properties[]
 ): FileUploaderStateProto =>
   new FileUploaderStateProto({
     uploadedFileInfo: fileUrlsArray.map(
@@ -207,10 +206,13 @@ describe("CameraInput widget", () => {
         1
       )
       expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         buildFileUploaderStateProto([]),
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
     })
 
@@ -224,10 +226,13 @@ describe("CameraInput widget", () => {
         },
       ])
       props.widgetMgr.setFileUploaderStateValue(
-        props.element,
+        props.element.id,
         existingState,
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
 
       vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
@@ -241,7 +246,7 @@ describe("CameraInput widget", () => {
     it("restores state from existing widget value", () => {
       const props = getProps()
       props.widgetMgr.setFileUploaderStateValue(
-        props.element,
+        props.element.id,
         buildFileUploaderStateProto([
           {
             fileId: "existing-photo.jpg",
@@ -249,8 +254,11 @@ describe("CameraInput widget", () => {
             deleteUrl: "existing-photo.jpg",
           },
         ]),
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
 
       render(<CameraInput {...props} />)
@@ -267,10 +275,13 @@ describe("CameraInput widget", () => {
       render(<CameraInput {...props} />)
 
       expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         expect.any(Object),
-        { fromUi: false },
-        "myFragmentId"
+        {
+          formId: props.element.formId,
+          fragmentId: "myFragmentId",
+          fromUser: false,
+        }
       )
     })
   })
@@ -359,7 +370,7 @@ describe("CameraInput widget", () => {
     it("shows Clear photo button when image is captured", () => {
       const props = getProps()
       props.widgetMgr.setFileUploaderStateValue(
-        props.element,
+        props.element.id,
         buildFileUploaderStateProto([
           {
             fileId: "test-photo.jpg",
@@ -367,8 +378,11 @@ describe("CameraInput widget", () => {
             deleteUrl: "test-photo.jpg",
           },
         ]),
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
 
       render(<CameraInput {...props} />)
@@ -383,7 +397,7 @@ describe("CameraInput widget", () => {
 
       // Set initial state with a photo
       props.widgetMgr.setFileUploaderStateValue(
-        props.element,
+        props.element.id,
         buildFileUploaderStateProto([
           {
             fileId: "test-photo.jpg",
@@ -391,8 +405,11 @@ describe("CameraInput widget", () => {
             deleteUrl: "test-photo.jpg",
           },
         ]),
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
 
       render(<CameraInput {...props} />)
@@ -409,10 +426,13 @@ describe("CameraInput widget", () => {
 
       // Widget state should be updated with empty files
       expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         buildFileUploaderStateProto([]),
-        { fromUi: true },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        }
       )
     })
 
@@ -422,7 +442,7 @@ describe("CameraInput widget", () => {
 
       // Set initial state with a photo
       props.widgetMgr.setFileUploaderStateValue(
-        props.element,
+        props.element.id,
         buildFileUploaderStateProto([
           {
             fileId: "test-photo.jpg",
@@ -430,8 +450,11 @@ describe("CameraInput widget", () => {
             deleteUrl: "test-photo.jpg",
           },
         ]),
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
 
       render(<CameraInput {...props} />)
@@ -452,7 +475,7 @@ describe("CameraInput widget", () => {
 
       // Set initial state with a photo (restored from widget)
       props.widgetMgr.setFileUploaderStateValue(
-        props.element,
+        props.element.id,
         buildFileUploaderStateProto([
           {
             fileId: "test-photo.jpg",
@@ -460,8 +483,11 @@ describe("CameraInput widget", () => {
             deleteUrl: "test-photo.jpg",
           },
         ]),
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
 
       render(<CameraInput {...props} />)
@@ -476,7 +502,7 @@ describe("CameraInput widget", () => {
 
       // Set initial state with a photo
       props.widgetMgr.setFileUploaderStateValue(
-        props.element,
+        props.element.id,
         buildFileUploaderStateProto([
           {
             fileId: "test-photo.jpg",
@@ -484,8 +510,11 @@ describe("CameraInput widget", () => {
             deleteUrl: "test-photo.jpg",
           },
         ]),
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
 
       render(<CameraInput {...props} />)
@@ -504,7 +533,7 @@ describe("CameraInput widget", () => {
 
       // Set initial state with a photo
       props.widgetMgr.setFileUploaderStateValue(
-        props.element,
+        props.element.id,
         buildFileUploaderStateProto([
           {
             fileId: "test-photo.jpg",
@@ -512,8 +541,11 @@ describe("CameraInput widget", () => {
             deleteUrl: "test-photo.jpg",
           },
         ]),
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
 
       render(<CameraInput {...props} />)
@@ -535,10 +567,13 @@ describe("CameraInput widget", () => {
 
       // Widget state should be updated with empty files
       expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         buildFileUploaderStateProto([]),
-        { fromUi: true },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        }
       )
     })
   })
@@ -597,7 +632,7 @@ describe("CameraInput widget", () => {
 
       const props = getProps()
       props.widgetMgr.setFileUploaderStateValue(
-        props.element,
+        props.element.id,
         buildFileUploaderStateProto([
           {
             fileId: "test-photo.jpg",
@@ -605,8 +640,11 @@ describe("CameraInput widget", () => {
             deleteUrl: "test-photo.jpg",
           },
         ]),
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
 
       render(<CameraInput {...props} />)
@@ -619,7 +657,7 @@ describe("CameraInput widget", () => {
     it("does not display image when imgSrc is RESTORED_FROM_WIDGET_STRING", () => {
       const props = getProps()
       props.widgetMgr.setFileUploaderStateValue(
-        props.element,
+        props.element.id,
         buildFileUploaderStateProto([
           {
             fileId: "test-photo.jpg",
@@ -627,8 +665,11 @@ describe("CameraInput widget", () => {
             deleteUrl: "test-photo.jpg",
           },
         ]),
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
 
       render(<CameraInput {...props} />)

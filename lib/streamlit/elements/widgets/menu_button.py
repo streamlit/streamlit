@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Final, Generic, Literal, TypeVar, cast
 
 from streamlit import runtime
@@ -29,7 +28,12 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidLayoutContextError,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.proto.Common_pb2 import StringTriggerValue
 from streamlit.proto.MenuButton_pb2 import MenuButton as MenuButtonProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -40,7 +44,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.string_util import validate_icon_or_emoji
+from streamlit.string_util import to_help_str, to_str, validate_icon_or_emoji
 from streamlit.type_util import check_python_comparable
 
 if TYPE_CHECKING:
@@ -253,10 +257,10 @@ class MenuButtonMixin:
             be one of the following:
 
             - ``None`` (default): Streamlit decides based on the surrounding
-              layout. Inside a horizontal container, the button keeps its
-              standard, single-row height and truncates an overflowing label
-              with an ellipsis; in other layouts, the label wraps onto
-              additional lines.
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the button keeps its standard, single-row height
+              and truncates an overflowing label with an ellipsis; in other
+              layouts, the label wraps onto additional lines.
             - ``True``: If the label is too wide for the button, it wraps onto
               additional lines and the button grows taller.
             - ``False``: The button keeps its standard, single-row height. A
@@ -332,6 +336,7 @@ class MenuButtonMixin:
         ctx: ScriptRunContext | None = None,
     ) -> T | None:
         key = to_key(key)
+        label = "" if label is None else to_str(label)
 
         check_widget_policies(
             self.dg,
@@ -342,7 +347,7 @@ class MenuButtonMixin:
         )
 
         if runtime.exists() and is_in_form(self.dg):
-            raise StreamlitAPIException(
+            raise StreamlitInvalidLayoutContextError(
                 f"`st.menu_button()` can't be used in an `st.form()`.{_FORM_DOCS_INFO}"
             )
 
@@ -356,8 +361,8 @@ class MenuButtonMixin:
         opt = convert_anything_to_list(options)
 
         if len(opt) == 0:
-            raise StreamlitAPIException(
-                "The options argument to st.menu_button must contain at least one option."
+            raise StreamlitMissingRequiredParameterError(
+                "options", detail="Provide at least one option."
             )
 
         check_python_comparable(opt)
@@ -371,7 +376,8 @@ class MenuButtonMixin:
         if len(formatted_options) != len(formatted_option_to_option_index):
             raise StreamlitAPIException(
                 "The `format_func` produced duplicate labels for the menu button "
-                "options. Each formatted option label must be unique."
+                "options. Each formatted option label must be unique.",
+                error_id="menu-button-duplicate-format-labels",
             )
 
         element_id = compute_and_register_element_id(
@@ -397,7 +403,7 @@ class MenuButtonMixin:
             menu_button_proto.wrap = wrap
 
         if help is not None:
-            menu_button_proto.help = dedent(help)
+            menu_button_proto.help = to_help_str(help)
 
         if icon is not None:
             menu_button_proto.icon = validate_icon_or_emoji(icon)

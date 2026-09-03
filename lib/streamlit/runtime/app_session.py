@@ -87,6 +87,61 @@ _LOGGER: Final = get_logger(__name__)
 _REPORTED_NUDGE_SUPPRESSION_REASONS: Final = frozenset({"conflict", "check_failed"})
 
 
+def _close_script_event_loop(loop: asyncio.AbstractEventLoop) -> None:
+    """Best-effort close the AppSession-owned loop at session teardown.
+
+    Resource owners must release loop-bound resources before session teardown
+    and must not close this shared loop themselves. Streamlit installs the loop
+    but does not run it continuously, although user or library code may drive
+    it explicitly.
+
+    If another runner is still driving the loop, closure is deferred because
+    tasks cannot be safely inspected or cancelled cross-thread. Otherwise,
+    pending tasks, async generators, and the default executor are drained when
+    Python permits the loop to be driven on this thread.
+    """
+    if loop.is_closed():
+        return
+    if loop.is_running():
+        _LOGGER.warning(
+            "Deferring script event loop closure because the loop is still running"
+        )
+        return
+
+    tasks_to_cancel = asyncio.all_tasks(loop)
+    for task in tasks_to_cancel:
+        task.cancel()
+    try:
+        running_loop = asyncio.get_running_loop()
+    except RuntimeError:
+        running_loop = None
+    if running_loop is None:
+        # No other loop is running on this thread; safe to drive the loop.
+        if tasks_to_cancel:
+            loop.run_until_complete(
+                asyncio.gather(*tasks_to_cancel, return_exceptions=True)
+            )
+        loop.run_until_complete(loop.shutdown_asyncgens())
+        loop.run_until_complete(loop.shutdown_default_executor())
+
+    # The loop can start on another thread after the check above.
+    if loop.is_running():
+        _LOGGER.warning(
+            "Deferring script event loop closure because the loop is still running"
+        )
+        return
+    try:
+        loop.close()
+    except RuntimeError:
+        # BaseEventLoop.close() raises RuntimeError only when the loop is
+        # running. Re-check state so unrelated RuntimeErrors still propagate.
+        if not loop.is_running():
+            raise
+        _LOGGER.warning(
+            "Deferring script event loop closure because the loop started running"
+        )
+
+
 class AppSessionState(Enum):
     APP_NOT_RUNNING = "APP_NOT_RUNNING"
     APP_IS_RUNNING = "APP_IS_RUNNING"
@@ -164,6 +219,12 @@ class AppSession:
         self.id = session_id_override or str(uuid.uuid4())
 
         self._event_loop = asyncio.get_running_loop()
+
+        # AppSession owns one persistent event loop for its script thread.
+        # Streamlit installs the loop but does not run it continuously. The
+        # loop outlives individual ScriptRunners so loop-bound session and
+        # cache resources remain valid when a runner is replaced.
+        self._script_event_loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
         self._script_data = script_data
         self._uploaded_file_mgr = uploaded_file_manager
         self._script_cache = script_cache
@@ -342,6 +403,14 @@ class AppSession:
             # Clear any session caches. This ensures shutdown hooks are called.
             self.clear_session_caches()
 
+            # Close the script-thread event loop only when there is no active
+            # ScriptRunner to wait for. When a runner exists, its SHUTDOWN event
+            # fires after script execution has unwound and the runner has
+            # detached the loop, so we defer the close there to avoid a race
+            # with in-flight user code.
+            if self._scriptrunner is None:
+                _close_script_event_loop(self._script_event_loop)
+
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a new ForwardMsg to our browser queue.
 
@@ -426,7 +495,7 @@ class AppSession:
         # this exception ForwardMsg *must* also be enqueued in a callback,
         # so that it will be enqueued *after* the various ForwardMsgs that
         # _on_scriptrunner_event sends.
-        self._event_loop.call_soon_threadsafe(
+        self._call_soon_on_event_loop(
             lambda: self._enqueue_forward_msg(self._create_exception_message(e))
         )
 
@@ -542,6 +611,16 @@ class AppSession:
 
     def _create_scriptrunner(self, initial_rerun_data: RerunData) -> None:
         """Create and run a new ScriptRunner with the given RerunData."""
+        # Defensive recovery: if the session loop closed mid-session, replace it
+        # so the new ScriptRunner gets a working one.
+        if self._script_event_loop.is_closed():
+            _LOGGER.warning(
+                "The session-owned script event loop is closed. AppSession is "
+                "creating a replacement; objects bound to the previous loop may no "
+                "longer work. Code using the session-owned loop must not close it."
+            )
+            self._script_event_loop = asyncio.new_event_loop()
+
         self._scriptrunner = ScriptRunner(
             session_id=self.id,
             main_script_path=self._script_data.main_script_path,
@@ -554,6 +633,7 @@ class AppSession:
             pages_manager=self._pages_manager,
             on_script_error=self._on_script_error,
             local_sources_watcher=self._local_sources_watcher,
+            event_loop=self._script_event_loop,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()
@@ -624,7 +704,7 @@ class AppSession:
         We forward the event on to _handle_scriptrunner_event_on_event_loop,
         which will be called on the main thread.
         """
-        self._event_loop.call_soon_threadsafe(
+        self._call_soon_on_event_loop(
             lambda: self._handle_scriptrunner_event_on_event_loop(
                 sender,
                 event,
@@ -636,6 +716,20 @@ class AppSession:
                 pages,
             )
         )
+
+    def _call_soon_on_event_loop(self, callback: Callable[[], None]) -> None:
+        """Schedule ``callback`` on the session event loop.
+
+        ScriptRunner events can arrive after the loop is closed (process
+        shutdown or test teardown). Drop them instead of raising
+        ``RuntimeError: Event loop is closed``.
+        """
+        try:
+            self._event_loop.call_soon_threadsafe(callback)
+        except RuntimeError:
+            if not self._event_loop.is_closed():
+                raise
+            _LOGGER.debug("Dropped event-loop callback", exc_info=True)
 
     def _handle_scriptrunner_event_on_event_loop(
         self,
@@ -671,8 +765,9 @@ class AppSession:
             SCRIPT_STOPPED_WITH_COMPILE_ERROR event.
 
         client_state : streamlit.proto.ClientState_pb2.ClientState | None
-            The ScriptRunner's final ClientState. Set only for the
-            SHUTDOWN event.
+            The ScriptRunner's final ClientState. Set only for the SHUTDOWN
+            event, and may be None if runner setup failed before a context was
+            available.
 
         page_script_hash : str | None
             A hash of the script path corresponding to the page currently being
@@ -779,22 +874,22 @@ class AppSession:
                 self._local_sources_watcher.update_watched_modules()
 
         elif event == ScriptRunnerEvent.SHUTDOWN:
-            if client_state is None:  # pragma: no cover - defensive
-                raise RuntimeError(
-                    "client_state must be set for the SHUTDOWN event. This should never happen."
-                )
-
-            if self._state == AppSessionState.SHUTDOWN_REQUESTED:
-                # Only clear media files and session caches if the script is done
-                # running AND the session is actually shutting down.
-                runtime.get_instance().media_file_mgr.clear_session_refs(self.id)
-                runtime.get_instance().dataframe_source_mgr.clear_all_for_session(
-                    self.id
-                )
-                self.clear_session_caches()
-
-            self._client_state = client_state
-            self._scriptrunner = None
+            try:
+                if self._state == AppSessionState.SHUTDOWN_REQUESTED:
+                    # Only clear media files and session caches if the script is done
+                    # running AND the session is actually shutting down.
+                    runtime.get_instance().media_file_mgr.clear_session_refs(self.id)
+                    runtime.get_instance().dataframe_source_mgr.clear_all_for_session(
+                        self.id
+                    )
+                    self.clear_session_caches()
+                    _close_script_event_loop(self._script_event_loop)
+            finally:
+                if client_state is not None:
+                    self._client_state = client_state
+                # Final runner state must be retained and the completed runner
+                # released even when best-effort teardown cannot close the loop.
+                self._scriptrunner = None
 
         elif event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:
             if forward_msg is None:  # pragma: no cover - defensive

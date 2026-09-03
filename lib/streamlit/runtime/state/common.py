@@ -32,9 +32,7 @@ from typing import (
 )
 
 from streamlit import util
-from streamlit.errors import (
-    StreamlitAPIException,
-)
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 
 if TYPE_CHECKING:
     from streamlit.runtime.state.session_state import SessionState
@@ -50,6 +48,11 @@ T_co = TypeVar("T_co", covariant=True)
 WidgetArgs: TypeAlias = tuple[Any, ...] | list[Any]
 WidgetKwargs: TypeAlias = dict[str, Any]
 WidgetCallback: TypeAlias = Callable[..., None]
+
+# Type for the on_change mode parameter.
+# "rerun" (default): triggers a rerun when the widget value changes
+# "ignore": stores the value without triggering a rerun
+OnChangeMode: TypeAlias = Literal["rerun", "ignore"]
 
 # Type for the bind parameter on widgets
 # Currently only supports binding to query params
@@ -283,8 +286,37 @@ def is_keyed_element_id(key: str) -> bool:
 def require_valid_user_key(key: str) -> None:
     """Raise an Exception if the given user_key is invalid."""
     if key == "":
-        raise StreamlitAPIException("The `key` argument must be non-empty.")
+        # Empty string is invalid input, not a missing required parameter: key is
+        # optional on most widgets.
+        raise StreamlitValueError(
+            "key",
+            ["a non-empty string"],
+        )
     if is_element_id(key):
         raise StreamlitAPIException(
-            f"Keys beginning with {GENERATED_ELEMENT_ID_PREFIX} are reserved."
+            f"Keys beginning with {GENERATED_ELEMENT_ID_PREFIX} are reserved.",
+            error_id="reserved-generated-element-id-prefix",
+        )
+
+
+def validate_on_change_mode(on_change: WidgetCallback | OnChangeMode | None) -> None:
+    """Reject `on_change` values that are neither a callback nor a supported mode.
+
+    `None` is accepted as a legacy alias for `"rerun"`.
+
+    Raises
+    ------
+    StreamlitValueError
+        If `on_change` is not `None`, not callable, and not a valid mode string.
+    """
+    if on_change is None or callable(on_change):
+        return
+
+    # Require a str before membership so array-like values (e.g. NumPy arrays)
+    # cannot raise an ambiguous-truth ValueError from ``==``.
+    supported_modes = get_args(OnChangeMode)
+    if not isinstance(on_change, str) or on_change not in supported_modes:
+        raise StreamlitValueError(
+            "on_change",
+            [repr(mode) for mode in supported_modes] + ["a callback function"],
         )

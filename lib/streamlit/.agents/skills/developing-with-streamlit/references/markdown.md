@@ -26,6 +26,7 @@ Streamlit supports Markdown throughout its API—in `st.markdown()`, widget labe
 | Streamlit logo | `:streamlit:` | `:streamlit:` | ✓ |
 | Material icon | `:material/icon_name:` | `:material/check_circle:` | ✓ |
 | Colored text | `:color[text]` | `:red[Error]` | ✓ |
+| Custom hex/CSS color | `:color[text]{foreground="..." background="..."}` | `:color[Important]{foreground="#E03131" background="#FFF5F5"}` | ✓ |
 | Colored background | `:color-background[text]` | `:blue-background[Info]` | ✓ |
 | Badge | `:color-badge[text]` | `:green-badge[Success]` | ✓ |
 | Shimmer animation | `:shimmer[text]` | `:shimmer[Loading...]` | ✓ |
@@ -37,11 +38,13 @@ Streamlit supports Markdown throughout its API—in `st.markdown()`, widget labe
 
 Markdown is supported in most places where text is rendered. Streamlit has three levels of markdown support:
 
+The lists below are not exhaustive. Always use `streamlit docs st.<command>` to inspect the current docstring and confirm whether a specific parameter supports Markdown and which subset it accepts. See **Proactively Look Up API Details** in the main skill.
+
 **Full Markdown** — All syntax shown in the table above:
-- `st.markdown()`, `st.write()`, `st.caption()`, `st.info()`, `st.warning()`, `st.error()`, `st.success()`, `st.table` cells and headers, tooltips (`help` parameter)
+- `st.markdown()`, `st.write()`, `st.caption()`, `st.info()`, `st.warning()`, `st.error()`, `st.success()`, `st.table` cells, index labels, and headers, tooltips (`help` parameter)
 
 **Label subset** — Inline formatting only (see table above). Block elements (e.g. headings, lists, tables) are silently stripped:
-- Widget and element labels (`st.button`, `st.checkbox`, `st.radio`, `st.expander`, `st.page_link`, etc.), `st.radio` and `st.select_slider` options, `st.tabs` names, `st.metric` label/value/delta, `st.title`, `st.header`, `st.subheader`, `st.image` caption, `st.dialog` title, `st.progress`, `st.spinner`.
+- Widget and element labels (`st.button`, `st.checkbox`, `st.radio`, `st.expander`, `st.page_link`, etc.), `st.radio` and `st.select_slider` options, `st.tabs` names, `st.metric` label/value/delta, `st.title`, `st.header`, `st.subheader`, `st.image` caption, `st.dialog` title, `st.progress`, `st.spinner`, `st.markdown` / `st.caption` when `wrap=False`.
 
 **No Markdown** — Text displays literally:
 - `st.text()`, `st.json()`, `st.dataframe()` / `st.data_editor()` cells, `st.selectbox` / `st.multiselect` options, input placeholders, `st.Page` titles, chart/map labels
@@ -114,15 +117,19 @@ st.markdown(":green-badge[Active] :red-badge[Inactive]")  # Inline badges
 
 Note: `rainbow` is not supported for backgrounds or badges. Standalone badges also available via `st.badge()`.
 
+Stick to the predefined palette above whenever possible — it adapts to the theme. For an exact hex or CSS color when the design truly requires one, add a `{foreground="..." background="..."}` modifier to the `:color[...]` directive (both keys are optional; e.g. `:color[Important]{foreground="#E03131"}` or `:color[Note]{background="#FFF3BF"}`) rather than raw HTML / `unsafe_allow_html`.
+
 ## Material icons
 
 Use Google Material Symbols with `:material/icon_name:` syntax. Find icons at [fonts.google.com/icons](https://fonts.google.com/icons)
+
+Full list of icons available in Streamlit: [material_icon_names.py](https://raw.githubusercontent.com/streamlit/streamlit/refs/heads/develop/lib/streamlit/material_icon_names.py)
 
 ```python
 st.markdown(":material/check_circle: Complete")
 ```
 
-Material icons also work in `icon` parameters across many elements (`st.button`, `st.expander`, `st.info`, etc.).
+Material icons also work in `icon` parameters across many elements (`st.title`, `st.header`, `st.subheader`, `st.button`, `st.expander`, `st.info`, etc.).
 
 ## Emojis
 
@@ -187,7 +194,7 @@ st.button("1\\. Not a list")
 
 ## Markdown in st.table
 
-`st.table()` renders Markdown in cells and headers.
+`st.table()` renders Markdown in cells, index labels, and headers.
 
 ```python
 st.table(
@@ -195,7 +202,8 @@ st.table(
         "**Name**": "Alice",
         "**Status**": ":green-badge[Active]",
         "**Role**": ":material/shield: Admin",
-    }
+    },
+    border="horizontal",
 )
 ```
 
@@ -226,6 +234,33 @@ st.markdown("Centered heading", text_alignment="center")  # left, center, right,
 st.markdown(
     "Content width only", width="content"
 )  # stretch, content, or pixels (e.g. 400)
+```
+
+## Keep text on one line with wrap
+
+`st.markdown`, `st.caption`, `st.title`, `st.header`,
+`st.subheader`, and `st.text` accept `wrap`. The default is `True` (text
+wraps onto additional lines). Pass `wrap=False` to keep the text on one
+ellipsized line. The ellipsis appears only when the element is narrower
+than its text. Content-sized elements are capped by their parent width, so
+they still truncate when the parent is narrower than their text. Use
+`width="stretch"` or a pixel width to set the available width explicitly.
+
+When `wrap=False`, `st.markdown` and `st.caption` use the same inline-only
+subset as widget labels (no headings, lists, tables, or block quotes).
+`wrap=False` cannot be combined with `unsafe_allow_html=True`. Extra body
+lines after the first newline are not supported on `st.title`, `st.header`,
+and `st.subheader`.
+
+```python
+metric, updated, region = st.columns(3, vertical_alignment="center")
+metric.markdown(
+    "Quarterly revenue versus plan for the complete fiscal year",
+    wrap=False,
+    width="stretch",
+)
+updated.caption("Last updated just now", wrap=False, width="stretch")
+region.text("North America · EMEA · APAC", wrap=False, width="stretch")
 ```
 
 ## HTML (use very sparingly!)

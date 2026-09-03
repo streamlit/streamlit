@@ -46,6 +46,7 @@ query = st.text_input("", placeholder="Search")
 # GOOD: Accessible label, visually collapsed
 query = st.text_input(
     "Search",
+    type="search",
     placeholder="Search",
     label_visibility="collapsed",
 )
@@ -97,7 +98,7 @@ with st.container(border=True):
 
 ## Navigation and pages
 
-Use `st.navigation` with an `app_pages/` directory. Avoid the legacy `pages/` auto-discovery pattern and app-body navigation built from `st.page_link`.
+Use `st.navigation` with an `app_pages/` directory. Give every `st.Page` a context-appropriate Material Symbols icon. Avoid the legacy `pages/` auto-discovery pattern and app-body navigation built from `st.page_link`.
 
 ```python
 # GOOD: streamlit_app.py
@@ -222,6 +223,8 @@ if submitted:
     results = search(query, category)
 ```
 
+For as-you-type search, use `st.text_input(..., type="search", live=True)` inside a `@st.fragment` instead of a form. Keep expensive work out of that fragment, or use a longer delay such as `live="500ms"`.
+
 Do not put expensive work unguarded inside tabs or expanders. Hidden tab content and collapsed expander content still compute unless you opt into dynamic state and guard the work.
 
 ```python
@@ -317,6 +320,18 @@ query = st.text_input(f"Search {category}")
 
 # GOOD: Stable widget identity and session-state access
 query = st.text_input(f"Search {category}", key="search_query")
+```
+
+Sync a widget to the URL with `bind="query-params"` rather than hand-rolling `st.query_params`.
+
+```python
+# BAD: Manual read/write plumbing that crashes on an unexpected URL value
+default = st.query_params.get("sort", SORTS[0])
+sort = st.selectbox("Sort", SORTS, index=SORTS.index(default))
+st.query_params["sort"] = sort
+
+# GOOD: Streamlit keeps the widget and the URL in sync
+sort = st.selectbox("Sort", SORTS, key="sort", bind="query-params")
 ```
 
 ## Secrets and queries

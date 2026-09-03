@@ -39,6 +39,7 @@ import {
   StyledSegmentedControlToggleButton,
   StyledToggleButtonGroup,
 } from "~lib/components/shared/BaseButton/styled-components"
+import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
@@ -46,6 +47,7 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import { useHorizontalScrollOverflow } from "~lib/hooks/useHorizontalScrollOverflow"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -54,16 +56,43 @@ export interface Props {
   element: ButtonGroupProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
-  widthConfig: streamlit.IWidthConfig | undefined | null
+  widthConfig: streamlit.WidthConfig.$Properties | undefined | null
 }
 
 /**
  * Get the base content string for an option.
  */
-function getOptionBaseContent(option: ButtonGroupProto.IOption): string {
+function getOptionBaseContent(
+  option: ButtonGroupProto.Option.$Properties
+): string {
   const icon = option.contentIcon
   const content = option.content ?? ""
   return icon ? `${icon} ${content}`.trim() : content
+}
+
+/**
+ * Scroll `option` into `group` horizontally without moving ancestor
+ * scrollports (`scrollIntoView` would also pan `stMain`). Honors CSS
+ * `scroll-padding-inline` so the option lands outside the overflow fade.
+ */
+function scrollOptionIntoGroup(group: HTMLElement, option: Element): void {
+  if (!(option instanceof HTMLElement)) return
+
+  /* eslint-disable streamlit-custom/no-force-reflow-access -- Batched reads to align the option inside this group only */
+  const groupRect = group.getBoundingClientRect()
+  const optionRect = option.getBoundingClientRect()
+  const style = getComputedStyle(group)
+  const padStart = Number.parseFloat(style.scrollPaddingInlineStart) || 0
+  const padEnd = Number.parseFloat(style.scrollPaddingInlineEnd) || 0
+  const overflowStart = optionRect.left - (groupRect.left + padStart)
+  const overflowEnd = optionRect.right - (groupRect.right - padEnd)
+  if (overflowStart >= 0 && overflowEnd <= 0) return
+
+  // Assign scrollLeft instead of scrollIntoView/scrollTo: it stays local to
+  // this group (no ancestor pan) and applies synchronously so layout tests
+  // don't wait on smooth-scroll animation.
+  group.scrollLeft += overflowStart < 0 ? overflowStart : overflowEnd
+  /* eslint-enable streamlit-custom/no-force-reflow-access */
 }
 
 /**
@@ -72,7 +101,7 @@ function getOptionBaseContent(option: ButtonGroupProto.IOption): string {
  * for duplicate labels), or -1 if not found.
  */
 function findOptionIndex(
-  options: ButtonGroupProto.IOption[],
+  options: ButtonGroupProto.Option.$Properties[],
   content: string
 ): number {
   for (let i = options.length - 1; i >= 0; i--) {
@@ -87,7 +116,7 @@ function findOptionIndex(
  * Convert content strings to indices based on current options.
  */
 function contentStringsToIndices(
-  options: ButtonGroupProto.IOption[],
+  options: ButtonGroupProto.Option.$Properties[],
   contentStrings: string[]
 ): number[] {
   const indices: number[] = []
@@ -132,12 +161,11 @@ function syncWithWidgetManager(
   valueWithSource: ValueWithSource<ButtonGroupValue>,
   fragmentId: string | undefined
 ): void {
-  widgetMgr.setStringArrayValue(
-    element,
-    valueWithSource.value,
-    { fromUi: valueWithSource.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringArrayValue(element.id, valueWithSource.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: valueWithSource.fromUser,
+  })
 }
 
 function ButtonGroup(props: Readonly<Props>): ReactElement {
@@ -170,11 +198,23 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   })
 
   const containerWidth = shouldWidthStretch(widthConfig)
+  const wrap = useResolvedWrap(element.wrap)
 
+  /** The option group scrollport: overflow tracking, scroll-into-view, and aria-required. */
+  const groupRef = useRef<HTMLDivElement>(null)
+
+  const overflowLayoutKey = useMemo(
+    () => options.map(getOptionBaseContent).join("\0"),
+    [options]
+  )
+  const { canScrollLeft, canScrollRight } = useHorizontalScrollOverflow({
+    elementRef: groupRef,
+    enabled: !wrap,
+    layoutKey: overflowLayoutKey,
+  })
   // React Aria's ToggleButtonGroup does not forward aria-required to the DOM
   // element. Imperatively set it on the group root so screen readers can
   // announce that the field is mandatory.
-  const groupRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!groupRef.current) return
     if (required) {
@@ -183,6 +223,29 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       groupRef.current.removeAttribute("aria-required")
     }
   }, [required])
+
+  // Keep a selected option visible when wrap is false.
+  // Defaults are never focused, so native focus scrolling is not enough.
+  // Assign scrollLeft instead of scrollIntoView so ancestors like stMain do not pan.
+  //
+  // - Prefer the focused selected option so multi-select clicks do not jump
+  //   to the leftmost selection.
+  // - If focus is on a just-deselected option, skip scrolling so remaining
+  //   selections do not yank the viewport.
+  // - Depend on overflowLayoutKey (not the options array reference) so a
+  //   reorder still scrolls, but unrelated reruns do not.
+  useEffect(() => {
+    if (wrap || !groupRef.current || value.length === 0) return
+    const group = groupRef.current
+    const active = document.activeElement
+    const focusIsInGroup = active instanceof Element && group.contains(active)
+    if (focusIsInGroup && !active.hasAttribute("data-selected")) return
+    const selectedOption = focusIsInGroup
+      ? active
+      : group.querySelector("[data-selected]")
+    if (!selectedOption) return
+    scrollOptionIntoGroup(group, selectedOption)
+  }, [wrap, value, overflowLayoutKey])
 
   // When options change and the currently stored value no longer matches any
   // option (e.g. because format_func changed dynamically due to a language
@@ -208,7 +271,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         backendValue.length > 0
           ? backendValue
           : getDefaultStateFromProto(element),
-      fromUi: false,
+      fromUser: false,
     })
   }, [options, value, setValueWithSource, element])
 
@@ -249,7 +312,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       ) {
         return
       }
-      setValueWithSource({ value: newSelection, fromUi: true })
+      setValueWithSource({ value: newSelection, fromUser: true })
     },
     [options, value, setValueWithSource, element.id]
   )
@@ -268,6 +331,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         id={buttonId(index)}
         data-variant={dataVariant}
         $containerWidth={containerWidth}
+        $wrap={wrap}
       >
         <DynamicButtonLabel
           icon={option.contentIcon ?? undefined}
@@ -276,7 +340,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         />
       </ButtonEl>
     ))
-  }, [options, isPills, containerWidth, buttonId])
+  }, [options, isPills, containerWidth, wrap, buttonId])
 
   return (
     <StyledButtonGroup
@@ -310,6 +374,9 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         aria-label={element.label}
         $isPills={isPills}
         $containerWidth={containerWidth}
+        $wrap={wrap}
+        data-can-scroll-start={canScrollLeft ? "" : undefined}
+        data-can-scroll-end={canScrollRight ? "" : undefined}
       >
         {optionElements}
       </StyledToggleButtonGroup>

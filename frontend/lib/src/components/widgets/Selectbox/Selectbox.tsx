@@ -66,12 +66,11 @@ const updateWidgetMgrState = (
   valueWithSource: ValueWithSource<SelectboxValue>,
   fragmentId: string | undefined
 ): void => {
-  widgetMgr.setStringValue(
-    element,
-    valueWithSource.value,
-    { fromUi: valueWithSource.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, valueWithSource.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: valueWithSource.fromUser,
+  })
 }
 
 const Selectbox: FC<Props> = ({
@@ -115,7 +114,7 @@ const Selectbox: FC<Props> = ({
 
   const onChange = useCallback(
     (valueArg: SelectboxValue) => {
-      setValueWithSource({ value: valueArg, fromUi: true })
+      setValueWithSource({ value: valueArg, fromUser: true })
     },
     [setValueWithSource]
   )
