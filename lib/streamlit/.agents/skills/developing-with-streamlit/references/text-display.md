@@ -51,6 +51,7 @@ def token_stream():
     for word in "Streaming one word at a time".split():
         yield word + " "
 
+
 full_text = st.write_stream(token_stream)
 ```
 
