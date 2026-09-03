@@ -515,7 +515,7 @@ describe("AppNavigation", () => {
       title: "streamlit_app",
     })
 
-    expect(onPageIconChange).toBeCalled()
+    expect(onPageIconChange).toHaveBeenCalled()
 
     expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
       type: "SET_APP_PAGES",
@@ -569,7 +569,7 @@ describe("AppNavigation", () => {
     expect(hostCommCalls.some(call => call[0].type === "SET_PAGE_TITLE")).toBe(
       false
     )
-    expect(onPageIconChange).not.toBeCalled()
+    expect(onPageIconChange).not.toHaveBeenCalled()
   })
 
   describe("hasSetDefaultFavicon flag", () => {

@@ -307,7 +307,7 @@ function useColumnLoader(
   data: Quiver,
   disabled: boolean,
   columnOrder: string[],
-  widthConfig?: streamlit.IWidthConfig | null
+  widthConfig?: streamlit.WidthConfig.$Properties | null
 ): ColumnLoaderReturn {
   const theme = useEmotionTheme()
 

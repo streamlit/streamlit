@@ -197,7 +197,7 @@ describe("useSelectionHandler hook", () => {
 
     expect(result.current.gridSelection).toEqual(newGridSelection)
 
-    expect(syncSelectionStateMock).toBeCalledTimes(1)
+    expect(syncSelectionStateMock).toHaveBeenCalledTimes(1)
 
     // Check that the selection can also be cleared again:
     act(() => {
@@ -210,7 +210,7 @@ describe("useSelectionHandler hook", () => {
     expect(result.current.isColumnSelected).toEqual(false)
     expect(result.current.isCellSelected).toEqual(false)
 
-    expect(syncSelectionStateMock).toBeCalledTimes(2)
+    expect(syncSelectionStateMock).toHaveBeenCalledTimes(2)
   })
   it("correctly processes and clears row selection", () => {
     const { result } = renderHook(() =>
@@ -252,7 +252,7 @@ describe("useSelectionHandler hook", () => {
 
     expect(result.current.gridSelection).toEqual(newGridSelection)
 
-    expect(syncSelectionStateMock).toBeCalledTimes(1)
+    expect(syncSelectionStateMock).toHaveBeenCalledTimes(1)
 
     // Check that the selection can also be cleared again:
     act(() => {
@@ -265,7 +265,7 @@ describe("useSelectionHandler hook", () => {
     expect(result.current.isColumnSelected).toEqual(false)
     expect(result.current.isCellSelected).toEqual(false)
 
-    expect(syncSelectionStateMock).toBeCalledTimes(2)
+    expect(syncSelectionStateMock).toHaveBeenCalledTimes(2)
   })
   it("forceSync syncs an unchanged row selection", () => {
     // Regression test: when a column is sorted within the selection debounce
@@ -297,7 +297,7 @@ describe("useSelectionHandler hook", () => {
       result.current.processSelectionChange(rowSelection)
     })
     expect(result.current.isRowSelected).toEqual(true)
-    expect(syncSelectionStateMock).toBeCalledTimes(1)
+    expect(syncSelectionStateMock).toHaveBeenCalledTimes(1)
 
     // Processing the same (unchanged) selection is deduplicated: no extra sync.
     act(() => {
@@ -307,7 +307,7 @@ describe("useSelectionHandler hook", () => {
         current: undefined,
       })
     })
-    expect(syncSelectionStateMock).toBeCalledTimes(1)
+    expect(syncSelectionStateMock).toHaveBeenCalledTimes(1)
 
     // Forcing a sync of the same (unchanged) selection syncs it anyway.
     act(() => {
@@ -321,7 +321,7 @@ describe("useSelectionHandler hook", () => {
       )
     })
     expect(result.current.isRowSelected).toEqual(true)
-    expect(syncSelectionStateMock).toBeCalledTimes(2)
+    expect(syncSelectionStateMock).toHaveBeenCalledTimes(2)
   })
 
   it("correctly processes and clears row+column selection", () => {
@@ -365,7 +365,7 @@ describe("useSelectionHandler hook", () => {
 
     expect(result.current.gridSelection).toEqual(newGridSelection)
 
-    expect(syncSelectionStateMock).toBeCalledTimes(1)
+    expect(syncSelectionStateMock).toHaveBeenCalledTimes(1)
 
     // Check that the clear cell selections doesn't clear the row+column selection:
     act(() => {
@@ -377,7 +377,7 @@ describe("useSelectionHandler hook", () => {
     expect(result.current.isColumnSelected).toEqual(true)
     expect(result.current.isCellSelected).toEqual(false)
     // This should not call syncSelectionState callback:
-    expect(syncSelectionStateMock).toBeCalledTimes(1)
+    expect(syncSelectionStateMock).toHaveBeenCalledTimes(1)
 
     // Check that the selection can also be cleared again:
     act(() => {
@@ -390,7 +390,7 @@ describe("useSelectionHandler hook", () => {
     expect(result.current.isColumnSelected).toEqual(false)
     expect(result.current.isCellSelected).toEqual(false)
 
-    expect(syncSelectionStateMock).toBeCalledTimes(2)
+    expect(syncSelectionStateMock).toHaveBeenCalledTimes(2)
   })
 
   it("clearSelection keeps only columns and syncs", () => {
@@ -422,7 +422,7 @@ describe("useSelectionHandler hook", () => {
 
     expect(result.current.isRowSelected).toEqual(true)
     expect(result.current.isColumnSelected).toEqual(true)
-    expect(syncSelectionStateMock).toBeCalledTimes(1)
+    expect(syncSelectionStateMock).toHaveBeenCalledTimes(1)
 
     act(() => {
       const { clearSelection } = result.current
@@ -433,7 +433,7 @@ describe("useSelectionHandler hook", () => {
     expect(result.current.isRowSelected).toEqual(false)
     expect(result.current.isColumnSelected).toEqual(true)
     expect(result.current.isCellSelected).toEqual(false)
-    expect(syncSelectionStateMock).toBeCalledTimes(2)
+    expect(syncSelectionStateMock).toHaveBeenCalledTimes(2)
   })
 
   it("clearSelection keeps only rows and syncs", () => {
@@ -465,7 +465,7 @@ describe("useSelectionHandler hook", () => {
 
     expect(result.current.isRowSelected).toEqual(true)
     expect(result.current.isColumnSelected).toEqual(true)
-    expect(syncSelectionStateMock).toBeCalledTimes(1)
+    expect(syncSelectionStateMock).toHaveBeenCalledTimes(1)
 
     act(() => {
       const { clearSelection } = result.current
@@ -476,7 +476,7 @@ describe("useSelectionHandler hook", () => {
     expect(result.current.isRowSelected).toEqual(true)
     expect(result.current.isColumnSelected).toEqual(false)
     expect(result.current.isCellSelected).toEqual(false)
-    expect(syncSelectionStateMock).toBeCalledTimes(2)
+    expect(syncSelectionStateMock).toHaveBeenCalledTimes(2)
   })
 
   it("correctly processes and clears cell selection", () => {
@@ -517,7 +517,7 @@ describe("useSelectionHandler hook", () => {
 
     expect(result.current.gridSelection).toEqual(newGridSelection)
 
-    expect(syncSelectionStateMock).not.toBeCalled()
+    expect(syncSelectionStateMock).not.toHaveBeenCalled()
 
     // Check that the clear cell selections doesn't clear the row+column selection:
     act(() => {
@@ -528,7 +528,7 @@ describe("useSelectionHandler hook", () => {
     expect(result.current.isColumnSelected).toEqual(false)
     expect(result.current.isCellSelected).toEqual(false)
     // This should not call syncSelectionState callback:
-    expect(syncSelectionStateMock).not.toBeCalled()
+    expect(syncSelectionStateMock).not.toHaveBeenCalled()
   })
   it("correctly processes and clears cell selection when cell selection is activated", () => {
     const { result } = renderHook(() =>
@@ -563,7 +563,7 @@ describe("useSelectionHandler hook", () => {
 
     expect(result.current.gridSelection).toEqual(newGridSelection)
 
-    expect(syncSelectionStateMock).toBeCalledTimes(1)
+    expect(syncSelectionStateMock).toHaveBeenCalledTimes(1)
     expect(syncSelectionStateMock).toHaveBeenLastCalledWith(
       expect.anything(),
       true
@@ -579,7 +579,7 @@ describe("useSelectionHandler hook", () => {
     expect(result.current.isColumnSelected).toEqual(false)
     expect(result.current.isCellSelected).toEqual(false)
 
-    expect(syncSelectionStateMock).toBeCalledTimes(2)
+    expect(syncSelectionStateMock).toHaveBeenCalledTimes(2)
     expect(syncSelectionStateMock).toHaveBeenLastCalledWith(
       expect.anything(),
       true
@@ -772,7 +772,7 @@ describe("useSelectionHandler hook", () => {
 
       expect(result.current.isRowSelected).toEqual(true)
       expect(result.current.gridSelection.rows.toArray()).toEqual([2])
-      expect(syncSelectionStateMock).toBeCalledTimes(1)
+      expect(syncSelectionStateMock).toHaveBeenCalledTimes(1)
 
       // Try to clear all selections via clearSelection()
       // This simulates what happens when a user sorts a column
@@ -787,7 +787,7 @@ describe("useSelectionHandler hook", () => {
 
       // syncSelectionState should NOT be called again since the row
       // selection didn't actually change
-      expect(syncSelectionStateMock).toBeCalledTimes(1)
+      expect(syncSelectionStateMock).toHaveBeenCalledTimes(1)
     })
 
     it("syncs column selection even when row clearing is prevented in combined mode", () => {
@@ -818,7 +818,7 @@ describe("useSelectionHandler hook", () => {
       })
 
       expect(result.current.gridSelection.rows.toArray()).toEqual([1])
-      expect(syncSelectionStateMock).toBeCalledTimes(1)
+      expect(syncSelectionStateMock).toHaveBeenCalledTimes(1)
 
       // Simulate glide-data-grid event when clicking a column header:
       // it tries to clear rows and select the column
@@ -838,7 +838,7 @@ describe("useSelectionHandler hook", () => {
       expect(result.current.gridSelection.columns.toArray()).toEqual([2])
 
       // syncSelectionState should be called again to sync the column change
-      expect(syncSelectionStateMock).toBeCalledTimes(2)
+      expect(syncSelectionStateMock).toHaveBeenCalledTimes(2)
     })
   })
 })

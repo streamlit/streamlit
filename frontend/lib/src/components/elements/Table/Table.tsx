@@ -47,8 +47,8 @@ import {
 export interface TableProps {
   element: TableProto
   elementHash?: string
-  widthConfig?: streamlit.IWidthConfig | null
-  heightConfig?: streamlit.IHeightConfig | null
+  widthConfig?: streamlit.WidthConfig.$Properties | null
+  heightConfig?: streamlit.HeightConfig.$Properties | null
 }
 
 // Fallback offset value (in rem) used for sticky positioning when multiple header rows

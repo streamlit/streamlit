@@ -35,8 +35,8 @@ import {
 } from "@emotion-icons/material-outlined"
 
 import {
-  IArrowData,
-  IArrowNamedDataSet,
+  type ArrowData,
+  type ArrowNamedDataSet,
   streamlit,
   VegaLiteChart as VegaLiteChartProto,
 } from "@streamlit/protobuf"
@@ -126,16 +126,18 @@ export interface Props {
   widgetMgr: WidgetStateManager
   fragmentId?: string
   disableFullscreenMode?: boolean
-  widthConfig: streamlit.IWidthConfig | null | undefined
-  heightConfig: streamlit.IHeightConfig | null | undefined
+  widthConfig: streamlit.WidthConfig.$Properties | null | undefined
+  heightConfig: streamlit.HeightConfig.$Properties | null | undefined
 }
 
 /** Iterates over datasets and converts data to Quiver. */
-function wrapDatasets(datasets: IArrowNamedDataSet[]): WrappedNamedDataset[] {
-  return datasets.map((dataset: IArrowNamedDataSet) => ({
+function wrapDatasets(
+  datasets: ArrowNamedDataSet.$Properties[]
+): WrappedNamedDataset[] {
+  return datasets.map(dataset => ({
     hasName: dataset.hasName as boolean,
     name: dataset.name as string,
-    data: new Quiver(dataset.data as IArrowData),
+    data: new Quiver(dataset.data as ArrowData.$Properties),
   }))
 }
 

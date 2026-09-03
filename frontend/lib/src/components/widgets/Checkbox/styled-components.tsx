@@ -72,7 +72,12 @@ interface StyledRootProps {
   $truncate?: boolean
 }
 
-/** Wrapper around React Aria Checkbox — handles layout and keyboard-focus background. */
+/**
+ * Wrapper around React Aria Checkbox — handles layout and keyboard-focus background.
+ * Checkbox is deprecated in favor of CheckboxField + CheckboxButton. Keep the
+ * current composition until that migration is done as its own a11y/DOM change.
+ */
+// eslint-disable-next-line @typescript-eslint/no-deprecated
 export const StyledCheckboxRoot = styled(RACheckbox, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
 })<StyledRootProps>(({ theme, $truncate }) => ({
@@ -157,7 +162,12 @@ export const StyledCheckboxIndicator =
     }
   )
 
-/** Wrapper around React Aria Switch — handles layout for the toggle variant. */
+/**
+ * Wrapper around React Aria Switch — handles layout for the toggle variant.
+ * Switch is deprecated in favor of SwitchField + SwitchButton. Keep the
+ * current composition until that migration is done as its own a11y/DOM change.
+ */
+// eslint-disable-next-line @typescript-eslint/no-deprecated
 export const StyledSwitchRoot = styled(RASwitch, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
 })<StyledRootProps>(({ theme, $truncate }) => ({

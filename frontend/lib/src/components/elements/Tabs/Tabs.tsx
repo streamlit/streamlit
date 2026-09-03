@@ -15,6 +15,7 @@
  */
 
 import {
+  type JSX,
   memo,
   ReactElement,
   useCallback,
