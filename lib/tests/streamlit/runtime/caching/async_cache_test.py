@@ -15,8 +15,8 @@
 """Tests for async-aware @st.cache_data and @st.cache_resource.
 
 These cover decorating coroutine functions (``async def``): the decorator caches
-the awaited result (an inert value) rather than the coroutine object. Coroutines
-are driven with ``asyncio.run`` to mirror how a user drives them from a script.
+the awaited result rather than the coroutine object. Coroutines are driven with
+``asyncio.run`` to mirror how a user drives them from a script.
 """
 
 from __future__ import annotations

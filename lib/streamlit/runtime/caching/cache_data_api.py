@@ -524,11 +524,11 @@ class CacheDataAPI:
 
         .. note::
             You can decorate a coroutine function (``async def``). Calling the
-            decorated function returns an awaitable; ``await`` it to run the
-            coroutine on a cache miss and cache its awaited result (the inert
-            value, not the coroutine object). On a hit, the cached result is
-            returned without re-running the function. The caller is responsible
-            for driving the coroutine (e.g. with ``asyncio.run``).
+            decorated function returns an awaitable; you must ``await`` it. On a
+            miss, Streamlit runs the coroutine and caches its return value, not the
+            coroutine object. On a hit, Streamlit returns the cached value without
+            running the function again. The caller is responsible for driving the
+            coroutine (for example, with ``asyncio.run``).
 
         .. note::
             Calls to a decorated coroutine function remain awaitable, but
@@ -639,6 +639,23 @@ class CacheDataAPI:
         >>>
         >>> d3 = fetch_and_clean_data(DATA_URL_2)
         >>> # This is a different URL, so the function executes.
+
+        To cache an async function, await the decorated function from an async entry
+        point:
+
+        >>> import asyncio
+        >>> import streamlit as st
+        >>>
+        >>> @st.cache_data
+        ... async def load_config():
+        ...     await asyncio.sleep(1)
+        ...     return {"env": "prod"}
+        >>>
+        >>> async def main():
+        ...     config = await load_config()
+        ...     st.write(config)
+        >>>
+        >>> asyncio.run(main())
 
         To set the ``persist`` parameter, use this command as follows:
 
