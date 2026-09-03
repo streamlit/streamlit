@@ -64,9 +64,7 @@ const renderTooltip = (props: Partial<TooltipProps> = {}): RenderResult => {
 
 describe("Tooltip element", () => {
   beforeAll(() => {
-    // Register React Aria's global pointermove listener so interaction
-    // modality tracking works during hover tests.
-    // eslint-disable-next-line testing-library/no-render-in-lifecycle -- useFocusVisible must run once so React Aria registers its document pointer listener.
+    // eslint-disable-next-line testing-library/no-render-in-lifecycle -- useFocusVisible must run once so React Aria registers the document pointer listener that hover tests depend on.
     renderHook(() => useFocusVisible())
   })
 

@@ -468,14 +468,13 @@ export default defineConfig([
   {
     files: ["**/*.test.ts", "**/*.test.tsx"],
     plugins: {
-      ...testingLibrary.configs["flat/react"].plugins,
       "testing-library": testingLibrary,
       vitest,
     },
     rules: {
-      // Spread Testing Library recommended rules inside `rules`. A sibling
-      // `rules` key replaces the preset's own and silently drops every
-      // recommended testing-library rule.
+      // Merge the Testing Library preset into this `rules` object. Spreading the
+      // whole preset at this config root would let this `rules` key replace it
+      // and drop every recommended testing-library rule.
       ...testingLibrary.configs["flat/react"].rules,
       ...vitest.configs.recommended.rules,
       // Allow hardcoded styles in test files
@@ -484,6 +483,7 @@ export default defineConfig([
       "streamlit-custom/no-force-reflow-access": "off",
 
       // Recommended rules with large existing debt; enable in later cleanups.
+      // Plan: https://github.com/streamlit/streamlit/wiki/2026-09-03-improving-frontend-linting
       "testing-library/no-node-access": "off",
       "testing-library/no-container": "off",
       "testing-library/prefer-presence-queries": "off",
