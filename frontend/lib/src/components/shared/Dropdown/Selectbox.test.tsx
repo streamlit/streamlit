@@ -232,9 +232,9 @@ describe("Selectbox widget", () => {
     await user.keyboard("{ArrowDown}{Enter}")
 
     await waitFor(() => {
-      expect(props.onChange).toHaveBeenCalledTimes(1)
       expect(props.onChange).toHaveBeenCalledWith("b")
     })
+    expect(props.onChange).toHaveBeenCalledTimes(1)
     expect(screen.getByDisplayValue("b")).toBeVisible()
   })
 

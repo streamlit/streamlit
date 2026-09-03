@@ -806,15 +806,13 @@ describe("ChatInput widget", () => {
 
     // Wait for files to be displayed (order-agnostic check)
     await waitFor(() => {
-      const fileNames = screen.getAllByTestId("stFileChipName")
-      expect(fileNames).toHaveLength(2)
-
-      // Check that both files are present using title attribute (full filename)
-      const fileTitles = Array.from(fileNames).map(el =>
-        el.getAttribute("title")
-      )
-      expect(fileTitles).toContain("folder/file1.txt")
-      expect(fileTitles).toContain("folder/file2.txt")
+      expect(
+        new Set(
+          screen
+            .getAllByTestId("stFileChipName")
+            .map(el => el.getAttribute("title"))
+        )
+      ).toEqual(new Set(["folder/file1.txt", "folder/file2.txt"]))
     })
 
     // Find and delete file1

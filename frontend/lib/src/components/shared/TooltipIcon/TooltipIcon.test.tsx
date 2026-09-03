@@ -33,6 +33,7 @@ describe("TooltipIcon element", () => {
   // hover-triggered tooltip tests can work.  See Tooltip.test.tsx for a full
   // explanation of this setup.
   beforeAll(() => {
+    // eslint-disable-next-line testing-library/no-render-in-lifecycle -- setupGlobalFocusEvents must run once; the document listener is module-level.
     renderHook(() => useFocusVisible())
   })
   it("renders a TooltipIcon", () => {

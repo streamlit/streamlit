@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { waitFor } from "@testing-library/dom"
+import { waitFor } from "@testing-library/react"
 import { enableMapSet, enablePatches } from "immer"
 import { getLogger } from "loglevel"
 import { Mock } from "vitest"
@@ -113,7 +113,6 @@ describe("Widget State Manager", () => {
       expect(sendBackMsg).not.toHaveBeenCalled()
     } else {
       await waitFor(() => {
-        expect(sendBackMsg).toHaveBeenCalledTimes(1)
         expect(sendBackMsg).toHaveBeenCalledWith(
           expect.anything(),
           undefined, // fragmentId
@@ -121,6 +120,7 @@ describe("Widget State Manager", () => {
           undefined
         )
       })
+      expect(sendBackMsg).toHaveBeenCalledTimes(1)
     }
   }
 
