@@ -42,6 +42,7 @@ import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { ensureError } from "~lib/util/ErrorHandling"
+import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
   applyStreamlitOptionDefaults,
@@ -61,12 +62,54 @@ import {
 
 const LOG = getLogger("EChartsChart")
 
-type ChartOpError = "theme" | "option" | "resize"
+type ChartErrorSource = "theme" | "option" | "resize"
 
 interface EChartsChartProps {
   element: EChartsChartProto
   disableFullscreenMode?: boolean
   heightConfig?: streamlit.IHeightConfig | null
+}
+
+function optionHasBackgroundColor(target: unknown): boolean {
+  return (
+    isPlainObject(target) &&
+    (target as EChartsOptionObject).backgroundColor !== undefined
+  )
+}
+
+/**
+ * Whether the option (or a timeline/media variant) sets ``backgroundColor``.
+ *
+ * PNG export supplies the Streamlit page background when the chart itself has
+ * none, so a background configured only on ``baseOption`` or
+ * ``media[*].option`` still counts as explicit.
+ */
+function hasExplicitBackgroundColor(
+  option: EChartsOptionObject | null
+): boolean {
+  if (isNullOrUndefined(option)) {
+    return false
+  }
+  if (optionHasBackgroundColor(option)) {
+    return true
+  }
+  if (optionHasBackgroundColor(option.baseOption)) {
+    return true
+  }
+  if (
+    Array.isArray(option.options) &&
+    option.options.some(optionHasBackgroundColor)
+  ) {
+    return true
+  }
+  if (Array.isArray(option.media)) {
+    return option.media.some(
+      entry =>
+        isPlainObject(entry) &&
+        optionHasBackgroundColor((entry as Record<string, unknown>).option)
+    )
+  }
+  return false
 }
 
 function isAriaEnabled(option: EChartsOptionObject): boolean {
@@ -139,12 +182,12 @@ export function EChartsChart({
     null
   )
   const [opErrors, setOpErrors] = useState<
-    Partial<Record<ChartOpError, string>>
+    Partial<Record<ChartErrorSource, string>>
   >({})
   const [hasRendered, setHasRendered] = useState(false)
 
   const setOpError = useCallback(
-    (op: ChartOpError, message: string | null): void => {
+    (op: ChartErrorSource, message: string | null): void => {
       setOpErrors(prev => {
         if (message === null) {
           if (prev[op] === undefined) {
@@ -162,6 +205,8 @@ export function EChartsChart({
     },
     []
   )
+  // An option error is the most actionable; a resize failure is usually a
+  // downstream symptom of the same bad option.
   const renderError =
     opErrors.option ?? opErrors.theme ?? opErrors.resize ?? null
 
@@ -368,15 +413,13 @@ export function EChartsChart({
       return
     }
     try {
-      const hasExplicitBackground =
-        isPlainObject(option) &&
-        (option as EChartsOptionObject).backgroundColor !== undefined
       const dataUrl = chartInstance.getDataURL({
         type: downloadType,
         ...(downloadType === "png"
           ? {
               pixelRatio: 2,
-              ...(hasExplicitBackground || element.theme !== STREAMLIT_THEME
+              ...(hasExplicitBackgroundColor(option) ||
+              element.theme !== STREAMLIT_THEME
                 ? {}
                 : { backgroundColor: theme.colors.bgColor }),
             }

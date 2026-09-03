@@ -669,16 +669,44 @@ export function withDefaultSeriesCursor(
     }
     return target
   }
+  const applyCursorToMedia = (
+    target: EChartsOptionObject
+  ): EChartsOptionObject => {
+    const withSeries = applyCursorToSeries(target)
+    const media = withSeries.media
+    if (!Array.isArray(media)) {
+      return withSeries
+    }
+    return {
+      ...withSeries,
+      media: media.map(entry => {
+        if (!isPlainObject(entry)) {
+          return entry
+        }
+        const mediaEntry = entry as Record<string, unknown>
+        if (!isPlainObject(mediaEntry.option)) {
+          return entry
+        }
+        return {
+          ...mediaEntry,
+          option: applyCursorToSeries(
+            mediaEntry.option as EChartsOptionObject
+          ),
+        }
+      }),
+    }
+  }
 
   // Timeline specs nest series under ``baseOption`` and per-tick ``options``.
-  // Apply the cursor default there too so display-only timelines don't keep
-  // ECharts' pointer cursor.
-  let result = applyCursorToSeries(option)
+  // Responsive specs nest series under ``media[*].option``. Apply the cursor
+  // default in all of those places so display-only charts don't keep ECharts'
+  // pointer cursor.
+  let result = applyCursorToMedia(option)
   const baseOption = result.baseOption
   if (isPlainObject(baseOption)) {
     result = {
       ...result,
-      baseOption: applyCursorToSeries(baseOption as EChartsOptionObject),
+      baseOption: applyCursorToMedia(baseOption as EChartsOptionObject),
     }
   }
   if (Array.isArray(result.options)) {
@@ -686,7 +714,7 @@ export function withDefaultSeriesCursor(
       ...result,
       options: result.options.map(tick =>
         isPlainObject(tick)
-          ? applyCursorToSeries(tick as EChartsOptionObject)
+          ? applyCursorToMedia(tick as EChartsOptionObject)
           : tick
       ),
     }

@@ -587,4 +587,22 @@ describe("withDefaultSeriesCursor", () => {
       )[0].cursor
     ).toBe("default")
   })
+
+  it("applies the default cursor inside media option overrides", () => {
+    const configured = withDefaultSeriesCursor({
+      series: [{ type: "bar", data: [1] }],
+      media: [
+        { query: { maxWidth: 500 }, option: { series: [{ type: "line" }] } },
+      ],
+    })
+
+    expect(
+      (
+        (
+          (configured.media as Array<Record<string, unknown>>)[0]
+            .option as Record<string, unknown>
+        ).series as Array<Record<string, unknown>>
+      )[0].cursor
+    ).toBe("default")
+  })
 })

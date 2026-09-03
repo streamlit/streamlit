@@ -204,6 +204,29 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         assert record["t"].startswith("2020-01-01")
         assert record["v"] is None
 
+    def test_dataset_source_infinities_become_null(self):
+        """Infinities in a dataframe source become ``null``, like NaN/NaT."""
+        df = pd.DataFrame({"x": [1.0, float("inf"), float("-inf")]})
+        st.echarts_chart({"dataset": {"source": df}})
+
+        source = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)[
+            "dataset"
+        ]["source"]
+        assert source[0]["x"] == 1.0
+        assert source[1]["x"] is None
+        assert source[2]["x"] is None
+
+    def test_dataset_source_preserves_high_precision_floats(self):
+        """Dataframe floats keep more than pandas' default 10 significant digits."""
+        value = 1.23456789012345
+        df = pd.DataFrame({"x": [value]})
+        st.echarts_chart({"dataset": {"source": df}})
+
+        record = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)[
+            "dataset"
+        ]["source"][0]
+        assert record["x"] == pytest.approx(value, rel=1e-15)
+
     @parameterized.expand(
         [
             ("streamlit", "streamlit"),
@@ -559,6 +582,32 @@ def test_normalize_spec_does_not_mutate_user_mapping() -> None:
     assert original["series"][0]["data"] == [1, 2, 3]
     option["series"][0]["type"] = "bar"
     assert "type" not in original["series"][0]
+
+
+def test_normalize_spec_does_not_mutate_dataset_list_with_leading_non_dict() -> None:
+    """A dataset list is copied even when the first entry is not a dict."""
+    df = pd.DataFrame({"a": [1]})
+    dataset_entry = {"source": df}
+    original = {"dataset": [None, dataset_entry]}
+
+    option = _normalize_spec(original)
+
+    assert original["dataset"][1] is dataset_entry
+    assert original["dataset"][1]["source"] is df
+    assert option["dataset"][1]["source"] == [{"a": 1}]
+    assert option["dataset"][1]["dimensions"] == ["a"]
+
+
+def test_normalize_spec_converts_tuple_dataset() -> None:
+    """A tuple of datasets converts each dataframe ``source``."""
+    df = pd.DataFrame({"a": [1]})
+    original = {"dataset": ({"source": df},)}
+
+    option = _normalize_spec(original)
+
+    assert original["dataset"][0]["source"] is df
+    assert option["dataset"][0]["source"] == [{"a": 1}]
+    assert option["dataset"][0]["dimensions"] == ["a"]
 
 
 def test_normalize_spec_accepts_source_that_cannot_be_deepcopied() -> None:

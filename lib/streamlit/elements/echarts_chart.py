@@ -60,6 +60,12 @@ _LOGGER: Final = get_logger(__name__)
 # friends) that render at exactly that height. There is no matching width: the
 # ``defaultChartWidth`` token is a Vega *view* dimension and does not correspond
 # to any rendered content width, so this is a plain fallback.
+#
+# ``defaultChartHeight`` is ``21.875rem`` and therefore scales with
+# ``theme.baseFontSize``. ``height="content"`` still sends this hard 350px,
+# while ``height="stretch"`` uses the rem-based token as its CSS floor, so the
+# two disagree under a non-default base font size. Moving content-height
+# resolution to the frontend is out of scope for v1.
 _DEFAULT_CONTENT_WIDTH: Final = 700
 _DEFAULT_CONTENT_HEIGHT: Final = 350
 
@@ -155,10 +161,20 @@ def _dataframe_to_records(df: pd.DataFrame) -> list[dict[str, Any]]:
     """Convert a dataframe to JSON-native records (array of objects).
 
     Uses pandas' JSON serialization to normalize datetimes (to ISO strings),
-    NaN/NaT (to ``null``), and numpy scalar types into JSON-native values so the
-    result can be strictly serialized without a ``default`` fallback.
+    NaN/NaT/infinities (to ``null``), and numpy scalar types into JSON-native
+    values so the result can be strictly serialized without a ``default``
+    fallback. ``double_precision=15`` keeps float values that the default of
+    10 would round, matching an equivalent dict spec more closely.
+
+    ``DataFrame.to_json`` on older pandas emits invalid JSON (``Infinity``)
+    for infinities, which would surface as a raw ``JSONDecodeError``. Replacing
+    them with NaN first makes every supported pandas version emit ``null``.
     """
-    records = json.loads(df.to_json(orient="records", date_format="iso"))
+    records = json.loads(
+        df.replace([float("inf"), float("-inf")], float("nan")).to_json(
+            orient="records", date_format="iso", double_precision=15
+        )
+    )
     return cast("list[dict[str, Any]]", records)
 
 
@@ -222,7 +238,7 @@ def _iter_series_entries(series: Any) -> Iterator[dict[str, Any]]:
 
 
 def _iter_series(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
-    """Yield every series config in an option, across all timeline variants."""
+    """Yield every series config across top-level, timeline, and media variants."""
     for variant in _iter_option_variants(option):
         yield from _iter_series_entries(variant.get("series"))
 
@@ -289,12 +305,12 @@ def _validate_supported_features(option: dict[str, Any]) -> None:
         )
 
 
-def _convert_datasets_in_option(option: dict[str, Any]) -> None:
-    """Convert dataframe-like ``dataset.source`` values on a single option."""
+def _convert_datasets_in_variant(option: dict[str, Any]) -> None:
+    """Convert dataframe-like ``dataset.source`` values on a single option variant."""
     dataset = option.get("dataset")
     if isinstance(dataset, dict):
         _convert_single_dataset(dataset)
-    elif isinstance(dataset, list):
+    elif isinstance(dataset, (list, tuple)):
         for entry in dataset:
             if isinstance(entry, dict):
                 _convert_single_dataset(entry)
@@ -303,14 +319,14 @@ def _convert_datasets_in_option(option: dict[str, Any]) -> None:
 def _convert_dataset_sources(option: dict[str, Any]) -> None:
     """Convert dataframe-like ``dataset.source`` values into JSON records.
 
-    ECharts' ``dataset`` can be a single object or a list of objects; both are
-    supported here (mirroring how ``st.vega_lite_chart`` ingests dataframes).
-    Timeline specs nest datasets under ``baseOption`` and per-tick ``options``,
-    and responsive specs nest them under ``media[*].option``, so those variants
-    are converted too.
+    ECharts' ``dataset`` can be a single object or a list/tuple of objects;
+    both are supported here (mirroring how ``st.vega_lite_chart`` ingests
+    dataframes). Timeline specs nest datasets under ``baseOption`` and per-tick
+    ``options``, and responsive specs nest them under ``media[*].option``, so
+    those variants are converted too.
     """
     for variant in _iter_option_variants(option):
-        _convert_datasets_in_option(variant)
+        _convert_datasets_in_variant(variant)
 
 
 def _copy_option_for_normalization(value: Any) -> Any:
@@ -329,13 +345,10 @@ def _copy_option_for_normalization(value: Any) -> Any:
             else:
                 copied[key] = _copy_option_for_normalization(item)
         return copied
-    if isinstance(value, list):
-        if value and isinstance(value[0], dict):
-            return [_copy_option_for_normalization(item) for item in value]
-        return value
-    if isinstance(value, tuple):
-        if value and isinstance(value[0], dict):
-            return tuple(_copy_option_for_normalization(item) for item in value)
+    if isinstance(value, (list, tuple)):
+        if any(isinstance(item, dict) for item in value):
+            copied_items = [_copy_option_for_normalization(item) for item in value]
+            return copied_items if isinstance(value, list) else tuple(copied_items)
         return value
     return value
 
@@ -580,14 +593,14 @@ class EChartsMixin:
             also applied.
 
         key : str, int, or None
-            An optional string to use for giving this element a stable
-            identity. If this is ``None`` (default), the chart is not given
-            an element ID and uses positional identity.
+            An optional key that gives this element a stable identity. If this
+            is ``None`` (default), the chart's identity is determined by its
+            position in the app, so moving it can reset the chart and replay
+            its entry animation.
 
             If ``key`` is provided, it will be used as a CSS class name
-            prefixed with ``st-key-``. The frontend also uses the key as a
-            stable identity across reruns, which keeps ECharts from remounting
-            and replaying its entry animation.
+            prefixed with ``st-key-``, and the chart keeps its identity across
+            reruns even when the spec, theme, or renderer changes.
 
         renderer : "canvas" or "svg"
             The renderer passed to ECharts. This can be one of the following:
@@ -655,13 +668,10 @@ class EChartsMixin:
                 user_key=key,
                 # A key is the whole identity, so a keyed chart keeps its
                 # frontend instance across data, theme, and renderer changes.
+                # ``dg`` is reserved for widgets; this display-only command
+                # is not one.
                 key_as_main_identity=True,
-                dg=self.dg,
-                spec=echarts_chart_proto.spec,
-                theme=theme,
-                renderer=renderer,
-                width=width,
-                height=height,
+                dg=None,
             )
 
         layout_config = LayoutConfig(width=final_width, height=final_height)

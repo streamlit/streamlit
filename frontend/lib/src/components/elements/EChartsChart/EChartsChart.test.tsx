@@ -35,12 +35,6 @@ const { mockInit, mockChart } = vi.hoisted(() => {
     dispose: vi.fn(),
     isDisposed: vi.fn(() => false),
     getDataURL: vi.fn(() => "data:image/png;base64,AAA"),
-    on: vi.fn(),
-    off: vi.fn(),
-    getZr: vi.fn(() => ({ on: vi.fn(), off: vi.fn() })),
-    dispatchAction: vi.fn(),
-    convertFromPixel: vi.fn(),
-    getOption: vi.fn(() => ({})),
   }
   return {
     mockInit: vi.fn(
@@ -526,6 +520,54 @@ describe("EChartsChart", () => {
       pixelRatio: 2,
     })
   })
+
+  it.each([
+    {
+      name: "root",
+      spec: {
+        backgroundColor: "#fff",
+        series: [{ type: "bar", data: [1] }],
+      },
+    },
+    {
+      name: "timeline baseOption",
+      spec: {
+        baseOption: {
+          backgroundColor: "#111",
+          series: [{ type: "bar", data: [1] }],
+        },
+        options: [{}],
+      },
+    },
+    {
+      name: "media option",
+      spec: {
+        series: [{ type: "bar", data: [1] }],
+        media: [
+          { query: { maxWidth: 500 }, option: { backgroundColor: "#222" } },
+        ],
+      },
+    },
+  ])(
+    "does not override the export background from a $name backgroundColor",
+    async ({ spec }) => {
+      const user = userEvent.setup()
+      vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
+        () => {}
+      )
+
+      render(
+        <Wrapper element={createElement({ spec: JSON.stringify(spec) })} />
+      )
+
+      await user.click(screen.getByRole("button", { name: "Download as PNG" }))
+
+      expect(mockChart.getDataURL).toHaveBeenCalledWith({
+        type: "png",
+        pixelRatio: 2,
+      })
+    }
+  )
 
   it("exports an SVG renderer chart with an .svg filename", async () => {
     const user = userEvent.setup()
