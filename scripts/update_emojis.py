@@ -21,18 +21,21 @@ Downloads Unicode's latest emoji-test.txt and regenerates ALL_EMOJIS.
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import sys
 import urllib.request
 from typing import Final
 
-BASE_DIR: Final[str] = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-EMOJI_SET_REGEX: Final[re.Pattern[str]] = re.compile(
+_BASE_DIR: Final[str] = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+_EMOJI_SET_REGEX: Final[re.Pattern[str]] = re.compile(
     r"### EMOJIS START ###(.+?)### EMOJIS END ###", re.DOTALL
 )
-EMOJIS_MODULE_PATH: Final[str] = os.path.join(BASE_DIR, "lib", "streamlit", "emojis.py")
-EMOJI_TEST_URL: Final[str] = (
+_EMOJIS_MODULE_PATH: Final[str] = os.path.join(
+    _BASE_DIR, "lib", "streamlit", "emojis.py"
+)
+_EMOJI_TEST_URL: Final[str] = (
     "https://www.unicode.org/Public/emoji/latest/emoji-test.txt"
 )
 # emoji-test.txt currently has ~5k sequences. A much smaller parse means a
@@ -60,7 +63,11 @@ def _parse_emoji_test(content: str) -> tuple[set[str], str]:
         # leaving it on the remaining text.
         codepoints = line.split(";", 1)[0].split()
         if codepoints:
-            emojis.add("".join(chr(int(cp, base=16)) for cp in codepoints))
+            try:
+                emojis.add("".join(chr(int(cp, base=16)) for cp in codepoints))
+            except ValueError:
+                print(f"Unexpected line in emoji-test.txt: {line!r}. Aborting.")
+                sys.exit(1)
 
     return emojis, version
 
@@ -81,18 +88,30 @@ def _abort_if_invalid_parse(emojis: set[str], version: str) -> None:
 def _abort_if_unexpected_removals(removed: set[str]) -> None:
     """Exit if the parse dropped sequences from the committed set.
 
-    Unicode's emoji encoding stability policy does not withdraw sequences, so a
-    non-empty removed set is treated as a truncated or malformed parse rather
-    than a real Unicode change. This also rejects partial downloads whose count
-    still clears ``_MIN_EMOJI_COUNT``.
+    Encoding stability does not un-assign code points, but UTS #51 does not
+    freeze the RGI / emoji-test.txt set, so a sequence can leave the file
+    without the download being truncated. Fail closed so unattended weekly
+    runs cannot drop committed sequences; a non-empty removed set needs
+    manual review rather than an automatic rewrite.
     """
     if removed:
         print(
-            "Aborting: parse would remove committed emoji sequences. Unicode "
-            "does not withdraw sequences, so this is likely a truncated "
-            f"download. Removed ({len(removed)}): {''.join(sorted(removed))}"
+            "Aborting: parse would remove committed emoji sequences. This "
+            "needs manual review before changing ALL_EMOJIS. Removed "
+            f"({len(removed)}): {''.join(sorted(removed))}"
         )
         sys.exit(1)
+
+
+def _generated_emoji_set_block(emojis: set[str]) -> str:
+    """Return the marked ALL_EMOJIS assignment to splice into emojis.py."""
+    # json.dumps keeps double-quoted literals matching the committed file.
+    literals = ", ".join(
+        json.dumps(emoji, ensure_ascii=False) for emoji in sorted(emojis)
+    )
+    return f"""### EMOJIS START ###
+ALL_EMOJIS = {{{literals}}}
+### EMOJIS END ###"""
 
 
 def _main() -> None:
@@ -100,10 +119,10 @@ def _main() -> None:
     from streamlit.emojis import ALL_EMOJIS
 
     try:
-        with urllib.request.urlopen(EMOJI_TEST_URL, timeout=30) as response:
+        with urllib.request.urlopen(_EMOJI_TEST_URL, timeout=30) as response:
             content = response.read().decode("utf-8")
     except OSError as exc:
-        print(f"Failed to download {EMOJI_TEST_URL}: {exc}")
+        print(f"Failed to download {_EMOJI_TEST_URL}: {exc}")
         sys.exit(1)
 
     emojis, emoji_version = _parse_emoji_test(content)
@@ -126,21 +145,19 @@ def _main() -> None:
         print(f"New emojis: {''.join(sorted(added))}")
     _abort_if_unexpected_removals(removed)
 
-    generated_code = f"""### EMOJIS START ###
-ALL_EMOJIS = {{{", ".join(repr(emoji) for emoji in sorted(emojis))}}}
-### EMOJIS END ###"""
+    generated_code = _generated_emoji_set_block(emojis)
 
-    with open(EMOJIS_MODULE_PATH, encoding="utf-8") as file:
+    with open(_EMOJIS_MODULE_PATH, encoding="utf-8") as file:
         script_content = file.read()
 
     updated_script_content = re.sub(
-        EMOJI_SET_REGEX, lambda _: generated_code, script_content
+        _EMOJI_SET_REGEX, lambda _: generated_code, script_content
     )
     if updated_script_content == script_content:
-        print(f"Could not find emoji markers in {EMOJIS_MODULE_PATH}. Aborting.")
+        print(f"Could not find emoji markers in {_EMOJIS_MODULE_PATH}. Aborting.")
         sys.exit(1)
 
-    with open(EMOJIS_MODULE_PATH, "w", encoding="utf-8") as file:
+    with open(_EMOJIS_MODULE_PATH, "w", encoding="utf-8") as file:
         file.write(updated_script_content)
 
 

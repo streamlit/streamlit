@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -37,6 +38,7 @@ _SAMPLE_EMOJI_TEST = """\
 261D 1F3FB ; minimally-qualified # ☝🏻 E1.0 index pointing up: light skin tone
 1F44D 1F3FD ; fully-qualified # 👍🏽 E1.0 thumbs up: medium skin tone
 1F468 200D 1F469 200D 1F467 ; fully-qualified # 👨‍👩‍👧 E2.0 family
+
 1F3FB ; component # 🏻 E1.0 light skin tone
 """
 
@@ -91,6 +93,14 @@ def test_parse_emoji_test_skips_comments_and_blank_lines(
     assert "emoji-test.txt" not in emojis
     assert all(";" not in emoji for emoji in emojis)
     assert version != "unknown"
+
+
+def test_parse_emoji_test_aborts_on_unexpected_line(update_emojis: ModuleType) -> None:
+    """Non-hex data (e.g. an HTML error page) must abort instead of raising."""
+    _assert_exits_with_code(
+        update_emojis._parse_emoji_test,
+        "# Version: 17.0\n<html>error</html>\n",
+    )
 
 
 def test_parse_emoji_test_missing_version(update_emojis: ModuleType) -> None:
@@ -148,8 +158,30 @@ def test_emoji_set_regex_matches_shipped_emojis_module(
     update_emojis: ModuleType,
 ) -> None:
     """The rewrite regex must match the committed emojis.py markers."""
-    content = Path(update_emojis.EMOJIS_MODULE_PATH).read_text(encoding="utf-8")
-    assert update_emojis.EMOJI_SET_REGEX.search(content) is not None
+    content = Path(update_emojis._EMOJIS_MODULE_PATH).read_text(encoding="utf-8")
+    assert update_emojis._EMOJI_SET_REGEX.search(content) is not None
+
+
+def test_generated_emoji_set_round_trips_through_rewrite_regex(
+    update_emojis: ModuleType,
+) -> None:
+    """Generated literals survive regex substitution and parse back to the same set."""
+    emojis, _ = update_emojis._parse_emoji_test(_SAMPLE_EMOJI_TEST)
+    generated = update_emojis._generated_emoji_set_block(emojis)
+    stub = (
+        'header\n### EMOJIS START ###\nALL_EMOJIS = {"x"}\n### EMOJIS END ###\nfooter\n'
+    )
+    rewritten = update_emojis._EMOJI_SET_REGEX.sub(lambda _: generated, stub)
+    match = update_emojis._EMOJI_SET_REGEX.search(rewritten)
+    assert match is not None
+    assignment = next(
+        line for line in match.group(0).splitlines() if line.startswith("ALL_EMOJIS =")
+    )
+    parsed = ast.literal_eval(assignment.split("=", 1)[1].strip())
+    assert parsed == emojis
+    assert "👨‍👩‍👧" in rewritten
+    assert rewritten.startswith("header\n")
+    assert rewritten.endswith("\nfooter\n")
 
 
 def test_main_aborts_on_download_failure(
