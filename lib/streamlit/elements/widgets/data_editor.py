@@ -25,6 +25,7 @@ from typing import (
     Any,
     Final,
     Literal,
+    NoReturn,
     TypeAlias,
     TypeVar,
     Union,
@@ -283,9 +284,18 @@ def _indexes_have_compatible_structure(
 
 
 def _is_async_callable(callback: Any) -> bool:
-    """True for async functions and callable instances with async ``__call__``."""
-    # Unwrap ``functools.partial`` so a partial around an async function or an
-    # instance with async ``__call__`` is still rejected at call time.
+    """True for async functions and callable instances with async ``__call__``.
+
+    Unwraps ``functools.partial`` and ``__wrapped__`` (for example
+    ``functools.wraps``) so a decorated async function is still rejected when
+    ``st.data_editor`` is called. Wrappers that return a coroutine without
+    exposing ``__wrapped__`` cannot be detected here and are rejected when the
+    callback is invoked.
+    """
+    while isinstance(callback, functools.partial):
+        callback = callback.func
+    callback = inspect.unwrap(callback)
+    # ``__wrapped__`` may itself be a ``partial`` (decorator around a partial).
     while isinstance(callback, functools.partial):
         callback = callback.func
     if inspect.iscoroutinefunction(callback):
@@ -296,8 +306,16 @@ def _is_async_callable(callback: Any) -> bool:
     for cls in type(callback).__mro__:
         call_attr = cls.__dict__.get("__call__")
         if call_attr is not None:
-            return inspect.iscoroutinefunction(call_attr)
+            return inspect.iscoroutinefunction(inspect.unwrap(call_attr))
     return False
+
+
+def _raise_async_commit_edits_error() -> NoReturn:
+    """Raise the shared error for async ``commit_edits`` callbacks."""
+    raise StreamlitAPIException(
+        "st.data_editor: commit_edits does not support async callbacks.",
+        error_id="data-editor-async-commit-edits",
+    )
 
 
 def _compute_data_editor_signature(
@@ -1578,10 +1596,7 @@ class DataEditorMixin:
                     "data=pandas.Styler",
                 )
             if _is_async_callable(commit_edits):
-                raise StreamlitAPIException(
-                    "st.data_editor: commit_edits does not support async callbacks.",
-                    error_id="data-editor-async-commit-edits",
-                )
+                _raise_async_commit_edits_error()
 
         validate_width(width, allow_content=True)
         validate_height(
@@ -1891,9 +1906,17 @@ class DataEditorMixin:
             edited_df = data_df.copy(deep=True)
             _apply_dataframe_edits(edited_df, edits, dataframe_schema)
             try:
+                commit_result: object = commit_edits(data_df, edited_df, edits)
+                # Sync wrappers that return a coroutine (decorators without
+                # ``__wrapped__``, callable objects) bypass declaration-time
+                # detection. Reject them here with the same error and close the
+                # coroutine so it does not leak an unawaited-coroutine warning.
+                if inspect.iscoroutine(commit_result):
+                    commit_result.close()
+                    _raise_async_commit_edits_error()
                 committed_df, committed_arrow = (
                     _validate_edited_dataframe_compatibility(
-                        commit_edits(data_df, edited_df, edits),
+                        commit_result,
                         baseline_df=data_df,
                         baseline_arrow_schema=arrow_table.schema,
                         baseline_dataframe_schema=dataframe_schema,

@@ -18,8 +18,10 @@ from __future__ import annotations
 
 import copy
 import datetime
+import functools
 import json
 import unittest
+import warnings
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
@@ -2154,6 +2156,32 @@ class DataEditorCommitEditsValidationTest(DeltaGeneratorTestCase):
         )
         assert exc.value.error_id == "data-editor-async-commit-edits"
 
+    def test_not_supported_with_wrapped_async_callback(self) -> None:
+        """A functools.wraps decorator around an async function is rejected at call time."""
+
+        async def commit(
+            source: pd.DataFrame, edited: pd.DataFrame, edits: Any
+        ) -> pd.DataFrame:
+            return source
+
+        def as_sync(fn: Any) -> Any:
+            @functools.wraps(fn)
+            def wrapper(*args: Any, **kwargs: Any) -> Any:
+                return fn(*args, **kwargs)
+
+            return wrapper
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.data_editor(
+                pd.DataFrame({"a": [1]}),
+                key="editor",
+                commit_edits=as_sync(commit),
+            )
+        assert str(exc.value) == (
+            "st.data_editor: commit_edits does not support async callbacks."
+        )
+        assert exc.value.error_id == "data-editor-async-commit-edits"
+
     def test_not_supported_with_partial_async_callback(self) -> None:
         """functools.partial around an async function is rejected at call time."""
         import functools
@@ -2361,6 +2389,52 @@ class DataEditorCommitEditsFlowTest(DeltaGeneratorTestCase):
         )
         stored = self.script_run_ctx.session_state["editor"]
         assert stored["edited_rows"] == {0: {"a": 5}}
+
+    def test_coroutine_returning_wrapper_rejected_on_commit(self) -> None:
+        """A sync wrapper that returns a coroutine is rejected with the async error.
+
+        Wrappers without ``__wrapped__`` cannot be detected when
+        ``st.data_editor`` is declared. On the first commit they must still
+        raise the async-callback error (not a misleading return-type error)
+        and close the coroutine so it is not reported as never awaited.
+        """
+
+        async def async_commit(
+            source: pd.DataFrame, edited: pd.DataFrame, edits: Any
+        ) -> pd.DataFrame:
+            return source
+
+        def commit(
+            source: pd.DataFrame, edited: pd.DataFrame, edits: Any
+        ) -> pd.DataFrame:
+            return async_commit(source, edited, edits)
+
+        df = pd.DataFrame({"a": [1, 2]})
+        _, proto1 = self._render(df, key="editor", commit_edits=commit)
+        self._simulate_edit_rerun(proto1.id, _CELL_EDIT)
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            result, proto2 = self._render(df, key="editor", commit_edits=commit)
+
+        assert proto2.clear_edits is False
+        assert result["a"].tolist() == [1, 2]
+        messages = [
+            delta.new_element.exception.message
+            for delta in self.get_all_deltas_from_queue()
+            if delta.new_element.HasField("exception")
+        ]
+        assert any(
+            "commit_edits does not support async callbacks" in message
+            for message in messages
+        )
+        stored = self.script_run_ctx.session_state["editor"]
+        assert stored["edited_rows"] == {0: {"a": 5}}
+        assert not any(
+            issubclass(warning.category, RuntimeWarning)
+            and "never awaited" in str(warning.message)
+            for warning in caught
+        )
 
     def test_serialization_failure_after_commit_preserves_edits(self) -> None:
         """If serializing the committed frame fails, edits are preserved.
