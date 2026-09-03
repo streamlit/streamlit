@@ -18,6 +18,8 @@ Reproduces streamlit/streamlit#8765: binding_radio / binding_select plus
 on_select="rerun" must not duplicate Vega bind widgets.
 """
 
+from typing import Any
+
 import altair as alt
 import pandas as pd
 
@@ -44,7 +46,7 @@ df = pd.DataFrame(
 REGION_OPTIONS = ["USA", "Europe", "Japan"]
 
 
-def _make_chart(bind: alt.Binding, *, prefix: str) -> alt.Chart:
+def _make_chart(bind: alt.Binding, *, prefix: str) -> Any:
     """Scatter chart with a click selection on color and a fields-bound Origin filter.
 
     ``prefix`` makes Vega param names unique so radio widgets in different
