@@ -267,8 +267,6 @@ export default defineConfig([
       "@eslint-react/set-state-in-effect": "off",
       // We don't want to warn about empty fragments
       "@eslint-react/jsx-no-useless-fragment": "off",
-      // Oxlint react/no-unstable-nested-components is the source of truth.
-      "@eslint-react/no-nested-component-definitions": "off",
       // Prevent context values from being recreated on every render
       "@eslint-react/no-unstable-context-value": "error",
       // We want to enforce display names for context providers for better debugging
@@ -507,6 +505,15 @@ export default defineConfig([
       "vitest/no-focused-tests": "off",
       "vitest/no-commented-out-tests": "off",
       "no-restricted-imports": getNoRestrictedImports([], true),
+    },
+  },
+  // Vendored tests are ignored by oxlint; keep the ESLint copies on there.
+  {
+    files: ["**/vendor/**"],
+    rules: {
+      "preserve-caught-error": "error",
+      "vitest/no-focused-tests": "error",
+      "vitest/no-commented-out-tests": "error",
     },
   },
   // Specific test files that need to access window.__streamlit for testing the config module itself
