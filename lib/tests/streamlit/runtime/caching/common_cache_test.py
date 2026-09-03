@@ -419,6 +419,44 @@ class CommonCacheTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
     )
+    def test_detached_child_cannot_mutate_cached_replay(
+        self, _, cache_decorator
+    ) -> None:
+        """A child writing after its parent returns cannot alter cached replay."""
+
+        async def run_detached_child_then_hit() -> None:
+            child_started = asyncio.Event()
+            allow_child_write = asyncio.Event()
+            child_task: asyncio.Task[None] | None = None
+
+            async def write_late() -> None:
+                child_started.set()
+                await allow_child_write.wait()
+                st.text("late")
+
+            @cache_decorator(show_spinner=False)
+            async def cached_text() -> None:
+                nonlocal child_task
+                st.text("captured")
+                child_task = asyncio.create_task(write_late())
+                await child_started.wait()
+
+            await cached_text()
+            assert child_task is not None
+
+            allow_child_write.set()
+            await child_task
+
+            self.clear_queue()
+            await cached_text()
+
+        asyncio.run(run_detached_child_then_hit())
+
+        assert self.get_text_delta_contents() == ["captured"]
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_cached_st_function_replay_nested(self, _, cache_decorator):
         @cache_decorator
         def inner(i):

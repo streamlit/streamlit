@@ -71,6 +71,15 @@ class BlockMsgData:
 MsgData: TypeAlias = ElementMsgData | BlockMsgData
 
 
+@dataclass
+class _CachedMessageCapture:
+    """Mutable state shared with child contexts for one cached invocation."""
+
+    messages: list[MsgData]
+    seen_dgs: set[str]
+    active: bool = True
+
+
 R = TypeVar("R")
 
 
@@ -133,14 +142,11 @@ class CachedMessageReplayContext:
 
     def __init__(self, cache_type: CacheType) -> None:
         self._cached_message_stack: contextvars.ContextVar[
-            tuple[list[MsgData], ...]
+            tuple[_CachedMessageCapture, ...]
         ] = contextvars.ContextVar(f"cached_message_stack_{cache_type}", default=())
-        self._seen_dg_stack: contextvars.ContextVar[tuple[set[str], ...]] = (
-            contextvars.ContextVar(f"seen_dg_stack_{cache_type}", default=())
-        )
-        self._most_recent_messages_var: contextvars.ContextVar[list[MsgData] | None] = (
-            contextvars.ContextVar(f"most_recent_messages_{cache_type}", default=None)
-        )
+        self._most_recent_messages_var: contextvars.ContextVar[
+            tuple[MsgData, ...] | None
+        ] = contextvars.ContextVar(f"most_recent_messages_{cache_type}", default=None)
         self._media_data_var: contextvars.ContextVar[tuple[MediaMsgData, ...]] = (
             contextvars.ContextVar(f"media_data_{cache_type}", default=())
         )
@@ -149,7 +155,7 @@ class CachedMessageReplayContext:
     @property
     def _most_recent_messages(self) -> list[MsgData]:
         messages = self._most_recent_messages_var.get()
-        return messages if messages is not None else []
+        return list(messages) if messages is not None else []
 
     @property
     def _media_data(self) -> list[MediaMsgData]:
@@ -164,12 +170,9 @@ class CachedMessageReplayContext:
         It allows us to track any `st.foo` messages that are generated from inside the
         function for playback during cache retrieval.
         """
-        messages: list[MsgData] = []
+        capture = _CachedMessageCapture(messages=[], seen_dgs=set())
         message_stack_token = self._cached_message_stack.set(
-            (*self._cached_message_stack.get(), messages)
-        )
-        seen_dg_stack_token = self._seen_dg_stack.set(
-            (*self._seen_dg_stack.get(), set())
+            (*self._cached_message_stack.get(), capture)
         )
         # If we're in a cached function. To disallow usage of widget-like element,
         # we need to set the in_cached_function to true for this cached function run
@@ -179,9 +182,12 @@ class CachedMessageReplayContext:
         try:
             yield
         finally:
-            self._most_recent_messages_var.set(messages)
+            # Child tasks inherit the same capture object. Deactivate it before
+            # publishing an immutable snapshot so detached children cannot mutate a
+            # cache entry after its parent invocation has returned.
+            capture.active = False
+            self._most_recent_messages_var.set(tuple(capture.messages))
             self._cached_message_stack.reset(message_stack_token)
-            self._seen_dg_stack.reset(seen_dg_stack_token)
             in_cached_function.reset(in_cached_function_token)
 
     def save_element_message(
@@ -200,7 +206,9 @@ class CachedMessageReplayContext:
         if not runtime.exists() or not in_cached_function.get():
             return
 
-        message_stack = self._cached_message_stack.get()
+        message_stack = tuple(
+            capture for capture in self._cached_message_stack.get() if capture.active
+        )
         if message_stack:
             id_to_save = self.select_dg_to_save(invoked_dg_id, used_dg_id)
 
@@ -214,15 +222,15 @@ class CachedMessageReplayContext:
                 media_data,
                 layout_config,
             )
-            for msgs in message_stack:
-                msgs.append(element_msg_data)
+            for capture in message_stack:
+                capture.messages.append(element_msg_data)
 
         # Reset instance state, now that it has been used for the
         # associated element.
         self._media_data_var.set(())
 
-        for s in self._seen_dg_stack.get():
-            s.add(returned_dg_id)
+        for capture in message_stack:
+            capture.seen_dgs.add(returned_dg_id)
 
     def save_block_message(
         self,
@@ -234,11 +242,18 @@ class CachedMessageReplayContext:
         if not in_cached_function.get():
             return
 
+        captures = tuple(
+            capture for capture in self._cached_message_stack.get() if capture.active
+        )
+        if not captures:
+            return
+
         id_to_save = self.select_dg_to_save(invoked_dg_id, used_dg_id)
-        for msgs in self._cached_message_stack.get():
-            msgs.append(BlockMsgData(block_proto, id_to_save, returned_dg_id))
-        for s in self._seen_dg_stack.get():
-            s.add(returned_dg_id)
+        for capture in captures:
+            capture.messages.append(
+                BlockMsgData(block_proto, id_to_save, returned_dg_id)
+            )
+            capture.seen_dgs.add(returned_dg_id)
 
     def select_dg_to_save(self, invoked_id: str, acting_on_id: str) -> str:
         """Select the id of the DG that this message should be invoked on
@@ -250,8 +265,10 @@ class CachedMessageReplayContext:
         acting_on_id is the DG the st function ultimately runs on, which may be different
         if the invoked DG delegated to another one because it was in a `with` block.
         """
-        seen_dg_stack = self._seen_dg_stack.get()
-        if seen_dg_stack and acting_on_id in seen_dg_stack[-1]:
+        active_captures = tuple(
+            capture for capture in self._cached_message_stack.get() if capture.active
+        )
+        if active_captures and acting_on_id in active_captures[-1].seen_dgs:
             return acting_on_id
         return invoked_id
 
