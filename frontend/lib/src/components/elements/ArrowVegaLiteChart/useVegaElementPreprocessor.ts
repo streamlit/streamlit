@@ -35,7 +35,12 @@ type VegaLiteSpec = Record<string, unknown>
 interface VegaLiteParam {
   select?:
     | string
-    | { type?: string; encodings?: string[]; [key: string]: unknown }
+    | {
+        type?: string
+        encodings?: string[]
+        fields?: string[]
+        [key: string]: unknown
+      }
   [key: string]: unknown
 }
 
@@ -150,8 +155,8 @@ function sanitizeUsermetaEmbedOptions(spec: VegaLiteSpec): void {
 
 /**
  * Prepares the vega-lite spec for selections by transforming the select parameters
- * to a full object specification and by automatically adding encodings (if missing)
- * to point selections.
+ * to a full object specification and by adding encodings to point selections
+ * that specify neither encodings nor fields.
  *
  * The changes are applied in-place to the spec object.
  *
@@ -193,12 +198,16 @@ function prepareSpecForSelections(spec: VegaLiteSpec): void {
       if (
         param.select.type === "point" &&
         !("encodings" in param.select) &&
-        isNullOrUndefined(param.select.encodings)
+        isNullOrUndefined(param.select.encodings) &&
+        !("fields" in param.select) &&
+        isNullOrUndefined(param.select.fields)
       ) {
-        // If encodings are not specified by the user, we add all the encodings from
-        // the chart to the selection parameter. This is required so that points
-        // selections are correctly resolved to a PointSelection and not an IndexSelection:
+        // Without encodings or fields, Vega-Lite resolves a point selection as
+        // IndexSelection. Add the chart encodings so it becomes a PointSelection:
         // https://github.com/altair-viz/altair/issues/3285#issuecomment-1858860696
+        // If fields are already set, leave the param unchanged: fields already
+        // project the selection, and unioning encodings would duplicate bind
+        // widgets and break scalar selection values.
         param.select.encodings = Object.keys(
           spec.encoding as Record<string, unknown>
         )
