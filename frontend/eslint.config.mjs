@@ -255,6 +255,8 @@ export default defineConfig([
       "no-console": "error",
       // Prevent unintentional use of `debugger`
       "no-debugger": "error",
+      // Oxlint owns this check (and the other zero-hit eslint/* lock-ins).
+      "preserve-caught-error": "off",
       // We do want to discourage the usage of flushSync
       "@eslint-react/dom-no-flush-sync": "error",
       // This was giving false positives
@@ -265,6 +267,8 @@ export default defineConfig([
       "@eslint-react/set-state-in-effect": "off",
       // We don't want to warn about empty fragments
       "@eslint-react/jsx-no-useless-fragment": "off",
+      // Oxlint react/no-unstable-nested-components is the source of truth.
+      "@eslint-react/no-nested-component-definitions": "off",
       // Prevent context values from being recreated on every render
       "@eslint-react/no-unstable-context-value": "error",
       // We want to enforce display names for context providers for better debugging
@@ -499,6 +503,9 @@ export default defineConfig([
       "testing-library/prefer-find-by": "error",
       // Enforce consistent use of it() over test()
       "vitest/consistent-test-it": ["error", { fn: "it" }],
+      // Oxlint vitest/no-focused-tests and no-commented-out-tests own these.
+      "vitest/no-focused-tests": "off",
+      "vitest/no-commented-out-tests": "off",
       "no-restricted-imports": getNoRestrictedImports([], true),
     },
   },
