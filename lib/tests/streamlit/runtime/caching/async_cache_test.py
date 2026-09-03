@@ -79,11 +79,13 @@ def test_async_generator_function_raises_at_decoration_time(
             r"iterators.*Consume the async generator and return a materialized result "
             r"from an ordinary coroutine function"
         ),
-    ):
+    ) as exc_info:
 
         @decorator
         async def stream() -> AsyncIterator[int]:
             yield 42
+
+    assert exc_info.value.error_id == "async-generator-function-not-cacheable"
 
 
 @pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)

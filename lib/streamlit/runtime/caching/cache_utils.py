@@ -570,7 +570,8 @@ class CachedFuncInfo(Generic[P, R]):
                 "Async-generator functions cannot be cached. Async generators produce "
                 "streams that are one-shot iterators, rather than a single cacheable "
                 "result. Consume the async generator and return a materialized result "
-                "from an ordinary coroutine function if appropriate."
+                "from an ordinary coroutine function if appropriate.",
+                error_id="async-generator-function-not-cacheable",
             )
         self.is_async = inspect.iscoroutinefunction(func)
         if self.is_async and refresh_mode == "background":
