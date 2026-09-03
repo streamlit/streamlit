@@ -1045,8 +1045,8 @@ describe("useVegaElementPreprocessor", () => {
         if (!("bind" in signal)) {
           return false
         }
-        const bind = signal.bind as { input?: string } | undefined
-        return bind?.input === "radio"
+        const signalBind = signal.bind as { input?: string } | undefined
+        return signalBind?.input === "radio"
       })
       expect(radioBinds).toHaveLength(1)
     })

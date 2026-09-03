@@ -195,6 +195,9 @@ function prepareSpecForSelections(spec: VegaLiteSpec): void {
         return
       }
 
+      // Point selections that already declare encodings or fields are projected
+      // by the user. Injecting encodings on top of fields unions the projections,
+      // which duplicates bound widgets and breaks scalar selection values.
       if (
         param.select.type === "point" &&
         !("encodings" in param.select) &&
@@ -205,9 +208,6 @@ function prepareSpecForSelections(spec: VegaLiteSpec): void {
         // Without encodings or fields, Vega-Lite resolves a point selection as
         // IndexSelection. Add the chart encodings so it becomes a PointSelection:
         // https://github.com/altair-viz/altair/issues/3285#issuecomment-1858860696
-        // If fields are already set, leave the param unchanged: fields already
-        // project the selection, and unioning encodings would duplicate bind
-        // widgets and break scalar selection values.
         param.select.encodings = Object.keys(
           spec.encoding as Record<string, unknown>
         )
