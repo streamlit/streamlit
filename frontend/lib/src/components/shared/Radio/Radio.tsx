@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useEffect, useState } from "react"
+import {
+  memo,
+  ReactElement,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
@@ -25,7 +32,7 @@ import { LabelVisibilityOptions } from "~lib/util/utils"
 import {
   StyledRadioButton,
   StyledRadioCaption,
-  StyledRadioContent,
+  StyledRadioCaptionSpacer,
   StyledRadioField,
   StyledRadioGroup,
   StyledRadioInner,
@@ -43,6 +50,108 @@ export interface Props {
   label?: string
   labelVisibility?: LabelVisibilityOptions
   help?: string
+}
+
+interface RadioOptionProps {
+  index: number
+  option: string
+  /** Empty when this option has no caption. */
+  caption: string
+  /** When true, renders a blank caption line so horizontal rows stay aligned. */
+  needsSpacer: boolean
+  /**
+   * The whole group is disabled. Only the caption reads this; the label and the
+   * circle use React Aria's per-option state instead.
+   */
+  isDisabled: boolean
+}
+
+/**
+ * One option in the group: the clickable label, plus the caption when the option
+ * has one. Each option is its own component so it can own the input ref that its
+ * caption's click handler needs — `RadioField` takes a `RefObject`, and hooks
+ * cannot run inside a loop.
+ */
+function RadioOption({
+  index,
+  option,
+  caption,
+  needsSpacer,
+  isDisabled,
+}: Readonly<RadioOptionProps>): ReactElement {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  /**
+   * Selects this option when its caption is clicked. The caption sits outside the
+   * label, so nothing native does this. It stays a plain pointer target — no
+   * role, no tab stop — because the radio input is already the accessible
+   * control.
+   */
+  const handleCaptionClick = useCallback((): void => {
+    // A click that ends a text selection should not also change the selection.
+    // getSelection() can be null, so compare against false rather than negating.
+    if (window.getSelection()?.isCollapsed === false) {
+      return
+    }
+
+    // Go through the input rather than reimplementing a label click, which keeps
+    // React Aria the only thing deciding what a selection means: it ignores a
+    // selection that changes nothing, so this cannot rerun the script for a
+    // no-op, and a disabled input ignores the click outright.
+    inputRef.current?.click()
+
+    // A programmatic click does not run the browser's focus steps, so move focus
+    // explicitly — otherwise arrow keys do nothing until the group is tabbed
+    // back into.
+    inputRef.current?.focus()
+  }, [])
+
+  return (
+    <StyledRadioField value={index.toString()} inputRef={inputRef}>
+      <StyledRadioButton data-testid="stRadioOption">
+        {({ isSelected: isChecked, isDisabled: isOptionDisabled }) => (
+          <StyledRadioRow>
+            <StyledRadioOuter
+              $isSelected={isChecked}
+              $isDisabled={isOptionDisabled}
+            >
+              <StyledRadioInner $isSelected={isChecked} />
+            </StyledRadioOuter>
+            <StreamlitMarkdown source={option} allowHTML={false} isLabel />
+          </StyledRadioRow>
+        )}
+      </StyledRadioButton>
+      {caption !== "" && (
+        <StyledRadioCaption
+          slot="description"
+          elementType="div"
+          data-testid="stRadioCaption"
+          onClick={handleCaptionClick}
+          $isDisabled={isDisabled}
+        >
+          <StreamlitMarkdown
+            source={caption}
+            allowHTML={false}
+            isCaption
+            isLabel
+          />
+        </StyledRadioCaption>
+      )}
+      {needsSpacer && (
+        <StyledRadioCaptionSpacer
+          aria-hidden="true"
+          data-testid="stRadioSpacer"
+        >
+          <StreamlitMarkdown
+            source="&nbsp;"
+            allowHTML={false}
+            isCaption
+            isLabel
+          />
+        </StyledRadioCaptionSpacer>
+      )}
+    </StyledRadioField>
+  )
 }
 
 function Radio({
@@ -85,13 +194,6 @@ function Radio({
   // Either the user specified it as disabled or it's disabled because we don't have any options
   const shouldDisable = disabled || !hasOptions
 
-  const spacerNeeded = (caption: string): string => {
-    // When captions are provided for only some options in horizontal layout
-    // we need to add a spacer for the options without captions
-    const spacer = caption === "" && horizontal && hasCaptions
-    return spacer ? "&nbsp;" : caption
-  }
-
   return (
     <div className="stRadio" data-testid="stRadio">
       <WidgetLabel
@@ -117,43 +219,24 @@ function Radio({
         $horizontal={horizontal}
         $hasCaptions={hasCaptions}
       >
-        {cleanedOptions.map((option: string, index: number) => (
-          <StyledRadioField
-            // eslint-disable-next-line @eslint-react/no-array-index-key
-            key={index}
-            value={index.toString()}
-          >
-            <StyledRadioButton data-testid="stRadioOption">
-              {({ isSelected, isDisabled }) => (
-                <StyledRadioContent $isDisabled={isDisabled}>
-                  <StyledRadioRow>
-                    <StyledRadioOuter
-                      $isSelected={isSelected}
-                      $isDisabled={isDisabled}
-                    >
-                      <StyledRadioInner $isSelected={isSelected} />
-                    </StyledRadioOuter>
-                    <StreamlitMarkdown
-                      source={option}
-                      allowHTML={false}
-                      isLabel
-                    />
-                  </StyledRadioRow>
-                  {hasCaptions && (
-                    <StyledRadioCaption>
-                      <StreamlitMarkdown
-                        source={spacerNeeded(captions[index])}
-                        allowHTML={false}
-                        isCaption
-                        isLabel
-                      />
-                    </StyledRadioCaption>
-                  )}
-                </StyledRadioContent>
-              )}
-            </StyledRadioButton>
-          </StyledRadioField>
-        ))}
+        {cleanedOptions.map((option: string, index: number) => {
+          // `captions` is not required to be as long as `options`, so an index
+          // past its end reads as a missing caption rather than `undefined`.
+          const caption = captions[index] ?? ""
+
+          return (
+            <RadioOption
+              // eslint-disable-next-line @eslint-react/no-array-index-key
+              key={index}
+              index={index}
+              option={option}
+              caption={caption}
+              // Only horizontal rows with partial captions need the space kept.
+              needsSpacer={caption === "" && horizontal && hasCaptions}
+              isDisabled={shouldDisable}
+            />
+          )
+        })}
       </StyledRadioGroup>
     </div>
   )

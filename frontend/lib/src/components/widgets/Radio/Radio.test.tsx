@@ -151,8 +151,10 @@ describe("Radio widget", () => {
     const props = getProps({ captions: ["caption1", "", ""] })
     render(<Radio {...props} />)
 
-    expect(screen.getAllByTestId("stCaptionContainer")).toHaveLength(3)
-    expect(screen.getByText("caption1")).toBeInTheDocument()
+    // Blank captions render nothing, so they cannot claim the description slot
+    // and point aria-describedby at empty content.
+    expect(screen.getAllByTestId("stCaptionContainer")).toHaveLength(1)
+    expect(screen.getByText("caption1")).toBeVisible()
   })
 
   it("shows a message when there are no options to be shown", () => {

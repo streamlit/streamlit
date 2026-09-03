@@ -114,6 +114,64 @@ def test_help_tooltip_works(app: Page):
     expect_help_tooltip(app, element_with_help, "help text")
 
 
+def test_captions_are_option_descriptions(app: Page):
+    """Captions reach assistive tech as descriptions, not as part of the name."""
+    with_captions = get_radio(app, "radio 10 (with captions)")
+
+    # The accessible name is the option text alone. Captions also render as
+    # sibling nodes, which this snapshot deliberately leaves unpinned: the
+    # contract under test is the names, not how caption markdown nests.
+    expect(with_captions).to_match_aria_snapshot(
+        """
+        - radiogroup "radio 10 (with captions)":
+          - radio "A" [checked]
+          - radio "B"
+          - radio "C"
+          - radio "D"
+          - radio "E"
+          - radio "F"
+          - radio "G"
+        """
+    )
+
+    # The caption is reachable instead through aria-describedby.
+    option_a = get_radio_option(with_captions, "A").locator("input")
+    caption_a = with_captions.get_by_test_id("stRadioCaption").first
+    expect(caption_a).to_have_text("bold text")
+    # React Aria joins several ids into aria-describedby (group description,
+    # error message), so match the caption's id as one entry rather than the
+    # whole value.
+    caption_id = re.escape(caption_a.get_attribute("id") or "")
+    expect(option_a).to_have_attribute(
+        "aria-describedby", re.compile(rf"(^|\s){caption_id}(\s|$)")
+    )
+
+    # An empty caption must not point the description at blank content.
+    horizontal = get_radio(app, "radio 11 (horizontal, captions)")
+    # "maybe" is the option whose caption is "".
+    no_caption = get_radio_option(horizontal, "maybe").locator("input")
+    # ".*" matches any present value, so this passes only when absent.
+    expect(no_caption).not_to_have_attribute("aria-describedby", re.compile(r".*"))
+
+    # A sibling in the same group still gets one, so the check above is not just
+    # observing a group-wide absence.
+    with_caption = get_radio_option(horizontal, "yes").locator("input")
+    expect(with_caption).to_have_attribute("aria-describedby", re.compile(r"\S"))
+
+    # Clicking a caption selects its option. The caption sits outside the label,
+    # so this comes from an explicit handler rather than label semantics.
+    # Done last because it changes the app's state.
+    #
+    # The handler also ignores a click that ends a text selection. That is not
+    # asserted here: synthetic mouse events do not drive native text selection in
+    # headless Chromium (a stepped drag across the caption leaves getSelection()
+    # empty), and a Range set from script is collapsed by mousedown before the
+    # click arrives. Radio.test.tsx covers it by stubbing getSelection instead.
+    with_captions.get_by_text("italics text").click()
+    wait_for_app_run(app)
+    expect_markdown(app, "value 10: B")
+
+
 def test_radio_has_correct_default_values(app: Page):
     """Verify initial markdown values using helper."""
     expect_markdown(app, "value 1: female")
@@ -179,8 +237,8 @@ def test_set_value_correctly_when_click(app: Page):
     # radio 9 (markdown options) -> italics text
     select_radio_option(app, option="italics text", label="radio 9 (markdown options)")
 
-    # radio 10 (with captions) -> B (match at start to avoid caption text)
-    select_radio_option(app, option=re.compile(r"^B"), label="radio 10 (with captions)")
+    # radio 10 (with captions) -> B
+    select_radio_option(app, option="B", label="radio 10 (with captions)")
 
     # radio 11 (horizontal, captions) -> maybe
     select_radio_option(app, option="maybe", label="radio 11 (horizontal, captions)")

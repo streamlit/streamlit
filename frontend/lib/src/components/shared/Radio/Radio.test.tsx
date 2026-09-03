@@ -14,13 +14,16 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { render } from "~lib/test_util"
+import { lightTheme } from "~lib/theme/themeConfigs"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import Radio, { Props } from "./Radio"
+
+const { bodyText, fadedText40 } = lightTheme.emotion.colors
 
 const getProps = (props: Partial<Props> = {}): Props => ({
   disabled: false,
@@ -123,10 +126,194 @@ describe("Radio widget", () => {
     const props = getProps({ captions: ["caption1", "", "caption2"] })
     render(<Radio {...props} />)
 
-    expect(screen.getAllByTestId("stCaptionContainer")).toHaveLength(3)
+    // A blank caption renders nothing, so it cannot claim the description slot
+    // and point aria-describedby at empty content.
+    expect(screen.getAllByTestId("stCaptionContainer")).toHaveLength(2)
 
-    expect(screen.getByText("caption1")).toBeInTheDocument()
-    expect(screen.getByText("caption2")).toBeInTheDocument()
+    expect(screen.getByText("caption1")).toBeVisible()
+    expect(screen.getByText("caption2")).toBeVisible()
+  })
+
+  it("exposes a caption as the option's accessible description", () => {
+    const props = getProps({ captions: ["fast", "slow", "medium"] })
+    render(<Radio {...props} />)
+
+    expect(screen.getAllByRole("radio")[0]).toHaveAccessibleDescription("fast")
+  })
+
+  it("keeps a caption out of the option's accessible name", () => {
+    const props = getProps({ captions: ["fast", "slow", "medium"] })
+    render(<Radio {...props} />)
+
+    // Separate from the description assertion above so that a caption leaking
+    // back into the name fails on its own rather than being masked by it.
+    expect(screen.getAllByRole("radio")[0]).toHaveAccessibleName("a")
+  })
+
+  it("reserves caption space in horizontal groups without describing the option", () => {
+    const props = getProps({
+      horizontal: true,
+      captions: ["Opt in", "", "Opt out"],
+    })
+    render(<Radio {...props} />)
+
+    // The spacer keeps partially-captioned horizontal rows aligned, so it has
+    // to render content — but it must stay out of the accessible tree rather
+    // than becoming a blank description.
+    const spacer = screen.getByTestId("stRadioSpacer")
+    expect(spacer).toHaveAttribute("aria-hidden", "true")
+    expect(screen.getAllByRole("radio")[1]).not.toHaveAccessibleDescription()
+  })
+
+  it("renders no caption spacer in vertical groups", () => {
+    const props = getProps({ horizontal: false, captions: ["Opt in", "", ""] })
+    render(<Radio {...props} />)
+
+    // Vertical rows stack from the top, so nothing needs its space reserved.
+    expect(screen.queryByTestId("stRadioSpacer")).not.toBeInTheDocument()
+  })
+
+  it.each([
+    { disabled: true, color: fadedText40, cursor: "not-allowed" },
+    { disabled: false, color: bodyText, cursor: "pointer" },
+  ])(
+    "dims text and sets the click cursors when disabled=$disabled",
+    ({ disabled, color, cursor }) => {
+      const props = getProps({
+        disabled,
+        captions: ["fast", "slow", "medium"],
+      })
+      render(<Radio {...props} />)
+
+      // The field's data-disabled rule sets the colour that both the option text
+      // and the caption inherit. The label and the caption are each clickable,
+      // so both carry the cursor themselves.
+      expect(screen.getAllByTestId("stCaptionContainer")[0]).toHaveStyle({
+        color,
+      })
+      // Scoped to the option: the widget label also renders a markdown
+      // container, and it gets these colours from StyledWidgetLabel instead.
+      expect(
+        within(screen.getAllByTestId("stRadioOption")[0]).getByTestId(
+          "stMarkdownContainer"
+        )
+      ).toHaveStyle({ color })
+      expect(screen.getAllByTestId("stRadioOption")[0]).toHaveStyle({ cursor })
+      expect(screen.getAllByTestId("stRadioCaption")[0]).toHaveStyle({
+        cursor,
+      })
+    }
+  )
+
+  it("selects an option when its caption is clicked", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const props = getProps({
+      onChange,
+      value: 0,
+      captions: ["fast", "slow", "medium"],
+    })
+    render(<Radio {...props} />)
+    const radioOptions = screen.getAllByRole("radio")
+
+    // The caption sits outside the label, so this click target comes from an
+    // explicit handler rather than from label semantics.
+    await user.click(screen.getByText("slow"))
+
+    expect(onChange).toHaveBeenCalledTimes(1)
+    expect(onChange).toHaveBeenCalledWith(1)
+    expect(radioOptions[1]).toBeChecked()
+    expect(radioOptions[0]).not.toBeChecked()
+    // Focus has to land on the input, as it does when the label is clicked, or
+    // arrow keys do nothing until the user tabs back into the group.
+    expect(radioOptions[1]).toHaveFocus()
+  })
+
+  it("does not fire onChange when the selected option's caption is clicked", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const props = getProps({
+      onChange,
+      value: 1,
+      captions: ["fast", "slow", "medium"],
+    })
+    render(<Radio {...props} />)
+
+    // React Aria drops a no-op selection on the label, so the caption must too:
+    // otherwise this reruns the script and dirties an enclosing form for a click
+    // that changes nothing.
+    await user.click(screen.getByText("slow"))
+
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.getAllByRole("radio")[1]).toBeChecked()
+  })
+
+  it("does not select an option when a click ends a text selection", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const props = getProps({
+      onChange,
+      value: 0,
+      captions: ["fast", "slow", "medium"],
+    })
+    render(<Radio {...props} />)
+
+    // Dragging across caption text ends in a click, which must not also answer
+    // the question. jsdom has no real selection, so report a live one.
+    const selection = { isCollapsed: false } as Selection
+    const getSelectionSpy = vi
+      .spyOn(window, "getSelection")
+      .mockReturnValue(selection)
+
+    await user.click(screen.getByText("slow"))
+
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.getAllByRole("radio")[1]).not.toBeChecked()
+
+    // With the selection collapsed again, the same click does select.
+    getSelectionSpy.mockReturnValue({ isCollapsed: true } as Selection)
+    await user.click(screen.getByText("slow"))
+
+    expect(onChange).toHaveBeenCalledWith(1)
+    getSelectionSpy.mockRestore()
+  })
+
+  it("does not select an option when a disabled caption is clicked", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const props = getProps({
+      onChange,
+      disabled: true,
+      captions: ["fast", "slow", "medium"],
+    })
+    render(<Radio {...props} />)
+
+    await user.click(screen.getByText("slow"))
+
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.getAllByRole("radio")[1]).not.toBeChecked()
+  })
+
+  it("treats options past the end of captions as having no caption", () => {
+    // `st.radio` does not require captions to be as long as options, so an
+    // out-of-range read must not describe the option with empty content.
+    const props = getProps({ captions: ["only one"] })
+    render(<Radio {...props} />)
+    const radioOptions = screen.getAllByRole("radio")
+
+    expect(radioOptions[0]).toHaveAccessibleDescription("only one")
+    expect(radioOptions[1]).not.toHaveAccessibleDescription()
+    expect(radioOptions[2]).not.toHaveAccessibleDescription()
+    expect(screen.getAllByTestId("stCaptionContainer")).toHaveLength(1)
+  })
+
+  it("gives an option with a blank caption no description", () => {
+    const props = getProps({ captions: ["fast", "", "medium"] })
+    render(<Radio {...props} />)
+    const radioOptions = screen.getAllByRole("radio")
+
+    expect(radioOptions[1]).not.toHaveAccessibleDescription()
+    expect(radioOptions[1]).toHaveAccessibleName("b")
   })
 
   it("has the correct captions", () => {
