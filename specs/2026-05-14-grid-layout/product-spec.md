@@ -180,7 +180,7 @@ principle keeps illustrating the abbreviation rather than the command.
 | --- | --- | --- | --- |
 | `columns` | `"auto"` or `int` | `"auto"` | Maximum number of equal-width columns. `"auto"` creates as many columns as fit the available container width. An integer caps the grid at that many columns and, when `wrap=True`, wraps to fewer columns when cells would become narrower than `min_column_width`. Must be `>= 1`. |
 | `min_column_width` | `"auto"` or `int` | `"auto"` | Minimum preferred cell width. `"auto"` (the default) is resolved on the frontend in rem and grows when `border=True` so cell padding does not eat the content floor (see [Auto minimum width](#auto-minimum-width)). A positive integer is an explicit outer cell width in pixels and is *not* padded on top of — same as `width=200`. When `wrap=True`, the grid wraps to fewer columns before cells would become narrower than this. When `wrap=False`, cells shrink until this width, then the grid scrolls horizontally (see [No-wrap behavior](#no-wrap-behavior)). |
-| `wrap` | `bool` | `True` | Whether the grid may wrap to fewer columns when the container is too narrow. Same name and layout-container default as [`st.container` / `st.columns`](../2026-07-23-horizontal-wrap-control/product-spec.md): `True` allows wrapping (today's behavior); `False` keeps the declared column count and scrolls locally. Invalid with `columns="auto"`. Not an adaptive `None` default — grid is a layout container, not a control. |
+| `wrap` | `bool` | `True` | Whether the grid may wrap to fewer columns when the container is too narrow. Same name and layout-container default as [`st.container` / `st.columns`](../2026-07-23-horizontal-wrap-control/product-spec.md): `True` allows wrapping (today's behavior); `False` keeps the declared column count and scrolls locally. `wrap=False` is invalid with `columns="auto"`. Not an adaptive `None` default — grid is a layout container, not a control. |
 | `gap` | gap size, `None`, or `(row_gap, column_gap)` | `"small"` | Space between cells. Accepts exactly what `st.columns` / `st.container` accept: the named scale (`"xxsmall"`, `"xsmall"`, `"small"`, `"medium"`, `"large"`, `"xlarge"`, `"xxlarge"`), a non-negative pixel integer such as `gap=20`, or `None` for no gap. A single value sets both row and column gaps; the optional `(row_gap, column_gap)` tuple is an additive grid-specific extension for asymmetric spacing (see note below). |
 | `vertical_alignment` | `"top"`, `"center"`, or `"bottom"` | `"top"` | Vertical alignment of a direct child inside its grid cell when the cell is taller than the child. Uses CSS "safe" alignment so oversized content stays reachable instead of overflowing past the cell's start edge (see [Risks](#risks) for the browser-support fallback). |
 | `border` | `bool` | `False` | Whether to show a border and padding around each grid cell, matching the visual language of `st.columns(border=True)` and `st.container(border=True)`. |
@@ -736,7 +736,8 @@ with st.grid("auto", min_column_width=72, gap="xsmall"):  # compact chips; overr
 ```python
 import streamlit as st
 
-grid = st.grid(3, min_column_width=320, gap=("medium", "small"), border=True)  # charts need room
+# Charts need room; min_column_width is an explicit pixel override of auto.
+grid = st.grid(3, min_column_width=320, gap=("medium", "small"), border=True)
 
 with grid.container():
     st.subheader("Revenue")
