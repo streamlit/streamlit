@@ -13,15 +13,10 @@ external ASGI server. The method starts the same embedded ASGI server runner tha
 `streamlit run` uses for ASGI apps, so `python app.py` and `streamlit run app.py` have
 the same runtime behavior for `st.App` launcher modules.
 
-`st.App` also accepts a zero-argument synchronous callable (`st.App(main)`), matching
-`st.Page`. That is the supported same-file launcher: the app body and `app.run()` live in
-one module, without the `__main__` double-start hazard of `st.App(__file__)`.
-
 > [!NOTE]
 > This is a follow-up to [`st.App`](../2025-12-23-st-app/product-spec.md) (ASGI entry
 > point). It only applies to apps built with `st.App`; it does not change how
-> traditional (non-`st.App`) scripts run. The callable constructor is an amendment to
-> that spec's `script_path: str | Path` signature.
+> traditional (non-`st.App`) scripts run.
 
 ## Problem
 
@@ -57,12 +52,11 @@ under `streamlit run` and `uvicorn`). That means `if __name__ == "__main__"` is 
 for the launcher only under `python app.py`, so there is no risk of double-starting a
 server under the other launcher modes.
 
-Path-based launchers such as `app = st.App("dashboard.py")` remain the split-file
-pattern. Same-file launchers use a callable entrypoint (`app = st.App(main)`):
-ScriptRunner invokes `main()` directly and does not exec the launcher as `__main__`,
-so `if __name__ == "__main__": app.run()` does not re-enter during app execution.
-`st.App(__file__)` is still not the supported same-file pattern, because file-based
-scripts *are* executed in a fake `__main__` module.
+This proposal intentionally focuses on launcher modules such as `app = st.App("dashboard.py")`.
+Same-file apps use a callable entrypoint (`st.App(main)`), specified on
+[`st.App`](../2025-12-23-st-app/product-spec.md). `st.App(__file__)` is not supported:
+file-based scripts execute in a fake `__main__` module, so
+`if __name__ == "__main__": app.run()` would run again during app execution.
 
 ## Proposal
 
@@ -70,12 +64,6 @@ scripts *are* executed in a fake `__main__` module.
 
 ```python
 class App:
-    def __init__(
-        self,
-        script_path: str | Path | Callable[[], None],
-        ...
-    ) -> None: ...
-
     def run(self, *, config: Mapping[str, Any] | None = None) -> None:
         """Start a local Streamlit server for this app and block until stopped.
 
@@ -95,30 +83,10 @@ class App:
         """
 ```
 
-The constructor's first argument is either a path to the Streamlit UI script or a
-zero-argument synchronous callable that *is* the app body. Other `st.App` parameters
-are unchanged from the [original spec](../2025-12-23-st-app/product-spec.md).
-
-Usage — same-file callable first (the shareable `uv run app.py` case), then a
-split-file launcher, then config overrides:
+Usage — simplest first, then with config overrides. In this example, `app.py` is the
+launcher module and `dashboard.py` is the Streamlit script executed by the runtime:
 
 ```python
-# app.py — UI and launcher in one file
-import streamlit as st
-
-
-def main() -> None:
-    st.title("Dashboard")
-
-
-app = st.App(main)
-
-if __name__ == "__main__":
-    app.run()
-```
-
-```python
-# app.py is the launcher; dashboard.py is the Streamlit script
 import streamlit as st
 
 app = st.App("dashboard.py")
@@ -134,7 +102,7 @@ if __name__ == "__main__":
     app.run(config={"server.port": 8502, "server.address": "0.0.0.0"})
 ```
 
-Now all launcher modes are equivalent for both path and callable entrypoints:
+Now all launcher modes are equivalent:
 
 ```bash
 python app.py            # new: App.run() on the existing `app` object
@@ -183,41 +151,13 @@ setup helpers and `UvicornRunner`, but pass the existing `App` instance into the
 instead of re-importing the launcher module. Re-importing would create a second launcher
 module instance and could duplicate user module-level side effects.
 
-**Callable entrypoints (`st.App(main)`):**
-
-- **Shape.** Zero-argument, synchronous, non-generator callables only (plain functions,
-  `functools.partial` of those, or callable instances). Async functions, generator
-  functions, and callables that require arguments fail at construction with a clear
-  `StreamlitAPIException`. A synchronous wrapper that returns a coroutine or generator
-  is rejected when it is invoked (construction cannot follow `@functools.wraps` without
-  also rejecting valid wrappers that drive the inner coroutine). The callable must be
-  defined in a filesystem-backed Python source file (`inspect.getsourcefile`); lambdas
-  / builtins are rejected.
-- **Same-file launch.** ScriptRunner invokes the retained callable on each full rerun
-  and does not `exec` the launcher module as `__main__`. That is why
-  `if __name__ == "__main__": app.run()` is safe in the same file as `st.App(main)`,
-  unlike `st.App(__file__)`.
-- **Retained object.** Streamlit keeps the original callable for the lifetime of the
-  `App`. Source-file edits can trigger a rerun of that same object; changing the
-  callable's definition requires a process restart.
-- **Locals vs. shared state.** Locals are created afresh each full rerun. Closure cells
-  and module globals are shared across reruns and sessions. Use `st.session_state` for
-  per-session values.
-- **Filesystem anchor.** The callable's source file is the Runtime script path for
-  `static/` serving and source watching. Under `streamlit run`, script-level
-  `config.toml` / `secrets.toml` still come from the launched file. When no launched
-  file is set (for example under uvicorn), the source file pins them instead.
-- **Multipage.** Callable execution takes precedence over a legacy `pages/` directory.
-  Use `st.navigation` for multipage callable apps; the callable remains the app
-  entrypoint (like `main.py`), and page switching happens inside it.
-
 **Command-line arguments (`python app.py foo bar`):**
 
 Positional arguments are forwarded to the app script so that `python app.py foo bar`
 behaves identically to `streamlit run app.py -- foo bar` for script arguments. `run()`
 sets `sys.argv = [<launcher>, *sys.argv[1:]]` via the existing `_fix_sys_argv`, so the
-executed Streamlit script (or callable) reads its arguments from `sys.argv` exactly as
-it does under `streamlit run`.
+executed Streamlit script reads its arguments from `sys.argv` exactly as it does under
+`streamlit run`.
 
 This gives a clean split with no `--` separator (which `streamlit run` needs to separate
 config flags from script args): under `python app.py`, positional args go to the app via
@@ -271,18 +211,15 @@ if __name__ == "__main__":
 Note that under `streamlit run app.py` / `uvicorn app:app`, the launcher module is
 *imported* (module name is the file stem, not `"__main__"`), so the guarded
 `if __name__ == "__main__": app.run()` block does not execute and there is no
-double-start. For callable entrypoints, ScriptRunner also never execs that module as
-`__main__`, so the same guard is safe when the UI lives in the launcher file. The
-`runtime.exists()` guard is the safety net for the rarer in-process cases above.
+double-start. The `runtime.exists()` guard is the safety net for the rarer in-process
+cases above.
 
 ### Why a method on `st.App` (vs. alternatives)
 
 `st.App` is the natural anchor: it is already an ASGI-callable object that builds the full
 Starlette + `Runtime` stack, and its launcher-module semantics eliminate the
-`__name__ == "__main__"` double-start ambiguity that affects bare scripts. Callable
-entrypoints make that true for same-file apps as well, matching the existing `st.Page`
-callable pattern. `run()` mirrors the `uvicorn`/FastAPI mental model (`app` object +
-`.run()`), so it reads as idiomatic.
+`__name__ == "__main__"` double-start ambiguity that affects bare scripts. `run()` mirrors
+the `uvicorn`/FastAPI mental model (`app` object + `.run()`), so it reads as idiomatic.
 
 ## Out of Scope (Future Work)
 
@@ -291,11 +228,10 @@ callable pattern. `run()` mirrors the `uvicorn`/FastAPI mental model (`app` obje
 - **Explicit `args=` parameter** — positional args are auto-forwarded from `sys.argv`;
   add an explicit override only if a launcher needs to consume some of its own arguments
   before handing the rest to the app.
-- **Same-file `st.App(__file__)` launchers** — still out of scope. File-based scripts
-  run in a fake `__main__` module, so `if __name__ == "__main__": app.run()` would
-  re-enter. Use `st.App(main)` for same-file apps.
-- **Async or generator callables** — rejected at construction. Streamlit's script runner
-  is synchronous; async/generator entrypoints would need a different execution model.
+- **Same-file `st.App(__file__)` launchers** — out of scope. File-based scripts run in a
+  fake `__main__` module, so `if __name__ == "__main__": app.run()` would re-enter.
+  Same-file apps use a callable entrypoint (`st.App(main)`); see
+  [`st.App`](../2025-12-23-st-app/product-spec.md).
 - **Auto-start without `if __name__ == "__main__": app.run()`** — implicitly starting a
   server whenever a script defining `st.App` is run with `python app.py` is more magical
   and risks firing in notebooks, tests, subprocesses, and mounting setups. Could be added
@@ -311,9 +247,9 @@ callable pattern. `run()` mirrors the `uvicorn`/FastAPI mental model (`app` obje
 | Item | ✅ or comment |
 |------|---------------|
 | Works on SiS, Cloud, etc? | N/A — `run()` is for local/self-hosted launching; hosted platforms use their own server entry points. |
-| No breaking API changes | ✅ Additive `run()` method; additive callable on the existing `script_path` argument. |
+| No breaking API changes | ✅ Additive method on `st.App`. |
 | No new dependencies | ✅ Reuses the existing uvicorn/Starlette stack. |
 | Metrics collected | Reuses existing `server_mode` tracking (`starlette-app`). Could add a flag to distinguish direct `python app.py` launches. |
-| Any security/legal impact? | ✅ None beyond existing `st.App` / `streamlit run`. The callable is invoked via a direct Python call (same trust model as `st.Page` callables). |
-| Any docs changes needed? | Add to the "Advanced Deployment with st.App" docs: a "Run with `python app.py`" subsection and callable entrypoint semantics. |
-| Any other risks? | Clear errors are needed for existing runtimes, invalid `config` keys, and unsupported callables (async, generators, required args, no source file). `st.App(__file__)` remains unsupported. |
+| Any security/legal impact? | ✅ None beyond existing `st.App` / `streamlit run`. |
+| Any docs changes needed? | Add to the "Advanced Deployment with st.App" docs: a "Run with `python app.py`" subsection. |
+| Any other risks? | Clear errors are needed for existing runtimes and invalid `config` keys. Same-file path launchers (`st.App(__file__)`) remain out of scope; use a callable entrypoint instead. |
