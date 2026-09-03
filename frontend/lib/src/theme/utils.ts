@@ -25,7 +25,7 @@ import {
 import { cloneDeep, isObject, merge, mergeWith, once } from "lodash-es"
 import { getLogger } from "loglevel"
 
-import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
+import { CustomThemeConfig } from "@streamlit/protobuf"
 import { localStorageAvailable, StreamlitConfig } from "@streamlit/utils"
 
 import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
@@ -105,7 +105,7 @@ export function sortThemeInputKeys(obj: unknown): unknown {
 
 function mergeTheme(
   theme: ThemeConfig,
-  injectedTheme: ICustomThemeConfig | undefined
+  injectedTheme: CustomThemeConfig.$Properties | undefined
 ): ThemeConfig {
   // We confirm the injectedTheme is a valid object before merging it
   // since the type makes assumption about the implementation of the
@@ -694,7 +694,7 @@ const validateChartColors = (
 }
 
 export const createEmotionTheme = (
-  themeInput: Partial<ICustomThemeConfig>,
+  themeInput: Partial<CustomThemeConfig.$Properties>,
   baseThemeConfig = baseTheme
 ): EmotionTheme => {
   const { colors, genericFonts, inSidebar } = baseThemeConfig.emotion
@@ -1463,7 +1463,7 @@ export const handleSectionInheritance = (
  * @returns true if the section has any actual values set
  */
 export const hasThemeSectionConfigs = (
-  section: ICustomThemeConfig | null | undefined
+  section: CustomThemeConfig.$Properties | null | undefined
 ): boolean => {
   if (!section) {
     return false

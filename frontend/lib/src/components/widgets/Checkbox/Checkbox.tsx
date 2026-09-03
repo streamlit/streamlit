@@ -31,12 +31,13 @@ import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
-  StyledCheckbox,
+  StyledCheckboxButton,
+  StyledCheckboxField,
   StyledCheckboxIndicator,
-  StyledCheckboxRoot,
   StyledContent,
   StyledLabelText,
-  StyledSwitchRoot,
+  StyledSwitchButton,
+  StyledSwitchField,
   StyledToggleThumb,
   StyledToggleTrack,
 } from "./styled-components"
@@ -132,17 +133,15 @@ function Checkbox({
 
   if (isToggle) {
     return (
-      <StyledCheckbox
+      <StyledSwitchField
         className="row-widget stCheckbox"
         data-testid="stCheckbox"
+        isSelected={value}
+        isDisabled={disabled}
+        onChange={handleChange}
+        aria-label={element.label}
       >
-        <StyledSwitchRoot
-          isSelected={value}
-          isDisabled={disabled}
-          onChange={handleChange}
-          aria-label={element.label}
-          $truncate={truncate}
-        >
+        <StyledSwitchButton $truncate={truncate}>
           {({ isSelected, isHovered, isDisabled: isDisab }) => (
             <>
               <StyledToggleTrack
@@ -158,20 +157,21 @@ function Checkbox({
               {labelContent}
             </>
           )}
-        </StyledSwitchRoot>
-      </StyledCheckbox>
+        </StyledSwitchButton>
+      </StyledSwitchField>
     )
   }
 
   return (
-    <StyledCheckbox className="row-widget stCheckbox" data-testid="stCheckbox">
-      <StyledCheckboxRoot
-        isSelected={value}
-        isDisabled={disabled}
-        onChange={handleChange}
-        aria-label={element.label}
-        $truncate={truncate}
-      >
+    <StyledCheckboxField
+      className="row-widget stCheckbox"
+      data-testid="stCheckbox"
+      isSelected={value}
+      isDisabled={disabled}
+      onChange={handleChange}
+      aria-label={element.label}
+    >
+      <StyledCheckboxButton $truncate={truncate}>
         {({ isSelected, isFocusVisible, isDisabled: isDisab }) => (
           <>
             <StyledCheckboxIndicator
@@ -188,8 +188,8 @@ function Checkbox({
             {labelContent}
           </>
         )}
-      </StyledCheckboxRoot>
-    </StyledCheckbox>
+      </StyledCheckboxButton>
+    </StyledCheckboxField>
   )
 }
 

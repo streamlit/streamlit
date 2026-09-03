@@ -56,13 +56,15 @@ export interface Props {
   element: ButtonGroupProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
-  widthConfig: streamlit.IWidthConfig | undefined | null
+  widthConfig: streamlit.WidthConfig.$Properties | undefined | null
 }
 
 /**
  * Get the base content string for an option.
  */
-function getOptionBaseContent(option: ButtonGroupProto.IOption): string {
+function getOptionBaseContent(
+  option: ButtonGroupProto.Option.$Properties
+): string {
   const icon = option.contentIcon
   const content = option.content ?? ""
   return icon ? `${icon} ${content}`.trim() : content
@@ -99,7 +101,7 @@ function scrollOptionIntoGroup(group: HTMLElement, option: Element): void {
  * for duplicate labels), or -1 if not found.
  */
 function findOptionIndex(
-  options: ButtonGroupProto.IOption[],
+  options: ButtonGroupProto.Option.$Properties[],
   content: string
 ): number {
   for (let i = options.length - 1; i >= 0; i--) {
@@ -114,7 +116,7 @@ function findOptionIndex(
  * Convert content strings to indices based on current options.
  */
 function contentStringsToIndices(
-  options: ButtonGroupProto.IOption[],
+  options: ButtonGroupProto.Option.$Properties[],
   contentStrings: string[]
 ): number[] {
   const indices: number[] = []

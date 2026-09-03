@@ -16,7 +16,8 @@
 
 import styled from "@emotion/styled"
 import {
-  Radio as RARadio,
+  RadioButton as RARadioButton,
+  RadioField as RARadioField,
   RadioGroup as RARadioGroup,
 } from "react-aria-components"
 
@@ -54,15 +55,31 @@ export const StyledRadioGroup = styled(RARadioGroup, {
 }))
 
 /**
- * Outer `<label>` wrapper for each individual radio option.
- * React Aria sets `data-focus-visible`, `data-disabled`, `data-selected` etc.
- * as data attributes — we use those for state-driven styles.
+ * Per-option wrapper: it declares the option's `value` and passes the group's
+ * selection state to its `RadioButton` child via context. `RadioButton` must
+ * nest inside this field.
  *
- * This element is intentionally a plain block container. Layout (circle + text
- * alignment) is handled by the children so that the caption can live outside
- * the circle/text row without requiring any manual offset calculations.
+ * It needs no styles of its own — as a block-level flex item it shrink-wraps the
+ * label, so `StyledRadioGroup`'s `alignItems` and `gap` still apply to the
+ * option's visible box.
+ *
+ * Keep state-driven styles on the label's class: React Aria also sets
+ * `data-selected`/`data-disabled` on this div, so styling both elements would
+ * apply those rules twice.
  */
-export const StyledRadioItem = styled(RARadio)(({ theme }) => ({
+export const StyledRadioField = styled(RARadioField)()
+
+/**
+ * Clickable `<label>` for each radio option. It wraps the hidden input, the
+ * circle indicator (`StyledRadioOuter`/`StyledRadioInner`), and the option text,
+ * so the whole row is a click target. It stays a plain block container: the
+ * children own the circle-and-text alignment so the caption can sit outside that
+ * row without manual offset calculations.
+ *
+ * React Aria sets `data-focus-visible`, `data-disabled`, `data-selected` and
+ * friends as data attributes — we use those for state-driven styles.
+ */
+export const StyledRadioButton = styled(RARadioButton)(({ theme }) => ({
   display: "block",
   cursor: "pointer",
   userSelect: "none",

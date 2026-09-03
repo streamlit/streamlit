@@ -199,12 +199,32 @@ describe("Radio widget", () => {
     })
   })
 
-  it("renders each option with data-testid stRadioOption", () => {
+  it("puts the stRadioOption test id on each option's label", () => {
     const props = getProps()
     render(<Radio {...props} />)
 
     const optionItems = screen.getAllByTestId("stRadioOption")
     expect(optionItems).toHaveLength(3)
+    // e2e helpers click stRadioOption (app_utils.get_radio_option), so it
+    // must stay on the input's <label>, not the Field wrapper.
+    const firstRadio = screen.getAllByRole("radio")[0]
+    expect(firstRadio.closest("label")).toBe(optionItems[0])
+  })
+
+  it("selects an option when its stRadioOption element is clicked", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const props = getProps({ onChange, value: 0 })
+    render(<Radio {...props} />)
+
+    const radioOptions = screen.getAllByRole("radio")
+    // Other tests click the hidden input; this one clicks the e2e helper target.
+    await user.click(screen.getAllByTestId("stRadioOption")[1])
+
+    expect(onChange).toHaveBeenCalledTimes(1)
+    expect(onChange).toHaveBeenCalledWith(1)
+    expect(radioOptions[1]).toBeChecked()
+    expect(radioOptions[0]).not.toBeChecked()
   })
 
   it("forwards data-testid to the radio group element", () => {

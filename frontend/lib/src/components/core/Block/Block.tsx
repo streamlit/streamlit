@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement, useContext, useMemo } from "react"
+import { type JSX, ReactElement, useContext, useMemo } from "react"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 

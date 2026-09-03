@@ -185,8 +185,8 @@ export function getKeyFromId(
 }
 
 export function getColumnGapConfig(
-  columnProto: BlockProto.IColumn
-): streamlit.IGapConfig {
+  columnProto: BlockProto.Column.$Properties
+): streamlit.GapConfig.$Properties {
   const gapConfig = columnProto.gapConfig
   if (typeof gapConfig?.pixelGap === "number") {
     return { pixelGap: gapConfig.pixelGap }

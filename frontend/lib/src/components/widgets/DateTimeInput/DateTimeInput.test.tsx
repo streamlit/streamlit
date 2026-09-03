@@ -1664,12 +1664,15 @@ describe("DateTimeInput widget", () => {
       await waitFor(() => {
         const calendar = screen.getByTestId("stDateTimeInputCalendar")
         expect(calendar).toHaveAttribute("role", "dialog")
-        expect(calendar).toHaveAttribute("aria-modal", "true")
         // Focus should be inside the calendar grid
         const focused = document.activeElement
         expect(calendar.contains(focused)).toBe(true)
         expect(focused?.getAttribute("tabindex")).toBe("0")
       })
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toHaveAttribute(
+        "aria-modal",
+        "true"
+      )
     })
 
     it("Escape from active calendar closes it and returns focus to the field", async () => {
@@ -1724,10 +1727,15 @@ describe("DateTimeInput widget", () => {
       await user.keyboard("{Alt>}{ArrowDown}{/Alt}")
 
       await waitFor(() => {
-        const calendar = screen.getByTestId("stDateTimeInputCalendar")
-        expect(calendar).toHaveAttribute("role", "dialog")
-        expect(calendar).toHaveAttribute("aria-modal", "true")
+        expect(screen.getByTestId("stDateTimeInputCalendar")).toHaveAttribute(
+          "role",
+          "dialog"
+        )
       })
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toHaveAttribute(
+        "aria-modal",
+        "true"
+      )
     })
   })
 

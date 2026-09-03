@@ -134,6 +134,20 @@ describe("Checkbox widget", () => {
     ).toBeVisible()
   })
 
+  // Both cases remove the visible label from the accessibility tree, leaving the
+  // field's aria-label as the only source of the accessible name.
+  it.each([
+    ["hidden", LabelVisibilityProto.LabelVisibilityOptions.HIDDEN],
+    ["collapsed", LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED],
+  ])("keeps an accessible name when the label is %s", (_, visibility) => {
+    const props = getProps({ labelVisibility: { value: visibility } })
+    render(<Checkbox {...props} />)
+
+    expect(
+      screen.getByRole("checkbox", { name: props.element.label })
+    ).toBeVisible()
+  })
+
   it("toggles via keyboard Space key", async () => {
     const user = userEvent.setup()
     const props = getProps()
@@ -266,6 +280,20 @@ describe("Checkbox TOGGLE type", () => {
 
   it("has an accessible name matching the label", () => {
     const props = getToggleProps()
+    render(<Checkbox {...props} />)
+
+    expect(
+      screen.getByRole("switch", { name: props.element.label })
+    ).toBeVisible()
+  })
+
+  // Both cases remove the visible label from the accessibility tree, leaving the
+  // field's aria-label as the only source of the accessible name.
+  it.each([
+    ["hidden", LabelVisibilityProto.LabelVisibilityOptions.HIDDEN],
+    ["collapsed", LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED],
+  ])("keeps an accessible name when the label is %s", (_, visibility) => {
+    const props = getToggleProps({ labelVisibility: { value: visibility } })
     render(<Checkbox {...props} />)
 
     expect(
@@ -457,7 +485,7 @@ describe("Checkbox wrap", () => {
 
   // Both checkbox and toggle share the same truncation/title wiring, so the
   // wrap behavior is exercised over both style types to catch a regression in
-  // either root (StyledCheckboxRoot / StyledSwitchRoot).
+  // either variant's button wrapper (StyledCheckboxButton / StyledSwitchButton).
   const STYLE_TYPES = [
     ["checkbox", CheckboxProto.StyleType.DEFAULT],
     ["toggle", CheckboxProto.StyleType.TOGGLE],
