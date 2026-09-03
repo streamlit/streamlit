@@ -254,17 +254,12 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         ]["source"][0]
         assert record["x"] == pytest.approx(value, rel=1e-15)
 
-    def test_dataset_source_non_serializable_raises(self):
-        """A dataframe pandas cannot JSON-serialize raises a targeted error."""
-        df = pd.DataFrame({"x": pd.period_range("2020", periods=2)})
-        with pytest.raises(StreamlitAPIException) as exc:
-            st.echarts_chart({"dataset": {"source": df}})
-
-        assert "dataset.source" in str(exc.value)
-        assert exc.value.error_id == "echarts-dataset-not-json-serializable"
-
     def test_dataset_source_to_json_failure_is_targeted(self):
-        """A ``to_json`` TypeError is re-raised with the dataset error_id."""
+        """A ``to_json`` TypeError is re-raised with the dataset error_id.
+
+        Pandas serialization of unusual dtypes varies by version, so this
+        patches ``to_json`` rather than relying on a specific dtype to fail.
+        """
         df = pd.DataFrame({"x": [1]})
         with (
             patch.object(pd.DataFrame, "to_json", side_effect=TypeError("boom")),
