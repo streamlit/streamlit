@@ -419,6 +419,19 @@ describe("EChartsChart", () => {
     expect(error).toHaveTextContent("invalid option")
   })
 
+  it("renders a styled error instead of throwing when echarts.init fails", () => {
+    mockInit.mockImplementationOnce(() => {
+      throw new Error("init failed")
+    })
+
+    render(<Wrapper element={createElement()} />)
+
+    const error = screen.getByTestId("stEChartsChartError")
+    expect(error).toBeVisible()
+    expect(error).toHaveTextContent("init failed")
+    expect(mockChart.setOption).not.toHaveBeenCalled()
+  })
+
   it("renders a styled error instead of throwing when a resize fails", () => {
     const { rerender } = render(<Wrapper element={createElement()} />)
 
@@ -545,6 +558,37 @@ describe("EChartsChart", () => {
         series: [{ type: "bar", data: [1] }],
         media: [
           { query: { maxWidth: 500 }, option: { backgroundColor: "#222" } },
+        ],
+      },
+    },
+    {
+      name: "nested baseOption media",
+      spec: {
+        baseOption: {
+          series: [{ type: "bar", data: [1] }],
+          media: [
+            {
+              query: { maxWidth: 500 },
+              option: { backgroundColor: "#333" },
+            },
+          ],
+        },
+        options: [{}],
+      },
+    },
+    {
+      name: "nested timeline options media",
+      spec: {
+        baseOption: { series: [{ type: "bar", data: [1] }] },
+        options: [
+          {
+            media: [
+              {
+                query: { maxWidth: 500 },
+                option: { backgroundColor: "#444" },
+              },
+            ],
+          },
         ],
       },
     },

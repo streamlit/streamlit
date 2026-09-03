@@ -254,6 +254,27 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         ]["source"][0]
         assert record["x"] == pytest.approx(value, rel=1e-15)
 
+    def test_dataset_source_non_serializable_raises(self):
+        """A dataframe pandas cannot JSON-serialize raises a targeted error."""
+        df = pd.DataFrame({"x": pd.period_range("2020", periods=2)})
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.echarts_chart({"dataset": {"source": df}})
+
+        assert "dataset.source" in str(exc.value)
+        assert exc.value.error_id == "echarts-dataset-not-json-serializable"
+
+    def test_dataset_source_to_json_failure_is_targeted(self):
+        """A ``to_json`` TypeError is re-raised with the dataset error_id."""
+        df = pd.DataFrame({"x": [1]})
+        with (
+            patch.object(pd.DataFrame, "to_json", side_effect=TypeError("boom")),
+            pytest.raises(StreamlitAPIException) as exc,
+        ):
+            st.echarts_chart({"dataset": {"source": df}})
+
+        assert "dataset.source" in str(exc.value)
+        assert exc.value.error_id == "echarts-dataset-not-json-serializable"
+
     @parameterized.expand(
         [
             ("streamlit", "streamlit"),
@@ -334,6 +355,32 @@ class EChartsChartTest(DeltaGeneratorTestCase):
             )
 
         assert exc.value.error_id == "echarts-js-callbacks-not-supported"
+
+    def test_sentinel_text_in_json_string_label_is_allowed(self):
+        """Literal ``--x_x--`` in a label is not treated as a pyecharts callback."""
+        raw = json.dumps(
+            {
+                "title": {"text": "Warning --x_x-- do not click"},
+                "series": [{"type": "bar", "data": [1]}],
+            }
+        )
+        st.echarts_chart(raw)
+
+        spec = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)
+        assert spec["title"]["text"] == "Warning --x_x-- do not click"
+
+    def test_sentinel_text_in_pyecharts_label_is_allowed(self):
+        """A pyecharts dump whose only sentinel is chart text is accepted."""
+        chart = _FakeEChart(
+            {
+                "title": {"text": "Warning --x_x-- do not click"},
+                "series": [{"type": "bar", "data": [1]}],
+            }
+        )
+        st.echarts_chart(chart)
+
+        spec = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)
+        assert spec["title"]["text"] == "Warning --x_x-- do not click"
 
     def test_malformed_json_mentioning_function_is_parse_error(self):
         """The word ``function`` in a label is not treated as a JS callback."""
@@ -778,6 +825,17 @@ def test_resolve_content_warns_and_defaults_on_unsupported_unit() -> None:
 
     assert "unsupported" in mock_warning.call_args.args[0]
     assert mock_warning.call_args.kwargs["stack_info"] is True
+
+
+def test_resolve_content_treats_blank_pyecharts_size_as_unset() -> None:
+    """Blank InitOpts width/height are treated as unset, not unsupported."""
+    chart = _FakeEChart(_BASIC_SPEC, width="", height="   ")
+
+    with patch.object(echarts_chart_module._LOGGER, "warning") as mock_warning:
+        assert _resolve_content_width("content", spec=chart) == 700
+        assert _resolve_content_height("content", spec=chart) == 350
+
+    mock_warning.assert_not_called()
 
 
 def test_resolve_content_height_passthrough() -> None:

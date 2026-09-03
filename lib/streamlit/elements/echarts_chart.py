@@ -112,6 +112,10 @@ _EXTENSION_SERIES_TYPES: Final = {
 # failure whose payload merely contains the word "function" as a callback.
 _BARE_JS_FUNCTION: Final = re.compile(r"\bfunction\s*\(")
 
+# pyecharts ``JsCode`` wraps JavaScript as ``--x_x--<code>--x_x--``.
+# ``dump_options_with_quotes`` emits that encoding as a JSON string value.
+_PYECHARTS_JSCODE_SENTINEL: Final = "--x_x--"
+
 
 class EChartsCompatible(Protocol):
     """Duck-typed protocol for objects convertible to an ECharts option.
@@ -151,14 +155,30 @@ def _unparsed_suffix_looks_like_js_callback(raw: str, ex: BaseException) -> bool
     return _BARE_JS_FUNCTION.search(rest) is not None or "=>" in rest
 
 
+def _contains_pyecharts_jscode(value: Any) -> bool:
+    """True if any string value is a pyecharts ``JsCode`` encoding.
+
+    ``pyecharts`` wraps JavaScript as ``--x_x--<code>--x_x--``. A label that
+    merely contains the sentinel text is not a callback.
+    """
+    if isinstance(value, str):
+        stripped = value.strip()
+        return (
+            stripped.startswith(_PYECHARTS_JSCODE_SENTINEL)
+            and stripped.endswith(_PYECHARTS_JSCODE_SENTINEL)
+            and len(stripped) > 2 * len(_PYECHARTS_JSCODE_SENTINEL)
+        )
+    if isinstance(value, dict):
+        return any(_contains_pyecharts_jscode(item) for item in value.values())
+    if isinstance(value, (list, tuple)):
+        return any(_contains_pyecharts_jscode(item) for item in value)
+    return False
+
+
 def _loads_json_option(raw: str) -> Any:
     """Parse a raw JSON option string, raising a helpful error on failure."""
-    # ``dump_options_with_quotes`` produces valid JSON that still embeds the
-    # ``--x_x--`` sentinel, so this check must run before ``json.loads``.
-    if "--x_x--" in raw:
-        raise _js_callback_error()
     try:
-        return json.loads(raw)
+        option = json.loads(raw)
     except (json.JSONDecodeError, TypeError, ValueError) as ex:
         if _unparsed_suffix_looks_like_js_callback(raw, ex):
             raise _js_callback_error() from ex
@@ -167,6 +187,12 @@ def _loads_json_option(raw: str) -> Any:
             "`st.echarts_chart` only supports JSON-compatible option objects.",
             error_id="echarts-spec-invalid-json",
         ) from ex
+    # ``dump_options_with_quotes`` produces valid JSON whose string values
+    # still embed the ``--x_x--`` JsCode encoding. Detect that on parsed
+    # values so a title that merely mentions the sentinel is accepted.
+    if _contains_pyecharts_jscode(option):
+        raise _js_callback_error()
+    return option
 
 
 def _dataframe_to_records(df: pd.DataFrame) -> list[dict[str, Any]]:
@@ -186,15 +212,24 @@ def _dataframe_to_records(df: pd.DataFrame) -> list[dict[str, Any]]:
     mixed extension dtypes can yield an object array that ``np.isinf``
     cannot scan.
     """
-    numeric = df.select_dtypes(include="number")
-    if not numeric.empty:
-        import numpy as np
+    try:
+        numeric = df.select_dtypes(include="number")
+        if not numeric.empty:
+            import numpy as np
 
-        if np.isinf(numeric.to_numpy(dtype=float, na_value=np.nan)).any():
-            df = df.replace([float("inf"), float("-inf")], float("nan"))
-    records = json.loads(
-        df.to_json(orient="records", date_format="iso", double_precision=15)
-    )
+            if np.isinf(numeric.to_numpy(dtype=float, na_value=np.nan)).any():
+                df = df.replace([float("inf"), float("-inf")], float("nan"))
+        records = json.loads(
+            df.to_json(orient="records", date_format="iso", double_precision=15)
+        )
+    except (TypeError, ValueError, OverflowError) as ex:
+        raise StreamlitAPIException(
+            "The provided ECharts `dataset.source` is not JSON-serializable. "
+            "`st.echarts_chart` only supports JSON-compatible values inside "
+            "`dataset.source`. Convert or drop columns that cannot be "
+            "serialized to JSON.",
+            error_id="echarts-dataset-not-json-serializable",
+        ) from ex
     return cast("list[dict[str, Any]]", records)
 
 
@@ -459,6 +494,8 @@ def _extract_chart_dimension(
         return None
 
     dimension = value.strip()
+    if not dimension:
+        return None
     if dimension == library_default:
         # pyecharts' own default rather than a size the author chose.
         return None
@@ -611,14 +648,17 @@ class EChartsMixin:
 
         theme : "streamlit" or None
             The theme of the chart. If ``theme`` is ``"streamlit"`` (default),
-            Streamlit uses its own design default. If ``theme`` is ``None``,
-            Streamlit falls back to ECharts' built-in default theme and leaves
-            your ``spec``'s styling untouched. Two defaults are independent of
-            ``theme`` and still apply: accessibility (``aria.enabled``, so the
-            chart keeps a screen-reader description) and the series hover
-            cursor, which is reset to ``"default"`` so the chart does not look
-            clickable. Set ``aria`` or ``series.cursor`` yourself to override
-            either.
+            Streamlit applies its own colors, fonts, and plot layout. If
+            ``theme`` is ``None``, Streamlit leaves your ``spec``'s styling
+            untouched and uses ECharts' built-in default theme.
+
+            Two defaults still apply when ``theme`` is ``None``:
+
+            - Accessibility: ``aria.enabled`` stays on so the chart keeps a
+              screen-reader description unless you set ``aria`` yourself.
+            - Display-only cursor: a missing ``series.cursor`` is set to
+              ``"default"`` so the chart does not look clickable. Set
+              ``series.cursor`` yourself to override it.
 
             The ``"streamlit"`` theme can be partially customized through the
             configuration options ``theme.chartCategoricalColors`` and
@@ -662,6 +702,36 @@ class EChartsMixin:
         .. output::
            https://doc-echarts-chart.streamlit.app/
            height: 400px
+
+        **Example 2: Chart from a dataframe**
+
+        Pass a dataframe as ``dataset.source``. Streamlit converts it to JSON
+        records and preserves column order through ``dataset.dimensions``.
+
+        .. code-block:: python
+           :filename: streamlit_app.py
+
+           import pandas as pd
+           import streamlit as st
+
+           df = pd.DataFrame(
+               {
+                   "product": ["Matcha", "Milk Tea", "Cocoa"],
+                   "2015": [43.3, 83.1, 86.4],
+                   "2016": [85.8, 73.4, 65.2],
+               }
+           )
+
+           st.echarts_chart(
+               {
+                   "legend": {},
+                   "tooltip": {},
+                   "dataset": {"source": df},
+                   "xAxis": {"type": "category"},
+                   "yAxis": {},
+                   "series": [{"type": "bar"}, {"type": "bar"}],
+               }
+           )
 
         """
         validate_width(width, allow_content=True)
