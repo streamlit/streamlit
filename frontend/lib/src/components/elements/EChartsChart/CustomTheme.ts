@@ -467,6 +467,39 @@ function isTitleAtBottom(title: Record<string, unknown>): boolean {
   return title.top === "bottom"
 }
 
+function isLegendAtTop(legend: Record<string, unknown>): boolean {
+  // ECharts places the legend at the bottom-center by default; it only sits at
+  // the top when the user gives it a (non-"bottom") `top`.
+  return legend.top !== undefined && legend.top !== "bottom"
+}
+
+function legendPlacement(option: EChartsOptionObject): {
+  occupiesTop: boolean
+  occupiesBottom: boolean
+} {
+  const legends = toComponentList(option.legend)
+  if (legends.length === 0) {
+    // Boolean ``false`` hides the legend. Any other non-object value still
+    // occupies the default bottom strip.
+    const hasLegend = option.legend !== undefined && option.legend !== false
+    return { occupiesTop: false, occupiesBottom: hasLegend }
+  }
+
+  let occupiesTop = false
+  let occupiesBottom = false
+  for (const legend of legends) {
+    if (legend.show === false) {
+      continue
+    }
+    if (isLegendAtTop(legend)) {
+      occupiesTop = true
+    } else {
+      occupiesBottom = true
+    }
+  }
+  return { occupiesTop, occupiesBottom }
+}
+
 function titlePlacement(option: EChartsOptionObject): {
   occupiesTop: boolean
   occupiesBottom: boolean
@@ -515,18 +548,8 @@ function buildDefaultGrid(
 ): Record<string, unknown> {
   const { occupiesTop: titleAtTop, occupiesBottom: titleAtBottom } =
     titlePlacement(option)
-  const legend = option.legend
-  const legendObject = isPlainObject(legend)
-    ? (legend as Record<string, unknown>)
-    : {}
-  const hasLegend = legend !== undefined && legendObject.show !== false
-  // ECharts places the legend at the bottom-center by default; it only sits at
-  // the top when the user gives it a (non-"bottom") `top`.
-  const legendAtTop =
-    hasLegend &&
-    legendObject.top !== undefined &&
-    legendObject.top !== "bottom"
-  const legendAtBottom = hasLegend && !legendAtTop
+  const { occupiesTop: legendAtTop, occupiesBottom: legendAtBottom } =
+    legendPlacement(option)
 
   const grid: Record<string, unknown> = {
     left: 8,

@@ -435,6 +435,62 @@ describe("applyStreamlitOptionDefaults", () => {
     const titleArrayGrid = titleArray.grid as Record<string, unknown>
     expect(titleArrayGrid.top).toBeUndefined()
     expect(titleArrayGrid.bottom).toBeUndefined()
+
+    // Legend arrays are walked the same way: a top-anchored entry must not
+    // fall through to the default bottom slot (which would keep a tight `top`).
+    const topLegendArray = applyStreamlitOptionDefaults(
+      {
+        xAxis: {},
+        yAxis: {},
+        legend: [{ data: ["a"], top: 0 }],
+        series: [],
+      },
+      STREAMLIT_THEME
+    )
+    const topLegendArrayGrid = topLegendArray.grid as Record<string, unknown>
+    expect(topLegendArrayGrid.top).toBeUndefined()
+    expect(topLegendArrayGrid.bottom).toBe(8)
+
+    const mixedLegendArray = applyStreamlitOptionDefaults(
+      {
+        xAxis: {},
+        yAxis: {},
+        legend: [{ data: ["a"] }, { data: ["b"], top: 0 }],
+        series: [],
+      },
+      STREAMLIT_THEME
+    )
+    const mixedLegendArrayGrid = mixedLegendArray.grid as Record<
+      string,
+      unknown
+    >
+    expect(mixedLegendArrayGrid.top).toBeUndefined()
+    expect(mixedLegendArrayGrid.bottom).toBeUndefined()
+
+    const hiddenLegendArray = applyStreamlitOptionDefaults(
+      {
+        xAxis: {},
+        yAxis: {},
+        legend: [{ show: false, top: 10 }],
+        series: [],
+      },
+      STREAMLIT_THEME
+    )
+    const hiddenLegendArrayGrid = hiddenLegendArray.grid as Record<
+      string,
+      unknown
+    >
+    expect(hiddenLegendArrayGrid.top).toBe(16)
+    expect(hiddenLegendArrayGrid.bottom).toBe(8)
+
+    // Boolean ``false`` hides the legend; do not reserve the default bottom.
+    const legendFalse = applyStreamlitOptionDefaults(
+      { xAxis: {}, yAxis: {}, legend: false, series: [] },
+      STREAMLIT_THEME
+    )
+    const legendFalseGrid = legendFalse.grid as Record<string, unknown>
+    expect(legendFalseGrid.top).toBe(16)
+    expect(legendFalseGrid.bottom).toBe(8)
   })
 
   it("fills only the grid gaps the user left unset (user values win)", () => {

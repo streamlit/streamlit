@@ -139,6 +139,18 @@ def _js_callback_error() -> StreamlitAPIException:
     )
 
 
+def _unparsed_suffix_looks_like_js_callback(raw: str, ex: BaseException) -> bool:
+    """True if a parse failure looks like a JS function rather than bad JSON.
+
+    Restricts the search to the unparsed suffix so a ``=>`` or ``function (``
+    inside an already-consumed JSON string (for example an unterminated object
+    whose title text contains ``=>``) is not misreported as a callback.
+    """
+    start = ex.pos if isinstance(ex, json.JSONDecodeError) else 0
+    rest = raw[start:]
+    return _BARE_JS_FUNCTION.search(rest) is not None or "=>" in rest
+
+
 def _loads_json_option(raw: str) -> Any:
     """Parse a raw JSON option string, raising a helpful error on failure."""
     # ``dump_options_with_quotes`` produces valid JSON that still embeds the
@@ -148,7 +160,7 @@ def _loads_json_option(raw: str) -> Any:
     try:
         return json.loads(raw)
     except (json.JSONDecodeError, TypeError, ValueError) as ex:
-        if _BARE_JS_FUNCTION.search(raw) is not None or "=>" in raw:
+        if _unparsed_suffix_looks_like_js_callback(raw, ex):
             raise _js_callback_error() from ex
         raise StreamlitAPIException(
             "The provided ECharts spec could not be parsed as JSON. "
@@ -169,11 +181,16 @@ def _dataframe_to_records(df: pd.DataFrame) -> list[dict[str, Any]]:
     ``DataFrame.to_json`` on older pandas emits invalid JSON (``Infinity``)
     for infinities, which would surface as a raw ``JSONDecodeError``. Replacing
     them with NaN first makes every supported pandas version emit ``null``.
+    The copy is skipped when no numeric column contains an infinity.
     """
+    numeric = df.select_dtypes(include="number")
+    if not numeric.empty:
+        import numpy as np
+
+        if np.isinf(numeric.to_numpy()).any():
+            df = df.replace([float("inf"), float("-inf")], float("nan"))
     records = json.loads(
-        df.replace([float("inf"), float("-inf")], float("nan")).to_json(
-            orient="records", date_format="iso", double_precision=15
-        )
+        df.to_json(orient="records", date_format="iso", double_precision=15)
     )
     return cast("list[dict[str, Any]]", records)
 
@@ -199,9 +216,22 @@ def _convert_single_dataset(dataset: dict[str, Any]) -> None:
         dataset["dimensions"] = labels
 
 
+def _iter_sequence_entries(value: Any, key: str) -> Iterator[Any]:
+    """Yield entries of a list-valued option key, or raise if it is malformed."""
+    if value is None:
+        return
+    if not isinstance(value, (list, tuple)):
+        raise StreamlitAPIException(
+            f"The provided ECharts spec has a `{key}` value that is not a list. "
+            "`st.echarts_chart` only supports JSON-compatible option objects.",
+            error_id="echarts-spec-invalid-structure",
+        )
+    yield from value
+
+
 def _iter_media_options(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
     """Yield each ``media[*].option`` override on an option object."""
-    for media_entry in option.get("media") or []:
+    for media_entry in _iter_sequence_entries(option.get("media"), "media"):
         if isinstance(media_entry, dict):
             media_option = media_entry.get("option")
             if isinstance(media_option, dict):
@@ -221,7 +251,7 @@ def _iter_option_variants(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
     if isinstance(base_option, dict):
         yield base_option
         yield from _iter_media_options(base_option)
-    for timeline_option in option.get("options") or []:
+    for timeline_option in _iter_sequence_entries(option.get("options"), "options"):
         if isinstance(timeline_option, dict):
             yield timeline_option
             yield from _iter_media_options(timeline_option)

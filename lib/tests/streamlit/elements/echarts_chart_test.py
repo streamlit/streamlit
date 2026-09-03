@@ -315,6 +315,20 @@ class EChartsChartTest(DeltaGeneratorTestCase):
 
         assert exc.value.error_id == "echarts-spec-invalid-json"
 
+    def test_malformed_json_with_arrow_in_string_is_parse_error(self):
+        """``=>`` inside an already-parsed JSON string is not a JS callback."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.echarts_chart('{"title": {"text": "a => b"')
+
+        assert exc.value.error_id == "echarts-spec-invalid-json"
+
+    def test_arrow_function_callback_string_raises(self):
+        """A JSON string with an arrow-function callback raises a helpful error."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.echarts_chart('{"tooltip": {"formatter": (p) => p}}')
+
+        assert exc.value.error_id == "echarts-js-callbacks-not-supported"
+
     def test_function_word_in_valid_json_is_allowed(self):
         """A title containing the word ``function`` is still valid JSON."""
         st.echarts_chart(
@@ -330,6 +344,22 @@ class EChartsChartTest(DeltaGeneratorTestCase):
 
         assert "could not be parsed as JSON" in str(exc.value)
         assert exc.value.error_id == "echarts-spec-invalid-json"
+
+    def test_non_list_media_raises(self):
+        """A non-list ``media`` value raises a Streamlit API error, not TypeError."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.echarts_chart({**_BASIC_SPEC, "media": 1})
+
+        assert exc.value.error_id == "echarts-spec-invalid-structure"
+        assert "`media`" in str(exc.value)
+
+    def test_non_list_options_raises(self):
+        """A non-list ``options`` value raises a Streamlit API error, not TypeError."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.echarts_chart({**_BASIC_SPEC, "options": 1})
+
+        assert exc.value.error_id == "echarts-spec-invalid-structure"
+        assert "`options`" in str(exc.value)
 
     def test_lambda_in_dict_raises(self):
         """A callable embedded in the option dict raises instead of stringifying."""

@@ -67,7 +67,7 @@ type ChartErrorSource = "theme" | "option" | "resize"
 interface EChartsChartProps {
   element: EChartsChartProto
   disableFullscreenMode?: boolean
-  heightConfig?: streamlit.IHeightConfig | null
+  heightConfig?: streamlit.HeightConfig.$Properties | null
 }
 
 function optionHasBackgroundColor(target: unknown): boolean {
