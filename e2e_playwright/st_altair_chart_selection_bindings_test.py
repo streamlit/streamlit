@@ -14,6 +14,8 @@
 
 """Altair bind widgets must not duplicate when on_select is enabled (#8765)."""
 
+from typing import Literal
+
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
@@ -26,7 +28,9 @@ def _expect_vega_chart_ready(chart: Locator) -> None:
     expect(get_vega_graphics_document(chart)).to_be_visible()
 
 
-def _assert_single_region_bind(chart: Locator, *, role: str, count: int) -> None:
+def _assert_single_region_bind(
+    chart: Locator, *, role: Literal["radio", "combobox"], count: int
+) -> None:
     """Region bind must appear once, not once per injected encoding."""
     expect(chart.get_by_text("Region:")).to_have_count(1)
     expect(chart.get_by_role(role)).to_have_count(count)
