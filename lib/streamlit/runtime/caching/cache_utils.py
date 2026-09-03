@@ -47,7 +47,6 @@ from streamlit.dataframe_util import is_unevaluated_data_object
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitIncompatibleParametersError,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
@@ -575,12 +574,12 @@ class CachedFuncInfo(Generic[P, R]):
             )
         self.is_async = inspect.iscoroutinefunction(func)
         if self.is_async and refresh_mode == "background":
-            raise StreamlitIncompatibleParametersError(
-                "refresh_mode='background'",
-                "async function",
-                explanation=(
-                    "Background refresh does not support coroutine functions. "
-                    'Use `refresh_mode="foreground"` instead.'
+            raise StreamlitValueError(
+                "refresh_mode",
+                ['"foreground"'],
+                detail=(
+                    "Background refresh is not supported for coroutine functions "
+                    '(`async def`). Use `refresh_mode="foreground"` instead.'
                 ),
             )
 

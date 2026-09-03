@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitIncompatibleParametersError
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.runtime.caching import cache_utils
 from streamlit.testing.v1 import AppTest
 
@@ -58,8 +58,12 @@ def _clear_caches() -> Any:
 def test_async_background_refresh_raises(name: str, decorator: Callable) -> None:
     """Coroutine functions reject background refresh at decoration time."""
     with pytest.raises(
-        StreamlitIncompatibleParametersError,
-        match=r"`refresh_mode='background'` and `async function` cannot be used together",
+        StreamlitValueError,
+        match=(
+            r'Invalid `refresh_mode` value\. Supported values: "foreground"\. '
+            r"Background refresh is not supported for coroutine functions "
+            r'\(`async def`\)\. Use `refresh_mode="foreground"` instead\.'
+        ),
     ):
 
         @decorator(ttl=60, refresh_mode="background")
