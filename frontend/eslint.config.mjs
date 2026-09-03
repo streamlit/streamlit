@@ -510,6 +510,9 @@ export default defineConfig([
   // Vendored tests are ignored by oxlint; keep the ESLint copies on there.
   {
     files: ["**/vendor/**"],
+    plugins: {
+      vitest,
+    },
     rules: {
       "preserve-caught-error": "error",
       "vitest/no-focused-tests": "error",
