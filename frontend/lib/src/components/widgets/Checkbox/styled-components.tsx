@@ -37,17 +37,15 @@ const fieldStyles = ({ theme }: { theme: EmotionTheme }): CSSObject => ({
 })
 
 /**
- * React Aria field that passes the controlled selection state to
- * `CheckboxButton` and renders the outer wrapper `<div>`. Column alignment CSS,
- * `data-testid="stCheckbox"` and the `stCheckbox` class all target this element.
+ * Outer wrapper `<div>` for the checkbox. Column-alignment CSS,
+ * `data-testid="stCheckbox"`, and the `stCheckbox` class all target this
+ * element. Passes controlled selection state to `CheckboxButton`.
  */
 export const StyledCheckboxField = styled(RACheckboxField)(fieldStyles)
 
 /**
- * The toggle's equivalent of `StyledCheckboxField`, kept separate because
- * `SwitchButton` reads its state from a `SwitchField`, not from a
- * `CheckboxField`. Column alignment CSS and `data-testid="stCheckbox"` target
- * this element too, so checkbox and toggle stay aligned identically.
+ * Toggle counterpart to `StyledCheckboxField`. `SwitchButton` reads state from a
+ * `SwitchField`, so this cannot share the checkbox Field component.
  */
 export const StyledSwitchField = styled(RASwitchField)(fieldStyles)
 
@@ -94,10 +92,14 @@ interface StyledButtonProps {
   $truncate?: boolean
 }
 
-/** Truncation and keyboard-focus background apply here, not on the Field wrapper. */
-export const StyledCheckboxButton = styled(RACheckboxButton, {
-  shouldForwardProp: (prop: string) => !prop.startsWith("$"),
-})<StyledButtonProps>(({ theme, $truncate }) => ({
+/**
+ * Shared by both button labels so truncation and the keyboard-focus background
+ * cannot drift between checkbox and toggle.
+ */
+const buttonStyles = ({
+  theme,
+  $truncate,
+}: { theme: EmotionTheme } & StyledButtonProps): CSSObject => ({
   display: "flex",
   alignItems: "flex-start",
   gap: theme.spacing.sm,
@@ -118,7 +120,12 @@ export const StyledCheckboxButton = styled(RACheckboxButton, {
   "&[data-focus-visible]": {
     backgroundColor: theme.colors.darkenedBgMix25,
   },
-}))
+})
+
+/** React Aria's `<label>` for the checkbox. Truncation and the keyboard-focus background belong here, not on the field wrapper. */
+export const StyledCheckboxButton = styled(RACheckboxButton, {
+  shouldForwardProp: (prop: string) => !prop.startsWith("$"),
+})<StyledButtonProps>(buttonStyles)
 
 interface StyledCheckboxIndicatorProps {
   $isSelected: boolean
@@ -179,34 +186,10 @@ export const StyledCheckboxIndicator =
     }
   )
 
-/**
- * The toggle's equivalent of `StyledCheckboxButton`: truncation and
- * keyboard-focus background apply here, not on the Field wrapper.
- */
+/** Toggle counterpart to `StyledCheckboxButton`, sharing its styles. */
 export const StyledSwitchButton = styled(RASwitchButton, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
-})<StyledButtonProps>(({ theme, $truncate }) => ({
-  display: "flex",
-  alignItems: "flex-start",
-  gap: theme.spacing.sm,
-  marginBottom: 0,
-  marginTop: 0,
-  cursor: "pointer",
-  position: "relative",
-  // Bound the control to its container (without expanding a short label to full
-  // width) and let it shrink so an overflowing label can ellipsize instead of
-  // widening the control past its container.
-  ...($truncate && { minWidth: 0, maxWidth: "100%" }),
-
-  "&[data-disabled]": {
-    cursor: "not-allowed",
-    color: theme.colors.fadedText40,
-  },
-
-  "&[data-focus-visible]": {
-    backgroundColor: theme.colors.darkenedBgMix25,
-  },
-}))
+})<StyledButtonProps>(buttonStyles)
 
 interface StyledToggleTrackProps {
   $isSelected: boolean

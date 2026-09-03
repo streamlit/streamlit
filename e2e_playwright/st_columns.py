@@ -136,8 +136,8 @@ with st.expander("Vertical alignment - bottom", expanded=True):
     col3.checkbox("Checkbox 2 (bottom)")
 
 # Toggle counterpart to the checkbox vertical-alignment fixtures above.
-# Two toggles per column so the first and last element-container rules apply to
-# different widgets.
+# Two toggles per column so the :first-of-type and :last-of-type alignment rules
+# land on different widgets.
 with st.expander("Vertical alignment - toggle", expanded=True):
     with st.container(key="vertical_alignment_toggle_top"):
         top_col1, top_col2, top_col3 = st.columns(3, vertical_alignment="top")

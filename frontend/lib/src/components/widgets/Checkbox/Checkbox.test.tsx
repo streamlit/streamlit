@@ -134,9 +134,8 @@ describe("Checkbox widget", () => {
     ).toBeVisible()
   })
 
-  // The visible label is removed from the accessibility tree in both of these
-  // cases, so `aria-label` on the field is the only remaining source of the
-  // accessible name.
+  // Both cases remove the visible label from the accessibility tree, leaving the
+  // field's aria-label as the only source of the accessible name.
   it.each([
     ["hidden", LabelVisibilityProto.LabelVisibilityOptions.HIDDEN],
     ["collapsed", LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED],
@@ -288,9 +287,8 @@ describe("Checkbox TOGGLE type", () => {
     ).toBeVisible()
   })
 
-  // The visible label is removed from the accessibility tree in both of these
-  // cases, so `aria-label` on the field is the only remaining source of the
-  // accessible name.
+  // Both cases remove the visible label from the accessibility tree, leaving the
+  // field's aria-label as the only source of the accessible name.
   it.each([
     ["hidden", LabelVisibilityProto.LabelVisibilityOptions.HIDDEN],
     ["collapsed", LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED],
