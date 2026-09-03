@@ -8237,10 +8237,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fflate@npm:0.7.4":
-  version: 0.7.4
-  resolution: "fflate@npm:0.7.4"
-  checksum: 10c0/5e749eb3a6ed61a0f6c55756abf9f4258f06f60505db689e22d18503dd252ca5af656d32668e4b7b20714adf8b313febf695d23863a8352f23e325baee0f672d
+"fflate@npm:^0.7.5":
+  version: 0.7.5
+  resolution: "fflate@npm:0.7.5"
+  checksum: 10c0/dd49302136bbe63d5e26a1e2ce7f2c9ff73a2c7eb591af433a20a4fd840e4914c7cad863945162067ec87dd871baa9250b755d06650f59c86b2d72dde4042f58
   languageName: node
   linkType: hard
 
