@@ -53,7 +53,11 @@ def _parse_emoji_test(content: str) -> tuple[set[str], str]:
             continue
 
         # Keep every status (fully-/minimally-/unqualified and component).
-        # is_emoji strips U+FE0F, so those forms must stay in the set.
+        # is_emoji strips U+FE0F before lookup, so unqualified forms must stay
+        # in the set; FE0F-containing forms are never looked up there.
+        # Fully-qualified FE0F forms must also stay so extract_leading_emoji /
+        # EMOJI_EXTRACTION_REGEX consumes the variation selector instead of
+        # leaving it on the remaining text.
         codepoints = line.split(";", 1)[0].split()
         if codepoints:
             emojis.add("".join(chr(int(cp, base=16)) for cp in codepoints))
@@ -74,7 +78,25 @@ def _abort_if_invalid_parse(emojis: set[str], version: str) -> None:
         sys.exit(1)
 
 
+def _abort_if_unexpected_removals(removed: set[str]) -> None:
+    """Exit if the parse dropped sequences from the committed set.
+
+    Unicode's emoji encoding stability policy does not withdraw sequences, so a
+    non-empty removed set is treated as a truncated or malformed parse rather
+    than a real Unicode change. This also rejects partial downloads whose count
+    still clears ``_MIN_EMOJI_COUNT``.
+    """
+    if removed:
+        print(
+            "Aborting: parse would remove committed emoji sequences. Unicode "
+            "does not withdraw sequences, so this is likely a truncated "
+            f"download. Removed ({len(removed)}): {''.join(sorted(removed))}"
+        )
+        sys.exit(1)
+
+
 def _main() -> None:
+    # Import here so unit tests can load this script without importing streamlit.
     from streamlit.emojis import ALL_EMOJIS
 
     try:
@@ -102,17 +124,18 @@ def _main() -> None:
 
     if added:
         print(f"New emojis: {''.join(sorted(added))}")
-    if removed:
-        print(f"Removed emojis: {''.join(sorted(removed))}")
+    _abort_if_unexpected_removals(removed)
 
     generated_code = f"""### EMOJIS START ###
-ALL_EMOJIS = {{{", ".join([f'"{emoji}"' for emoji in sorted(emojis)])}}}
+ALL_EMOJIS = {{{", ".join(repr(emoji) for emoji in sorted(emojis))}}}
 ### EMOJIS END ###"""
 
     with open(EMOJIS_MODULE_PATH, encoding="utf-8") as file:
         script_content = file.read()
 
-    updated_script_content = re.sub(EMOJI_SET_REGEX, generated_code, script_content)
+    updated_script_content = re.sub(
+        EMOJI_SET_REGEX, lambda _: generated_code, script_content
+    )
     if updated_script_content == script_content:
         print(f"Could not find emoji markers in {EMOJIS_MODULE_PATH}. Aborting.")
         sys.exit(1)
