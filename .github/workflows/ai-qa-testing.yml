@@ -278,9 +278,9 @@ jobs:
               gh pr edit "$PR_NUMBER_ENV" --add-label "do-not-merge" --repo "$REPOSITORY"
               ;;
             PASS)
-              # Only the AI review job may remove do-not-merge (e.g. after an
-              # approved review). A QA PASS must not clear a review hold.
-              echo "QA PASS does not remove 'do-not-merge'; only the AI review job may remove it"
+              # A QA PASS must not lift a review hold. Only the AI review job
+              # removes do-not-merge, including holds this job added on FAIL.
+              echo "QA PASS does not remove 'do-not-merge'; re-add 'ai-review' or remove the label manually"
               ;;
             *)
               echo "Verdict is $VERDICT - no label changes"
