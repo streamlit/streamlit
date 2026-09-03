@@ -205,8 +205,8 @@ describe("Radio widget", () => {
 
     const optionItems = screen.getAllByTestId("stRadioOption")
     expect(optionItems).toHaveLength(3)
-    // Pin stRadioOption to the input's <label>. e2e helpers click this node
-    // (app_utils.get_radio_option); the Field wrapper is not a click target.
+    // e2e helpers click stRadioOption (app_utils.get_radio_option), so it
+    // must stay on the input's <label>, not the Field wrapper.
     const firstRadio = screen.getAllByRole("radio")[0]
     expect(firstRadio.closest("label")).toBe(optionItems[0])
   })
@@ -217,8 +217,8 @@ describe("Radio widget", () => {
     const props = getProps({ onChange, value: 0 })
     render(<Radio {...props} />)
 
-    // Click the e2e target (stRadioOption), not the hidden input the other tests use.
     const radioOptions = screen.getAllByRole("radio")
+    // Other tests click the hidden input; this one clicks the e2e helper target.
     await user.click(screen.getAllByTestId("stRadioOption")[1])
 
     expect(onChange).toHaveBeenCalledTimes(1)

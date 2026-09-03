@@ -55,28 +55,29 @@ export const StyledRadioGroup = styled(RARadioGroup, {
 }))
 
 /**
- * Required `RadioField` wrapper around each option. `RadioButton` must nest
- * inside it: the field declares which option this is (`value`) and passes the
- * group's selection state to the button via context.
+ * Per-option wrapper: it declares the option's `value` and passes the group's
+ * selection state to its `RadioButton` child via context. `RadioButton` must
+ * nest inside this field.
  *
- * Unstyled so it shrink-wraps the label as a flex item, and `StyledRadioGroup`'s
- * `alignItems` and `gap` apply to the option's visible box. React Aria mirrors
- * `data-selected`/`data-disabled` onto this div, so keep state-driven styles on
- * the label's class to avoid matching both elements.
+ * It needs no styles of its own — as a block-level flex item it shrink-wraps the
+ * label, so `StyledRadioGroup`'s `alignItems` and `gap` still apply to the
+ * option's visible box.
+ *
+ * Keep state-driven styles on the label's class: React Aria also sets
+ * `data-selected`/`data-disabled` on this div, so styling both elements would
+ * apply those rules twice.
  */
 export const StyledRadioField = styled(RARadioField)()
 
 /**
- * Clickable `<label>` for each radio option — it wraps the hidden input, the
+ * Clickable `<label>` for each radio option. It wraps the hidden input, the
  * circle indicator (`StyledRadioOuter`/`StyledRadioInner`), and the option text,
- * so the whole row is a click target.
+ * so the whole row is a click target. It stays a plain block container: the
+ * children own the circle-and-text alignment so the caption can sit outside that
+ * row without manual offset calculations.
  *
- * React Aria sets `data-focus-visible`, `data-disabled`, `data-selected` etc.
- * as data attributes — we use those for state-driven styles.
- *
- * This element is intentionally a plain block container. Layout (circle + text
- * alignment) is handled by the children so that the caption can live outside
- * the circle/text row without requiring any manual offset calculations.
+ * React Aria sets `data-focus-visible`, `data-disabled`, `data-selected` and
+ * friends as data attributes — we use those for state-driven styles.
  */
 export const StyledRadioButton = styled(RARadioButton)(({ theme }) => ({
   display: "block",
