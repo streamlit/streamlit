@@ -23,7 +23,7 @@ import os
 import tempfile
 import threading
 import unittest
-from collections.abc import Iterator, Mapping, MutableMapping
+from collections.abc import Callable, Iterator, Mapping, MutableMapping
 from collections.abc import Mapping as MappingABC
 from collections.abc import MutableMapping as MutableMappingABC
 from typing import TYPE_CHECKING, Any
@@ -37,10 +37,12 @@ import streamlit as st
 from streamlit import config
 from streamlit.errors import StreamlitSecretNotFoundError
 from streamlit.runtime.secrets import (
+    _MISSING_ENTRY_HINT,
     AttrDict,
-    SecretErrorMessages,
     Secrets,
     _convert_to_dict,
+    _missing_attr_error_message,
+    _missing_key_error_message,
 )
 from streamlit.signal_util import Signal
 from tests import testutil
@@ -61,74 +63,6 @@ email="eng@streamlit.io"
 """
 
 MOCK_SECRETS_FILE_LOC = "/mock/secrets.toml"
-
-
-class TestSecretErrorMessages(unittest.TestCase):
-    def test_changing_message(self):
-        messages = SecretErrorMessages()
-        assert (
-            messages.get_missing_attr_message("attr")
-            == 'st.secrets has no attribute "attr". Did you forget to add it to secrets.toml, '
-            "mount it to secret directory, or the app settings on Streamlit Cloud? More info: "
-            "https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management"
-        )
-
-        messages.set_missing_attr_message(
-            lambda attr: "Missing attribute message",
-        )
-
-        assert messages.get_missing_attr_message([""]) == "Missing attribute message"
-
-    def test_set_and_get_missing_key_message(self) -> None:
-        """Verify set_missing_key_message and get_missing_key_message work correctly."""
-        messages = SecretErrorMessages()
-        messages.set_missing_key_message(lambda key: f"Custom missing key: {key}")
-        assert (
-            messages.get_missing_key_message("my_key") == "Custom missing key: my_key"
-        )
-
-    def test_set_and_get_no_secrets_found_message(self) -> None:
-        """Verify set_no_secrets_found_message and get_no_secrets_found_message work correctly."""
-        messages = SecretErrorMessages()
-        messages.set_no_secrets_found_message(
-            lambda paths: f"No secrets at: {', '.join(paths)}"
-        )
-        assert (
-            messages.get_no_secrets_found_message(["/path/a", "/path/b"])
-            == "No secrets at: /path/a, /path/b"
-        )
-
-    def test_set_and_get_error_parsing_file_at_path_message(self) -> None:
-        """Verify set_error_parsing_file_at_path_message works correctly."""
-        messages = SecretErrorMessages()
-        messages.set_error_parsing_file_at_path_message(
-            lambda path, ex: f"Parse error at {path}: {ex}"
-        )
-        exc = ValueError("invalid toml")
-        assert (
-            messages.get_error_parsing_file_at_path_message("/secrets.toml", exc)
-            == "Parse error at /secrets.toml: invalid toml"
-        )
-
-    def test_set_and_get_subfolder_path_is_not_a_folder_message(self) -> None:
-        """Verify set_subfolder_path_is_not_a_folder_message works correctly."""
-        messages = SecretErrorMessages()
-        messages.set_subfolder_path_is_not_a_folder_message(
-            lambda path: f"Not a folder: {path}"
-        )
-        assert (
-            messages.get_subfolder_path_is_not_a_folder_message("/some/path")
-            == "Not a folder: /some/path"
-        )
-
-    def test_set_and_get_invalid_secret_path_message(self) -> None:
-        """Verify set_invalid_secret_path_message works correctly."""
-        messages = SecretErrorMessages()
-        messages.set_invalid_secret_path_message(lambda path: f"Invalid path: {path}")
-        assert (
-            messages.get_invalid_secret_path_message("/bad/path")
-            == "Invalid path: /bad/path"
-        )
 
 
 class SecretsTest(unittest.TestCase):
@@ -210,24 +144,45 @@ class SecretsTest(unittest.TestCase):
         with patch("builtins.open", mock_open()) as mock_file:
             mock_file.side_effect = FileNotFoundError()
 
-            with pytest.raises(StreamlitSecretNotFoundError):
+            with pytest.raises(StreamlitSecretNotFoundError, match="No secrets found"):
                 self.secrets.get("no_such_secret", None)
 
     @patch("builtins.open", new_callable=mock_open, read_data="invalid_toml")
     @patch("streamlit.config.get_option", return_value=[MOCK_SECRETS_FILE_LOC])
     def test_malformed_toml_error(self, mock_get_option, _):
         """Secrets access raises an error if secrets.toml is malformed."""
-        with pytest.raises(StreamlitSecretNotFoundError):
+        with pytest.raises(
+            StreamlitSecretNotFoundError, match="Error parsing secrets file"
+        ) as excinfo:
             self.secrets.get("no_such_secret", None)
+        message = str(excinfo.value)
+        error = excinfo.value.exec_kwargs["error"]
+        assert MOCK_SECRETS_FILE_LOC in message
+        assert excinfo.value.exec_kwargs["path"] == MOCK_SECRETS_FILE_LOC
+        assert error
+        assert error in message
+
+    @patch("builtins.open", new_callable=mock_open, read_data="key = {invalid")
+    @patch("streamlit.config.get_option", return_value=["/mock/{secrets}.toml"])
+    def test_malformed_toml_error_with_braces_in_path(self, mock_get_option, _):
+        """Brace characters in the secrets path still raise StreamlitSecretNotFoundError."""
+        with pytest.raises(StreamlitSecretNotFoundError) as excinfo:
+            self.secrets.get("no_such_secret", None)
+        message = str(excinfo.value)
+        error = excinfo.value.exec_kwargs["error"]
+        assert "/mock/{secrets}.toml" in message
+        assert excinfo.value.exec_kwargs["path"] == "/mock/{secrets}.toml"
+        assert error
+        assert error in message
 
     @patch("streamlit.watcher.path_watcher.watch_file")
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_getattr_nonexistent(self, *mocks):
         """Verify that access to missing attribute raises  AttributeError."""
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="has no attribute"):
             self.secrets.nonexistent_secret  # noqa: B018
 
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="has no attribute"):
             self.secrets.subsection.nonexistent_secret  # noqa: B018
 
     @patch("streamlit.watcher.path_watcher.watch_file")
@@ -244,10 +199,10 @@ class SecretsTest(unittest.TestCase):
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_getitem_nonexistent(self, *mocks):
         """Verify that access to missing key via dict notation raises KeyError."""
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match="has no key"):
             self.secrets["nonexistent_secret"]
 
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match="has no key"):
             self.secrets["subsection"]["nonexistent_secret"]
 
     @patch("streamlit.watcher.path_watcher.watch_file")
@@ -308,9 +263,6 @@ class SecretsTest(unittest.TestCase):
         self.secrets._file_watchers_installed = True
         assert self.secrets._file_watchers_installed
 
-        self.secrets._suppress_print_error_on_exception = True
-        assert self.secrets._suppress_print_error_on_exception
-
         self.secrets.file_change_listener = Signal()
         assert isinstance(self.secrets.file_change_listener, Signal)
 
@@ -365,7 +317,7 @@ class MultipleSecretsFilesTest(unittest.TestCase):
         with patch("streamlit.config.get_option", new=mock_get_option):
             secrets = Secrets()
 
-            with pytest.raises(StreamlitSecretNotFoundError):
+            with pytest.raises(StreamlitSecretNotFoundError, match="No secrets found"):
                 secrets.get("no_such_secret", None)
 
     @patch("streamlit.runtime.secrets._LOGGER")
@@ -715,6 +667,21 @@ def test_attr_dict_repr() -> None:
     attr_dict = AttrDict(data)
     assert repr(attr_dict) == repr(data)
     assert len(attr_dict) == 2
+
+
+@pytest.mark.parametrize(
+    ("message_fn", "kind"),
+    [
+        (_missing_attr_error_message, "attribute"),
+        (_missing_key_error_message, "key"),
+    ],
+    ids=["attribute", "key"],
+)
+def test_missing_entry_error_messages_include_hint(
+    message_fn: Callable[[str], str], kind: str
+) -> None:
+    """Missing key and attribute messages include the shared docs hint."""
+    assert message_fn("foo") == f'st.secrets has no {kind} "foo". {_MISSING_ENTRY_HINT}'
 
 
 # --- Tests for _validate_secrets_value ---

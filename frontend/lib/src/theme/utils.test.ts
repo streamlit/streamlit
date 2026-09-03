@@ -18,7 +18,7 @@ import { darken, lighten, mix, transparentize } from "color2k"
 import { getLogger } from "loglevel"
 import { MockInstance } from "vitest"
 
-import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
+import { CustomThemeConfig } from "@streamlit/protobuf"
 
 import { baseTheme, darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 import { ThemeConfig } from "~lib/theme/types"
@@ -1861,7 +1861,7 @@ describe("createEmotionTheme", () => {
 
   // Code text color handling
   it("uses configured codeTextColor when provided", () => {
-    const themeInput: Partial<ICustomThemeConfig> = {
+    const themeInput: Partial<CustomThemeConfig.$Properties> = {
       codeTextColor: "#ff0000",
       greenTextColor: "#00aa00", // This should be ignored when codeTextColor is set
     }
@@ -1939,7 +1939,7 @@ describe("createEmotionTheme", () => {
   })
 
   it("prioritizes codeTextColor over greenTextColor when both are configured", () => {
-    const themeInput: Partial<ICustomThemeConfig> = {
+    const themeInput: Partial<CustomThemeConfig.$Properties> = {
       codeTextColor: "#ff0000", // Explicit code text color
       greenTextColor: "#00ff00", // This should be ignored for codeTextColor
     }
@@ -1950,7 +1950,7 @@ describe("createEmotionTheme", () => {
   })
 
   it("prioritizes codeTextColor over derived greenTextColor from greenColor", () => {
-    const themeInput: Partial<ICustomThemeConfig> = {
+    const themeInput: Partial<CustomThemeConfig.$Properties> = {
       base: CustomThemeConfig.BaseTheme.LIGHT,
       codeTextColor: "#ff0000", // Explicit code text color
       greenColor: "#29b09d", // This would derive a different greenTextColor
@@ -1964,7 +1964,7 @@ describe("createEmotionTheme", () => {
 
   it("handles invalid codeTextColor by logging warning and falling back to default greenTextColor", () => {
     const logWarningSpy = vi.spyOn(LOG, "warn")
-    const themeInput: Partial<ICustomThemeConfig> = {
+    const themeInput: Partial<CustomThemeConfig.$Properties> = {
       codeTextColor: "invalid-color",
       greenTextColor: "#00aa00",
     }
@@ -1980,7 +1980,7 @@ describe("createEmotionTheme", () => {
 
   it("falls back to default when both codeTextColor and greenTextColor are invalid", () => {
     const logWarningSpy = vi.spyOn(LOG, "warn")
-    const themeInput: Partial<ICustomThemeConfig> = {
+    const themeInput: Partial<CustomThemeConfig.$Properties> = {
       base: CustomThemeConfig.BaseTheme.LIGHT,
       codeTextColor: "invalid-code-color",
       greenTextColor: "invalid-green-color",
@@ -2004,7 +2004,7 @@ describe("createEmotionTheme", () => {
   })
 
   it("handles codeTextColor without # prefix correctly", () => {
-    const themeInput: Partial<ICustomThemeConfig> = {
+    const themeInput: Partial<CustomThemeConfig.$Properties> = {
       codeTextColor: "00ff00", // Green without # prefix
     }
     const theme = createEmotionTheme(themeInput, lightTheme)

@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitInvalidThemeOptionError
 from streamlit.url_util import is_url
 
 if TYPE_CHECKING:
@@ -58,7 +58,7 @@ def _parse_font_config(
     # only shows up once in the source string (structure applies to Google Fonts only)
     family_occurrences = source_url.count("family=")
     if family_occurrences > 1:
-        raise StreamlitAPIException(
+        raise StreamlitInvalidThemeOptionError(
             f"The source URL specified in the {property_name} property of config.toml contains multiple fonts. "
             "Please specify only one font in the source URL."
         )
@@ -67,7 +67,7 @@ def _parse_font_config(
 
     # If the source is a valid URL (http/https) but no font name is provided, throw an exception
     if is_valid_url and not font_name:
-        raise StreamlitAPIException(
+        raise StreamlitInvalidThemeOptionError(
             f"A font family name is required when specifying a source URL "
             f"for the {property_name} property in config.toml."
         )

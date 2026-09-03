@@ -27,9 +27,11 @@ from streamlit.elements.lib.options_selector_utils import create_mappings
 from streamlit.elements.widgets.selectbox import SelectboxSerde
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
     StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
     StreamlitValueError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
@@ -176,10 +178,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
 
     def test_filter_mode_none_with_accept_new_options_raises_exception(self):
         """Test that filter_mode=None is incompatible with accept_new_options=True."""
-        with pytest.raises(
-            StreamlitAPIException,
-            match=r"cannot be None when `accept_new_options=True`",
-        ):
+        with pytest.raises(StreamlitIncompatibleParametersError):
             st.selectbox(
                 "the label", ("m", "f"), filter_mode=None, accept_new_options=True
             )
@@ -194,17 +193,16 @@ class SelectboxTest(DeltaGeneratorTestCase):
 
     def test_invalid_value_range(self):
         """Test that value must be within the length of the options."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueOutOfRangeError):
             st.selectbox("the label", ("m", "f"), 2)
 
-    def test_raises_exception_of_index_larger_than_options(self):
-        """Test that it raises an exception if index is larger than options."""
-        with pytest.raises(StreamlitAPIException) as ex:
+    def test_index_out_of_range_error_message(self):
+        """Out-of-range index names the closed interval in StreamlitValueOutOfRangeError."""
+        with pytest.raises(StreamlitValueOutOfRangeError) as ex:
             st.selectbox("Test box", ["a"], index=1)
 
-        assert (
-            str(ex.value)
-            == "Selectbox index must be greater than or equal to 0 and less than the length of options."
+        assert str(ex.value) == (
+            "The `index` parameter, set to 1, is outside the required range [0, 0]."
         )
 
     def test_outside_form(self):

@@ -134,10 +134,14 @@ export {
 export { useScrollToBottom } from "./hooks/useScrollToBottom"
 export { default as useTimeout } from "./hooks/useTimeout"
 export { default as HostCommunicationManager } from "./hostComm/HostCommunicationManager"
-export { HOST_COMM_VERSION } from "./hostComm/HostCommunicationManager"
+export {
+  HOST_COMM_VERSION,
+  IS_GUEST_TO_HOST_ECHO,
+} from "./hostComm/HostCommunicationManager"
 export type {
   AppConfig,
   DeployedAppMetadata,
+  GuestToHostEnvelope,
   IGuestToHostMessage,
   IHostToGuestMessage,
   IMenuItem,
@@ -191,6 +195,7 @@ export type {
   CachedTheme,
   EmotionTheme,
   IconSize,
+  IconSizeProp,
   PresetThemeName,
   ThemeSelection,
   ThemeConfig,

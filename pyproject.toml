@@ -88,9 +88,9 @@ dev = [
   { include-group = "test" },
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.73",
+  "ty==0.0.75",
   # We fix ruff to a version to be in sync with the pre-commit hook:
-  "ruff==0.16.4",
+  "ruff==0.16.5",
   # We fix mypy to a version to avoid breaking our CI on updates,
   # and have dependabot handle the updates instead.
   "mypy==2.3.1",
@@ -311,6 +311,9 @@ ignore = [
   "RUF105",  # Checks for legacy `# noqa` comments (migrates them to `# ruff:ignore`).
   "RUF106",  # Checks for rule codes in suppression comments (migrates to human-readable names).
   "RUF201",  # Checks for rule codes in config selectors (migrates to human-readable names).
+  # New code-less preview rule in ruff 0.16.5 (pedantic category). Autouse
+  # fixtures are intentional in our pytest and e2e test setup.
+  "pytest-fixture-autouse",
 ]
 extend-safe-fixes = ["TC002", "TC003"]
 
@@ -492,7 +495,13 @@ ignore_missing_imports = true
 root = ["./lib"]
 
 [tool.ty.src]
-include = ["lib/streamlit", "e2e_playwright", "scripts"]
+include = [
+  "lib/streamlit",
+  # Public-API typing tests; the type checkers run them, not pytest.
+  "lib/tests/streamlit/typing",
+  "e2e_playwright",
+  "scripts",
+]
 exclude = [
   "e2e_playwright/compilation_error_dialog.py",
   "lib/streamlit/vendor/**",

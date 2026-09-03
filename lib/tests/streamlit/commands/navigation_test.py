@@ -18,7 +18,12 @@ import pytest
 
 import streamlit as st
 from streamlit.commands.navigation import convert_to_streamlit_page
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.navigation.page import Page, StreamlitPage
 from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -31,8 +36,9 @@ class NavigationTest(DeltaGeneratorTestCase):
 
     def test_no_pages(self):
         """Test that an error is thrown with no pages"""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitMissingRequiredParameterError) as exc:
             st.navigation([])
+        assert "Provide at least one `st.Page`" in str(exc.value)
 
     def test_single_page(self):
         """Test that a single page is returned"""
@@ -217,21 +223,22 @@ class NavigationTest(DeltaGeneratorTestCase):
 
     def test_navigation_message_with_expanded_negative_raises(self):
         """Test that negative expanded values raise an error."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.navigation(
                 [st.Page("page1.py"), st.Page("page2.py")],
                 expanded=-1,
             )
-        assert "must be a non-negative integer" in str(exc.value)
+        assert "a non-negative integer" in str(exc.value)
+        assert "Provided value: -1" in str(exc.value)
 
     def test_navigation_message_with_expanded_invalid_type_raises(self):
         """Test that invalid expanded type raises an error."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitInvalidParameterTypeError) as exc:
             st.navigation(
                 [st.Page("page1.py"), st.Page("page2.py")],
                 expanded="invalid",  # type: ignore[arg-type]
             )
-        assert "must be a bool or a non-negative integer" in str(exc.value)
+        assert "Invalid `expanded` type" in str(exc.value)
 
     def test_convert_to_streamlit_page_with_string(self):
         """Test converting string path to Page."""
@@ -259,9 +266,9 @@ class NavigationTest(DeltaGeneratorTestCase):
 
     def test_convert_to_streamlit_page_invalid_type(self):
         """Test that invalid types raise exception"""
-        with pytest.raises(StreamlitAPIException) as exc_info:
+        with pytest.raises(StreamlitInvalidParameterTypeError) as exc_info:
             convert_to_streamlit_page(123)
-        assert "Invalid page type" in str(exc_info.value)
+        assert exc_info.value.exec_kwargs["parameter"] == "pages"
 
     def test_navigation_with_string_list(self):
         """Test navigation with list of strings"""

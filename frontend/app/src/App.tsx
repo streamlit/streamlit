@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-import { createRef, PureComponent, ReactNode } from "react"
+import { createRef, type JSX, PureComponent, ReactNode } from "react"
 
-import classNames from "classnames"
 import { enableMapSet, enablePatches } from "immer"
 import { getLogger } from "loglevel"
 import { flushSync } from "react-dom"
-import Hotkeys from "react-hot-keys"
 
 import AppView from "@streamlit/app/src/components/AppView/AppView"
 import DeployButton from "@streamlit/app/src/components/DeployButton/DeployButton"
+import { GlobalHotkeys } from "@streamlit/app/src/components/GlobalHotkeys/GlobalHotkeys"
 import MainMenu from "@streamlit/app/src/components/MainMenu/MainMenu"
 import {
   isSkillsNudgeDismissed,
@@ -126,6 +125,7 @@ import {
   WidgetStateManager,
 } from "@streamlit/lib"
 import {
+  type AppPage,
   AuthRedirect,
   AutoRerun,
   BackendOperationResponse,
@@ -137,9 +137,6 @@ import {
   ForwardMsg,
   ForwardMsgMetadata,
   GitInfo,
-  IAppPage,
-  ICustomThemeConfig,
-  IGitInfo,
   Initialize,
   Logo,
   Navigation,
@@ -198,21 +195,21 @@ interface State {
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
   initialSidebarWidth?: number
-  menuItems?: PageConfig.IMenuItems | null
+  menuItems?: PageConfig.MenuItems.$Properties | null
   allowRunOnSave: boolean
   scriptFinishedHandlers: (() => void)[]
   toolbarMode: Config.ToolbarMode
   showErrorLinks: Config.ShowErrorLinks
   disableDataExport: boolean
   themeHash: string
-  gitInfo: IGitInfo | null
+  gitInfo: GitInfo.$Properties | null
   formsData: FormsData
   hideTopBar: boolean
   hideSidebarNav: boolean
   expandSidebarNav: boolean
   sidebarNavVisibleItems?: number
   navigationPosition: Navigation.Position
-  appPages: IAppPage[]
+  appPages: AppPage.$Properties[]
   navSections: string[]
   // The hash of the current page executing
   currentPageScriptHash: string
@@ -952,7 +949,7 @@ export class App extends PureComponent<Props, State> {
    */
   handleThemeMessage = (
     themeName?: PresetThemeName,
-    theme?: ICustomThemeConfig
+    theme?: CustomThemeConfig.$Properties
   ): void => {
     const [, lightTheme, darkTheme] = createPresetThemes()
     const isUsingPresetTheme = isPresetTheme(this.props.theme.activeTheme)
@@ -1052,7 +1049,7 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  handleGitInfoChanged = (gitInfo: IGitInfo): void => {
+  handleGitInfoChanged = (gitInfo: GitInfo.$Properties): void => {
     this.setState({
       gitInfo,
     })
@@ -2688,13 +2685,6 @@ export class App extends PureComponent<Props, State> {
   }
 
   handleKeyDown = (keyName: string, keyboardEvent?: KeyboardEvent): void => {
-    // Ignore keyup events so a modified shortcut cannot become a bare-key
-    // shortcut when the user releases the modifier first (for example, Cmd+C).
-    // react-hot-keys binds keydown and keyup to the same onKeyDown handler.
-    if (keyboardEvent?.type === "keyup") {
-      return
-    }
-
     // See `isKeyboardEventFromEditableTarget` for editable/shadow DOM behavior.
     // We never fire global single-letter shortcuts while the user is typing.
     if (
@@ -2805,14 +2795,14 @@ export class App extends PureComponent<Props, State> {
       this.state.toolbarMode
     )
 
-    const outerDivClass = classNames(
+    const outerDivClass = [
       "stApp",
       getEmbeddingIdClassName(this.embeddingId),
-      {
-        "streamlit-embedded": isEmbed(),
-        "streamlit-wide": userSettings.wideMode,
-      }
-    )
+      isEmbed() && "streamlit-embedded",
+      userSettings.wideMode && "streamlit-wide",
+    ]
+      .filter(Boolean)
+      .join(" ")
 
     const renderedDialog: React.ReactNode = dialog
       ? StreamlitDialog({
@@ -2889,7 +2879,7 @@ export class App extends PureComponent<Props, State> {
         onInstallSkills={this.handleErrorCalloutInstall}
         onSkillsCalloutShown={this.handleErrorCalloutShown}
       >
-        <Hotkeys
+        <GlobalHotkeys
           keyName="r,c,esc"
           onKeyDown={this.handleKeyDown}
           onKeyUp={this.handleKeyUp}
@@ -2988,7 +2978,7 @@ export class App extends PureComponent<Props, State> {
             />
             {renderedDialog}
           </StyledApp>
-        </Hotkeys>
+        </GlobalHotkeys>
       </StreamlitContextProvider>
     )
   }

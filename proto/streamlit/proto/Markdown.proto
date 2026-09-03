@@ -43,4 +43,8 @@ message Markdown {
   // When true, headers within `body` keep their `id` (so URL #anchor deep
   // linking still works) but the visible anchor link icon is not rendered.
   bool hide_anchors = 7;
+
+  // If false, the text stays on one line and ellipsizes instead of wrapping.
+  // Absent or true means the text wraps.
+  optional bool wrap = 8;
 }

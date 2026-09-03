@@ -19,7 +19,6 @@ import { Mock, MockInstance } from "vitest"
 
 import {
   ComponentInstance as ComponentInstanceProto,
-  IComponentInstance as IComponentInstanceProto,
   SpecialArg,
 } from "@streamlit/protobuf"
 
@@ -943,7 +942,7 @@ describe("ComponentInstance", () => {
   function createElementProp(
     jsonArgs: Record<string, unknown> = {},
     specialArgs: SpecialArg[] = [],
-    overrides: Partial<IComponentInstanceProto> = {}
+    overrides: Partial<ComponentInstanceProto.$Properties> = {}
   ): ComponentInstanceProto {
     return ComponentInstanceProto.create({
       jsonArgs: JSON.stringify(jsonArgs),

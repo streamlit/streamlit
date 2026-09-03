@@ -1223,7 +1223,10 @@ def determine_arrow_column_fix(
             # Get the first non-null value to check if it is a supported list-like type.
             # Using dropna() handles cases where early values are NaN (e.g., from reindexing).
             non_null = column.dropna()
-            if len(non_null) == 0:
+            if len(non_null) == 0:  # pragma: no cover - defensive
+                # ``infer_dtype(..., skipna=True)`` reports all-null object
+                # columns as ``"empty"``, not ``"mixed"``, so this branch is
+                # not reachable with current pandas.
                 return "string"
             first_value = cast("DataFrameGenericAlias[Any]", non_null).iloc[0]  # type: ignore[index] # ty: ignore[not-subscriptable]
 
@@ -1447,12 +1450,12 @@ def _pandas_df_to_series(df: DataFrame) -> Series[Any]:
 
     Raises
     ------
-    ValueError
+    StreamlitDataframeConversionError
         If the DataFrame has more than one column.
     """
     # Select first column in dataframe and create a new series based on the values
     if len(df.columns) != 1:
-        raise ValueError(
+        raise errors.StreamlitDataframeConversionError(
             f"DataFrame is expected to have a single column but has {len(df.columns)}."
         )
     return df.iloc[:, 0]
@@ -1563,7 +1566,7 @@ def convert_pandas_df_to_data_format(
             #  Get the first column and convert to list
             return_list = df.iloc[:, 0].tolist()
         elif len(df.columns) >= 1:
-            raise ValueError(
+            raise errors.StreamlitDataframeConversionError(
                 "DataFrame is expected to have a single column but "
                 f"has {len(df.columns)}."
             )
@@ -1578,4 +1581,6 @@ def convert_pandas_df_to_data_format(
         # as a dict with index as key.
         return {} if df.empty else df.iloc[:, 0].to_dict()
 
-    raise ValueError(f"Unsupported input data format: {data_format}")
+    raise errors.StreamlitDataframeConversionError(
+        f"Unsupported input data format: {data_format}"
+    )

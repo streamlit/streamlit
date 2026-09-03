@@ -381,11 +381,21 @@ export const StyledDropdownListBoxItem = styled(ListBoxItem)(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
   color: theme.colors.bodyText,
   outline: "none",
-  "&[data-hovered], &[data-focused]": {
+  // Interactive fills exclude disabled items rather than relying on the rule
+  // below coming last, matching how BaseButton gates its own states.
+  "&:is([data-hovered],[data-focused]):not([data-disabled])": {
     backgroundColor: theme.colors.darkenedBgMix15,
   },
-  "&[data-selected]": {
+  "&[data-selected]:not([data-disabled])": {
     backgroundColor: theme.colors.darkenedBgMix25,
+  },
+  // Mirrors StyledCalendarCell's [data-disabled] rule, so an unselectable month
+  // reads the same in the dropdown as it does in the calendar below. Fading is
+  // allowed here because these options are genuinely inactive — WCAG exempts
+  // inactive controls from the contrast requirement.
+  "&[data-disabled]": {
+    color: theme.colors.fadedText40,
+    cursor: "not-allowed",
   },
 }))
 

@@ -1950,12 +1950,15 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     await waitFor(() => {
       const calendar = screen.getByTestId("stDateInputCalendar")
       expect(calendar).toHaveAttribute("role", "dialog")
-      expect(calendar).toHaveAttribute("aria-modal", "true")
       // Focus should be inside the calendar grid
       const focused = document.activeElement
       expect(calendar.contains(focused)).toBe(true)
       expect(focused?.getAttribute("tabindex")).toBe("0")
     })
+    expect(screen.getByTestId("stDateInputCalendar")).toHaveAttribute(
+      "aria-modal",
+      "true"
+    )
   })
 
   it("Alt+ArrowDown opens calendar even if popover was closed", async () => {
@@ -2184,10 +2187,15 @@ describe("DateInput range-mode active calendar (Alt+ArrowDown)", () => {
     await user.keyboard("{Alt>}{ArrowDown}{/Alt}")
 
     await waitFor(() => {
-      const calendar = screen.getByTestId("stDateInputCalendar")
-      expect(calendar).toHaveAttribute("role", "dialog")
-      expect(calendar).toHaveAttribute("aria-modal", "true")
+      expect(screen.getByTestId("stDateInputCalendar")).toHaveAttribute(
+        "role",
+        "dialog"
+      )
     })
+    expect(screen.getByTestId("stDateInputCalendar")).toHaveAttribute(
+      "aria-modal",
+      "true"
+    )
   })
 
   it("Alt+ArrowDown from end field segment enters active calendar", async () => {
@@ -2951,6 +2959,350 @@ describe("DateInput month/year picker escape handling", () => {
     })
 
     expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
+  })
+
+  it("Tab in the month picker closes the picker without closing the calendar", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getSingleDateSegments(region)
+    await user.click(year)
+
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    const monthTrigger = within(calendar).getByRole("button", {
+      name: "month",
+    })
+    await user.click(monthTrigger)
+
+    expect(screen.getByTestId("stDateInputHeaderPickerPopover")).toBeVisible()
+
+    await user.keyboard("{Tab}")
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputHeaderPickerPopover")
+      ).not.toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+  })
+
+  it("selecting a year from the picker keeps the calendar open", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getSingleDateSegments(region)
+    await user.click(year)
+
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    const yearTrigger = within(calendar).getByRole("button", {
+      name: "year",
+    })
+    const monthTrigger = within(calendar).getByRole("button", {
+      name: "month",
+    })
+    expect(yearTrigger).toHaveTextContent("1970")
+    expect(monthTrigger).toHaveTextContent("January")
+
+    await user.click(yearTrigger)
+    await user.click(await screen.findByRole("option", { name: "1971" }))
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputHeaderPickerPopover")
+      ).not.toBeInTheDocument()
+    })
+    expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+    expect(yearTrigger).toHaveTextContent("1971")
+    expect(monthTrigger).toHaveTextContent("January")
+  })
+})
+
+describe("DateInput year picker with a constrained range", () => {
+  const openCalendarHeader = async (
+    user: ReturnType<typeof userEvent.setup>
+  ): Promise<{ yearTrigger: HTMLElement; monthTrigger: HTMLElement }> => {
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getSingleDateSegments(region)
+    await user.click(year)
+
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    return {
+      yearTrigger: within(calendar).getByRole("button", { name: "year" }),
+      monthTrigger: within(calendar).getByRole("button", { name: "month" }),
+    }
+  }
+
+  // React Aria builds its year list by stepping whole years from `min`, so it
+  // drops the final year whenever `max`'s month/day precedes `min`'s — leaving
+  // the trigger showing a year the grid isn't on. See #16686.
+  it.each([
+    {
+      name: "max month/day before min's (the reported case)",
+      min: "2024-08-03",
+      max: "2025-02-03",
+      value: "2025-02-01",
+      expectedYear: "2025",
+      expectedOptions: ["2024", "2025"],
+    },
+    {
+      name: "bounds sharing a month/day",
+      min: "2024-08-03",
+      max: "2025-08-03",
+      value: "2025-08-01",
+      expectedYear: "2025",
+      expectedOptions: ["2024", "2025"],
+    },
+    {
+      name: "range within a single year",
+      min: "2024-08-03",
+      max: "2024-11-03",
+      value: "2024-09-01",
+      expectedYear: "2024",
+      expectedOptions: ["2024"],
+    },
+  ])(
+    "lists every in-range year and shows the focused one — $name",
+    async ({ min, max, value, expectedYear, expectedOptions }) => {
+      const user = userEvent.setup()
+      render(<DateInput {...getProps({ min, max, default: [value] })} />)
+
+      const { yearTrigger } = await openCalendarHeader(user)
+
+      // The trigger must agree with the year the calendar grid is showing.
+      expect(yearTrigger).toHaveTextContent(expectedYear)
+      expect(screen.getByRole("grid")).toHaveAccessibleName(
+        new RegExp(expectedYear)
+      )
+
+      await user.click(yearTrigger)
+      const options = await screen.findAllByRole("option")
+      expect(options.map(option => option.textContent)).toEqual(
+        expectedOptions
+      )
+    }
+  )
+
+  // Range mode reads RangeCalendarStateContext instead of CalendarStateContext,
+  // so it needs its own coverage even though the header component is shared.
+  it("lists the boundary year in range mode", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({
+          isRange: true,
+          min: "2024-08-03",
+          max: "2025-02-03",
+          default: ["2025-02-01", "2025-02-02"],
+        })}
+      />
+    )
+
+    const region = screen.getByTestId("stDateInput")
+    await user.click(getRangeDateSegments(region, "start").year)
+
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    const yearTrigger = within(calendar).getByRole("button", { name: "year" })
+    expect(yearTrigger).toHaveTextContent("2025")
+    expect(within(calendar).getByRole("grid")).toHaveAccessibleName(/2025/)
+
+    await user.click(yearTrigger)
+    const years = (await screen.findAllByRole("option")).map(
+      option => option.textContent
+    )
+    expect(years).toEqual(["2024", "2025"])
+  })
+
+  // The visitor's locale chooses the calendar system, so `focusedDate` may be
+  // Buddhist or Persian while the min/max props stay Gregorian. Reading years
+  // off both without converting left the trigger blank. See #16686.
+  it.each([
+    // Buddhist months align with Gregorian ones, so only January and February
+    // 2568 (= 2025) hold a selectable day, exactly as in the Gregorian case.
+    { locale: "th", enabledMonths: 2 },
+    // Persian months straddle Gregorian ones: the bounds fall inside Solar
+    // Hijri 1403, spanning its months 5-11. A different count from `th` is what
+    // proves the month bounds are evaluated in the visitor's calendar.
+    { locale: "fa-IR", enabledMonths: 7 },
+  ])(
+    "shows the focused year and reachable months in a non-Gregorian calendar — $locale",
+    async ({ locale, enabledMonths }) => {
+      const user = userEvent.setup()
+      renderWithContexts(
+        <DateInput
+          {...getProps({
+            min: "2024-08-03",
+            max: "2025-02-03",
+            default: ["2025-02-01"],
+          })}
+        />,
+        { libConfigContext: { locale } }
+      )
+
+      const region = screen.getByTestId("stDateInput")
+      // Segment and picker aria-labels are localized, so locate positionally:
+      // month is the first picker trigger, year the second.
+      await user.click(within(region).getAllByRole("spinbutton")[0])
+      const calendar = await screen.findByTestId("stDateInputCalendar")
+      const [monthTrigger, yearTrigger] = within(calendar)
+        .getAllByRole("button")
+        .filter(button => button.getAttribute("aria-haspopup") === "listbox")
+
+      // Localized year strings vary with browser locale data, so compare the
+      // numeric year in the trigger against the grid's accessible name — React
+      // Aria formats that from `focusedDate` independently of this hook, so it
+      // witnesses the year actually on screen.
+      const triggerText = yearTrigger.textContent
+      const triggerYear = triggerText?.match(/\p{Nd}+/gu)?.at(-1)
+      expect(triggerYear).toBeTruthy()
+      expect(within(calendar).getByRole("grid")).toHaveAccessibleName(
+        new RegExp(String(triggerYear))
+      )
+
+      // Month availability is compared on absolute days rather than converted
+      // year numbers, so it needs its own non-Gregorian coverage: a month-off
+      // result would otherwise be silent. Counts rather than localized month
+      // names, which shift with locale data.
+      await user.click(monthTrigger)
+      const monthOptions = await screen.findAllByRole("option")
+      const reachable = monthOptions.filter(
+        option => option.getAttribute("aria-disabled") !== "true"
+      )
+      expect(monthOptions).toHaveLength(12)
+      expect(reachable).toHaveLength(enabledMonths)
+      // The month on screen must be one the user can still choose.
+      expect(reachable.map(option => option.textContent)).toContain(
+        monthTrigger.textContent
+      )
+      await user.keyboard("{Escape}")
+
+      await user.click(yearTrigger)
+      const options = (await screen.findAllByRole("option")).map(
+        option => option.textContent
+      )
+      expect(options).toContain(triggerText)
+    }
+  )
+
+  it("caps a wide range at the visible-year window around the focused year", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({
+          min: "1990-08-03",
+          max: "2025-02-03",
+          default: ["2025-02-01"],
+        })}
+      />
+    )
+
+    const { yearTrigger } = await openCalendarHeader(user)
+    await user.click(yearTrigger)
+
+    const years = (await screen.findAllByRole("option")).map(
+      option => option.textContent
+    )
+    expect(years).toHaveLength(20)
+    expect(years.at(0)).toBe("2006")
+    expect(years.at(-1)).toBe("2025")
+    // The window is clamped to `max`, so later years are never offered.
+    expect(years).not.toContain("2026")
+  })
+
+  it("changes only the year, keeping the focused month", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({
+          min: "2020-08-03",
+          max: "2025-02-03",
+          default: ["2025-02-01"],
+        })}
+      />
+    )
+
+    const { yearTrigger, monthTrigger } = await openCalendarHeader(user)
+    // 2025 is the boundary year React Aria's list omits, so an unfixed picker
+    // falls back to the first option (2020) here.
+    expect(yearTrigger).toHaveTextContent("2025")
+    expect(monthTrigger).toHaveTextContent("February")
+
+    await user.click(yearTrigger)
+    await user.click(await screen.findByRole("option", { name: "2022" }))
+
+    expect(yearTrigger).toHaveTextContent("2022")
+    expect(monthTrigger).toHaveTextContent("February")
+    // The grid is formatted independently of the header, so it confirms the
+    // month really did survive the year change.
+    expect(screen.getByRole("grid")).toHaveAccessibleName(/February 2022/)
+  })
+
+  it("disables only the months holding no selectable day", async () => {
+    const user = userEvent.setup()
+    // Focused on December so the clamp target for a disabled month (August, the
+    // nearest bound) differs from where the calendar already is. Focusing a
+    // boundary month instead would make the final assertion unfalsifiable,
+    // because every unreachable month clamps straight back onto it.
+    render(
+      <DateInput
+        {...getProps({
+          min: "2024-08-03",
+          max: "2025-02-03",
+          default: ["2024-12-01"],
+        })}
+      />
+    )
+
+    const { monthTrigger } = await openCalendarHeader(user)
+    await user.click(monthTrigger)
+
+    const options = await screen.findAllByRole("option")
+    const enabled = options
+      .filter(option => option.getAttribute("aria-disabled") !== "true")
+      .map(option => option.textContent)
+
+    // The grid is on 2024, reachable from August onwards. August is partly out
+    // of range (min is the 3rd) but must stay usable.
+    expect(enabled).toEqual([
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ])
+    expect(options).toHaveLength(12)
+
+    // The attribute alone isn't the point — clicking a disabled month must not
+    // relocate the calendar, which is the behavior the disabling protects.
+    await user.click(screen.getByRole("option", { name: "January" }))
+    expect(monthTrigger).toHaveTextContent("December")
+    // A disabled option isn't selectable, so the picker is still open.
+    expect(screen.getAllByRole("option")).toHaveLength(12)
+  })
+
+  it("clamps into range when the picked year puts the month out of bounds", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({
+          min: "2024-08-03",
+          max: "2025-02-03",
+          default: ["2025-02-01"],
+        })}
+      />
+    )
+
+    const { yearTrigger, monthTrigger } = await openCalendarHeader(user)
+    await user.click(yearTrigger)
+    await user.click(await screen.findByRole("option", { name: "2024" }))
+
+    // February 2024 precedes min_value, so the calendar moves to the earliest
+    // allowed month rather than leaving the valid range.
+    expect(yearTrigger).toHaveTextContent("2024")
+    expect(monthTrigger).toHaveTextContent("August")
+    expect(screen.getByRole("grid")).toHaveAccessibleName(/August 2024/)
   })
 })
 

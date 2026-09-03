@@ -230,6 +230,9 @@ export const StyledStreamlitMarkdown =
         color: "inherit",
         // Always respect the width of the parent container:
         maxWidth: "100%",
+        // Labels shrink to content so a [label][help] row keeps the icon
+        // beside the text. Truncation still ellipsizes via maxWidth and
+        // minWidth in a bounded parent.
         width: isLabel ? "" : "100%",
         // Break long words to prevent them from overflowing the container:
         overflowWrap: "break-word",
@@ -255,11 +258,50 @@ export const StyledStreamlitMarkdown =
           // parent so the ellipsis can appear.
           minWidth: 0,
 
+          // CommonMark hard breaks (`<br>` from trailing spaces or `\`) are
+          // not suppressed by nowrap. Replace the break with a gap so
+          // wrap=False stays one line without concatenating words.
+          "& br": {
+            display: "inline-block",
+            width: "0.25em",
+            height: 0,
+            overflow: "hidden",
+            verticalAlign: "bottom",
+          },
+
           "& p": {
+            // Label mode unwraps headings, lists, and tables. Leftover
+            // paragraphs would still stack, so inline them. Ellipsis stays
+            // on the markdown container: overflow/maxWidth on an inlined
+            // <p> computes as inline-block and can clip content-width
+            // wrap=auto labels (menu/popover in columns).
+            display: "inline",
+            margin: 0,
+            padding: 0,
+            border: "none",
+            whiteSpace: "nowrap",
+            verticalAlign: "bottom",
+            lineHeight: shouldInheritLineHeight ? "inherit" : "normal",
+          },
+
+          // Adjacent leftover paragraphs would otherwise render as `onetwo`.
+          "& p + p::before": {
+            content: '" "',
+          },
+
+          // Display math stays block-level and horizontally scrollable under
+          // the shared markdown styles. Inline it so wrap=False is one row.
+          "& .katex-display": {
+            display: "inline",
+            margin: 0,
             overflow: "hidden",
             whiteSpace: "nowrap",
-            textOverflow: "ellipsis",
-            lineHeight: shouldInheritLineHeight ? "inherit" : "normal",
+          },
+
+          // Inline code uses pre-wrap; nowrap so a fenced block's trailing
+          // newline cannot become a second row.
+          "& code": {
+            whiteSpace: "nowrap",
           },
         }),
 
@@ -384,6 +426,8 @@ export const StyledStreamlitMarkdown =
           overflow: "hidden",
           textOverflow: "ellipsis",
           maxWidth: "100%",
+          // Shrink inside a flex row (e.g. wrap=false next to a help icon).
+          minWidth: 0,
           display: "inline-block",
           verticalAlign: "middle",
         },
@@ -442,8 +486,9 @@ export const StyledStreamlitMarkdown =
 
         // Allow long Latex formulas that are not inline (i.e. either from `st.latex`
         // or in their own paragraph inside `st.markdown`) to scroll horizontally.
+        // Truncation inlines display math above so it cannot become a second row.
         ".katex-display": {
-          overflowX: "auto",
+          overflowX: truncate ? "hidden" : "auto",
           overflowY: "hidden",
         },
 
@@ -480,7 +525,9 @@ export const StyledLinkIcon = styled.a(({ theme }) => ({
   },
 }))
 
-export const StyledHeadingWithActionElements = styled.div(({ theme }) => ({
+export const StyledHeadingWithActionElements = styled.div<{
+  $truncate?: boolean
+}>(({ theme, $truncate }) => ({
   "h1, h2, h3, h4, h5, h6, span": {
     scrollMarginTop: theme.sizes.headerHeight,
   },
@@ -499,12 +546,41 @@ export const StyledHeadingWithActionElements = styled.div(({ theme }) => ({
       pointerEvents: "auto",
     },
   },
+
+  ...($truncate && {
+    minWidth: 0,
+    maxWidth: "100%",
+    "h1, h2, h3, h4, h5, h6": {
+      display: "flex",
+      alignItems: "center",
+      overflow: "hidden",
+      minWidth: 0,
+      whiteSpace: "nowrap",
+      textWrap: "nowrap",
+    },
+  }),
 }))
+
+export const StyledHeadingText = styled.span<{ $truncate?: boolean }>(
+  ({ $truncate }) => ({
+    ...($truncate && {
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+      minWidth: 0,
+      // Fill the heading so inherited text-align still positions short copy
+      // while help/anchor icons stay at the end.
+      flex: 1,
+    }),
+  })
+)
 
 export const StyledHeadingActionElements = styled.span(({ theme }) => ({
   marginLeft: theme.spacing.sm,
   display: "inline-flex",
   gap: theme.spacing.sm,
+  // Keep anchor and help icons visible when the heading text ellipsizes.
+  flexShrink: 0,
 
   verticalAlign: "middle",
 
@@ -512,6 +588,37 @@ export const StyledHeadingActionElements = styled.span(({ theme }) => ({
     // remove margins of inner elements as they are wrapped in a container that applies the margin
     marginLeft: "0 !important",
   },
+}))
+
+/**
+ * Leading decorative icon for st.title / st.header / st.subheader.
+ *
+ * Inline in the heading's text flow so wrapping and text-align match a
+ * markdown icon (`:material/name: Title`). The wrapper is one heading
+ * line tall so the 1em glyph sits with the letters.
+ */
+export const StyledHeadingIcon = styled.span(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  // A 1em-tall box with vertical-align: bottom would leave the line-height gap
+  // above the icon, so the wrapper spans the full heading line box.
+  verticalAlign: "bottom",
+  marginInlineEnd: theme.spacing.sm,
+  color: "inherit",
+  fontSize: "1em",
+  lineHeight: theme.lineHeights.none,
+  width: "1em",
+  height: `${theme.lineHeights.headings}em`,
+  // Clip to the 1em box so Material ligature names (e.g. "star") cannot
+  // expand the heading before the icon font loads. Keep a fixed width
+  // (not minWidth) so that pre-load text cannot grow the box. Emoji and
+  // spinner glyphs are optically shrunk to fit inside 1em.
+  overflow: "hidden",
+  userSelect: "none",
+  boxSizing: "border-box",
+  // wrap=false makes the heading a flex row; keep the glyph from shrinking.
+  flexShrink: 0,
 }))
 
 interface StyledDividerProps {

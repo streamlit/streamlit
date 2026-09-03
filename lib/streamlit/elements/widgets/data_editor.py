@@ -61,7 +61,7 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitDataframeConversionError
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -86,15 +86,16 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = _logger.get_logger(__name__)
 
-# All formats that support direct editing, meaning that these
-# formats will be returned with the same type when used with data_editor.
+T = TypeVar("T")
+
+# Dataframe-like inputs return the same type. List, dict, and set inputs use
+# dedicated overloads that preserve inner type parameters but return the plain
+# builtin, matching the runtime conversion (a dict subclass in returns a plain
+# dict out). The bound's tuple[Any] matches only 1-tuples, so longer tuples hit
+# the data: Any overload and return pd.DataFrame.
 EditableData = TypeVar(
     "EditableData",
-    bound=dataframe_util.DataFrameGenericAlias[Any]
-    | tuple[Any]
-    | list[Any]
-    | set[Any]
-    | dict[str, Any],
+    bound=dataframe_util.DataFrameGenericAlias[Any] | tuple[Any],
 )
 
 
@@ -660,7 +661,8 @@ def _check_column_names(data_df: pd.DataFrame) -> None:
         raise StreamlitAPIException(
             f"All column names are required to be unique for usage with data editor. "
             f"The following column names are duplicated: {list(duplicated_columns)}. "
-            f"Please rename the duplicated columns in the provided data."
+            f"Please rename the duplicated columns in the provided data.",
+            error_id="data-editor-duplicate-column-names",
         )
 
     # Check if the column names are not named "_index" and raise an exception if so.
@@ -668,7 +670,8 @@ def _check_column_names(data_df: pd.DataFrame) -> None:
         raise StreamlitAPIException(
             f"The column name '{INDEX_IDENTIFIER}' is reserved for the index column "
             f"and can't be used for data columns. Please rename the column in the "
-            f"provided data."
+            f"provided data.",
+            error_id="data-editor-reserved-index-column-name",
         )
 
 
@@ -731,11 +734,80 @@ def _check_type_compatibilities(
                     f"`{column_name}` is not compatible for editing the underlying "
                     f"data type `{column_data_kind}`.\n\nYou have following options to "
                     f"fix this: 1) choose a compatible type 2) disable the column "
-                    f"3) convert the column into a compatible data type."
+                    f"3) convert the column into a compatible data type.",
+                    error_id="data-editor-incompatible-column-type",
                 )
 
 
 class DataEditorMixin:
+    # Inner types are echoed. Runtime may convert row/column tuples to lists
+    # (e.g. [(1, 2)] becomes list[list[int]]); that mismatch is pre-existing.
+    @overload
+    def data_editor(
+        self,
+        data: list[T],
+        *,
+        width: Width = "stretch",
+        height: Height | Literal["auto"] = "auto",
+        use_container_width: bool | None = None,
+        hide_index: bool | None = None,
+        column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
+        num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
+        disabled: bool | Iterable[str | int] = False,
+        key: Key | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        row_height: int | None = None,
+        placeholder: str | None = None,
+    ) -> list[T]:
+        pass
+
+    @overload
+    def data_editor(
+        self,
+        data: dict[str, T],
+        *,
+        width: Width = "stretch",
+        height: Height | Literal["auto"] = "auto",
+        use_container_width: bool | None = None,
+        hide_index: bool | None = None,
+        column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
+        num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
+        disabled: bool | Iterable[str | int] = False,
+        key: Key | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        row_height: int | None = None,
+        placeholder: str | None = None,
+    ) -> dict[str, T]:
+        pass
+
+    @overload
+    def data_editor(
+        self,
+        data: set[T],
+        *,
+        width: Width = "stretch",
+        height: Height | Literal["auto"] = "auto",
+        use_container_width: bool | None = None,
+        hide_index: bool | None = None,
+        column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
+        num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
+        disabled: bool | Iterable[str | int] = False,
+        key: Key | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        row_height: int | None = None,
+        placeholder: str | None = None,
+    ) -> set[T]:
+        pass
+
     @overload
     def data_editor(
         self,
@@ -1138,7 +1210,7 @@ class DataEditorMixin:
 
         data_format = dataframe_util.determine_data_format(data)
         if data_format == dataframe_util.DataFormat.UNKNOWN:
-            raise StreamlitAPIException(
+            raise StreamlitDataframeConversionError(
                 f"The data type ({type(data).__name__}) or format is not supported by "
                 "the data editor. Please convert your data into a Pandas Dataframe or "
                 "another supported data format."
@@ -1152,7 +1224,8 @@ class DataEditorMixin:
         if not _is_supported_index(data_df.index):
             raise StreamlitAPIException(
                 f"The type of the dataframe index - {type(data_df.index).__name__} - is not "
-                "yet supported by the data editor."
+                "yet supported by the data editor.",
+                error_id="data-editor-unsupported-index-type",
             )
 
         # Check if the column names are valid and unique.

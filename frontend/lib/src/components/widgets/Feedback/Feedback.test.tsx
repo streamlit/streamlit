@@ -138,6 +138,17 @@ describe("Feedback widget", () => {
       )
     })
 
+    it("treats an empty string widget state as a cleared selection", () => {
+      const props = getProps()
+      vi.spyOn(props.widgetMgr, "getStringValue").mockReturnValue("")
+
+      render(<Feedback {...props} />)
+
+      getFeedbackButtons().forEach(button => {
+        expect(button).toHaveAttribute("aria-checked", "false")
+      })
+    })
+
     it("selects an option when clicked", async () => {
       const user = userEvent.setup()
       const props = getProps({
@@ -498,6 +509,24 @@ describe("Feedback widget", () => {
         { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
+
+    it("ignores keys that are not used for navigation or selection", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        type: FeedbackProto.FeedbackType.THUMBS,
+      })
+      const setStringValue = vi.spyOn(props.widgetMgr, "setStringValue")
+
+      render(<Feedback {...props} />)
+      setStringValue.mockClear()
+
+      const buttons = getFeedbackButtons()
+      buttons[0].focus()
+      await user.keyboard("{Escape}")
+
+      expect(buttons[0]).toHaveFocus()
+      expect(setStringValue).not.toHaveBeenCalled()
+    })
   })
 
   describe("Accessibility", () => {
@@ -571,6 +600,17 @@ describe("Feedback widget", () => {
       expect(buttons[2]).toHaveAttribute("aria-label", "3 out of 5 stars")
       expect(buttons[3]).toHaveAttribute("aria-label", "4 out of 5 stars")
       expect(buttons[4]).toHaveAttribute("aria-label", "5 out of 5 stars")
+    })
+
+    it("falls back to generic rating labels for unknown feedback types", () => {
+      const props = getProps({
+        type: 999 as FeedbackProto.FeedbackType,
+      })
+      render(<Feedback {...props} />)
+
+      expect(screen.getByLabelText("Rating 2")).toBeVisible()
+      expect(screen.getByLabelText("Rating 1")).toBeVisible()
+      expect(screen.queryByLabelText("Thumbs up")).not.toBeInTheDocument()
     })
 
     it("has aria-label on radiogroup", () => {
@@ -652,6 +692,25 @@ describe("Feedback widget", () => {
       )
       // Thumbs down (value 0) should be selected
       expect(activeButtons).toHaveLength(1)
+    })
+
+    it("updates from a click when proto still has a leftover value", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        type: FeedbackProto.FeedbackType.THUMBS,
+        value: 0,
+      })
+      render(<Feedback {...props} />)
+
+      const buttons = getFeedbackButtons()
+      await user.click(buttons[0])
+
+      const feedbackWidget = screen.getByTestId("stFeedback")
+      const activeButtons = within(feedbackWidget).getAllByTestId(
+        "stFeedbackButtonActive"
+      )
+      expect(activeButtons).toHaveLength(1)
+      expect(buttons[0]).toHaveAttribute("aria-checked", "true")
     })
   })
 })

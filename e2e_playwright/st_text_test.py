@@ -15,11 +15,12 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_until
 from e2e_playwright.shared.app_target import AppTarget
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expect_help_tooltip,
+    get_element_by_key,
     get_expander,
     get_text,
 )
@@ -115,3 +116,62 @@ def test_text_text_alignment(
     text_element.scroll_into_view_if_needed()
 
     assert_snapshot(text_element, name=f"st_text-text_alignment_{alignment_value}")
+
+
+WRAP_TEXT = "Quarterly revenue versus plan for the complete fiscal year dashboard"
+WRAPPED_HEIGHT_MARGIN = 4
+
+
+def test_wrap_false_ellipsizes_text_and_sets_title(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """wrap=False keeps plain text on one line, ellipsizes overflow, and exposes
+    the full text via a native title. wrap=True wraps and has no title.
+    """
+    no_wrap_container = get_element_by_key(app, "wrap_false_text")
+    wrap_container = get_element_by_key(app, "wrap_true_text")
+    no_wrap = no_wrap_container.get_by_test_id("stText")
+    wraps = wrap_container.get_by_test_id("stText")
+
+    expect(no_wrap_container.get_by_title(WRAP_TEXT, exact=True)).to_be_visible()
+    expect(wrap_container.get_by_title(WRAP_TEXT, exact=True)).to_have_count(0)
+    wait_until(
+        app,
+        lambda: no_wrap.evaluate(
+            "el => Array.from(el.querySelectorAll('span')).some("
+            "t => t.scrollWidth > t.clientWidth)"
+        ),
+    )
+
+    false_box = no_wrap.bounding_box()
+    true_box = wraps.bounding_box()
+    assert false_box is not None
+    assert true_box is not None
+    assert true_box["height"] > false_box["height"] + WRAPPED_HEIGHT_MARGIN
+    assert_snapshot(no_wrap_container, name="st_text-wrap_false")
+
+
+WRAP_NEWLINE_TEXT = "Line one Line two Line three extra"
+
+
+def test_wrap_false_collapses_text_newlines(app: Page):
+    """wrap=False keeps st.text on one line even when the body contains newlines."""
+    no_wrap_container = get_element_by_key(app, "wrap_false_text_newlines")
+    wrap_container = get_element_by_key(app, "wrap_true_text_newlines")
+    no_wrap = no_wrap_container.get_by_test_id("stText")
+    wraps = wrap_container.get_by_test_id("stText")
+    single_line = get_element_by_key(app, "wrap_false_text").get_by_test_id("stText")
+
+    expect(
+        no_wrap_container.get_by_title(WRAP_NEWLINE_TEXT, exact=True)
+    ).to_be_visible()
+    expect(wrap_container.get_by_title(WRAP_NEWLINE_TEXT, exact=True)).to_have_count(0)
+
+    false_box = no_wrap.bounding_box()
+    true_box = wraps.bounding_box()
+    single_box = single_line.bounding_box()
+    assert false_box is not None
+    assert true_box is not None
+    assert single_box is not None
+    assert true_box["height"] > false_box["height"] + WRAPPED_HEIGHT_MARGIN
+    assert abs(false_box["height"] - single_box["height"]) < WRAPPED_HEIGHT_MARGIN

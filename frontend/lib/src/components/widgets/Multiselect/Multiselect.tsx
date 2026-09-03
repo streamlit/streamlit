@@ -176,21 +176,6 @@ const TagRemoveIcon: FC = () => (
   </svg>
 )
 
-/** Render a single option. Cast required: styled(ListBox) erases the generic item type. */
-const renderOption = (item: unknown): ReactElement => {
-  const option = item as MultiselectOption
-  return (
-    <StyledListBoxItem
-      id={option.id}
-      textValue={option.label}
-      $isCreatable={option.isCreatable}
-      $isBulkAction={option.isBulkAction}
-    >
-      <StyledItemHighlight data-item-hl="">{option.label}</StyledItemHighlight>
-    </StyledListBoxItem>
-  )
-}
-
 /**
  * Pass-through filter for RAC's <ComboBox defaultFilter>. Our own
  * `filterSelectOptions` runs upstream in useMultiselectFiltering, so RAC
@@ -256,6 +241,7 @@ const Multiselect: FC<Props> = props => {
     ((focusStrategy?: "first" | "last" | null) => void) | null
   >(null)
   const focusedKeyRef = useRef<Key | null>(null)
+  const hoveredKeyRef = useRef<Key | null>(null)
 
   // In the sidebar, flip/shift are bounded by the viewport so the dropdown can
   // flip up when near the bottom, rather than overflowing (see #16181).
@@ -283,10 +269,18 @@ const Multiselect: FC<Props> = props => {
     filterMode: element.filterMode,
     acceptNewOptions: element.acceptNewOptions ?? false,
     maxSelections: element.maxSelections,
+    selectAll: element.selectAll,
   })
 
   const displayOptionsRef = useRef(displayOptions)
   displayOptionsRef.current = displayOptions
+  // onHoverEnd does not fire when filtering unmounts the hovered row.
+  if (
+    notNullOrUndefined(hoveredKeyRef.current) &&
+    !displayOptions.some(o => o.id === hoveredKeyRef.current)
+  ) {
+    hoveredKeyRef.current = null
+  }
   const valueRef = useRef(value)
   valueRef.current = value
 
@@ -494,7 +488,33 @@ const Multiselect: FC<Props> = props => {
     isOpenRef.current = open
     if (!open) {
       setInputValue("")
+      hoveredKeyRef.current = null
     }
+  }, [])
+
+  /** Render a single option. Cast required: styled(ListBox) erases the generic item type. */
+  const renderOption = useCallback((item: unknown): ReactElement => {
+    const option = item as MultiselectOption
+    return (
+      <StyledListBoxItem
+        id={option.id}
+        textValue={option.label}
+        $isCreatable={option.isCreatable}
+        $isBulkAction={option.isBulkAction}
+        onHoverStart={() => {
+          hoveredKeyRef.current = option.id
+        }}
+        onHoverEnd={() => {
+          if (hoveredKeyRef.current === option.id) {
+            hoveredKeyRef.current = null
+          }
+        }}
+      >
+        <StyledItemHighlight data-item-hl="">
+          {option.label}
+        </StyledItemHighlight>
+      </StyledListBoxItem>
+    )
   }, [])
 
   const handleTagGroupRemove = useCallback(
@@ -632,6 +652,20 @@ const Multiselect: FC<Props> = props => {
     (e: React.KeyboardEvent<HTMLInputElement>): void => {
       if (disabled) return
 
+      // RAC binds Mod+A to "select all options" while the menu is open and
+      // calls preventDefault(), which would keep the user from selecting the
+      // typed filter text. stopPropagation (without preventDefault) keeps the
+      // input's native select-all.
+      if (
+        e.key.toLowerCase() === "a" &&
+        (e.ctrlKey || e.metaKey) &&
+        !e.altKey &&
+        !e.shiftKey
+      ) {
+        e.stopPropagation()
+        return
+      }
+
       // Block character input for FILTER_MODE_NONE, but allow Backspace
       // through when input is empty so the tag-removal handler can process it.
       if (isFilterNone && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -664,42 +698,33 @@ const Multiselect: FC<Props> = props => {
         }
       }
 
-      // Creatable Enter: commit typed text as a new option.
-      // Only create when no item is focused or CREATABLE_ID is focused.
-      // If focus is on a real option or bulk action, let RAC handle it.
-      if (
-        e.key === "Enter" &&
-        !e.nativeEvent.isComposing &&
-        (element.acceptNewOptions ?? false)
-      ) {
-        const currentInput = inputValueRef.current
-        if (currentInput) {
-          const focused = focusedKeyRef.current
-          const shouldCreate =
-            !notNullOrUndefined(focused) || String(focused) === CREATABLE_ID
-
-          if (shouldCreate) {
-            const alreadyExists =
-              element.options.some(o => o === currentInput) ||
-              value.includes(currentInput)
-            if (!alreadyExists) {
-              if (
-                element.maxSelections > 0 &&
-                value.length >= element.maxSelections
-              ) {
-                e.preventDefault()
-                e.stopPropagation()
-                return
-              }
-              e.preventDefault()
-              e.stopPropagation()
-              const newValue = [...value, currentInput]
-              setValueWithSource({ value: newValue, fromUser: true })
-              setInputValue("")
-              return
-            }
-          }
+      // Enter with no RAC focusedKey: commit the hovered row if any,
+      // otherwise the first visible row so users do not need ArrowDown first.
+      // Hover paints data-hovered without setting focusedKey, so we track
+      // it separately. The first row is "Select all" / "Select X matches"
+      // when that bulk action is shown, otherwise the first matching option.
+      // "Add: …" is last, so it is first only when the query matches no
+      // existing option.
+      // TODO: Set RAC focusedKey / aria-activedescendant to the Enter target
+      // (ComboBox focus-management follow-up; see StyledListBox).
+      if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+        if (notNullOrUndefined(focusedKeyRef.current)) {
+          return
         }
+        if (!isOpenRef.current) return
+        const display = displayOptionsRef.current
+        const hovered = hoveredKeyRef.current
+        const hoveredStillShown =
+          notNullOrUndefined(hovered) && display.some(o => o.id === hovered)
+        // Swallow Enter when the menu is open with no rows (for example
+        // max_selections reached) so RAC does not try to commit typed text.
+        e.preventDefault()
+        e.stopPropagation()
+        const targetId = hoveredStillShown ? hovered : display[0]?.id
+        if (notNullOrUndefined(targetId)) {
+          handleChange([targetId])
+        }
+        return
       }
 
       // Backspace on empty input removes last tag
@@ -722,15 +747,7 @@ const Multiselect: FC<Props> = props => {
         setValueWithSource({ value: newValue, fromUser: true })
       }
     },
-    [
-      disabled,
-      element.acceptNewOptions,
-      element.maxSelections,
-      element.options,
-      isFilterNone,
-      setValueWithSource,
-      value,
-    ]
+    [disabled, handleChange, isFilterNone, setValueWithSource, value]
   )
 
   // Map selected values to option IDs for the ComboBox selection prop

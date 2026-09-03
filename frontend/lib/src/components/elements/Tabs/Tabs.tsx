@@ -15,6 +15,7 @@
  */
 
 import {
+  type JSX,
   memo,
   ReactElement,
   useCallback,
@@ -26,7 +27,6 @@ import {
 } from "react"
 
 import { ChevronLeft, ChevronRight } from "@emotion-icons/material-outlined"
-import classNames from "classnames"
 import { Key, SelectionIndicator } from "react-aria-components"
 
 import { AppNode, BlockNode } from "~lib/AppNode"
@@ -322,7 +322,9 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
 
   return (
     <StyledTabContainer
-      className={classNames("stTabs", convertKeyToClassName(userKey))}
+      className={["stTabs", convertKeyToClassName(userKey)]
+        .filter(Boolean)
+        .join(" ")}
       data-testid="stTabs"
       isOverflowing={isOverflowing}
       width={width}

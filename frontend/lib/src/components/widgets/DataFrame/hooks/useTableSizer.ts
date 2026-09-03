@@ -77,8 +77,8 @@ function useTableSizer(
   containerWidth: number,
   fullscreenContainerHeight?: number,
   isFullScreen?: boolean,
-  widthConfig?: streamlit.IWidthConfig | null,
-  heightConfig?: streamlit.IHeightConfig | null,
+  widthConfig?: streamlit.WidthConfig.$Properties | null,
+  heightConfig?: streamlit.HeightConfig.$Properties | null,
   measuredContainerHeight?: number,
   isInRoot?: boolean
 ): AutoSizerReturn {

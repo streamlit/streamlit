@@ -121,6 +121,12 @@ type IconSizes = typeof emotionBaseTheme.iconSizes
 type ThemeSpacings = typeof emotionBaseTheme.spacing
 
 export type IconSize = keyof IconSizes
+
+/**
+ * Icon size token, or `"inherit"` to match the parent font-size (`1em`).
+ * Use inherit for inline contexts such as heading icons.
+ */
+export type IconSizeProp = IconSize | "inherit"
 export type ThemeSpacing = keyof ThemeSpacings
 export type PresetThemeName = "Light" | "Dark"
 

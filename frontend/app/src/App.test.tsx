@@ -17,7 +17,6 @@
 import { act } from "react"
 
 import {
-  fireEvent,
   render,
   RenderResult,
   screen,
@@ -71,6 +70,8 @@ import {
 } from "@streamlit/lib"
 import { mockWindowLocation } from "@streamlit/lib/testing"
 import {
+  type AuthRedirect,
+  type AutoRerun,
   Config,
   CustomThemeConfig,
   Delta,
@@ -78,19 +79,16 @@ import {
   Exception,
   ForwardMsg,
   ForwardMsgMetadata,
-  IAuthRedirect,
-  IAutoRerun,
-  ILogo,
-  INavigation,
-  INewSession,
-  IPageConfig,
-  IPageInfo,
-  IPageNotFound,
-  IParentMessage,
-  IStopAutoRerun,
+  type Logo,
   Navigation,
+  type NewSession,
+  type PageConfig,
+  type PageInfo,
+  type PageNotFound,
+  type ParentMessage,
   SessionEvent,
   SessionStatus,
+  type StopAutoRerun,
   TextInput,
 } from "@streamlit/protobuf"
 
@@ -315,7 +313,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   ...extend,
 })
 
-const NEW_SESSION_JSON: INewSession = {
+const NEW_SESSION_JSON: NewSession.$Properties = {
   name: "scriptName",
   config: {
     gatherUsageStats: false,
@@ -359,7 +357,7 @@ const NEW_SESSION_JSON: INewSession = {
   fragmentIdsThisRun: [],
 }
 
-const NAVIGATION_JSON: INavigation = {
+const NAVIGATION_JSON: Navigation.$Properties = {
   appPages: [
     {
       pageScriptHash: "page_script_hash",
@@ -434,16 +432,16 @@ type ForwardMsgType =
   | boolean // the type of heartbeatAck is just boolean
   | DeltaWithElement
   | ForwardMsg.ScriptFinishedStatus
-  | IAuthRedirect
-  | IAutoRerun
-  | ILogo
-  | INavigation
-  | INewSession
-  | IPageConfig
-  | IPageInfo
-  | IParentMessage
-  | IPageNotFound
-  | IStopAutoRerun
+  | AuthRedirect.$Properties
+  | AutoRerun.$Properties
+  | Logo.$Properties
+  | Navigation.$Properties
+  | NewSession.$Properties
+  | PageConfig.$Properties
+  | PageInfo.$Properties
+  | ParentMessage.$Properties
+  | PageNotFound.$Properties
+  | StopAutoRerun.$Properties
   | Omit<SessionEvent, "toJSON">
   | Omit<SessionStatus, "toJSON">
 
@@ -1706,7 +1704,7 @@ describe("App", () => {
 
       window.history.back()
       await waitFor(() => {
-        expect(connectionManager.sendMessage).toBeCalledTimes(1)
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
       })
 
       expect(
@@ -1719,7 +1717,7 @@ describe("App", () => {
 
       window.history.back()
       await waitFor(() => {
-        expect(connectionManager.sendMessage).toBeCalledTimes(1)
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
       })
 
       expect(
@@ -1735,9 +1733,9 @@ describe("App", () => {
       window.history.pushState({}, "", "#foo_bar")
       const connectionManager = getMockConnectionManager()
 
-      expect(connectionManager.sendMessage).not.toBeCalled()
+      expect(connectionManager.sendMessage).not.toHaveBeenCalled()
       window.history.back()
-      expect(connectionManager.sendMessage).not.toBeCalled()
+      expect(connectionManager.sendMessage).not.toHaveBeenCalled()
     })
 
     it("does rerun when we are navigating to a different page and the last window history url contains an anchor", async () => {
@@ -1747,7 +1745,7 @@ describe("App", () => {
       window.history.pushState({}, "", "#foo_bar")
       window.history.back()
       const connectionManager = getMockConnectionManager()
-      expect(connectionManager.sendMessage).not.toBeCalled()
+      expect(connectionManager.sendMessage).not.toHaveBeenCalled()
 
       sendForwardMessage("newSession", {
         ...CURRENT_NEW_SESSION_JSON,
@@ -1760,7 +1758,7 @@ describe("App", () => {
       window.history.back()
 
       await waitFor(() => {
-        expect(connectionManager.sendMessage).toBeCalledTimes(1)
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
       })
 
       expect(
@@ -1808,7 +1806,7 @@ describe("App", () => {
       })
 
       await waitFor(() => {
-        expect(connectionManager.sendMessage).toBeCalledTimes(1)
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
       })
 
       // Verify the query params from the URL are preserved in the rerun message
@@ -1952,7 +1950,7 @@ describe("App", () => {
       const connectionManager = getMockConnectionManager()
 
       widgetStateManager.sendUpdateWidgetsMessage(undefined)
-      expect(connectionManager.sendMessage).toBeCalledTimes(1)
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
 
       expect(
         // @ts-expect-error
@@ -1974,7 +1972,7 @@ describe("App", () => {
         .mockReturnValue(["hash1", "hash2"])
 
       widgetStateManager.sendUpdateWidgetsMessage(undefined)
-      expect(connectionManager.sendMessage).toBeCalledTimes(1)
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
 
       expect(
         // @ts-expect-error
@@ -1992,7 +1990,7 @@ describe("App", () => {
 
       widgetStateManager.sendUpdateWidgetsMessage(undefined)
       widgetStateManager.sendUpdateWidgetsMessage("myFragmentId")
-      expect(connectionManager.sendMessage).toBeCalledTimes(2)
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(2)
 
       expect(
         // @ts-expect-error
@@ -2011,7 +2009,7 @@ describe("App", () => {
       const connectionManager = getMockConnectionManager()
 
       widgetStateManager.sendUpdateWidgetsMessage(undefined)
-      expect(connectionManager.sendMessage).toBeCalledTimes(1)
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
 
       expect(
         // @ts-expect-error
@@ -2028,7 +2026,7 @@ describe("App", () => {
       const connectionManager = getMockConnectionManager()
 
       widgetStateManager.sendUpdateWidgetsMessage(undefined)
-      expect(connectionManager.sendMessage).toBeCalledTimes(1)
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
 
       expect(
         // @ts-expect-error
@@ -3173,7 +3171,9 @@ describe("App", () => {
       )
 
       const connectionManager = getMockConnectionManager()
-      expect(connectionManager.incrementMessageCacheRunCount).not.toBeCalled()
+      expect(
+        connectionManager.incrementMessageCacheRunCount
+      ).not.toHaveBeenCalled()
     })
 
     it("will not increment cache count if session info is not set and the script finished early", () => {
@@ -3185,7 +3185,9 @@ describe("App", () => {
       )
 
       const connectionManager = getMockConnectionManager()
-      expect(connectionManager.incrementMessageCacheRunCount).not.toBeCalled()
+      expect(
+        connectionManager.incrementMessageCacheRunCount
+      ).not.toHaveBeenCalled()
     })
 
     it("will not increment cache count if session info is set and the script finished early", () => {
@@ -3197,7 +3199,9 @@ describe("App", () => {
       )
 
       const connectionManager = getMockConnectionManager()
-      expect(connectionManager.incrementMessageCacheRunCount).not.toBeCalled()
+      expect(
+        connectionManager.incrementMessageCacheRunCount
+      ).not.toHaveBeenCalled()
     })
 
     it("will increment cache count if session info is set", () => {
@@ -3209,7 +3213,9 @@ describe("App", () => {
       )
 
       const connectionManager = getMockConnectionManager()
-      expect(connectionManager.incrementMessageCacheRunCount).toBeCalled()
+      expect(
+        connectionManager.incrementMessageCacheRunCount
+      ).toHaveBeenCalled()
     })
 
     it("will clear stale nodes if finished successfully", async () => {
@@ -4156,7 +4162,7 @@ describe("App", () => {
       const connectionManager = getMockConnectionManager()
 
       // No message sent when disconnected
-      expect(connectionManager.sendMessage).not.toBeCalled()
+      expect(connectionManager.sendMessage).not.toHaveBeenCalled()
 
       // Error response should be sent to reject the pending promise
       expect(onFileURLsResponseSpy).toHaveBeenCalledWith({
@@ -4230,30 +4236,13 @@ describe("App", () => {
     })
 
     it("stops screencast recording when Escape is released", async () => {
+      const user = userEvent.setup()
       const props = getProps()
       renderApp(props)
 
-      // hotkeys-js matches Escape via keyCode 27; userEvent does not set it.
-      /* eslint-disable testing-library/prefer-user-event */
-      fireEvent.keyDown(document, {
-        key: "Escape",
-        code: "Escape",
-        keyCode: 27,
-        which: 27,
-      })
-      fireEvent.keyUp(document, {
-        key: "Escape",
-        code: "Escape",
-        keyCode: 27,
-        which: 27,
-      })
-      /* eslint-enable testing-library/prefer-user-event */
+      await user.keyboard("{Escape}")
 
-      // react-hot-keys delivers onKeyUp from a document keyup listener on a
-      // 0ms timeout so hotkeys-js can drop the key from its pressed set.
-      await waitFor(() => {
-        expect(props.screenCast.stopRecording).toHaveBeenCalled()
-      })
+      expect(props.screenCast.stopRecording).toHaveBeenCalled()
     })
   })
 
@@ -5156,7 +5145,7 @@ describe("App", () => {
       }
 
       const connectionManager = getMockConnectionManager()
-      expect(connectionManager.sendMessage).toBeCalledTimes(times)
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(times)
       // ensure that all calls came from the autoRerun by checking the fragment id
       for (let i = 0; i < times; i++) {
         expect(
@@ -5187,7 +5176,7 @@ describe("App", () => {
       // was called, but this check is more observing the behavior than checking
       // the exact internals.
       const oldCallCountPlusPageChangeRequest = times + 1
-      expect(connectionManager.sendMessage).toBeCalledTimes(
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(
         oldCallCountPlusPageChangeRequest
       )
 
@@ -5457,7 +5446,7 @@ describe("App", () => {
         })
         sendForwardMessage("sessionEvent", sessionEvent)
 
-        expect(hostCommunicationMgr.sendMessageToHost).toBeCalledWith({
+        expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
           type: "CLIENT_ERROR_DIALOG",
           error: "scriptCompileError",
           message: "random string",
@@ -5472,7 +5461,7 @@ describe("App", () => {
         // @ts-expect-error - send an unknown type of forward message
         sendForwardMessage("randomMessage", {})
 
-        expect(hostCommunicationMgr.sendMessageToHost).toBeCalledWith({
+        expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
           type: "CLIENT_ERROR_DIALOG",
           error: "Bad message format",
           message: 'Cannot handle type "undefined".',
@@ -5487,7 +5476,7 @@ describe("App", () => {
         // send a page not found forward message
         sendForwardMessage("pageNotFound", { pageName: "random page" })
 
-        expect(hostCommunicationMgr.sendMessageToHost).toBeCalledWith({
+        expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
           type: "CLIENT_ERROR_DIALOG",
           error: "Page not found",
           message:
@@ -5507,7 +5496,7 @@ describe("App", () => {
           })
         })
 
-        expect(hostCommunicationMgr.sendMessageToHost).toBeCalledWith({
+        expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
           type: "CLIENT_ERROR_DIALOG",
           error: "Connection error",
           message: "Connection error message.",

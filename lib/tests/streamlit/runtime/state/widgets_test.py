@@ -469,12 +469,6 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         sig = inspect.signature(widget_func)
         expected_sig = self.signature_to_expected_kwargs(sig)
 
-        # `validate` only contributes to the text_input element ID when a
-        # validation regex is actually configured. Since this test calls the
-        # widget without `validate`, it isn't passed to the ID computation.
-        if widget_func == st.text_input:
-            del expected_sig["validate"]
-
         # time_input excludes format from the ID because format is display-only
         # and does not require a widget reset.
         if widget_func == st.time_input:
@@ -643,7 +637,7 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
         """Test that `register_widget` raises an exception when both `on_change`
         and `callbacks` are provided.
         """
-        with pytest.raises(errors.StreamlitAPIException):
+        with pytest.raises(errors.StreamlitIncompatibleParametersError):
             register_widget(
                 "el_id",
                 deserializer=lambda x: x,

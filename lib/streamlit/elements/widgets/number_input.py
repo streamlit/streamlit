@@ -17,7 +17,7 @@ from __future__ import annotations
 import math
 import numbers
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal, TypeAlias, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Final, Literal, TypeAlias, cast, overload
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
@@ -43,26 +43,29 @@ from streamlit.errors import (
     StreamlitValueAboveMaxError,
     StreamlitValueBelowMinError,
 )
+from streamlit.logger import get_logger
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    OnChangeMode,
     PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
     get_session_state,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.string_util import to_help_str, validate_icon_or_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
+_LOGGER: Final = get_logger(__name__)
+
 Number: TypeAlias = int | float
-IntOrNone = TypeVar("IntOrNone", int, None)
-FloatOrNone = TypeVar("FloatOrNone", float, None)
 
 
 @dataclass
@@ -97,22 +100,24 @@ class NumberInputSerde:
 
 
 class NumberInputMixin:
+    # Each numeric group has one overload for a concrete value (or the "min"
+    # default) and one for value=None. A single constrained TypeVar covering
+    # both would leave ty and pyright inferring int | None where the runtime
+    # always returns int.
     # If "min_value: int" is given and all other numerical inputs are
     #   "int"s or not provided (value optionally being "min"), return "int"
-    # If "min_value: int, value: None" is given and all other numerical inputs
-    #   are "int"s or not provided, return "int | None"
     @overload
     def number_input(
         self,
         label: str,
         min_value: int,
         max_value: int | None = None,
-        value: IntOrNone | Literal["min"] = "min",
+        value: int | Literal["min"] = "min",
         step: int | None = None,
         format: str | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,
@@ -123,10 +128,60 @@ class NumberInputMixin:
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
-    ) -> int | IntOrNone: ...
+    ) -> int: ...
+
+    # If "min_value: int, value: None" is given and all other numerical inputs
+    #   are "int"s or not provided, return "int | None"
+    @overload
+    def number_input(
+        self,
+        label: str,
+        min_value: int,
+        max_value: int | None = None,
+        value: None = None,
+        step: int | None = None,
+        format: str | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,
+        placeholder: str | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        icon: str | None = None,
+        width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> int | None: ...
 
     # If "max_value: int" is given and all other numerical inputs are
     #   "int"s or not provided (value optionally being "min"), return "int"
+    @overload
+    def number_input(
+        self,
+        label: str,
+        min_value: None = None,
+        *,
+        max_value: int,
+        value: int | Literal["min"] = "min",
+        step: int | None = None,
+        format: str | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        placeholder: str | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        icon: str | None = None,
+        width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> int: ...
+
     # If "max_value: int, value=None" is given and all other numerical inputs
     #   are "int"s or not provided, return "int | None"
     @overload
@@ -136,12 +191,12 @@ class NumberInputMixin:
         min_value: None = None,
         *,
         max_value: int,
-        value: IntOrNone | Literal["min"] = "min",
+        value: None = None,
         step: int | None = None,
         format: str | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         placeholder: str | None = None,
@@ -151,7 +206,7 @@ class NumberInputMixin:
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
-    ) -> int | IntOrNone: ...
+    ) -> int | None: ...
 
     # If "value=int" is given and all other numerical inputs are "int"s
     #   or not provided, return "int"
@@ -167,7 +222,7 @@ class NumberInputMixin:
         format: str | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         placeholder: str | None = None,
@@ -181,6 +236,30 @@ class NumberInputMixin:
 
     # If "step=int" is given and all other numerical inputs are "int"s
     #   or not provided (value optionally being "min"), return "int"
+    @overload
+    def number_input(
+        self,
+        label: str,
+        min_value: None = None,
+        max_value: None = None,
+        value: int | Literal["min"] = "min",
+        *,
+        step: int,
+        format: str | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        placeholder: str | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        icon: str | None = None,
+        width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> int: ...
+
     # If "step=int, value=None" is given and all other numerical inputs
     #   are "int"s or not provided, return "int | None"
     @overload
@@ -189,13 +268,13 @@ class NumberInputMixin:
         label: str,
         min_value: None = None,
         max_value: None = None,
-        value: IntOrNone | Literal["min"] = "min",
+        value: None = None,
         *,
         step: int,
         format: str | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         placeholder: str | None = None,
@@ -205,10 +284,34 @@ class NumberInputMixin:
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
-    ) -> int | IntOrNone: ...
+    ) -> int | None: ...
 
     # If all numerical inputs are floats (with value optionally being "min")
     #   or are not provided, return "float"
+    @overload
+    def number_input(
+        self,
+        label: str,
+        min_value: float | None = None,
+        max_value: float | None = None,
+        value: float | Literal["min"] = "min",
+        step: float | None = None,
+        format: str | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,
+        placeholder: str | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        icon: str | None = None,
+        width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> float: ...
+
     # If only "value=None" is given and none of the other numerical inputs
     #   are "int"s, return "float | None"
     @overload
@@ -217,12 +320,12 @@ class NumberInputMixin:
         label: str,
         min_value: float | None = None,
         max_value: float | None = None,
-        value: FloatOrNone | Literal["min"] = "min",
+        value: None = None,
         step: float | None = None,
         format: str | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,
@@ -233,7 +336,7 @@ class NumberInputMixin:
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
-    ) -> float | FloatOrNone: ...
+    ) -> float | None: ...
 
     @gather_metrics("number_input")
     def number_input(
@@ -246,7 +349,7 @@ class NumberInputMixin:
         format: str | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -348,8 +451,30 @@ class NumberInputMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change : callable
-            An optional callback invoked when this number_input's value changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the number input should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the number input. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a new value (pressing Enter, blurring the field,
+              clicking the ``+/-`` buttons, pressing the up or down arrow
+              keys, or clearing the value).
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits a new value. The number input still updates in the UI.
+              The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. Ignored
+              commits are held in the browser and are lost if the page is
+              refreshed before that rerun, unless ``bind="query-params"``
+              is set (see ``bind``). Inside ``st.form``, this has no
+              effect: the form already defers all commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -420,6 +545,14 @@ class NumberInputMixin:
             Invalid query parameter values are ignored and removed
             from the URL. If ``value`` is ``None``, an empty query
             parameter (e.g., ``?my_key=``) clears the widget.
+
+            When ``on_change="ignore"``, the URL is updated as soon as the
+            value is committed (Enter, blur, the ``+/-`` buttons, the up or
+            down arrow keys, or clearing the value); typing alone does not
+            update it. As with widgets inside a form, the URL can show a
+            value that Python hasn't received yet. Python receives the new
+            value on the next rerun, so a page load or share uses the
+            updated URL value.
 
         persist_state : "page", "session", or None
             How long to preserve the widget's value when it isn't rendered.
@@ -500,7 +633,7 @@ class NumberInputMixin:
         format: str | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -515,10 +648,16 @@ class NumberInputMixin:
     ) -> Number | None:
         key = to_key(key)
 
+        validate_on_change_mode(on_change)
+
+        on_change_callback: WidgetCallback | None = (
+            on_change if callable(on_change) else None
+        )
+
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=value if value != "min" else None,
         )
         label = maybe_raise_label_warnings(label, label_visibility)
@@ -585,20 +724,20 @@ class NumberInputMixin:
         # Use default format depending on value type if format was not provided:
         number_format = ("%d" if int_value else "%0.2f") if format is None else format
 
-        # Warn user if they format an int type as a float or vice versa.
+        # A type/format mismatch only affects how the value is displayed, so it
+        # is reported to the developer via the console rather than the app.
         if number_format in {"%d", "%u", "%i"} and float_value:
-            import streamlit as st
-
-            st.warning(
-                "Warning: NumberInput value below has type float,"
-                f" but format {number_format} displays as integer."
+            _LOGGER.warning(
+                "st.number_input value has type float, but format %s displays as integer.",
+                number_format,
+                stack_info=True,
             )
         elif number_format[-1] == "f" and int_value:
-            import streamlit as st
-
-            st.warning(
-                "Warning: NumberInput value below has type int so is"
-                f" displayed as int despite format string {number_format}."
+            _LOGGER.warning(
+                "st.number_input value has type int so is displayed as int despite "
+                "format string %s.",
+                number_format,
+                stack_info=True,
             )
 
         if step is None:
@@ -704,6 +843,9 @@ class NumberInputMixin:
         if bind == "query-params" and key is not None:
             number_input_proto.query_param_key = str(key)
 
+        if isinstance(on_change, str) and on_change == "ignore":
+            number_input_proto.ignore_rerun = True
+
         # min_value and max_value are guaranteed to be Number (not None) after
         # the JSNumber defaults above.
         serde = NumberInputSerde(
@@ -714,7 +856,7 @@ class NumberInputMixin:
         )
         widget_state = register_widget(
             number_input_proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,

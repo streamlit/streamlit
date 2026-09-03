@@ -22,6 +22,8 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.runtime.context import (
+    _CONTEXT_KEYS,
+    ContextProxy,
     StreamlitCookies,
     StreamlitHeaders,
     StreamlitTheme,
@@ -134,6 +136,76 @@ class StContextTest(unittest.TestCase):
         mock_add_path.assert_called_once_with(
             "https://example.com/", mock_ctx.pages_manager
         )
+
+    def test_context_keys_match_public_properties(self) -> None:
+        """Allowlist must stay in sync with ContextProxy public properties."""
+        public_properties = {
+            name
+            for name, value in vars(ContextProxy).items()
+            if isinstance(value, property) and not name.startswith("_")
+        }
+        assert public_properties == _CONTEXT_KEYS
+
+    @parameterized.expand([(key,) for key in sorted(_CONTEXT_KEYS)])
+    @patch("streamlit.runtime.context.get_script_run_ctx")
+    @patch("streamlit.runtime.context._get_client_context")
+    def test_getitem_matches_attribute(
+        self,
+        property_name: str,
+        mock_get_client_context: MagicMock,
+        mock_get_script_run_ctx: MagicMock,
+    ) -> None:
+        """Bracket access returns the same populated value as attribute access."""
+        mock_get_client_context.return_value = _create_mock_client_context(
+            headers=[("host", "example.com")],
+            cookies={"session": "abc"},
+            remote_ip="8.8.8.8",
+        )
+        mock_context_info = MagicMock()
+        mock_context_info.timezone = "Europe/Berlin"
+        mock_context_info.timezone_offset = -120
+        mock_context_info.locale = "en-US"
+        mock_context_info.color_scheme = "dark"
+        mock_context_info.is_embedded = True
+        mock_context_info.url = "https://example.com/app"
+        mock_ctx = MagicMock()
+        mock_ctx.context_info = mock_context_info
+        mock_ctx.pages_manager.get_pages.return_value = {}
+        mock_get_script_run_ctx.return_value = mock_ctx
+
+        attr_value = getattr(st.context, property_name)
+        item_value = st.context[property_name]
+        if property_name in {"headers", "cookies"}:
+            assert item_value.to_dict() == attr_value.to_dict() != {}
+        elif property_name == "theme":
+            assert item_value.type == attr_value.type == "dark"
+        else:
+            assert item_value == attr_value
+            assert item_value is not None
+
+    def test_getitem_unknown_key(self) -> None:
+        """Unknown keys raise KeyError."""
+        with pytest.raises(KeyError, match=r'st.context has no key "not_a_property"'):
+            st.context["not_a_property"]
+
+    def test_contains_known_and_unknown_keys(self) -> None:
+        """Membership uses the public property allowlist."""
+        assert "timezone" in st.context
+        assert "theme" in st.context
+        assert "not_a_property" not in st.context
+
+    @patch("streamlit.runtime.context.get_script_run_ctx")
+    def test_contains_does_not_read_properties(
+        self, mock_get_script_run_ctx: MagicMock
+    ) -> None:
+        """Membership must not trigger property getters such as theme."""
+        assert "theme" in st.context
+        mock_get_script_run_ctx.assert_not_called()
+
+    def test_context_is_not_iterable(self) -> None:
+        """st.context is a property bag, not a sequence."""
+        with pytest.raises(TypeError):
+            iter(st.context)
 
     @parameterized.expand(
         [

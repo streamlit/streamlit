@@ -45,11 +45,12 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
-    StreamlitAPIException,
+    StreamlitInvalidMinMaxError,
     StreamlitInvalidParameterTypeError,
     StreamlitJSNumberBoundsError,
     StreamlitValueAboveMaxError,
     StreamlitValueBelowMinError,
+    StreamlitValueError,
 )
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -939,9 +940,17 @@ class SliderMixin:
             # type mismatch — listing list/tuple as expected types would
             # contradict the provided type.
             if isinstance(value, (list, tuple)):
-                raise StreamlitAPIException(
-                    "Slider value should either be an int/float/datetime or a "
-                    "list/tuple of 0 to 2 ints/floats/datetimes"
+                raise StreamlitValueError(
+                    "value",
+                    [
+                        "int",
+                        "float",
+                        "date",
+                        "time",
+                        "datetime",
+                        "a list containing up to two such values",
+                        "a tuple containing up to two such values",
+                    ],
                 )
             raise StreamlitInvalidParameterTypeError(
                 "value",
@@ -1038,9 +1047,18 @@ class SliderMixin:
         if format is None:
             format = cast("str", defaults[data_type]["format"])  # noqa: A001
 
-        if step == 0:
-            raise StreamlitAPIException(
-                "Slider components cannot be passed a `step` of 0."
+        if isinstance(step, timedelta):
+            if step == timedelta(0):
+                raise StreamlitValueError(
+                    "step",
+                    ["a timedelta"],
+                    detail="Zero is not allowed.",
+                )
+        elif step == 0:
+            raise StreamlitValueError(
+                "step",
+                ["a number"],
+                detail="Zero is not allowed.",
             )
 
         # Ensure that all arguments are of the same type.
@@ -1097,7 +1115,7 @@ class SliderMixin:
             prepared_value = [min_value, max_value]
 
         # Bounds checks. JSNumber produces human-readable exceptions that
-        # we simply re-package as StreamlitAPIExceptions.
+        # we re-raise as StreamlitJSNumberBoundsError.
         # (We check `min_value` and `max_value` here; `value` and `step` are
         # already known to be in the [min_value, max_value] range.)
         # Timelike bounds are checked further down instead, after the conversion to
@@ -1135,10 +1153,7 @@ class SliderMixin:
         # The frontend will error if the values are equal, so checking here
         # lets us produce a nicer python error message and stack trace.
         if min_value == max_value:
-            raise StreamlitAPIException(
-                "Slider `min_value` must be less than the `max_value`."
-                f"\nThe values were {min_value} and {max_value}."
-            )
+            raise StreamlitInvalidMinMaxError(min_value, max_value)
 
         # Now, convert to microseconds (so we can serialize datetime to a long)
         if data_type in TIMELIKE_TYPES:
@@ -1167,7 +1182,7 @@ class SliderMixin:
                 ("`max_value`", max_value),
             ):
                 if abs(micros) > JSNumber.MAX_SAFE_INTEGER:
-                    raise StreamlitAPIException(
+                    raise StreamlitJSNumberBoundsError(
                         f"{name} is too far from 1970 for Streamlit to represent "
                         "exactly. Use a value between "
                         f"{_MIN_SAFE_DAY:%Y-%m-%d} and "

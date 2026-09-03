@@ -18,7 +18,7 @@ import re
 from typing import TYPE_CHECKING
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import FilePayload, Page, expect
 
 from e2e_playwright.conftest import IframedPage, rerun_app, wait_for_app_run, wait_until
 from e2e_playwright.shared.app_utils import (
@@ -199,6 +199,47 @@ def test_mega_tester_app_rendering_performance(app: Page) -> None:
     # Rerun the app 5 times:
     for _ in range(5):
         rerun_app(app)
+
+
+@pytest.mark.external_test
+def test_mega_tester_app_uploads_small_file(app_target: AppTarget) -> None:
+    """A small file uploads end to end and reaches a settled, error-free state.
+
+    This is the only coverage that drives the ``/_stcore/upload_file`` route
+    against a hosted app; the other external tests assert rendering, console
+    errors, and host messaging. Uploads are a separate round trip that hosting
+    can break on its own — via XSRF handling, session affinity, proxy body
+    limits, or path rewriting — without anything else looking wrong.
+
+    The payload is only a few hundred bytes, so a failure points at the upload
+    round trip itself rather than at a hosting body-size limit.
+    """
+    uploader = app_target.locator(".st-key-file_input")
+    uploader.scroll_into_view_if_needed()
+
+    with app_target.page.expect_file_chooser() as file_chooser_info:
+        uploader.get_by_test_id("stFileUploaderDropzone").click()
+
+    file_chooser_info.value.set_files(
+        files=[
+            FilePayload(
+                name="upload_probe.csv",
+                mimeType="text/csv",
+                buffer=b"col_a,col_b\n" + b"1,2\n" * 40,
+            )
+        ]
+    )
+
+    app_target.wait_for_run()
+
+    expect(uploader.get_by_test_id("stFileChipName")).to_have_text(
+        "upload_probe.csv", use_inner_text=True
+    )
+    # The chip name alone renders while the PUT is still in flight, so assert the
+    # terminal state: the spinner exists only during upload, and the alert only on
+    # error. Together these fail a stalled or rejected round trip.
+    expect(uploader.get_by_test_id("stFileChipIconSpinner")).to_have_count(0)
+    expect(uploader.get_by_role("alert")).to_have_count(0)
 
 
 @pytest.mark.external_test(upload_test_assets=True)

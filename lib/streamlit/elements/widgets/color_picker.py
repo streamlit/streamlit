@@ -34,7 +34,7 @@ from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -302,17 +302,21 @@ class ColorPickerMixin:
 
         # make sure the value is a string
         if not isinstance(value, str):
-            raise StreamlitAPIException(f"""
-Color Picker Value has invalid type: {type(value).__name__}. Expects a hex string
-like '#00FFAA' or '#000'.
-""")
+            raise StreamlitInvalidParameterTypeError(
+                "value",
+                type(value).__name__,
+                ["str"],
+                detail="Pass a hex string like `'#00FFAA'` or `'#000'`.",
+            )
 
-        # validate the value and expects a hex string
         if not _HEX_COLOR_RE.match(value):
-            raise StreamlitAPIException(f"""
-'{value}' is not a valid hex code for colors. Valid ones are like
-'#00FFAA' or '#000'.
-""")
+            # Not StreamlitInvalidColorError: its message documents RGB
+            # sequences, which st.color_picker does not accept.
+            raise StreamlitAPIException(
+                f"'{value}' is not a valid hex code for colors. Valid ones are like "
+                "'#00FFAA' or '#000'.",
+                error_id="color-picker-invalid-hex",
+            )
 
         color_picker_proto = ColorPickerProto()
         color_picker_proto.id = element_id

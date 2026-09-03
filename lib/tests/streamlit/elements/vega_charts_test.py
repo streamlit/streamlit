@@ -35,10 +35,7 @@ from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
     convert_arrow_table_to_arrow_bytes,
 )
-from streamlit.elements.lib.built_in_chart_utils import (
-    _PROTECTION_SUFFIX,
-    StreamlitColumnNotFoundError,
-)
+from streamlit.elements.lib.built_in_chart_utils import _PROTECTION_SUFFIX
 from streamlit.elements.vega_charts import (
     VegaLiteState,
     VegaLiteStateSerde,
@@ -47,9 +44,14 @@ from streamlit.elements.vega_charts import (
     _reset_counter_pattern,
     _stabilize_vega_json_spec,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.type_util import is_altair_version_less_than
+from streamlit.util import ReadOnlyAttributeDictionary
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 if TYPE_CHECKING:
@@ -90,6 +92,30 @@ def test_vega_lite_state_is_read_only() -> None:
     # Read access still works, and deepcopy preserves the concrete type.
     assert result.selection.brush == {}
     assert isinstance(copy.deepcopy(result), VegaLiteState)
+
+
+def test_vega_lite_serde_deserializes_selection_json() -> None:
+    """Non-empty selection JSON is parsed and wrapped for stable bracket access."""
+    payload = json.dumps({"selection": {"brush": {"x": [1, 2]}}})
+    result = VegaLiteStateSerde(["brush"]).deserialize(payload)
+    assert result.selection.brush == {"x": [1, 2]}
+    assert result["selection"] is result.selection
+
+
+def test_vega_lite_serde_returns_empty_state_when_selection_key_missing() -> None:
+    """JSON without a ``selection`` key yields the empty typed selection state."""
+    result = VegaLiteStateSerde(["brush"]).deserialize(json.dumps({"other": 1}))
+    assert result.selection.brush == {}
+
+
+def test_vega_lite_state_wraps_plain_selection_dict_and_other_keys() -> None:
+    """A plain dict ``selection`` is wrapped; unrelated keys use the base getter."""
+    state = VegaLiteState({"selection": {"brush": {"x": 1}}, "other": 2})
+    selection = state["selection"]
+    assert isinstance(selection, ReadOnlyAttributeDictionary)
+    assert selection["brush"] == {"x": 1}
+    assert state["selection"] is selection
+    assert state["other"] == 2
 
 
 def merge_dicts(x, y):
@@ -1422,13 +1448,15 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
 
     def test_no_args(self):
         """Test that an error is raised when called with no args."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitMissingRequiredParameterError) as exc:
             st.vega_lite_chart()
+        assert exc.value.exec_kwargs["parameter"] == "spec"
 
     def test_none_args(self):
         """Test that an error is raised when called with args set to None."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitMissingRequiredParameterError) as exc:
             st.vega_lite_chart(None, None)
+        assert exc.value.exec_kwargs["parameter"] == "spec"
 
     def test_spec_but_no_data(self):
         """Test that it can be called with only data set to None."""
@@ -2696,11 +2724,17 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             }
         )
 
-        with pytest.raises(StreamlitColumnNotFoundError):
+        with pytest.raises(
+            StreamlitAPIException, match="does not have a column"
+        ) as exc:
             st.bar_chart(df, x="A", y="B", sort="nonexistent_column")
+        assert exc.value.error_id == "chart-column-not-found"
 
-        with pytest.raises(StreamlitColumnNotFoundError):
+        with pytest.raises(
+            StreamlitAPIException, match="does not have a column"
+        ) as exc:
             st.bar_chart(df, x="A", y="B", sort="-nonexistent_column")
+        assert exc.value.error_id == "chart-column-not-found"
 
     def test_bar_chart_single_column_with_dot_in_name_renders(self):
         """Regression test for #7714: a single column whose name contains '.'

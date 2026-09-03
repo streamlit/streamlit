@@ -31,7 +31,8 @@ from streamlit.elements.widgets.multiselect import (
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitDuplicateElementId,
-    StreamlitInvalidMaxError,
+    StreamlitIncompatibleParametersError,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
     StreamlitSelectionCountExceedsMaxError,
     StreamlitValueError,
@@ -66,6 +67,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
         assert not c.disabled
         assert not c.accept_new_options
         assert c.filter_mode == ProtoSelectWidgetFilterMode.FILTER_MODE_FUZZY
+        assert c.select_all == 1000
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -247,10 +249,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
 
     def test_filter_mode_none_with_accept_new_options_raises_exception(self):
         """Test that filter_mode=None is incompatible with accept_new_options=True."""
-        with pytest.raises(
-            StreamlitAPIException,
-            match=r"cannot be None when `accept_new_options=True`",
-        ):
+        with pytest.raises(StreamlitIncompatibleParametersError):
             st.multiselect(
                 "the label", ("m", "f"), filter_mode=None, accept_new_options=True
             )
@@ -334,6 +333,12 @@ class Multiselectbox(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.multiselect
         assert c.max_selections == 2
 
+        st.multiselect(
+            "the label", ("m", "f"), max_selections=np.int64(2), key="numpy_max"
+        )
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.max_selections == 2
+
     @parameterized.expand(
         [
             (["a", "b", "c"], 3),
@@ -413,6 +418,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 format_func=lambda x: x.capitalize(),
                 options=["a", "b", "cd"],
                 filter_mode="fuzzy",
+                select_all=True,
                 # Whitelisted kwargs:
                 accept_new_options=True,
                 max_selections=3,
@@ -436,6 +442,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 format_func=lambda x: x.upper(),
                 options=["a", "b", "cd", "e"],
                 filter_mode="prefix",
+                select_all=False,
                 # Whitelisted kwargs:
                 accept_new_options=True,
                 max_selections=3,
@@ -486,27 +493,45 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 "the label", ["a", "b", "c", "d"], ["a", "b", "c"], max_selections=2
             )
 
-    def test_max_selections_zero_includes_action(self) -> None:
-        """Raise StreamlitInvalidMaxError with a suggested action when max_selections is 0."""
+    @parameterized.expand([(0,), (False,)])
+    def test_max_selections_zero_includes_action(self, max_selections: object) -> None:
+        """Raise StreamlitValueError with a suggested action when max_selections is 0 or False."""
         with pytest.raises(
-            StreamlitInvalidMaxError,
+            StreamlitValueError,
             match=r"To disable `st\.multiselect`, use `disabled=True`",
         ):
-            st.multiselect("the label", ["a", "b", "c"], max_selections=0)
+            st.multiselect("the label", ["a", "b", "c"], max_selections=max_selections)
 
     @parameterized.expand(
         [
             (-1,),
             (-100,),
+            (True,),
+            (1.5,),
+            ("2",),
         ]
     )
-    def test_max_selections_negative_no_action(self, max_selections: int) -> None:
-        """Raise StreamlitInvalidMaxError without an action for negative max_selections."""
+    def test_max_selections_invalid_values_have_no_action(
+        self, max_selections: object
+    ) -> None:
+        """Raise StreamlitValueError without an action for invalid max_selections."""
         with pytest.raises(
-            StreamlitInvalidMaxError,
-            match=r"must be a positive integer\.$",
+            StreamlitValueError,
+            match=r"Supported values: a positive integer\.$",
         ):
             st.multiselect("the label", ["a", "b", "c"], max_selections=max_selections)
+
+    def test_max_selections_array_like_raises_value_error(self) -> None:
+        """Array-like max_selections raises StreamlitValueError, not a numpy truth error."""
+        with pytest.raises(
+            StreamlitValueError,
+            match=r"Supported values: a positive integer\.$",
+        ):
+            st.multiselect(
+                "the label",
+                ["a", "b", "c"],
+                max_selections=np.array([0, 1]),  # type: ignore[arg-type]
+            )
 
     @parameterized.expand(
         [
@@ -628,6 +653,80 @@ class Multiselectbox(DeltaGeneratorTestCase):
         st.multiselect("same label", ("m", "f"))
         with pytest.raises(StreamlitDuplicateElementId):
             st.multiselect("same label", ("m", "f"), wrap=False)
+
+    @parameterized.expand(
+        [
+            (True, -1),
+            (False, 0),
+            (0, 0),
+            (1000, 1000),
+            (2**31 - 1, 2**31 - 1),
+        ]
+    )
+    def test_select_all(self, value: bool | int, expected: int) -> None:
+        """The select_all parameter is encoded on the proto."""
+        st.multiselect("the label", ("m", "f"), select_all=value)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.select_all == expected
+        assert c.HasField("select_all")
+
+    def test_select_all_negative_raises(self) -> None:
+        """Negative select_all values raise StreamlitValueError."""
+        with pytest.raises(
+            StreamlitValueError,
+            match=r"Invalid `select_all` value.*must be a non-negative integer",
+        ):
+            st.multiselect("the label", ("m", "f"), select_all=-1)
+
+    def test_select_all_above_int32_clamps(self) -> None:
+        """Values above the proto int32 max clamp to the int32 ceiling."""
+        st.multiselect("the label", ("m", "f"), select_all=2**31)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.select_all == 2**31 - 1
+
+    def test_select_all_invalid_does_not_register_key(self) -> None:
+        """Invalid select_all must not register the widget key.
+
+        Catching StreamlitValueError and rendering a valid multiselect with
+        the same key in the same run must not hit StreamlitDuplicateElementKey.
+        """
+        with pytest.raises(
+            StreamlitValueError,
+            match=r"Invalid `select_all` value.*must be a non-negative integer",
+        ):
+            st.multiselect("the label", ("m", "f"), key="ms_select_all", select_all=-1)
+        st.multiselect("the label", ("m", "f"), key="ms_select_all", select_all=False)
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.select_all == 0
+
+    @parameterized.expand([("yes",), (1.5,), (None,)])
+    def test_select_all_invalid_type_raises(self, value: object) -> None:
+        """Non bool/int values raise StreamlitInvalidParameterTypeError."""
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError,
+            match=rf"Invalid `select_all` type.*Provided type: {type(value).__name__}",
+        ):
+            st.multiselect("the label", ("m", "f"), select_all=value)  # type: ignore[arg-type]
+
+    def test_select_all_included_in_id(self) -> None:
+        """select_all is included in the unkeyed element id.
+
+        Two otherwise-identical multiselects that differ only in select_all
+        get distinct ids.
+        """
+        st.multiselect("same label", ("m", "f"), select_all=False)
+        st.multiselect("same label", ("m", "f"), select_all=True)
+        c1 = self.get_delta_from_queue(-2).new_element.multiselect
+        c2 = self.get_delta_from_queue().new_element.multiselect
+        assert c1.id != c2.id
+
+    def test_select_all_false_and_zero_share_unkeyed_id(self) -> None:
+        """False and 0 are equivalent, so unkeyed widgets share an id."""
+        st.multiselect("same label", ("m", "f"), select_all=False)
+        with pytest.raises(StreamlitDuplicateElementId):
+            st.multiselect("same label", ("m", "f"), select_all=0)
 
 
 def test_multiselect_enum_coercion():

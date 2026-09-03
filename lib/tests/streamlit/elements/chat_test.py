@@ -30,6 +30,7 @@ from streamlit.elements.widgets.chat import (
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidHeightError,
+    StreamlitInvalidLayoutContextError,
     StreamlitInvalidWidthError,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
@@ -168,13 +169,11 @@ class ChatTest(DeltaGeneratorTestCase):
 
     def test_chat_not_allowed_in_form(self):
         """Test that it disallows being called in a form."""
-        with pytest.raises(StreamlitAPIException) as exception_message:
+        with pytest.raises(
+            StreamlitInvalidLayoutContextError,
+            match=r"`st.chat_input\(\)` can't be used in a `st.form\(\)`",
+        ):
             st.form("Form Key").chat_input()
-
-        assert (
-            str(exception_message.value)
-            == "`st.chat_input()` can't be used in a `st.form()`."
-        )
 
     @parameterized.expand(
         [
@@ -258,7 +257,7 @@ class ChatTest(DeltaGeneratorTestCase):
 
         assert (
             str(ex.value)
-            == "Invalid `accept_file` value. Supported values: True, False, 'multiple', 'directory'."
+            == "Invalid `accept_file` value. Supported values: True, False, 'multiple', 'directory'. Got 'invalid'."
         )
 
     def test_file_type(self):
@@ -629,15 +628,14 @@ class ChatTest(DeltaGeneratorTestCase):
             ("negative", -1),
             ("float", 1.5),
             ("string", "10"),
+            ("true", True),
         ]
     )
     def test_max_upload_size_invalid(self, _: str, max_upload_size: object) -> None:
         """Test that invalid max_upload_size values raise an exception for chat_input."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.chat_input("the label", max_upload_size=max_upload_size)
-        assert "The `max_upload_size` parameter must be a positive integer" in str(
-            exc.value
-        )
+        assert "a positive integer" in str(exc.value)
 
     def test_accept_file_single(self):
         """Test st.chat_input with accept_file=True."""

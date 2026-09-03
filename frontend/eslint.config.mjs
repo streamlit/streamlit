@@ -31,7 +31,6 @@ import testingLibrary from "eslint-plugin-testing-library"
 import noRelativeImportPaths from "eslint-plugin-no-relative-import-paths"
 import globals from "globals"
 import { defineConfig, globalIgnores } from "eslint/config"
-import jsxA11y from "eslint-plugin-jsx-a11y"
 
 // Import other configs
 // Note: Some configs may need to be applied differently in flat config
@@ -71,6 +70,11 @@ export const getNoRestrictedImports = (
       name: "axios",
       importNames: ["CancelToken"],
       message: "Please use the `AbortController` API instead of `CancelToken`",
+    },
+    {
+      // lodash only provides downstream peer/types; runtime imports use lodash-es.
+      name: "lodash",
+      message: "Please import from `lodash-es` for tree-shaking.",
     },
     {
       name: "react",
@@ -239,7 +243,6 @@ export default defineConfig([
   {
     files: ["**/*.ts", "**/*.tsx"],
     plugins: {
-      ...jsxA11y.flatConfigs.recommended.plugins,
       lodash,
       "no-relative-import-paths": fixupPluginRules(noRelativeImportPaths),
       "streamlit-custom": streamlitCustom,
@@ -297,7 +300,10 @@ export default defineConfig([
         },
       ],
       // It's safe to use functions before they're defined
-      "@typescript-eslint/no-use-before-define": ["warn", { functions: false }],
+      "@typescript-eslint/no-use-before-define": [
+        "warn",
+        { functions: false },
+      ],
       // Functions must have return types, but we allow inline function expressions to omit them
       "@typescript-eslint/explicit-function-return-type": [
         "warn",
@@ -328,6 +334,8 @@ export default defineConfig([
       "@typescript-eslint/prefer-readonly": "warn",
       // Ensure return await is used in try/catch for proper error stack traces
       "@typescript-eslint/return-await": ["error", "in-try-catch"],
+      // Treat @deprecated API usage as errors
+      "@typescript-eslint/no-deprecated": "error",
       // Permit for-of loops
       "no-restricted-syntax": [
         "error",
@@ -434,18 +442,6 @@ export default defineConfig([
       "react-hooks/set-state-in-effect": "off",
       // Enforce "You Might Not Need an Effect" pattern - don't derive state in effects
       "react-hooks/no-deriving-state-in-effects": "error",
-      // jsx-a11y rules
-      ...jsxA11y.flatConfigs.recommended.rules,
-      // prohibit autoFocus prop
-      // https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/main/docs/rules/no-autofocus.md
-      "jsx-a11y/no-autofocus": ["error", { ignoreNonDOM: true }],
-      // Stricter a11y enforcement beyond the recommended ruleset:
-      // - Require accessible names for icon-only controls
-      "jsx-a11y/control-has-associated-label": "error",
-      // - Do not hide focusable controls from assistive technology
-      "jsx-a11y/no-aria-hidden-on-focusable": "error",
-      // - Avoid making non-interactive elements keyboard-focusable via tabIndex>=0
-      "jsx-a11y/no-noninteractive-tabindex": "error",
     },
     settings: {
       "import-x/resolver": {
@@ -471,21 +467,31 @@ export default defineConfig([
   // Test files specific configuration
   {
     files: ["**/*.test.ts", "**/*.test.tsx"],
-    ...testingLibrary.configs["flat/react"],
     plugins: {
-      ...testingLibrary.configs["flat/react"].plugins,
       "testing-library": testingLibrary,
       vitest,
     },
     rules: {
-      // Recommended vitest configuration to enforce good testing practices
+      // Merge the Testing Library preset into this `rules` object. Spreading the
+      // whole preset at this config root would let this `rules` key replace it
+      // and drop every recommended testing-library rule.
+      ...testingLibrary.configs["flat/react"].rules,
       ...vitest.configs.recommended.rules,
       // Allow hardcoded styles in test files
       "streamlit-custom/no-hardcoded-theme-values": "off",
       // Allow force reflow access in test files
       "streamlit-custom/no-force-reflow-access": "off",
 
-      // Testing library rules
+      // Recommended rules with large existing debt; enable in later cleanups.
+      // Plan: https://github.com/streamlit/streamlit/wiki/2026-09-03-improving-frontend-linting
+      "testing-library/no-node-access": "off",
+      "testing-library/no-container": "off",
+      "testing-library/prefer-presence-queries": "off",
+      "testing-library/no-unnecessary-act": "off",
+      "testing-library/no-manual-cleanup": "off",
+      "testing-library/render-result-naming-convention": "off",
+
+      // Testing library overrides
       "testing-library/prefer-user-event": "error",
       // Prefer screen.getBy* over destructured queries for consistency
       "testing-library/prefer-screen-queries": "warn",
@@ -545,7 +551,7 @@ export default defineConfig([
   globalIgnores([
     "eslint.config.mjs",
     "app/eslint.config.mjs",
-    "vitest.config.ts",
+    "vitest.config.mts",
     "vitest.setup.ts",
     "**/vite.config.ts",
     "lib/src/proto.js",

@@ -70,17 +70,17 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Missing required figure
-    pyplot()  # type: ignore[call-arg]
+    pyplot()  # type: ignore[call-arg]  # ty: ignore[missing-argument]
 
     # Figure cannot be None
-    pyplot(None)  # type: ignore[arg-type]
+    pyplot(None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid width value (not "content", "stretch", or int)
-    pyplot(fig, width="invalid")  # type: ignore[arg-type]
+    pyplot(fig, width="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid clear_figure values
-    pyplot(fig, clear_figure=None)  # type: ignore[arg-type]
-    pyplot(fig, clear_figure="yes")  # type: ignore[arg-type]
+    pyplot(fig, clear_figure=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    pyplot(fig, clear_figure="yes")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Passing width as positional argument (should be keyword-only)
-    pyplot(fig, False, "stretch")  # type: ignore[call-arg]
+    pyplot(fig, False, "stretch")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]

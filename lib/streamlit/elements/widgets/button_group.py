@@ -53,7 +53,11 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitValueError,
+)
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -372,7 +376,7 @@ class ButtonGroupMixin:
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
-    # 3. Single-select (default, required=False) -> V | None
+    # 3. Single-select with required=False or a non-literal bool -> V | None
     @overload
     def pills(
         self,
@@ -381,7 +385,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["single"] = "single",
         default: V | None = None,
-        required: Literal[False] = ...,
+        required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -395,7 +399,16 @@ class ButtonGroupMixin:
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
-    # 4. Multi-select -> list[V]
+    # 4. Multi-select with a sequence default -> list[V]
+    # Split from overload 5 so checkers solve V from options, not from default:
+    # a combined `default: Sequence[V] | V | None` makes `default=[1]` solve V
+    # as `int | Sequence[int]` and yields `list[V | Sequence[V]]`.
+    # Include None so a `list[V] | None` default matches this overload without
+    # relying on checker union expansion.
+    # Reject required=True in multi-select mode statically: it raises
+    # StreamlitAPIException at runtime. Keep Literal[False] rather than bool --
+    # bool cannot exclude True, so a `required: bool` variable then matches no
+    # overload here, even when its value is False.
     @overload
     def pills(
         self,
@@ -403,8 +416,31 @@ class ButtonGroupMixin:
         options: OptionSequence[V],
         *,
         selection_mode: Literal["multi"],
-        default: Sequence[V] | V | None = None,
-        required: bool = False,
+        default: Sequence[V] | None,
+        required: Literal[False] = False,
+        format_func: Callable[[Any], str] | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        wrap: bool | None = None,
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> list[V]: ...
+    # 5. Multi-select with a scalar default or None -> list[V]
+    @overload
+    def pills(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["multi"],
+        default: V | None = None,
+        required: Literal[False] = False,
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -738,7 +774,7 @@ class ButtonGroupMixin:
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
-    # 3. Single-select (default, required=False) -> V | None
+    # 3. Single-select with required=False or a non-literal bool -> V | None
     @overload
     def segmented_control(
         self,
@@ -747,7 +783,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["single"] = "single",
         default: V | None = None,
-        required: Literal[False] = ...,
+        required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
@@ -761,7 +797,16 @@ class ButtonGroupMixin:
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
-    # 4. Multi-select -> list[V]
+    # 4. Multi-select with a sequence default -> list[V]
+    # Split from overload 5 so checkers solve V from options, not from default:
+    # a combined `default: Sequence[V] | V | None` makes `default=[1]` solve V
+    # as `int | Sequence[int]` and yields `list[V | Sequence[V]]`.
+    # Include None so a `list[V] | None` default matches this overload without
+    # relying on checker union expansion.
+    # Reject required=True in multi-select mode statically: it raises
+    # StreamlitAPIException at runtime. Keep Literal[False] rather than bool --
+    # bool cannot exclude True, so a `required: bool` variable then matches no
+    # overload here, even when its value is False.
     @overload
     def segmented_control(
         self,
@@ -769,8 +814,31 @@ class ButtonGroupMixin:
         options: OptionSequence[V],
         *,
         selection_mode: Literal["multi"],
-        default: Sequence[V] | V | None = None,
-        required: bool = False,
+        default: Sequence[V] | None,
+        required: Literal[False] = False,
+        format_func: Callable[[Any], str] | None = None,
+        key: str | int | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        wrap: bool | None = None,
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> list[V]: ...
+    # 5. Multi-select with a scalar default or None -> list[V]
+    @overload
+    def segmented_control(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["multi"],
+        default: V | None = None,
+        required: Literal[False] = False,
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
@@ -1094,9 +1162,10 @@ class ButtonGroupMixin:
 
         # Validate required with multi-select
         if required and selection_mode == "multi":
-            raise StreamlitAPIException(
-                "The `required` argument cannot be used with `selection_mode='multi'`. "
-                "The `required` parameter is only supported for single-select mode."
+            raise StreamlitIncompatibleParametersError(
+                "required=True",
+                "selection_mode='multi'",
+                explanation="`required` is only supported for single-select mode.",
             )
 
         # Use str as default format_func
@@ -1276,10 +1345,10 @@ class ButtonGroupMixin:
             and isinstance(default, Sequence)
             and len(default) > 1
         ):
-            # add more commands to the error message
             raise StreamlitAPIException(
-                "The default argument to `st.pills` must be a single value when "
-                "`selection_mode='single'`."
+                f"The default argument to `st.{style}` must be a single value when "
+                "`selection_mode='single'`.",
+                error_id="button-group-single-select-multiple-defaults",
             )
 
         if style not in {"pills", "segmented_control"}:

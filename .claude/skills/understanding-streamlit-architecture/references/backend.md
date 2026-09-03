@@ -157,7 +157,7 @@ register_widget(
 
 **Lifecycle hooks**:
 - `on_script_will_rerun()`: Process widget states from browser, run callbacks
-- `on_script_finished()`: Clean up stale widgets not seen this run
+- `on_script_finished()`: Reset trigger widgets. Drop stale widgets not seen this run, except on `SCRIPT_STOPPED_FOR_RERUN`: `st.rerun()` can interrupt before later widgets register, so stale cleanup is deferred until the next completed run.
 
 **Disabled widget enforcement**: `WidgetMetadata` carries a `disabled` flag (set via `register_widget(..., disabled=...)`). Because a disabled widget cannot be interacted with in the browser, this is enforced server-side to guard against a stale UI or a forged `BackMsg`: `SessionState.register_widget()` discards any incoming frontend value for a disabled widget (falling back to its previous value, or its default on first registration), and `_call_callbacks()` suppresses its `on_change`/`on_click` callback. Programmatic `st.session_state` assignments are still honored.
 
@@ -241,6 +241,13 @@ sequenceDiagram
 - Each fragment gets a unique `fragment_id` (hash of function identity + delta-path context)
 - Frontend tracks `fragmentIdsThisRun` to know which fragments are active
 - Delta messages include `fragment_id` for proper tree updates
+- `@st.fragment(key=...)` also indexes that `fragment_id` under the user-facing name in `FragmentStorage` (`"app"` and `"fragment"` are reserved and cannot be used as keys)
+
+**Keyed / event-scoped reruns**:
+- `st.rerun("<key>")` or `st.rerun(["k1", "k2"])` from a widget callback (`on_click` / `on_change`) resolves those names to fragment ids and reruns only those fragments, replacing the interaction's default rerun.
+- This form is only valid from a callback. Calling it from the main script body or a fragment body raises `StreamlitAPIException`.
+- When the interaction's default rerun is app-wide (the widget lives in the main script, not inside a fragment), a sibling callback that returns normally or calls `st.rerun()` escalates the result to a full-app rerun. Interactions originating inside a fragment keep the targeted scope unless a sibling explicitly calls plain `st.rerun()`; a pending `st.switch_page()` is exempt.
+- A full-app run prunes `FragmentStorage` down to the fragments that actually executed during it, so a fragment skipped by a `False` conditional loses its key.
 
 **Staleness with fragments**:
 - Elements track both `scriptRunId` and `fragmentId`

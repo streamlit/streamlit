@@ -53,6 +53,7 @@ export function WidgetLabelHelpIconInline({
   containerWidth,
 }: WidgetLabelHelpIconInlineProps): ReactElement {
   return (
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- WidgetLabelHelpIconInline is the public API; it still wraps this deprecated layout styled-component.
     <StyledWidgetLabelHelpInline>
       <TooltipIcon
         content={content}

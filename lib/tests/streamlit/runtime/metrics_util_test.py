@@ -34,10 +34,15 @@ from streamlit import config
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.connections import SQLConnection
 from streamlit.errors import (
+    LocalizableStreamlitException,
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
     StreamlitInvalidLayoutContextError,
+    StreamlitInvalidMinMaxError,
     StreamlitInvalidParameterTypeError,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.navigation.page import _create_page
 from streamlit.runtime import metrics_util
@@ -869,7 +874,15 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
             "StreamlitValueError:width",
         ),
         (
-            StreamlitMissingRequiredParameterError("st.expander", "label"),
+            StreamlitValueError(
+                "scope",
+                ["'global'", "'session'"],
+                detail="Connection class Foo has an invalid scope.",
+            ),
+            "StreamlitValueError:scope",
+        ),
+        (
+            StreamlitMissingRequiredParameterError("label"),
             "StreamlitMissingRequiredParameterError:label",
         ),
         (
@@ -877,10 +890,58 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
             "StreamlitInvalidParameterTypeError:spec",
         ),
         (
+            StreamlitInvalidMinMaxError(10, 5),
+            "StreamlitInvalidMinMaxError",
+        ),
+        (
+            StreamlitValueOutOfRangeError("index", 5, 0, 2),
+            "StreamlitValueOutOfRangeError:index",
+        ),
+        (
+            StreamlitIncompatibleParametersError(
+                "wrap=False", "unsafe_allow_html=True"
+            ),
+            "StreamlitIncompatibleParametersError",
+        ),
+        (
             StreamlitInvalidLayoutContextError(
                 "Forms cannot be nested in other forms."
             ),
             "StreamlitInvalidLayoutContextError",
+        ),
+        (
+            StreamlitAPIException("Failed to load secrets"),
+            "StreamlitAPIException",
+        ),
+        (
+            StreamlitAPIException(
+                "Failed to load secrets",
+                error_id="failed-loading-secrets-file",
+            ),
+            "StreamlitAPIException:failed-loading-secrets-file",
+        ),
+        (
+            StreamlitInvalidLayoutContextError(
+                "Forms cannot be nested in other forms.",
+                error_id="nested-forms-not-allowed",
+            ),
+            "StreamlitInvalidLayoutContextError:nested-forms-not-allowed",
+        ),
+        (
+            LocalizableStreamlitException(
+                "Error parsing secrets file at {path}",
+                path="secrets.toml",
+                error_id="failed-parsing-secrets-file",
+            ),
+            "LocalizableStreamlitException:failed-parsing-secrets-file",
+        ),
+        (
+            LocalizableStreamlitException(
+                "Invalid {parameter}",
+                parameter="width",
+                error_id="should-not-appear",
+            ),
+            "LocalizableStreamlitException:width",
         ),
         (
             ModuleNotFoundError("No module named 'pyarrow'"),
@@ -946,9 +1007,18 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
         "unsupported-proto-type",
         "unsupported-byteslike",
         "streamlit-value-error",
+        "streamlit-value-error-detail",
         "streamlit-missing-required-parameter",
         "invalid-parameter-type",
+        "invalid-min-max",
+        "value-out-of-range",
+        "incompatible-parameters",
         "invalid-context-no-command-suffix",
+        "streamlit-api-exception-plain",
+        "streamlit-api-exception-error-id",
+        "streamlit-api-exception-subclass-error-id",
+        "localizable-error-id-without-parameter",
+        "localizable-parameter-takes-precedence-over-error-id",
         "modulenotfound-message-fallback",
         "import-error-message-fallback",
         "modulenotfound-private-module",

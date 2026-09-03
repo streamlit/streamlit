@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import type { JSX } from "react"
+
 import { type CustomCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { screen } from "@testing-library/react"
 

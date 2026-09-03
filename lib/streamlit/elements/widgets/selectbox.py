@@ -50,7 +50,10 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
+from streamlit.errors import (
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueOutOfRangeError,
+)
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -282,6 +285,34 @@ class SelectboxMixin:
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> T | str | None: ...
+
+    # A dynamic index: int | None with default accept_new_options=False
+    # returns T | None. This sits before the bool catch-all so checkers
+    # that do not expand int | None (e.g. pyrefly) do not pick up a
+    # spurious | str. mypy expands the union, so CI cannot catch deleting
+    # this overload. See #16630.
+    @overload
+    def selectbox(
+        self,
+        label: str,
+        options: OptionSequence[T],
+        index: int | None = 0,
+        format_func: Callable[[Any], str] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        placeholder: str | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        accept_new_options: Literal[False] = False,
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
+        width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> T | None: ...
 
     @overload
     def selectbox(
@@ -634,10 +665,7 @@ class SelectboxMixin:
             )
 
         if index is not None and len(opt) > 0 and not 0 <= index < len(opt):
-            raise StreamlitAPIException(
-                "Selectbox index must be greater than or equal to 0 "
-                "and less than the length of options."
-            )
+            raise StreamlitValueOutOfRangeError("index", index, 0, len(opt) - 1)
 
         # Convert empty string to single space to distinguish from None:
         # - None (default) → "" → Frontend shows contextual placeholders
@@ -649,7 +677,6 @@ class SelectboxMixin:
         proto_filter_mode = validate_select_widget_filter_mode(
             filter_mode,
             accept_new_options=accept_new_options,
-            command="st.selectbox",
         )
 
         formatted_options, formatted_option_to_option_index = create_mappings(

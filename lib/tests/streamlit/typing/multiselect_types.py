@@ -43,7 +43,8 @@ if TYPE_CHECKING:
     assert_type(multiselect("foo", ["foo", "bar"], default=None), list[str])
     assert_type(multiselect("foo", Alfred), list[Alfred])
     assert_type(multiselect("foo", [Alfred.HITCHCOCK, Alfred.GREENE]), list[Alfred])
-    assert_type(multiselect("foo", [1, Alfred.HITCHCOCK, "five"]), list[object])
+    # ty infers `list[int | Alfred | str]` rather than `list[object]`.
+    assert_type(multiselect("foo", [1, Alfred.HITCHCOCK, "five"]), list[object])  # ty: ignore[type-assertion-failure]
 
     # Tests with accept_new_options=True
     assert_type(multiselect("foo", [1, 2, 3], accept_new_options=True), list[int | str])
@@ -114,3 +115,43 @@ if TYPE_CHECKING:
     assert_type(multiselect("foo", ["a", "b"], wrap=True), list[str])
     assert_type(multiselect("foo", ["a", "b"], wrap=False), list[str])
     assert_type(multiselect("foo", ["a", "b"], wrap=None), list[str])
+
+    # Check select_all parameter
+    assert_type(multiselect("foo", ["a", "b"], select_all=True), list[str])
+    assert_type(multiselect("foo", ["a", "b"], select_all=False), list[str])
+    assert_type(multiselect("foo", ["a", "b"], select_all=1000), list[str])
+
+    def on_multiselect_change(prefix: str) -> None: ...
+
+    # Non-literal accept_new_options returns the union of both result types.
+    accept_new_options: bool = True
+    # ty infers `list[int | str]` rather than the union of both overloads.
+    assert_type(  # ty: ignore[type-assertion-failure]
+        multiselect("foo", [1, 2, 3], accept_new_options=accept_new_options),
+        list[int] | list[int | str],
+    )
+
+    # Common parameters combined
+    assert_type(
+        multiselect(
+            "foo",
+            [1, 2, 3],
+            format_func=lambda value: f"Option {value}",
+            key="numbers",
+            help="Choose numbers",
+            on_change=on_multiselect_change,
+            args=("selected",),
+            kwargs={},
+            max_selections=2,
+            placeholder="Choose up to two",
+            disabled=False,
+            label_visibility="visible",
+            width=400,
+            persist_state="session",
+            select_all=False,
+        ),
+        list[int],
+    )
+
+    # Invalid select_all type
+    multiselect("foo", ["a", "b"], select_all="yes")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]

@@ -42,6 +42,10 @@ from streamlit.web import cli
 from streamlit.web.cli import _convert_config_option_to_click_option
 from tests import testutil
 
+_SENSITIVE_CONFIG_OPTIONS = [
+    key for key, opt in config._config_options_template.items() if opt.sensitive
+]
+
 
 class CliTest(unittest.TestCase):
     """Unit tests for the cli."""
@@ -263,8 +267,14 @@ class CliTest(unittest.TestCase):
         )
         assert result.exit_code == 0
 
-    @parameterized.expand(["mapbox.token", "server.cookieSecret"])
-    def test_run_command_with_sensitive_options_as_flag(self, sensitive_option):
+    def test_sensitive_config_options_are_registered(self) -> None:
+        """Fail if parameterization of sensitive CLI flags would expand to no cases."""
+        assert _SENSITIVE_CONFIG_OPTIONS
+
+    @parameterized.expand([(key,) for key in _SENSITIVE_CONFIG_OPTIONS])
+    def test_run_command_with_sensitive_option_as_flag(
+        self, sensitive_option: str
+    ) -> None:
         with (
             patch("streamlit.url_util.is_url", return_value=False),
             patch("streamlit.web.cli._main_run"),
@@ -852,28 +862,22 @@ def test_main_run_handles_none_flag_options() -> None:
     assert flag_opts == {}
 
 
-def test_init_command_runs_app_when_user_confirms() -> None:
+def test_init_command_runs_app_when_user_confirms(tmp_path: Path) -> None:
     """``streamlit init`` invokes ``_main_run`` when the user confirms 'Run the app now?'."""
     runner = CliRunner()
-    with (
-        runner.isolated_filesystem(),
-        patch("streamlit.web.cli._main_run") as mock_main_run,
-    ):
-        result = runner.invoke(cli.main, ["init"], input="y\n")
+    with patch("streamlit.web.cli._main_run") as mock_main_run:
+        result = runner.invoke(cli.main, ["init", str(tmp_path)], input="y\n")
 
     assert result.exit_code == 0
     mock_main_run.assert_called_once()
     assert "streamlit_app.py" in mock_main_run.call_args.args[0]
 
 
-def test_init_command_raises_click_exception_on_oserror() -> None:
+def test_init_command_raises_click_exception_on_oserror(tmp_path: Path) -> None:
     """``streamlit init <dir>`` surfaces ``OSError`` as a Click exception."""
     runner = CliRunner()
-    with (
-        runner.isolated_filesystem(),
-        patch("pathlib.Path.mkdir", side_effect=OSError("disk full")),
-    ):
-        result = runner.invoke(cli.main, ["init", "some-dir"])
+    with patch("pathlib.Path.mkdir", side_effect=OSError("disk full")):
+        result = runner.invoke(cli.main, ["init", str(tmp_path / "some-dir")])
 
     assert result.exit_code != 0
     assert "Failed to create directory" in result.output

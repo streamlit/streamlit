@@ -34,6 +34,7 @@ from streamlit.elements.widgets.slider import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidMinMaxError,
     StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
     StreamlitJSNumberBoundsError,
@@ -221,9 +222,9 @@ class SliderTest(DeltaGeneratorTestCase):
         assert c.max == 101
 
     def test_min_equals_max(self):
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidMinMaxError, match="must not be equal"):
             st.slider("oh no", min_value=10, max_value=10)
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidMinMaxError, match="must not be equal"):
             date = datetime(2024, 4, 3)
             st.slider("datetime", min_value=date, max_value=date)
 
@@ -274,7 +275,7 @@ class SliderTest(DeltaGeneratorTestCase):
         in a JavaScript number. Past MAX_SAFE_INTEGER the value cannot round-trip, so
         it has to fail rather than silently shift to a different instant.
         """
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitJSNumberBoundsError) as exc:
             st.slider(
                 "Label", min_value=min_value, max_value=max_value, value=min_value
             )
@@ -384,11 +385,11 @@ class SliderTest(DeltaGeneratorTestCase):
         just_above = datetime.combine(_MAX_SAFE_DAY + timedelta(days=1), time(23, 59))
         in_range = datetime.combine(_MIN_SAFE_DAY, time(12))
 
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitJSNumberBoundsError) as exc:
             st.slider("Label", min_value=just_below, max_value=in_range, value=in_range)
         assert "`min_value` is too far from 1970" in str(exc.value)
 
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitJSNumberBoundsError) as exc:
             st.slider("Label", min_value=in_range, max_value=just_above, value=in_range)
         assert "`max_value` is too far from 1970" in str(exc.value)
 
@@ -426,14 +427,22 @@ class SliderTest(DeltaGeneratorTestCase):
         surfacing as a bare ``OverflowError``. It should report the representable range
         instead.
         """
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitJSNumberBoundsError) as exc:
             st.slider("Label", value=value)
         assert "too far from 1970" in str(exc.value)
 
     def test_step_zero(self):
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.slider("Label", min_value=0, max_value=10, step=0)
-        assert str(exc.value) == "Slider components cannot be passed a `step` of 0."
+        assert "Zero is not allowed" in str(exc.value)
+        with pytest.raises(StreamlitValueError) as exc:
+            st.slider(
+                "Label",
+                min_value=datetime(2020, 1, 1),
+                max_value=datetime(2020, 1, 2),
+                step=timedelta(0),
+            )
+        assert "Zero is not allowed" in str(exc.value)
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""
@@ -1004,11 +1013,8 @@ class SliderEdgeCasesTest(DeltaGeneratorTestCase):
     """Tests for slider parameter validation edge cases."""
 
     def test_overlong_value_sequence_raises(self):
-        """A list or tuple longer than 2 items raises StreamlitAPIException."""
-        with pytest.raises(
-            StreamlitAPIException,
-            match="list/tuple of 0 to 2",
-        ):
+        """A list or tuple longer than two items raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match="containing up to two"):
             st.slider("the label", value=[1, 2, 3])
 
     def test_mixed_types_in_value_raises(self):

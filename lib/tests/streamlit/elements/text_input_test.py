@@ -15,6 +15,7 @@
 """text_input unit test."""
 
 import re
+from datetime import timedelta
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -25,8 +26,12 @@ import streamlit as st
 from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitBadTimeStringError,
+    StreamlitIncompatibleParametersError,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
     StreamlitValueError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.TextInput_pb2 import TextInput
@@ -286,9 +291,8 @@ class TextInputTest(DeltaGeneratorTestCase):
         """Test that type-derived defaults do not enter the email widget identity.
 
         The live ID must match an expected ID computed from the raw user kwargs
-        (``None`` enhanced params, no ``validate`` identity kwarg). Folding the
-        email defaults into the hash would change that expected ID. Opting out
-        with ``validate=""`` must stay identity-neutral with the default rule.
+        (``None`` enhanced params). Folding the email defaults into the hash
+        would change that expected ID.
         """
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
@@ -314,14 +318,15 @@ class TextInputTest(DeltaGeneratorTestCase):
                 placeholder=str(None),
                 icon=None,
                 width="stretch",
+                live=None,
+                validate=None,
             )
             assert actual_id == expected_id
 
-            # Default email validation and an explicit opt-out share an ID —
-            # the type's default rule must stay identity-neutral.
+            # Opting out of the type default is a real `validate` change.
             st.text_input("label", key="email_key", type="email", validate="")
             opt_out_id = self.get_delta_from_queue().new_element.text_input.id
-            assert actual_id == opt_out_id
+            assert actual_id != opt_out_id
 
     @parameterized.expand([("email",), ("url",), ("phone",), ("search",)])
     def test_bind_query_params_allowed_for_specialized_types(self, type_string: str):
@@ -383,16 +388,16 @@ class TextInputTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("wrong_tuple_length", ("only-one",)),
-            ("non_string_regex", (1, "msg")),
-            ("non_string_message", ("rx", 1)),
-            ("list_shape", ["rx", "msg"]),
-            ("callable", lambda _value: True),
+            ("wrong_tuple_length", ("only-one",), StreamlitValueError),
+            ("non_string_regex", (1, "msg"), StreamlitValueError),
+            ("non_string_message", ("rx", 1), StreamlitValueError),
+            ("list_shape", ["rx", "msg"], StreamlitInvalidParameterTypeError),
+            ("callable", lambda _value: True, StreamlitInvalidParameterTypeError),
         ]
     )
-    def test_invalid_validate_shapes_raise(self, _name, validate):
-        """Test that invalid validate values raise StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as exc:
+    def test_invalid_validate_shapes_raise(self, _name, validate, error_type):
+        """Malformed tuples are value errors; unsupported outer types are type errors."""
+        with pytest.raises(error_type) as exc:
             st.text_input("the label", validate=validate)
 
         assert "validate" in str(exc.value)
@@ -650,21 +655,10 @@ class TextInputTest(DeltaGeneratorTestCase):
         [
             ("absent", {}),
             ("none", {"validate": None}),
-            ("empty_string", {"validate": ""}),
         ]
     )
-    def test_falsy_validate_preserves_backwards_compatible_id(
-        self, _name: str, validate_kwarg: dict
-    ):
-        """Test that an input without effective validation keeps the same
-        widget ID as before `validate` became part of the identity.
-
-        This guards against widget-ID churn on upgrade: a falsy `validate`
-        (absent, ``None``, or ``""``) must not contribute to the element ID,
-        otherwise pre-existing text inputs would reset and lose their session
-        state. ``validate=""`` is a frontend no-op, so it must be treated the
-        same as no validation here.
-        """
+    def test_omitted_and_none_validate_share_id(self, _name: str, validate_kwarg: dict):
+        """Test that omitted and None validate produce the same widget ID."""
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
@@ -678,14 +672,12 @@ class TextInputTest(DeltaGeneratorTestCase):
             )
             actual_id = self.get_delta_from_queue().new_element.text_input.id
 
-            # Reproduce the pre-`validate` identity computation (i.e. without
-            # the `validate` kwarg and using the old `key_as_main_identity`
-            # whitelist). For a keyed widget, dg-derived keys are dropped, so
-            # `dg=None` yields the same result as passing the real dg.
+            # For a keyed widget, dg-derived keys are dropped, so `dg=None`
+            # yields the same result as passing the real dg.
             expected_id = compute_and_register_element_id(
                 "text_input",
                 user_key="text_input_key",
-                key_as_main_identity={"max_chars"},
+                key_as_main_identity={"max_chars", "validate"},
                 dg=None,
                 label="Label",
                 value="abc",
@@ -696,8 +688,251 @@ class TextInputTest(DeltaGeneratorTestCase):
                 placeholder=str(None),
                 icon=None,
                 width="stretch",
+                live=None,
+                validate=None,
             )
             assert actual_id == expected_id
+
+    @parameterized.expand(
+        [
+            ("omitted", {}),
+            ("false", {"live": False}),
+        ]
+    )
+    def test_falsy_live_does_not_set_proto_field(
+        self, _name: str, live_kwarg: dict[str, bool]
+    ) -> None:
+        """Test that omitted or False live leaves live_debounce_ms unset."""
+        st.text_input("the label", **live_kwarg)
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert not c.HasField("live_debounce_ms")
+
+    def test_live_true_sets_default_debounce(self) -> None:
+        """Test that live=True marshals a 250ms debounce."""
+        st.text_input("the label", live=True)
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.HasField("live_debounce_ms")
+        assert c.live_debounce_ms == 250
+
+    @parameterized.expand(
+        [
+            ("300ms", 300),
+            ("0.5s", 500),
+            ("1s", 1000),
+            ("60s", 60_000),
+            ("1m", 60_000),
+            ("0ms", 0),
+            ("0s", 0),
+            ("0", 0),
+            ("0.4ms", 1),
+        ]
+    )
+    def test_live_duration_string_sets_debounce_ms(
+        self, live: str, expected_ms: int
+    ) -> None:
+        """Test that duration strings marshal to the expected milliseconds.
+
+        Zero-length durations still set the field (HasField is true) so the
+        frontend can distinguish ``live="0ms"`` from live off.
+        """
+        st.text_input("the label", live=live)
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.HasField("live_debounce_ms")
+        assert c.live_debounce_ms == expected_ms
+
+    def test_live_true_with_password_sets_debounce(self) -> None:
+        """Test that password inputs accept live=True with no extra error."""
+        st.text_input("the label", type="password", live=True)
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.type == TextInput.PASSWORD
+        assert c.live_debounce_ms == 250
+
+    def test_live_true_inside_form_still_sets_proto_field(self) -> None:
+        """Test that forms still marshal live_debounce_ms; the no-op is frontend-only."""
+        with st.form("form"):
+            st.text_input("the label", live=True)
+
+        c = self.get_delta_from_queue(1).new_element.text_input
+        assert c.HasField("live_debounce_ms")
+        assert c.live_debounce_ms == 250
+
+    @parameterized.expand(
+        [
+            (300,),
+            (0.3,),
+            (0,),
+            (timedelta(milliseconds=300),),
+        ]
+    )
+    def test_live_number_or_timedelta_raises(
+        self, live: int | float | timedelta
+    ) -> None:
+        """Test that numbers and timedelta point users to valid alternatives."""
+        with pytest.raises(StreamlitInvalidParameterTypeError) as exc:
+            st.text_input("the label", live=live)
+
+        message = str(exc.value)
+        assert "live" in message
+        assert "True" in message
+        assert "250ms" in message
+        assert "300ms" in message
+
+    @parameterized.expand(
+        [
+            ("-1s",),
+            ("-1ms",),
+            ("61s",),
+            ("2m",),
+        ]
+    )
+    def test_live_duration_out_of_range_raises(self, live: str) -> None:
+        """Test that delays outside 0-1 minute raise StreamlitValueOutOfRangeError."""
+        with pytest.raises(StreamlitValueOutOfRangeError) as exc:
+            st.text_input("the label", live=live)
+
+        assert "1m" in str(exc.value)
+        assert "0ms" in str(exc.value)
+
+    @parameterized.expand(
+        [
+            ("soon",),
+            ("",),
+        ]
+    )
+    def test_live_unparseable_string_raises(self, live: str) -> None:
+        """Test that unparseable duration strings raise StreamlitBadTimeStringError."""
+        with pytest.raises(StreamlitBadTimeStringError):
+            st.text_input("the label", live=live)
+
+    def test_live_none_raises_invalid_type(self) -> None:
+        """Test that live=None raises StreamlitInvalidParameterTypeError."""
+        with pytest.raises(StreamlitInvalidParameterTypeError) as exc:
+            st.text_input("the label", live=None)
+
+        assert "live" in str(exc.value)
+
+    def test_omitted_and_false_live_share_id(self) -> None:
+        """Test that omitted live and live=False produce the same widget ID.
+
+        ``live`` is not in ``key_as_main_identity``, so enabling it later
+        does not reset a keyed input.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.text_input(
+                label="Label",
+                key="text_input_key",
+                value="abc",
+                max_chars=50,
+            )
+            omitted_id = self.get_delta_from_queue().new_element.text_input.id
+
+            st.text_input(
+                label="Label",
+                key="text_input_key",
+                value="abc",
+                max_chars=50,
+                live=False,
+            )
+            false_id = self.get_delta_from_queue().new_element.text_input.id
+
+            expected_id = compute_and_register_element_id(
+                "text_input",
+                user_key="text_input_key",
+                key_as_main_identity={"max_chars", "validate"},
+                dg=None,
+                label="Label",
+                value="abc",
+                max_chars=50,
+                type="default",
+                help=None,
+                autocomplete=None,
+                placeholder=str(None),
+                icon=None,
+                width="stretch",
+                live=None,
+                validate=None,
+            )
+            assert omitted_id == expected_id
+            assert false_id == expected_id
+
+    def test_unkeyed_omitted_and_false_live_share_id(self) -> None:
+        """Test that omitted live and live=False share an unkeyed widget ID."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.text_input("Label")
+            omitted_id = self.get_delta_from_queue().new_element.text_input.id
+            st.text_input("Label", live=False)
+            false_id = self.get_delta_from_queue().new_element.text_input.id
+            assert omitted_id == false_id
+
+    def test_live_true_and_250ms_share_identity(self) -> None:
+        """Test that live=True and live='250ms' hash the same normalized ms."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.text_input("Label", live=True)
+            id_true = self.get_delta_from_queue().new_element.text_input.id
+            st.text_input("Label", live="250ms")
+            id_250ms = self.get_delta_from_queue().new_element.text_input.id
+            assert id_true == id_250ms
+
+    def test_live_500ms_differs_from_true(self) -> None:
+        """Test that a different delay produces a different unkeyed widget ID."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.text_input("Label", live=True)
+            id_true = self.get_delta_from_queue().new_element.text_input.id
+            st.text_input("Label", live="500ms")
+            id_500ms = self.get_delta_from_queue().new_element.text_input.id
+            assert id_true != id_500ms
+
+    def test_live_zero_ms_differs_from_false(self) -> None:
+        """Test that live='0ms' produces a different unkeyed widget ID than live=False."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.text_input("Label", live=False)
+            id_false = self.get_delta_from_queue().new_element.text_input.id
+            st.text_input("Label", live="0ms")
+            id_zero = self.get_delta_from_queue().new_element.text_input.id
+            assert id_false != id_zero
+
+    def test_keyed_widget_keeps_id_when_live_changes(self) -> None:
+        """Test that changing live on a keyed widget does not change the ID."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.text_input("Label", key="text_input_key", live=False)
+            id1 = self.get_delta_from_queue().new_element.text_input.id
+            st.text_input("Label", key="text_input_key", live=True)
+            id2 = self.get_delta_from_queue().new_element.text_input.id
+            assert id1 == id2
+
+    def test_unkeyed_live_true_differs_from_omitted(self) -> None:
+        """Test that enabling live on an unkeyed widget changes its ID."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.text_input("Label")
+            id_omitted = self.get_delta_from_queue().new_element.text_input.id
+            st.text_input("Label", live=True)
+            id_live = self.get_delta_from_queue().new_element.text_input.id
+            assert id_omitted != id_live
 
     def test_bind_query_params_sets_query_param_key(self) -> None:
         """Test that bind='query-params' with a key sets query_param_key in proto."""
@@ -746,15 +981,16 @@ class TextInputTest(DeltaGeneratorTestCase):
 
     def test_bind_query_params_with_password_raises_exception(self) -> None:
         """Test that bind='query-params' with type='password' raises an exception."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(
+            StreamlitIncompatibleParametersError,
+            match=r"Password values must not appear in URLs",
+        ):
             st.text_input(
                 "the label",
                 key="my_text",
                 bind="query-params",
                 type="password",
             )
-
-        assert "password" in str(exc.value).lower()
 
 
 class TextInputOnChangeModeTest(DeltaGeneratorTestCase):
