@@ -25,13 +25,18 @@ import {
   STEP_FOLLOWED_BY_STEP_SELECTOR,
 } from "~lib/components/core/Layout/stepConnector"
 import { Direction } from "~lib/components/core/Layout/utils"
-import {
-  StyledCheckboxField,
-  StyledSwitchField,
-} from "~lib/components/widgets/Checkbox/styled-components"
 import { STALE_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
 import { assertNever } from "~lib/util/assertNever"
+
+/**
+ * Class that `st.checkbox` and `st.toggle` both set on their outer React Aria
+ * field wrapper (see `Checkbox.tsx`). The column vertical-alignment rules below
+ * target this class rather than the two field styled-components so that `Block`
+ * does not import widget internals, and so the rules keep covering both widgets
+ * if their internal composition changes again.
+ */
+const CHECKBOX_WRAPPER_SELECTOR = ".stCheckbox"
 
 function translateGapWidth(
   gap: streamlit.GapConfig.$Properties | undefined,
@@ -196,7 +201,7 @@ export const StyledColumn = styled.div<StyledColumnProps>(
         // Scoped to the column's own stVerticalBlock so nested containers
         // (e.g. horizontal containers of checkboxes) do not also get matched
         // (issue #13162).
-        [`& > .stVerticalBlock > ${StyledElementContainer}:last-of-type > :is(${StyledCheckboxField}, ${StyledSwitchField})`]:
+        [`& > .stVerticalBlock > ${StyledElementContainer}:last-of-type > ${CHECKBOX_WRAPPER_SELECTOR}`]:
           {
             marginBottom: theme.spacing.sm,
           },
@@ -206,7 +211,7 @@ export const StyledColumn = styled.div<StyledColumnProps>(
         // widgets. Scoped to the column's own stVerticalBlock so nested
         // containers (e.g. horizontal containers of checkboxes) do not also
         // get matched (issue #13162).
-        [`& > .stVerticalBlock > ${StyledElementContainer}:first-of-type > :is(${StyledCheckboxField}, ${StyledSwitchField})`]:
+        [`& > .stVerticalBlock > ${StyledElementContainer}:first-of-type > ${CHECKBOX_WRAPPER_SELECTOR}`]:
           {
             marginTop: theme.spacing.sm,
           },

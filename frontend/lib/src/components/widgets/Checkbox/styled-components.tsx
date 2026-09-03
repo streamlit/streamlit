@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import styled from "@emotion/styled"
+import styled, { CSSObject } from "@emotion/styled"
 import {
   CheckboxButton as RACheckboxButton,
   CheckboxField as RACheckboxField,
@@ -23,30 +23,34 @@ import {
 } from "react-aria-components"
 
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
+import type { EmotionTheme } from "~lib/theme/types"
 import { LabelVisibilityOptions } from "~lib/util/utils"
+
+/**
+ * Shared by both field wrappers so checkbox and toggle cannot drift out of
+ * alignment with each other.
+ */
+const fieldStyles = ({ theme }: { theme: EmotionTheme }): CSSObject => ({
+  display: "flex",
+  alignItems: "center",
+  minHeight: theme.sizes.smallElementHeight,
+})
 
 /**
  * React Aria field that passes the controlled selection state to
  * `CheckboxButton` and renders the outer wrapper `<div>`. Column alignment CSS,
  * `data-testid="stCheckbox"` and the `stCheckbox` class all target this element.
  */
-export const StyledCheckboxField = styled(RACheckboxField)(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  minHeight: theme.sizes.smallElementHeight,
-}))
+export const StyledCheckboxField = styled(RACheckboxField)(fieldStyles)
 
 /**
- * Outer wrapper for the toggle variant. Kept separate from `StyledCheckboxField`
- * because `SwitchButton` reads its state from a `SwitchField`, not from a
- * `CheckboxField`. Layout matches `StyledCheckboxField` so checkbox and toggle
- * align identically.
+ * The toggle's equivalent of `StyledCheckboxField`, kept separate because
+ * `SwitchButton` reads its state from a `SwitchField`, not from a
+ * `CheckboxField`. Column alignment CSS, `data-testid="stCheckbox"` and the
+ * `stCheckbox` class target this element too — the toggle silently dropping out
+ * of that alignment CSS is the regression this pairing exists to avoid.
  */
-export const StyledSwitchField = styled(RASwitchField)(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  minHeight: theme.sizes.smallElementHeight,
-}))
+export const StyledSwitchField = styled(RASwitchField)(fieldStyles)
 
 interface StyledContentProps {
   visibility?: LabelVisibilityOptions
@@ -91,7 +95,7 @@ interface StyledButtonProps {
   $truncate?: boolean
 }
 
-/** Wrapper around React Aria CheckboxButton — handles layout and keyboard-focus background. */
+/** Truncation and keyboard-focus background apply here, not on the Field wrapper. */
 export const StyledCheckboxButton = styled(RACheckboxButton, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
 })<StyledButtonProps>(({ theme, $truncate }) => ({
@@ -176,7 +180,7 @@ export const StyledCheckboxIndicator =
     }
   )
 
-/** Wrapper around React Aria SwitchButton — handles layout for the toggle variant. */
+/** The toggle's equivalent of `StyledCheckboxButton`: truncation and keyboard-focus background apply here, not on the Field wrapper. */
 export const StyledSwitchButton = styled(RASwitchButton, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
 })<StyledButtonProps>(({ theme, $truncate }) => ({

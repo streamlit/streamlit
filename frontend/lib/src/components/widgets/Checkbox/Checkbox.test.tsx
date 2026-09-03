@@ -487,7 +487,7 @@ describe("Checkbox wrap", () => {
 
   // Both checkbox and toggle share the same truncation/title wiring, so the
   // wrap behavior is exercised over both style types to catch a regression in
-  // either button (StyledCheckboxButton / StyledSwitchButton).
+  // either variant's button wrapper (StyledCheckboxButton / StyledSwitchButton).
   const STYLE_TYPES = [
     ["checkbox", CheckboxProto.StyleType.DEFAULT],
     ["toggle", CheckboxProto.StyleType.TOGGLE],

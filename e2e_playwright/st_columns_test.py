@@ -228,12 +228,10 @@ def test_column_vertical_alignment_bottom(
 
 
 def test_column_vertical_alignment_applies_to_toggles(app: Page):
-    """Test that toggles get the same alignment margins as checkboxes.
+    """Protect the toggle side of the column-alignment CSS.
 
-    Toggles and checkboxes render separate wrapper elements, so the alignment
-    selector has to name both. `test_column_vertical_alignment_top` and
-    `test_column_vertical_alignment_bottom` assert only on checkboxes, so they
-    cannot catch the toggle wrapper being dropped from it.
+    `test_column_vertical_alignment_top` and `test_column_vertical_alignment_bottom`
+    assert only on checkboxes, so neither would catch toggles losing the margin.
     """
     top_row = get_element_by_key(app, "vertical_alignment_toggle_top")
     top_toggles = top_row.get_by_test_id("stCheckbox")
