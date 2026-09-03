@@ -16,7 +16,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import rerun_app, wait_for_app_run, wait_until
-from e2e_playwright.shared.app_utils import click_button
+from e2e_playwright.shared.app_utils import click_button, get_button
 
 _BACKGROUND_REFRESH_STALE_WAIT_MS = 9000
 
@@ -52,6 +52,37 @@ def test_that_replay_element_works_as_expected(app: Page):
     expect(app.get_by_test_id("stException")).to_have_count(0)
     expect(app.get_by_text("Cache executions: 1")).to_be_visible()
     expect(app.get_by_text("Cache return 1")).to_be_visible()
+
+
+def test_async_cache_resource_miss_hit_spinner_and_replay(app: Page):
+    get_button(app, "Run async cache_resource E2E scenario").click()
+
+    spinner = app.get_by_test_id("stSpinner").filter(
+        has_text="Computing async cache_resource value..."
+    )
+    expect(spinner).to_be_visible()
+    wait_for_app_run(app)
+
+    expect(app.get_by_test_id("stSpinner")).to_have_count(0)
+    expect(
+        app.get_by_text("Inside async cache_resource: 1", exact=True)
+    ).to_be_visible()
+    expect(
+        app.get_by_text("Async cache_resource result: 1", exact=True)
+    ).to_be_visible()
+
+    rerun_app(app)
+
+    expect(app.get_by_test_id("stSpinner")).to_have_count(0)
+    expect(
+        app.get_by_text("Inside async cache_resource: 1", exact=True)
+    ).to_be_visible()
+    expect(
+        app.get_by_text("Async cache_resource result: 1", exact=True)
+    ).to_be_visible()
+    expect(app.get_by_text("Inside async cache_resource: 2", exact=True)).to_have_count(
+        0
+    )
 
 
 def test_background_refresh_stale_while_revalidate(app: Page):
