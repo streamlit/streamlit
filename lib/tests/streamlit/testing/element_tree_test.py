@@ -2135,9 +2135,16 @@ def test_disabled_widget_rejects_update() -> None:
     ("widget_type", "method_name", "args"),
     [
         ("file_uploader", "set_value", (("test.txt", b"data", "text/plain"),)),
+        (
+            "file_uploader",
+            "set_value",
+            ([("a.txt", b"a", "text/plain"), ("b.txt", b"b", "text/plain")],),
+        ),
         ("file_uploader", "upload", ("test.txt", b"data")),
         ("file_uploader", "clear", ()),
         ("slider", "set_value", (7,)),
+        ("color_picker", "pick", ("#00ff00",)),
+        ("button_group", "select", ("A",)),
     ],
 )
 def test_disabled_widget_specialized_interactions_reject_updates(
@@ -2150,6 +2157,8 @@ def test_disabled_widget_specialized_interactions_reject_updates(
         "import streamlit as st\n"
         "st.file_uploader('File', disabled=True, key='file')\n"
         "st.slider('Number', 0, 10, disabled=True, key='slider')\n"
+        "st.color_picker('Color', '#ff0000', disabled=True, key='color')\n"
+        "st.pills('Group', ['A', 'B'], disabled=True, key='group')\n"
     ).run()
     widget = getattr(at, widget_type)[0]
     with pytest.raises(AppTestError, match="disabled"):

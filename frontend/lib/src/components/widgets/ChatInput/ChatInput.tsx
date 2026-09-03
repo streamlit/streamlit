@@ -42,9 +42,9 @@ import { useDropzone } from "react-dropzone"
 import { useWindowDimensionsContext } from "@streamlit/lib"
 import {
   ChatInput as ChatInputProto,
+  type ChatInputValue,
   FileUploaderState as FileUploaderStateProto,
-  IChatInputValue,
-  IFileURLs,
+  type FileURLs,
   streamlit,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
@@ -132,7 +132,7 @@ export interface Props {
   widgetMgr: WidgetStateManager
   uploadClient: FileUploadClient
   fragmentId?: string
-  heightConfig?: streamlit.IHeightConfig | null
+  heightConfig?: streamlit.HeightConfig.$Properties | null
 }
 
 const updateFile = (
@@ -587,7 +587,7 @@ function ChatInput({
           )
         })
       },
-      onUploadComplete: (id: number, fileUrls: IFileURLs) => {
+      onUploadComplete: (id: number, fileUrls: FileURLs.$Properties) => {
         setFiles(prevFiles => {
           const curFile = getFile(id, prevFiles)
           if (
@@ -683,7 +683,7 @@ function ChatInput({
 
       const filesValue = createChatInputWidgetFilesValue()
 
-      const composedValue: IChatInputValue = {
+      const composedValue: ChatInputValue.$Properties = {
         data: value,
         fileUploaderState: filesValue,
         audioFileInfo: audioInfo,

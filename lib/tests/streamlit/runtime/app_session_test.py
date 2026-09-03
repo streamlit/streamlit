@@ -40,7 +40,11 @@ from streamlit.proto.NewSession_pb2 import (
     FontSource,
 )
 from streamlit.runtime import Runtime, app_session, caching
-from streamlit.runtime.app_session import AppSession, AppSessionState
+from streamlit.runtime.app_session import (
+    AppSession,
+    AppSessionState,
+    _close_script_event_loop,
+)
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
@@ -190,9 +194,14 @@ class AppSessionTest(unittest.TestCase):
         session = _create_test_session()
         mock_scriptrunner = MagicMock(spec=ScriptRunner)
         session._scriptrunner = mock_scriptrunner
+        loop = session._script_event_loop
 
-        session.request_script_stop()
-        mock_scriptrunner.request_stop.assert_called()
+        try:
+            session.request_script_stop()
+            mock_scriptrunner.request_stop.assert_called_once_with()
+            assert not loop.is_closed()
+        finally:
+            loop.close()
 
     def test_request_script_stop_no_scriptrunner(self):
         """Test that calling request_script_stop when there is no scriptrunner doesn't
@@ -360,13 +369,14 @@ class AppSessionTest(unittest.TestCase):
 
     @patch("streamlit.runtime.app_session.ScriptRunner")
     def test_create_scriptrunner(self, mock_scriptrunner: MagicMock):
-        """Test that _create_scriptrunner does what it should."""
+        """Verify that ScriptRunner receives the session-owned script event loop."""
         session = _create_test_session()
         assert session._scriptrunner is None
 
         session._create_scriptrunner(initial_rerun_data=RerunData())
 
-        # Assert that the ScriptRunner constructor was called.
+        # Assert that the ScriptRunner constructor was called, including the
+        # session-owned event_loop forwarded to the runner.
         mock_scriptrunner.assert_called_once_with(
             session_id=session.id,
             main_script_path=session._script_data.main_script_path,
@@ -379,6 +389,7 @@ class AppSessionTest(unittest.TestCase):
             pages_manager=session._pages_manager,
             on_script_error=None,
             local_sources_watcher=session._local_sources_watcher,
+            event_loop=session._script_event_loop,
         )
 
         assert session._scriptrunner is not None
@@ -389,6 +400,194 @@ class AppSessionTest(unittest.TestCase):
             session._on_scriptrunner_event
         )
         scriptrunner.start.assert_called_once()
+
+    @patch("streamlit.runtime.app_session.ScriptRunner")
+    def test_closed_script_event_loop_is_replaced_with_warning(
+        self, mock_scriptrunner: MagicMock
+    ):
+        """A closed session loop is replaced and its invalidation is diagnosed."""
+        session = _create_test_session()
+        closed_loop = session._script_event_loop
+        closed_loop.close()
+        assert closed_loop.is_closed()
+
+        try:
+            with self.assertLogs(
+                "streamlit.runtime.app_session", level="WARNING"
+            ) as logs:
+                session._create_scriptrunner(initial_rerun_data=RerunData())
+
+            replacement_loop = session._script_event_loop
+            assert replacement_loop is not closed_loop
+            assert not replacement_loop.is_closed()
+            assert mock_scriptrunner.call_args.kwargs["event_loop"] is replacement_loop
+
+            warning = " ".join(logs.output)
+            assert "creating a replacement" in warning
+            assert "objects bound to the previous loop may no longer work" in warning
+            assert "must not close it" in warning
+        finally:
+            if not session._script_event_loop.is_closed():
+                session._script_event_loop.close()
+
+    def test_script_event_loop_created_on_init(self):
+        """AppSession creates a non-running event loop for the script thread."""
+        session = _create_test_session()
+        loop = session._script_event_loop
+        assert isinstance(loop, asyncio.AbstractEventLoop)
+        assert not loop.is_running()
+        assert not loop.is_closed()
+        loop.close()
+
+    @patch("streamlit.runtime.app_session.ScriptRunner")
+    def test_same_event_loop_forwarded_to_each_scriptrunner(
+        self, mock_scriptrunner: MagicMock
+    ):
+        """Every ScriptRunner created by the session receives the same loop."""
+        session = _create_test_session()
+        expected_loop = session._script_event_loop
+
+        session._create_scriptrunner(initial_rerun_data=RerunData())
+
+        # Clear the first runner reference so AppSession creates a second one.
+        session._scriptrunner = None
+
+        session._create_scriptrunner(initial_rerun_data=RerunData())
+
+        # Both ScriptRunner constructors must have received the same loop object.
+        for call in mock_scriptrunner.call_args_list:
+            assert call.kwargs.get("event_loop") is expected_loop
+
+        expected_loop.close()
+
+    @patch("streamlit.runtime.app_session.AppSession.request_script_stop")
+    def test_shutdown_closes_script_event_loop_when_no_runner_is_active(
+        self, mock_stop: MagicMock
+    ):
+        """AppSession closes the script-thread event loop immediately on shutdown
+        when no ScriptRunner is active (no runner to wait for)."""
+        session = _create_test_session()
+        loop = session._script_event_loop
+        assert not loop.is_closed()
+
+        session.shutdown()
+
+        assert loop.is_closed()
+
+    @patch("streamlit.runtime.app_session.AppSession.request_script_stop")
+    def test_script_event_loop_not_closed_during_shutdown_with_runner(
+        self, mock_stop: MagicMock
+    ):
+        """When a ScriptRunner is active, shutdown() must not close the loop;
+        closure is deferred to the SHUTDOWN event so we don't race with the
+        script thread."""
+        session = _create_test_session()
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+        loop = session._script_event_loop
+
+        session.shutdown()
+
+        assert not loop.is_closed()
+        loop.close()
+
+    @patch("streamlit.runtime.app_session.AppSession.request_script_stop")
+    def test_shutdown_without_client_state_completes_cleanup(
+        self, mock_stop: MagicMock
+    ):
+        """Shutdown cleanup does not depend on a final client-state snapshot."""
+        session = _create_test_session()
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+        loop = session._script_event_loop
+        original_client_state = session._client_state
+
+        # Simulate a full shutdown: shutdown() sets state but defers loop close.
+        session.shutdown()
+        assert not loop.is_closed(), "Loop must still be open before SHUTDOWN event"
+
+        # Script execution has unwound and the runner has detached the loop.
+        with patch(
+            "streamlit.runtime.app_session.asyncio.get_running_loop",
+            return_value=session._event_loop,
+        ):
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=mock_scriptrunner,
+                event=ScriptRunnerEvent.SHUTDOWN,
+                client_state=None,
+            )
+
+        assert loop.is_closed()
+        assert session._scriptrunner is None
+        assert session._client_state is original_client_state
+
+    def test_shutdown_defers_closure_while_script_loop_is_running(self):
+        """SHUTDOWN releases the runner without closing a loop in use elsewhere."""
+        session = _create_test_session()
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+        session._state = AppSessionState.SHUTDOWN_REQUESTED
+        loop = session._script_event_loop
+        loop_started = threading.Event()
+        loop.call_soon(loop_started.set)
+        loop_thread = threading.Thread(target=loop.run_forever)
+        loop_thread.start()
+
+        try:
+            assert loop_started.wait(timeout=5)
+            with (
+                patch(
+                    "streamlit.runtime.app_session.asyncio.get_running_loop",
+                    return_value=session._event_loop,
+                ),
+                self.assertLogs(
+                    "streamlit.runtime.app_session", level="WARNING"
+                ) as logs,
+            ):
+                session._handle_scriptrunner_event_on_event_loop(
+                    sender=mock_scriptrunner,
+                    event=ScriptRunnerEvent.SHUTDOWN,
+                    client_state=ClientState(),
+                )
+
+            assert session._scriptrunner is None
+            assert loop.is_running()
+            assert not loop.is_closed()
+            assert any("still running" in message for message in logs.output)
+        finally:
+            loop.call_soon_threadsafe(loop.stop)
+            loop_thread.join(timeout=5)
+            assert not loop_thread.is_alive()
+            loop.close()
+
+    def test_shutdown_releases_runner_when_loop_closure_raises(self):
+        """Final SHUTDOWN state is retained if best-effort loop closure fails."""
+        session = _create_test_session()
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+        session._state = AppSessionState.SHUTDOWN_REQUESTED
+        final_client_state = ClientState()
+
+        with (
+            patch(
+                "streamlit.runtime.app_session.asyncio.get_running_loop",
+                return_value=session._event_loop,
+            ),
+            patch(
+                "streamlit.runtime.app_session._close_script_event_loop",
+                side_effect=RuntimeError("unrelated close failure"),
+            ),
+            pytest.raises(RuntimeError, match="unrelated close failure"),
+        ):
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=mock_scriptrunner,
+                event=ScriptRunnerEvent.SHUTDOWN,
+                client_state=final_client_state,
+            )
+
+        assert session._client_state is final_client_state
+        assert session._scriptrunner is None
+        session._script_event_loop.close()
 
     @patch("streamlit.runtime.app_session.ScriptRunner", MagicMock(spec=ScriptRunner))
     @patch("streamlit.runtime.app_session.AppSession._enqueue_forward_msg")
@@ -1176,6 +1375,46 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
 
         handle_event_spy.assert_called_once()
 
+    def test_on_scriptrunner_event_when_event_loop_closed(self):
+        """A late ScriptRunner event after the loop is closed is dropped."""
+        loop = asyncio.new_event_loop()
+        loop.close()
+        session = _create_test_session(loop)
+        handle_event = MagicMock()
+        session._handle_scriptrunner_event_on_event_loop = handle_event
+
+        session._on_scriptrunner_event(
+            sender=MagicMock(),
+            event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+        )
+
+        handle_event.assert_not_called()
+
+    def test_handle_backmsg_exception_when_event_loop_closed(self):
+        """A late backmsg exception after the loop is closed is dropped."""
+        loop = asyncio.new_event_loop()
+        loop.close()
+        session = _create_test_session(loop)
+        handle_event = MagicMock()
+        enqueue = MagicMock()
+        session._handle_scriptrunner_event_on_event_loop = handle_event
+        session._enqueue_forward_msg = enqueue
+
+        session.handle_backmsg_exception(RuntimeError("late exception"))
+
+        handle_event.assert_not_called()
+        enqueue.assert_not_called()
+
+    def test_call_soon_on_event_loop_reraises_when_loop_open(self):
+        """Unexpected RuntimeError from call_soon_threadsafe is not swallowed."""
+        loop = MagicMock()
+        loop.is_closed.return_value = False
+        loop.call_soon_threadsafe.side_effect = RuntimeError("unexpected")
+        session = _create_test_session(loop)
+
+        with pytest.raises(RuntimeError, match="unexpected"):
+            session._call_soon_on_event_loop(lambda: None)
+
     async def test_event_handler_asserts_if_called_off_event_loop(self):
         """AppSession._handle_scriptrunner_event_on_event_loop will assert
         if it's called from another event loop (or no event loop).
@@ -1439,25 +1678,26 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
                 exception=None,  # This is the condition we're testing
             )
 
-    async def test_event_handler_raises_error_if_client_state_none_on_shutdown(
-        self,
-    ):
-        """Test that _handle_scriptrunner_event_on_event_loop raises RuntimeError
-        if client_state is None when event is SHUTDOWN.
-        """
+    async def test_shutdown_without_client_state_preserves_existing_state(self):
+        """An early runner failure clears lifecycle state without fabricating data."""
         session = _create_test_session(asyncio.get_running_loop())
         mock_scriptrunner = MagicMock(spec=ScriptRunner)
         session._scriptrunner = mock_scriptrunner
+        original_client_state = session._client_state
 
-        with pytest.raises(
-            RuntimeError,
-            match=r"client_state must be set for the SHUTDOWN event. This should never happen.",
-        ):
+        try:
             session._handle_scriptrunner_event_on_event_loop(
                 sender=mock_scriptrunner,
                 event=ScriptRunnerEvent.SHUTDOWN,
-                client_state=None,  # This is the condition we're testing
+                client_state=None,
             )
+            # Runner replacement SHUTDOWN must not close the session-owned loop.
+            assert not session._script_event_loop.is_closed()
+        finally:
+            session._script_event_loop.close()
+
+        assert session._scriptrunner is None
+        assert session._client_state is original_client_state
 
     async def test_event_handler_raises_error_if_forward_msg_none_on_enqueue(
         self,
@@ -3127,3 +3367,59 @@ def test_create_file_change_message_marks_script_changed() -> None:
     msg = session._create_file_change_message()
 
     assert msg.session_event.script_changed_on_disk is True
+
+
+async def _run_close_from_running_loop(loop: asyncio.AbstractEventLoop) -> bool:
+    _close_script_event_loop(loop)
+    return loop.is_closed()
+
+
+def test_close_script_event_loop_while_runtime_loop_is_running() -> None:
+    """_close_script_event_loop closes the loop even when called from within
+    a running asyncio event loop, without raising RuntimeError."""
+    script_loop = asyncio.new_event_loop()
+
+    runtime_loop = asyncio.new_event_loop()
+    try:
+        closed = runtime_loop.run_until_complete(
+            _run_close_from_running_loop(script_loop)
+        )
+    finally:
+        runtime_loop.close()
+
+    assert closed, "script_loop must be closed after _close_script_event_loop"
+
+
+def test_close_script_event_loop_propagates_unrelated_runtime_error() -> None:
+    """Best-effort closure does not hide RuntimeErrors from a stopped loop."""
+    script_loop = MagicMock(spec=asyncio.AbstractEventLoop)
+    script_loop.is_closed.return_value = False
+    script_loop.is_running.return_value = False
+    script_loop.close.side_effect = RuntimeError("unrelated close failure")
+
+    with (
+        patch("streamlit.runtime.app_session.asyncio.all_tasks", return_value=set()),
+        patch(
+            "streamlit.runtime.app_session.asyncio.get_running_loop",
+            return_value=MagicMock(spec=asyncio.AbstractEventLoop),
+        ),
+        pytest.raises(RuntimeError, match="unrelated close failure"),
+    ):
+        _close_script_event_loop(script_loop)
+
+
+def test_close_script_event_loop_cancels_pending_tasks() -> None:
+    """When no other loop is running on this thread, pending tasks are cancelled
+    and drained before the script loop is closed."""
+    script_loop = asyncio.new_event_loop()
+
+    async def _linger() -> None:
+        await asyncio.sleep(3600)
+
+    task = script_loop.create_task(_linger())
+
+    _close_script_event_loop(script_loop)
+
+    assert script_loop.is_closed()
+    assert task.done()
+    assert task.cancelled() or isinstance(task.exception(), asyncio.CancelledError)

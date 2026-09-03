@@ -29,7 +29,6 @@ from typing import (
     overload,
 )
 
-from streamlit import config
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
@@ -578,13 +577,7 @@ class PydeckMixin:
         if tooltip:
             pydeck_proto.tooltip = json.dumps(tooltip)
 
-        # Get the Mapbox key from the PyDeck object first, and then fallback to the
-        # old mapbox.token config option.
-
         mapbox_token = getattr(pydeck_obj, "mapbox_key", None)
-        if mapbox_token is None or mapbox_token == "":
-            mapbox_token = config.get_option("mapbox.token")
-
         if mapbox_token:
             pydeck_proto.mapbox_token = mapbox_token
 

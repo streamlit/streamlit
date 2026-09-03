@@ -27,7 +27,6 @@ import {
   FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
   FileURLs as FileURLsProto,
-  IFileURLs,
   LabelVisibility as LabelVisibilityProto,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
@@ -81,7 +80,7 @@ const dropFiles = (dropzone: HTMLElement, files: File[]): void => {
 }
 
 const buildFileUploaderStateProto = (
-  fileUrlsArray: IFileURLs[]
+  fileUrlsArray: FileURLsProto.$Properties[]
 ): FileUploaderStateProto =>
   new FileUploaderStateProto({
     uploadedFileInfo: fileUrlsArray.map(
@@ -168,6 +167,22 @@ describe("FileUploader widget tests", () => {
     render(<FileUploader {...props} />)
     const fileNameNode = screen.getByText("filename.txt")
     expect(fileNameNode).toBeInTheDocument()
+  })
+
+  it("renders the empty dropzone when widget state has no uploaded files", () => {
+    const props = getProps()
+    const { element, widgetMgr } = props
+
+    widgetMgr.setFileUploaderStateValue(
+      element.id,
+      buildFileUploaderStateProto([]),
+      { formId: element.formId, fragmentId: undefined, fromUser: false }
+    )
+
+    render(<FileUploader {...props} />)
+
+    expect(screen.queryByTestId("stFileChip")).not.toBeInTheDocument()
+    expect(screen.getByText("Upload")).toBeVisible()
   })
 
   it("shows a label", () => {

@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import TYPE_CHECKING, Final, Literal, NamedTuple, cast, overload
 
 from streamlit.elements.lib.form_utils import current_form_id
@@ -38,6 +39,7 @@ from streamlit.errors import (
     StreamlitIncompatibleParametersError,
     StreamlitInvalidParameterTypeError,
     StreamlitValueError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
@@ -55,6 +57,7 @@ from streamlit.runtime.state import (
     validate_on_change_mode,
 )
 from streamlit.string_util import to_help_str, validate_icon_or_emoji
+from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -113,6 +116,69 @@ def _parse_text_input_validate(
         type(validate).__name__,
         ["None", "str", "tuple"],
     )
+
+
+# Default pause used when ``live=True``.
+_DEFAULT_LIVE_DEBOUNCE_MS: Final = 250
+# Cap at 1 minute so a typo like "60m" or "2h" cannot schedule a multi-day
+# debounce (uint32 would allow ~49 days).
+_MAX_LIVE_DEBOUNCE_MS: Final = 60_000
+
+
+def _parse_text_input_live(live: object) -> int | None:
+    """Normalize ``live`` to a debounce in milliseconds.
+
+    Returns ``None`` when live is off so the proto field stays unset. ``0``
+    commits on every accepted change.
+    """
+    if live is False:
+        return None
+    if live is True:
+        return _DEFAULT_LIVE_DEBOUNCE_MS
+
+    # bool is a subclass of int — True/False must be handled before this.
+    if isinstance(live, (int, float, timedelta)):
+        raise StreamlitInvalidParameterTypeError(
+            "live",
+            type(live).__name__,
+            ["bool", "str"],
+            detail=(
+                "A number or `datetime.timedelta` is not accepted. "
+                "Use `True` for a 250ms pause, or a duration string like "
+                "`'300ms'` or `'0.5s'`. `live=300` is not milliseconds "
+                "(and `live=0.3` is not seconds); duration units must be "
+                "explicit."
+            ),
+        )
+
+    if not isinstance(live, str):
+        raise StreamlitInvalidParameterTypeError(
+            "live",
+            type(live).__name__,
+            ["bool", "str"],
+        )
+
+    # Valid duration strings convert to a finite number of seconds.
+    seconds = time_to_seconds(live)
+    debounce_ms = round(seconds * 1000.0)
+    # Only a true zero-length duration is immediate-commit. A positive
+    # sub-millisecond value would otherwise round to 0 and silently become
+    # the most expensive rerun mode.
+    if seconds > 0 and debounce_ms == 0:
+        debounce_ms = 1
+    # Use ``seconds < 0`` so a sub-millisecond negative does not round to 0.
+    if seconds < 0 or debounce_ms > _MAX_LIVE_DEBOUNCE_MS:
+        raise StreamlitValueOutOfRangeError(
+            "live",
+            live,
+            "0ms",
+            "1m",
+            detail=(
+                "Use `True` for the 250ms default, `'0ms'` to commit on every "
+                "change, or a duration string up to `'1m'`."
+            ),
+        )
+    return debounce_ms
 
 
 # Default (regex, message) validation rules for the specialized text input types.
@@ -213,6 +279,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         validate: str | tuple[str, str] | None = None,
+        live: str | bool = False,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -240,6 +307,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         validate: str | tuple[str, str] | None = None,
+        live: str | bool = False,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -267,6 +335,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         validate: str | tuple[str, str] | None = None,
+        live: str | bool = False,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -389,8 +458,9 @@ class TextWidgetsMixin:
             with the text input. ``on_change`` can be one of the following:
 
             - ``"rerun"`` (default): Streamlit will rerun the app when the
-              user commits a new value (pressing Enter, blurring the field, or
-              clearing a search input).
+              user commits a new value (pressing Enter, blurring the field,
+              clearing a search input, or, when ``live`` is set, after a
+              typing pause).
 
             - ``"ignore"``: Streamlit will not rerun the app when the user
               commits a new value. The text input still updates in the UI.
@@ -477,8 +547,9 @@ class TextWidgetsMixin:
             match (same semantics as ``st.column_config.TextColumn``).
 
             Validation runs when the user tries to submit a value: on blur or
-            Enter outside a form, and on form submission inside a form. Invalid
-            values are not submitted, and empty inputs bypass validation.
+            Enter outside a form, after a typing pause when ``live`` is set,
+            and on form submission inside a form. Invalid values are not
+            submitted, and empty inputs bypass validation.
 
             Inside a form with ``bind="query-params"``, keystrokes still stage
             the value into widget state (and therefore the URL) before
@@ -490,6 +561,33 @@ class TextWidgetsMixin:
                If the validation is security-relevant, you must also validate
                the value on the server (in your app code) after it is
                submitted.
+
+        live : bool or str
+            Whether the widget commits while the user types, after a pause.
+            Defaults to ``False``.
+
+            - ``False`` (default): Commit on blur, Enter, or clearing a
+              ``type="search"`` input.
+            - ``True``: Commit after 250ms without further input.
+            - A duration string (same format as ``ttl`` in
+              ``st.cache_data``, for example ``"250ms"`` or ``"0.5s"``):
+              Commit after that pause. Must be between 0 and 1 minute.
+              ``"0ms"``, ``"0s"``, and ``"0"`` commit on every change
+              (typing, paste, and so on). Bare numbers and
+              ``datetime.timedelta`` raise; use a duration string
+              (``live=300`` is not milliseconds).
+
+            The 250ms default suits most cases. Consider ``"200ms"`` for
+            inexpensive fragment-scoped filtering and ``"300ms"`` to
+            ``"500ms"`` when each update performs expensive computation or
+            a remote request.
+
+            Inside ``st.form``, ``live`` has no effect: form widgets only
+            commit on submit. ``on_change="ignore"`` still wins: each pause
+            stages the value without triggering a rerun. Prefer wrapping
+            live search UI in ``@st.fragment`` so typing does not rerun the
+            rest of the app. Zero-length and very short delays can cause
+            many reruns; use them sparingly.
 
         width : "stretch" or int
             The width of the text input widget. This can be one of the
@@ -521,8 +619,9 @@ class TextWidgetsMixin:
             query parameter (e.g., ``?my_key=``) clears the widget.
 
             When ``on_change="ignore"``, the URL is updated as soon as the
-            value is committed (Enter, blur, or search-clear); typing alone
-            does not update it. As with widgets inside a form, the URL can
+            value is committed (Enter, blur, search-clear, or a live pause
+            when ``live`` is set); typing alone does not update it unless
+            ``live`` is set. As with widgets inside a form, the URL can
             show a value that Python hasn't received yet. Python receives
             the new value on the next rerun, so a page load or share uses
             the updated URL value.
@@ -571,6 +670,37 @@ class TextWidgetsMixin:
         >>> if email:
         ...     st.write("We'll reach you at", email)
 
+        .. output::
+           https://doc-text-input-email.streamlit.app/
+           height: 260px
+
+        Use ``live=True`` with ``type="search"`` for live search. Prefer a
+        fragment around the live UI so typing does not rerun the rest of
+        the app:
+
+        >>> import streamlit as st
+        >>>
+        >>> products = [
+        ...     {"Product": "Apple", "Category": "Fruit", "Price": 1.20},
+        ...     {"Product": "Banana", "Category": "Fruit", "Price": 0.50},
+        ...     {"Product": "Cherry", "Category": "Fruit", "Price": 2.50},
+        ...     {"Product": "Date", "Category": "Dried fruit", "Price": 3.00},
+        ... ]
+        >>>
+        >>> @st.fragment
+        >>> def product_search():
+        ...     query = st.text_input("Search products", type="search", live=True)
+        ...     matches = [
+        ...         p for p in products if query.lower() in p["Product"].lower()
+        ...     ]
+        ...     st.dataframe(matches, hide_index=True)
+        >>>
+        >>> product_search()
+
+        .. output::
+           https://doc-text-input-live.streamlit.app/
+           height: 450px
+
         """
         ctx = get_script_run_ctx()
         return self._text_input(
@@ -589,6 +719,7 @@ class TextWidgetsMixin:
             label_visibility=label_visibility,
             icon=icon,
             validate=validate,
+            live=live,
             width=width,
             bind=bind,
             persist_state=persist_state,
@@ -613,6 +744,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         validate: str | tuple[str, str] | None = None,
+        live: str | bool = False,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -621,6 +753,7 @@ class TextWidgetsMixin:
         key = to_key(key)
 
         validate_on_change_mode(on_change)
+        live_debounce_ms = _parse_text_input_live(live)
 
         on_change_callback: WidgetCallback | None = (
             on_change if callable(on_change) else None
@@ -643,27 +776,10 @@ class TextWidgetsMixin:
         # Make sure value is always string or None:
         value = str(value) if value is not None else None
 
-        # Compute the widget identity from the RAW user-provided values, before
-        # resolving any type-derived smart defaults below. `type` is already
-        # part of the identity, so folding the type defaults (icon, placeholder,
-        # validate, autocomplete) in here would needlessly reset every
-        # pre-existing widget on upgrade. This is what keeps `type="default"`
-        # and `type="password"` element IDs byte-for-byte unchanged.
+        # Hash the raw user-provided values, before type-derived defaults below.
+        # `type` is already part of the identity, so those defaults (icon,
+        # placeholder, validate, autocomplete) stay out of the hash.
         identity_validate_regex, _ = _parse_text_input_validate(validate)
-
-        # Only contribute the validation regex to the element identity when
-        # validation is actually configured. This keeps element IDs (and thus
-        # widget state) stable across upgrades for the common case of inputs
-        # without validation, instead of hashing a `validate=None` placeholder
-        # that would reset every pre-existing text input on the first run after
-        # upgrade. A falsy regex (`None` or `""`) is identity-neutral, matching
-        # the frontend, which treats an empty regex as "no validation". When a
-        # regex is set, it still affects identity so that changing the regex
-        # resets the widget (its value may no longer be valid). The message is
-        # intentionally excluded since it is cosmetic.
-        validate_identity_kwarg = (
-            {"validate": identity_validate_regex} if identity_validate_regex else {}
-        )
 
         element_id = compute_and_register_element_id(
             "text_input",
@@ -683,7 +799,9 @@ class TextWidgetsMixin:
             placeholder=str(placeholder),
             icon=icon,
             width=width,
-            **validate_identity_kwarg,
+            # Normalized milliseconds so `True` and `"250ms"` share an ID.
+            live=live_debounce_ms,
+            validate=identity_validate_regex,
         )
 
         # Resolve the effective values from the type defaults now that the
@@ -701,9 +819,8 @@ class TextWidgetsMixin:
 
         # `validate=None` falls back to the type default (a no-op for
         # `default`/`password`, which define none); `validate=""` and explicit
-        # values pass through unchanged. This effective regex is separate from
-        # the identity regex above, which intentionally ignores the type
-        # default so the default rule never enters the widget ID.
+        # values pass through unchanged. Identity uses the raw user value above,
+        # so the type default never enters the widget ID.
         effective_validate = type_defaults.validate if validate is None else validate
         validate_regex, validate_message = _parse_text_input_validate(
             effective_validate
@@ -763,6 +880,9 @@ class TextWidgetsMixin:
 
         if isinstance(on_change, str) and on_change == "ignore":
             text_input_proto.ignore_rerun = True
+
+        if live_debounce_ms is not None:
+            text_input_proto.live_debounce_ms = live_debounce_ms
 
         serde = TextInputSerde(value, max_chars)
 

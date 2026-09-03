@@ -47,7 +47,7 @@ import {
   ViewStateContext,
   ViewStateContextProps,
 } from "@streamlit/lib"
-import { Config, IAppPage, Logo, PageConfig } from "@streamlit/protobuf"
+import { type AppPage, Config, Logo, PageConfig } from "@streamlit/protobuf"
 
 type ViewStateContextValues = {
   isFullScreen: boolean
@@ -69,7 +69,7 @@ type NavigationContextValues = {
   currentPageScriptHash: string
   onPageChange: (pageScriptHash: string) => void
   navSections: string[]
-  appPages: IAppPage[]
+  appPages: AppPage.$Properties[]
 }
 
 type SidebarConfigContextValues = {

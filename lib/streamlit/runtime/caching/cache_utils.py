@@ -842,13 +842,13 @@ class CachedFunc(Generic[P, R]):
         """Warn that display output won't replay on hits in background mode."""
         from streamlit import exception
 
-        # We use an exception here to show a proper stack trace pointing at the user's
-        # cached function (same channel as the cached-widget warning).
-        exception(
-            CachedStFunctionInBackgroundModeWarning(
-                self._info.cache_type, self._info.func
-            )
+        # Mirrors the cached-widget warning: st.exception surfaces it in the
+        # app, the log surfaces it in the console.
+        warning = CachedStFunctionInBackgroundModeWarning(
+            self._info.cache_type, self._info.func
         )
+        _LOGGER.warning("%s", warning, stack_info=True)
+        exception(warning)
 
     @overload
     def clear(self) -> None: ...

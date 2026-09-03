@@ -128,8 +128,9 @@ Use `@st.fragment` to isolate reruns for self-contained UI pieces.
 ```python
 # BAD: Full app reruns
 st.metric("Users", get_count())
-if st.button("Refresh"):
-    st.rerun()
+st.button("Refresh")
+query = st.text_input("Search", type="search", live=True)
+st.dataframe(search(query))
 
 
 # GOOD: Only fragment reruns
@@ -139,7 +140,14 @@ def live_metrics():
     st.button("Refresh")
 
 
+@st.fragment
+def live_search():
+    query = st.text_input("Search", type="search", live=True)
+    st.dataframe(search(query))
+
+
 live_metrics()
+live_search()
 ```
 
 For auto-refreshing metrics, use `run_every`:
@@ -153,7 +161,34 @@ def auto_refresh_metrics():
 auto_refresh_metrics()
 ```
 
-Use for: live metrics, refresh buttons, interactive charts that don't affect global state.
+Use for: live metrics, refresh buttons, live search, interactive charts that don't affect global state.
+
+
+### Keyed reruns — target a fragment from a callback
+
+Use this when a widget *outside* a fragment should trigger only that fragment's rerun — not a full-app rerun. Give the fragment a stable name with `@st.fragment(key=...)` and call `st.rerun("<key>")` from the widget's callback.
+
+```python
+@st.fragment(key="charts")
+def charts():
+    st.line_chart(st.session_state.data)
+
+
+charts()
+# Button lives outside the fragment; clicking it reruns only "charts".
+st.button("Refresh charts", on_click=lambda: st.rerun("charts"))
+```
+
+To rerun multiple fragments at once, pass a list:
+
+```python
+st.button("Refresh all", on_click=lambda: st.rerun(["charts", "table"]))
+```
+
+**Constraints:**
+
+- `st.rerun("<key>")` is **only valid inside a widget callback** (`on_change`, `on_click`, etc.). Calling it from the main script body or a fragment body raises an error.
+- The named fragment must have been rendered during the **most recently completed full-app run**. Fragments evicted because they were behind a `False` conditional in that run are no longer in storage and raise an error.
 
 ### Parallel fragments
 
@@ -244,10 +279,10 @@ if submitted:
 Use `border=False` for seamless inline forms that don't look like forms:
 
 ```python
-with st.form("search", border=False):
+with st.form("invite", border=False):
     with st.container(horizontal=True):
-        query = st.text_input("Search", label_visibility="collapsed")
-        st.form_submit_button(":material/search:")
+        email = st.text_input("Email", label_visibility="collapsed")
+        st.form_submit_button("Invite")
 ```
 
 **When to use forms:**
@@ -268,7 +303,7 @@ By default, layout containers like `st.tabs`, `st.expander`, and `st.popover` al
 
 `st.tabs` renders ALL tab content on every rerun, even hidden tabs. Two fixes:
 
-**Preferred (Streamlit 1.55+): Dynamic tabs with `on_change="rerun"`**
+**Preferred: Dynamic tabs with `on_change="rerun"`**
 
 Keep the tabs UX. Setting `on_change="rerun"` makes tabs dynamic — each tab's `.open` property returns `True` for the selected tab and `False` otherwise, so you can guard expensive work. (With the default `on_change="ignore"`, all tab content runs on every rerun and `.open` is `None` for every tab.)
 
@@ -305,7 +340,7 @@ elif view == "Heavy":
 
 `st.expander` renders content even when collapsed. Two fixes:
 
-**Preferred (Streamlit 1.55+): Dynamic expander with `on_change="rerun"`**
+**Preferred: Dynamic expander with `on_change="rerun"`**
 
 With `on_change="rerun"`, the `.open` property returns `True` when the expander is open and `False` when collapsed, so you can guard expensive work. (Without `on_change`, `.open` is `None` and all content runs regardless.)
 

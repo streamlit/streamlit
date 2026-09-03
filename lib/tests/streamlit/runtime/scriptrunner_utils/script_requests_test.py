@@ -268,6 +268,73 @@ class ScriptRequestsTest(unittest.TestCase):
         assert reqs._rerun_data.fragment_id_queue == []
         assert reqs._rerun_data.is_fragment_scoped_rerun is False
 
+    def test_suppress_callbacks_preserved_during_coalescing(self):
+        """suppress_callbacks=True survives coalescing with a regular request."""
+        reqs = ScriptRequests()
+        reqs.request_rerun(
+            RerunData(fragment_id_queue=["frag"], is_fragment_scoped_rerun=True)
+        )
+        reqs.request_rerun(RerunData(suppress_callbacks=True))
+        assert reqs._rerun_data.suppress_callbacks is True
+
+    def test_suppress_callbacks_false_when_neither_sets_it(self):
+        """Two non-suppressing requests coalesce to suppress_callbacks=False."""
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData())
+        reqs.request_rerun(RerunData(query_string="new"))
+        assert reqs._rerun_data.suppress_callbacks is False
+
+    def test_suppressed_old_triggers_not_preserved_during_coalescing(self):
+        """Old triggers whose callbacks already ran are dropped during coalescing.
+
+        When the old request had suppress_callbacks=True (an escalated replay),
+        its button triggers should not carry forward into the merged request —
+        preserving them would cause duplicate callback execution.
+        """
+        reqs = ScriptRequests()
+
+        old_states = WidgetStates()
+        _create_widget("btn_a", old_states).trigger_value = True
+        _create_widget("slider", old_states).int_value = 50
+        reqs.request_rerun(RerunData(widget_states=old_states, suppress_callbacks=True))
+
+        new_states = WidgetStates()
+        _create_widget("btn_b", new_states).trigger_value = True
+        _create_widget("slider", new_states).int_value = 75
+        reqs.request_rerun(
+            RerunData(widget_states=new_states, suppress_callbacks=False)
+        )
+
+        result = reqs._rerun_data.widget_states
+        assert _get_widget("btn_a", result) is None
+        assert _get_widget("btn_b", result).trigger_value is True
+        assert _get_widget("slider", result).int_value == 75
+        assert reqs._rerun_data.suppress_callbacks is False
+
+    def test_normal_old_triggers_preserved_during_coalescing(self):
+        """Old triggers from a non-suppressed request are still preserved.
+
+        Rapid clicks where neither request has suppress_callbacks should
+        continue preserving both triggers (the existing behavior).
+        """
+        reqs = ScriptRequests()
+
+        old_states = WidgetStates()
+        _create_widget("btn_a", old_states).trigger_value = True
+        reqs.request_rerun(
+            RerunData(widget_states=old_states, suppress_callbacks=False)
+        )
+
+        new_states = WidgetStates()
+        _create_widget("btn_b", new_states).trigger_value = True
+        reqs.request_rerun(
+            RerunData(widget_states=new_states, suppress_callbacks=False)
+        )
+
+        result = reqs._rerun_data.widget_states
+        assert _get_widget("btn_a", result).trigger_value is True
+        assert _get_widget("btn_b", result).trigger_value is True
+
     def test_on_script_yield_with_no_request(self):
         """Return None; remain in the CONTINUE state."""
         reqs = ScriptRequests()
@@ -284,6 +351,24 @@ class ScriptRequestsTest(unittest.TestCase):
         assert None is result
         assert reqs._state == ScriptRequestType.RERUN
         assert reqs._rerun_data == RerunData(fragment_id_queue=["my_fragment_id"])
+
+    def test_compose_fragment_rerun_lets_body_finish_then_serves_target(self):
+        """A composing fragment rerun lets the body finish before running the target.
+
+        on_scriptrunner_yield returns None (the runner does not preempt the body),
+        and on_scriptrunner_ready returns the pending fragment rerun afterwards.
+        """
+        reqs = ScriptRequests()
+        rerun_data = RerunData(fragment_id_queue=["target-frag"])
+        reqs.request_rerun(rerun_data)
+
+        assert reqs._rerun_data.is_fragment_scoped_rerun is False
+        assert reqs.on_scriptrunner_yield() is None
+        assert reqs._state == ScriptRequestType.RERUN
+
+        result = reqs.on_scriptrunner_ready()
+        assert result == ScriptRequest(ScriptRequestType.RERUN, rerun_data)
+        assert reqs._state == ScriptRequestType.CONTINUE
 
     def test_on_script_yield_with_is_fragment_scoped_rerun(self):
         """Return RERUN; transition to the CONTINUE state."""

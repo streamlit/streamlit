@@ -80,6 +80,17 @@ def test_make_trigger_id_validates_event_delimiter() -> None:
         _make_trigger_id("normal_base", "click__event")
 
 
+def test_bidi_component_without_script_run_ctx_returns_empty_result() -> None:
+    """Without a ScriptRunContext, bidi components return empty state and triggers."""
+    mixin = BidiComponentMixin()
+    with patch(
+        "streamlit.components.v2.bidi_component.main.get_script_run_ctx",
+        return_value=None,
+    ):
+        result = mixin._bidi_component("my_component")
+    assert dict(result) == {}
+
+
 def test_make_trigger_id_creates_internal_key() -> None:
     """Test that _make_trigger_id creates widget IDs with internal prefix.
     Trigger widgets should be marked as internal so they don't appear
