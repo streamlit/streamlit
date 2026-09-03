@@ -467,21 +467,31 @@ export default defineConfig([
   // Test files specific configuration
   {
     files: ["**/*.test.ts", "**/*.test.tsx"],
-    ...testingLibrary.configs["flat/react"],
     plugins: {
-      ...testingLibrary.configs["flat/react"].plugins,
       "testing-library": testingLibrary,
       vitest,
     },
     rules: {
-      // Recommended vitest configuration to enforce good testing practices
+      // Merge the Testing Library preset into this `rules` object. Spreading the
+      // whole preset at this config root would let this `rules` key replace it
+      // and drop every recommended testing-library rule.
+      ...testingLibrary.configs["flat/react"].rules,
       ...vitest.configs.recommended.rules,
       // Allow hardcoded styles in test files
       "streamlit-custom/no-hardcoded-theme-values": "off",
       // Allow force reflow access in test files
       "streamlit-custom/no-force-reflow-access": "off",
 
-      // Testing library rules
+      // Recommended rules with large existing debt; enable in later cleanups.
+      // Plan: https://github.com/streamlit/streamlit/wiki/2026-09-03-improving-frontend-linting
+      "testing-library/no-node-access": "off",
+      "testing-library/no-container": "off",
+      "testing-library/prefer-presence-queries": "off",
+      "testing-library/no-unnecessary-act": "off",
+      "testing-library/no-manual-cleanup": "off",
+      "testing-library/render-result-naming-convention": "off",
+
+      // Testing library overrides
       "testing-library/prefer-user-event": "error",
       // Prefer screen.getBy* over destructured queries for consistency
       "testing-library/prefer-screen-queries": "warn",
