@@ -31,6 +31,7 @@ import pytest
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException, StreamlitIncompatibleParametersError
+from streamlit.runtime.caching import cache_utils
 from streamlit.testing.v1 import AppTest
 
 if TYPE_CHECKING:
@@ -225,6 +226,220 @@ def test_async_cancelled_owner_wakes_waiter(name: str, decorator: Callable) -> N
 
     assert asyncio.run(main()) == 42
     assert calls == 2
+
+
+@pytest.mark.timeout(5)
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
+def test_whole_cache_clear_invalidates_in_flight_async_write(
+    name: str, decorator: Callable
+) -> None:
+    """A pre-clear computation returns to its owner but does not repopulate."""
+
+    async def main() -> tuple[int, int, int]:
+        computation_started = asyncio.Event()
+        allow_computation_to_finish = asyncio.Event()
+        calls = 0
+
+        @decorator
+        async def load() -> int:
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                computation_started.set()
+                await allow_computation_to_finish.wait()
+            return calls
+
+        owner = asyncio.create_task(load())
+        await computation_started.wait()
+        load.clear()
+        allow_computation_to_finish.set()
+
+        owner_result = await owner
+        later_result = await load()
+        return owner_result, later_result, calls
+
+    assert asyncio.run(main()) == (1, 2, 2)
+
+
+@pytest.mark.timeout(5)
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
+def test_key_clear_only_invalidates_matching_in_flight_async_write(
+    name: str, decorator: Callable
+) -> None:
+    """A key clear discards that key's old write without affecting another key."""
+
+    async def main() -> tuple[list[int], int, int, dict[int, int]]:
+        started = {1: asyncio.Event(), 2: asyncio.Event()}
+        allow_computations_to_finish = asyncio.Event()
+        calls = {1: 0, 2: 0}
+
+        @decorator
+        async def load(key: int) -> int:
+            calls[key] += 1
+            if calls[key] == 1:
+                started[key].set()
+                await allow_computations_to_finish.wait()
+            return key * 10 + calls[key]
+
+        owners = [asyncio.create_task(load(1)), asyncio.create_task(load(2))]
+        await asyncio.gather(*(event.wait() for event in started.values()))
+        load.clear(1)
+        allow_computations_to_finish.set()
+
+        owner_results = await asyncio.gather(*owners)
+        matching_key_result = await load(1)
+        unrelated_key_result = await load(2)
+        return owner_results, matching_key_result, unrelated_key_result, calls
+
+    assert asyncio.run(main()) == ([11, 21], 12, 21, {1: 2, 2: 1})
+
+
+@pytest.mark.timeout(5)
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
+def test_waiter_retries_after_in_flight_async_write_is_cleared(
+    name: str, decorator: Callable, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A waiter wakes after the invalidated owner and becomes the retry owner."""
+
+    async def main() -> tuple[list[int], int]:
+        computation_started = asyncio.Event()
+        allow_computation_to_finish = asyncio.Event()
+        waiter_registered = asyncio.Event()
+        calls = 0
+        original_claim = cache_utils.Cache.claim_async_compute
+
+        def tracking_claim(
+            cache: cache_utils.Cache[Any], value_key: str
+        ) -> tuple[concurrent.futures.Future[None], bool]:
+            claim = original_claim(cache, value_key)
+            if not claim[1]:
+                waiter_registered.set()
+            return claim
+
+        monkeypatch.setattr(cache_utils.Cache, "claim_async_compute", tracking_claim)
+
+        @decorator
+        async def load() -> int:
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                computation_started.set()
+                await allow_computation_to_finish.wait()
+            return calls
+
+        owner = asyncio.create_task(load())
+        await computation_started.wait()
+        waiter = asyncio.create_task(load())
+        await asyncio.wait_for(waiter_registered.wait(), timeout=1)
+
+        load.clear()
+        allow_computation_to_finish.set()
+        results = await asyncio.gather(owner, waiter)
+        return results, calls
+
+    assert asyncio.run(main()) == ([1, 2], 2)
+
+
+@pytest.mark.timeout(5)
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
+def test_clear_is_atomic_with_async_foreground_write(
+    name: str, decorator: Callable, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A clear starting after token validation still removes the pending write."""
+    write_token_validated = threading.Event()
+    allow_write_to_continue = threading.Event()
+    clear_reached_storage = threading.Event()
+    calls = 0
+
+    @decorator
+    async def load() -> int:
+        nonlocal calls
+        calls += 1
+        return calls
+
+    cache = load._info.get_function_cache(load._function_key)
+    original_is_current = cache._invalidation_token_is_current
+    validation_calls = 0
+    validation_call_under_storage_lock = 2 if name == "cache_data" else 1
+
+    def pause_after_validation(
+        value_key: str, invalidation_token: cache_utils.CacheInvalidationToken
+    ) -> bool:
+        nonlocal validation_calls
+        is_current = original_is_current(value_key, invalidation_token)
+        validation_calls += 1
+        if validation_calls == validation_call_under_storage_lock:
+            write_token_validated.set()
+            assert allow_write_to_continue.wait(timeout=1)
+        return is_current
+
+    original_clear = cache._clear
+
+    def track_storage_clear(key: str | None = None) -> None:
+        clear_reached_storage.set()
+        original_clear(key)
+
+    monkeypatch.setattr(cache, "_invalidation_token_is_current", pause_after_validation)
+    monkeypatch.setattr(cache, "_clear", track_storage_clear)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        owner = executor.submit(asyncio.run, load())
+        assert write_token_validated.wait(timeout=1)
+        clear = executor.submit(load.clear)
+        assert clear_reached_storage.wait(timeout=1)
+        allow_write_to_continue.set()
+        assert owner.result(timeout=1) == 1
+        clear.result(timeout=1)
+
+    assert asyncio.run(load()) == 2
+    assert calls == 2
+
+
+def test_invalidated_async_resource_is_not_released_before_owner_returns() -> None:
+    """An invalidated resource remains live for the owner that computed it."""
+    released: list[object] = []
+
+    async def main() -> object:
+        computation_started = asyncio.Event()
+        allow_computation_to_finish = asyncio.Event()
+
+        @st.cache_resource(on_release=released.append)
+        async def load() -> object:
+            computation_started.set()
+            await allow_computation_to_finish.wait()
+            return object()
+
+        owner = asyncio.create_task(load())
+        await computation_started.wait()
+        load.clear()
+        allow_computation_to_finish.set()
+        return await owner
+
+    owner_value = asyncio.run(main())
+    assert owner_value is not None
+    assert released == []
+
+
+def test_invalidated_async_data_result_does_not_require_serialization() -> None:
+    """An invalidated value can return to its owner without being serialized."""
+
+    async def main() -> Callable[[], int]:
+        computation_started = asyncio.Event()
+        allow_computation_to_finish = asyncio.Event()
+
+        @st.cache_data
+        async def load() -> Callable[[], int]:
+            computation_started.set()
+            await allow_computation_to_finish.wait()
+            return lambda: 42
+
+        owner = asyncio.create_task(load())
+        await computation_started.wait()
+        load.clear()
+        allow_computation_to_finish.set()
+        return await owner
+
+    assert asyncio.run(main())() == 42
 
 
 @pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)

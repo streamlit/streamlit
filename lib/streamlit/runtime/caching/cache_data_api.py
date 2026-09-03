@@ -866,6 +866,13 @@ class DataCache(Cache[R]):
         """Write a value and associated messages to the cache.
         The value must be pickleable.
         """
+        pickled_entry = self._pickle_result(value_key, value, messages)
+        self.storage.set(value_key, pickled_entry)
+
+    def _pickle_result(
+        self, value_key: str, value: R, messages: list[MsgData]
+    ) -> bytes:
+        """Serialize a value and its replay messages for storage."""
         try:
             main_id = st._main._id
             sidebar_id = st.sidebar._id
@@ -883,7 +890,36 @@ class DataCache(Cache[R]):
             pickled_entry = pickle.dumps(entry)
         except (pickle.PicklingError, TypeError) as exc:
             raise CacheError(f"Failed to pickle {value_key}") from exc
-        self.storage.set(value_key, pickled_entry)
+        return pickled_entry
+
+    @gather_metrics("_cache_data_object")
+    def write_result_if_current(
+        self,
+        value_key: str,
+        value: R,
+        messages: list[MsgData],
+        *,
+        invalidation_token: cache_utils.CacheInvalidationToken,
+    ) -> bool:
+        """Write an async foreground result if no relevant clear invalidated it."""
+        if not self._invalidation_token_is_current(value_key, invalidation_token):
+            return False
+
+        # Serialize outside the lock. If clear wins during serialization, the check
+        # under the lock discards the result without touching storage.
+        try:
+            pickled_entry = self._pickle_result(value_key, value, messages)
+        except CacheError:
+            # An invalidated result is returned without being cached, so its
+            # serializability is no longer relevant.
+            if not self._invalidation_token_is_current(value_key, invalidation_token):
+                return False
+            raise
+        with self._write_lock:
+            if not self._invalidation_token_is_current(value_key, invalidation_token):
+                return False
+            self.storage.set(value_key, pickled_entry)
+            return True
 
     def write_background_refresh_result(
         self,

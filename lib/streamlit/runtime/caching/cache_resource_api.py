@@ -799,6 +799,27 @@ class ResourceCache(Cache[R]):
                 value, messages, main_id, sidebar_id, stored_at=stored_at
             )
 
+    @gather_metrics("_cache_resource_object")
+    def write_result_if_current(
+        self,
+        value_key: str,
+        value: R,
+        messages: list[MsgData],
+        *,
+        invalidation_token: cache_utils.CacheInvalidationToken,
+    ) -> bool:
+        """Write an async foreground result if no relevant clear invalidated it."""
+        main_id = st._main._id
+        sidebar_id = st.sidebar._id
+        with self._mem_cache_lock:
+            if not self._invalidation_token_is_current(value_key, invalidation_token):
+                # The owner still returns this value, so it must remain live.
+                return False
+            self._mem_cache[value_key] = CachedResult(
+                value, messages, main_id, sidebar_id
+            )
+            return True
+
     def write_background_refresh_result(
         self,
         value_key: str,

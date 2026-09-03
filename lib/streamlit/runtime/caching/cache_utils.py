@@ -126,6 +126,14 @@ class CacheReadResult(Generic[R]):
     is_stale: bool
 
 
+@dataclass(frozen=True)
+class CacheInvalidationToken:
+    """The cache and key generations observed before a computation starts."""
+
+    generation: int
+    key_generation: int
+
+
 def _warn_background_refresh_ttl_multiplier(configured: object, reason: str) -> None:
     """Warn that the TTL multiplier is being ignored, once per distinct value.
 
@@ -289,42 +297,50 @@ class Cache(Generic[R]):
         self._async_compute_futures_lock = threading.Lock()
         # Whether this cache is still attached to its manager. Set to False when the
         # cache is replaced (param change), or when the owning session / all caches
-        # are cleared. A background refresh that completes for a detached cache is
-        # discarded rather than written back.
+        # are cleared. In-flight writes to a detached cache are discarded.
         self._active = True
-        # Bumped whenever the *whole* cache is cleared. A background refresh captures
-        # the generation at trigger time and is discarded if it changed since then
-        # (guards the clear-then-repopulate case).
+        # Bumped whenever the *whole* cache is cleared. An async foreground computation
+        # or background refresh captures the generation before running user code and
+        # discards its write if the generation changed.
         self._generation = 0
         # Maps value_key -> a counter bumped each time that key is individually cleared
-        # (func.clear(*args)). A background refresh captures its key's counter at trigger
-        # time and is discarded if it changed since then, so a per-key clear (which does
-        # not bump _generation) can't let an older refresh clobber a freshly recomputed
-        # value. Absent keys read as 0.
+        # (func.clear(*args)). In-flight writes capture the counter before running user
+        # code and are discarded if it changed. Absent keys read as 0.
         self._key_generations: dict[str, int] = {}
-        # Guards _generation, _key_generations, and the per-key failure cooldowns.
-        self._refresh_state_lock = threading.Lock()
+        # Guards invalidation state and the per-key refresh failure cooldowns.
+        self._invalidation_lock = threading.Lock()
         # Maps value_key -> monotonic time until which a failed refresh won't retry.
         self._refresh_cooldowns: dict[str, float] = {}
 
     @property
     def is_active(self) -> bool:
         """Whether this cache is still attached to its manager."""
-        return self._active
+        with self._invalidation_lock:
+            return self._active
 
     @property
     def generation(self) -> int:
         """A counter that increments each time the whole cache is cleared."""
-        return self._generation
+        with self._invalidation_lock:
+            return self._generation
 
     def key_generation(self, value_key: str) -> int:
         """The per-key clear counter, captured when a background refresh is triggered."""
-        with self._refresh_state_lock:
+        with self._invalidation_lock:
             return self._key_generations.get(value_key, 0)
 
     def mark_detached(self) -> None:
-        """Mark this cache as detached so in-flight background refreshes discard."""
-        self._active = False
+        """Mark this cache as detached so in-flight writes are discarded."""
+        with self._invalidation_lock:
+            self._active = False
+
+    def capture_invalidation_token(self, value_key: str) -> CacheInvalidationToken:
+        """Capture the cache and key generations at a computation's start."""
+        with self._invalidation_lock:
+            return CacheInvalidationToken(
+                generation=self._generation,
+                key_generation=self._key_generations.get(value_key, 0),
+            )
 
     @abstractmethod
     def read_result(self, value_key: str) -> CachedResult[R]:
@@ -382,6 +398,21 @@ class Cache(Generic[R]):
         # a compute_value_lock for this value_key after the result is written.
         raise NotImplementedError
 
+    def write_result_if_current(
+        self,
+        value_key: str,
+        value: R,
+        messages: list[MsgData],
+        *,
+        invalidation_token: CacheInvalidationToken,
+    ) -> bool:
+        """Write a foreground result only if its invalidation token is still current.
+
+        The token check and write must be atomic with respect to cache clearing.
+        Returns whether the result was written.
+        """
+        raise NotImplementedError
+
     def write_background_refresh_result(
         self,
         value_key: str,
@@ -400,6 +431,20 @@ class Cache(Generic[R]):
         """
         raise NotImplementedError
 
+    def _invalidation_token_is_current(
+        self,
+        value_key: str,
+        invalidation_token: CacheInvalidationToken,
+    ) -> bool:
+        """Whether an in-flight computation may still write its result."""
+        with self._invalidation_lock:
+            return (
+                self._active
+                and self._generation == invalidation_token.generation
+                and self._key_generations.get(value_key, 0)
+                == invalidation_token.key_generation
+            )
+
     def _refresh_is_orphaned(
         self, value_key: str, *, expected_generation: int, expected_key_generation: int
     ) -> bool:
@@ -408,16 +453,14 @@ class Cache(Generic[R]):
         ``True`` if the cache detached, the whole cache was cleared, or this specific
         key was individually cleared since the refresh was triggered.
         """
-        with self._refresh_state_lock:
-            return (
-                not self._active
-                or self._generation != expected_generation
-                or self._key_generations.get(value_key, 0) != expected_key_generation
-            )
+        return not self._invalidation_token_is_current(
+            value_key,
+            CacheInvalidationToken(expected_generation, expected_key_generation),
+        )
 
     def in_refresh_cooldown(self, value_key: str) -> bool:
         """Whether a recent background-refresh failure is still on cooldown."""
-        with self._refresh_state_lock:
+        with self._invalidation_lock:
             cooldown_until = self._refresh_cooldowns.get(value_key)
             if cooldown_until is None:
                 return False
@@ -429,14 +472,14 @@ class Cache(Generic[R]):
 
     def mark_refresh_failed(self, value_key: str) -> None:
         """Record a background-refresh failure and start its retry cooldown."""
-        with self._refresh_state_lock:
+        with self._invalidation_lock:
             self._refresh_cooldowns[value_key] = (
                 TTLCACHE_TIMER() + _FAILURE_COOLDOWN_SECONDS
             )
 
     def clear_refresh_cooldown(self, value_key: str) -> None:
         """Clear any failure cooldown for a key after a successful refresh."""
-        with self._refresh_state_lock:
+        with self._invalidation_lock:
             self._refresh_cooldowns.pop(value_key, None)
 
     def compute_value_lock(self, value_key: str) -> threading.Lock:
@@ -482,17 +525,14 @@ class Cache(Generic[R]):
                 self._value_locks.clear()
             elif key in self._value_locks:
                 del self._value_locks[key]
-        with self._refresh_state_lock:
+        with self._invalidation_lock:
             if not key:
-                # A whole-cache clear bumps the generation so in-flight background
-                # refreshes triggered before the clear are discarded on write-back.
+                # A whole-cache clear invalidates every earlier in-flight write.
                 self._generation += 1
                 self._refresh_cooldowns.clear()
                 self._key_generations.clear()
             else:
-                # A per-key clear bumps just that key's generation so an in-flight
-                # refresh for the same key (triggered before the clear) is discarded
-                # rather than clobbering a freshly recomputed value.
+                # A per-key clear invalidates only earlier writes for this key.
                 self._key_generations[key] = self._key_generations.get(key, 0) + 1
                 self._refresh_cooldowns.pop(key, None)
         self._clear(key=key)
@@ -773,12 +813,15 @@ class CachedFunc(Generic[P, R]):
         cache: Cache[R],
         value_key: str,
         computed_value: R,
+        *,
+        invalidation_token: CacheInvalidationToken | None = None,
     ) -> R:
         """Write a freshly computed value back to the cache and return it.
 
         Shared by the sync and async cache-miss paths. The value has already been
         computed (or awaited); this captures any replay messages, applies the
-        background-mode display rules, and translates serialization failures into the
+        background-mode display rules, conditionally writes async results from the
+        current cache generation, and translates serialization failures into the
         user-facing cache errors.
         """
         # We've computed our value, and now we need to write it back to the cache
@@ -794,7 +837,18 @@ class CachedFunc(Generic[P, R]):
         else:
             messages = captured_messages
         try:
-            cache.write_result(value_key, computed_value, messages)
+            if invalidation_token is None:
+                cache.write_result(value_key, computed_value, messages)
+                was_written = True
+            else:
+                was_written = cache.write_result_if_current(
+                    value_key,
+                    computed_value,
+                    messages,
+                    invalidation_token=invalidation_token,
+                )
+            if not was_written:
+                return computed_value
             # A successful (re)compute clears any prior background-refresh failure
             # cooldown, so a later stale window can refresh again even if an earlier
             # refresh failed and the entry then hard-expired and recomputed here.
@@ -901,6 +955,10 @@ class CachedFunc(Generic[P, R]):
                 else:
                     return self._handle_cache_hit(cached_result)
 
+                # Capturing under the invalidation lock is the computation's
+                # linearization point. A clear after this point invalidates the write;
+                # a clear before it belongs to the generation being computed.
+                invalidation_token = cache.capture_invalidation_token(value_key)
                 with self._info.cached_message_replay_ctx.calling_cached_function(
                     self._info.func
                 ):
@@ -911,7 +969,12 @@ class CachedFunc(Generic[P, R]):
                         "Any", self._info.func(*func_args, **func_kwargs)
                     )
 
-                return self._store_computed_value(cache, value_key, computed_value)
+                return self._store_computed_value(
+                    cache,
+                    value_key,
+                    computed_value,
+                    invalidation_token=invalidation_token,
+                )
             finally:
                 cache.complete_async_compute(value_key, compute_future)
 
