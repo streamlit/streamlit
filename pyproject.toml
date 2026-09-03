@@ -38,6 +38,11 @@ dependencies = ["streamlit"]
 default-groups = ["dev"]
 # Keep this floor low enough for Dependabot's bundled uv.
 # Raise it when Dependabot ships a newer uv and we want a tighter floor.
+# NOTE: this floor cannot enforce itself. uv reads this whole table in one
+# settings-discovery pass, and `exclude-newer = "24 hours"` below is a form only
+# newer uv parses -- so an older uv discards this table entirely (warning, not
+# error) and re-resolves `uv.lock`. `scripts/check_uv_version.py` enforces the
+# floor from outside uv; keep them in sync.
 required-version = ">=0.11.8"
 # Resolve the development lock only for the currently supported Python range.
 environments = ["python_version < '3.15'"]

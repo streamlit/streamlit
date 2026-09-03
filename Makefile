@@ -159,6 +159,9 @@ python-init:
 		echo "Installing uv..."; \
 		pip install uv; \
 	fi
+	@# An older uv cannot parse `[tool.uv]` and silently discards all of it,
+	@# including the `required-version` floor meant to stop exactly that.
+	@./scripts/check_uv_version.py
 	@# Sync exactly one final dependency selection. uv otherwise includes dev by default.
 	@if [ "${PYTHON_DEPENDENCY_GROUP}" = "runtime" ]; then \
 		echo "Installing runtime dependencies..."; \
@@ -651,6 +654,9 @@ cli-smoke-tests:
 .PHONY: check
 # Run all checks (format, lint, types, unit tests) on changed files only. Useful to verify the current state of the codebase before committing.
 check:
+	@# Before any `uv run` below: an old uv rewrites `uv.lock` here, and the
+	@# `uv-lock` hook then fails on a file the user never touched.
+	@./scripts/check_uv_version.py
 	@echo "=== Checking changed files ==="
 	@CHANGED=$$(uv run python scripts/get_changed_files.py --all); \
 	if [ -z "$$CHANGED" ]; then \

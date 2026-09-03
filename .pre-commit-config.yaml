@@ -19,6 +19,17 @@
 # the second commit should pass,
 # because the files were linted after trying to do the first commit.
 repos:
+  # Runs first, and on every commit: an older uv silently drops the whole
+  # `[tool.uv]` table (see scripts/check_uv_version.py) and rewrites `uv.lock`,
+  # which surfaces as the `uv-lock` hook below failing for no visible reason.
+  - repo: local
+    hooks:
+      - id: check-uv-version
+        name: Check uv version
+        entry: ./scripts/check_uv_version.py
+        language: system
+        always_run: true
+        pass_filenames: false
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # We fix ruff to a version to be in sync with pyproject.toml:
     rev: v0.16.5
