@@ -146,47 +146,84 @@ def test_async_concurrent_same_key_shares_computation(
     assert calls == [3]
 
 
+@pytest.mark.timeout(5)
 @pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
 def test_async_concurrent_same_key_across_event_loops(
-    name: str, decorator: Callable
+    name: str, decorator: Callable, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Callers on different threads and event loops share one computation."""
     calls: list[int] = []
-    callers_ready = threading.Barrier(2)
+    waiter_registered = threading.Event()
+    original_claim = cache_utils.Cache.claim_async_compute
+
+    def tracking_claim(
+        cache: cache_utils.Cache[Any], value_key: str
+    ) -> tuple[concurrent.futures.Future[None], bool]:
+        claim = original_claim(cache, value_key)
+        if not claim[1]:
+            waiter_registered.set()
+        return claim
+
+    monkeypatch.setattr(cache_utils.Cache, "claim_async_compute", tracking_claim)
 
     @decorator
     async def load(x: int) -> int:
         calls.append(x)
-        await asyncio.sleep(0.05)
+        assert waiter_registered.wait(timeout=1)
         return x * 10
 
     def invoke() -> int:
-        callers_ready.wait()
         return asyncio.run(load(4))
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-        results = list(executor.map(lambda _: invoke(), range(2)))
+        first = executor.submit(invoke)
+        second = executor.submit(invoke)
+        results = [first.result(timeout=2), second.result(timeout=2)]
 
     assert results == [40, 40]
     assert calls == [4]
 
 
+@pytest.mark.timeout(5)
 @pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
-def test_async_failed_owner_wakes_waiter(name: str, decorator: Callable) -> None:
+def test_async_failed_owner_wakes_waiter(
+    name: str, decorator: Callable, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """A waiter retries after the owner raises instead of waiting indefinitely."""
     calls = 0
 
-    @decorator
-    async def load() -> int:
-        nonlocal calls
-        calls += 1
-        await asyncio.sleep(0)
-        if calls == 1:
-            raise ValueError("first computation failed")
-        return 42
-
     async def main() -> list[int | BaseException]:
-        return await asyncio.gather(load(), load(), return_exceptions=True)
+        owner_started = asyncio.Event()
+        waiter_registered = asyncio.Event()
+        allow_owner_failure = asyncio.Event()
+        original_claim = cache_utils.Cache.claim_async_compute
+
+        def tracking_claim(
+            cache: cache_utils.Cache[Any], value_key: str
+        ) -> tuple[concurrent.futures.Future[None], bool]:
+            claim = original_claim(cache, value_key)
+            if not claim[1]:
+                waiter_registered.set()
+            return claim
+
+        monkeypatch.setattr(cache_utils.Cache, "claim_async_compute", tracking_claim)
+
+        @decorator
+        async def load() -> int:
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                owner_started.set()
+                await allow_owner_failure.wait()
+                raise ValueError("first computation failed")
+            return 42
+
+        owner = asyncio.create_task(load())
+        await owner_started.wait()
+        waiter = asyncio.create_task(load())
+        await waiter_registered.wait()
+        allow_owner_failure.set()
+        return await asyncio.gather(owner, waiter, return_exceptions=True)
 
     results = asyncio.run(main())
     assert any(
@@ -197,14 +234,29 @@ def test_async_failed_owner_wakes_waiter(name: str, decorator: Callable) -> None
     assert calls == 2
 
 
+@pytest.mark.timeout(5)
 @pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
-def test_async_cancelled_owner_wakes_waiter(name: str, decorator: Callable) -> None:
+def test_async_cancelled_owner_wakes_waiter(
+    name: str, decorator: Callable, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """A waiter retries after the owner is cancelled."""
     calls = 0
 
     async def main() -> int:
         first_call_started = asyncio.Event()
         keep_first_call_running = asyncio.Event()
+        waiter_registered = asyncio.Event()
+        original_claim = cache_utils.Cache.claim_async_compute
+
+        def tracking_claim(
+            cache: cache_utils.Cache[Any], value_key: str
+        ) -> tuple[concurrent.futures.Future[None], bool]:
+            claim = original_claim(cache, value_key)
+            if not claim[1]:
+                waiter_registered.set()
+            return claim
+
+        monkeypatch.setattr(cache_utils.Cache, "claim_async_compute", tracking_claim)
 
         @decorator
         async def load() -> int:
@@ -218,16 +270,69 @@ def test_async_cancelled_owner_wakes_waiter(name: str, decorator: Callable) -> N
         owner = asyncio.create_task(load())
         await first_call_started.wait()
         waiter = asyncio.create_task(load())
-        await asyncio.sleep(0)
+        await waiter_registered.wait()
 
         owner.cancel()
         with pytest.raises(asyncio.CancelledError):
             await owner
 
-        return await asyncio.wait_for(waiter, timeout=1)
+        return await waiter
 
     assert asyncio.run(main()) == 42
     assert calls == 2
+
+
+@pytest.mark.timeout(5)
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
+def test_async_cancelled_waiter_does_not_cancel_shared_compute(
+    name: str, decorator: Callable, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Cancelling one waiter leaves the owner and other waiters running."""
+    calls = 0
+
+    async def main() -> list[int]:
+        owner_started = asyncio.Event()
+        allow_owner_to_finish = asyncio.Event()
+        two_waiters_registered = asyncio.Event()
+        waiter_count = 0
+        original_claim = cache_utils.Cache.claim_async_compute
+
+        def tracking_claim(
+            cache: cache_utils.Cache[Any], value_key: str
+        ) -> tuple[concurrent.futures.Future[None], bool]:
+            nonlocal waiter_count
+            claim = original_claim(cache, value_key)
+            if not claim[1]:
+                waiter_count += 1
+                if waiter_count == 2:
+                    two_waiters_registered.set()
+            return claim
+
+        monkeypatch.setattr(cache_utils.Cache, "claim_async_compute", tracking_claim)
+
+        @decorator
+        async def load() -> int:
+            nonlocal calls
+            calls += 1
+            owner_started.set()
+            await allow_owner_to_finish.wait()
+            return 42
+
+        owner = asyncio.create_task(load())
+        await owner_started.wait()
+        cancelled_waiter = asyncio.create_task(load())
+        surviving_waiter = asyncio.create_task(load())
+        await two_waiters_registered.wait()
+
+        cancelled_waiter.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await cancelled_waiter
+
+        allow_owner_to_finish.set()
+        return await asyncio.gather(owner, surviving_waiter)
+
+    assert asyncio.run(main()) == [42, 42]
+    assert calls == 1
 
 
 @pytest.mark.timeout(5)
@@ -397,6 +502,7 @@ def test_clear_is_atomic_with_async_foreground_write(
     assert calls == 2
 
 
+@pytest.mark.timeout(5)
 def test_invalidated_async_resource_is_not_released_before_owner_returns() -> None:
     """An invalidated resource remains live for the owner that computed it."""
     released: list[object] = []
@@ -422,6 +528,7 @@ def test_invalidated_async_resource_is_not_released_before_owner_returns() -> No
     assert released == []
 
 
+@pytest.mark.timeout(5)
 def test_invalidated_async_data_result_does_not_require_serialization() -> None:
     """An invalidated value can return to its owner without being serialized."""
 

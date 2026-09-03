@@ -937,6 +937,9 @@ class CachedFunc(Generic[P, R]):
         while True:
             compute_future, is_owner = cache.claim_async_compute(value_key)
             if not is_owner:
+                # Shield the shared signal because cancelling one task otherwise
+                # propagates through wrap_future and cancels it for the owner and all
+                # other waiters.
                 await asyncio.shield(asyncio.wrap_future(compute_future))
                 try:
                     cached_result = cache.read_result(value_key)
