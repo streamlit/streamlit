@@ -239,6 +239,8 @@ def test_button_hover(themed_app: Page, assert_snapshot: ImageCompareFunction):
     # Prime the interaction modality to 'pointer' before hovering.
     reset_hovering(themed_app)
     help_button.hover()
+    # Not open immediately after hover; unit tests lock the 500ms delay.
+    expect(themed_app.get_by_test_id("stTooltipContent")).not_to_be_attached()
     expect(themed_app.get_by_text("help text")).to_be_visible()
     assert_snapshot(help_button_container, name="st_button-help_button")
 
