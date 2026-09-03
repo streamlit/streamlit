@@ -46,9 +46,8 @@ export const StyledCheckboxField = styled(RACheckboxField)(fieldStyles)
 /**
  * The toggle's equivalent of `StyledCheckboxField`, kept separate because
  * `SwitchButton` reads its state from a `SwitchField`, not from a
- * `CheckboxField`. Column alignment CSS, `data-testid="stCheckbox"` and the
- * `stCheckbox` class target this element too — the toggle silently dropping out
- * of that alignment CSS is the regression this pairing exists to avoid.
+ * `CheckboxField`. Column alignment CSS and `data-testid="stCheckbox"` target
+ * this element too, so checkbox and toggle stay aligned identically.
  */
 export const StyledSwitchField = styled(RASwitchField)(fieldStyles)
 
@@ -180,7 +179,10 @@ export const StyledCheckboxIndicator =
     }
   )
 
-/** The toggle's equivalent of `StyledCheckboxButton`: truncation and keyboard-focus background apply here, not on the Field wrapper. */
+/**
+ * The toggle's equivalent of `StyledCheckboxButton`: truncation and
+ * keyboard-focus background apply here, not on the Field wrapper.
+ */
 export const StyledSwitchButton = styled(RASwitchButton, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
 })<StyledButtonProps>(({ theme, $truncate }) => ({

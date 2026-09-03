@@ -32,9 +32,9 @@ import { assertNever } from "~lib/util/assertNever"
 /**
  * Class that `st.checkbox` and `st.toggle` both set on their outer React Aria
  * field wrapper (see `Checkbox.tsx`). The column vertical-alignment rules below
- * target this class rather than the two field styled-components so that `Block`
- * does not import widget internals, and so the rules keep covering both widgets
- * if their internal composition changes again.
+ * target this class rather than the widgets' field styled-components, so `Block`
+ * does not import widget internals and the rules cover both widgets regardless
+ * of how each composes React Aria internally.
  */
 const CHECKBOX_WRAPPER_SELECTOR = ".stCheckbox"
 
