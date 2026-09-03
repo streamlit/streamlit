@@ -67,8 +67,13 @@ describe("BaseButtonTooltip", () => {
     })
 
     afterEach(async () => {
-      // Unhover before unmount. If a tooltip is still in React Aria's warmup
-      // window, the next hover skips the open delay.
+      // Drop focus before unhover: pointer leave does not close while focus is
+      // inside the trigger, and an open tooltip keeps React Aria warmed up.
+      act(() => {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur()
+        }
+      })
       const tooltipTarget = screen.queryByTestId("stTooltipHoverTarget")
       if (tooltipTarget) {
         await user.unhover(tooltipTarget)
