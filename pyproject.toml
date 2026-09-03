@@ -104,8 +104,6 @@ dev = [
   "twine",
   "wheel",
   "pytz",
-  # Used for updating emojis via: scripts/update_emojis.py
-  "emoji",
   # mypy type stubs
   "types-protobuf",
   "types-pytz",

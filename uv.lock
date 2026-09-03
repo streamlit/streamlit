@@ -997,15 +997,6 @@ wheels = [
 ]
 
 [[package]]
-name = "emoji"
-version = "2.15.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a2/78/0d2db9382c92a163d7095fc08efff7800880f830a152cfced40161e7638d/emoji-2.15.0.tar.gz", hash = "sha256:eae4ab7d86456a70a00a985125a03263a5eac54cd55e51d7e184b1ed3b6757e4", size = 615483, upload-time = "2025-09-21T12:13:02.755Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e1/5e/4b5aaaabddfacfe36ba7768817bd1f71a7a810a43705e531f3ae4c690767/emoji-2.15.0-py3-none-any.whl", hash = "sha256:205296793d66a89d88af4688fa57fd6496732eb48917a87175a023c8138995eb", size = 608433, upload-time = "2025-09-21T12:13:01.197Z" },
-]
-
-[[package]]
 name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
@@ -4628,7 +4619,6 @@ automation = [
 ]
 dev = [
     { name = "build" },
-    { name = "emoji" },
     { name = "httpx2" },
     { name = "hypothesis" },
     { name = "mypy" },
@@ -4751,7 +4741,6 @@ automation = [
 ]
 dev = [
     { name = "build" },
-    { name = "emoji" },
     { name = "httpx2" },
     { name = "hypothesis" },
     { name = "mypy", specifier = "==2.3.1" },
