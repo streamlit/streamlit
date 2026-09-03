@@ -20,10 +20,11 @@ type EnterKeyEvent = Pick<
 >
 
 export function isEnterKeyPressed(event: EnterKeyEvent): boolean {
+  // Windows IME can report Enter as keyCode 10 (LF), so we check keyCode in
+  // addition to key. https://bugs.chromium.org/p/chromium/issues/detail?id=79407
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
   const { keyCode, key } = event
 
-  // Using keyCode as well due to some different behaviors on Windows
-  // https://bugs.chromium.org/p/chromium/issues/detail?id=79407
   return (
     (key === "Enter" || keyCode === 13 || keyCode === 10) &&
     // Do not send the sentence being composed when Enter is typed into the IME.

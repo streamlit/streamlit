@@ -46,6 +46,7 @@ query = st.text_input("", placeholder="Search")
 # GOOD: Accessible label, visually collapsed
 query = st.text_input(
     "Search",
+    type="search",
     placeholder="Search",
     label_visibility="collapsed",
 )
@@ -221,6 +222,8 @@ with st.form("search", border=False):
 if submitted:
     results = search(query, category)
 ```
+
+For as-you-type search, use `st.text_input(..., type="search", live=True)` inside a `@st.fragment` instead of a form. Keep expensive work out of that fragment, or use a longer delay such as `live="500ms"`.
 
 Do not put expensive work unguarded inside tabs or expanders. Hidden tab content and collapsed expander content still compute unless you opt into dynamic state and guard the work.
 

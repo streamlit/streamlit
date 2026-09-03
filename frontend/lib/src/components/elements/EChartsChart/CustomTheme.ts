@@ -460,6 +460,40 @@ function hasBottomAnchoredComponent(option: EChartsOptionObject): boolean {
   ].some(isAtBottom)
 }
 
+function isTitleAtBottom(title: Record<string, unknown>): boolean {
+  if (title.bottom !== undefined) {
+    return true
+  }
+  return title.top === "bottom"
+}
+
+function titlePlacement(option: EChartsOptionObject): {
+  occupiesTop: boolean
+  occupiesBottom: boolean
+} {
+  const titles = toComponentList(option.title)
+  if (titles.length === 0) {
+    // A non-object title (for example a string) still occupies the default
+    // top strip.
+    const hasTitle = option.title !== undefined
+    return { occupiesTop: hasTitle, occupiesBottom: false }
+  }
+
+  let occupiesTop = false
+  let occupiesBottom = false
+  for (const title of titles) {
+    if (title.show === false) {
+      continue
+    }
+    if (isTitleAtBottom(title)) {
+      occupiesBottom = true
+    } else {
+      occupiesTop = true
+    }
+  }
+  return { occupiesTop, occupiesBottom }
+}
+
 /**
  * Build the default cartesian ``grid`` layout so charts fill their container.
  *
@@ -479,11 +513,8 @@ function hasBottomAnchoredComponent(option: EChartsOptionObject): boolean {
 function buildDefaultGrid(
   option: EChartsOptionObject
 ): Record<string, unknown> {
-  const title = option.title
-  const hasTitle =
-    title !== undefined &&
-    (!isPlainObject(title) ||
-      (title as Record<string, unknown>).show !== false)
+  const { occupiesTop: titleAtTop, occupiesBottom: titleAtBottom } =
+    titlePlacement(option)
   const legend = option.legend
   const legendObject = isPlainObject(legend)
     ? (legend as Record<string, unknown>)
@@ -502,10 +533,14 @@ function buildDefaultGrid(
     right: 24,
     outerBoundsMode: "same",
   }
-  if (!hasTitle && !legendAtTop) {
+  if (!titleAtTop && !legendAtTop) {
     grid.top = 16
   }
-  if (!legendAtBottom && !hasBottomAnchoredComponent(option)) {
+  if (
+    !titleAtBottom &&
+    !legendAtBottom &&
+    !hasBottomAnchoredComponent(option)
+  ) {
     grid.bottom = 8
   }
   return grid
@@ -634,16 +669,44 @@ export function withDefaultSeriesCursor(
     }
     return target
   }
+  const applyCursorToMedia = (
+    target: EChartsOptionObject
+  ): EChartsOptionObject => {
+    const withSeries = applyCursorToSeries(target)
+    const media = withSeries.media
+    if (!Array.isArray(media)) {
+      return withSeries
+    }
+    return {
+      ...withSeries,
+      media: media.map(entry => {
+        if (!isPlainObject(entry)) {
+          return entry
+        }
+        const mediaEntry = entry as Record<string, unknown>
+        if (!isPlainObject(mediaEntry.option)) {
+          return entry
+        }
+        return {
+          ...mediaEntry,
+          option: applyCursorToSeries(
+            mediaEntry.option as EChartsOptionObject
+          ),
+        }
+      }),
+    }
+  }
 
   // Timeline specs nest series under ``baseOption`` and per-tick ``options``.
-  // Apply the cursor default there too so display-only timelines don't keep
-  // ECharts' pointer cursor.
-  let result = applyCursorToSeries(option)
+  // Responsive specs nest series under ``media[*].option``. Apply the cursor
+  // default in all of those places so display-only charts don't keep ECharts'
+  // pointer cursor.
+  let result = applyCursorToMedia(option)
   const baseOption = result.baseOption
   if (isPlainObject(baseOption)) {
     result = {
       ...result,
-      baseOption: applyCursorToSeries(baseOption as EChartsOptionObject),
+      baseOption: applyCursorToMedia(baseOption as EChartsOptionObject),
     }
   }
   if (Array.isArray(result.options)) {
@@ -651,7 +714,7 @@ export function withDefaultSeriesCursor(
       ...result,
       options: result.options.map(tick =>
         isPlainObject(tick)
-          ? applyCursorToSeries(tick as EChartsOptionObject)
+          ? applyCursorToMedia(tick as EChartsOptionObject)
           : tick
       ),
     }

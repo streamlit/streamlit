@@ -128,8 +128,9 @@ Use `@st.fragment` to isolate reruns for self-contained UI pieces.
 ```python
 # BAD: Full app reruns
 st.metric("Users", get_count())
-if st.button("Refresh"):
-    st.rerun()
+st.button("Refresh")
+query = st.text_input("Search", type="search", live=True)
+st.dataframe(search(query))
 
 
 # GOOD: Only fragment reruns
@@ -139,7 +140,14 @@ def live_metrics():
     st.button("Refresh")
 
 
+@st.fragment
+def live_search():
+    query = st.text_input("Search", type="search", live=True)
+    st.dataframe(search(query))
+
+
 live_metrics()
+live_search()
 ```
 
 For auto-refreshing metrics, use `run_every`:
@@ -153,7 +161,8 @@ def auto_refresh_metrics():
 auto_refresh_metrics()
 ```
 
-Use for: live metrics, refresh buttons, interactive charts that don't affect global state.
+Use for: live metrics, refresh buttons, live search, interactive charts that don't affect global state.
+
 
 ### Keyed reruns — target a fragment from a callback
 
@@ -270,10 +279,10 @@ if submitted:
 Use `border=False` for seamless inline forms that don't look like forms:
 
 ```python
-with st.form("search", border=False):
+with st.form("invite", border=False):
     with st.container(horizontal=True):
-        query = st.text_input("Search", label_visibility="collapsed")
-        st.form_submit_button(":material/search:")
+        email = st.text_input("Email", label_visibility="collapsed")
+        st.form_submit_button("Invite")
 ```
 
 **When to use forms:**
@@ -294,7 +303,7 @@ By default, layout containers like `st.tabs`, `st.expander`, and `st.popover` al
 
 `st.tabs` renders ALL tab content on every rerun, even hidden tabs. Two fixes:
 
-**Preferred (Streamlit 1.55+): Dynamic tabs with `on_change="rerun"`**
+**Preferred: Dynamic tabs with `on_change="rerun"`**
 
 Keep the tabs UX. Setting `on_change="rerun"` makes tabs dynamic — each tab's `.open` property returns `True` for the selected tab and `False` otherwise, so you can guard expensive work. (With the default `on_change="ignore"`, all tab content runs on every rerun and `.open` is `None` for every tab.)
 
@@ -331,7 +340,7 @@ elif view == "Heavy":
 
 `st.expander` renders content even when collapsed. Two fixes:
 
-**Preferred (Streamlit 1.55+): Dynamic expander with `on_change="rerun"`**
+**Preferred: Dynamic expander with `on_change="rerun"`**
 
 With `on_change="rerun"`, the `.open` property returns `True` when the expander is open and `False` when collapsed, so you can guard expensive work. (Without `on_change`, `.open` is `None` and all content runs regardless.)
 

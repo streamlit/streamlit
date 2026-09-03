@@ -14,12 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  Block as BlockProto,
-  Element,
-  type IBlock,
-  streamlit,
-} from "@streamlit/protobuf"
+import { Block as BlockProto, Element, streamlit } from "@streamlit/protobuf"
 
 import { BlockNode, ElementNode } from "~lib/AppNode"
 import { ElementsSetVisitor } from "~lib/render-tree/visitors/ElementsSetVisitor"
@@ -305,7 +300,7 @@ describe("getBorderBackwardsCompatible", () => {
 describe("shouldActivateScrollToBottom", () => {
   // Helper function to create a proper BlockNode instance for testing
   const createBlockNode = (
-    parentDeltaBlock: IBlock,
+    parentDeltaBlock: BlockProto.$Properties,
     hasChatMessageChild: boolean = false
   ): BlockNode => {
     const children = []

@@ -18,7 +18,7 @@ import { zip } from "lodash-es"
 
 import {
   FileUploaderState as FileUploaderStateProto,
-  IFileURLs,
+  type FileURLs,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
@@ -27,7 +27,7 @@ import { ensureError } from "~lib/util/ErrorHandling"
 import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
 type SuccessfulUpload = {
-  fileUrl: IFileURLs
+  fileUrl: FileURLs.$Properties
   file: File
 }
 
@@ -54,7 +54,7 @@ export const uploadFiles = async ({
   successfulUploads: SuccessfulUpload[]
   failedUploads: FailedUpload[]
 }> => {
-  let fileUrls: IFileURLs[]
+  let fileUrls: FileURLs.$Properties[]
 
   try {
     fileUrls = await uploadClient.fetchFileURLs(files)

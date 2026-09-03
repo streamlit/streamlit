@@ -28,7 +28,7 @@ from e2e_playwright.shared.app_utils import (
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
 # (including the ones inside the collapsed expander and the form).
-_EXPECTED_CHART_COUNT = 16
+_EXPECTED_CHART_COUNT = 17
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
 
@@ -43,7 +43,12 @@ def _get_chart(page: Page, key: str) -> Locator:
 
 
 def test_echarts_charts_render_without_errors(app: Page):
-    """All charts render, none show an error box, and canvas/SVG renderers work."""
+    """Charts render without errors, and shared display checks pass on one load.
+
+    Aggregates read-only checks that share the same untouched page: renderer
+    output, top-level class, ``st-key-*`` targeting, toolbar overflow, and the
+    stretch-height content floor.
+    """
     charts = app.get_by_test_id("stEChartsChart")
     expect(charts).to_have_count(_EXPECTED_CHART_COUNT)
 
@@ -61,20 +66,18 @@ def test_echarts_charts_render_without_errors(app: Page):
     expect(svg_chart.locator("svg")).to_be_visible()
     expect(svg_chart.locator("canvas")).to_have_count(0)
 
+    check_top_level_class(app, "stEChartsChart")
+    expect(get_element_by_key(app, "basic_bar")).to_be_visible()
+    # A key works for selection widgets too, not just display-only charts.
+    expect(get_element_by_key(app, "selection_chart")).to_be_visible()
 
-def test_hover_toolbar_is_not_clipped_by_container_overflow(app: Page):
-    """The chart's element container must not clip the floating hover toolbar.
-
-    Regression test: a pixel `height` gives the element container
-    ``overflow: auto``, which clipped the toolbar (it's positioned above the
-    chart at a negative top). The chart uses ``overflow: visible`` like other
-    charts so the toolbar (and tooltips) can extend beyond the plot.
-    """
+    # The chart's element container must not clip the floating hover toolbar.
+    # A pixel `height` gives the element container ``overflow: auto``, which
+    # clipped the toolbar (it's positioned above the chart at a negative top).
     chart_container = get_element_by_key(app, "c_line_multi")
     chart = chart_container.get_by_test_id("stEChartsChart")
     expect(chart.locator("canvas")).to_be_visible()
 
-    # The element container wrapping the chart must not clip overflow.
     overflow_y = chart.evaluate(
         "(el) => { const c = el.closest('[data-testid=\"stElementContainer\"]');"
         " return c ? getComputedStyle(c).overflowY : null; }"
@@ -83,23 +86,23 @@ def test_hover_toolbar_is_not_clipped_by_container_overflow(app: Page):
         f"element container clips the toolbar (overflow-y={overflow_y})"
     )
 
-    # The toolbar is revealed on hover.
     chart.hover()
     expect(
         chart_container.get_by_role("button", name="Download as PNG")
     ).to_be_visible()
 
+    stretch_chart = _get_chart(app, "c_stretch_height")
+    expect(stretch_chart.locator("canvas")).to_be_visible()
 
-def test_check_top_level_class(app: Page):
-    """The top level class is correctly set."""
-    check_top_level_class(app, "stEChartsChart")
+    def _has_content_height() -> bool:
+        box = stretch_chart.bounding_box()
+        return box is not None and box["height"] >= 300
 
-
-def test_custom_css_class_via_key(app: Page):
-    """A chart can be targeted via the st-key-<key> class from its key."""
-    expect(get_element_by_key(app, "selection_chart")).to_be_visible()
-    # A key works for display-only charts too, not just selection widgets.
-    expect(get_element_by_key(app, "basic_bar")).to_be_visible()
+    wait_until(app, _has_content_height)
+    box = stretch_chart.bounding_box()
+    assert box is not None
+    # Must NOT collapse to a blank zero-height chart.
+    assert box["height"] >= 300
 
 
 def test_unrelated_rerun_does_not_reset_display_chart(app: Page):
@@ -249,62 +252,46 @@ def test_tooltip_and_label_xss_payloads_are_escaped(app: Page):
     assert dialogs == [], f"Unexpected dialog(s) fired from XSS payload: {dialogs}"
 
 
-def test_download_as_png(app: Page):
-    """The download toolbar action triggers a PNG download."""
-    chart_container = get_element_by_key(app, "c_custom_colors")
-    expect(
-        chart_container.get_by_test_id("stEChartsChart").locator("canvas")
-    ).to_be_visible()
-
-    download_button = chart_container.get_by_role("button", name="Download as PNG")
+def test_toolbar_actions(app: Page):
+    """Download and fullscreen toolbar actions work on a single page load."""
+    png_container = get_element_by_key(app, "c_custom_colors")
+    png_chart = png_container.get_by_test_id("stEChartsChart")
+    expect(png_chart.locator("canvas")).to_be_visible()
 
     # The hover-revealed toolbar floats above the chart and overlaps the
     # neighboring chart, so a positional click is unreliable. Dispatching the
     # click directly on the button fires its handler regardless of overlap.
-    with app.expect_download() as download_info:
-        download_button.dispatch_event("click")
+    with app.expect_download() as png_download_info:
+        png_container.get_by_role("button", name="Download as PNG").dispatch_event(
+            "click"
+        )
 
-    download = download_info.value
-    assert download.suggested_filename.endswith(".png")
+    assert png_download_info.value.suggested_filename.endswith(".png")
 
-
-def test_download_as_svg(app: Page):
-    """An SVG-rendered chart exposes an SVG download action and file."""
-    chart_container = get_element_by_key(app, "c_svg_renderer")
+    svg_container = get_element_by_key(app, "c_svg_renderer")
     expect(
-        chart_container.get_by_test_id("stEChartsChart").locator("svg")
+        svg_container.get_by_test_id("stEChartsChart").locator("svg")
     ).to_be_visible()
 
-    download_button = chart_container.get_by_role("button", name="Download as SVG")
+    with app.expect_download() as svg_download_info:
+        svg_container.get_by_role("button", name="Download as SVG").dispatch_event(
+            "click"
+        )
 
-    # See test_download_as_png for why we dispatch the click directly.
-    with app.expect_download() as download_info:
-        download_button.dispatch_event("click")
+    assert svg_download_info.value.suggested_filename.endswith(".svg")
 
-    download = download_info.value
-    assert download.suggested_filename.endswith(".svg")
-
-
-def test_fullscreen_expands_and_collapses_chart(app: Page):
-    """The fullscreen toolbar action expands the chart and can be collapsed."""
-    chart_container = get_element_by_key(app, "c_custom_colors")
-    chart = chart_container.get_by_test_id("stEChartsChart")
-    expect(chart.locator("canvas")).to_be_visible()
-
-    box_before = chart.bounding_box()
+    box_before = png_chart.bounding_box()
     assert box_before is not None
 
-    # See test_download_as_png for why we dispatch the click directly.
-    chart_container.get_by_role("button", name="Fullscreen", exact=True).dispatch_event(
+    png_container.get_by_role("button", name="Fullscreen", exact=True).dispatch_event(
         "click"
     )
 
     close_button = app.get_by_role("button", name="Close fullscreen")
     expect(close_button).to_be_visible()
 
-    # The chart should grow substantially when entering fullscreen.
     def _is_expanded() -> bool:
-        box = chart.bounding_box()
+        box = png_chart.bounding_box()
         return box is not None and box["height"] > box_before["height"] + 100
 
     wait_until(app, _is_expanded)

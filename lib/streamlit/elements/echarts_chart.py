@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import copy
 import json
 import re
 from collections.abc import Iterator, Mapping
@@ -68,6 +67,12 @@ _LOGGER: Final = get_logger(__name__)
 # friends) that render at exactly that height. There is no matching width: the
 # ``defaultChartWidth`` token is a Vega *view* dimension and does not correspond
 # to any rendered content width, so this is a plain fallback.
+#
+# ``defaultChartHeight`` is ``21.875rem`` and therefore scales with
+# ``theme.baseFontSize``. ``height="content"`` still sends this hard 350px,
+# while ``height="stretch"`` uses the rem-based token as its CSS floor, so the
+# two disagree under a non-default base font size. Moving content-height
+# resolution to the frontend is out of scope for v1.
 _DEFAULT_CONTENT_WIDTH: Final = 700
 _DEFAULT_CONTENT_HEIGHT: Final = 350
 
@@ -296,10 +301,20 @@ def _dataframe_to_records(df: pd.DataFrame) -> list[dict[str, Any]]:
     """Convert a dataframe to JSON-native records (array of objects).
 
     Uses pandas' JSON serialization to normalize datetimes (to ISO strings),
-    NaN/NaT (to ``null``), and numpy scalar types into JSON-native values so the
-    result can be strictly serialized without a ``default`` fallback.
+    NaN/NaT/infinities (to ``null``), and numpy scalar types into JSON-native
+    values so the result can be strictly serialized without a ``default``
+    fallback. ``double_precision=15`` keeps float values that the default of
+    10 would round, matching an equivalent dict spec more closely.
+
+    ``DataFrame.to_json`` on older pandas emits invalid JSON (``Infinity``)
+    for infinities, which would surface as a raw ``JSONDecodeError``. Replacing
+    them with NaN first makes every supported pandas version emit ``null``.
     """
-    records = json.loads(df.to_json(orient="records", date_format="iso"))
+    records = json.loads(
+        df.replace([float("inf"), float("-inf")], float("nan")).to_json(
+            orient="records", date_format="iso", double_precision=15
+        )
+    )
     return cast("list[dict[str, Any]]", records)
 
 
@@ -324,31 +339,48 @@ def _convert_single_dataset(dataset: dict[str, Any]) -> None:
         dataset["dimensions"] = labels
 
 
+def _iter_media_options(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
+    """Yield each ``media[*].option`` override on an option object."""
+    for media_entry in option.get("media") or []:
+        if isinstance(media_entry, dict):
+            media_option = media_entry.get("option")
+            if isinstance(media_option, dict):
+                yield media_option
+
+
 def _iter_option_variants(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
-    """Yield the option itself plus the variants of a timeline spec.
+    """Yield the option itself plus timeline and media variants.
 
     Timeline specs keep the chart under ``baseOption`` and per-tick overrides
-    under ``options``, so series can live in any of the three places.
+    under ``options``. Responsive specs keep breakpoint overrides under
+    ``media[*].option``. Series and datasets can live in any of those places.
     """
     yield option
+    yield from _iter_media_options(option)
     base_option = option.get("baseOption")
     if isinstance(base_option, dict):
         yield base_option
+        yield from _iter_media_options(base_option)
     for timeline_option in option.get("options") or []:
         if isinstance(timeline_option, dict):
             yield timeline_option
+            yield from _iter_media_options(timeline_option)
+
+
+def _iter_series_entries(series: Any) -> Iterator[dict[str, Any]]:
+    """Yield series configs from a ``series`` value (object, list, or tuple)."""
+    if isinstance(series, dict):
+        yield series
+    elif isinstance(series, (list, tuple)):
+        for entry in series:
+            if isinstance(entry, dict):
+                yield entry
 
 
 def _iter_series(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
-    """Yield every series config in an option, across all timeline variants."""
+    """Yield every series config across top-level, timeline, and media variants."""
     for variant in _iter_option_variants(option):
-        series = variant.get("series")
-        if isinstance(series, dict):
-            yield series
-        elif isinstance(series, list):
-            for entry in series:
-                if isinstance(entry, dict):
-                    yield entry
+        yield from _iter_series_entries(variant.get("series"))
 
 
 def _enables_selection(option: dict[str, Any]) -> bool:
@@ -439,12 +471,12 @@ def _validate_supported_features(option: dict[str, Any]) -> None:
         )
 
 
-def _convert_datasets_in_option(option: dict[str, Any]) -> None:
-    """Convert dataframe-like ``dataset.source`` values on a single option."""
+def _convert_datasets_in_variant(option: dict[str, Any]) -> None:
+    """Convert dataframe-like ``dataset.source`` values on a single option variant."""
     dataset = option.get("dataset")
     if isinstance(dataset, dict):
         _convert_single_dataset(dataset)
-    elif isinstance(dataset, list):
+    elif isinstance(dataset, (list, tuple)):
         for entry in dataset:
             if isinstance(entry, dict):
                 _convert_single_dataset(entry)
@@ -453,13 +485,38 @@ def _convert_datasets_in_option(option: dict[str, Any]) -> None:
 def _convert_dataset_sources(option: dict[str, Any]) -> None:
     """Convert dataframe-like ``dataset.source`` values into JSON records.
 
-    ECharts' ``dataset`` can be a single object or a list of objects; both are
-    supported here (mirroring how ``st.vega_lite_chart`` ingests dataframes).
-    Timeline specs nest datasets under ``baseOption`` and per-tick ``options``,
-    so those variants are converted too.
+    ECharts' ``dataset`` can be a single object or a list/tuple of objects;
+    both are supported here (mirroring how ``st.vega_lite_chart`` ingests
+    dataframes). Timeline specs nest datasets under ``baseOption`` and per-tick
+    ``options``, and responsive specs nest them under ``media[*].option``, so
+    those variants are converted too.
     """
     for variant in _iter_option_variants(option):
-        _convert_datasets_in_option(variant)
+        _convert_datasets_in_variant(variant)
+
+
+def _copy_option_for_normalization(value: Any) -> Any:
+    """Copy option dicts we may mutate, leaving dataframe sources in place.
+
+    A full ``deepcopy`` would copy ``dataset.source`` dataframes (wasted work on
+    the conversion path) and fail on deepcopy-unsafe sources that
+    ``is_dataframe_like`` otherwise accepts. Primitive arrays such as
+    ``series.data`` are shared with the input.
+    """
+    if isinstance(value, dict):
+        copied: dict[str, Any] = {}
+        for key, item in value.items():
+            if key == "source" and dataframe_util.is_dataframe_like(item):
+                copied[key] = item
+            else:
+                copied[key] = _copy_option_for_normalization(item)
+        return copied
+    if isinstance(value, (list, tuple)):
+        if any(isinstance(item, dict) for item in value):
+            copied_items = [_copy_option_for_normalization(item) for item in value]
+            return copied_items if isinstance(value, list) else tuple(copied_items)
+        return value
+    return value
 
 
 def _normalize_spec(spec: EChartsSpec) -> dict[str, Any]:
@@ -472,8 +529,9 @@ def _normalize_spec(spec: EChartsSpec) -> dict[str, Any]:
     if isinstance(spec, str):
         option = _loads_json_option(spec)
     elif isinstance(spec, Mapping):
-        # Deep-copy before any mutation so the user's object is left untouched.
-        option = copy.deepcopy(dict(spec))
+        # Copy option/dataset dicts before mutation so the user's object is
+        # left untouched, without deepcopying dataframe sources.
+        option = _copy_option_for_normalization(dict(spec))
     elif callable(getattr(spec, "dump_options", None)):
         # Duck-typed pyecharts chart (detected without importing pyecharts).
         option = _loads_json_option(spec.dump_options())
@@ -505,7 +563,7 @@ def _serialize_option(option: dict[str, Any]) -> str:
     error instead of being silently stringified.
     """
     try:
-        return json.dumps(option, allow_nan=False)
+        return json.dumps(option, allow_nan=False, separators=(",", ":"))
     except (TypeError, ValueError) as ex:
         raise StreamlitAPIException(
             "The provided ECharts spec is not JSON-serializable. "
@@ -556,6 +614,7 @@ def _extract_chart_dimension(
         parameter,
         dimension,
         parameter,
+        stack_info=True,
     )
     return None
 
@@ -728,10 +787,12 @@ class EChartsMixin:
             also applied.
 
         key : str, int, or None
-            An optional string to use for giving this element a stable
-            identity. If this is ``None`` (default), the element's identity
-            will be determined based on the values of the other parameters,
-            so any change to the chart resets its selection.
+            An optional key that gives this element a stable identity. If this
+            is ``None`` (default), the chart's identity is determined by its
+            position in the app, so moving it can reset the chart and replay
+            its entry animation. When selections are activated, identity is
+            also determined by the other parameters, so any change to the
+            chart resets its selection.
 
             If selections are activated and ``key`` is provided, Streamlit
             will register the key in Session State to store the selection
@@ -740,8 +801,9 @@ class EChartsMixin:
             more details, see `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
-            Additionally, if ``key`` is provided, it will be used as a CSS
-            class name prefixed with ``st-key-``.
+            If ``key`` is provided, it will be used as a CSS class name
+            prefixed with ``st-key-``, and the chart keeps its identity across
+            reruns even when the spec, theme, or renderer changes.
 
         on_select : "ignore", "rerun", or callable
             How the chart should respond to user selection events. This
@@ -928,12 +990,15 @@ class EChartsMixin:
                 "echarts_chart",
                 user_key=key,
                 # A key is the whole identity, so a keyed chart keeps its
-                # selection across data, theme, and renderer changes (the
-                # frontend re-applies the selection after a re-init). Without a
-                # key, every rendering parameter participates, so any change
-                # makes this a new element and resets the selection.
+                # selection and frontend instance across data, theme, and
+                # renderer changes (the frontend re-applies the selection
+                # after a re-init). Without a key, every rendering parameter
+                # participates, so any change makes this a new element and
+                # resets the selection.
+                # ``dg`` is reserved for widgets; keyed display-only charts
+                # pass None so they stay off the widget path.
                 key_as_main_identity=True,
-                dg=self.dg,
+                dg=self.dg if is_selection_activated else None,
                 spec=echarts_chart_proto.spec,
                 theme=theme,
                 renderer=renderer,

@@ -300,7 +300,10 @@ export default defineConfig([
         },
       ],
       // It's safe to use functions before they're defined
-      "@typescript-eslint/no-use-before-define": ["warn", { functions: false }],
+      "@typescript-eslint/no-use-before-define": [
+        "warn",
+        { functions: false },
+      ],
       // Functions must have return types, but we allow inline function expressions to omit them
       "@typescript-eslint/explicit-function-return-type": [
         "warn",
@@ -331,6 +334,8 @@ export default defineConfig([
       "@typescript-eslint/prefer-readonly": "warn",
       // Ensure return await is used in try/catch for proper error stack traces
       "@typescript-eslint/return-await": ["error", "in-try-catch"],
+      // Treat @deprecated API usage as errors
+      "@typescript-eslint/no-deprecated": "error",
       // Permit for-of loops
       "no-restricted-syntax": [
         "error",

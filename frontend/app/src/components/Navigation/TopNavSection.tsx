@@ -31,7 +31,7 @@ import {
   useFloatingOverlay,
   useOverlayDismissal,
 } from "@streamlit/lib"
-import { IAppPage } from "@streamlit/protobuf"
+import { type AppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
 import SidebarNavLink from "./SidebarNavLink"
@@ -49,7 +49,7 @@ import { getExternalPageUrl, isExternalPage } from "./utils"
 interface TopNavSectionProps {
   handlePageChange: (pageScriptHash: string) => void
   title: string
-  sections: IAppPage[][]
+  sections: AppPage.$Properties[][]
   endpoints: StreamlitEndpoints
   pageLinkBaseUrl: string
   currentPageScriptHash: string

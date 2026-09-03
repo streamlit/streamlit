@@ -382,3 +382,17 @@ with st.form("echarts_form"):
     )
     st.form_submit_button("Submit selection")
 st.write(f"echarts form groups: {len(form_event['selection']['selected'])}")
+
+# Stretch height outside a sized parent: the chart must still get the 350px
+# content-height floor so ECharts can initialize.
+with st.container(key="c_stretch_height"):
+    st.echarts_chart(
+        {
+            "xAxis": {"type": "category", "data": ["A", "B", "C"]},
+            "yAxis": {"type": "value"},
+            "series": [{"type": "bar", "data": [12, 24, 18]}],
+            **_NO_ANIM,
+        },
+        key="stretch_height",
+        height="stretch",
+    )

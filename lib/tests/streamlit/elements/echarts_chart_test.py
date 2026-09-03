@@ -178,6 +178,25 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         assert spec["options"][0]["dataset"]["source"] == [{"x": 1, "y": 2}]
         assert spec["options"][0]["dataset"]["dimensions"] == ["x", "y"]
 
+    def test_dataset_source_dataframe_inside_media_option(self):
+        """A dataframe ``dataset.source`` in a media override is converted."""
+        df = pd.DataFrame({"x": [1], "y": [2]})
+        st.echarts_chart(
+            {
+                "series": [{"type": "bar"}],
+                "media": [
+                    {
+                        "query": {"maxWidth": 500},
+                        "option": {"dataset": {"source": df}},
+                    }
+                ],
+            }
+        )
+
+        spec = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)
+        assert spec["media"][0]["option"]["dataset"]["source"] == [{"x": 1, "y": 2}]
+        assert spec["media"][0]["option"]["dataset"]["dimensions"] == ["x", "y"]
+
     def test_dataset_source_datetime_and_nan_normalized(self):
         """Datetimes become ISO strings and missing values become ``null``."""
         df = pd.DataFrame(
@@ -190,6 +209,29 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         record = json.loads(el.spec)["dataset"]["source"][0]
         assert record["t"].startswith("2020-01-01")
         assert record["v"] is None
+
+    def test_dataset_source_infinities_become_null(self):
+        """Infinities in a dataframe source become ``null``, like NaN/NaT."""
+        df = pd.DataFrame({"x": [1.0, float("inf"), float("-inf")]})
+        st.echarts_chart({"dataset": {"source": df}})
+
+        source = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)[
+            "dataset"
+        ]["source"]
+        assert source[0]["x"] == 1.0
+        assert source[1]["x"] is None
+        assert source[2]["x"] is None
+
+    def test_dataset_source_preserves_high_precision_floats(self):
+        """Dataframe floats keep more than pandas' default 10 significant digits."""
+        value = 1.23456789012345
+        df = pd.DataFrame({"x": [value]})
+        st.echarts_chart({"dataset": {"source": df}})
+
+        record = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)[
+            "dataset"
+        ]["source"][0]
+        assert record["x"] == pytest.approx(value, rel=1e-15)
 
     @parameterized.expand(
         [
@@ -421,6 +463,25 @@ class EChartsChartTest(DeltaGeneratorTestCase):
                     "options": [{"series": [{"type": "bar3D"}]}],
                 }
             )
+
+        assert exc.value.error_id == "echarts-gl-series-not-supported"
+
+    def test_unsupported_series_detected_inside_media_option(self):
+        """Media option overrides are scanned for unsupported series."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.echarts_chart(
+                {
+                    "series": [{"type": "bar"}],
+                    "media": [{"option": {"series": [{"type": "bar3D"}]}}],
+                }
+            )
+
+        assert exc.value.error_id == "echarts-gl-series-not-supported"
+
+    def test_unsupported_series_in_tuple_raises(self):
+        """A tuple of series is walked the same way as a list."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.echarts_chart({"series": ({"type": "bar3D"},)})
 
         assert exc.value.error_id == "echarts-gl-series-not-supported"
 
@@ -690,13 +751,74 @@ def test_dataset_source_polars_dataframe() -> None:
     assert option["dataset"]["dimensions"] == ["a", "b"]
 
 
-def test_normalize_spec_deep_copies_mapping() -> None:
-    """A mapping input is deep-copied so the user's object is left untouched."""
-    original = {"series": [{"data": [1, 2, 3]}]}
+def test_normalize_spec_does_not_mutate_user_mapping() -> None:
+    """Option/dataset dicts are copied so conversion does not mutate the input."""
+    df = pd.DataFrame({"a": [1, 2]})
+    original = {
+        "dataset": {"source": df},
+        "series": [{"data": [1, 2, 3]}],
+    }
     option = _normalize_spec(original)
-    option["series"][0]["data"].append(4)
 
+    assert original["dataset"]["source"] is df
     assert original["series"][0]["data"] == [1, 2, 3]
+    option["series"][0]["type"] = "bar"
+    assert "type" not in original["series"][0]
+
+
+def test_normalize_spec_does_not_mutate_dataset_list_with_leading_non_dict() -> None:
+    """A dataset list is copied even when the first entry is not a dict."""
+    df = pd.DataFrame({"a": [1]})
+    dataset_entry = {"source": df}
+    original = {"dataset": [None, dataset_entry]}
+
+    option = _normalize_spec(original)
+
+    assert original["dataset"][1] is dataset_entry
+    assert original["dataset"][1]["source"] is df
+    assert option["dataset"][1]["source"] == [{"a": 1}]
+    assert option["dataset"][1]["dimensions"] == ["a"]
+
+
+def test_normalize_spec_converts_tuple_dataset() -> None:
+    """A tuple of datasets converts each dataframe ``source``."""
+    df = pd.DataFrame({"a": [1]})
+    original = {"dataset": ({"source": df},)}
+
+    option = _normalize_spec(original)
+
+    assert original["dataset"][0]["source"] is df
+    assert option["dataset"][0]["source"] == [{"a": 1}]
+    assert option["dataset"][0]["dimensions"] == ["a"]
+
+
+def test_normalize_spec_accepts_source_that_cannot_be_deepcopied() -> None:
+    """Dataframe-like sources are not deep-copied before conversion."""
+
+    class _OpaqueSource:
+        def __deepcopy__(self, memo: dict[str, Any]) -> _OpaqueSource:
+            raise TypeError("not deepcopyable")
+
+    source = _OpaqueSource()
+    df = pd.DataFrame({"a": [1]})
+    original = {"dataset": {"source": source}}
+
+    with (
+        patch.object(
+            echarts_chart_module.dataframe_util,
+            "is_dataframe_like",
+            lambda value: value is source,
+        ),
+        patch.object(
+            echarts_chart_module.dataframe_util,
+            "convert_anything_to_pandas_df",
+            lambda _value: df,
+        ),
+    ):
+        option = _normalize_spec(original)
+
+    assert original["dataset"]["source"] is source
+    assert option["dataset"]["source"] == [{"a": 1}]
 
 
 def test_normalize_spec_invalid_type_raises() -> None:
@@ -728,6 +850,11 @@ def test_serialize_option_rejects_arbitrary_object() -> None:
         _serialize_option({"series": _Custom()})
 
     assert exc.value.error_id == "echarts-spec-not-json-serializable"
+
+
+def test_serialize_option_uses_compact_separators() -> None:
+    """The wire payload omits insignificant JSON whitespace."""
+    assert _serialize_option({"a": 1, "b": [2]}) == '{"a":1,"b":[2]}'
 
 
 def test_serde_deserialize_none_returns_empty_selection() -> None:
@@ -851,6 +978,7 @@ def test_resolve_content_warns_and_defaults_on_unsupported_unit() -> None:
         assert _resolve_content_width("content", spec=chart) == 700
 
     assert "unsupported" in mock_warning.call_args.args[0]
+    assert mock_warning.call_args.kwargs["stack_info"] is True
 
 
 def test_resolve_content_height_passthrough() -> None:

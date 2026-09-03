@@ -29,7 +29,10 @@ import * as echarts from "echarts"
 import { isPlainObject } from "lodash-es"
 import { getLogger } from "loglevel"
 
-import { EChartsChart as EChartsChartProto } from "@streamlit/protobuf"
+import {
+  EChartsChart as EChartsChartProto,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
@@ -40,6 +43,7 @@ import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { ensureError } from "~lib/util/ErrorHandling"
+import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
@@ -50,6 +54,8 @@ import {
 } from "./CustomTheme"
 import {
   StyledEChartsChartContainer,
+  StyledEChartsChartFill,
+  StyledEChartsChartRoot,
   StyledEChartsChartStack,
   StyledEChartsError,
   StyledEChartsErrorOverlay,
@@ -57,6 +63,8 @@ import {
 import { useEChartsSelections } from "./useEChartsSelections"
 
 const LOG = getLogger("EChartsChart")
+
+type ChartErrorSource = "theme" | "option" | "resize"
 
 interface EChartsChartProps {
   element: EChartsChartProto
@@ -68,6 +76,86 @@ interface EChartsChartProps {
   disabled?: boolean
   fragmentId?: string
   disableFullscreenMode?: boolean
+  heightConfig?: streamlit.IHeightConfig | null
+}
+
+function optionHasBackgroundColor(target: unknown): boolean {
+  return (
+    isPlainObject(target) &&
+    (target as EChartsOptionObject).backgroundColor !== undefined
+  )
+}
+
+/**
+ * Whether the option (or a timeline/media variant) sets ``backgroundColor``.
+ *
+ * PNG export supplies the Streamlit page background when the chart itself has
+ * none, so a background configured only on ``baseOption`` or
+ * ``media[*].option`` still counts as explicit.
+ */
+function hasExplicitBackgroundColor(
+  option: EChartsOptionObject | null
+): boolean {
+  if (isNullOrUndefined(option)) {
+    return false
+  }
+  if (optionHasBackgroundColor(option)) {
+    return true
+  }
+  if (optionHasBackgroundColor(option.baseOption)) {
+    return true
+  }
+  if (
+    Array.isArray(option.options) &&
+    option.options.some(optionHasBackgroundColor)
+  ) {
+    return true
+  }
+  if (Array.isArray(option.media)) {
+    return option.media.some(
+      entry =>
+        isPlainObject(entry) &&
+        optionHasBackgroundColor((entry as Record<string, unknown>).option)
+    )
+  }
+  return false
+}
+
+function isAriaEnabled(option: EChartsOptionObject): boolean {
+  const target = isPlainObject(option.baseOption)
+    ? (option.baseOption as EChartsOptionObject)
+    : option
+  const aria = target.aria
+  if (isPlainObject(aria)) {
+    return (aria as { enabled?: unknown }).enabled !== false
+  }
+  return true
+}
+
+/**
+ * Reconcile ECharts-owned `role` / `aria-label` after `setOption`.
+ *
+ * ECharts 6.1 can leave `role="img"` and `aria-label` behind when a later
+ * option disables ARIA, and an empty series can get `role="img"` with no
+ * accessible name. Keyed charts reuse this DOM node, so those stale
+ * attributes persist across option updates.
+ */
+function reconcileEChartsAria(
+  dom: HTMLElement,
+  option: EChartsOptionObject
+): void {
+  if (!isAriaEnabled(option)) {
+    if (dom.getAttribute("role") === "img") {
+      dom.removeAttribute("role")
+    }
+    if (dom.hasAttribute("aria-label")) {
+      dom.removeAttribute("aria-label")
+    }
+    return
+  }
+  if (dom.getAttribute("role") === "img" && !dom.getAttribute("aria-label")) {
+    dom.removeAttribute("role")
+  }
 }
 
 export function EChartsChart({
@@ -76,8 +164,10 @@ export function EChartsChart({
   fragmentId,
   disableFullscreenMode,
   disabled = false,
+  heightConfig,
 }: Readonly<EChartsChartProps>): ReactElement {
   const theme = useEmotionTheme()
+  const isStretchHeight = !!heightConfig?.useStretch
 
   const {
     expanded: isFullScreen,
@@ -92,9 +182,9 @@ export function EChartsChart({
     elementRef: containerRef,
   } = useCalculatedDimensions<HTMLDivElement>([], 0)
 
-  // The JSON of the last option applied via setOption, used to skip no-op
-  // setOption calls so unrelated reruns don't replay entry animations.
-  const appliedOptionRef = useRef<string | null>(null)
+  // The last option object applied via setOption. `preparedOption` is already
+  // memoized, so identity comparison skips no-op reruns without re-serializing.
+  const appliedOptionRef = useRef<EChartsOptionObject | null>(null)
   // The instance the resize effect last observed, used to skip the resize that
   // coincides with (re)creating the instance (see the resize effect below).
   const resizedInstanceRef = useRef<echarts.ECharts | null>(null)
@@ -103,8 +193,34 @@ export function EChartsChart({
   const [chartInstance, setChartInstance] = useState<echarts.ECharts | null>(
     null
   )
-  const [renderError, setRenderError] = useState<string | null>(null)
+  const [opErrors, setOpErrors] = useState<
+    Partial<Record<ChartErrorSource, string>>
+  >({})
   const [hasRendered, setHasRendered] = useState(false)
+
+  const setOpError = useCallback(
+    (op: ChartErrorSource, message: string | null): void => {
+      setOpErrors(prev => {
+        if (message === null) {
+          if (prev[op] === undefined) {
+            return prev
+          }
+          const next = { ...prev }
+          delete next[op]
+          return next
+        }
+        if (prev[op] === message) {
+          return prev
+        }
+        return { ...prev, [op]: message }
+      })
+    },
+    []
+  )
+  // An option error is the most actionable; a resize failure is usually a
+  // downstream symptom of the same bad option.
+  const renderError =
+    opErrors.option ?? opErrors.theme ?? opErrors.resize ?? null
 
   // Parse the spec, memoized on the spec string.
   const { option, parseError } = useMemo<{
@@ -159,8 +275,9 @@ export function EChartsChart({
     if (!option) {
       return null
     }
-    const withDefaults = applyStreamlitOptionDefaults(option, element.theme)
-    return configureSelectionOption(withDefaults)
+    return configureSelectionOption(
+      applyStreamlitOptionDefaults(option, element.theme)
+    )
   }, [option, element.theme, configureSelectionOption])
 
   const hasValidSpec = option !== null
@@ -191,8 +308,10 @@ export function EChartsChart({
   // Create (and dispose) the ECharts instance. Only the renderer is fixed at
   // init time, so only a renderer change recreates the instance; a theme change
   // is applied in place by the effect below. The theme is read through a ref so
-  // that a light/dark toggle doesn't tear the instance down. We never init into
-  // a zero-sized container.
+  // that a light/dark toggle doesn't tear the instance down. The latch prevents
+  // the initial zero-size creation. If dimensions become zero during a later
+  // renderer recreation, the resize effect recovers on the next positive
+  // measurement.
   useEffect(() => {
     const dom = containerRef.current
     if (!dom || !hasValidSpec || !hasBeenSized) {
@@ -209,6 +328,7 @@ export function EChartsChart({
     // Force the setOption effect to re-apply against the fresh instance.
     appliedOptionRef.current = null
     setHasRendered(false)
+    setOpErrors({})
     setChartInstance(chart)
 
     return () => {
@@ -233,17 +353,18 @@ export function EChartsChart({
     try {
       chartInstance.setTheme(themeArg ?? "default")
       appliedThemeRef.current = themeArg
-      setRenderError(null)
+      setOpError("theme", null)
       // Re-theming re-runs the render pipeline, which drops the native
       // select/brush visuals, so put them back.
       restoreSelection(chartInstance)
     } catch (error) {
-      setRenderError(ensureError(error).message)
+      setOpError("theme", ensureError(error).message)
     }
-  }, [chartInstance, themeArg, restoreSelection])
+  }, [chartInstance, themeArg, restoreSelection, setOpError])
 
   // Apply the option whenever it (or the underlying instance) changes. Skips
-  // no-op setOption calls and re-applies the persisted selection afterwards.
+  // no-op setOption calls so unrelated reruns don't replay entry animations,
+  // then re-applies the persisted selection afterwards.
   useEffect(() => {
     // When the instance is recreated (renderer change), an effect keyed on
     // the previous `chartInstance` can still run once against the just-disposed
@@ -254,26 +375,34 @@ export function EChartsChart({
       return
     }
 
-    const optionJson = JSON.stringify(preparedOption)
-    if (appliedOptionRef.current === optionJson) {
+    if (appliedOptionRef.current === preparedOption) {
       return
     }
     // Mark this option as attempted up front so a rendering error isn't cleared
     // by a redundant retry against the same option.
-    appliedOptionRef.current = optionJson
+    appliedOptionRef.current = preparedOption
 
     try {
       chartInstance.setOption(preparedOption as echarts.EChartsOption, {
         notMerge: true,
       })
-      setRenderError(null)
+      if (containerRef.current) {
+        reconcileEChartsAria(containerRef.current, preparedOption)
+      }
+      setOpError("option", null)
       setHasRendered(true)
       // A full replacement clears the selected/brushed state, so restore it.
       restoreSelection(chartInstance)
     } catch (error) {
-      setRenderError(ensureError(error).message)
+      setOpError("option", ensureError(error).message)
     }
-  }, [chartInstance, preparedOption, restoreSelection])
+  }, [
+    chartInstance,
+    preparedOption,
+    containerRef,
+    restoreSelection,
+    setOpError,
+  ])
 
   // Bind selection handlers to the current instance (no-op for display-only).
   // This effect is intentionally declared *after* the option-apply effect so
@@ -314,7 +443,7 @@ export function EChartsChart({
     }
     try {
       chartInstance.resize()
-      setRenderError(null)
+      setOpError("resize", null)
       const previousSize = lastPositiveSizeRef.current
       lastPositiveSizeRef.current = { width, height }
       if (
@@ -328,9 +457,15 @@ export function EChartsChart({
       // failed in `setOption` throws again here. Surface it as an in-chart
       // error; letting it escape the effect would trip the error boundary and
       // replace the element with an unrecoverable stack trace.
-      setRenderError(ensureError(error).message)
+      setOpError("resize", ensureError(error).message)
     }
-  }, [chartInstance, width, height, prunePixelOnlyBrushAfterResize])
+  }, [
+    chartInstance,
+    width,
+    height,
+    setOpError,
+    prunePixelOnlyBrushAfterResize,
+  ])
 
   // Reset the selection when the surrounding form is cleared.
   useEffect(() => {
@@ -357,15 +492,13 @@ export function EChartsChart({
       return
     }
     try {
-      const hasExplicitBackground =
-        isPlainObject(option) &&
-        (option as EChartsOptionObject).backgroundColor !== undefined
       const dataUrl = chartInstance.getDataURL({
         type: downloadType,
         ...(downloadType === "png"
           ? {
               pixelRatio: 2,
-              ...(hasExplicitBackground || element.theme !== STREAMLIT_THEME
+              ...(hasExplicitBackgroundColor(option) ||
+              element.theme !== STREAMLIT_THEME
                 ? {}
                 : { backgroundColor: theme.colors.bgColor }),
             }
@@ -403,58 +536,62 @@ export function EChartsChart({
   ])
 
   return (
-    <StyledToolbarElementContainer
-      height={isFullScreen ? fullScreenHeight : "100%"}
-      useContainerWidth={true}
-      useContainerHeight={true}
-    >
-      <Toolbar
-        target={StyledToolbarElementContainer}
-        isFullScreen={isFullScreen}
-        onExpand={expand}
-        onCollapse={collapse}
-        disableFullscreenMode={disableFullscreenMode}
-      >
-        {chartInstance !== null && (
-          <ToolbarAction
-            label={`Download as ${downloadType.toUpperCase()}`}
-            icon={FileDownload}
-            onClick={handleDownloadChart}
-          />
-        )}
-      </Toolbar>
-      {parseError !== null ? (
-        <StyledEChartsError role="alert" data-testid="stEChartsChartError">
-          ECharts chart error: {parseError}
-        </StyledEChartsError>
-      ) : (
-        <>
-          <StyledEChartsChartStack>
-            {/*
+    <StyledEChartsChartRoot isStretchHeight={isStretchHeight}>
+      <StyledEChartsChartFill isStretchHeight={isStretchHeight}>
+        <StyledToolbarElementContainer
+          height={isFullScreen ? fullScreenHeight : "100%"}
+          useContainerWidth={true}
+          useContainerHeight={true}
+        >
+          <Toolbar
+            target={StyledToolbarElementContainer}
+            isFullScreen={isFullScreen}
+            onExpand={expand}
+            onCollapse={collapse}
+            disableFullscreenMode={disableFullscreenMode}
+          >
+            {chartInstance !== null && (
+              <ToolbarAction
+                label={`Download as ${downloadType.toUpperCase()}`}
+                icon={FileDownload}
+                onClick={handleDownloadChart}
+              />
+            )}
+          </Toolbar>
+          {parseError !== null ? (
+            <StyledEChartsError role="alert" data-testid="stEChartsChartError">
+              ECharts chart error: {parseError}
+            </StyledEChartsError>
+          ) : (
+            <>
+              <StyledEChartsChartStack>
+                {/*
               No `role` here on purpose. ECharts sets `role="img"` plus a
               generated `aria-label` on this same element (`zr.dom`) whenever
               `aria.enabled` is on, which is the default. Declaring the role
               here too would leave it behind as an image with no accessible
               name for users who opt out with `aria: {enabled: false}`.
             */}
-            <StyledEChartsChartContainer
-              ref={containerRef}
-              className="stEChartsChart"
-              data-testid="stEChartsChart"
-              aria-busy={!hasRendered && renderError === null}
-            />
-            {renderError !== null && (
-              <StyledEChartsErrorOverlay
-                role="alert"
-                data-testid="stEChartsChartError"
-              >
-                ECharts chart error: {renderError}
-              </StyledEChartsErrorOverlay>
-            )}
-          </StyledEChartsChartStack>
-        </>
-      )}
-    </StyledToolbarElementContainer>
+                <StyledEChartsChartContainer
+                  ref={containerRef}
+                  className="stEChartsChart"
+                  data-testid="stEChartsChart"
+                  aria-busy={!hasRendered && renderError === null}
+                />
+                {renderError !== null && (
+                  <StyledEChartsErrorOverlay
+                    role="alert"
+                    data-testid="stEChartsChartError"
+                  >
+                    ECharts chart error: {renderError}
+                  </StyledEChartsErrorOverlay>
+                )}
+              </StyledEChartsChartStack>
+            </>
+          )}
+        </StyledToolbarElementContainer>
+      </StyledEChartsChartFill>
+    </StyledEChartsChartRoot>
   )
 }
 
