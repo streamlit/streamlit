@@ -125,10 +125,6 @@ function Radio({
           >
             <StyledRadioButton data-testid="stRadioOption">
               {({ isSelected, isDisabled }) => (
-                // Keep this render function on the button, not the field:
-                // RadioFieldRenderProps has no interaction states (hovered,
-                // pressed, focused, focus-visible), so only the button can
-                // drive the indicator from them.
                 <StyledRadioContent $isDisabled={isDisabled}>
                   <StyledRadioRow>
                     <StyledRadioOuter
