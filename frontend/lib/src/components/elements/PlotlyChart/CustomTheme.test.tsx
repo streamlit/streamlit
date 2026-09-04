@@ -141,22 +141,54 @@ describe("PlotlyChart CustomTheme", () => {
       )
     })
 
-    it("handles missing template gracefully", () => {
+    it("creates a template when missing so Streamlit colors still apply", () => {
       const errorSpy = vi
         .spyOn(getLogger("PlotlyChart:CustomTheme"), "error")
         .mockImplementation(() => {})
-      const spec = {
+      const spec: Record<string, unknown> = {
         layout: {
           title: { text: "My Chart" },
-          // missing template
+          // missing template — raw figure JSON / plotly.js v4 defaults
         },
       }
 
       expect(() => applyStreamlitTheme(spec, theme)).not.toThrow()
-      expect(spec.layout.title.text).toBe("<b>My Chart</b>")
+      const layout = spec.layout as {
+        title: { text: string }
+        template: { layout: { paper_bgcolor: string; plot_bgcolor: string } }
+      }
+      expect(layout.title.text).toBe("<b>My Chart</b>")
+      expect(layout.template.layout.paper_bgcolor).toBe(theme.colors.bgColor)
+      expect(layout.template.layout.plot_bgcolor).toBe(theme.colors.bgColor)
       expect(errorSpy).not.toHaveBeenCalled()
 
       errorSpy.mockRestore()
+    })
+
+    it("replaces a named string template with Streamlit layout colors", () => {
+      const spec: Record<string, unknown> = {
+        layout: {
+          template: "plotly",
+        },
+      }
+
+      applyStreamlitTheme(spec, theme)
+
+      const layout = spec.layout as {
+        template: { layout: { paper_bgcolor: string } }
+      }
+      expect(layout.template.layout.paper_bgcolor).toBe(theme.colors.bgColor)
+    })
+
+    it("creates layout and template when both are missing", () => {
+      const spec: Record<string, unknown> = {}
+
+      applyStreamlitTheme(spec, theme)
+
+      const layout = spec.layout as {
+        template: { layout: { paper_bgcolor: string } }
+      }
+      expect(layout.template.layout.paper_bgcolor).toBe(theme.colors.bgColor)
     })
 
     it("scrubs sankey template textfont.color when user set layout.font.color", () => {

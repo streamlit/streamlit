@@ -420,23 +420,31 @@ export function applyStreamlitTheme(
   spec: Record<string, unknown>,
   theme: EmotionTheme
 ): void {
-  const layout = isRecord(spec.layout) ? spec.layout : undefined
-  if (!layout) {
-    return
+  if (!isRecord(spec.layout)) {
+    spec.layout = {}
+  }
+  const layout = spec.layout
+
+  // Figures sent as raw JSON (or without Python's streamlit template) have no
+  // `layout.template`. Still apply Streamlit colors so `theme="streamlit"`
+  // does not fall through to plotly.js's light defaults.
+  if (!isRecord(layout.template)) {
+    layout.template = {}
+  }
+  const template = layout.template
+  if (!isRecord(template.layout)) {
+    template.layout = {}
   }
 
-  const template = layout.template
-  if (isRecord(template) && isRecord(template.layout)) {
-    try {
-      applyStreamlitThemeTemplateLayout(template.layout, theme)
-      // Ensure user-provided `layout.font` overrides Streamlit's trace-level
-      // `textfont` defaults (e.g. Sankey, icicle); otherwise those template
-      // defaults shadow user settings.
-      // See https://github.com/streamlit/streamlit/issues/11031.
-      respectUserFontOnTemplateTraces(spec, theme)
-    } catch (e) {
-      LOG.error(ensureError(e))
-    }
+  try {
+    applyStreamlitThemeTemplateLayout(template.layout, theme)
+    // Ensure user-provided `layout.font` overrides Streamlit's trace-level
+    // `textfont` defaults (e.g. Sankey, icicle); otherwise those template
+    // defaults shadow user settings.
+    // See https://github.com/streamlit/streamlit/issues/11031.
+    respectUserFontOnTemplateTraces(spec, theme)
+  } catch (e) {
+    LOG.error(ensureError(e))
   }
 
   if ("title" in layout && notNullOrUndefined(layout.title)) {
