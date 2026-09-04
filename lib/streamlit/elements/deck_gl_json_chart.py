@@ -399,7 +399,14 @@ class PydeckMixin:
         Parameters
         ----------
         pydeck_obj : pydeck.Deck or None
-            Object specifying the PyDeck chart to draw.
+            Object specifying the PyDeck chart to draw. Built-in deck.gl
+            layers, views (``MapView``, ``OrbitView``, ``OrthographicView``,
+            ``FirstPersonView``, and ``GlobeView``), JSON ``parameters``, and
+            layer extensions are supported. Use ``map_provider=None`` to omit
+            the basemap. Pass extensions as ``@@type`` dicts, for example
+            ``extensions=[{"@@type": "DataFilterExtension", "filterSize": 1}]``.
+            Custom JS libraries, widgets, and multi-view layouts are not
+            supported.
         width : "stretch" or int
             The width of the chart element. This can be one of the following:
 
@@ -538,10 +545,6 @@ class PydeckMixin:
         .. note::
            To make the PyDeck chart's style consistent with Streamlit's theme,
            you can set ``map_style=None`` in the ``pydeck.Deck`` object.
-
-        Deck.gl layer extensions such as ``DataFilterExtension`` can be passed
-        on ``pydeck.Layer`` as ``@@type`` dictionaries, for example
-        ``extensions=[{"@@type": "DataFilterExtension", "filterSize": 1}]``.
 
         """
         if use_container_width is not None:
