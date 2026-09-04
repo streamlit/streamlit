@@ -420,24 +420,26 @@ export function applyStreamlitTheme(
   spec: Record<string, unknown>,
   theme: EmotionTheme
 ): void {
-  if (!isRecord(spec.layout)) {
-    spec.layout = {}
-  }
-  const layout = spec.layout
+  const layout: Record<string, unknown> = isRecord(spec.layout)
+    ? spec.layout
+    : {}
+  spec.layout = layout
 
   // Figures sent as raw JSON (or without Python's streamlit template) have no
   // `layout.template`. Still apply Streamlit colors so `theme="streamlit"`
   // does not fall through to plotly.js's light defaults.
-  if (!isRecord(layout.template)) {
-    layout.template = {}
-  }
-  const template = layout.template
-  if (!isRecord(template.layout)) {
-    template.layout = {}
-  }
+  const template: Record<string, unknown> = isRecord(layout.template)
+    ? layout.template
+    : {}
+  layout.template = template
+
+  const templateLayout: Record<string, unknown> = isRecord(template.layout)
+    ? template.layout
+    : {}
+  template.layout = templateLayout
 
   try {
-    applyStreamlitThemeTemplateLayout(template.layout, theme)
+    applyStreamlitThemeTemplateLayout(templateLayout, theme)
     // Ensure user-provided `layout.font` overrides Streamlit's trace-level
     // `textfont` defaults (e.g. Sankey, icicle); otherwise those template
     // defaults shadow user settings.
