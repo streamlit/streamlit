@@ -55,6 +55,7 @@ import { Quiver } from "~lib/dataframes/Quiver"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { downloadDataUrl } from "~lib/util/downloadDataUrl"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { VegaLiteChartElement, WrappedNamedDataset } from "./arrowUtils"
@@ -270,20 +271,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
         return
       }
 
-      // Build a `YYYY-MM-DDTHH-MM` timestamp from local time so the filename
-      // reflects the user's wall-clock time rather than UTC.
-      const now = new Date()
-      const pad = (value: number): string => String(value).padStart(2, "0")
-      const timestamp =
-        `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
-        `T${pad(now.getHours())}-${pad(now.getMinutes())}`
-      const link = document.createElement("a")
-      link.setAttribute("href", pngUrl)
-      link.setAttribute("download", `${timestamp}_chart.png`)
-      link.style.display = "none"
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+      downloadDataUrl(pngUrl, "png")
     })()
   }, [exportToPng])
 
