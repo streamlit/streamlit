@@ -43,8 +43,11 @@ describe("getVegaBindingStyles", () => {
   )
 
   it("reuses the same style object for a given theme", () => {
-    const theme = lightTheme.emotion
-    expect(getVegaBindingStyles(theme)).toBe(getVegaBindingStyles(theme))
+    const light = lightTheme.emotion
+    const dark = darkTheme.emotion
+    expect(getVegaBindingStyles(light)).toBe(getVegaBindingStyles(light))
+    expect(getVegaBindingStyles(dark)).toBe(getVegaBindingStyles(dark))
+    expect(getVegaBindingStyles(light)).not.toBe(getVegaBindingStyles(dark))
   })
 
   it("styles Vega bind labels, selects, and range value readouts", () => {
@@ -63,6 +66,12 @@ describe("getVegaBindingStyles", () => {
           borderRadius: theme.radii.default,
           color: theme.colors.bodyText,
         }),
+        "& input[type='text'], & input[type='number'], & input[type='search'], & input[type='date'], & input[type='time'], & input[type='datetime-local'], & input[type='month'], & input[type='week']":
+          expect.objectContaining({
+            backgroundColor: theme.colors.secondaryBg,
+            borderRadius: theme.radii.default,
+            color: theme.colors.bodyText,
+          }),
         "& input[type='range']": expect.objectContaining({
           appearance: "none",
           backgroundColor: "transparent",

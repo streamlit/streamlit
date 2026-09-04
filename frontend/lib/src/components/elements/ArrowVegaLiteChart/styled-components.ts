@@ -27,9 +27,13 @@ import type { EmotionTheme } from "~lib/theme/types"
  */
 export const VEGA_RANGE_PROGRESS_VAR = "--vega-range-progress"
 
+/**
+ * Writes the input's value as a 0-100% stop into `--vega-range-progress` so
+ * the WebKit track gradient matches the slider position.
+ */
 export const syncVegaRangeProgress = (input: HTMLInputElement): void => {
-  // HTML range defaults: min 0, max 100, value = midpoint. Empty `value` is a
-  // defensive fallback to min; it is not the platform default.
+  // Missing min/max use the HTML defaults (0/100); an empty value falls
+  // back to min, not the platform midpoint.
   const min = input.min === "" ? 0 : Number(input.min)
   const max = input.max === "" ? 100 : Number(input.max)
   const value = input.value === "" ? min : Number(input.value)
@@ -74,14 +78,14 @@ export const bindVegaRangeProgress = (root: HTMLElement): (() => void) => {
   return () => root.removeEventListener("input", onInput)
 }
 
+const vegaBindingStylesCache = new WeakMap<EmotionTheme, CSSObject>()
+
 /**
  * Styles Vega's native parameter-binding widgets (`form.vega-bindings`).
  * Streamlit disables vega-embed's default CSS, so without this they render
  * as unstyled browser controls. Uses Streamlit fonts, colors, radius, and
  * focus treatment rather than replacing the native controls.
  */
-const vegaBindingStylesCache = new WeakMap<EmotionTheme, CSSObject>()
-
 export const getVegaBindingStyles = (theme: EmotionTheme): CSSObject => {
   const cached = vegaBindingStylesCache.get(theme)
   if (cached) {
@@ -186,10 +190,10 @@ export const getVegaBindingStyles = (theme: EmotionTheme): CSSObject => {
       cursor: "pointer",
     },
 
-    // Vega copies the bind `input` type onto a generic <input>. Style
-    // text-like types (text, number, search, ...) to match Streamlit inputs;
-    // range/checkbox/radio/color have more specific rules below.
-    "& input:not([type='range']):not([type='checkbox']):not([type='radio']):not([type='color']):not([type='file']):not([type='hidden']):not([type='button']):not([type='submit']):not([type='reset'])":
+    // Vega copies the bind `input` type onto a generic <input>. Style the
+    // text-like types Vega can emit; range/checkbox/radio/color have more
+    // specific rules below.
+    "& input[type='text'], & input[type='number'], & input[type='search'], & input[type='date'], & input[type='time'], & input[type='datetime-local'], & input[type='month'], & input[type='week']":
       textControlStyles,
 
     "& input[type='color']": {
@@ -226,7 +230,8 @@ export const getVegaBindingStyles = (theme: EmotionTheme): CSSObject => {
       },
       "&::-webkit-slider-thumb": {
         ...rangeThumbStyles,
-        // Center the thumb on the track.
+        // WebKit lays the thumb on the track's top edge; pull it back by
+        // half the height difference so it sits on the centerline.
         marginTop: `calc((${theme.spacing.twoXS} - ${theme.sizes.sliderThumb}) / 2)`,
       },
       "&::-moz-range-track": {
@@ -251,7 +256,6 @@ export const getVegaBindingStyles = (theme: EmotionTheme): CSSObject => {
     "& input[type='checkbox'], & input[type='radio']": {
       margin: theme.spacing.none,
       cursor: "pointer",
-      accentColor: theme.colors.primary,
       width: theme.sizes.checkbox,
       height: theme.sizes.checkbox,
     },

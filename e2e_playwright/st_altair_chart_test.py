@@ -34,6 +34,9 @@ def test_altair_chart_displays_correctly(
 ):
     charts = themed_app.get_by_test_id("stVegaLiteChart")
     expect(charts).to_have_count(NUM_CHARTS)
+    # Vega always mounts an empty bindings form; hide it so charts without
+    # parameter widgets do not pick up extra padding.
+    expect(charts.nth(0).locator("form.vega-bindings")).to_be_hidden()
 
     # Each chart container carries the Vega "graphics-document" ARIA role once
     # it has rendered. Verify every baseline chart is a visible graphics
@@ -238,8 +241,8 @@ def test_altair_chart_binding_widget_styling(
     wait_for_react_stability(themed_app)
     assert_snapshot(chart, name="st_altair_chart-binding_widgets")
 
-    # Vega's native binding controls must stay interactive without rerunning
-    # the app (they are not Streamlit widgets).
+    # Vega's native binding controls stay interactive (they are not Streamlit
+    # widgets). Changing them must not surface an exception.
     select = bindings.get_by_role("combobox")
     expect(select).to_have_value("USA")
     select.select_option("Europe")
