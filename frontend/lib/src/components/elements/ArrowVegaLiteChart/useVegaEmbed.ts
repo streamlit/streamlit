@@ -33,6 +33,7 @@ import {
   VegaLiteChartElement,
   WrappedNamedDataset,
 } from "./arrowUtils"
+import { bindVegaRangeProgress } from "./styled-components"
 import { useVegaLiteSelections } from "./useVegaLiteSelections"
 
 const DEFAULT_DATA_NAME = "source"
@@ -119,6 +120,7 @@ export function useVegaEmbed(
       if (containerRef.current === null) {
         throw new Error("Element missing.")
       }
+      const container = containerRef.current
       setIsCreatingView(true)
       try {
         // Finalize the previous view so it can be garbage collected.
@@ -129,9 +131,8 @@ export function useVegaEmbed(
           ast: true,
           expr: expressionInterpreter,
 
-          // Disable default styles so that vega doesn't inject <style> tags in the
-          // DOM. We set these styles manually for finer control over them and to
-          // avoid inlining styles.
+          // Disable vega-embed's injected default CSS. Container, tooltip, and
+          // parameter-binding styles live in styled-components.ts instead.
           tooltip: { disableDefaultStyle: true },
           defaultStyle: false,
           // Disable all built-in vega-embed action links ("View Source", "Open
@@ -148,14 +149,18 @@ export function useVegaEmbed(
         }
 
         const { vgSpec, view, finalize } = await embed(
-          containerRef.current,
+          container,
           spec,
           options
         )
 
         vegaViewRef.current = maybeConfigureSelections(view)
 
-        vegaFinalizerRef.current = finalize
+        const unbindRangeProgress = bindVegaRangeProgress(container)
+        vegaFinalizerRef.current = () => {
+          unbindRangeProgress()
+          finalize()
+        }
 
         // Load the initial set of data into the chart.
         const dataArrays = getDataArrays(latestDatasetsRef.current)

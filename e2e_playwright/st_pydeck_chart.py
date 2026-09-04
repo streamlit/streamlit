@@ -254,6 +254,73 @@ def mapbox_subtest():
     )
 
 
+def layer_extensions_subtest():
+    st.write("""
+    ## Test deck.gl layer extensions
+
+    Should show two high-value points (DataFilterExtension) and a dashed
+    path (PathStyleExtension).
+    """)
+
+    points = pd.DataFrame(
+        [
+            {"lat": 37.75, "lon": -122.45, "value": 10},
+            {"lat": 37.76, "lon": -122.42, "value": 80},
+            {"lat": 37.77, "lon": -122.4, "value": 90},
+            {"lat": 37.76, "lon": -122.38, "value": 20},
+        ]
+    )
+    path_data = [
+        {
+            "path": [
+                [-122.45, 37.75],
+                [-122.42, 37.76],
+                [-122.4, 37.77],
+                [-122.38, 37.76],
+            ],
+        }
+    ]
+
+    st.pydeck_chart(
+        pdk.Deck(
+            map_style="light",
+            initial_view_state=pdk.ViewState(
+                latitude=37.76,
+                longitude=-122.42,
+                zoom=12,
+                pitch=0,
+            ),
+            layers=[
+                pdk.Layer(
+                    "ScatterplotLayer",
+                    data=points,
+                    id="filtered-points",
+                    get_position="[lon, lat]",
+                    get_fill_color="[200, 30, 0, 200]",
+                    get_radius=120,
+                    radius_min_pixels=8,
+                    get_filter_value="value",
+                    filter_range=[50, 100],
+                    # pydeck has no Extension class, so extensions are passed as @@type dicts.
+                    extensions=[{"@@type": "DataFilterExtension", "filterSize": 1}],
+                ),
+                pdk.Layer(
+                    "PathLayer",
+                    data=path_data,
+                    id="dashed-path",
+                    get_path="path",
+                    get_color=[220, 20, 60],
+                    get_width=20,
+                    width_min_pixels=6,
+                    get_dash_array=[8, 4],
+                    extensions=[{"@@type": "PathStyleExtension", "dash": True}],
+                ),
+            ],
+        ),
+        height=400,
+    )
+
+
 def width_parameter_subtest():
     st.write("""
     ## Test width parameter

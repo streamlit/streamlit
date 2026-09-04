@@ -51,7 +51,7 @@ import {
   getContextualFillColor,
   LAYER_TYPE_TO_FILL_FUNCTION,
 } from "./utils/colors"
-import { jsonConverter } from "./utils/jsonConverter"
+import { convertDeckJson } from "./utils/jsonConverter"
 import {
   getProvidedViews,
   isMapCompatibleViewSpec,
@@ -576,7 +576,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       })
     }
 
-    const converted = jsonConverter.convert(jsonCopy) as DeckObject
+    const converted = convertDeckJson(jsonCopy) as DeckObject
     const providedViews = getProvidedViews(converted.views)
 
     // Carto after convert so unknown @@type (null → MapView) still gets tiles.
