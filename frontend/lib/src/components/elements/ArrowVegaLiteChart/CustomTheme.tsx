@@ -84,7 +84,8 @@ export function applyStreamlitTheme(
       titleFontWeight: theme.fontWeights.normal,
       titleFontStyle: "normal",
       titleColor: getGray70(theme),
-      titlePadding: convertRemToPx(theme.spacing.twoXS),
+      // Larger than rowPadding so the title reads as a header, not another entry.
+      titlePadding: convertRemToPx(theme.spacing.md),
       labelPadding: convertRemToPx(theme.spacing.lg),
       columnPadding: convertRemToPx(theme.spacing.sm),
       rowPadding: convertRemToPx(theme.spacing.twoXS),
