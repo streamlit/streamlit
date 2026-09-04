@@ -31,7 +31,8 @@ def test_repeated_query_param_assignment_does_not_push_history(app: Page):
     click_checkbox(app, "Toggle this")
 
     expect(app).to_have_url(re.compile(r"[?&]number=1(?:&|$)"))
-    expect(app).not_to_have_url(re.compile(r"number=1.*number=1"))
+    # Guard against the param being appended again instead of replaced.
+    expect(app).not_to_have_url(re.compile(r"number=1(&.*)?&number="))
     history_length_after_noop = app.evaluate("window.history.length")
     assert history_length_after_noop == history_length_before, (
         f"history.length grew from {history_length_before} to {history_length_after_noop}"

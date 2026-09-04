@@ -1256,9 +1256,10 @@ export class App extends PureComponent<Props, State> {
       document.location.pathname + (queryString ? `?${queryString}` : "")
     const currentSearch = document.location.search.replace(/^\?/, "")
 
-    // Skip pushState when the query string is already current so reruns do not
-    // fill the back stack (an unchanged query string still creates a history
-    // entry). Always update React state and notify the host so embeds stay in sync.
+    // `pushState` always adds a history entry, even when the resulting URL is
+    // identical, so reruns that re-assign the same query params would otherwise
+    // fill the back stack with no-op entries. React state and the host message
+    // below are still updated so embeds stay in sync.
     if (queryString !== currentSearch) {
       window.history.pushState({}, "", targetUrl)
     }
