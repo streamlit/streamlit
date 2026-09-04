@@ -436,29 +436,28 @@ def orbit_point_cloud_subtest():
         }
     )
 
-    with st.container(key="orbit_point_cloud"):
-        st.pydeck_chart(
-            pdk.Deck(
-                layers=[
-                    pdk.Layer(
-                        "PointCloudLayer",
-                        data=point_cloud,
-                        get_position=["x", "y", "z"],
-                        get_color=["r", "g", "b"],
-                        point_size=4,
-                    ),
-                ],
-                initial_view_state=pdk.ViewState(
-                    target=[0, 0, 0],
-                    zoom=5,
-                    rotation_x=15,
-                    rotation_orbit=30,
+    st.pydeck_chart(
+        pdk.Deck(
+            layers=[
+                pdk.Layer(
+                    "PointCloudLayer",
+                    data=point_cloud,
+                    get_position=["x", "y", "z"],
+                    get_color=["r", "g", "b"],
+                    point_size=4,
                 ),
-                views=[pdk.View(type="OrbitView", controller=True)],
-                map_provider=None,
+            ],
+            initial_view_state=pdk.ViewState(
+                target=[0, 0, 0],
+                zoom=5,
+                rotation_x=15,
+                rotation_orbit=30,
             ),
-            height=400,
-        )
+            views=[pdk.View(type="OrbitView", controller=True)],
+            map_provider=None,
+        ),
+        height=400,
+    )
 
 
 def globe_view_subtest():
@@ -490,26 +489,25 @@ def globe_view_subtest():
         ],
     }
 
-    with st.container(key="globe_view"):
-        st.pydeck_chart(
-            pdk.Deck(
-                layers=[
-                    pdk.Layer(
-                        "GeoJsonLayer",
-                        data=countries,
-                        filled=True,
-                        stroked=True,
-                        get_fill_color=[30, 120, 180, 220],
-                        get_line_color=[255, 255, 255],
-                    ),
-                ],
-                views=[pdk.View(type="_GlobeView", controller=True)],
-                initial_view_state=pdk.ViewState(latitude=20, longitude=10, zoom=0),
-                map_provider=None,
-                parameters={"cull": True},
-            ),
-            height=400,
-        )
+    st.pydeck_chart(
+        pdk.Deck(
+            layers=[
+                pdk.Layer(
+                    "GeoJsonLayer",
+                    data=countries,
+                    filled=True,
+                    stroked=True,
+                    get_fill_color=[30, 120, 180, 220],
+                    get_line_color=[255, 255, 255],
+                ),
+            ],
+            views=[pdk.View(type="_GlobeView", controller=True)],
+            initial_view_state=pdk.ViewState(latitude=20, longitude=10, zoom=0),
+            map_provider=None,
+            parameters={"cull": True},
+        ),
+        height=400,
+    )
 
 
 SUBTESTS = {k: v for k, v in globals().items() if k.endswith("_subtest")}

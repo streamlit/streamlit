@@ -57,6 +57,47 @@ const isMapViewObject = (view: unknown): boolean => {
   return view instanceof MapView
 }
 
+const DEFAULT_MAP_VIEW_ID = "default-view"
+
+/**
+ * Give pydeck MapViews the same DOM id DeckGL uses when `views` are omitted.
+ *
+ * pydeck's default MapView has no `id`. deck.gl then uses `MapView` as the
+ * view id (`#view-MapView`). Selection e2e and existing apps target
+ * `#view-default-view`.
+ *
+ * @param {unknown} views - Serialized views from the pydeck JSON.
+ * @returns {unknown} Views with a default MapView id when missing.
+ */
+export function withDefaultMapViewIds(views: unknown): unknown {
+  if (isNullOrUndefined(views)) {
+    return views
+  }
+
+  const assignId = (view: unknown): unknown => {
+    if (
+      isNullOrUndefined(view) ||
+      typeof view !== "object" ||
+      Array.isArray(view)
+    ) {
+      return view
+    }
+
+    const spec = view as Record<string, unknown>
+    if (spec["@@type"] !== "MapView") {
+      return view
+    }
+
+    if (typeof spec.id === "string" && spec.id.length > 0) {
+      return view
+    }
+
+    return { ...spec, id: DEFAULT_MAP_VIEW_ID }
+  }
+
+  return Array.isArray(views) ? views.map(assignId) : assignId(views)
+}
+
 /**
  * True when the spec uses deck.gl's default camera or an explicit MapView.
  *
@@ -99,16 +140,6 @@ export function getProvidedViews(views: unknown): View | View[] | undefined {
   }
 
   return viewList
-}
-
-/**
- * True when pydeck provided at least one view that DeckGL should receive.
- *
- * @param {unknown} views - Converted `views` from the JSON converter.
- * @returns {boolean} Whether `<DeckGL>` should take a `views` prop.
- */
-export function hasProvidedViews(views: unknown): boolean {
-  return getProvidedViews(views) !== undefined
 }
 
 /**

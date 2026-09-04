@@ -18,12 +18,12 @@ import { MapView, OrbitView } from "@deck.gl/core"
 
 import {
   getProvidedViews,
-  hasProvidedViews,
   isMapCompatibleViewSpec,
   isUnsetMapStyle,
   PYDECK_UNSET_MAP_STYLE,
   sanitizeDeckParameters,
   shouldShowBasemap,
+  withDefaultMapViewIds,
 } from "./mapShell"
 
 describe("isUnsetMapStyle", () => {
@@ -77,19 +77,22 @@ describe("isMapCompatibleViewSpec", () => {
   })
 })
 
-describe("hasProvidedViews", () => {
-  it("is false when views are omitted or empty", () => {
-    expect(hasProvidedViews(undefined)).toBe(false)
-    expect(hasProvidedViews([])).toBe(false)
+describe("getProvidedViews", () => {
+  it("is undefined when views are omitted or empty", () => {
+    expect(getProvidedViews(undefined)).toBeUndefined()
+    expect(getProvidedViews([])).toBeUndefined()
   })
 
-  it("is true when a view instance or non-empty array is present", () => {
-    expect(hasProvidedViews(new MapView({ controller: true }))).toBe(true)
-    expect(hasProvidedViews([new OrbitView({ controller: true })])).toBe(true)
+  it("returns a view instance or non-empty array when present", () => {
+    expect(getProvidedViews(new MapView({ controller: true }))).toBeInstanceOf(
+      MapView
+    )
+    expect(
+      getProvidedViews([new OrbitView({ controller: true })])
+    ).toHaveLength(1)
   })
 
   it("ignores converter failures so DeckGL can fall back to MapView", () => {
-    expect(hasProvidedViews([null])).toBe(false)
     expect(getProvidedViews([null])).toBeUndefined()
     expect(
       shouldShowBasemap({
@@ -97,6 +100,23 @@ describe("hasProvidedViews", () => {
         mapStyle: "mapbox://styles/mapbox/light-v9",
       })
     ).toBe(true)
+  })
+})
+
+describe("withDefaultMapViewIds", () => {
+  it("assigns default-view when a MapView omits id", () => {
+    expect(
+      withDefaultMapViewIds([{ "@@type": "MapView", controller: true }])
+    ).toEqual([{ "@@type": "MapView", controller: true, id: "default-view" }])
+  })
+
+  it("leaves an explicit MapView id and non-MapView specs unchanged", () => {
+    expect(
+      withDefaultMapViewIds([{ "@@type": "MapView", id: "split-left" }])
+    ).toEqual([{ "@@type": "MapView", id: "split-left" }])
+    expect(
+      withDefaultMapViewIds([{ "@@type": "OrbitView", controller: true }])
+    ).toEqual([{ "@@type": "OrbitView", controller: true }])
   })
 })
 

@@ -1031,5 +1031,33 @@ describe("useDeckGl", () => {
         "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
       )
     })
+
+    it("gives pydeck MapViews the default-view id used by selection e2e", () => {
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps(),
+      })
+
+      const views = result.current.deck.views
+      const firstView = Array.isArray(views) ? views[0] : views
+      expect(firstView?.id).toBe("default-view")
+    })
+
+    it("applies the Carto default when an unknown view type falls back to MapView", () => {
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps(
+          {},
+          {},
+          {
+            views: [{ "@@type": "NotARealView", controller: true }],
+            mapStyle: undefined,
+          }
+        ),
+      })
+
+      expect(result.current.deck.views).toBeUndefined()
+      expect(result.current.deck.mapStyle).toBe(
+        "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+      )
+    })
   })
 })

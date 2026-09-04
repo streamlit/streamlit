@@ -35,7 +35,7 @@ export type ParsedDeckGlConfig = {
   layers: SerializedLayer[]
   initialViewState: Record<string, unknown>
   views?: unknown
-  /** WebGL parameters from pydeck, e.g. `{ cull: true }` for GlobeView. */
+  /** GPU parameters from pydeck. deck.gl 9 uses luma.gl keys such as `cullMode`; pydeck examples still send `{ cull: true }`. */
   parameters?: DeckProps["parameters"]
   mapStyle?: string
   mapProvider?: string

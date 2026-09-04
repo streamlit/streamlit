@@ -14,7 +14,15 @@
  * limitations under the License.
  */
 
-import { FC, memo, useCallback, useContext, useEffect, useState } from "react"
+import {
+  FC,
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
 
 import "./patchLumaCanvasContext"
 
@@ -96,11 +104,18 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   const usesMapbox =
     deck.mapProvider == "mapbox" ||
     (deck?.mapStyle && deck.mapStyle?.indexOf("mapbox") >= 0)
-  const providedViews = getProvidedViews(deck.views)
-  const showBasemap = shouldShowBasemap({
-    views: providedViews,
-    mapStyle: deck.mapStyle,
-  })
+  const providedViews = useMemo(
+    () => getProvidedViews(deck.views),
+    [deck.views]
+  )
+  const showBasemap = useMemo(
+    () =>
+      shouldShowBasemap({
+        views: providedViews,
+        mapStyle: deck.mapStyle,
+      }),
+    [providedViews, deck.mapStyle]
+  )
 
   const [isInitialized, setIsInitialized] = useState(false)
 

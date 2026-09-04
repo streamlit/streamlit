@@ -152,6 +152,24 @@ describe("DeckGlJsonChart", () => {
       expect(screen.getByTitle("Zoom In")).toBeVisible()
     })
 
+    it("renders zoom controls when an unknown view type falls back to MapView", async () => {
+      render(
+        <DeckGlJsonChart
+          {...getProps(
+            {},
+            {},
+            { views: [{ "@@type": "NotARealView", controller: true }] }
+          )}
+        />
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId("mockDeckGL")).toBeVisible()
+      })
+      expect(screen.getByTestId("stDeckGlJsonChartZoomButton")).toBeVisible()
+      expect(screen.getByTitle("Zoom In")).toBeVisible()
+    })
+
     it("does not render zoom controls when mapStyle is the pydeck unset sentinel", async () => {
       render(
         <DeckGlJsonChart

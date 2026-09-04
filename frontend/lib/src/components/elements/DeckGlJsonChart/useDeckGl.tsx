@@ -53,9 +53,11 @@ import {
 } from "./utils/colors"
 import { jsonConverter } from "./utils/jsonConverter"
 import {
+  getProvidedViews,
   isMapCompatibleViewSpec,
   PYDECK_UNSET_MAP_STYLE,
   sanitizeDeckParameters,
+  withDefaultMapViewIds,
 } from "./utils/mapShell"
 
 /**
@@ -435,15 +437,13 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
   const deck = useMemo<DeckObject>(() => {
     const jsonCopy = { ...parsedPydeckJson }
+    jsonCopy.views = withDefaultMapViewIds(jsonCopy.views)
 
     // pydeck's map_provider=None writes this sentinel instead of omitting mapStyle.
-    if (jsonCopy.mapStyle === PYDECK_UNSET_MAP_STYLE) {
+    const hadUnsetMapStyleSentinel =
+      jsonCopy.mapStyle === PYDECK_UNSET_MAP_STYLE
+    if (hadUnsetMapStyleSentinel) {
       delete jsonCopy.mapStyle
-    } else if (!jsonCopy.mapStyle && isMapCompatibleViewSpec(jsonCopy.views)) {
-      // If unset, use either the light or dark style based on Streamlit's theme.
-      jsonCopy.mapStyle = isLightTheme
-        ? "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
-        : "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
     }
 
     const isUsingCarto =
@@ -577,8 +577,34 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     }
 
     const converted = jsonConverter.convert(jsonCopy) as DeckObject
+    const providedViews = getProvidedViews(converted.views)
+
+    // Apply the themed Carto default after conversion so unknown @@type
+    // values (which hydrate to null and fall back to MapView) still get tiles.
+    let { mapStyle, cartoKey } = converted
+    if (
+      !hadUnsetMapStyleSentinel &&
+      !mapStyle &&
+      isMapCompatibleViewSpec(providedViews)
+    ) {
+      mapStyle = isLightTheme
+        ? "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+        : "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+    }
+
+    if (
+      !cartoKey &&
+      typeof mapStyle === "string" &&
+      mapStyle.indexOf("cartocdn") >= 0
+    ) {
+      cartoKey = "x7g2plm9yq8vfrc"
+    }
+
     return {
       ...converted,
+      views: providedViews,
+      mapStyle,
+      cartoKey,
       parameters: sanitizeDeckParameters(converted.parameters),
     }
   }, [
