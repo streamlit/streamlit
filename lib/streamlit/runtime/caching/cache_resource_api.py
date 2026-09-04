@@ -435,8 +435,9 @@ class CacheResourceAPI:
             ``Event loop closed`` error. Cache resources that remain valid
             independently of the event loop that created them.
 
-            To upvote official ``asyncio`` support, see GitHub issue `#8488
-            <https://github.com/streamlit/streamlit/issues/8488>`_.
+            To upvote support for caching event-loop-bound async resources, see
+            GitHub issue `#16801
+            <https://github.com/streamlit/streamlit/issues/16801>`_.
 
         Parameters
         ----------
