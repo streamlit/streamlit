@@ -14,7 +14,9 @@
 
 
 import re
+from pathlib import Path
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
@@ -31,6 +33,14 @@ from e2e_playwright.shared.app_utils import (
 )
 
 _BACKGROUND_REFRESH_STALE_WAIT_MS = 9000
+
+
+@pytest.fixture(scope="module")
+def app_server_extra_env(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> dict[str, str]:
+    release_file = tmp_path_factory.mktemp("st_cache_data") / "async-cache-release"
+    return {"STREAMLIT_ASYNC_CACHE_DATA_RELEASE_FILE": str(release_file)}
 
 
 def test_that_caching_shows_cached_widget_warning(app: Page):
@@ -67,13 +77,20 @@ def test_that_replay_element_works_as_expected(app: Page):
     expect(app.get_by_text("Cache return 1")).to_be_visible()
 
 
-def test_async_cache_data_miss_hit_spinner_and_replay(app: Page):
+@pytest.mark.only_browser("chromium")
+def test_async_cache_data_miss_hit_spinner_and_replay(
+    app: Page, app_server_extra_env: dict[str, str]
+):
+    release_file = Path(app_server_extra_env["STREAMLIT_ASYNC_CACHE_DATA_RELEASE_FILE"])
+    release_file.unlink(missing_ok=True)
+
     get_button(app, "Run async cache_data E2E scenario").click()
 
     spinner = app.get_by_test_id("stSpinner").filter(
         has_text="Computing async cache_data value..."
     )
     expect(spinner).to_be_visible()
+    release_file.touch()
     wait_for_app_run(app)
 
     expect(app.get_by_test_id("stSpinner")).to_have_count(0)

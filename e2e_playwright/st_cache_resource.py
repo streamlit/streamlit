@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import uuid
 from typing import cast
 
@@ -58,31 +57,6 @@ def replay_element() -> int:
 
 if st.button("Cached function with element replay"):
     st.write("Cache return", replay_element())
-
-
-@st.cache_resource(show_spinner="Computing async cache_resource value...")
-async def async_cache_resource_value() -> dict[str, int]:
-    st.session_state.async_cache_resource_executions = (
-        st.session_state.get("async_cache_resource_executions", 0) + 1
-    )
-    st.markdown(
-        f"Inside async cache_resource: "
-        f"{st.session_state.async_cache_resource_executions}"
-    )
-    await asyncio.sleep(1)
-    return {"execution": st.session_state.async_cache_resource_executions}
-
-
-async def render_async_cache_resource_value() -> None:
-    value = await async_cache_resource_value()
-    st.markdown(f"Async cache_resource result: {value['execution']}")
-
-
-if st.button("Run async cache_resource E2E scenario"):
-    st.session_state.run_async_cache_resource_e2e_scenario = True
-
-if st.session_state.get("run_async_cache_resource_e2e_scenario", False):
-    asyncio.run(render_async_cache_resource_value())
 
 
 # Keep the background-refresh scenario opt-in so its warning and display output don't
