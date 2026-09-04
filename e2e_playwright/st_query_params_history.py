@@ -16,4 +16,6 @@ import streamlit as st
 
 st.checkbox("Toggle this")
 st.query_params["number"] = 1
+if st.button("Set extra param"):
+    st.query_params["extra"] = "yes"
 st.markdown(str(st.query_params))

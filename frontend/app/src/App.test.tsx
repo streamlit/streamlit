@@ -1874,6 +1874,7 @@ describe("App", () => {
     it("does not override the pathname when resetting query params", () => {
       renderApp(getProps())
       const pathname = "/foo/bar/"
+      // Seed a query string so that resetting it is an actual URL change.
       window.history.pushState({}, "", `${pathname}?flying=spaghetti`)
       pushStateSpy.mockClear()
 
@@ -1886,6 +1887,7 @@ describe("App", () => {
 
     it("resets query params as expected when at the root pathname", () => {
       renderApp(getProps())
+      // Seed a query string so that resetting it is an actual URL change.
       window.history.pushState({}, "", "/?flying=spaghetti")
       pushStateSpy.mockClear()
 
@@ -1935,7 +1937,7 @@ describe("App", () => {
       expect(pushStateSpy).not.toHaveBeenCalled()
     })
 
-    it("still confirms query params to the host when the URL is unchanged", () => {
+    it("still sends SET_QUERY_PARAM to the host when the query string is unchanged", () => {
       renderApp(getProps())
       const queryString = "flying=spaghetti&monster=omg"
       window.history.pushState({}, "", `/?${queryString}`)
