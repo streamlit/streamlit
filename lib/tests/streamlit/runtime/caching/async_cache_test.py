@@ -162,7 +162,7 @@ def test_async_concurrent_same_key_across_event_loops(
 
     def tracking_claim(
         cache: cache_utils.Cache[Any], value_key: str
-    ) -> tuple[concurrent.futures.Future[None], bool]:
+    ) -> cache_utils.AsyncComputeClaim:
         claim = original_claim(cache, value_key)
         if not claim[1]:
             waiter_registered.set()
@@ -204,7 +204,7 @@ def test_async_failed_owner_wakes_waiter(
 
         def tracking_claim(
             cache: cache_utils.Cache[Any], value_key: str
-        ) -> tuple[concurrent.futures.Future[None], bool]:
+        ) -> cache_utils.AsyncComputeClaim:
             claim = original_claim(cache, value_key)
             if not claim[1]:
                 waiter_registered.set()
@@ -254,7 +254,7 @@ def test_async_cancelled_owner_wakes_waiter(
 
         def tracking_claim(
             cache: cache_utils.Cache[Any], value_key: str
-        ) -> tuple[concurrent.futures.Future[None], bool]:
+        ) -> cache_utils.AsyncComputeClaim:
             claim = original_claim(cache, value_key)
             if not claim[1]:
                 waiter_registered.set()
@@ -303,7 +303,7 @@ def test_async_cancelled_waiter_does_not_cancel_shared_compute(
 
         def tracking_claim(
             cache: cache_utils.Cache[Any], value_key: str
-        ) -> tuple[concurrent.futures.Future[None], bool]:
+        ) -> cache_utils.AsyncComputeClaim:
             nonlocal waiter_count
             claim = original_claim(cache, value_key)
             if not claim[1]:
@@ -421,7 +421,7 @@ def test_waiter_retries_after_in_flight_async_write_is_cleared(
 
         def tracking_claim(
             cache: cache_utils.Cache[Any], value_key: str
-        ) -> tuple[concurrent.futures.Future[None], bool]:
+        ) -> cache_utils.AsyncComputeClaim:
             claim = original_claim(cache, value_key)
             if not claim[1]:
                 waiter_registered.set()
@@ -433,10 +433,11 @@ def test_waiter_retries_after_in_flight_async_write_is_cleared(
         async def load() -> int:
             nonlocal calls
             calls += 1
-            if calls == 1:
+            call_number = calls
+            if call_number == 1:
                 computation_started.set()
                 await allow_computation_to_finish.wait()
-            return calls
+            return call_number
 
         owner = asyncio.create_task(load())
         await computation_started.wait()
@@ -444,11 +445,17 @@ def test_waiter_retries_after_in_flight_async_write_is_cleared(
         await asyncio.wait_for(waiter_registered.wait(), timeout=1)
 
         load.clear()
-        allow_computation_to_finish.set()
-        results = await asyncio.gather(owner, waiter)
-        return results, calls
+        post_clear_caller = asyncio.create_task(load())
+        replacement_results = await asyncio.wait_for(
+            asyncio.gather(waiter, post_clear_caller), timeout=1
+        )
+        assert not owner.done()
 
-    assert asyncio.run(main()) == ([1, 2], 2)
+        allow_computation_to_finish.set()
+        owner_result = await owner
+        return [owner_result, *replacement_results], calls
+
+    assert asyncio.run(main()) == ([1, 2, 2], 2)
 
 
 @pytest.mark.timeout(5)

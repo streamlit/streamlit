@@ -133,6 +133,11 @@ class CacheInvalidationToken:
     key_generation: int
 
 
+AsyncComputeClaim: TypeAlias = tuple[
+    concurrent.futures.Future[None], bool, CacheInvalidationToken | None
+]
+
+
 def _warn_background_refresh_ttl_multiplier(configured: object, reason: str) -> None:
     """Warn that the TTL multiplier is being ignored, once per distinct value.
 
@@ -491,18 +496,19 @@ class Cache(Generic[R]):
         with self._value_locks_lock:
             return self._value_locks[value_key]
 
-    def claim_async_compute(
-        self, value_key: str
-    ) -> tuple[concurrent.futures.Future[None], bool]:
-        """Return the same-key async computation signal and whether this caller owns it."""
+    def claim_async_compute(self, value_key: str) -> AsyncComputeClaim:
+        """Claim a same-key async computation and capture its invalidation token."""
         with self._async_compute_futures_lock:
             future = self._async_compute_futures.get(value_key)
             if future is not None:
-                return future, False
+                return future, False, None
 
             future = concurrent.futures.Future()
             self._async_compute_futures[value_key] = future
-            return future, True
+            # Capturing while the claim lock is held makes this owner either entirely
+            # before a clear (and therefore invalidated) or entirely after it.
+            invalidation_token = self.capture_invalidation_token(value_key)
+            return future, True, invalidation_token
 
     def complete_async_compute(
         self, value_key: str, future: concurrent.futures.Future[None]
@@ -512,6 +518,14 @@ class Cache(Generic[R]):
             if self._async_compute_futures.get(value_key) is not future:
                 return
             del self._async_compute_futures[value_key]
+        self._wake_async_compute_waiters(future)
+
+    @staticmethod
+    def _wake_async_compute_waiters(
+        future: concurrent.futures.Future[None],
+    ) -> None:
+        """Complete an async computation signal without masking the owner result."""
+        with contextlib.suppress(concurrent.futures.InvalidStateError):
             future.set_result(None)
 
     def clear(self, key: str | None = None) -> None:
@@ -524,16 +538,28 @@ class Cache(Generic[R]):
                 self._value_locks.clear()
             elif key in self._value_locks:
                 del self._value_locks[key]
-        with self._invalidation_lock:
+        with self._async_compute_futures_lock:
             if not key:
-                # A whole-cache clear invalidates every earlier in-flight write.
-                self._generation += 1
-                self._refresh_cooldowns.clear()
-                self._key_generations.clear()
+                retired_futures = list(self._async_compute_futures.values())
+                self._async_compute_futures.clear()
             else:
-                # A per-key clear invalidates only earlier writes for this key.
-                self._key_generations[key] = self._key_generations.get(key, 0) + 1
-                self._refresh_cooldowns.pop(key, None)
+                retired_future = self._async_compute_futures.pop(key, None)
+                retired_futures = [retired_future] if retired_future is not None else []
+
+            # Use the same lock ordering as claim_async_compute so claiming ownership
+            # and advancing the generation are atomic with respect to each other.
+            with self._invalidation_lock:
+                if not key:
+                    # A whole-cache clear invalidates every earlier in-flight write.
+                    self._generation += 1
+                    self._refresh_cooldowns.clear()
+                    self._key_generations.clear()
+                else:
+                    # A per-key clear invalidates only earlier writes for this key.
+                    self._key_generations[key] = self._key_generations.get(key, 0) + 1
+                    self._refresh_cooldowns.pop(key, None)
+        for retired_future in retired_futures:
+            self._wake_async_compute_waiters(retired_future)
         self._clear(key=key)
 
     @abstractmethod
@@ -934,7 +960,9 @@ class CachedFunc(Generic[P, R]):
         owner wakes waiters, and one waiter retries the computation.
         """
         while True:
-            compute_future, is_owner = cache.claim_async_compute(value_key)
+            compute_future, is_owner, invalidation_token = cache.claim_async_compute(
+                value_key
+            )
             if not is_owner:
                 # Shield the shared signal because cancelling one task otherwise
                 # propagates through wrap_future and cancels it for the owner and all
@@ -958,10 +986,11 @@ class CachedFunc(Generic[P, R]):
                 else:
                     return self._handle_cache_hit(cached_result)
 
-                # Capturing under the invalidation lock is the computation's
-                # linearization point. A clear after this point invalidates the write;
-                # a clear before it belongs to the generation being computed.
-                invalidation_token = cache.capture_invalidation_token(value_key)
+                # Owners capture their invalidation token atomically with the claim.
+                if invalidation_token is None:
+                    raise RuntimeError(
+                        "Async computation owner has no invalidation token"
+                    )
                 with self._info.cached_message_replay_ctx.calling_cached_function(
                     self._info.func
                 ):
