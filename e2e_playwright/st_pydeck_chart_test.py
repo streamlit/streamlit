@@ -76,7 +76,9 @@ def test_empty_chart(themed_app: Page, assert_snapshot: ImageCompareFunction) ->
 def test_basic_chart(themed_app: Page, assert_snapshot: ImageCompareFunction) -> None:
     pydeck_charts = select_subtest(themed_app, "basic_chart_subtest")
 
-    expect(pydeck_charts.get_by_test_id("stDeckGlJsonChartZoomButton")).to_be_visible()
+    wait_for_chart_canvas(pydeck_charts.nth(0))
+    # Wrapper is position:absolute with no intrinsic size, so it is not "visible".
+    expect(pydeck_charts.get_by_role("button", name="Zoom In")).to_be_visible()
 
     # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
