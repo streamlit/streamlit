@@ -244,13 +244,17 @@ message CustomThemeConfig {
   optional string metric_value_font_size = 64;
   optional int32 metric_value_font_weight = 65;
 
+  // Multiplier for rem-based spacing tokens and min control height.
+  // < 1 is more compact; > 1 is roomier. Unset uses the default (1.0).
+  optional double spacing_scale = 66;
+
   // Theme sections:
   optional CustomThemeConfig sidebar = 24;
   optional CustomThemeConfig light = 60;
   optional CustomThemeConfig dark = 61;
 
   reserved 5, 7, 8, 9, 16, 17;
-  // Next ID: 66
+  // Next ID: 67
 }
 
 message FontFace {
