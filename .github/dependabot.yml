@@ -48,12 +48,15 @@ updates:
         # Our Yarn patch only applies to color2k 2.0.3.
         versions: [">=2.0.4"]
       - dependency-name: "katex"
-        # KaTeX 0.18 prefixed its internal CSS class names, which no longer
-        # match the markup produced by rehype-katex (it bundles katex 0.16.x).
-        # We only use the direct katex dependency for its stylesheet, so it must
-        # stay compatible with rehype-katex. Keep it below 0.18 until
-        # rehype-katex ships a katex 0.18-compatible release.
-        versions: [">=0.18.0"]
+        # We only use the direct katex dependency for its stylesheet; the JS that
+        # renders math comes from rehype-katex and mermaid, which both resolve
+        # 0.16.x. Holding the stylesheet on the same version keeps a single copy
+        # of katex in the bundle instead of two, and guarantees the CSS matches
+        # the markup the renderer emits. That guarantee is not theoretical:
+        # KaTeX 0.18 prefixed its internal class names, which would no longer
+        # match rehype-katex's markup at all. Raise this only together with
+        # rehype-katex and mermaid.
+        versions: [">=0.17.0"]
 
     groups:
       deck-gl:
