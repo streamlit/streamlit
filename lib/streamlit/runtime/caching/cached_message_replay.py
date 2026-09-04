@@ -155,6 +155,7 @@ class CachedMessageReplayContext:
     @property
     def _most_recent_messages(self) -> list[MsgData]:
         messages = self._most_recent_messages_var.get()
+        # Copy so CachedResult cannot share a mutable list with this context.
         return list(messages) if messages is not None else []
 
     @property
