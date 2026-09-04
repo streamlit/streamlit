@@ -705,7 +705,9 @@ class CachedFunc(Generic[P, R]):
         if self._info.is_async:
             # For a coroutine function, return an awaitable. Awaiting it performs the
             # cache lookup and, on a miss, awaits the underlying coroutine and caches
-            # its awaited result. For an `async def`, the wrapper's return type `R` is
+            # For a coroutine function, return an awaitable. Awaiting it performs the
+            # cache lookup and, on a miss, awaits the underlying coroutine and caches
+            # its awaited result.
             # itself the coroutine type, so the cast is accurate.
             return cast(
                 "R",
