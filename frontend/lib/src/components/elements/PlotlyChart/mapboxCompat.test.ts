@@ -118,7 +118,7 @@ describe("migratePlotlyMapboxFigure", () => {
     })
   })
 
-  it("warns when a custom Mapbox style URL cannot be migrated", () => {
+  it("falls back to basic when a custom Mapbox style URL cannot be migrated", () => {
     const warnSpy = vi.spyOn(LOG, "warn").mockImplementation(() => {})
 
     const figure = migratePlotlyMapboxFigure({
@@ -130,11 +130,12 @@ describe("migratePlotlyMapboxFigure", () => {
     })
 
     expect(figure.layout).toEqual({
-      map: { style: "mapbox://styles/myuser/custom-style" },
+      map: { style: "basic" },
     })
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("mapbox://styles/myuser/custom-style")
     )
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("basic"))
 
     warnSpy.mockRestore()
   })
@@ -151,6 +152,37 @@ describe("migratePlotlyMapboxFigure", () => {
 
     expect(figure.layout).toEqual({
       map: { style: "dark" },
+    })
+  })
+
+  it("rewrites styles on already-named layout.map subplots", () => {
+    const figure = migratePlotlyMapboxFigure({
+      data: [{ type: "scattermap" }],
+      layout: {
+        map: { style: "mapbox://styles/mapbox/light-v10" },
+        map2: { style: "stamen-toner" },
+      },
+      frames: null,
+    })
+
+    expect(figure.layout).toEqual({
+      map: { style: "light" },
+      map2: { style: "carto-positron" },
+    })
+  })
+
+  it("rewrites a mapbox URL on layout.map even when mapbox is also present", () => {
+    const figure = migratePlotlyMapboxFigure({
+      data: [],
+      layout: {
+        map: { style: "mapbox://styles/mapbox/light-v10" },
+        mapbox: { style: "dark", accesstoken: "secret" },
+      },
+      frames: null,
+    })
+
+    expect(figure.layout).toEqual({
+      map: { style: "light" },
     })
   })
 
@@ -190,6 +222,27 @@ describe("migratePlotlyMapboxFigure", () => {
       },
     ])
   })
+
+  it("does not let a migrated template mapbox key overwrite scattermap", () => {
+    const figure = migratePlotlyMapboxFigure({
+      data: [],
+      layout: {
+        template: {
+          data: {
+            scattermap: [{ marker: { size: 4 } }],
+            scattermapbox: [{ marker: { size: 12 } }],
+          },
+        },
+      },
+      frames: null,
+    })
+
+    expect(figure.layout).toEqual({
+      template: {
+        data: { scattermap: [{ marker: { size: 4 } }] },
+      },
+    })
+  })
 })
 
 describe("migratePlotlyMapboxConfig", () => {
@@ -207,6 +260,22 @@ describe("migratePlotlyMapboxConfig", () => {
       displaylogo: false,
       modeBarButtonsToRemove: ["zoomInMap", "lasso2d"],
       modeBarButtonsToAdd: [{ name: "resetViewMap" }],
+    })
+  })
+
+  it("rewrites nested custom modeBarButtons names", () => {
+    expect(
+      migratePlotlyMapboxConfig({
+        modeBarButtons: [
+          ["zoomInMapbox", "zoomOutMapbox"],
+          [{ name: "resetViewMapbox" }, "toImage"],
+        ],
+      })
+    ).toEqual({
+      modeBarButtons: [
+        ["zoomInMap", "zoomOutMap"],
+        [{ name: "resetViewMap" }, "toImage"],
+      ],
     })
   })
 

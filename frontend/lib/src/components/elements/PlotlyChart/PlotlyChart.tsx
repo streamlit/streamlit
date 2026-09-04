@@ -153,12 +153,9 @@ export function PlotlyChart({
     element.selectionMode.includes(PlotlyChartProto.SelectionMode.POINTS)
 
   const plotlyConfig = useMemo(() => {
-    if (!element.config) {
-      // If there is no config, return an empty object
-      return {}
-    }
-
-    const config = migratePlotlyMapboxConfig(JSON.parse(element.config))
+    const config = migratePlotlyMapboxConfig(
+      element.config ? JSON.parse(element.config) : {}
+    )
 
     // Customize the plotly toolbar:
     if (!disableFullscreenMode) {

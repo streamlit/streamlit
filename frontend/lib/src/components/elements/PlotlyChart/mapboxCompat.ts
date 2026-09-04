@@ -95,10 +95,13 @@ function migrateMapboxSubplotId(id: unknown): unknown {
   return id
 }
 
+/** plotly.js v4 `styleValueDflt` when a Mapbox style cannot be mapped. */
+const FALLBACK_MAP_STYLE = "basic"
+
 /**
  * Map official Mapbox style URLs and v3-only Stamen names to built-in
- * MapLibre styles. Custom `mapbox://` URLs and unknown removed names are
- * left unchanged, with a warning because MapLibre treats them as style URLs.
+ * MapLibre styles. Custom `mapbox://` URLs cannot be fetched by MapLibre,
+ * so they fall back to `basic` after a warning so traces stay visible.
  */
 function migrateMapboxStyle(style: unknown): unknown {
   if (typeof style !== "string") {
@@ -123,9 +126,12 @@ function migrateMapboxStyle(style: unknown): unknown {
   if (style.startsWith("mapbox://")) {
     LOG.warn(
       `Plotly map style "${style}" is not supported by plotly.js v4 ` +
-        `(MapLibre). Use a built-in style such as "open-street-map", ` +
-        `"carto-positron", "carto-darkmatter", or "carto-voyager".`
+        `(MapLibre). Falling back to "${FALLBACK_MAP_STYLE}" so map ` +
+        `traces stay visible. Use a built-in style such as ` +
+        `"open-street-map", "carto-positron", "carto-darkmatter", ` +
+        `or "carto-voyager".`
     )
+    return FALLBACK_MAP_STYLE
   }
 
   return style
@@ -142,6 +148,35 @@ function migrateMapboxSubplot(value: unknown): Record<string, unknown> {
   return mapLayout
 }
 
+function migrateTemplateData(
+  data: Record<string, unknown>
+): Record<string, unknown> {
+  const next: Record<string, unknown> = {}
+  const pending: Array<[string, unknown]> = []
+
+  for (const [traceType, traces] of Object.entries(data)) {
+    const migratedTraces = Array.isArray(traces)
+      ? traces.map(trace => migratePlotlyMapboxTrace(trace))
+      : traces
+    const migratedType = MAPBOX_TRACE_TYPES[traceType]
+    if (migratedType) {
+      pending.push([migratedType, migratedTraces])
+    } else {
+      next[traceType] = migratedTraces
+    }
+  }
+
+  // Keep existing v4 template keys. Only add a migrated mapbox key when
+  // the target is absent so scattermapbox cannot overwrite scattermap.
+  for (const [traceType, traces] of pending) {
+    if (!(traceType in next)) {
+      next[traceType] = traces
+    }
+  }
+
+  return next
+}
+
 function migrateTemplate(
   template: Record<string, unknown>
 ): Record<string, unknown> {
@@ -150,15 +185,7 @@ function migrateTemplate(
     next.layout = migratePlotlyMapboxLayout(next.layout)
   }
   if (isRecord(next.data)) {
-    next.data = Object.fromEntries(
-      Object.entries(next.data).map(([traceType, traces]) => {
-        const migratedType = MAPBOX_TRACE_TYPES[traceType] ?? traceType
-        const migratedTraces = Array.isArray(traces)
-          ? traces.map(trace => migratePlotlyMapboxTrace(trace))
-          : traces
-        return [migratedType, migratedTraces]
-      })
-    )
+    next.data = migrateTemplateData(next.data)
   }
   return next
 }
@@ -172,6 +199,10 @@ function migratePlotlyMapboxLayout(
   for (const [key, value] of Object.entries(layout)) {
     if (key === "mapbox" || /^mapbox\d+$/.test(key)) {
       pendingMaps.push([migrateMapboxSubplotId(key) as string, value])
+      continue
+    }
+    if (key === "map" || /^map\d+$/.test(key)) {
+      next[key] = migrateMapboxSubplot(value)
       continue
     }
     if (key === "template" && isRecord(value)) {
@@ -239,6 +270,17 @@ function migrateModeBarButton(button: unknown): unknown {
   return button
 }
 
+function migrateModeBarButtons(buttons: unknown): unknown {
+  if (!Array.isArray(buttons)) {
+    return buttons
+  }
+  return buttons.map(button =>
+    Array.isArray(button)
+      ? migrateModeBarButtons(button)
+      : migrateModeBarButton(button)
+  )
+}
+
 /**
  * Rewrite a plotly.js v3 Mapbox figure to the v4 MapLibre `map` API
  * while preserving already-migrated values.
@@ -272,10 +314,13 @@ export function migratePlotlyMapboxConfig<T extends object>(config: T): T {
     next.scrollZoom = next.scrollZoom.replaceAll("mapbox", "map")
   }
 
-  for (const key of ["modeBarButtonsToRemove", "modeBarButtonsToAdd"]) {
-    const buttons = next[key]
-    if (Array.isArray(buttons)) {
-      next[key] = buttons.map(migrateModeBarButton)
+  for (const key of [
+    "modeBarButtonsToRemove",
+    "modeBarButtonsToAdd",
+    "modeBarButtons",
+  ]) {
+    if (key in next) {
+      next[key] = migrateModeBarButtons(next[key])
     }
   }
 

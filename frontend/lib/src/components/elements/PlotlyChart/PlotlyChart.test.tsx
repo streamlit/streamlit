@@ -482,7 +482,7 @@ describe("PlotlyChart Component", () => {
     ).toBeUndefined()
   })
 
-  it("uses an empty plotly config when the element has no config", () => {
+  it("hides sharing when the element has no config", () => {
     const element = new PlotlyChartProto({
       ...DEFAULT_ELEMENT,
       config: "",
@@ -490,8 +490,10 @@ describe("PlotlyChart Component", () => {
     renderComponent({ element })
 
     const lastCallProps = getLastPlotProps()
-    expect(lastCallProps.config?.modeBarButtonsToAdd).toBeUndefined()
-    expect(lastCallProps.config?.modeBarButtonsToRemove).toBeUndefined()
+    expect(lastCallProps.config?.showSendToCloud).toBe(false)
+    expect(lastCallProps.config?.modeBarButtonsToRemove).toEqual(
+      expect.arrayContaining(["sendChartToCloud"])
+    )
   })
 
   it("collapses fullscreen from the plotly toolbar", () => {
