@@ -153,7 +153,7 @@ describe("Radio widget", () => {
 
     // Blank captions render nothing, so they cannot claim the description slot
     // and point aria-describedby at empty content.
-    expect(screen.getAllByTestId("stCaptionContainer")).toHaveLength(1)
+    expect(screen.getAllByTestId("stRadioCaption")).toHaveLength(1)
     expect(screen.getByText("caption1")).toBeVisible()
   })
 

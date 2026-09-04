@@ -23,7 +23,7 @@ markdown_options = (
     "*italics text*",
     "~strikethrough text~",
     "shortcode: :blush:",
-    # link should not work when used as an option label (it does work in a caption)
+    # Links in option labels are non-navigable; caption links can navigate.
     "[link text](www.example.com)",
     "`code text`",
     ":red[red] :blue[blue] :green[green] :violet[violet] :orange[orange]",

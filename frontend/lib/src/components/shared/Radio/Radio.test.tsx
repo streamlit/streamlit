@@ -149,19 +149,28 @@ describe("Radio widget", () => {
     const props = getProps({ captions: ["caption1", "", "caption2"] })
     render(<Radio {...props} />)
 
-    // A blank caption renders nothing, so it cannot claim the description slot
-    // and point aria-describedby at empty content.
-    expect(screen.getAllByTestId("stCaptionContainer")).toHaveLength(2)
+    // Counts the caption element, not StreamlitMarkdown's container: a spacer
+    // renders caption-styled markdown too.
+    expect(screen.getAllByTestId("stRadioCaption")).toHaveLength(2)
 
     expect(screen.getByText("caption1")).toBeVisible()
     expect(screen.getByText("caption2")).toBeVisible()
   })
 
-  it("exposes a caption as the option's accessible description", () => {
-    const props = getProps({ captions: ["fast", "slow", "medium"] })
+  it("describes an option with the caption's rendered text, not its markdown", () => {
+    const props = getProps({ captions: ["**fast**", "slow", "medium"] })
     render(<Radio {...props} />)
 
     expect(screen.getAllByRole("radio")[0]).toHaveAccessibleDescription("fast")
+  })
+
+  it("leaves captions inert when there are no options", () => {
+    const props = getProps({ options: [], captions: ["hi"] })
+    render(<Radio {...props} />)
+
+    // The placeholder option is ours, not the user's, so nothing captions it.
+    expect(screen.queryAllByTestId("stRadioCaption")).toHaveLength(0)
+    expect(screen.getAllByRole("radio")[0]).not.toHaveAccessibleDescription()
   })
 
   it("keeps a caption out of the option's accessible name", () => {
@@ -213,16 +222,6 @@ describe("Radio widget", () => {
     ).not.toBeInTheDocument()
     expect(screen.queryAllByTestId("stRadioCaption")).toHaveLength(0)
     expect(screen.getAllByRole("radio")[0]).not.toHaveAccessibleDescription()
-  })
-
-  it("renders no caption spacer in vertical groups", () => {
-    const props = getProps({ horizontal: false, captions: ["Opt in", "", ""] })
-    render(<Radio {...props} />)
-
-    // Vertical rows stack from the top, so nothing needs its space reserved.
-    expect(
-      screen.queryByTestId("stRadioCaptionSpacer")
-    ).not.toBeInTheDocument()
   })
 
   it.each([
@@ -284,30 +283,26 @@ describe("Radio widget", () => {
     expect(screen.getAllByTestId("stCaptionContainer")).toHaveLength(1)
   })
 
-  it("gives an option with a blank caption no description", () => {
-    const props = getProps({ captions: ["fast", "", "medium"] })
-    render(<Radio {...props} />)
-    const radioOptions = screen.getAllByRole("radio")
+  it.each(["", " "])(
+    "gives an option no description when its caption is %j",
+    blank => {
+      const props = getProps({ captions: ["fast", blank, "medium"] })
+      render(<Radio {...props} />)
+      const radioOptions = screen.getAllByRole("radio")
 
-    expect(radioOptions[1]).not.toHaveAccessibleDescription()
-    expect(radioOptions[1]).toHaveAccessibleName("b")
-  })
-
-  it("ignores a whitespace-only caption", () => {
-    const props = getProps({ captions: [" ", "slow", "medium"] })
-    render(<Radio {...props} />)
-
-    // Python preserves whitespace strings, which would otherwise claim the
-    // description slot and describe the option with nothing.
-    expect(screen.getAllByRole("radio")[0]).not.toHaveAccessibleDescription()
-    expect(screen.queryAllByTestId("stRadioCaption")).toHaveLength(2)
-  })
+      // The backend passes whitespace through unchanged, so both spellings of
+      // "no caption" must stay out of aria-describedby.
+      expect(radioOptions[1]).not.toHaveAccessibleDescription()
+      expect(radioOptions[1]).toHaveAccessibleName("b")
+      expect(screen.getAllByTestId("stRadioCaption")).toHaveLength(2)
+    }
+  )
 
   it("has the correct captions", () => {
     const props = getProps({ captions: ["caption1", "caption2", "caption3"] })
     render(<Radio {...props} />)
 
-    expect(screen.getAllByTestId("stCaptionContainer")).toHaveLength(3)
+    expect(screen.getAllByTestId("stRadioCaption")).toHaveLength(3)
 
     props.captions.forEach(caption => {
       expect(screen.getByText(caption)).toBeInTheDocument()

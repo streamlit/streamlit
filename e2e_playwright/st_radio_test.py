@@ -114,7 +114,7 @@ def test_help_tooltip_works(app: Page):
     expect_help_tooltip(app, element_with_help, "help text")
 
 
-def test_captions_describe_options_without_being_click_targets(app: Page):
+def test_captions_are_option_descriptions_not_labels(app: Page):
     """Captions reach assistive tech as descriptions, not as part of the name."""
     with_captions = get_radio(app, "radio 10 (with captions)")
 
@@ -135,34 +135,36 @@ def test_captions_describe_options_without_being_click_targets(app: Page):
     )
 
     # The caption is reachable instead through aria-describedby.
-    option_a = get_radio_option(with_captions, "A").locator("input")
+    option_a = get_radio_option(with_captions, "A").get_by_role("radio")
     caption_a = with_captions.get_by_test_id("stRadioCaption").filter(
         has_text="bold text"
     )
     expect(caption_a).to_have_text("bold text")
+    expect(caption_a).to_have_attribute("id", re.compile(r"\S"))
+    caption_id = caption_a.get_attribute("id")
+    assert caption_id is not None  # narrowed for the type checker
     # Match the caption's id as one entry rather than the whole value, so a
     # group-level description added later cannot break this.
-    caption_id = re.escape(caption_a.get_attribute("id") or "")
     expect(option_a).to_have_attribute(
-        "aria-describedby", re.compile(rf"(^|\s){caption_id}(\s|$)")
+        "aria-describedby", re.compile(rf"(^|\s){re.escape(caption_id)}(\s|$)")
     )
 
     # An empty caption must not point the description at blank content.
     horizontal = get_radio(app, "radio 11 (horizontal, captions)")
     # "maybe" is the option whose caption is "".
-    no_caption = get_radio_option(horizontal, "maybe").locator("input")
+    no_caption = get_radio_option(horizontal, "maybe").get_by_role("radio")
     expect(no_caption).not_to_have_attribute("aria-describedby")
 
     # A sibling in the same group still gets one, so the check above is not just
     # observing a group-wide absence.
-    with_caption = get_radio_option(horizontal, "yes").locator("input")
+    with_caption = get_radio_option(horizontal, "yes").get_by_role("radio")
     expect(with_caption).to_have_attribute("aria-describedby", re.compile(r"\S"))
 
     # The caption is not a click target: it is supplementary text outside the
     # label, so clicking it must leave the selection alone. Assert the input's
     # checked state, not the written value: a regression would trigger a rerun,
     # during which the value still reads "A".
-    option_b = get_radio_option(with_captions, "B").locator("input")
+    option_b = get_radio_option(with_captions, "B").get_by_role("radio")
     with_captions.get_by_text("italics text").click()
     expect(option_b).not_to_be_checked()
     expect(option_a).to_be_checked()
@@ -173,13 +175,23 @@ def test_captions_describe_options_without_being_click_targets(app: Page):
     wait_for_app_run(app)
     expect(option_b).to_be_checked()
 
-    # A link in a caption is a real anchor. Inside the label React Aria's
-    # preventDefault cancelled its navigation; outside it, nothing does.
-    expect(
-        with_captions.get_by_test_id("stRadioCaption").get_by_role(
-            "link", name="link text"
-        )
-    ).to_have_attribute("href", re.compile(r"example\.com"))
+    # Caption links stay navigable because captions sit outside the option label,
+    # where React Aria cancels clicks. Assert the click survives uncancelled
+    # rather than the href, which would pass even when navigation is blocked.
+    # Reads defaultPrevented on document, after React's delegated handlers, then
+    # suppresses the navigation itself — the same trick st_link_button_test.py
+    # uses to avoid flaky popups.
+    caption_link = with_captions.get_by_test_id("stRadioCaption").get_by_role(
+        "link", name="link text"
+    )
+    app.evaluate(
+        "() => document.addEventListener('click', e => {"
+        "  window.__captionLinkPrevented = e.defaultPrevented;"
+        "  e.preventDefault();"
+        "}, {once: true})"
+    )
+    caption_link.click()
+    assert app.evaluate("() => window.__captionLinkPrevented") is False
 
     # Caption and option text are both selectable: neither carries a user-select
     # rule. Check option A, not the B just clicked — react-aria's usePress sets

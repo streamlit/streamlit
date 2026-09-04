@@ -81,14 +81,13 @@ function Radio({
   const hasOptions = options.length > 0
   const cleanedOptions = hasOptions ? options : ["No options to select."]
 
-  // Gates the vertical group's gap and the horizontal spacers, so it has to mean
-  // "some option actually shows a caption". Captioning only part of a group is
-  // supported, and `captions` may be any length, so blank entries and entries
-  // past the last option are both ignored — otherwise a group with nothing to
-  // show still reserves the space for it.
-  const hasCaptions = captions
-    .slice(0, cleanedOptions.length)
-    .some(caption => caption.trim() !== "")
+  // `captions` can be any length, and the no-options placeholder is ours rather
+  // than a user option — so only entries lining up with a real option apply.
+  const optionCaptions = captions.slice(0, options.length)
+
+  // Blank entries do not count, so a group with nothing to show reserves no
+  // caption space.
+  const hasCaptions = optionCaptions.some(caption => caption.trim() !== "")
 
   // Either the user specified it as disabled or it's disabled because we don't have any options
   const shouldDisable = disabled || !hasOptions
@@ -119,16 +118,16 @@ function Radio({
         $hasCaptions={hasCaptions}
       >
         {cleanedOptions.map((option: string, index: number) => {
-          // A missing or whitespace-only caption counts as no caption: `captions`
-          // need not be as long as `options`, and the backend passes whitespace
+          // A missing or whitespace-only caption counts as no caption: captioning
+          // only part of a group is supported, and the backend passes whitespace
           // through unchanged. Either would otherwise point `aria-describedby` at
           // content with nothing to announce.
-          const rawCaption = captions[index] ?? ""
+          const rawCaption = optionCaptions[index] ?? ""
           const caption = rawCaption.trim() === "" ? "" : rawCaption
 
           // In a horizontal group, an option without a caption still needs that
           // vertical space reserved, or its label stops lining up with the
-          // captioned options'.
+          // captioned ones.
           const needsSpacer = caption === "" && horizontal && hasCaptions
 
           return (
