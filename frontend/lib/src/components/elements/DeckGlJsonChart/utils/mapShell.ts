@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { MapView } from "@deck.gl/core"
+import { MapView, View } from "@deck.gl/core"
 
 import { isNullOrUndefined } from "~lib/util/utils"
 
@@ -77,21 +77,38 @@ export function isMapCompatibleViewSpec(views: unknown): boolean {
 }
 
 /**
+ * Real deck.gl View instances from the converted spec.
+ *
+ * Unknown `@@type` values hydrate to `null`. Those must not be forwarded to
+ * DeckGL, which would skip the default MapView fallback.
+ *
+ * @param {unknown} views - Converted `views` from the JSON converter.
+ * @returns {View | View[] | undefined} Usable views, or undefined when none exist.
+ */
+export function getProvidedViews(views: unknown): View | View[] | undefined {
+  const viewList = (Array.isArray(views) ? views : [views]).filter(
+    (view): view is View => view instanceof View
+  )
+
+  if (viewList.length === 0) {
+    return undefined
+  }
+
+  if (!Array.isArray(views) && viewList.length === 1) {
+    return viewList[0]
+  }
+
+  return viewList
+}
+
+/**
  * True when pydeck provided at least one view that DeckGL should receive.
  *
  * @param {unknown} views - Converted `views` from the JSON converter.
  * @returns {boolean} Whether `<DeckGL>` should take a `views` prop.
  */
 export function hasProvidedViews(views: unknown): boolean {
-  if (isNullOrUndefined(views)) {
-    return false
-  }
-
-  if (Array.isArray(views)) {
-    return views.length > 0
-  }
-
-  return true
+  return getProvidedViews(views) !== undefined
 }
 
 /**

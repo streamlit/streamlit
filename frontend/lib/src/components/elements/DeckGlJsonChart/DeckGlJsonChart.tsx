@@ -45,7 +45,7 @@ import {
 } from "./styled-components"
 import type { DeckGlElementState, DeckGLProps } from "./types"
 import { EMPTY_STATE, useDeckGl } from "./useDeckGl"
-import { hasProvidedViews, shouldShowBasemap } from "./utils/mapShell"
+import { getProvidedViews, shouldShowBasemap } from "./utils/mapShell"
 
 registerLoaders([CSVLoader, GLTFLoader])
 
@@ -96,11 +96,11 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   const usesMapbox =
     deck.mapProvider == "mapbox" ||
     (deck?.mapStyle && deck.mapStyle?.indexOf("mapbox") >= 0)
+  const providedViews = getProvidedViews(deck.views)
   const showBasemap = shouldShowBasemap({
-    views: deck.views,
+    views: providedViews,
     mapStyle: deck.mapStyle,
   })
-  const hasViews = hasProvidedViews(deck.views)
 
   const [isInitialized, setIsInitialized] = useState(false)
 
@@ -252,8 +252,10 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
             // @ts-expect-error There is a type mismatch due to our versions of the libraries
             ContextProvider={MapContext.Provider}
             parameters={deck.parameters}
-            views={hasViews ? deck.views : undefined}
-            controller={!hasViews}
+            views={providedViews}
+            // Deck copies a truthy controller onto views[0], which double-binds
+            // pydeck's View.controller. Omit that when the spec already has views.
+            controller={!providedViews}
             onClick={
               isSelectionModeActivated && !disabled ? handleClick : undefined
             }

@@ -17,6 +17,7 @@
 import { MapView, OrbitView } from "@deck.gl/core"
 
 import {
+  getProvidedViews,
   hasProvidedViews,
   isMapCompatibleViewSpec,
   isUnsetMapStyle,
@@ -84,6 +85,17 @@ describe("hasProvidedViews", () => {
   it("is true when a view instance or non-empty array is present", () => {
     expect(hasProvidedViews(new MapView({ controller: true }))).toBe(true)
     expect(hasProvidedViews([new OrbitView({ controller: true })])).toBe(true)
+  })
+
+  it("ignores converter failures so DeckGL can fall back to MapView", () => {
+    expect(hasProvidedViews([null])).toBe(false)
+    expect(getProvidedViews([null])).toBeUndefined()
+    expect(
+      shouldShowBasemap({
+        views: getProvidedViews([null]),
+        mapStyle: "mapbox://styles/mapbox/light-v9",
+      })
+    ).toBe(true)
   })
 })
 

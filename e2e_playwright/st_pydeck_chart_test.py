@@ -220,9 +220,8 @@ def test_orbit_point_cloud(
 ) -> None:
     pydeck_charts = select_subtest(themed_app, "orbit_point_cloud_subtest")
 
-    expect(pydeck_charts.get_by_test_id("stDeckGlJsonChartZoomButton")).to_have_count(0)
-
     wait_for_chart_canvas(pydeck_charts.nth(0))
+    expect(pydeck_charts.get_by_test_id("stDeckGlJsonChartZoomButton")).to_have_count(0)
     assert_snapshot(
         pydeck_charts.nth(0),
         name="st_pydeck_chart-orbit_point_cloud",
@@ -235,9 +234,8 @@ def test_orbit_point_cloud(
 def test_globe_view(themed_app: Page, assert_snapshot: ImageCompareFunction) -> None:
     pydeck_charts = select_subtest(themed_app, "globe_view_subtest")
 
-    expect(pydeck_charts.get_by_test_id("stDeckGlJsonChartZoomButton")).to_have_count(0)
-
     wait_for_chart_canvas(pydeck_charts.nth(0))
+    expect(pydeck_charts.get_by_test_id("stDeckGlJsonChartZoomButton")).to_have_count(0)
     assert_snapshot(
         pydeck_charts.nth(0),
         name="st_pydeck_chart-globe_view",

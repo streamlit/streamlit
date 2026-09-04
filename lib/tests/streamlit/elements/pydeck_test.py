@@ -99,7 +99,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         assert actual["views"][0]["controller"] is True
         assert actual["parameters"]["cull"] is True
         assert actual.get("mapProvider") in {None, ""}
-        assert actual.get("mapStyle") in {None, "", "__MAP_STYLE__"}
+        assert actual["mapStyle"] == "__MAP_STYLE__"
         assert actual["initialViewState"]["target"] == [0, 0, 0]
         assert "latitude" not in actual["initialViewState"]
 
@@ -131,7 +131,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
 
         assert actual["views"][0]["@@type"] == view_type
         assert actual["parameters"]["cull"] is True
-        assert actual.get("mapStyle") in {None, "", "__MAP_STYLE__"}
+        assert actual["mapStyle"] == "__MAP_STYLE__"
 
     def test_with_tooltip(self):
         """Test that pydeck object with tooltip works."""
