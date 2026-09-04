@@ -180,13 +180,12 @@ class MarkdownMixin:
             expressions within ``body`` will be rendered.
 
             Adding custom HTML to your app impacts safety, styling, and
-            maintainability.
+            maintainability. Don't use this to build custom components or
+            inject custom CSS. Prefer native Streamlit features and advanced
+            theming instead. If custom CSS or HTML (without Markdown) is
+            necessary, use ``st.html``.
 
             ``unsafe_allow_html=True`` cannot be combined with ``wrap=False``.
-
-            .. note::
-                If you only want to insert HTML or CSS without Markdown text,
-                we recommend using ``st.html`` instead.
 
         help : str or None
             A tooltip that gets displayed next to the Markdown. If this is
@@ -321,13 +320,12 @@ class MarkdownMixin:
             expressions within ``body`` will be rendered.
 
             Adding custom HTML to your app impacts safety, styling, and
-            maintainability.
+            maintainability. Don't use this to build custom components or
+            inject custom CSS. Prefer native Streamlit features and advanced
+            theming instead. If custom CSS or HTML (without Markdown) is
+            necessary, use ``st.html``.
 
             ``unsafe_allow_html=True`` cannot be combined with ``wrap=False``.
-
-            .. note::
-                If you only want to insert HTML or CSS without Markdown text,
-                we recommend using ``st.html`` instead.
 
         help : str or None
             A tooltip that gets displayed next to the caption. If this is

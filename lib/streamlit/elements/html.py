@@ -64,6 +64,10 @@ class HtmlMixin:
         ``unsafe_allow_javascript=True``. Use this with caution and never pass
         untrusted input.
 
+        .. note::
+            Prefer native Streamlit features and advanced theming over custom
+            CSS or custom HTML components.
+
         Parameters
         ----------
         body : any
