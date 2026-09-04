@@ -151,6 +151,20 @@ def test_mapbox(themed_app: Page, assert_snapshot: ImageCompareFunction) -> None
 
 # Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
 @pytest.mark.only_browser("chromium")
+def test_layer_extensions(app: Page, assert_snapshot: ImageCompareFunction) -> None:
+    """st.pydeck_chart still renders layers that use @@type extensions."""
+    pydeck_charts = select_subtest(app, "layer_extensions_subtest")
+
+    wait_for_chart_canvas(pydeck_charts.nth(0))
+    assert_snapshot(
+        pydeck_charts.nth(0),
+        name="st_pydeck_chart-layer_extensions",
+        pixel_threshold=PIXEL_THRESHOLD,
+    )
+
+
+# Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
+@pytest.mark.only_browser("chromium")
 def test_width_parameter(app: Page, assert_snapshot: ImageCompareFunction) -> None:
     """Tests that width parameter works correctly."""
     pydeck_charts = select_subtest(app, "width_parameter_subtest")

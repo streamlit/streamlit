@@ -21,6 +21,7 @@ import {
   colorCategories,
   colorContinuous,
 } from "@deck.gl/carto"
+import * as deckExtensions from "@deck.gl/extensions"
 import * as geoLayers from "@deck.gl/geo-layers"
 import { JSONConverter } from "@deck.gl/json"
 import * as layers from "@deck.gl/layers"
@@ -33,6 +34,9 @@ const configuration = {
     ...geoLayers,
     ...meshLayers,
     ...CARTO_LAYERS,
+    ...deckExtensions,
+    // Alias _TerrainExtension so pydeck's @@type "TerrainExtension" resolves.
+    TerrainExtension: deckExtensions._TerrainExtension,
   },
   functions: {
     colorBins,
