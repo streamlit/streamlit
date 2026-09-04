@@ -226,7 +226,8 @@ class CachedMessageReplayContext:
             for capture in message_stack:
                 capture.messages.append(element_msg_data)
 
-        # Reset instance state, now that it has been used for the
+        # Reset this context's media buffer now that it has been attached
+        # to the associated element.
         # associated element.
         self._media_data_var.set(())
 
