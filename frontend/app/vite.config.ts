@@ -22,7 +22,8 @@ import appPackage from "./package.json" with { type: "json" }
 
 import react from "@vitejs/plugin-react-swc"
 
-import { katexWoff2Only } from "./vite/katexWoff2Only.ts"
+// Vite's native config loader requires the extension on relative imports.
+import { katexWoff2Only } from "./vite-plugins/katexWoff2Only.ts"
 
 const BASE = "./"
 const HASH = process.env.OMIT_HASH_FROM_MAIN_FILES ? "" : ".[hash]"
