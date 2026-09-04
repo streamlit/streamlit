@@ -771,7 +771,7 @@ class VegaChartsMixin:
               for three lines). You can also use built-in color names in the
               list (e.g. ``color=["red", "blue", "green"]``).
 
-            You can set the default colors in the ``theme.chartCategoryColors``
+            You can set the default colors in the ``theme.chartCategoricalColors``
             configuration option.
 
         width : "stretch", "content", or int
@@ -845,7 +845,7 @@ class VegaChartsMixin:
         directly and the series will be unlabeled. If the column contains other
         values, those values will label each line, and the line colors will be
         selected from the default color palette. You can configure this color
-        palette in the ``theme.chartCategoryColors`` configuration option.
+        palette in the ``theme.chartCategoricalColors`` configuration option.
 
         >>> import pandas as pd
         >>> import streamlit as st
@@ -1008,7 +1008,7 @@ class VegaChartsMixin:
               for three lines). You can also use built-in color names in the
               list (e.g. ``color=["red", "blue", "green"]``).
 
-            You can set the default colors in the ``theme.chartCategoryColors``
+            You can set the default colors in the ``theme.chartCategoricalColors``
             configuration option.
 
         stack : bool, "normalize", "center", or None
@@ -1094,7 +1094,7 @@ class VegaChartsMixin:
         directly and the series will be unlabeled. If the column contains other
         values, those values will label each area, and the area colors will be
         selected from the default color palette. You can configure this color
-        palette in the ``theme.chartCategoryColors`` configuration option.
+        palette in the ``theme.chartCategoricalColors`` configuration option.
 
         >>> import pandas as pd
         >>> import streamlit as st
@@ -1296,7 +1296,7 @@ class VegaChartsMixin:
               for three lines). You can also use built-in color names in the
               list (e.g. ``color=["red", "blue", "green"]``).
 
-            You can set the default colors in the ``theme.chartCategoryColors``
+            You can set the default colors in the ``theme.chartCategoricalColors``
             configuration option.
 
         horizontal : bool
@@ -1402,7 +1402,7 @@ class VegaChartsMixin:
         directly and the series will be unlabeled. If the column contains other
         values, those values will label each series, and the bar colors will be
         selected from the default color palette. You can configure this color
-        palette in the ``theme.chartCategoryColors`` configuration option.
+        palette in the ``theme.chartCategoricalColors`` configuration option.
 
         >>> import pandas as pd
         >>> import streamlit as st
@@ -1702,7 +1702,7 @@ class VegaChartsMixin:
         directly and each color group will be unlabeled. If the column contains
         other values, those values will label each group, and the scatter point
         colors will be selected from the default color palette. You can
-        configure this color palette in the ``theme.chartCategoryColors``
+        configure this color palette in the ``theme.chartCategoricalColors``
         configuration option.
 
         >>> import pandas as pd

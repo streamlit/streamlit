@@ -382,6 +382,61 @@ describe("PlotlyChart Component", () => {
     expect(fullscreenButton).toBeDefined()
   })
 
+  it("hides the Plotly Cloud share button by default", () => {
+    renderComponent()
+
+    const lastCallProps = getLastPlotProps()
+    const config = lastCallProps.config
+
+    expect(config?.showSendToCloud).toBe(false)
+    expect(config?.displaylogo).toBe(false)
+    expect(config?.modeBarButtonsToRemove).toEqual(
+      expect.arrayContaining(["sendChartToCloud", "lasso2d", "select2d"])
+    )
+  })
+
+  it("respects an explicit showSendToCloud config", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      config: JSON.stringify({ showSendToCloud: true }),
+    })
+    renderComponent({ element })
+
+    const lastCallProps = getLastPlotProps()
+    expect(lastCallProps.config?.showSendToCloud).toBe(true)
+    expect(lastCallProps.config?.modeBarButtonsToRemove).not.toContain(
+      "sendChartToCloud"
+    )
+  })
+
+  it("keeps Streamlit toolbar defaults when the user customizes modeBarButtonsToRemove", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      config: JSON.stringify({ modeBarButtonsToRemove: ["zoom"] }),
+    })
+    renderComponent({ element })
+
+    const lastCallProps = getLastPlotProps()
+    expect(lastCallProps.config?.displaylogo).toBe(false)
+    expect(lastCallProps.config?.modeBarButtonsToRemove).toEqual([
+      "zoom",
+      "lasso2d",
+      "select2d",
+      "sendChartToCloud",
+    ])
+    expect(lastCallProps.config?.showSendToCloud).toBe(false)
+  })
+
+  it("preserves an explicit displaylogo config", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      config: JSON.stringify({ displaylogo: true }),
+    })
+    renderComponent({ element })
+
+    expect(getLastPlotProps().config?.displaylogo).toBe(true)
+  })
+
   it("handles fullscreen button click", () => {
     const expandMock = vi.fn()
     renderComponent({}, { expanded: false, expand: expandMock })
@@ -406,7 +461,42 @@ describe("PlotlyChart Component", () => {
     expect(expandMock).toHaveBeenCalled()
   })
 
-  it("uses an empty plotly config when the element has no config", () => {
+  it("migrates plotly.js v3 mapbox figures so they render on v4", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      spec: JSON.stringify({
+        data: [{ type: "scattermapbox", lon: [0], lat: [51.5] }],
+        layout: {
+          mapbox: {
+            style: "mapbox://styles/mapbox/light-v10",
+            accesstoken: "secret",
+          },
+        },
+      }),
+      config: JSON.stringify({ mapboxAccessToken: "secret" }),
+    })
+
+    renderComponent({ element })
+
+    const lastCallProps = getLastPlotProps()
+    expect(lastCallProps.data).toEqual([
+      { type: "scattermap", lon: [0], lat: [51.5] },
+    ])
+    expect(lastCallProps.layout).toEqual(
+      expect.objectContaining({
+        map: { style: "light" },
+      })
+    )
+    expect(
+      (lastCallProps.layout as { mapbox?: unknown }).mapbox
+    ).toBeUndefined()
+    expect(
+      (lastCallProps.config as { mapboxAccessToken?: string } | undefined)
+        ?.mapboxAccessToken
+    ).toBeUndefined()
+  })
+
+  it("hides sharing when the element has no config", () => {
     const element = new PlotlyChartProto({
       ...DEFAULT_ELEMENT,
       config: "",
@@ -414,8 +504,10 @@ describe("PlotlyChart Component", () => {
     renderComponent({ element })
 
     const lastCallProps = getLastPlotProps()
-    expect(lastCallProps.config?.modeBarButtonsToAdd).toBeUndefined()
-    expect(lastCallProps.config?.modeBarButtonsToRemove).toBeUndefined()
+    expect(lastCallProps.config?.showSendToCloud).toBe(false)
+    expect(lastCallProps.config?.modeBarButtonsToRemove).toEqual(
+      expect.arrayContaining(["sendChartToCloud"])
+    )
   })
 
   it("collapses fullscreen from the plotly toolbar", () => {

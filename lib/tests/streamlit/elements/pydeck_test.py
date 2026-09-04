@@ -70,6 +70,34 @@ class PyDeckTest(DeltaGeneratorTestCase):
         ]
         assert el.deck_gl_json_chart.tooltip == ""
 
+    def test_layer_extensions_serialized(self) -> None:
+        """Extension @@type dicts on a pydeck Layer appear in the chart JSON sent to the frontend."""
+
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[
+                    pdk.Layer(
+                        "ScatterplotLayer",
+                        data=df1,
+                        get_filter_value="lat",
+                        filter_range=[0, 10],
+                        extensions=[
+                            {"@@type": "DataFilterExtension", "filterSize": 1},
+                        ],
+                    ),
+                ]
+            )
+        )
+
+        layer = json.loads(
+            self.get_delta_from_queue().new_element.deck_gl_json_chart.json
+        )["layers"][0]
+        assert layer["extensions"] == [
+            {"@@type": "DataFilterExtension", "filterSize": 1}
+        ]
+        assert layer["getFilterValue"] == "@@=lat"
+        assert layer["filterRange"] == [0, 10]
+
     def test_with_tooltip(self):
         """Test that pydeck object with tooltip works."""
 

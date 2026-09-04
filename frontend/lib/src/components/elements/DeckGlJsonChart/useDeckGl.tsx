@@ -51,7 +51,7 @@ import {
   getContextualFillColor,
   LAYER_TYPE_TO_FILL_FUNCTION,
 } from "./utils/colors"
-import { jsonConverter } from "./utils/jsonConverter"
+import { convertDeckJson } from "./utils/jsonConverter"
 
 /**
  * Extracted type from the DeckGL library since it is not exported correctly.
@@ -570,7 +570,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
     delete jsonCopy?.views // We are not using views. This avoids a console warning.
 
-    return jsonConverter.convert(jsonCopy) as DeckObject
+    return convertDeckJson(jsonCopy) as DeckObject
   }, [
     data.selection.indices,
     isLightTheme,

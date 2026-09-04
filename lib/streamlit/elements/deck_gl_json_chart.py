@@ -539,6 +539,10 @@ class PydeckMixin:
            To make the PyDeck chart's style consistent with Streamlit's theme,
            you can set ``map_style=None`` in the ``pydeck.Deck`` object.
 
+        Deck.gl layer extensions such as ``DataFilterExtension`` can be passed
+        on ``pydeck.Layer`` as ``@@type`` dictionaries, for example
+        ``extensions=[{"@@type": "DataFilterExtension", "filterSize": 1}]``.
+
         """
         if use_container_width is not None:
             show_deprecation_warning(
