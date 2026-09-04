@@ -390,9 +390,8 @@ describe("PlotlyChart Component", () => {
 
     expect(config?.showSendToCloud).toBe(false)
     expect(config?.modeBarButtonsToRemove).toEqual(
-      expect.arrayContaining(["lasso2d", "select2d"])
+      expect.arrayContaining(["sendChartToCloud", "lasso2d", "select2d"])
     )
-    expect(config?.modeBarButtonsToRemove).not.toContain("sendChartToCloud")
   })
 
   it("respects an explicit showSendToCloud config", () => {
@@ -409,7 +408,7 @@ describe("PlotlyChart Component", () => {
     )
   })
 
-  it("does not overwrite a user-provided modeBarButtonsToRemove", () => {
+  it("still hides sharing when the user customizes modeBarButtonsToRemove", () => {
     const element = new PlotlyChartProto({
       ...DEFAULT_ELEMENT,
       config: JSON.stringify({ modeBarButtonsToRemove: ["zoom"] }),
@@ -417,7 +416,10 @@ describe("PlotlyChart Component", () => {
     renderComponent({ element })
 
     const lastCallProps = getLastPlotProps()
-    expect(lastCallProps.config?.modeBarButtonsToRemove).toEqual(["zoom"])
+    expect(lastCallProps.config?.modeBarButtonsToRemove).toEqual([
+      "zoom",
+      "sendChartToCloud",
+    ])
     expect(lastCallProps.config?.showSendToCloud).toBe(false)
   })
 

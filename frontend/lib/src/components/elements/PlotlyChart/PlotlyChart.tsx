@@ -181,23 +181,24 @@ export function PlotlyChart({
       ]
     }
 
-    // plotly.js v4 shows a "Share chart…" button when showSendToCloud is
-    // true. Default it off so chart data is not offered to Plotly Cloud.
-    // Do not also put sendChartToCloud in modeBarButtonsToRemove: v4 already
-    // omits the button when the flag is false, and removing it would hide
-    // the button even when a user opts in with showSendToCloud: true.
+    // plotly.js v4 enables the "Share chart…" button (`sendChartToCloud`) by
+    // default. Hide it unless the user explicitly opted in. Removing the
+    // modebar button is required: `showSendToCloud: false` alone does not
+    // hide it in the react-plotly.js / plotly.js v4 combination we ship.
     if (config.showSendToCloud === undefined) {
       config.showSendToCloud = false
     }
 
-    if (!config.modeBarButtonsToRemove) {
-      // Only modify the mode bar buttons if it's not already set
-      // in the config provided by the user.
+    const userProvidedModeBarButtonsToRemove = Array.isArray(
+      config.modeBarButtonsToRemove
+    )
+    const modeBarButtonsToRemove: string[] = userProvidedModeBarButtonsToRemove
+      ? [...config.modeBarButtonsToRemove]
+      : []
 
+    if (!userProvidedModeBarButtonsToRemove) {
       // Hide the logo by default
       config.displaylogo = false
-
-      const modeBarButtonsToRemove: string[] = []
 
       if (!isSelectionActivated) {
         // Remove lasso & select buttons in read-only charts:
@@ -213,9 +214,16 @@ export function PlotlyChart({
           modeBarButtonsToRemove.push("select2d")
         }
       }
-
-      config.modeBarButtonsToRemove = modeBarButtonsToRemove
     }
+
+    if (
+      config.showSendToCloud !== true &&
+      !modeBarButtonsToRemove.includes("sendChartToCloud")
+    ) {
+      modeBarButtonsToRemove.push("sendChartToCloud")
+    }
+
+    config.modeBarButtonsToRemove = modeBarButtonsToRemove
     return config
     // We want to reload the plotlyConfig object whenever the element id changes
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
