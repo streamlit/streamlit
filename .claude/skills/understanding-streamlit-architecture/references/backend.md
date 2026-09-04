@@ -54,6 +54,8 @@ Represents a single browser tab.
 
 **File watchers**: Monitors script, config.toml, secrets.toml, pages/ for changes.
 
+**Script event loop**: Owns one non-running asyncio loop for the script thread, reused across `ScriptRunner` instances and closed on session shutdown.
+
 ## Session bootstrap ordering
 
 Initial session creation and first script run are intentionally decoupled:
@@ -83,6 +85,7 @@ Executes user scripts in isolated thread.
 - `SCRIPT_STOPPED_WITH_COMPILE_ERROR`
 - `SCRIPT_STOPPED_FOR_RERUN` (st.rerun() called)
 - `FRAGMENT_STOPPED_WITH_SUCCESS`
+- `SHUTDOWN` (the ScriptRunner is exiting)
 
 **Interrupt points**: Most `st.*` commands check for stop/rerun requests and raise `RerunException` or `StopException`.
 
