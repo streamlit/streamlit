@@ -255,6 +255,8 @@ export default defineConfig([
       "no-console": "error",
       // Prevent unintentional use of `debugger`
       "no-debugger": "error",
+      // Oxlint eslint/preserve-caught-error owns this check.
+      "preserve-caught-error": "off",
       // We do want to discourage the usage of flushSync
       "@eslint-react/dom-no-flush-sync": "error",
       // This was giving false positives
@@ -499,7 +501,22 @@ export default defineConfig([
       "testing-library/prefer-find-by": "error",
       // Enforce consistent use of it() over test()
       "vitest/consistent-test-it": ["error", { fn: "it" }],
+      // Oxlint vitest/no-focused-tests and no-commented-out-tests own these.
+      "vitest/no-focused-tests": "off",
+      "vitest/no-commented-out-tests": "off",
       "no-restricted-imports": getNoRestrictedImports([], true),
+    },
+  },
+  // Vendored tests are ignored by oxlint; keep the ESLint copies on there.
+  {
+    files: ["**/vendor/**"],
+    plugins: {
+      vitest,
+    },
+    rules: {
+      "preserve-caught-error": "error",
+      "vitest/no-focused-tests": "error",
+      "vitest/no-commented-out-tests": "error",
     },
   },
   // Specific test files that need to access window.__streamlit for testing the config module itself
