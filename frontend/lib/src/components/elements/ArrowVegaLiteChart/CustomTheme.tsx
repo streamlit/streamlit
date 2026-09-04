@@ -89,7 +89,8 @@ export function applyStreamlitTheme(
       columnPadding: convertRemToPx(theme.spacing.sm),
       rowPadding: convertRemToPx(theme.spacing.twoXS),
       padding: convertRemToPx(theme.spacing.sm),
-      symbolStrokeWidth: convertRemToPx(theme.spacing.twoXS),
+      // 1.5 is Vega's default stroke; a 4px theme spacing token fills point symbols into rings.
+      symbolStrokeWidth: 1.5,
     },
     range: {
       category: theme.colors.chartCategoricalColors,
