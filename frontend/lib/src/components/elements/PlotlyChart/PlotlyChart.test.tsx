@@ -389,6 +389,7 @@ describe("PlotlyChart Component", () => {
     const config = lastCallProps.config
 
     expect(config?.showSendToCloud).toBe(false)
+    expect(config?.displaylogo).toBe(false)
     expect(config?.modeBarButtonsToRemove).toEqual(
       expect.arrayContaining(["sendChartToCloud", "lasso2d", "select2d"])
     )
@@ -408,7 +409,7 @@ describe("PlotlyChart Component", () => {
     )
   })
 
-  it("still hides sharing when the user customizes modeBarButtonsToRemove", () => {
+  it("keeps Streamlit toolbar defaults when the user customizes modeBarButtonsToRemove", () => {
     const element = new PlotlyChartProto({
       ...DEFAULT_ELEMENT,
       config: JSON.stringify({ modeBarButtonsToRemove: ["zoom"] }),
@@ -416,11 +417,24 @@ describe("PlotlyChart Component", () => {
     renderComponent({ element })
 
     const lastCallProps = getLastPlotProps()
+    expect(lastCallProps.config?.displaylogo).toBe(false)
     expect(lastCallProps.config?.modeBarButtonsToRemove).toEqual([
       "zoom",
+      "lasso2d",
+      "select2d",
       "sendChartToCloud",
     ])
     expect(lastCallProps.config?.showSendToCloud).toBe(false)
+  })
+
+  it("preserves an explicit displaylogo config", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      config: JSON.stringify({ displaylogo: true }),
+    })
+    renderComponent({ element })
+
+    expect(getLastPlotProps().config?.displaylogo).toBe(true)
   })
 
   it("handles fullscreen button click", () => {

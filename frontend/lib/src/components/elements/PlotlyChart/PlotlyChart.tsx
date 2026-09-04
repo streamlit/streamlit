@@ -186,38 +186,38 @@ export function PlotlyChart({
       config.showSendToCloud = false
     }
 
-    const userProvidedModeBarButtonsToRemove = Array.isArray(
+    if (config.displaylogo === undefined) {
+      // Hide the Plotly logo unless the user explicitly opts in.
+      config.displaylogo = false
+    }
+
+    const modeBarButtonsToRemove: string[] = Array.isArray(
       config.modeBarButtonsToRemove
     )
-    const modeBarButtonsToRemove: string[] = userProvidedModeBarButtonsToRemove
       ? [...config.modeBarButtonsToRemove]
       : []
 
-    if (!userProvidedModeBarButtonsToRemove) {
-      // Hide the logo by default
-      config.displaylogo = false
-
-      if (!isSelectionActivated) {
-        // Remove lasso & select buttons in read-only charts:
-        modeBarButtonsToRemove.push("lasso2d", "select2d")
-      } else {
-        if (!isLassoSelectionActivated) {
-          // Remove the lasso button if lasso selection is not activated
-          modeBarButtonsToRemove.push("lasso2d")
-        }
-
-        if (!isBoxSelectionActivated) {
-          // Remove the box select button if box selection is not activated
-          modeBarButtonsToRemove.push("select2d")
-        }
+    const removeModeBarButton = (name: string): void => {
+      if (!modeBarButtonsToRemove.includes(name)) {
+        modeBarButtonsToRemove.push(name)
       }
     }
 
-    if (
-      config.showSendToCloud !== true &&
-      !modeBarButtonsToRemove.includes("sendChartToCloud")
-    ) {
-      modeBarButtonsToRemove.push("sendChartToCloud")
+    if (!isSelectionActivated) {
+      // Remove lasso & select buttons in read-only charts
+      removeModeBarButton("lasso2d")
+      removeModeBarButton("select2d")
+    } else {
+      if (!isLassoSelectionActivated) {
+        removeModeBarButton("lasso2d")
+      }
+      if (!isBoxSelectionActivated) {
+        removeModeBarButton("select2d")
+      }
+    }
+
+    if (config.showSendToCloud !== true) {
+      removeModeBarButton("sendChartToCloud")
     }
 
     config.modeBarButtonsToRemove = modeBarButtonsToRemove

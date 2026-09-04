@@ -28,8 +28,25 @@ import {
 import type { EmotionTheme } from "~lib/theme/types"
 import { convertRemToPx } from "~lib/theme/utils"
 import { ensureError } from "~lib/util/ErrorHandling"
+import { notNullOrUndefined } from "~lib/util/utils"
 
 const LOG = getLogger("PlotlyChart:CustomTheme")
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+/** Plotly accepts `layout.title` as a string or `{ text, ... }`. */
+function plotlyTitleObject(title: unknown): Record<string, unknown> {
+  if (typeof title === "string") {
+    return { text: title }
+  }
+  if (isRecord(title)) {
+    return title
+  }
+  return {}
+}
+
 /**
  * This applies general layout changes to things such as x axis,
  * y axis, legends, titles, grid changes, background, etc.
@@ -403,27 +420,30 @@ export function applyStreamlitTheme(
   spec: Record<string, unknown>,
   theme: EmotionTheme
 ): void {
-  try {
-    const layout = spec.layout as Record<string, unknown>
-    const template = layout.template as Record<string, unknown>
-    applyStreamlitThemeTemplateLayout(
-      template.layout as Record<string, unknown>,
-      theme
-    )
-    // Ensure user-provided `layout.font` overrides Streamlit's trace-level
-    // `textfont` defaults (e.g. Sankey, icicle); otherwise those template
-    // defaults shadow user settings.
-    // See https://github.com/streamlit/streamlit/issues/11031.
-    respectUserFontOnTemplateTraces(spec, theme)
-  } catch (e) {
-    const err = ensureError(e)
-    LOG.error(err)
+  const layout = isRecord(spec.layout) ? spec.layout : undefined
+  if (!layout) {
+    return
   }
-  const layout = spec.layout as Record<string, unknown>
-  if ("title" in layout) {
-    const title = layout.title as Record<string, unknown>
-    layout.title = merge(title, {
-      text: `<b>${String(title.text)}</b>`,
+
+  const template = layout.template
+  if (isRecord(template) && isRecord(template.layout)) {
+    try {
+      applyStreamlitThemeTemplateLayout(template.layout, theme)
+      // Ensure user-provided `layout.font` overrides Streamlit's trace-level
+      // `textfont` defaults (e.g. Sankey, icicle); otherwise those template
+      // defaults shadow user settings.
+      // See https://github.com/streamlit/streamlit/issues/11031.
+      respectUserFontOnTemplateTraces(spec, theme)
+    } catch (e) {
+      LOG.error(ensureError(e))
+    }
+  }
+
+  if ("title" in layout && notNullOrUndefined(layout.title)) {
+    const title = plotlyTitleObject(layout.title)
+    const titleText = typeof title.text === "string" ? title.text : ""
+    layout.title = merge({}, title, {
+      text: `<b>${titleText}</b>`,
     })
   }
 }

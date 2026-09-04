@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+import { getLogger } from "loglevel"
+import { vi } from "vitest"
+
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { getGray70 } from "~lib/theme/getColors"
 
@@ -121,7 +124,27 @@ describe("PlotlyChart CustomTheme", () => {
       expect(spec.layout.template.layout).toHaveProperty("paper_bgcolor")
     })
 
+    it("bolds a string layout.title used by older figure JSON", () => {
+      const spec: Record<string, unknown> = {
+        layout: {
+          title: "My Chart",
+          template: {
+            layout: {},
+          },
+        },
+      }
+
+      applyStreamlitTheme(spec, theme)
+
+      expect((spec.layout as { title: { text: string } }).title.text).toBe(
+        "<b>My Chart</b>"
+      )
+    })
+
     it("handles missing template gracefully", () => {
+      const errorSpy = vi
+        .spyOn(getLogger("PlotlyChart:CustomTheme"), "error")
+        .mockImplementation(() => {})
       const spec = {
         layout: {
           title: { text: "My Chart" },
@@ -129,8 +152,11 @@ describe("PlotlyChart CustomTheme", () => {
         },
       }
 
-      // Should not throw
       expect(() => applyStreamlitTheme(spec, theme)).not.toThrow()
+      expect(spec.layout.title.text).toBe("<b>My Chart</b>")
+      expect(errorSpy).not.toHaveBeenCalled()
+
+      errorSpy.mockRestore()
     })
 
     it("scrubs sankey template textfont.color when user set layout.font.color", () => {
