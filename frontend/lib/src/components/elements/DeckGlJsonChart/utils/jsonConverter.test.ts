@@ -97,7 +97,7 @@ describe("jsonConverter layer extensions", () => {
           },
         ],
       })
-    ).toThrow()
+    ).toThrow(TypeError)
   })
 
   it("resolves TerrainExtension from the pydeck JSON type name", () => {

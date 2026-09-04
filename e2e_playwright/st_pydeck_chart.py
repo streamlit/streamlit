@@ -259,8 +259,8 @@ def layer_extensions_subtest():
     ## Test deck.gl layer extensions
 
     Should show two high-value points (DataFilterExtension) and a dashed
-    path (PathStyleExtension). If extensions are unregistered, both layers
-    disappear.
+    path (PathStyleExtension). If the extensions are not registered, the
+    chart fails to render at all.
     """)
 
     points = pd.DataFrame(
