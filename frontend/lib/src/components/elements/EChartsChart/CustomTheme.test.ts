@@ -23,6 +23,7 @@ import {
   applyStreamlitOptionDefaults,
   buildStreamlitEChartsTheme,
   type EChartsOptionObject,
+  insideDataZoomConsumesWheelEvent,
   optionHasInsideDataZoom,
   STREAMLIT_THEME,
   withDefaultSeriesCursor,
@@ -962,6 +963,21 @@ describe("optionHasInsideDataZoom", () => {
     ).toBe(true)
   })
 
+  it("detects modifier-gated zoom and move-on-wheel", () => {
+    expect(
+      optionHasInsideDataZoom({
+        dataZoom: [{ type: "inside", zoomOnMouseWheel: "shift" }],
+      })
+    ).toBe(true)
+    expect(
+      optionHasInsideDataZoom({
+        dataZoom: [
+          { type: "inside", zoomOnMouseWheel: false, moveOnMouseWheel: true },
+        ],
+      })
+    ).toBe(true)
+  })
+
   it("ignores slider zoom and disabled inside zoom", () => {
     expect(optionHasInsideDataZoom(null)).toBe(false)
     expect(optionHasInsideDataZoom({ dataZoom: [{ type: "slider" }] })).toBe(
@@ -977,5 +993,49 @@ describe("optionHasInsideDataZoom", () => {
         dataZoom: [{ type: "inside", zoomOnMouseWheel: false }],
       })
     ).toBe(false)
+  })
+})
+
+describe("insideDataZoomConsumesWheelEvent", () => {
+  const noModifiers = { shiftKey: false, ctrlKey: false, altKey: false }
+  const shift = { shiftKey: true, ctrlKey: false, altKey: false }
+  const ctrl = { shiftKey: false, ctrlKey: true, altKey: false }
+  const alt = { shiftKey: false, ctrlKey: false, altKey: true }
+
+  it("consumes unmodified wheel when zoomOnMouseWheel defaults to true", () => {
+    const option = { dataZoom: [{ type: "inside" }] }
+    expect(insideDataZoomConsumesWheelEvent(option, noModifiers)).toBe(true)
+    expect(insideDataZoomConsumesWheelEvent(option, shift)).toBe(true)
+  })
+
+  it("consumes wheel only with the configured modifier", () => {
+    const option = {
+      dataZoom: [{ type: "inside", zoomOnMouseWheel: "shift" as const }],
+    }
+    expect(insideDataZoomConsumesWheelEvent(option, noModifiers)).toBe(false)
+    expect(insideDataZoomConsumesWheelEvent(option, shift)).toBe(true)
+    expect(insideDataZoomConsumesWheelEvent(option, ctrl)).toBe(false)
+
+    expect(
+      insideDataZoomConsumesWheelEvent(
+        { dataZoom: [{ type: "inside", zoomOnMouseWheel: "ctrl" }] },
+        ctrl
+      )
+    ).toBe(true)
+    expect(
+      insideDataZoomConsumesWheelEvent(
+        { dataZoom: [{ type: "inside", zoomOnMouseWheel: "alt" }] },
+        alt
+      )
+    ).toBe(true)
+  })
+
+  it("consumes wheel for moveOnMouseWheel when zoom is off", () => {
+    const option = {
+      dataZoom: [
+        { type: "inside", zoomOnMouseWheel: false, moveOnMouseWheel: true },
+      ],
+    }
+    expect(insideDataZoomConsumesWheelEvent(option, noModifiers)).toBe(true)
   })
 })

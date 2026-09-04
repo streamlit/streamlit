@@ -662,6 +662,39 @@ describe("EChartsChart", () => {
     expect(event.defaultPrevented).toBe(true)
   })
 
+  it("does not intercept unmodified wheel when zoomOnMouseWheel requires a modifier", () => {
+    render(
+      <Wrapper
+        element={createElement({
+          spec: JSON.stringify({
+            xAxis: {},
+            yAxis: {},
+            dataZoom: [{ type: "inside", zoomOnMouseWheel: "shift" }],
+            series: [{ type: "line", data: [1] }],
+          }),
+        })}
+      />
+    )
+
+    const chart = screen.getByTestId("stEChartsChart")
+    const unmodified = new WheelEvent("wheel", {
+      bubbles: true,
+      cancelable: true,
+      deltaY: 40,
+    })
+    chart.dispatchEvent(unmodified)
+    expect(unmodified.defaultPrevented).toBe(false)
+
+    const withShift = new WheelEvent("wheel", {
+      bubbles: true,
+      cancelable: true,
+      deltaY: 40,
+      shiftKey: true,
+    })
+    chart.dispatchEvent(withShift)
+    expect(withShift.defaultPrevented).toBe(true)
+  })
+
   it("does not intercept wheel when the chart has no inside dataZoom", () => {
     render(<Wrapper element={createElement()} />)
 

@@ -49,6 +49,7 @@ import {
   applyStreamlitOptionDefaults,
   buildStreamlitEChartsTheme,
   EChartsOptionObject,
+  insideDataZoomConsumesWheelEvent,
   optionHasInsideDataZoom,
   STREAMLIT_THEME,
   withDefaultSeriesCursor,
@@ -439,8 +440,11 @@ export function EChartsChart({
     }
   }, [chartInstance, width, height, setOpError])
 
-  // Inside dataZoom zooms on wheel. Without preventDefault the page scroll
-  // container wins, so the chart never zooms.
+  // Inside dataZoom zooms (or pans) on wheel. Without preventDefault the page
+  // scroll container wins, so the chart never zooms. Only block the event when
+  // this wheel would actually be consumed — `zoomOnMouseWheel` may require a
+  // modifier (`"shift"` / `"ctrl"` / `"alt"`), and unmodified wheels must still
+  // scroll the page.
   const hasInsideDataZoom = optionHasInsideDataZoom(option)
   useEffect(() => {
     const dom = containerRef.current
@@ -448,13 +452,15 @@ export function EChartsChart({
       return
     }
     const handleWheel = (event: WheelEvent): void => {
-      event.preventDefault()
+      if (insideDataZoomConsumesWheelEvent(option, event)) {
+        event.preventDefault()
+      }
     }
     dom.addEventListener("wheel", handleWheel, { passive: false })
     return () => {
       dom.removeEventListener("wheel", handleWheel)
     }
-  }, [containerRef, hasInsideDataZoom])
+  }, [containerRef, hasInsideDataZoom, option])
 
   const downloadType = rendererStr === "svg" ? "svg" : "png"
 

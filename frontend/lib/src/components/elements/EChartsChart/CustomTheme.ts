@@ -582,28 +582,110 @@ function hasBottomAnchoredComponent(option: EChartsOptionObject): boolean {
 }
 
 /**
- * True when the option enables an inside ``dataZoom`` that zooms on wheel.
- *
- * Used to prevent the page from scrolling while the pointer is over the chart.
+ * ECharts ``zoomOnMouseWheel`` / ``moveOnMouseWheel``: ``true``, ``false``, or
+ * a modifier name. Matches RoamController's ``isAvailableBehavior``.
  */
-export function optionHasInsideDataZoom(
-  option: EChartsOptionObject | null
+function isEChartsWheelSettingActive(
+  setting: unknown,
+  event: Pick<WheelEvent, "shiftKey" | "ctrlKey" | "altKey">
 ): boolean {
+  if (setting === true) {
+    return true
+  }
+  if (setting === "shift") {
+    return event.shiftKey
+  }
+  if (setting === "ctrl") {
+    return event.ctrlKey
+  }
+  if (setting === "alt") {
+    return event.altKey
+  }
+  return false
+}
+
+function forEachEnabledInsideDataZoom(
+  option: EChartsOptionObject | null,
+  visit: (zoom: Record<string, unknown>) => void
+): void {
   if (option === null) {
-    return false
+    return
   }
   const targets: EChartsOptionObject[] = [option]
   if (isPlainObject(option.baseOption)) {
     targets.push(option.baseOption as EChartsOptionObject)
   }
-  return targets.some(target =>
-    toComponentList(target.dataZoom).some(
-      zoom =>
-        zoom.type === "inside" &&
-        zoom.disabled !== true &&
-        zoom.zoomOnMouseWheel !== false
-    )
+  for (const target of targets) {
+    for (const zoom of toComponentList(target.dataZoom)) {
+      if (zoom.type === "inside" && zoom.disabled !== true) {
+        visit(zoom)
+      }
+    }
+  }
+}
+
+function insideDataZoomMayConsumeWheel(
+  zoom: Record<string, unknown>
+): boolean {
+  // Inside defaults: zoom on wheel, do not pan on wheel.
+  const zoomOnWheel =
+    zoom.zoomOnMouseWheel === undefined ? true : zoom.zoomOnMouseWheel
+  const moveOnWheel =
+    zoom.moveOnMouseWheel === undefined ? false : zoom.moveOnMouseWheel
+  return zoomOnWheel !== false || moveOnWheel !== false
+}
+
+function insideDataZoomConsumesEvent(
+  zoom: Record<string, unknown>,
+  event: Pick<WheelEvent, "shiftKey" | "ctrlKey" | "altKey">
+): boolean {
+  const zoomOnWheel =
+    zoom.zoomOnMouseWheel === undefined ? true : zoom.zoomOnMouseWheel
+  const moveOnWheel =
+    zoom.moveOnMouseWheel === undefined ? false : zoom.moveOnMouseWheel
+  return (
+    isEChartsWheelSettingActive(zoomOnWheel, event) ||
+    isEChartsWheelSettingActive(moveOnWheel, event)
   )
+}
+
+/**
+ * True when the option enables an inside ``dataZoom`` that can consume wheel
+ * events (zoom and/or pan), possibly only while a modifier is held.
+ *
+ * Used to attach a non-passive wheel listener so the page does not steal
+ * those events.
+ */
+export function optionHasInsideDataZoom(
+  option: EChartsOptionObject | null
+): boolean {
+  let found = false
+  forEachEnabledInsideDataZoom(option, zoom => {
+    if (insideDataZoomMayConsumeWheel(zoom)) {
+      found = true
+    }
+  })
+  return found
+}
+
+/**
+ * True when this wheel event would zoom or pan an inside ``dataZoom``.
+ *
+ * ``zoomOnMouseWheel`` / ``moveOnMouseWheel`` may be ``true`` or a modifier
+ * (``"shift"`` / ``"ctrl"`` / ``"alt"``). Only matching events should call
+ * ``preventDefault``; otherwise the page cannot scroll.
+ */
+export function insideDataZoomConsumesWheelEvent(
+  option: EChartsOptionObject | null,
+  event: Pick<WheelEvent, "shiftKey" | "ctrlKey" | "altKey">
+): boolean {
+  let consumes = false
+  forEachEnabledInsideDataZoom(option, zoom => {
+    if (insideDataZoomConsumesEvent(zoom, event)) {
+      consumes = true
+    }
+  })
+  return consumes
 }
 
 function isTitleAtBottom(title: Record<string, unknown>): boolean {
