@@ -414,6 +414,104 @@ def height_parameter_subtest():
     )
 
 
+def orbit_point_cloud_subtest():
+    st.write("""
+    ## Test OrbitView + PointCloudLayer
+
+    Should show a rotatable 3D point cloud with no street-map basemap or zoom buttons.
+    """)
+
+    rng = np.random.default_rng(0)
+    n = 250
+    theta = rng.uniform(0, 2 * np.pi, n)
+    phi = rng.uniform(0, np.pi, n)
+    point_cloud = pd.DataFrame(
+        {
+            "x": np.sin(phi) * np.cos(theta),
+            "y": np.sin(phi) * np.sin(theta),
+            "z": np.cos(phi),
+            "r": rng.integers(40, 255, n),
+            "g": rng.integers(40, 255, n),
+            "b": rng.integers(40, 255, n),
+        }
+    )
+
+    with st.container(key="orbit_point_cloud"):
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[
+                    pdk.Layer(
+                        "PointCloudLayer",
+                        data=point_cloud,
+                        get_position=["x", "y", "z"],
+                        get_color=["r", "g", "b"],
+                        point_size=4,
+                    ),
+                ],
+                initial_view_state=pdk.ViewState(
+                    target=[0, 0, 0],
+                    zoom=5,
+                    rotation_x=15,
+                    rotation_orbit=30,
+                ),
+                views=[pdk.View(type="OrbitView", controller=True)],
+                map_provider=None,
+            ),
+            height=400,
+        )
+
+
+def globe_view_subtest():
+    st.write("""
+    ## Test GlobeView
+
+    Should show a globe (not Web Mercator) with no street-map basemap or zoom buttons.
+    """)
+
+    countries = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {"name": "patch"},
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            [-20.0, -10.0],
+                            [50.0, -10.0],
+                            [50.0, 40.0],
+                            [-20.0, 40.0],
+                            [-20.0, -10.0],
+                        ]
+                    ],
+                },
+            }
+        ],
+    }
+
+    with st.container(key="globe_view"):
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[
+                    pdk.Layer(
+                        "GeoJsonLayer",
+                        data=countries,
+                        filled=True,
+                        stroked=True,
+                        get_fill_color=[30, 120, 180, 220],
+                        get_line_color=[255, 255, 255],
+                    ),
+                ],
+                views=[pdk.View(type="_GlobeView", controller=True)],
+                initial_view_state=pdk.ViewState(latitude=20, longitude=10, zoom=0),
+                map_provider=None,
+                parameters={"cull": True},
+            ),
+            height=400,
+        )
+
+
 SUBTESTS = {k: v for k, v in globals().items() if k.endswith("_subtest")}
 
 subtest = SUBTESTS[st.selectbox("Test to run", SUBTESTS.keys())]

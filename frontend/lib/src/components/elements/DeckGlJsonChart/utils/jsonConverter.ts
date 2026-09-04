@@ -21,6 +21,13 @@ import {
   colorCategories,
   colorContinuous,
 } from "@deck.gl/carto"
+import {
+  _GlobeView,
+  FirstPersonView,
+  MapView,
+  OrbitView,
+  OrthographicView,
+} from "@deck.gl/core"
 import * as geoLayers from "@deck.gl/geo-layers"
 import { JSONConverter } from "@deck.gl/json"
 import * as layers from "@deck.gl/layers"
@@ -33,6 +40,14 @@ const configuration = {
     ...geoLayers,
     ...meshLayers,
     ...CARTO_LAYERS,
+    // Named imports only: @deck.gl/core has many non-class exports.
+    MapView,
+    OrbitView,
+    OrthographicView,
+    FirstPersonView,
+    _GlobeView,
+    // pydeck and deck.gl docs use GlobeView; the export is still experimental.
+    GlobeView: _GlobeView,
   },
   functions: {
     colorBins,

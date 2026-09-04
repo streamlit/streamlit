@@ -70,6 +70,69 @@ class PyDeckTest(DeltaGeneratorTestCase):
         ]
         assert el.deck_gl_json_chart.tooltip == ""
 
+    def test_orbit_view_parameters_and_no_basemap_are_serialized(self) -> None:
+        """OrbitView, WebGL parameters, and map_provider=None survive to_json()."""
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[
+                    pdk.Layer(
+                        "PointCloudLayer",
+                        data=[{"x": 0, "y": 0, "z": 0, "r": 255, "g": 0, "b": 0}],
+                    ),
+                ],
+                initial_view_state=pdk.ViewState(
+                    target=[0, 0, 0],
+                    zoom=5,
+                    rotation_x=15,
+                    rotation_orbit=30,
+                ),
+                views=[pdk.View(type="OrbitView", controller=True)],
+                map_provider=None,
+                parameters={"cull": True},
+            )
+        )
+
+        el = self.get_delta_from_queue().new_element
+        actual = json.loads(el.deck_gl_json_chart.json)
+
+        assert actual["views"][0]["@@type"] == "OrbitView"
+        assert actual["views"][0]["controller"] is True
+        assert actual["parameters"]["cull"] is True
+        assert actual.get("mapProvider") in {None, ""}
+        assert actual.get("mapStyle") in {None, "", "__MAP_STYLE__"}
+        assert actual["initialViewState"]["target"] == [0, 0, 0]
+        assert "latitude" not in actual["initialViewState"]
+
+    @parameterized.expand(
+        [
+            ("_GlobeView",),
+            ("GlobeView",),
+        ]
+    )
+    def test_globe_view_type_is_serialized(self, view_type: str) -> None:
+        """Globe view names used by pydeck and docs survive to_json()."""
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[
+                    pdk.Layer(
+                        "GeoJsonLayer",
+                        data={"type": "FeatureCollection", "features": []},
+                    )
+                ],
+                views=[pdk.View(type=view_type, controller=True)],
+                initial_view_state=pdk.ViewState(latitude=0, longitude=0, zoom=0),
+                map_provider=None,
+                parameters={"cull": True},
+            )
+        )
+
+        el = self.get_delta_from_queue().new_element
+        actual = json.loads(el.deck_gl_json_chart.json)
+
+        assert actual["views"][0]["@@type"] == view_type
+        assert actual["parameters"]["cull"] is True
+        assert actual.get("mapStyle") in {None, "", "__MAP_STYLE__"}
+
     def test_with_tooltip(self):
         """Test that pydeck object with tooltip works."""
 

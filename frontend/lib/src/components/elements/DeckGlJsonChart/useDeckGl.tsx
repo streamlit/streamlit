@@ -52,6 +52,10 @@ import {
   LAYER_TYPE_TO_FILL_FUNCTION,
 } from "./utils/colors"
 import { jsonConverter } from "./utils/jsonConverter"
+import {
+  isMapCompatibleViewSpec,
+  PYDECK_UNSET_MAP_STYLE,
+} from "./utils/mapShell"
 
 /**
  * Extracted type from the DeckGL library since it is not exported correctly.
@@ -431,8 +435,11 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   const deck = useMemo<DeckObject>(() => {
     const jsonCopy = { ...parsedPydeckJson }
 
-    // If unset, use either the light or dark style based on Streamlit's theme.
-    if (!jsonCopy.mapStyle) {
+    // pydeck's map_provider=None writes this sentinel instead of omitting mapStyle.
+    if (jsonCopy.mapStyle === PYDECK_UNSET_MAP_STYLE) {
+      delete jsonCopy.mapStyle
+    } else if (!jsonCopy.mapStyle && isMapCompatibleViewSpec(jsonCopy.views)) {
+      // If unset, use either the light or dark style based on Streamlit's theme.
       jsonCopy.mapStyle = isLightTheme
         ? "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
         : "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
@@ -567,8 +574,6 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
         return clonedLayer
       })
     }
-
-    delete jsonCopy?.views // We are not using views. This avoids a console warning.
 
     return jsonConverter.convert(jsonCopy) as DeckObject
   }, [
