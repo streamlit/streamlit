@@ -72,7 +72,8 @@ export const katexWoff2Only = (): Plugin => {
     },
 
     buildStart() {
-      // Re-armed per build, so a watching build cannot coast on an earlier pass.
+      // Reset per build, so a watch-mode rebuild must see the stylesheet again
+      // rather than trusting an earlier pass.
       sawStylesheet = false
     },
 
@@ -105,16 +106,22 @@ export const katexWoff2Only = (): Plugin => {
 
     buildEnd(error) {
       // The checks above only fire once the stylesheet reaches us. If its path
-      // moves, or Vite changes how it ids CSS, this plugin would silently do
-      // nothing at all -- so require that it ran at least once per build.
+      // moves, if nothing imports it any more, or if Vite changes how it ids CSS,
+      // this plugin would silently do nothing at all -- so require that it ran at
+      // least once per build.
       //
       // A build that failed for its own reasons may never have got as far as the
       // stylesheet, so stay quiet rather than masking the real error.
+      //
+      // Note these hooks are per-environment. The app build resolves a single
+      // (client) environment today; adding a second one would need this narrowed
+      // to it, since the extra environment's buildStart would clear the flag.
       if (!error && isBuild && !sawStylesheet) {
         this.error(
-          "KaTeX's stylesheet never reached this plugin, so its woff and ttf " +
-            "fonts were emitted. Check KATEX_STYLESHEET_PATH against the id " +
-            "Vite now gives katex/dist/katex.min.css."
+          "KaTeX's stylesheet was never transformed, so its woff and ttf fonts " +
+            "were emitted. Check that frontend/lib still imports the stylesheet, " +
+            "and that KATEX_STYLESHEET_PATH matches the id Vite gives " +
+            "katex/dist/katex.min.css."
         )
       }
     },

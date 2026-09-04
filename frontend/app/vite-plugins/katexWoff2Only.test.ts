@@ -81,6 +81,41 @@ const transform = (code: string, id: string): string | null => {
 const count = (css: string, pattern: RegExp): number =>
   (css.match(pattern) ?? []).length
 
+/**
+ * Drives one plugin instance through a whole build: `configResolved`,
+ * `buildStart`, optionally a stylesheet passing through `transform`, then
+ * `buildEnd`. Throws whatever the plugin reports via `this.error`.
+ */
+const runBuildLifecycle = (options: {
+  command: "build" | "serve"
+  transformsStylesheet: boolean
+  error?: Error
+}): void => {
+  const plugin = katexWoff2Only()
+  const context = {
+    error: (message: string) => {
+      throw new Error(message)
+    },
+  }
+
+  const call = (hook: unknown, ...args: unknown[]): unknown => {
+    if (typeof hook !== "function") {
+      throw new TypeError("expected a function hook")
+    }
+    return (hook as (this: typeof context, ...a: unknown[]) => unknown).call(
+      context,
+      ...args
+    )
+  }
+
+  call(plugin.configResolved, { command: options.command })
+  call(plugin.buildStart, {})
+  if (options.transformsStylesheet) {
+    call(plugin.transform, INSTALLED_KATEX_CSS, KATEX_ID)
+  }
+  call(plugin.buildEnd, options.error)
+}
+
 describe("katexWoff2Only", () => {
   it("runs before Vite rewrites the stylesheet's urls to asset placeholders", () => {
     // Under `enforce: "post"` the strip silently matches nothing.
@@ -163,5 +198,39 @@ describe("katexWoff2Only", () => {
     expect(() => transform(`@font-face{${src}}`, KATEX_ID)).toThrow(
       /still references woff or ttf fonts/
     )
+  })
+
+  describe("requires the stylesheet to have been transformed", () => {
+    it("fails a build that never saw it", () => {
+      // Catches the stylesheet becoming unreachable, which no per-transform
+      // check can see: the transform simply never runs.
+      expect(() =>
+        runBuildLifecycle({ command: "build", transformsStylesheet: false })
+      ).toThrow(/never transformed/)
+    })
+
+    it("stays quiet when the build already failed", () => {
+      // A build that failed on its own may never reach the stylesheet, and
+      // reporting here would bury the real error.
+      expect(() =>
+        runBuildLifecycle({
+          command: "build",
+          transformsStylesheet: false,
+          error: new Error("some other build failure"),
+        })
+      ).not.toThrow()
+    })
+
+    it("stays quiet for a build that saw it", () => {
+      expect(() =>
+        runBuildLifecycle({ command: "build", transformsStylesheet: true })
+      ).not.toThrow()
+    })
+
+    it("stays quiet in serve, where nothing is emitted", () => {
+      expect(() =>
+        runBuildLifecycle({ command: "serve", transformsStylesheet: false })
+      ).not.toThrow()
+    })
   })
 })
