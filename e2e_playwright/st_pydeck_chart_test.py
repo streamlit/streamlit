@@ -152,7 +152,7 @@ def test_mapbox(themed_app: Page, assert_snapshot: ImageCompareFunction) -> None
 # Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
 @pytest.mark.only_browser("chromium")
 def test_layer_extensions(app: Page, assert_snapshot: ImageCompareFunction) -> None:
-    """st.pydeck_chart still renders layers that use @@type extensions."""
+    """st.pydeck_chart renders layers that declare deck.gl @@type extensions."""
     pydeck_charts = select_subtest(app, "layer_extensions_subtest")
 
     wait_for_chart_canvas(pydeck_charts.nth(0))

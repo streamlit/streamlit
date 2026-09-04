@@ -291,7 +291,6 @@ def layer_extensions_subtest():
                 zoom=12,
                 pitch=0,
             ),
-            # pydeck 0.9.3 has no Extension class, so pass @@type dicts.
             layers=[
                 pdk.Layer(
                     "ScatterplotLayer",
@@ -303,6 +302,7 @@ def layer_extensions_subtest():
                     radius_min_pixels=8,
                     get_filter_value="value",
                     filter_range=[50, 100],
+                    # pydeck has no Extension class, so extensions are passed as @@type dicts.
                     extensions=[{"@@type": "DataFilterExtension", "filterSize": 1}],
                 ),
                 pdk.Layer(

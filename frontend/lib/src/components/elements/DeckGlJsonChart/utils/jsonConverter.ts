@@ -35,7 +35,7 @@ const configuration = {
     ...meshLayers,
     ...CARTO_LAYERS,
     ...deckExtensions,
-    // Alias _TerrainExtension so pydeck's @@type "TerrainExtension" resolves.
+    // pydeck JSON uses "TerrainExtension"; deck.gl exports it as _TerrainExtension.
     TerrainExtension: deckExtensions._TerrainExtension,
   },
   functions: {

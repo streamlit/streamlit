@@ -84,6 +84,22 @@ describe("jsonConverter layer extensions", () => {
     expect(converted.layers[0]).toBeNull()
   })
 
+  it("throws when a known layer has an unknown extension @@type", () => {
+    expect(() =>
+      jsonConverter.convert({
+        layers: [
+          {
+            "@@type": "ScatterplotLayer",
+            id: "unknown-extension",
+            data: [{ position: [0, 0] }],
+            getPosition: "@@=position",
+            extensions: [{ "@@type": "NotARealExtension" }],
+          },
+        ],
+      })
+    ).toThrow()
+  })
+
   it("resolves TerrainExtension from the pydeck JSON type name", () => {
     const layer = convertLayer({
       "@@type": "ScatterplotLayer",

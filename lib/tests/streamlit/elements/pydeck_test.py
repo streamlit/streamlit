@@ -70,7 +70,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         ]
         assert el.deck_gl_json_chart.tooltip == ""
 
-    def test_layer_extensions_serialized(self):
+    def test_layer_extensions_serialized(self) -> None:
         """Extension @@type dicts on a pydeck Layer appear in the chart JSON sent to the frontend."""
 
         st.pydeck_chart(
