@@ -89,8 +89,7 @@ export function applyStreamlitTheme(
       columnPadding: convertRemToPx(theme.spacing.sm),
       rowPadding: convertRemToPx(theme.spacing.twoXS),
       padding: convertRemToPx(theme.spacing.sm),
-      // Vega's default legend symbol stroke; wider strokes fill point swatches into solid rings.
-      symbolStrokeWidth: 1.5,
+      symbolStrokeWidth: convertRemToPx(theme.spacing.twoXS),
     },
     range: {
       category: theme.colors.chartCategoricalColors,
