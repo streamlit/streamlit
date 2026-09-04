@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Writer } from "protobufjs"
+import { Writer } from "protobufjs/minimal"
 
 import {
   Block as BlockProto,

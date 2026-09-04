@@ -16,7 +16,7 @@
 
 import { Draft, produce } from "immer"
 import { getLogger } from "loglevel"
-import { Long, util } from "protobufjs"
+import { type Long, util } from "protobufjs/minimal"
 import queryString from "query-string"
 import { Signal, SignalConnection } from "typed-signals"
 
