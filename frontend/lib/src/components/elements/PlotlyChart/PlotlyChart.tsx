@@ -178,10 +178,9 @@ export function PlotlyChart({
       ]
     }
 
-    // plotly.js v4 enables the "Share chart…" button (`sendChartToCloud`) by
-    // default. Hide it unless the user explicitly opted in. Removing the
-    // modebar button is required: `showSendToCloud: false` alone does not
-    // hide it in the react-plotly.js / plotly.js v4 combination we ship.
+    // plotly.js v4 adds `sendChartToCloud` when `showSendToCloud` is true.
+    // Default the flag off, and also remove the button so layout.modebar.add
+    // cannot put it back unless the app opts in with showSendToCloud: true.
     if (config.showSendToCloud === undefined) {
       config.showSendToCloud = false
     }

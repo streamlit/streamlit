@@ -44,9 +44,9 @@ const MAPBOX_TRACE_TYPES: Record<string, string> = {
 }
 
 /**
- * Mapbox Studio style slugs from `mapbox://styles/mapbox/<slug>[-vN]` URLs.
- * Identity rows are the v4 built-in allowlist; navigation entries are the
- * closest MapLibre fallbacks.
+ * Maps `mapbox://styles/mapbox/<slug>` URLs to plotly.js v4 built-in style
+ * names. Most slugs keep their name; `navigation-*` has no v4 equivalent and
+ * maps to the closest built-in.
  */
 const MAPBOX_URL_STYLE_TO_MAP_STYLE: Record<string, string> = {
   basic: "basic",
@@ -66,6 +66,9 @@ const STAMEN_STYLE_ALIASES: Record<string, string> = {
   "stamen-toner": "carto-positron",
   "stamen-watercolor": "carto-voyager",
 }
+
+/** plotly.js v4 `styleValueDflt` when a Mapbox style cannot be mapped. */
+const FALLBACK_MAP_STYLE = "basic"
 
 const MAPBOX_MODEBAR_BUTTONS: Record<string, string> = {
   zoomInMapbox: "zoomInMap",
@@ -94,9 +97,6 @@ function migrateMapboxSubplotId(id: unknown): unknown {
   }
   return id
 }
-
-/** plotly.js v4 `styleValueDflt` when a Mapbox style cannot be mapped. */
-const FALLBACK_MAP_STYLE = "basic"
 
 /**
  * Map official Mapbox style URLs and v3-only Stamen names to built-in
@@ -209,7 +209,7 @@ function migratePlotlyMapboxLayout(
       next.template = migrateTemplate(value)
       continue
     }
-    next[key] = value
+    next[key] = migrateMapboxNestedRefs(value)
   }
 
   // Apply renamed map* keys last so an existing layout.map wins over a
@@ -260,6 +260,34 @@ function migrateModeBarName(name: string): string {
   return MAPBOX_MODEBAR_BUTTONS[name] ?? name
 }
 
+/**
+ * Rewrite leftover v3 Mapbox identifiers in nested layout values such as
+ * `layout.modebar.add`/`remove` and updatemenu/slider `args` paths
+ * (`mapbox.zoom` → `map.zoom`).
+ */
+function migrateMapboxNestedRefs(value: unknown): unknown {
+  if (typeof value === "string") {
+    const modebarName = migrateModeBarName(value)
+    if (modebarName !== value) {
+      return modebarName
+    }
+    return value
+      .replace(/\bmapbox(\d*)\./g, (_match, n: string) => `map${n}.`)
+      .replace(/^mapbox(\d*)$/, (_match, n: string) => (n ? `map${n}` : "map"))
+  }
+  if (Array.isArray(value)) {
+    return value.map(item => migrateMapboxNestedRefs(item))
+  }
+  if (isRecord(value)) {
+    const next: Record<string, unknown> = {}
+    for (const [key, nested] of Object.entries(value)) {
+      next[key] = migrateMapboxNestedRefs(nested)
+    }
+    return next
+  }
+  return value
+}
+
 function migrateModeBarButton(button: unknown): unknown {
   if (typeof button === "string") {
     return migrateModeBarName(button)
@@ -303,12 +331,21 @@ export function migratePlotlyMapboxFigure(
 }
 
 /**
- * Drop `mapboxAccessToken` and rename mapbox modebar / scrollZoom values
- * so plotly.js v4 config objects stay valid.
+ * Drop `mapboxAccessToken`, map `showEditInChartStudio` to `showSendToCloud`,
+ * and rename mapbox modebar / scrollZoom values so plotly.js v4 config
+ * objects stay valid.
  */
 export function migratePlotlyMapboxConfig<T extends object>(config: T): T {
   const next = { ...config } as Record<string, unknown>
   delete next.mapboxAccessToken
+
+  if (
+    next.showSendToCloud === undefined &&
+    next.showEditInChartStudio === true
+  ) {
+    next.showSendToCloud = true
+  }
+  delete next.showEditInChartStudio
 
   if (typeof next.scrollZoom === "string") {
     next.scrollZoom = next.scrollZoom.replaceAll("mapbox", "map")

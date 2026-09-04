@@ -124,7 +124,7 @@ describe("PlotlyChart CustomTheme", () => {
       expect(spec.layout.template.layout).toHaveProperty("paper_bgcolor")
     })
 
-    it("bolds a string layout.title used by older figure JSON", () => {
+    it("bolds layout.title when it is a plain string", () => {
       const spec: Record<string, unknown> = {
         layout: {
           title: "My Chart",

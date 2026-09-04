@@ -243,6 +243,56 @@ describe("migratePlotlyMapboxFigure", () => {
       },
     })
   })
+
+  it("rewrites layout.modebar mapbox button names", () => {
+    const figure = migratePlotlyMapboxFigure({
+      data: [{ type: "scattermapbox" }],
+      layout: {
+        modebar: {
+          add: ["zoomInMapbox"],
+          remove: ["resetViewMapbox", "toImage"],
+        },
+      },
+    })
+
+    expect(figure.layout).toEqual({
+      modebar: {
+        add: ["zoomInMap"],
+        remove: ["resetViewMap", "toImage"],
+      },
+    })
+  })
+
+  it("rewrites mapbox restyle paths in updatemenus", () => {
+    const figure = migratePlotlyMapboxFigure({
+      data: [{ type: "scattermapbox" }],
+      layout: {
+        updatemenus: [
+          {
+            buttons: [
+              {
+                args: ["mapbox.zoom", 4],
+                args2: ["mapbox2.center", { lat: 0, lon: 0 }],
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    expect(figure.layout).toEqual({
+      updatemenus: [
+        {
+          buttons: [
+            {
+              args: ["map.zoom", 4],
+              args2: ["map2.center", { lat: 0, lon: 0 }],
+            },
+          ],
+        },
+      ],
+    })
+  })
 })
 
 describe("migratePlotlyMapboxConfig", () => {
@@ -282,5 +332,26 @@ describe("migratePlotlyMapboxConfig", () => {
   it("does not rewrite unrelated config", () => {
     const config = { displayModeBar: true, scrollZoom: true }
     expect(migratePlotlyMapboxConfig(config)).toEqual(config)
+  })
+
+  it("maps showEditInChartStudio to showSendToCloud when unset", () => {
+    expect(migratePlotlyMapboxConfig({ showEditInChartStudio: true })).toEqual(
+      { showSendToCloud: true }
+    )
+  })
+
+  it("keeps an explicit showSendToCloud over showEditInChartStudio", () => {
+    expect(
+      migratePlotlyMapboxConfig({
+        showSendToCloud: false,
+        showEditInChartStudio: true,
+      })
+    ).toEqual({ showSendToCloud: false })
+  })
+
+  it("drops showEditInChartStudio when it is not an opt-in", () => {
+    expect(
+      migratePlotlyMapboxConfig({ showEditInChartStudio: false })
+    ).toEqual({})
   })
 })
