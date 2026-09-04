@@ -51,6 +51,7 @@ from streamlit.runtime.runtime_util import (
 from streamlit.runtime.scriptrunner_utils.script_requests import (
     _TRIGGER_PROTO_FIELDS,
     _coalesce_replay_trigger_states,
+    _coalesce_replay_trigger_values,
     _has_active_trigger_value,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -893,7 +894,9 @@ class SessionState:
     def on_script_will_rerun(
         self,
         fresh_widget_states: WidgetStatesProto | None,
+        *,
         replay_trigger_states: WidgetStatesProto | None = None,
+        replay_trigger_values: Mapping[str, Any] | None = None,
     ) -> None:
         """Prepare widget state before a script rerun.
 
@@ -906,16 +909,20 @@ class SessionState:
             self.set_widgets_from_proto(fresh_widget_states)
             self._current_interaction_widget_states = fresh_widget_states
             try:
-                self._call_callbacks(replay_trigger_states)
+                self._call_callbacks(replay_trigger_states, replay_trigger_values)
             finally:
                 self._current_interaction_widget_states = None
         if replay_trigger_states is not None:
             self._overlay_replay_trigger_states(
-                replay_trigger_states, fresh_widget_states
+                replay_trigger_states,
+                replay_trigger_values,
+                fresh_widget_states,
             )
 
     def _call_callbacks(
-        self, incoming_replay_trigger_states: WidgetStatesProto | None = None
+        self,
+        incoming_replay_trigger_states: WidgetStatesProto | None = None,
+        incoming_replay_trigger_values: Mapping[str, Any] | None = None,
     ) -> None:
         """Run changed-widget callbacks, collect rerun votes, and submit reruns atomically."""
         votes = _CallbackRerunVotes()
@@ -1013,19 +1020,40 @@ class SessionState:
 
         if ctx and ctx.script_requests and rerun_batch:
             replay_trigger_states = incoming_replay_trigger_states
+            replay_trigger_values = incoming_replay_trigger_values
             if votes.requested_targeted:
-                replay_trigger_states = _coalesce_replay_trigger_states(
-                    replay_trigger_states,
+                current_replay_trigger_states = (
                     self._filter_active_trigger_widget_states(
                         self._current_interaction_widget_states
-                    ),
+                    )
                 )
+                current_replay_trigger_values = self._capture_replay_trigger_values(
+                    current_replay_trigger_states
+                )
+                coalesced_replay_states = _coalesce_replay_trigger_states(
+                    replay_trigger_states,
+                    current_replay_trigger_states,
+                )
+                replay_trigger_values = _coalesce_replay_trigger_values(
+                    current_replay_trigger_states,
+                    replay_trigger_values,
+                    current_replay_trigger_values,
+                    coalesced_replay_states,
+                )
+                replay_trigger_states = coalesced_replay_states
             if replay_trigger_states is not None:
+                coalesced_replay_states = _coalesce_replay_trigger_states(
+                    rerun_batch[0].replay_trigger_states,
+                    replay_trigger_states,
+                )
                 rerun_batch[0] = replace(
                     rerun_batch[0],
-                    replay_trigger_states=_coalesce_replay_trigger_states(
-                        rerun_batch[0].replay_trigger_states,
+                    replay_trigger_states=coalesced_replay_states,
+                    replay_trigger_values=_coalesce_replay_trigger_values(
                         replay_trigger_states,
+                        rerun_batch[0].replay_trigger_values,
+                        replay_trigger_values,
+                        coalesced_replay_states,
                     ),
                 )
             ctx.script_requests.request_rerun_batch(rerun_batch)
@@ -1094,9 +1122,6 @@ class SessionState:
             query_string=ctx.query_string,
             page_script_hash=ctx.page_script_hash,
             widget_states=None,
-            replay_trigger_states=self._filter_active_trigger_widget_states(
-                self._current_interaction_widget_states
-            ),
             cached_message_hashes=ctx.cached_message_hashes,
             context_info=ctx.context_info,
         )
@@ -1121,6 +1146,7 @@ class SessionState:
     def _overlay_replay_trigger_states(
         self,
         replay_trigger_states: WidgetStatesProto,
+        replay_trigger_values: Mapping[str, Any] | None,
         fresh_widget_states: WidgetStatesProto | None,
     ) -> None:
         """Apply replay triggers without replacing an active fresh trigger."""
@@ -1133,11 +1159,30 @@ class SessionState:
             else set()
         )
         for widget in replay_trigger_states.widgets:
-            if (
-                widget.id not in active_fresh_ids
-                and widget.WhichOneof("value") in _TRIGGER_PROTO_FIELDS
-            ):
+            if widget.id in active_fresh_ids or not _has_active_trigger_value(widget):
+                continue
+            if replay_trigger_values is not None and widget.id in replay_trigger_values:
+                self._new_widget_state.set_from_value(
+                    widget.id, replay_trigger_values[widget.id]
+                )
+            else:
                 self._new_widget_state.set_widget_from_proto(widget)
+
+    def _capture_replay_trigger_values(
+        self, replay_trigger_states: WidgetStatesProto | None
+    ) -> Mapping[str, Any] | None:
+        """Snapshot hydrated chat inputs whose uploaded files were consumed."""
+        if replay_trigger_states is None:
+            return None
+
+        values: dict[str, Any] = {}
+        for widget in replay_trigger_states.widgets:
+            if widget.WhichOneof("value") != "chat_input_value":
+                continue
+            state = self._new_widget_state.states.get(widget.id)
+            if isinstance(state, Value) and state.value is not None:
+                values[widget.id] = state.value
+        return values or None
 
     def _dispatch_trigger_callbacks(
         self,

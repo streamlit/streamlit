@@ -19,7 +19,7 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Iterator, Mapping
 
     from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
     from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
@@ -61,7 +61,9 @@ class SafeSessionState:
     def on_script_will_rerun(
         self,
         fresh_widget_states: WidgetStatesProto | None,
+        *,
         replay_trigger_states: WidgetStatesProto | None = None,
+        replay_trigger_values: Mapping[str, Any] | None = None,
     ) -> None:
         self._yield_callback()
         with self._lock:
@@ -69,7 +71,11 @@ class SafeSessionState:
             #  variable so that we don't need to hold our lock for the
             #  duration. (This will also allow us to downgrade our RLock
             #  to a Lock.)
-            self._state.on_script_will_rerun(fresh_widget_states, replay_trigger_states)
+            self._state.on_script_will_rerun(
+                fresh_widget_states,
+                replay_trigger_states=replay_trigger_states,
+                replay_trigger_values=replay_trigger_values,
+            )
 
     def on_script_finished(
         self,

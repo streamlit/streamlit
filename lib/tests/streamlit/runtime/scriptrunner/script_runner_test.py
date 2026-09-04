@@ -950,7 +950,11 @@ class ScriptRunnerTest(unittest.TestCase):
         scriptrunner.start()
         scriptrunner.join()
 
-        patched_on_script_will_rerun.assert_called_once_with(None, replay)
+        patched_on_script_will_rerun.assert_called_once_with(
+            None,
+            replay_trigger_states=replay,
+            replay_trigger_values=None,
+        )
 
     @patch(
         "streamlit.runtime.state.safe_session_state.SafeSessionState.on_script_finished"
@@ -967,7 +971,7 @@ class ScriptRunnerTest(unittest.TestCase):
             "good_script.py",
             RerunData(widget_states=None, replay_trigger_states=replay),
         )
-        patched_on_script_will_rerun.side_effect = lambda *_: (
+        patched_on_script_will_rerun.side_effect = lambda *_, **__: (
             scriptrunner.request_rerun(RerunData())
         )
 

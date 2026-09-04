@@ -368,6 +368,7 @@ class ScriptRequestsTest(unittest.TestCase):
         assert reqs._rerun_data.replay_trigger_states is None
 
     def test_present_message_fields_are_replayed_even_when_data_is_empty(self):
+        """Present message fields remain active even when their payload is falsy."""
         reqs = ScriptRequests()
         replay = WidgetStates()
         _create_widget("string", replay).string_trigger_value.CopyFrom(
@@ -389,6 +390,91 @@ class ScriptRequestsTest(unittest.TestCase):
             "file_chat",
             "audio_chat",
         ]
+
+    def test_hydrated_chat_value_tracks_winning_replay_proto(self):
+        """A newer active chat proto replaces both parts of an older replay entry."""
+        reqs = ScriptRequests()
+        older_replay = WidgetStates()
+        _create_widget("chat", older_replay).chat_input_value.data = "older"
+        older_value = object()
+        reqs.request_rerun(
+            RerunData(
+                replay_trigger_states=older_replay,
+                replay_trigger_values={"chat": older_value},
+            )
+        )
+
+        inactive_replay = WidgetStates()
+        _create_widget("chat", inactive_replay).chat_input_value.CopyFrom(
+            ChatInputValue(data=None)
+        )
+        reqs.request_rerun(RerunData(replay_trigger_states=inactive_replay))
+
+        assert reqs._rerun_data.replay_trigger_values == {"chat": older_value}
+
+        newer_replay = WidgetStates()
+        _create_widget("chat", newer_replay).chat_input_value.data = "newer"
+        reqs.request_rerun(RerunData(replay_trigger_states=newer_replay))
+
+        replayed = reqs._rerun_data.replay_trigger_states
+        assert replayed is not None
+        assert _get_widget("chat", replayed).chat_input_value.data == "newer"
+        assert reqs._rerun_data.replay_trigger_values is None
+
+    def test_consuming_request_releases_queued_hydrated_values(self):
+        """The request queue drops its reference after transferring a replay value."""
+        reqs = ScriptRequests()
+        replay = WidgetStates()
+        _create_widget("chat", replay).chat_input_value.data = "message"
+        hydrated_value = object()
+        reqs.request_rerun(
+            RerunData(
+                replay_trigger_states=replay,
+                replay_trigger_values={"chat": hydrated_value},
+            )
+        )
+
+        request = reqs.on_scriptrunner_ready()
+
+        assert request.rerun_data.replay_trigger_values == {"chat": hydrated_value}
+        assert reqs._rerun_data.replay_trigger_values is None
+
+    def test_stopping_releases_queued_hydrated_values(self):
+        """Stopping a runner releases hydrated values from its abandoned rerun."""
+        reqs = ScriptRequests()
+        replay = WidgetStates()
+        _create_widget("chat", replay).chat_input_value.data = "message"
+        reqs.request_rerun(
+            RerunData(
+                replay_trigger_states=replay,
+                replay_trigger_values={"chat": object()},
+            )
+        )
+
+        reqs.request_stop()
+
+        assert reqs._rerun_data.replay_trigger_values is None
+
+    def test_preempting_request_releases_queued_hydrated_values(self):
+        """Yield-time consumption transfers and releases a hydrated replay value."""
+        reqs = ScriptRequests()
+        replay = WidgetStates()
+        _create_widget("chat", replay).chat_input_value.data = "message"
+        hydrated_value = object()
+        reqs.request_rerun(
+            RerunData(
+                fragment_id_queue=["target"],
+                is_fragment_scoped_rerun=True,
+                replay_trigger_states=replay,
+                replay_trigger_values={"chat": hydrated_value},
+            )
+        )
+
+        request = reqs.on_scriptrunner_yield()
+
+        assert request is not None
+        assert request.rerun_data.replay_trigger_values == {"chat": hydrated_value}
+        assert reqs._rerun_data.replay_trigger_values is None
 
     def test_request_rerun_batch_coalesces_fragment_targets(self):
         reqs = ScriptRequests()

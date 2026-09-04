@@ -700,10 +700,12 @@ class ScriptRunner:
                     if (
                         rerun_data.widget_states is not None
                         or rerun_data.replay_trigger_states is not None
+                        or rerun_data.replay_trigger_values is not None
                     ):
                         self._session_state.on_script_will_rerun(
                             rerun_data.widget_states,
-                            rerun_data.replay_trigger_states,
+                            replay_trigger_states=rerun_data.replay_trigger_states,
+                            replay_trigger_values=rerun_data.replay_trigger_values,
                         )
                         # Check for pending rerun/stop requests while
                         # has_script_started is still False so on_script_finished

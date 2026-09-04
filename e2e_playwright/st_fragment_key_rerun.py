@@ -205,3 +205,42 @@ def coalescing_result_fragment() -> None:
 coalescing_source_fragment()
 coalescing_fresh_fragment()
 coalescing_result_fragment()
+
+# ------------------------------------------------------------------ #
+# Scenario 6: Targeted chat callback replay retains uploaded file contents.
+# ------------------------------------------------------------------ #
+st.header("Scenario 6: chat attachment replay")
+
+
+def rerun_chat_result_fragment() -> None:
+    st.rerun("chat_replay_result")
+
+
+@st.fragment(key="chat_replay_source")
+def chat_replay_source_fragment() -> None:
+    st.chat_input(
+        "Upload a replay attachment",
+        accept_file=True,
+        key="replay_chat",
+        on_submit=rerun_chat_result_fragment,
+    )
+
+
+@st.fragment(key="chat_replay_result")
+def chat_replay_result_fragment() -> None:
+    value = st.session_state.get("replay_chat")
+    with st.container(key="chat_replay_results"):
+        if value is None:
+            st.write("No replayed chat value")
+        else:
+            st.write(f"Replayed text: {value.text!r}")
+            st.write(f"Replayed files: {len(value.files)}")
+            if value.files:
+                st.write(f"Replayed filename: {value.files[0].name}")
+                st.write(
+                    f"Replayed contents: {value.files[0].getvalue().decode('utf-8')}"
+                )
+
+
+chat_replay_source_fragment()
+chat_replay_result_fragment()

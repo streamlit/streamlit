@@ -15,7 +15,7 @@
 """Playwright tests for @st.fragment(key=...) and st.rerun(scope=<key>)."""
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import FilePayload, Page, expect
 
 from e2e_playwright.shared.app_utils import (
     click_button,
@@ -145,4 +145,38 @@ def test_fresh_fragment_interaction_preserves_pending_callback_replay(
     expect(get_element_by_key(app, "coalescing_result_runs")).to_have_text(
         f"Result runs: {result_runs + 1}"
     )
+    expect_no_exception(app)
+
+
+def test_targeted_chat_callback_replay_retains_uploaded_file(app: Page) -> None:
+    """A targeted callback replay preserves an attachment-only chat value."""
+    chat_input = get_element_by_key(app, "replay_chat")
+    upload_button = chat_input.get_by_test_id("stChatInputFileUploadButton")
+    with app.expect_file_chooser() as chooser_info:
+        upload_button.click()
+    chooser_info.value.set_files(
+        FilePayload(
+            name="replay.txt",
+            mimeType="text/plain",
+            buffer=b"replayed contents",
+        )
+    )
+
+    expect(chat_input.get_by_text("replay.txt")).to_be_visible()
+    submit_button = chat_input.get_by_test_id("stChatInputSubmitButton")
+    expect(submit_button).to_be_enabled()
+    submit_button.click()
+
+    results = get_element_by_key(app, "chat_replay_results")
+    expect(results.get_by_text("Replayed text: ''", exact=True)).to_be_visible()
+    expect(results.get_by_text("Replayed files: 1", exact=True)).to_be_visible()
+    expect(
+        results.get_by_text("Replayed filename: replay.txt", exact=True)
+    ).to_be_visible()
+    expect(
+        results.get_by_text(
+            "Replayed contents: replayed contents",
+            exact=True,
+        )
+    ).to_be_visible()
     expect_no_exception(app)

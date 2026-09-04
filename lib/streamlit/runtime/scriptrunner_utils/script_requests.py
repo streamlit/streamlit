@@ -17,7 +17,7 @@ from __future__ import annotations
 import threading
 from dataclasses import dataclass, field, replace
 from enum import Enum
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from google.protobuf.message import Message
 
@@ -26,6 +26,8 @@ from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from streamlit.proto.ClientState_pb2 import ContextInfo
 
 
@@ -67,6 +69,10 @@ class RerunData:
     # fresh widget callbacks so the script body can observe them without
     # dispatching their callbacks again.
     replay_trigger_states: WidgetStates | None = None
+    # Already-deserialized chat input values corresponding to replay_trigger_states.
+    # Chat deserialization consumes uploaded file records, so replaying only its
+    # protobuf would lose file and audio payloads.
+    replay_trigger_values: Mapping[str, Any] | None = None
     # Hashes of messages that are cached in the client browser:
     cached_message_hashes: frozenset[str] = field(default_factory=frozenset)
     # context_info is used to store information from the user browser (e.g. timezone)
@@ -216,6 +222,49 @@ def _coalesce_replay_trigger_states(
     return coalesced
 
 
+def _coalesce_replay_trigger_values(
+    new_states: WidgetStates | None,
+    old_values: Mapping[str, Any] | None,
+    new_values: Mapping[str, Any] | None,
+    coalesced_states: WidgetStates | None,
+) -> Mapping[str, Any] | None:
+    """Coalesce hydrated chat values in lockstep with their replay protos."""
+    values_by_id = dict(old_values or {})
+
+    # A newer proto replaces the complete replay entry. Drop any older hydrated
+    # value even when the newer request does not carry one.
+    new_chat_ids: set[str] = set()
+    if new_states is not None:
+        for state in new_states.widgets:
+            if _has_active_trigger_value(state):
+                values_by_id.pop(state.id, None)
+                if state.WhichOneof("value") == "chat_input_value":
+                    new_chat_ids.add(state.id)
+    if new_values is not None:
+        values_by_id.update(
+            {
+                widget_id: value
+                for widget_id, value in new_values.items()
+                if widget_id in new_chat_ids
+            }
+        )
+
+    if coalesced_states is None:
+        return None
+
+    active_chat_ids = {
+        state.id
+        for state in coalesced_states.widgets
+        if state.WhichOneof("value") == "chat_input_value"
+    }
+    coalesced_values = {
+        widget_id: value
+        for widget_id, value in values_by_id.items()
+        if widget_id in active_chat_ids
+    }
+    return coalesced_values or None
+
+
 class ScriptRequests:
     """An interface for communicating with a ScriptRunner. Thread-safe.
 
@@ -234,6 +283,8 @@ class ScriptRequests:
         """
         with self._lock:
             self._state = ScriptRequestType.STOP
+            if self._rerun_data.replay_trigger_values is not None:
+                self._rerun_data = replace(self._rerun_data, replay_trigger_values=None)
 
     def request_rerun(self, new_data: RerunData) -> bool:
         """Request that the ScriptRunner rerun its script.
@@ -273,10 +324,17 @@ class ScriptRequests:
                     fragment_id_queue=[new_data.fragment_id],
                 )
 
+            coalesced_replay_states = _coalesce_replay_trigger_states(
+                None, new_data.replay_trigger_states
+            )
             new_data = replace(
                 new_data,
-                replay_trigger_states=_coalesce_replay_trigger_states(
-                    None, new_data.replay_trigger_states
+                replay_trigger_states=coalesced_replay_states,
+                replay_trigger_values=_coalesce_replay_trigger_values(
+                    new_data.replay_trigger_states,
+                    None,
+                    new_data.replay_trigger_values,
+                    coalesced_replay_states,
                 ),
             )
             self._rerun_data = new_data
@@ -290,6 +348,12 @@ class ScriptRequests:
             coalesced_replay_states = _coalesce_replay_trigger_states(
                 self._rerun_data.replay_trigger_states,
                 new_data.replay_trigger_states,
+            )
+            coalesced_replay_values = _coalesce_replay_trigger_values(
+                new_data.replay_trigger_states,
+                self._rerun_data.replay_trigger_values,
+                new_data.replay_trigger_values,
+                coalesced_replay_states,
             )
 
             # Fold a bare fragment_id into fragment_id_queue so the coalescing
@@ -334,6 +398,7 @@ class ScriptRequests:
                 is_fragment_scoped_rerun=is_fragment_scoped_rerun,
                 is_auto_rerun=new_data.is_auto_rerun,
                 replay_trigger_states=coalesced_replay_states,
+                replay_trigger_values=coalesced_replay_values,
                 context_info=new_data.context_info,
             )
 
@@ -377,7 +442,10 @@ class ScriptRequests:
                     return None
 
                 self._state = ScriptRequestType.CONTINUE
-                return ScriptRequest(ScriptRequestType.RERUN, self._rerun_data)
+                rerun_data = self._rerun_data
+                if rerun_data.replay_trigger_values is not None:
+                    self._rerun_data = replace(rerun_data, replay_trigger_values=None)
+                return ScriptRequest(ScriptRequestType.RERUN, rerun_data)
 
             if self._state != ScriptRequestType.STOP:  # pragma: no cover - defensive
                 raise RuntimeError(
@@ -398,9 +466,14 @@ class ScriptRequests:
         with self._lock:
             if self._state == ScriptRequestType.RERUN:
                 self._state = ScriptRequestType.CONTINUE
-                return ScriptRequest(ScriptRequestType.RERUN, self._rerun_data)
+                rerun_data = self._rerun_data
+                if rerun_data.replay_trigger_values is not None:
+                    self._rerun_data = replace(rerun_data, replay_trigger_values=None)
+                return ScriptRequest(ScriptRequestType.RERUN, rerun_data)
 
             # If we don't have a rerun request, unconditionally change our
             # state to STOP.
             self._state = ScriptRequestType.STOP
+            if self._rerun_data.replay_trigger_values is not None:
+                self._rerun_data = replace(self._rerun_data, replay_trigger_values=None)
             return ScriptRequest(ScriptRequestType.STOP)
