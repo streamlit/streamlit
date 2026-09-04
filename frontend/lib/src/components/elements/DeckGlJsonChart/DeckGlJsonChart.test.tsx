@@ -26,6 +26,7 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { DeckGlJsonChart } from "./DeckGlJsonChart"
 import type { DeckGlElementState, DeckGLProps } from "./types"
+import { PYDECK_UNSET_MAP_STYLE } from "./utils/mapShell"
 
 type MockPickingInfo = {
   index: number
@@ -148,12 +149,12 @@ describe("DeckGlJsonChart", () => {
     })
 
     it.each([
-      { name: "unset sentinel", extra: { mapStyle: "__MAP_STYLE__" } },
+      { name: "unset sentinel", extra: { mapStyle: PYDECK_UNSET_MAP_STYLE } },
       {
         name: "OrbitView",
         extra: {
           views: [{ "@@type": "OrbitView", controller: true }],
-          mapStyle: "__MAP_STYLE__",
+          mapStyle: PYDECK_UNSET_MAP_STYLE,
           initialViewState: { target: [0, 0, 0], zoom: 5 },
         },
       },

@@ -53,7 +53,7 @@ import {
 } from "./styled-components"
 import type { DeckGlElementState, DeckGLProps } from "./types"
 import { EMPTY_STATE, useDeckGl } from "./useDeckGl"
-import { getProvidedViews, shouldShowBasemap } from "./utils/mapShell"
+import { shouldShowBasemap } from "./utils/mapShell"
 
 registerLoaders([CSVLoader, GLTFLoader])
 
@@ -104,17 +104,13 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   const usesMapbox =
     deck.mapProvider == "mapbox" ||
     (deck?.mapStyle && deck.mapStyle?.indexOf("mapbox") >= 0)
-  const providedViews = useMemo(
-    () => getProvidedViews(deck.views),
-    [deck.views]
-  )
   const showBasemap = useMemo(
     () =>
       shouldShowBasemap({
-        views: providedViews,
+        views: deck.views,
         mapStyle: deck.mapStyle,
       }),
-    [providedViews, deck.mapStyle]
+    [deck.views, deck.mapStyle]
   )
 
   const [isInitialized, setIsInitialized] = useState(false)
@@ -267,9 +263,9 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
             // @ts-expect-error There is a type mismatch due to our versions of the libraries
             ContextProvider={MapContext.Provider}
             parameters={deck.parameters}
-            views={providedViews}
+            views={deck.views}
             // Deck copies a truthy controller onto views[0]; skip if views exist.
-            controller={!providedViews}
+            controller={!deck.views}
             onClick={
               isSelectionModeActivated && !disabled ? handleClick : undefined
             }

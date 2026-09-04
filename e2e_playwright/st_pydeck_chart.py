@@ -553,7 +553,6 @@ def globe_view_subtest():
             views=[pdk.View(type="_GlobeView", controller=True)],
             initial_view_state=pdk.ViewState(latitude=20, longitude=10, zoom=0),
             map_provider=None,
-            parameters={"cull": True},
         ),
         height=400,
     )

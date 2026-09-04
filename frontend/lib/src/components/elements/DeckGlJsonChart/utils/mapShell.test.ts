@@ -88,6 +88,15 @@ describe("withDefaultMapViewIds", () => {
     expect(
       withDefaultMapViewIds([{ "@@type": "OrbitView", controller: true }])
     ).toEqual([{ "@@type": "OrbitView", controller: true }])
+    expect(
+      withDefaultMapViewIds([
+        { "@@type": "MapView", width: "50%" },
+        { "@@type": "MapView", x: "50%", width: "50%" },
+      ])
+    ).toEqual([
+      { "@@type": "MapView", width: "50%" },
+      { "@@type": "MapView", x: "50%", width: "50%" },
+    ])
   })
 })
 

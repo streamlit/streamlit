@@ -68,6 +68,12 @@ export function withDefaultMapViewIds(views: unknown): unknown {
     return views
   }
 
+  const viewList = Array.isArray(views) ? views : [views]
+  // Multiple id-less MapViews would collide on #view-default-view.
+  if (viewList.filter(isMapViewObject).length !== 1) {
+    return views
+  }
+
   const assignId = (view: unknown): unknown => {
     if (
       isNullOrUndefined(view) ||

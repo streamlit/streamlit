@@ -60,6 +60,9 @@ import {
   withDefaultMapViewIds,
 } from "./utils/mapShell"
 
+// Manually created by Carto for Streamlit stats only — not a paid/secure key.
+const CARTO_STREAMLIT_API_KEY = "x7g2plm9yq8vfrc"
+
 /**
  * Extracted type from the DeckGL library since it is not exported correctly.
  */
@@ -451,11 +454,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       (jsonCopy?.mapStyle && jsonCopy.mapStyle?.indexOf("cartocdn") >= 0)
 
     if (isUsingCarto && !jsonCopy.cartoKey) {
-      // This key was manually created by Carto just for Streamlit. It is NOT
-      // connected to any paid accounts, or secure API access, or anything of
-      // the sort. It's is just used for Carto to be able to separate Streamlit
-      // usage from other types in their own internal stats.
-      jsonCopy.cartoKey = "x7g2plm9yq8vfrc"
+      jsonCopy.cartoKey = CARTO_STREAMLIT_API_KEY
     }
 
     if (jsonCopy.layers) {
@@ -596,7 +595,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       typeof mapStyle === "string" &&
       mapStyle.indexOf("cartocdn") >= 0
     ) {
-      cartoKey = "x7g2plm9yq8vfrc"
+      cartoKey = CARTO_STREAMLIT_API_KEY
     }
 
     return {

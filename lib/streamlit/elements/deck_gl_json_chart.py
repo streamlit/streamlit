@@ -403,7 +403,8 @@ class PydeckMixin:
             layers, views (``MapView``, ``OrbitView``, ``OrthographicView``,
             ``FirstPersonView``, and ``GlobeView``), JSON ``parameters``, and
             layer extensions are supported. Use ``map_provider=None`` to omit
-            the basemap. Pass extensions as ``@@type`` dicts, for example
+            the basemap (pydeck 0.9+). Pass extensions as ``@@type`` dicts,
+            for example
             ``extensions=[{"@@type": "DataFilterExtension", "filterSize": 1}]``.
             Custom JS libraries, widgets, and multi-view layouts are not
             supported.
