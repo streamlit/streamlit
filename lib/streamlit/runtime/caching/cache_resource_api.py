@@ -412,13 +412,12 @@ class CacheResourceAPI:
         To learn more about caching, see `Caching overview
         <https://docs.streamlit.io/develop/concepts/architecture/caching>`_.
 
-        .. note::
-            You can decorate a coroutine function (``async def``). Calling the
-            decorated function returns an awaitable; you must ``await`` it. On a
-            miss, Streamlit runs the coroutine and caches its return value, not the
-            coroutine object. On a hit, Streamlit returns the cached value without
-            running the function again. The caller is responsible for driving the
-            coroutine (for example, with ``asyncio.run``).
+        Cached functions can be synchronous or asynchronous. To cache an asynchronous
+        function, define it with ``async def``. Calling a cached asynchronous function
+        returns an awaitable, which you must await (for example, with ``asyncio.run``).
+        On a cache miss, Streamlit runs the function and caches its awaited return
+        value. On a cache hit, Streamlit returns the cached value without rerunning
+        the function. The caller is responsible for driving the awaitable.
 
         .. note::
             Calls to a decorated coroutine function remain awaitable, but
@@ -538,7 +537,9 @@ class CacheResourceAPI:
               the ``runner.cacheBackgroundRefreshTTLMultiplier`` configuration option.
               This mode requires a ``ttl``. If you set ``on_release``,
               Streamlit calls it for the old resource after a successful update.
-              It is not supported for coroutine functions.
+              It is not supported for coroutine functions. To upvote support for
+              this combination, see GitHub issue `#16800
+              <https://github.com/streamlit/streamlit/issues/16800>`_.
 
             .. note::
                 A function that refreshes in the background can't use session-specific
