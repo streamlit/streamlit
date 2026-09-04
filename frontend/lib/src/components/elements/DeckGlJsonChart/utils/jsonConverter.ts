@@ -21,6 +21,13 @@ import {
   colorCategories,
   colorContinuous,
 } from "@deck.gl/carto"
+import {
+  _GlobeView,
+  FirstPersonView,
+  MapView,
+  OrbitView,
+  OrthographicView,
+} from "@deck.gl/core"
 import * as deckExtensions from "@deck.gl/extensions"
 import * as geoLayers from "@deck.gl/geo-layers"
 import { JSONConverter } from "@deck.gl/json"
@@ -52,6 +59,13 @@ const configuration = {
     ...meshLayers,
     ...CARTO_LAYERS,
     ...extensionClasses,
+    // Named imports only; @deck.gl/core also exports non-classes.
+    MapView,
+    OrbitView,
+    OrthographicView,
+    FirstPersonView,
+    _GlobeView,
+    GlobeView: _GlobeView, // docs alias; export is still experimental
   },
   functions: {
     colorBins,

@@ -481,6 +481,83 @@ def height_parameter_subtest():
     )
 
 
+def orbit_point_cloud_subtest():
+    st.write("## Test OrbitView + PointCloudLayer")
+    rng = np.random.default_rng(0)
+    n = 250
+    theta, phi = rng.uniform(0, 2 * np.pi, n), rng.uniform(0, np.pi, n)
+    st.pydeck_chart(
+        pdk.Deck(
+            layers=[
+                pdk.Layer(
+                    "PointCloudLayer",
+                    data=pd.DataFrame(
+                        {
+                            "x": np.sin(phi) * np.cos(theta),
+                            "y": np.sin(phi) * np.sin(theta),
+                            "z": np.cos(phi),
+                            "r": rng.integers(40, 255, n),
+                            "g": rng.integers(40, 255, n),
+                            "b": rng.integers(40, 255, n),
+                        }
+                    ),
+                    get_position=["x", "y", "z"],
+                    get_color=["r", "g", "b"],
+                    point_size=4,
+                ),
+            ],
+            initial_view_state=pdk.ViewState(
+                target=[0, 0, 0], zoom=5, rotation_x=15, rotation_orbit=30
+            ),
+            views=[pdk.View(type="OrbitView", controller=True)],
+            map_provider=None,
+        ),
+        height=400,
+    )
+
+
+def globe_view_subtest():
+    st.write("## Test GlobeView")
+    patch = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            [-20.0, -10.0],
+                            [50.0, -10.0],
+                            [50.0, 40.0],
+                            [-20.0, 40.0],
+                            [-20.0, -10.0],
+                        ]
+                    ],
+                },
+            }
+        ],
+    }
+    st.pydeck_chart(
+        pdk.Deck(
+            layers=[
+                pdk.Layer(
+                    "GeoJsonLayer",
+                    data=patch,
+                    filled=True,
+                    stroked=True,
+                    get_fill_color=[30, 120, 180, 220],
+                    get_line_color=[255, 255, 255],
+                ),
+            ],
+            views=[pdk.View(type="_GlobeView", controller=True)],
+            initial_view_state=pdk.ViewState(latitude=20, longitude=10, zoom=0),
+            map_provider=None,
+        ),
+        height=400,
+    )
+
+
 SUBTESTS = {k: v for k, v in globals().items() if k.endswith("_subtest")}
 
 subtest = SUBTESTS[st.selectbox("Test to run", SUBTESTS.keys())]

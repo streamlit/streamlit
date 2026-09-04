@@ -15,6 +15,13 @@
  */
 
 import {
+  _GlobeView,
+  FirstPersonView,
+  MapView,
+  OrbitView,
+  OrthographicView,
+} from "@deck.gl/core"
+import {
   _TerrainExtension,
   DataFilterExtension,
   PathStyleExtension,
@@ -23,10 +30,22 @@ import { PathLayer, ScatterplotLayer } from "@deck.gl/layers"
 
 import { convertDeckJson } from "./jsonConverter"
 
+type ConvertedViews = {
+  views: unknown[]
+}
+
 type ConvertedLayer = {
   props: {
     extensions?: unknown[]
   }
+}
+
+const convertView = (type: string): unknown => {
+  const converted = convertDeckJson({
+    views: [{ "@@type": type, controller: true }],
+  }) as ConvertedViews
+
+  return converted.views[0]
 }
 
 const convertLayer = (layerJson: Record<string, unknown>): ConvertedLayer => {
@@ -38,6 +57,31 @@ const convertLayer = (layerJson: Record<string, unknown>): ConvertedLayer => {
   expect(layer).toBeTruthy()
   return layer as ConvertedLayer
 }
+
+describe("jsonConverter view classes", () => {
+  it.each([
+    { type: "MapView", ViewClass: MapView },
+    { type: "OrbitView", ViewClass: OrbitView },
+    { type: "OrthographicView", ViewClass: OrthographicView },
+    { type: "FirstPersonView", ViewClass: FirstPersonView },
+    { type: "_GlobeView", ViewClass: _GlobeView },
+    { type: "GlobeView", ViewClass: _GlobeView },
+  ])("hydrates @@type $type to $ViewClass.name", ({ type, ViewClass }) => {
+    expect(convertView(type)).toBeInstanceOf(ViewClass)
+  })
+
+  it("hydrates an unknown view type to null", () => {
+    expect(convertView("NotARealView")).toBeNull()
+  })
+
+  it("passes JSON parameters through", () => {
+    const converted = convertDeckJson({
+      parameters: { cull: true },
+    }) as { parameters: { cull: boolean } }
+
+    expect(converted.parameters).toEqual({ cull: true })
+  })
+})
 
 describe("jsonConverter layer extensions", () => {
   it("hydrates DataFilterExtension instead of dropping the layer", () => {
