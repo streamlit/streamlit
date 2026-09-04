@@ -128,3 +128,60 @@ export function shouldShowBasemap({
 }): boolean {
   return isMapCompatibleViewSpec(views) && !isUnsetMapStyle(mapStyle)
 }
+
+const UNSAFE_PARAMETER_KEYS = new Set([
+  "__proto__",
+  "constructor",
+  "prototype",
+])
+
+/**
+ * GPU parameters from pydeck JSON, with converter artifacts removed.
+ *
+ * `JSONConverter` can turn `@@=` strings into functions (deck.gl allows
+ * `parameters` to be a per-frame callback). Only JSON values are forwarded.
+ *
+ * @param {unknown} value - Converted `parameters` from the pydeck spec.
+ * @returns {Record<string, unknown> | undefined} JSON-safe GPU state, or undefined.
+ */
+export function sanitizeDeckParameters(
+  value: unknown
+): Record<string, unknown> | undefined {
+  if (isNullOrUndefined(value) || typeof value !== "object") {
+    return undefined
+  }
+
+  if (
+    Array.isArray(value) ||
+    Object.getPrototypeOf(value) !== Object.prototype
+  ) {
+    return undefined
+  }
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(JSON.stringify(value))
+  } catch {
+    return undefined
+  }
+
+  if (
+    isNullOrUndefined(parsed) ||
+    typeof parsed !== "object" ||
+    Array.isArray(parsed)
+  ) {
+    return undefined
+  }
+
+  const sanitized: Record<string, unknown> = {}
+  for (const [key, nested] of Object.entries(
+    parsed as Record<string, unknown>
+  )) {
+    if (UNSAFE_PARAMETER_KEYS.has(key)) {
+      continue
+    }
+    sanitized[key] = nested
+  }
+
+  return Object.keys(sanitized).length > 0 ? sanitized : undefined
+}

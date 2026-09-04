@@ -62,4 +62,12 @@ describe("jsonConverter view classes", () => {
 
     expect(converted.parameters).toEqual({ cull: true })
   })
+
+  it("turns @@= parameter values into functions", () => {
+    const converted = jsonConverter.convert({
+      parameters: "@@=1",
+    }) as { parameters: unknown }
+
+    expect(typeof converted.parameters).toBe("function")
+  })
 })

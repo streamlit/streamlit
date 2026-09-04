@@ -142,6 +142,16 @@ describe("DeckGlJsonChart", () => {
       expect(screen.getByTitle("Zoom In")).toBeVisible()
     })
 
+    it("renders zoom controls when the spec omits views", async () => {
+      render(<DeckGlJsonChart {...getProps({}, {}, { views: undefined })} />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId("mockDeckGL")).toBeVisible()
+      })
+      expect(screen.getByTestId("stDeckGlJsonChartZoomButton")).toBeVisible()
+      expect(screen.getByTitle("Zoom In")).toBeVisible()
+    })
+
     it("does not render zoom controls when mapStyle is the pydeck unset sentinel", async () => {
       render(
         <DeckGlJsonChart

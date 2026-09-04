@@ -22,6 +22,7 @@ import {
   isMapCompatibleViewSpec,
   isUnsetMapStyle,
   PYDECK_UNSET_MAP_STYLE,
+  sanitizeDeckParameters,
   shouldShowBasemap,
 } from "./mapShell"
 
@@ -126,5 +127,43 @@ describe("shouldShowBasemap", () => {
           "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
       })
     ).toBe(false)
+  })
+
+  it("shows a basemap when views are omitted and a style is present", () => {
+    expect(
+      shouldShowBasemap({
+        views: undefined,
+        mapStyle: "mapbox://styles/mapbox/light-v9",
+      })
+    ).toBe(true)
+  })
+})
+
+describe("sanitizeDeckParameters", () => {
+  it("keeps JSON GPU state such as GlobeView cull", () => {
+    expect(sanitizeDeckParameters({ cull: true })).toEqual({ cull: true })
+  })
+
+  it("drops functions produced by JSONConverter @@= expressions", () => {
+    expect(
+      sanitizeDeckParameters({
+        cull: true,
+        blend: () => true,
+      })
+    ).toEqual({ cull: true })
+  })
+
+  it("rejects a top-level function, class instance, or array", () => {
+    expect(sanitizeDeckParameters(() => ({ cull: true }))).toBeUndefined()
+    expect(
+      sanitizeDeckParameters(new MapView({ controller: true }))
+    ).toBeUndefined()
+    expect(sanitizeDeckParameters([{ cull: true }])).toBeUndefined()
+  })
+
+  it("returns undefined when nothing JSON-safe remains", () => {
+    expect(sanitizeDeckParameters({ blend: () => true })).toBeUndefined()
+    expect(sanitizeDeckParameters(undefined)).toBeUndefined()
+    expect(sanitizeDeckParameters(null)).toBeUndefined()
   })
 })

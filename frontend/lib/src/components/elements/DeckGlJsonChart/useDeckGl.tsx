@@ -55,6 +55,7 @@ import { jsonConverter } from "./utils/jsonConverter"
 import {
   isMapCompatibleViewSpec,
   PYDECK_UNSET_MAP_STYLE,
+  sanitizeDeckParameters,
 } from "./utils/mapShell"
 
 /**
@@ -575,7 +576,11 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       })
     }
 
-    return jsonConverter.convert(jsonCopy) as DeckObject
+    const converted = jsonConverter.convert(jsonCopy) as DeckObject
+    return {
+      ...converted,
+      parameters: sanitizeDeckParameters(converted.parameters),
+    }
   }, [
     data.selection.indices,
     isLightTheme,

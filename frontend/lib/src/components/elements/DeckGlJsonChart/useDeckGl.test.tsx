@@ -1002,5 +1002,34 @@ describe("useDeckGl", () => {
 
       expect(result.current.deck.parameters).toEqual({ cull: true })
     })
+
+    it("does not forward @@= parameters as a per-frame function", () => {
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps(
+          {},
+          {},
+          {
+            parameters: "@@=1",
+          }
+        ),
+      })
+
+      expect(result.current.deck.parameters).toBeUndefined()
+    })
+
+    it("applies the Carto default when the spec omits views", () => {
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps(
+          {},
+          {},
+          { views: undefined, mapStyle: undefined }
+        ),
+      })
+
+      expect(result.current.deck.views).toBeUndefined()
+      expect(result.current.deck.mapStyle).toBe(
+        "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+      )
+    })
   })
 })
