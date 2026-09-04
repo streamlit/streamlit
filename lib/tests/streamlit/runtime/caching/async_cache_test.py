@@ -478,6 +478,9 @@ def test_clear_is_atomic_with_async_foreground_write(
     cache = load._info.get_function_cache(load._function_key)
     original_is_current = cache._invalidation_token_is_current
     validation_calls = 0
+    # Pause on the token check that runs under the storage lock. cache_data
+    # validates once before pickling and again under `_write_lock`;
+    # cache_resource validates only under `_mem_cache_lock`.
     validation_call_under_storage_lock = 2 if name == "cache_data" else 1
 
     def pause_after_validation(
