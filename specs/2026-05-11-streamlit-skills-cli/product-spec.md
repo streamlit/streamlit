@@ -15,7 +15,7 @@ Two installation modes are supported:
 - **Global:** Fetches the `developing-with-streamlit` meta skill from the
   [`streamlit/agent-skills`](https://github.com/streamlit/agent-skills) GitHub
   repository and installs it to the user's global agent skills directories
-  (`~/.agents/skills/` and `~/.claude/skills/` if `~/.claude` exists).
+  (`~/.agents/skills/`, and `~/.claude/skills/` when Claude Code is detected).
   This meta skill includes a discovery script that dynamically locates
   project-specific bundled skills at runtime.
 
@@ -124,7 +124,7 @@ active Streamlit installation, ensuring version-matched guidance.
 
 **Targets:**
 - `<project>/.agents/skills/developing-with-streamlit/` (always)
-- `<project>/.claude/skills/developing-with-streamlit/` (when `~/.claude` exists)
+- `<project>/.claude/skills/developing-with-streamlit/` (when Claude Code is detected)
 
 **Project root detection:** Existing `.agents/` or `.claude/` dir → git root → cwd.
 
@@ -153,7 +153,7 @@ locates each project's bundled skills at runtime.
 
 **Targets:**
 - `~/.agents/skills/developing-with-streamlit/` (always)
-- `~/.claude/skills/developing-with-streamlit/` (when `~/.claude` exists)
+- `~/.claude/skills/developing-with-streamlit/` (when Claude Code is detected)
 
 **What gets installed:**
 ```
@@ -181,11 +181,33 @@ breaking changes roll out to users.
 
 ### Common Behavior
 
-- **Claude Code detection:** The presence of `~/.claude` in the user's home
-  directory is used to determine whether to install to `.claude/skills/`
-  directories (both project-local and global). This simple heuristic may
-  produce false positives (leftover dir after uninstall) or false negatives
-  (custom `CLAUDE_HOME`), but keeps the implementation straightforward.
+- **Claude Code detection:** Whether to install to `.claude/skills/` (both
+  project-local and global) is decided by any of three signals: `~/.claude`,
+  `~/.claude.json`, or a `claude` executable on `PATH`. Any one is enough,
+  because the failure is asymmetric - Claude Code never reads `.agents/skills/`,
+  so a missed detection costs the user the whole skill while a false positive
+  costs a few unused symlinks. `~/.claude` alone is not sufficient: it is
+  created lazily, so a freshly installed CLI has none yet. False positives
+  (a leftover dir after uninstall) and false negatives (a `CLAUDE_CONFIG_DIR`
+  pointing elsewhere with the CLI off `PATH`) are still accepted to keep
+  detection simple.
+- **Install completeness:** A skill present in only some of a scope's target
+  directories counts as *not* installed, so the startup recommendation and the
+  in-app nudge both prompt again and the re-run fills in the missing agent
+  directory. Completeness is judged per scope and either scope satisfying it is
+  enough, so a deliberate global-only install is not flagged in every project. An
+  install that cannot be inspected at all - every target directory raises, e.g.
+  on permissions - does not prompt: neither surface can tell, and the install
+  they would recommend hits the same error. The startup recommendation reaches
+  that by treating it as installed; the in-app nudge withholds under its own
+  `check_unreadable` reason, so the two stay distinguishable in telemetry.
+- **Who gets prompted:** The in-app nudge requires an agent harness to be
+  present, judged by *either* detector - the home-directory harness list or the
+  broader Claude Code detection above. Either is enough on purpose: a user
+  detected broadly enough to be given a `.claude/skills` target is not reported
+  as fully installed, so the startup recommendation prints for them. Gating
+  the nudge on the narrower signal left that user nagged by the surface that
+  cannot fix it and hidden from the one-click repair that can.
 - **Idempotent:** Safe to run multiple times; reports "up to date" for existing
   installs, repairs broken links, skips user-managed files with conflict warning,
   and updates global skill if the versioned tag has changed on GitHub

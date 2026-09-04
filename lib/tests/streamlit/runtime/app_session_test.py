@@ -2899,7 +2899,7 @@ def test_create_new_session_message_suppresses_nudge_on_non_loopback() -> None:
     )
 
 
-@pytest.mark.parametrize("reason", ["conflict", "check_failed"])
+@pytest.mark.parametrize("reason", ["conflict", "check_failed", "check_unreadable"])
 def test_create_new_session_message_reports_informative_suppression(
     reason: str,
 ) -> None:

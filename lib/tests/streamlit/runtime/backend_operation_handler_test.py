@@ -486,6 +486,10 @@ def test_install_skills_handler_refuses_without_agent_harness() -> None:
     with (
         patch("streamlit.config.get_option", return_value=False),
         patch.object(skills, "detect_installed_agents", return_value=[]),
+        # Pinned, not inherited: the gate consults the broader Claude signal too,
+        # which reads PATH and so would otherwise answer differently on a
+        # contributor machine with the CLI installed than it does in CI.
+        patch.object(skills, "_is_claude_code_present", return_value=False),
         patch("streamlit.web.skills.install_skills") as mock_install,
     ):
         response = asyncio.run(
@@ -498,6 +502,34 @@ def test_install_skills_handler_refuses_without_agent_harness() -> None:
     assert response.error_msg == "Skills install is not available in this environment."
     assert response.error_reason == "refused:no_agent"
     assert not response.HasField("install_skills")
+
+
+def test_install_skills_handler_honors_a_broad_claude_signal() -> None:
+    """The action gate accepts whatever the display gate accepts.
+
+    A `claude` on PATH with no ~/.claude gets a .claude/skills target, is
+    therefore reported as partially installed, and now sees the nudge. If this
+    gate still keyed on detect_installed_agents() alone, that nudge would hand
+    the user a button that refuses - worse than the nag it replaced.
+    """
+    install_result = skills._InstallResult(installed=[".claude/skills/foo"])
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=[]),
+        patch.object(skills, "_is_claude_code_present", return_value=True),
+        patch(
+            "streamlit.web.skills.install_skills", return_value=install_result
+        ) as mock_install,
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    mock_install.assert_called_once()
+    assert response.error_reason == ""
+    assert response.HasField("install_skills")
 
 
 def test_install_skills_handler_refuses_non_loopback_connection() -> None:
@@ -610,8 +642,13 @@ def test_install_skills_handler_runs_real_installer(tmp_path: Path) -> None:
         patch.object(skills, "detect_installed_agents", return_value=["claude"]),
         patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
         patch("pathlib.Path.cwd", return_value=project_dir),
-        # No ~/.claude, so only .agents/skills is targeted.
         patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        # Pin Claude Code as absent so .agents/skills is the only target, and the
+        # detail string below stays predictable. Stated explicitly rather than
+        # left to the temp $HOME having no ~/.claude: detection also consults
+        # PATH, so on a contributor's machine with the CLI installed the real
+        # helper would add .claude/skills and this would fail there but not in CI.
+        patch.object(skills, "_is_claude_code_present", return_value=False),
         patch.object(skills, "clear_installed_skills_cache"),
     ):
         response = asyncio.run(
