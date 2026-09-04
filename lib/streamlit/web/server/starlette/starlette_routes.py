@@ -181,6 +181,21 @@ ROUTE_HOST_CONFIG: Final = f"{BASE_ROUTE_CORE}/host-config"
 _ROUTE_MEDIA: Final = f"{BASE_ROUTE_MEDIA}/{{file_id:path}}"
 _ROUTE_UPLOAD_FILE: Final = f"{BASE_ROUTE_UPLOAD_FILE}/{{session_id}}/{{file_id}}"
 
+# Media MIME types that a browser can render as an active document (i.e. that
+# can execute scripts) when navigated to directly. Only these need the
+# Content-Security-Policy: sandbox header. Passive types (images, audio, video,
+# PDFs served as iframe documents via st.iframe) are left un-sandboxed so their
+# inline rendering keeps working.
+_ACTIVE_DOCUMENT_MIME_TYPES: Final = frozenset(
+    {
+        "text/html",
+        "application/xhtml+xml",
+        "image/svg+xml",
+        "text/xml",
+        "application/xml",
+    }
+)
+
 # Component routes
 _ROUTE_COMPONENTS_V1: Final = f"{BASE_ROUTE_COMPONENT}/{{path:path}}"
 _ROUTE_COMPONENTS_V2: Final = f"{BASE_ROUTE_CORE}/bidi-components/{{path:path}}"
@@ -693,7 +708,14 @@ def create_media_routes(
         except MediaFileStorageError as exc:
             raise HTTPException(status_code=404, detail="File not found") from exc
 
-        headers: dict[str, str] = {}
+        # Media contents and MIME types can originate from user uploads, so
+        # always block MIME sniffing and additionally sandbox active-document
+        # types (see _ACTIVE_DOCUMENT_MIME_TYPES) so uploaded content cannot run
+        # in the app's origin on direct navigation.
+        headers: dict[str, str] = {"X-Content-Type-Options": "nosniff"}
+        base_mimetype = (media_file.mimetype or "").split(";", 1)[0].strip().lower()
+        if base_mimetype in _ACTIVE_DOCUMENT_MIME_TYPES:
+            headers["Content-Security-Policy"] = "sandbox"
 
         if media_file.kind == MediaFileKind.DOWNLOADABLE:
             filename = media_file.filename
