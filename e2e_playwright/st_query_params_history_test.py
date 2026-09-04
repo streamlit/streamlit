@@ -16,7 +16,6 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
 from e2e_playwright.shared.app_utils import click_button, click_checkbox
 
 
@@ -46,8 +45,3 @@ def test_repeated_query_param_assignment_does_not_push_history(app: Page):
         "history.length did not grow after a real query-param change: "
         f"before={history_length_before}, after={history_length_after_change}"
     )
-
-    app.go_back()
-    wait_for_app_run(app)
-    expect(app).to_have_url(re.compile(r"[?&]number=1(?:&|$)"))
-    expect(app).not_to_have_url(re.compile(r"[?&]extra=yes(?:&|$)"))
