@@ -1449,6 +1449,51 @@ def test_websocket_rejects_auth_cookie_without_valid_xsrf(tmp_path: Path) -> Non
 
 @patch_config_options(
     {
+        "server.enableXsrfProtection": True,
+        # CORS is disabled so the Origin check admits every origin and only the
+        # XSRF check can reject the handshake.
+        "server.enableCORS": False,
+        "global.developmentMode": False,
+        "server.cookieSecret": "test-signing-secret",
+    }
+)
+def test_websocket_rejects_cross_origin_handshake_without_valid_xsrf(
+    tmp_path: Path,
+) -> None:
+    """Close a cross-origin handshake that has no valid XSRF token.
+
+    The socket closes with code 1008 and the runtime never opens a session.
+    """
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+    runtime = _DummyRuntime(component_dir)
+    app = create_starlette_app(runtime)
+    client = TestClient(app)
+
+    with (
+        pytest.raises(WebSocketDisconnect) as exc_info,
+        client.websocket_connect(
+            "/_stcore/stream",
+            headers={"Origin": "http://evil.example.com"},
+            subprotocols=["streamlit"],  # No XSRF token in second position
+        ),
+    ):
+        pass
+
+    assert exc_info.value.code == 1008
+    assert runtime.last_user_info is None
+
+    monkeypatch.undo()
+
+
+@patch_config_options(
+    {
         "global.developmentMode": False,
         "global.e2eTest": False,
         "server.enableXsrfProtection": False,

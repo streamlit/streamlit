@@ -871,6 +871,29 @@ class ConfigTest(unittest.TestCase):
         assert config.get_option("server.enableCORS") is False
 
     @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_cors_disabled_says_xsrf_still_rejects_cross_origin(
+        self, get_logger
+    ):
+        """The warning must say that XSRF still rejects cross-origin handshakes.
+
+        The WebSocket handler rejects a cross-origin handshake without a valid
+        XSRF token even when CORS is disabled, so the warning must not tell the
+        operator that XSRF leaves those connections open.
+        """
+        config._set_option("server.enableXsrfProtection", True, "test")
+        config._set_option("server.enableCORS", False, "test")
+        config._set_option("global.developmentMode", False, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        warnings = _warning_text(mock_logger)
+        assert "cross-origin" in warnings
+        assert "XSRF token" in warnings
+        assert "does not stop" not in warnings
+        # The allowlist limits which origins may try, but it grants no exemption
+        # from the token, so the warning must not imply that it does.
+        assert "does not exempt" in warnings
+
+    @patch("streamlit.logger.get_logger")
     def test_check_conflicts_cors_disabled_warns_once_in_development_mode(
         self, get_logger
     ):
