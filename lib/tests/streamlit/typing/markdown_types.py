@@ -14,16 +14,19 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from typing_extensions import assert_type
 
 if TYPE_CHECKING:
+    import sympy
+
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.markdown import MarkdownMixin
 
     markdown = MarkdownMixin().markdown
     caption = MarkdownMixin().caption
+    latex = MarkdownMixin().latex
     badge = MarkdownMixin().badge
 
     # =====================================================================
@@ -109,6 +112,60 @@ if TYPE_CHECKING:
     assert_type(caption("Note", wrap=True), DeltaGenerator)
     assert_type(caption("Note", wrap=False), DeltaGenerator)
     caption("Note", wrap="yes")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # =====================================================================
+    # st.latex return type tests
+    # =====================================================================
+
+    # Basic usage - returns DeltaGenerator
+    assert_type(latex(r"a + b"), DeltaGenerator)
+
+    # body is SupportsStr, so non-str values should work
+    assert_type(latex(42), DeltaGenerator)
+
+    # Stand-in for optional unstubbed sympy.Expr (same pattern as graphviz/plotly)
+    sympy_expr = cast("sympy.Expr", object())
+    assert_type(latex(sympy_expr), DeltaGenerator)
+
+    # help parameter (keyword-only)
+    assert_type(latex(r"x^2", help="Quadratic"), DeltaGenerator)
+    assert_type(latex(r"x^2", help=None), DeltaGenerator)
+
+    # width parameter (keyword-only)
+    assert_type(latex(r"x^2", width="content"), DeltaGenerator)
+    assert_type(latex(r"x^2", width="stretch"), DeltaGenerator)
+    assert_type(latex(r"x^2", width=300), DeltaGenerator)
+
+    # All parameters combined
+    assert_type(
+        latex(
+            r"E = mc^2",
+            help="Mass-energy equivalence",
+            width="stretch",
+        ),
+        DeltaGenerator,
+    )
+
+    # =====================================================================
+    # Invalid st.latex usages - should NOT type check
+    # =====================================================================
+
+    # Invalid width value (not "stretch", "content", or int)
+    latex(r"x^2", width="auto")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    latex(r"x^2", width=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Invalid help type
+    latex(r"x^2", help=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Passing keyword-only parameters as positional
+    latex(r"x^2", "help")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
+
+    # Missing required body argument
+    latex()  # type: ignore[call-arg]  # ty: ignore[missing-argument]
+
+    # st.latex does not take markdown-only keywords
+    latex(r"x^2", text_alignment="center")  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
+    latex(r"x^2", wrap=False)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
 
     # =====================================================================
     # st.badge return type tests
