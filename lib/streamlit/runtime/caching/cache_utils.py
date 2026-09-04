@@ -705,10 +705,7 @@ class CachedFunc(Generic[P, R]):
         if self._info.is_async:
             # For a coroutine function, return an awaitable. Awaiting it performs the
             # cache lookup and, on a miss, awaits the underlying coroutine and caches
-            # For a coroutine function, return an awaitable. Awaiting it performs the
-            # cache lookup and, on a miss, awaits the underlying coroutine and caches
             # its awaited result.
-            # itself the coroutine type, so the cast is accurate.
             return cast(
                 "R",
                 self._get_or_create_cached_value_async(args, kwargs, spinner_message),
