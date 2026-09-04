@@ -14,7 +14,10 @@
 
 from __future__ import annotations
 
+import functools
+import inspect
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import (
@@ -22,6 +25,7 @@ from typing import (
     Any,
     Final,
     Literal,
+    NoReturn,
     TypeAlias,
     TypeVar,
     Union,
@@ -29,7 +33,7 @@ from typing import (
     overload,
 )
 
-from streamlit import dataframe_util
+from streamlit import dataframe_util, runtime
 from streamlit import logger as _logger
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
@@ -50,7 +54,7 @@ from streamlit.elements.lib.column_config_utils import (
     register_button_column_widgets,
     update_column_config,
 )
-from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.form_utils import current_form_id, is_in_form
 from streamlit.elements.lib.layout_utils import (
     Height,
     LayoutConfig,
@@ -61,9 +65,17 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException, StreamlitDataframeConversionError
+from streamlit.error_util import handle_user_script_exception
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitDataframeConversionError,
+    StreamlitIncompatibleParametersError,
+    StreamlitInvalidLayoutContextError,
+    StreamlitMissingRequiredParameterError,
+)
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner_utils.exceptions import ScriptControlException
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import (
     WidgetArgs,
@@ -165,6 +177,15 @@ class DataEditorState(ReadOnlyAttributeDictionary):
         return super().__getitem__(key)
 
 
+# Signature of the optional ``commit_edits`` callback. It receives the source
+# dataframe (before pending edits), the edited dataframe (with pending edits
+# applied), and the read-only edit delta, and returns the new source dataframe
+# for the current render.
+CommitEditsCallback: TypeAlias = Callable[
+    ["pd.DataFrame", "pd.DataFrame", DataEditorState], "pd.DataFrame"
+]
+
+
 @dataclass
 class DataEditorSerde:
     """DataEditorSerde is used to serialize and deserialize the data editor state."""
@@ -197,6 +218,106 @@ class DataEditorSerde:
         return json.dumps(editing_state, default=str)
 
 
+def _canonical_arrow_type(arrow_type: pa.DataType) -> str:
+    """Return a canonical string for an Arrow type.
+
+    The large and non-large variants of the string, binary, and list types
+    (e.g. ``string`` vs ``large_string``) are indistinguishable to the data
+    editor, but they can differ purely based on how pandas/pyarrow happens to
+    serialize a frame (for example, adding a row can downcast ``large_string``
+    to ``string``). Collapsing them to a single canonical name avoids spurious
+    schema-mismatch rejections and needless widget-identity resets.
+    """
+    import pyarrow as pa
+
+    if pa.types.is_string(arrow_type) or pa.types.is_large_string(arrow_type):
+        return "string"
+    if pa.types.is_binary(arrow_type) or pa.types.is_large_binary(arrow_type):
+        return "binary"
+    if pa.types.is_list(arrow_type) or pa.types.is_large_list(arrow_type):
+        return f"list<{_canonical_arrow_type(arrow_type.value_type)}>"
+    return str(arrow_type)
+
+
+def _is_integer_like_index(index: pd.Index[Any]) -> bool:
+    """True for ``RangeIndex`` and plain integer ``Index`` variants.
+
+    On pandas < 3.0, adding a row via ``.loc`` can downcast a default
+    ``RangeIndex`` to a plain integer ``Index``. Those forms are equivalent for
+    editing purposes (labels may still change).
+    """
+    import pandas as pd
+
+    if isinstance(index, pd.RangeIndex):
+        return True
+    if type(index) is pd.Index and pd.api.types.is_integer_dtype(index.dtype):
+        return True
+    # Legacy numeric index types (removed in newer pandas).
+    return is_type(index, "pandas.core.indexes.numeric.Int64Index") or is_type(
+        index, "pandas.core.indexes.numeric.UInt64Index"
+    )
+
+
+def _canonical_index_type_name(index: pd.Index[Any]) -> str:
+    """Stable index-kind name for widget identity / compatibility checks."""
+    if _is_integer_like_index(index):
+        return "integer"
+    return type(index).__name__
+
+
+def _indexes_have_compatible_structure(
+    result_index: pd.Index[Any], baseline_index: pd.Index[Any]
+) -> bool:
+    """True when two indexes share the same editing-compatible structure.
+
+    Index labels may differ. ``RangeIndex`` and an equivalent integer ``Index``
+    are treated as the same kind so ``return edited_df`` after a row addition
+    stays valid on pandas < 3.0.
+    """
+    if list(result_index.names) != list(baseline_index.names):
+        return False
+    if type(result_index) is type(baseline_index):
+        return True
+    return _is_integer_like_index(result_index) and _is_integer_like_index(
+        baseline_index
+    )
+
+
+def _is_async_callable(callback: Any) -> bool:
+    """True for async functions and callable instances with async ``__call__``.
+
+    Unwraps ``functools.partial`` and ``__wrapped__`` (for example
+    ``functools.wraps``) so a decorated async function is still rejected when
+    ``st.data_editor`` is called. Wrappers that return a coroutine without
+    exposing ``__wrapped__`` cannot be detected here and are rejected when the
+    callback is invoked.
+    """
+    while isinstance(callback, functools.partial):
+        callback = callback.func
+    callback = inspect.unwrap(callback)
+    # ``__wrapped__`` may itself be a ``partial`` (decorator around a partial).
+    while isinstance(callback, functools.partial):
+        callback = callback.func
+    if inspect.iscoroutinefunction(callback):
+        return True
+    # ``inspect.iscoroutinefunction`` misses instances whose ``__call__`` is
+    # defined with ``async def``. Walk the MRO for that method without using
+    # ``getattr(..., "__call__")`` (flagged by ruff as an unreliable callable check).
+    for cls in type(callback).__mro__:
+        call_attr = cls.__dict__.get("__call__")
+        if call_attr is not None:
+            return inspect.iscoroutinefunction(inspect.unwrap(call_attr))
+    return False
+
+
+def _raise_async_commit_edits_error() -> NoReturn:
+    """Raise the shared error for async ``commit_edits`` callbacks."""
+    raise StreamlitAPIException(
+        "st.data_editor: commit_edits does not support async callbacks.",
+        error_id="data-editor-async-commit-edits",
+    )
+
+
 def _compute_data_editor_signature(
     data_df: pd.DataFrame,
     data_format: dataframe_util.DataFormat,
@@ -204,10 +325,17 @@ def _compute_data_editor_signature(
     dataframe_schema: DataframeSchema,
     disabled: bool | Iterable[str | int],
     include_row_count: bool,
+    include_index_values: bool = True,
     disabled_columns: Iterable[str | int] = (),
 ) -> str:
     """Compute a stable signature over the data's structure (schema), used as a
     keyed fixed-rows editor's identity so value-only changes don't reset edits.
+
+    When ``include_index_values`` is ``False``, the index labels are excluded so
+    the signature depends only on the schema. This is used for ``commit_edits``
+    editors, whose committed result may legitimately change the row count and
+    index labels without churning the widget identity (which would orphan the
+    next edit).
     """
     import pandas as pd
 
@@ -222,7 +350,9 @@ def _compute_data_editor_signature(
 
     add_to_signature("format", data_format.name)
     add_to_signature("columns", tuple(data_df.columns))
-    add_to_signature("index_type", type(data_df.index).__name__)
+    # Canonicalize RangeIndex / integer Index so a pandas < 3.0 row-add
+    # downcast does not churn the commit_edits widget identity.
+    add_to_signature("index_type", _canonical_index_type_name(data_df.index))
     # Encode each index name as a (is_none, name) pair so an unnamed index
     # (None) can never collide with an index whose name is a sentinel string.
     add_to_signature(
@@ -230,10 +360,13 @@ def _compute_data_editor_signature(
         tuple((name is None, name) for name in data_df.index.names),
     )
 
-    if not isinstance(data_df.index, pd.RangeIndex) or (
-        data_df.index.start != 0
-        or data_df.index.stop != len(data_df.index)
-        or data_df.index.step != 1
+    if include_index_values and (
+        not isinstance(data_df.index, pd.RangeIndex)
+        or (
+            data_df.index.start != 0
+            or data_df.index.stop != len(data_df.index)
+            or data_df.index.step != 1
+        )
     ):
         h.update(b"index_values:")
         try:
@@ -247,11 +380,17 @@ def _compute_data_editor_signature(
         h.update(b"\0")
 
     for field in arrow_schema:
+        # Pandas materializes an unnamed Index as ``__index_level_N__``, while a
+        # RangeIndex stays metadata-only. Skip those fields so a pandas < 3.0
+        # RangeIndex → integer Index downcast does not churn widget identity
+        # (same rule as ``_validate_edited_dataframe_compatibility``).
+        if field.name.startswith("__index_level_"):
+            continue
         add_to_signature(
             "field",
             (
                 field.name,
-                str(field.type),
+                _canonical_arrow_type(field.type),
                 field.nullable,
             ),
         )
@@ -739,6 +878,140 @@ def _check_type_compatibilities(
                 )
 
 
+def _has_pending_edits(state: DataEditorState) -> bool:
+    """True if the data editor state contains any pending edits.
+
+    Pending edits are cell edits, row additions, or row deletions submitted by
+    the user but not yet committed.
+    """
+    return bool(
+        state.get("edited_rows") or state.get("added_rows") or state.get("deleted_rows")
+    )
+
+
+def _format_arrow_field(field: tuple[str, bool]) -> str:
+    """Format an Arrow (canonical type, nullable) pair for error messages."""
+    arrow_type, nullable = field
+    return f"{arrow_type}, nullable={nullable}"
+
+
+def _format_arrow_schema_mismatch(
+    result_fields: dict[str, tuple[str, bool]],
+    baseline_fields: dict[str, tuple[str, bool]],
+) -> str:
+    """Build an actionable detail string for Arrow schema differences.
+
+    Includes type **and** nullability for fields present on both sides, plus
+    missing and extra field names. Returns ``""`` when there is nothing to
+    report (should not happen when the caller already detected a mismatch).
+    """
+    parts: list[str] = []
+    mismatched = [
+        (
+            f"{name!r} (expected {_format_arrow_field(baseline_fields[name])}; "
+            f"got {_format_arrow_field(result_fields[name])})"
+        )
+        for name in baseline_fields
+        if name in result_fields and result_fields[name] != baseline_fields[name]
+    ]
+    if mismatched:
+        parts.append(f"Mismatched columns: {', '.join(mismatched)}.")
+
+    missing = [repr(name) for name in baseline_fields if name not in result_fields]
+    extra = [repr(name) for name in result_fields if name not in baseline_fields]
+    if missing:
+        parts.append(f"Missing fields: {', '.join(missing)}.")
+    if extra:
+        parts.append(f"Extra fields: {', '.join(extra)}.")
+
+    return (" " + " ".join(parts)) if parts else ""
+
+
+def _validate_edited_dataframe_compatibility(
+    result: Any,
+    *,
+    baseline_df: pd.DataFrame,
+    baseline_arrow_schema: pa.Schema,
+    baseline_dataframe_schema: DataframeSchema,
+) -> tuple[pd.DataFrame, pa.Table]:
+    """Validate that a ``commit_edits`` result stays editing-compatible.
+
+    A compatible result may change values, row count, and index labels, but must
+    preserve the column order, index kind and names (``RangeIndex`` and an
+    equivalent integer ``Index`` count as the same kind), the Arrow field
+    types/nullability, and the parsing data kinds of the baseline dataframe.
+
+    Returns the validated dataframe together with its Arrow table so the caller
+    can reuse both without re-converting. Raises ``StreamlitAPIException`` if the
+    result is incompatible.
+    """
+    import pandas as pd
+    import pyarrow as pa
+
+    if not isinstance(result, pd.DataFrame):
+        raise StreamlitAPIException(
+            "st.data_editor: commit_edits must return a pandas.DataFrame, but it "
+            f"returned an object of type {type(result).__name__}.",
+            error_id="data-editor-commit-edits-not-dataframe",
+        )
+
+    if list(result.columns) != list(baseline_df.columns):
+        raise StreamlitAPIException(
+            "st.data_editor: commit_edits must preserve the column order of the "
+            "source dataframe.",
+            error_id="data-editor-commit-edits-column-order",
+        )
+
+    if not _indexes_have_compatible_structure(result.index, baseline_df.index):
+        raise StreamlitAPIException(
+            "st.data_editor: commit_edits must preserve the index structure (kind "
+            "and names) of the source dataframe.",
+            error_id="data-editor-commit-edits-index-structure",
+        )
+
+    if not _is_supported_index(result.index):
+        raise StreamlitAPIException(
+            "st.data_editor: commit_edits returned a dataframe with an index type "
+            f"({type(result.index).__name__}) that is not supported by the data "
+            "editor.",
+            error_id="data-editor-unsupported-index-type",
+        )
+
+    result_arrow = pa.Table.from_pandas(result)
+
+    def _arrow_fields(schema: pa.Schema) -> dict[str, tuple[str, bool]]:
+        # Pandas materializes an unnamed Index as ``__index_level_N__``, while a
+        # RangeIndex stays metadata-only. Ignore those fields so RangeIndex /
+        # integer Index equivalence does not look like a schema change.
+        return {
+            field.name: (_canonical_arrow_type(field.type), field.nullable)
+            for field in schema
+            if not field.name.startswith("__index_level_")
+        }
+
+    result_fields = _arrow_fields(result_arrow.schema)
+    baseline_fields = _arrow_fields(baseline_arrow_schema)
+    if result_fields != baseline_fields:
+        raise StreamlitAPIException(
+            "st.data_editor: commit_edits must preserve the column data types and "
+            "nullability of the source dataframe."
+            f"{_format_arrow_schema_mismatch(result_fields, baseline_fields)}",
+            error_id="data-editor-commit-edits-column-types",
+        )
+
+    if (
+        determine_dataframe_schema(result, result_arrow.schema)
+        != baseline_dataframe_schema
+    ):
+        raise StreamlitAPIException(
+            "st.data_editor: commit_edits must preserve the editable data kinds of "
+            "the source dataframe's columns.",
+            error_id="data-editor-commit-edits-data-kinds",
+        )
+
+    return result, result_arrow
+
+
 class DataEditorMixin:
     # Inner types are echoed. Runtime may convert row/column tuples to lists
     # (e.g. [(1, 2)] becomes list[list[int]]); that mismatch is pre-existing.
@@ -757,6 +1030,7 @@ class DataEditorMixin:
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
         on_change: WidgetCallback | None = None,
+        commit_edits: CommitEditsCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -779,6 +1053,7 @@ class DataEditorMixin:
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
         on_change: WidgetCallback | None = None,
+        commit_edits: CommitEditsCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -801,6 +1076,7 @@ class DataEditorMixin:
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
         on_change: WidgetCallback | None = None,
+        commit_edits: CommitEditsCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -823,6 +1099,7 @@ class DataEditorMixin:
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
         on_change: WidgetCallback | None = None,
+        commit_edits: CommitEditsCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -845,6 +1122,7 @@ class DataEditorMixin:
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
         on_change: WidgetCallback | None = None,
+        commit_edits: CommitEditsCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -867,6 +1145,7 @@ class DataEditorMixin:
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
         on_change: WidgetCallback | None = None,
+        commit_edits: CommitEditsCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -1048,8 +1327,129 @@ class DataEditorMixin:
                 specific rows when the data is reordered. Omit ``key`` to reset
                 all edits whenever the data changes.
 
+                When ``commit_edits`` is set, the widget's identity is based on
+                the schema only, so the row count and index labels *can* change
+                (for example, from a committed result) without resetting the
+                widget or orphaning the next edit.
+
         on_change : callable
             An optional callback invoked when this data_editor's value changes.
+
+        commit_edits : callable or None
+            An optional callback that turns the data editor into a
+            transactional, commit-based editor. If this is ``None`` (default),
+            the data editor behaves normally and returns the edited data.
+
+            When ``commit_edits`` is set, Streamlit calls it during the rerun
+            caused by an edit, after deserializing and applying the pending
+            edits. The callback has the following signature and receives three
+            positional arguments:
+
+            .. code-block:: python
+
+                def commit_edits(
+                    source_df: pd.DataFrame,
+                    edited_df: pd.DataFrame,
+                    edits: DataEditorState,
+                ) -> pd.DataFrame: ...
+
+            - ``source_df`` is the normalized dataframe passed to
+              ``st.data_editor`` before the pending edits are applied. Treat it
+              as read-only; it is the baseline rendered if the callback fails.
+            - ``edited_df`` is a copy of ``source_df`` with all pending edits
+              already applied.
+            - ``edits`` is the read-only ``DataEditorState`` (the same object
+              returned by ``st.session_state[key]``). It supports attribute and
+              item access, for example ``edits.edited_rows`` or
+              ``edits["edited_rows"]``. Row positions in ``edited_rows`` and
+              ``deleted_rows`` refer to ``source_df``, so you can recover row
+              identity with ``source_df.iloc[row_position]``.
+
+            The callback returns the new source dataframe for the current
+            render. On a successful return, Streamlit displays the returned
+            dataframe and clears the pending edits. To reject a batch without
+            writing, return ``source_df`` (or another baseline); this is still a
+            successful return, so the pending edits clear. If the callback
+            raises an exception, Streamlit preserves the pending edits, shows the
+            standard exception message, and the ``st.data_editor`` call returns
+            the last committed baseline. Persisting the returned dataframe (to
+            Session State, a database, or a cache) is the app's responsibility;
+            the result is the baseline for the current render only.
+
+            .. note::
+                The edits are cleared on the frontend without an immediate
+                rerun, so ``st.session_state[key]`` reflects the cleared state
+                only on the next rerun. Within the committing run itself,
+                ``st.session_state[key]`` still reports the batch that was just
+                committed. Use the ``edits`` argument (not
+                ``st.session_state[key]``) to inspect the committed batch inside
+                the callback.
+
+            ``commit_edits`` has the following requirements and constraints:
+
+            - A ``key`` is required so edit state can be preserved across
+              reruns.
+            - It can't be combined with ``on_change``. Because ``args`` and
+              ``kwargs`` are only forwarded to ``on_change``, they have no
+              effect when ``commit_edits`` is set.
+            - It isn't supported inside ``st.form`` or with ``pandas.Styler``
+              input.
+            - Async callbacks aren't supported.
+            - The returned dataframe must stay editing-compatible: it may change
+              values, row count, and index labels, but must preserve the column
+              order, index kind and names, column data types/nullability, and
+              editable data kinds of ``source_df``. Incompatible results raise a
+              ``StreamlitAPIException`` and preserve the pending edits.
+
+            .. code-block:: python
+                :filename: streamlit_app.py
+
+                import pandas as pd
+                import streamlit as st
+
+                from streamlit.typing import DataEditorState
+
+                if "orders" not in st.session_state:
+                    st.session_state.orders = load_orders()
+
+
+                def persist_orders(
+                    source_df: pd.DataFrame,
+                    edited_df: pd.DataFrame,
+                    edits: DataEditorState,
+                ) -> pd.DataFrame:
+                    # Reject without writing by returning the source dataframe.
+                    if (edited_df["amount"] < 0).any():
+                        st.toast("Amounts must be positive.", icon=":material/error:")
+                        return source_df
+
+                    # Persist the whole batch atomically. Streamlit preserves
+                    # the full edit batch when the callback raises, so a
+                    # mid-batch failure must roll back completely — otherwise a
+                    # later retry would replay already-committed operations.
+                    with begin_transaction():
+                        for row_position in edits.deleted_rows:
+                            delete_order(source_df.iloc[row_position]["id"])
+                        for row_position, changes in edits.edited_rows.items():
+                            update_order(source_df.iloc[row_position]["id"], changes)
+                        for row in edits.added_rows:
+                            insert_order(row)
+
+                    refreshed_df = load_orders()
+                    st.session_state.orders = refreshed_df
+                    return refreshed_df
+
+
+                st.data_editor(
+                    st.session_state.orders,
+                    key="orders_editor",
+                    num_rows="dynamic",
+                    commit_edits=persist_orders,
+                )
+
+            .. output::
+               https://doc-data-editor-commit-edits.streamlit.app/
+               height: 350px
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -1169,6 +1569,34 @@ class DataEditorMixin:
         import pyarrow as pa
 
         key = to_key(key)
+
+        if commit_edits is not None:
+            if key is None:
+                raise StreamlitMissingRequiredParameterError(
+                    "key",
+                    detail=(
+                        "When using commit_edits, the widget must have a unique "
+                        "'key' parameter specified so edit state can be preserved "
+                        "across reruns."
+                    ),
+                )
+            if on_change is not None:
+                raise StreamlitIncompatibleParametersError(
+                    "commit_edits",
+                    "on_change",
+                    explanation="Use `commit_edits` alone for transactional write-back.",
+                )
+            if runtime.exists() and is_in_form(self.dg):
+                raise StreamlitInvalidLayoutContextError(
+                    "`commit_edits` can't be used in an `st.form()`."
+                )
+            if dataframe_util.is_pandas_styler(data):
+                raise StreamlitIncompatibleParametersError(
+                    "commit_edits",
+                    "data=pandas.Styler",
+                )
+            if _is_async_callable(commit_edits):
+                _raise_async_commit_edits_error()
 
         validate_width(width, allow_content=True)
         validate_height(
@@ -1312,7 +1740,17 @@ class DataEditorMixin:
         # For keyed editors with a fixed number of rows, we base the widget
         # identity on the data schema (via a stable signature) instead of the
         # full data. This keeps edits alive across pure value changes.
-        use_signature_identity = key is not None and num_rows == "fixed"
+        #
+        # `commit_edits` editors use the same schema-based identity for every
+        # `num_rows` mode: a successful commit can change the row count and
+        # index labels, so a data-based identity would churn on the next run and
+        # orphan the pending edit. The signature therefore excludes the row
+        # count and index labels, depending only on the (validated, preserved)
+        # schema.
+        commit_edits_active = commit_edits is not None
+        use_signature_identity = key is not None and (
+            num_rows == "fixed" or commit_edits_active
+        )
         signature_kwargs: dict[str, str] = {}
         key_as_main_identity: bool | set[str] = False
         if use_signature_identity:
@@ -1333,7 +1771,8 @@ class DataEditorMixin:
                 dataframe_schema=dataframe_schema,
                 disabled=disabled,
                 disabled_columns=disabled_columns,
-                include_row_count=True,
+                include_row_count=not commit_edits_active,
+                include_index_values=not commit_edits_active,
             )
 
         element_id = compute_and_register_element_id(
@@ -1379,6 +1818,8 @@ class DataEditorMixin:
             proto.editing_mode = DataframeProto.EditingMode.FIXED
 
         proto.form_id = current_form_id(self.dg)
+
+        proto.commit_edits = commit_edits_active
 
         if dataframe_util.is_pandas_styler(data):
             # Pandas styler will only work for non-editable/disabled columns.
@@ -1431,9 +1872,81 @@ class DataEditorMixin:
             disabled=disabled is True,
         )
 
-        _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
+        if commit_edits is None:
+            # Default behavior: apply the pending edits directly to the frame we
+            # render and return.
+            _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
+            self.dg._enqueue("dataframe", proto, layout_config=layout_config)
+            return dataframe_util.convert_pandas_df_to_data_format(data_df, data_format)
+
+        # commit_edits mode: never apply the pending edits to the rendered or
+        # returned frame. We commit a freshly submitted edit batch via the
+        # callback and render its result; otherwise we render the last committed
+        # baseline (`data_df`) while the frontend overlays the preserved edits.
+        # `edits` is the read-only DataEditorState (identical to
+        # st.session_state[key]) and must not be mutated.
+        edits = widget_state.value
+        # Check for pending edits first so the common no-edit render short-circuits
+        # before acquiring the session state lock via `widget_changed`.
+        # After a successful commit the frontend clears edits with
+        # ``fromUser: false``, so `_old_state` still holds the last-committed
+        # batch. Re-submitting that identical batch on the next rerun is a
+        # no-op (`widget_changed` is False) until another interaction changes
+        # the stored value. That is intentional (no auto-retry) and only
+        # noticeable for transforming commits.
+        should_commit = _has_pending_edits(edits) and (
+            ctx is not None and ctx.session_state.widget_changed(proto.id)
+        )
+
+        render_df = data_df
+
+        if should_commit:
+            # Operate on a deep copy so the DataEditorState handed to the
+            # callback keeps matching st.session_state[key].
+            edited_df = data_df.copy(deep=True)
+            _apply_dataframe_edits(edited_df, edits, dataframe_schema)
+            try:
+                commit_result: object = commit_edits(data_df, edited_df, edits)
+                # Sync wrappers that return a coroutine (decorators without
+                # ``__wrapped__``, callable objects) bypass declaration-time
+                # detection. Reject them here with the same error and close the
+                # coroutine so it does not leak an unawaited-coroutine warning.
+                if inspect.iscoroutine(commit_result):
+                    commit_result.close()
+                    _raise_async_commit_edits_error()
+                committed_df, committed_arrow = (
+                    _validate_edited_dataframe_compatibility(
+                        commit_result,
+                        baseline_df=data_df,
+                        baseline_arrow_schema=arrow_table.schema,
+                        baseline_dataframe_schema=dataframe_schema,
+                    )
+                )
+                # Success: render the committed frame and signal the frontend to
+                # clear its pending edits. Set `clear_edits` only after the Arrow
+                # serialization succeeds, so a failure there falls through to the
+                # exception handler with the edits preserved (instead of telling
+                # the frontend to wipe them while the baseline is rendered).
+                render_df = committed_df
+                proto.arrow_data.data = (
+                    dataframe_util.convert_arrow_table_to_arrow_bytes(committed_arrow)
+                )
+                proto.clear_edits = True
+            except ScriptControlException:
+                # st.rerun()/st.stop() inside the callback: preserve the pending
+                # edits and keep normal control flow.
+                raise
+            except Exception as ex:
+                # A failing callback or an incompatible result preserves the
+                # pending edits and surfaces the standard exception message via
+                # the user-script path (so a configured on_script_error handler
+                # still runs). ScriptControlException is re-raised above.
+                on_script_error = ctx.on_script_error if ctx is not None else None
+                handle_user_script_exception(ex, on_script_error)
+                render_df = data_df
+
         self.dg._enqueue("dataframe", proto, layout_config=layout_config)
-        return dataframe_util.convert_pandas_df_to_data_format(data_df, data_format)
+        return dataframe_util.convert_pandas_df_to_data_format(render_df, data_format)
 
     @property
     def dg(self) -> DeltaGenerator:

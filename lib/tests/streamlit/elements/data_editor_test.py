@@ -18,8 +18,10 @@ from __future__ import annotations
 
 import copy
 import datetime
+import functools
 import json
 import unittest
+import warnings
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
@@ -31,6 +33,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit import dataframe_util
 from streamlit.dataframe_util import (
     DataFormat,
     convert_arrow_bytes_to_pandas_df,
@@ -48,13 +51,28 @@ from streamlit.elements.widgets.data_editor import (
     _apply_dataframe_edits,
     _apply_row_additions,
     _apply_row_deletions,
+    _canonical_arrow_type,
     _check_column_names,
     _check_type_compatibilities,
     _compute_data_editor_signature,
+    _format_arrow_schema_mismatch,
+    _has_pending_edits,
     _parse_value,
+    _validate_edited_dataframe_compatibility,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitInvalidLayoutContextError,
+    StreamlitMissingRequiredParameterError,
+)
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
+from streamlit.proto.WidgetStates_pb2 import WidgetStates
+from streamlit.runtime.scriptrunner_utils.exceptions import (
+    RerunException,
+    StopException,
+)
+from streamlit.runtime.scriptrunner_utils.script_requests import RerunData
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
 from tests.streamlit.elements.layout_test_utils import (
@@ -77,6 +95,7 @@ def _get_data_editor_signature(
     data_format: DataFormat = DataFormat.PANDAS_DATAFRAME,
     disabled: bool | list[str | int] = False,
     include_row_count: bool = True,
+    include_index_values: bool = True,
     disabled_columns: tuple[str | int, ...] = (),
 ) -> str:
     """Get the data editor schema signature for tests."""
@@ -88,6 +107,7 @@ def _get_data_editor_signature(
         dataframe_schema=determine_dataframe_schema(df, arrow_schema),
         disabled=disabled,
         include_row_count=include_row_count,
+        include_index_values=include_index_values,
         disabled_columns=disabled_columns,
     )
 
@@ -897,6 +917,68 @@ class DataEditorSignatureTest(unittest.TestCase):
             df1, include_row_count=False
         ) == _get_data_editor_signature(df2, include_row_count=False)
 
+    def test_signature_treats_string_arrow_variants_as_equal(self):
+        """A ``string`` and ``large_string`` field are the same to the editor, so
+        the signature (and thus widget identity) must not distinguish them.
+        Otherwise a committed frame that serializes as ``string`` would churn the
+        identity of a baseline that serialized as ``large_string``."""
+        df = pd.DataFrame({"b": ["x", "y"]})
+        dataframe_schema = determine_dataframe_schema(df, _get_arrow_schema(df))
+
+        def signature(field_type: pa.DataType) -> str:
+            return _compute_data_editor_signature(
+                data_df=df,
+                data_format=DataFormat.PANDAS_DATAFRAME,
+                arrow_schema=pa.schema([pa.field("b", field_type, nullable=True)]),
+                dataframe_schema=dataframe_schema,
+                disabled=False,
+                include_row_count=True,
+            )
+
+        assert signature(pa.string()) == signature(pa.large_string())
+
+    def test_signature_can_exclude_index_values(self):
+        """Excluding index values keeps the signature stable across index-label
+        changes (used by commit_edits editors, whose committed result may
+        renumber rows)."""
+        df1 = pd.DataFrame({"a": [1, 2]}, index=["x", "y"])
+        df2 = pd.DataFrame({"a": [1, 2]}, index=["p", "q"])
+
+        assert _get_data_editor_signature(
+            df1, include_index_values=False
+        ) == _get_data_editor_signature(df2, include_index_values=False)
+
+    def test_signature_stable_across_range_to_integer_index_downcast(self) -> None:
+        """A RangeIndex baseline and a pandas < 3.0 integer-Index result must
+        share the commit_edits schema signature.
+
+        Arrow only materializes ``__index_level_0__`` for the integer Index;
+        hashing that field would churn the widget id and orphan the next edit.
+        """
+        baseline = pd.DataFrame({"a": [1, 2]})
+        assert isinstance(baseline.index, pd.RangeIndex)
+
+        # Simulate the pandas < 3.0 ``.loc`` append downcast (and force it on
+        # pandas 3+ where RangeIndex may be preserved).
+        edited = baseline.copy()
+        edited.loc[len(edited)] = 3
+        if isinstance(edited.index, pd.RangeIndex):
+            edited.index = pd.Index(list(edited.index))
+        # Older pandas may use Int64Index rather than a plain Index.
+        assert not isinstance(edited.index, pd.RangeIndex)
+        assert pd.api.types.is_integer_dtype(edited.index.dtype)
+
+        assert _get_data_editor_signature(
+            baseline, include_row_count=False, include_index_values=False
+        ) == _get_data_editor_signature(
+            edited, include_row_count=False, include_index_values=False
+        )
+        # Including index values / row count must still distinguish them so
+        # non-commit keyed editors keep noticing structural changes.
+        assert _get_data_editor_signature(baseline) != _get_data_editor_signature(
+            edited
+        )
+
     def test_signature_hashes_meaningful_index_values(self):
         df = pd.DataFrame({"a": [1, 2, 3]}, index=["x", "y", "z"])
         reordered_df = df.iloc[::-1]
@@ -1015,6 +1097,74 @@ class DataEditorStableIdTest(DeltaGeneratorTestCase):
 
         id1 = self._get_id(df, key="editor", num_rows="fixed")
         id2 = self._get_id(df, key="editor", num_rows="dynamic")
+
+        assert id1 != id2
+
+    @parameterized.expand(["fixed", "dynamic", "add", "delete"])
+    def test_commit_edits_editor_id_stable_when_row_count_changes(self, num_rows: str):
+        """A commit_edits editor must keep a stable identity across row-count
+        changes (for every num_rows mode) so that a committed result -- which
+        may change the row count -- does not orphan the next edit."""
+
+        def commit(source, edited, edits):  # type: ignore[no-untyped-def]
+            return edited
+
+        id1 = self._get_id(
+            pd.DataFrame({"a": [1, 2]}),
+            key="editor",
+            num_rows=num_rows,
+            commit_edits=commit,
+        )
+        id2 = self._get_id(
+            pd.DataFrame({"a": [1, 2, 3, 4]}),
+            key="editor",
+            num_rows=num_rows,
+            commit_edits=commit,
+        )
+
+        assert id1 == id2
+
+    def test_commit_edits_editor_id_stable_when_index_labels_change(self):
+        """A commit_edits editor must keep a stable identity when only the
+        index labels change, since a commit can renumber rows."""
+
+        def commit(source, edited, edits):  # type: ignore[no-untyped-def]
+            return edited
+
+        id1 = self._get_id(
+            pd.DataFrame({"a": [1, 2]}, index=["x", "y"]),
+            key="editor",
+            num_rows="dynamic",
+            commit_edits=commit,
+        )
+        id2 = self._get_id(
+            pd.DataFrame({"a": [1, 2]}, index=["p", "q"]),
+            key="editor",
+            num_rows="dynamic",
+            commit_edits=commit,
+        )
+
+        assert id1 == id2
+
+    def test_commit_edits_editor_id_changes_for_schema_changes(self):
+        """A commit_edits editor must still reset its identity when the schema
+        (columns/dtypes) changes, since edits are positional to that schema."""
+
+        def commit(source, edited, edits):  # type: ignore[no-untyped-def]
+            return edited
+
+        id1 = self._get_id(
+            pd.DataFrame({"a": [1, 2]}),
+            key="editor",
+            num_rows="dynamic",
+            commit_edits=commit,
+        )
+        id2 = self._get_id(
+            pd.DataFrame({"a": [1, 2], "b": [3, 4]}),
+            key="editor",
+            num_rows="dynamic",
+            commit_edits=commit,
+        )
 
         assert id1 != id2
 
@@ -1680,3 +1830,745 @@ def test_data_editor_signature_falls_back_when_index_hash_raises() -> None:
         sig_b = _get_data_editor_signature(df_b)
     assert sig_a == sig_a_again
     assert sig_a != sig_b
+
+
+# The edit payload used across the commit-flow tests: change cell (row 0, col "a").
+_CELL_EDIT: dict[str, Any] = {
+    "edited_rows": {0: {"a": 5}},
+    "added_rows": [],
+    "deleted_rows": [],
+}
+
+
+def _make_edit_widget_state(widget_id: str, edit: dict[str, Any]) -> WidgetStates:
+    """Build a WidgetStates proto carrying a single data editor edit payload."""
+    widget_states = WidgetStates()
+    widget = widget_states.widgets.add()
+    widget.id = widget_id
+    widget.string_value = json.dumps(edit)
+    return widget_states
+
+
+class HasPendingEditsTest(unittest.TestCase):
+    """Tests for the _has_pending_edits helper."""
+
+    @parameterized.expand(
+        [
+            ("empty", {"edited_rows": {}, "added_rows": [], "deleted_rows": []}, False),
+            (
+                "edited",
+                {"edited_rows": {0: {"a": 1}}, "added_rows": [], "deleted_rows": []},
+                True,
+            ),
+            (
+                "added",
+                {"edited_rows": {}, "added_rows": [{"a": 1}], "deleted_rows": []},
+                True,
+            ),
+            (
+                "deleted",
+                {"edited_rows": {}, "added_rows": [], "deleted_rows": [1]},
+                True,
+            ),
+        ]
+    )
+    def test_has_pending_edits(
+        self, _name: str, state_dict: dict[str, Any], expected: bool
+    ) -> None:
+        """_has_pending_edits is True for any non-empty edit collection."""
+        assert _has_pending_edits(DataEditorState(state_dict)) is expected
+
+
+class ValidateEditedDataframeCompatibilityTest(unittest.TestCase):
+    """Tests for the _validate_edited_dataframe_compatibility helper."""
+
+    @staticmethod
+    def _baseline(df: pd.DataFrame) -> tuple[pa.Schema, Any]:
+        """Return the baseline Arrow schema and dataframe schema for a df."""
+        arrow_schema = _get_arrow_schema(df)
+        return arrow_schema, determine_dataframe_schema(df, arrow_schema)
+
+    def _validate(self, result: Any, baseline: pd.DataFrame) -> tuple[Any, pa.Table]:
+        arrow_schema, dataframe_schema = self._baseline(baseline)
+        return _validate_edited_dataframe_compatibility(
+            result,
+            baseline_df=baseline,
+            baseline_arrow_schema=arrow_schema,
+            baseline_dataframe_schema=dataframe_schema,
+        )
+
+    def test_accepts_value_only_change(self) -> None:
+        """A result that only changes values is compatible."""
+        baseline = pd.DataFrame({"a": [1, 2], "b": ["x", "y"]})
+        result = pd.DataFrame({"a": [9, 8], "b": ["p", "q"]})
+
+        validated, arrow_table = self._validate(result, baseline)
+        assert validated is result
+        assert isinstance(arrow_table, pa.Table)
+
+    def test_accepts_row_addition(self) -> None:
+        """A result with additional rows is compatible."""
+        validated, _ = self._validate(
+            pd.DataFrame({"a": [1, 2, 3]}), pd.DataFrame({"a": [1, 2]})
+        )
+        assert len(validated) == 3
+
+    def test_accepts_row_deletion(self) -> None:
+        """A result with fewer rows is compatible."""
+        validated, _ = self._validate(
+            pd.DataFrame({"a": [1, 2]}), pd.DataFrame({"a": [1, 2, 3]})
+        )
+        assert len(validated) == 2
+
+    def test_accepts_index_label_change(self) -> None:
+        """A result that only changes index labels is compatible."""
+        baseline = pd.DataFrame({"a": [1, 2]}, index=pd.Index(["x", "y"]))
+        result = pd.DataFrame({"a": [1, 2]}, index=pd.Index(["p", "q"]))
+
+        validated, _ = self._validate(result, baseline)
+        assert list(validated.index) == ["p", "q"]
+
+    @parameterized.expand(
+        [
+            (
+                "non_dataframe",
+                [1, 2, 3],
+                pd.DataFrame({"a": [1, 2]}),
+                "must return a pandas.DataFrame",
+            ),
+            (
+                "reordered_columns",
+                pd.DataFrame({"a": [1, 2], "b": [3, 4]})[["b", "a"]],
+                pd.DataFrame({"a": [1, 2], "b": [3, 4]}),
+                "column order",
+            ),
+            (
+                "added_column",
+                pd.DataFrame({"a": [1, 2], "b": [3, 4]}),
+                pd.DataFrame({"a": [1, 2]}),
+                "column order",
+            ),
+            (
+                "removed_column",
+                pd.DataFrame({"a": [1, 2]}),
+                pd.DataFrame({"a": [1, 2], "b": [3, 4]}),
+                "column order",
+            ),
+            (
+                "changed_dtype",
+                pd.DataFrame({"a": [1.0, 2.0]}),
+                pd.DataFrame({"a": [1, 2]}),
+                "column data types",
+            ),
+            (
+                "changed_index_structure",
+                pd.DataFrame(
+                    {"a": [1, 2]},
+                    index=pd.DatetimeIndex(["2020-01-01", "2020-01-02"]),
+                ),
+                pd.DataFrame({"a": [1, 2]}),
+                "index structure",
+            ),
+            (
+                "unsupported_index",
+                pd.DataFrame(
+                    {"a": [3, 4]}, index=pd.interval_range(start=0, periods=2)
+                ),
+                pd.DataFrame(
+                    {"a": [1, 2]}, index=pd.interval_range(start=0, periods=2)
+                ),
+                "not supported",
+            ),
+        ]
+    )
+    def test_rejects_incompatible_result(
+        self, _name: str, result: Any, baseline: pd.DataFrame, message_substring: str
+    ) -> None:
+        """An editing-incompatible result is rejected with a descriptive error."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            self._validate(result, baseline)
+        assert message_substring in str(exc.value)
+
+    def test_changed_dtype_message_names_column(self) -> None:
+        """The dtype-mismatch message names the offending column and both types
+        so the cause is not misattributed."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            self._validate(pd.DataFrame({"a": ["x", "y"]}), pd.DataFrame({"a": [1, 2]}))
+        message = str(exc.value)
+        assert "'a'" in message
+        assert "expected int64" in message
+        assert "got string" in message
+        assert "nullable=" in message
+
+    def test_arrow_schema_mismatch_includes_nullability_and_missing_fields(
+        self,
+    ) -> None:
+        """Mismatch details include nullability and missing/extra field names."""
+        detail = _format_arrow_schema_mismatch(
+            result_fields={"a": ("string", True), "extra": ("int64", True)},
+            baseline_fields={"a": ("string", False), "missing": ("int64", True)},
+        )
+        assert "nullable=False" in detail
+        assert "nullable=True" in detail
+        assert "Missing fields: 'missing'" in detail
+        assert "Extra fields: 'extra'" in detail
+
+    def test_accepts_equivalent_string_arrow_variants(self) -> None:
+        """A large_string baseline and a string result (as produced by a partial
+        row addition) are the same to the editor and must be accepted."""
+        baseline = pd.DataFrame(
+            {"a": [1, 2], "b": pd.array(["x", "y"], dtype="string")}
+        )
+        # A partial row addition downcasts the untouched string column from
+        # large_string to string; returning that frame must still validate.
+        result = baseline.copy(deep=True)
+        result.loc[len(result)] = {"a": 3}
+        # Some pandas versions downcast the RangeIndex to an integer Index when a
+        # row is added via .loc. Leave that as-is: RangeIndex / integer Index
+        # equivalence is part of the compatibility contract under test here.
+
+        validated, _ = self._validate(result, baseline)
+        assert len(validated) == 3
+
+    def test_accepts_range_index_downcast_to_integer_index(self) -> None:
+        """A RangeIndex baseline and an integer Index result (pandas < 3.0 row
+        addition) are editing-compatible, including the ``__index_level_0__``
+        Arrow field that only appears for the plain Index."""
+        baseline = pd.DataFrame({"a": [1, 2]})
+        # Simulate the pandas < 3.0 .loc enlargement downcast without depending
+        # on the installed pandas version.
+        result = pd.DataFrame(
+            {"a": [1, 2, 3]}, index=pd.Index([0, 1, 2], dtype="int64")
+        )
+
+        validated, arrow_table = self._validate(result, baseline)
+        assert len(validated) == 3
+        assert isinstance(arrow_table, pa.Table)
+        # The result may carry `__index_level_0__`; validation must still pass.
+
+
+class CanonicalArrowTypeTest(unittest.TestCase):
+    """Tests for the _canonical_arrow_type helper."""
+
+    def test_collapses_string_variants(self) -> None:
+        """string and large_string collapse to the same canonical name."""
+        assert _canonical_arrow_type(pa.string()) == _canonical_arrow_type(
+            pa.large_string()
+        )
+
+    def test_collapses_binary_variants(self) -> None:
+        """binary and large_binary collapse to the same canonical name."""
+        assert _canonical_arrow_type(pa.binary()) == _canonical_arrow_type(
+            pa.large_binary()
+        )
+
+    def test_collapses_list_variants_recursively(self) -> None:
+        """list and large_list (including their value types) collapse together."""
+        assert _canonical_arrow_type(pa.list_(pa.string())) == _canonical_arrow_type(
+            pa.large_list(pa.large_string())
+        )
+
+    def test_preserves_distinct_numeric_types(self) -> None:
+        """Genuinely different types keep distinct canonical names."""
+        assert _canonical_arrow_type(pa.int64()) != _canonical_arrow_type(pa.float64())
+
+
+class DataEditorCommitEditsValidationTest(DeltaGeneratorTestCase):
+    """Call-time validation of commit_edits with exact exception messages."""
+
+    @staticmethod
+    def _commit(source: pd.DataFrame, edited: pd.DataFrame, edits: Any) -> pd.DataFrame:
+        return source
+
+    def test_requires_key(self) -> None:
+        """commit_edits without a key raises StreamlitMissingRequiredParameterError."""
+        with pytest.raises(StreamlitMissingRequiredParameterError) as exc:
+            st.data_editor(pd.DataFrame({"a": [1]}), commit_edits=self._commit)
+        assert str(exc.value) == (
+            "The `key` parameter is required. When using commit_edits, the "
+            "widget must have a unique 'key' parameter specified so edit "
+            "state can be preserved across reruns."
+        )
+
+    def test_cannot_combine_with_on_change(self) -> None:
+        """commit_edits combined with on_change raises StreamlitIncompatibleParametersError."""
+        with pytest.raises(StreamlitIncompatibleParametersError) as exc:
+            st.data_editor(
+                pd.DataFrame({"a": [1]}),
+                key="editor",
+                on_change=lambda: None,
+                commit_edits=self._commit,
+            )
+        assert str(exc.value) == (
+            "`commit_edits` and `on_change` cannot be used together. "
+            "Use `commit_edits` alone for transactional write-back."
+        )
+
+    def test_not_supported_inside_form(self) -> None:
+        """commit_edits inside a form raises StreamlitInvalidLayoutContextError."""
+        with pytest.raises(StreamlitInvalidLayoutContextError) as exc, st.form("form"):
+            st.data_editor(
+                pd.DataFrame({"a": [1]}), key="editor", commit_edits=self._commit
+            )
+        assert str(exc.value) == "`commit_edits` can't be used in an `st.form()`."
+
+    def test_not_supported_with_styler(self) -> None:
+        """commit_edits with a Styler input raises StreamlitIncompatibleParametersError."""
+        styler = pd.DataFrame({"a": [1]}).style
+        with pytest.raises(StreamlitIncompatibleParametersError) as exc:
+            st.data_editor(styler, key="editor", commit_edits=self._commit)
+        assert str(exc.value) == (
+            "`commit_edits` and `data=pandas.Styler` cannot be used together."
+        )
+
+    def test_not_supported_with_async_callback(self) -> None:
+        """commit_edits with an async callback raises with the documented message."""
+
+        async def commit(
+            source: pd.DataFrame, edited: pd.DataFrame, edits: Any
+        ) -> pd.DataFrame:
+            return source
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.data_editor(pd.DataFrame({"a": [1]}), key="editor", commit_edits=commit)
+        assert str(exc.value) == (
+            "st.data_editor: commit_edits does not support async callbacks."
+        )
+        assert exc.value.error_id == "data-editor-async-commit-edits"
+
+    def test_not_supported_with_async_callable_object(self) -> None:
+        """An instance with async ``__call__`` is rejected like an async function."""
+
+        class AsyncCommit:
+            async def __call__(
+                self, source: pd.DataFrame, edited: pd.DataFrame, edits: Any
+            ) -> pd.DataFrame:
+                return source
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.data_editor(
+                pd.DataFrame({"a": [1]}),
+                key="editor",
+                commit_edits=AsyncCommit(),
+            )
+        assert str(exc.value) == (
+            "st.data_editor: commit_edits does not support async callbacks."
+        )
+        assert exc.value.error_id == "data-editor-async-commit-edits"
+
+    def test_not_supported_with_wrapped_async_callback(self) -> None:
+        """A functools.wraps decorator around an async function is rejected at call time."""
+
+        async def commit(
+            source: pd.DataFrame, edited: pd.DataFrame, edits: Any
+        ) -> pd.DataFrame:
+            return source
+
+        def as_sync(fn: Any) -> Any:
+            @functools.wraps(fn)
+            def wrapper(*args: Any, **kwargs: Any) -> Any:
+                return fn(*args, **kwargs)
+
+            return wrapper
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.data_editor(
+                pd.DataFrame({"a": [1]}),
+                key="editor",
+                commit_edits=as_sync(commit),
+            )
+        assert str(exc.value) == (
+            "st.data_editor: commit_edits does not support async callbacks."
+        )
+        assert exc.value.error_id == "data-editor-async-commit-edits"
+
+    def test_not_supported_with_partial_async_callback(self) -> None:
+        """functools.partial around an async function is rejected at call time."""
+        import functools
+
+        async def commit(
+            source: pd.DataFrame,
+            edited: pd.DataFrame,
+            edits: Any,
+            unused: int = 0,
+        ) -> pd.DataFrame:
+            return source
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.data_editor(
+                pd.DataFrame({"a": [1]}),
+                key="editor",
+                commit_edits=functools.partial(commit, unused=1),
+            )
+        assert str(exc.value) == (
+            "st.data_editor: commit_edits does not support async callbacks."
+        )
+        assert exc.value.error_id == "data-editor-async-commit-edits"
+
+    def test_not_supported_with_partial_async_callable_object(self) -> None:
+        """functools.partial around an async callable instance is rejected at call time."""
+        import functools
+
+        class AsyncCommit:
+            async def __call__(
+                self, source: pd.DataFrame, edited: pd.DataFrame, edits: Any
+            ) -> pd.DataFrame:
+                return source
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.data_editor(
+                pd.DataFrame({"a": [1]}),
+                key="editor",
+                commit_edits=functools.partial(AsyncCommit()),
+            )
+        assert str(exc.value) == (
+            "st.data_editor: commit_edits does not support async callbacks."
+        )
+        assert exc.value.error_id == "data-editor-async-commit-edits"
+
+
+class DataEditorCommitEditsProtoTest(DeltaGeneratorTestCase):
+    """Tests for the commit_edits/clear_edits proto flags."""
+
+    def test_commit_edits_flag_set_when_provided(self) -> None:
+        """proto.commit_edits is True when a callback is provided."""
+        st.data_editor(
+            pd.DataFrame({"a": [1, 2]}),
+            key="editor",
+            commit_edits=lambda source, edited, edits: source,
+        )
+        proto = self.get_delta_from_queue().new_element.dataframe
+        assert proto.commit_edits is True
+        assert proto.clear_edits is False
+
+    def test_commit_edits_flag_unset_by_default(self) -> None:
+        """proto.commit_edits and clear_edits are unset without a callback."""
+        st.data_editor(pd.DataFrame({"a": [1, 2]}), key="editor")
+        proto = self.get_delta_from_queue().new_element.dataframe
+        assert proto.commit_edits is False
+        assert proto.clear_edits is False
+
+
+class DataEditorCommitEditsFlowTest(DeltaGeneratorTestCase):
+    """Tests for the commit_edits commit flow (edit -> rerun -> commit)."""
+
+    def _render(self, data: Any, **kwargs: Any) -> tuple[Any, DataframeProto]:
+        """Render a data editor and return its call result and dataframe proto."""
+        result = st.data_editor(data, **kwargs)
+        return result, self.get_delta_from_queue().new_element.dataframe
+
+    def _simulate_edit_rerun(self, widget_id: str, edit: dict[str, Any]) -> None:
+        """Simulate the rerun triggered by a submitted edit batch.
+
+        Injects the edit into widget state so it differs from the previous run,
+        and resets the per-run element-id registry so the editor can be
+        re-rendered with the same key.
+        """
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            _make_edit_widget_state(widget_id, edit)
+        )
+        self.script_run_ctx.shared.reset()
+        self.clear_queue()
+
+    def test_no_pending_edits_does_not_invoke_callback(self) -> None:
+        """Without pending edits, the callback is not called and clear_edits stays unset."""
+        calls: list[Any] = []
+
+        def commit(
+            source: pd.DataFrame, edited: pd.DataFrame, edits: Any
+        ) -> pd.DataFrame:
+            calls.append(edits)
+            return source
+
+        result, proto = self._render(
+            pd.DataFrame({"a": [1, 2], "b": [3, 4]}),
+            key="editor",
+            commit_edits=commit,
+        )
+        assert calls == []
+        assert proto.clear_edits is False
+        assert result["a"].tolist() == [1, 2]
+
+    def test_pending_edits_invoke_callback_and_commit(self) -> None:
+        """A submitted edit invokes the callback and renders the committed result."""
+        received: dict[str, Any] = {}
+
+        def commit(
+            source: pd.DataFrame, edited: pd.DataFrame, edits: Any
+        ) -> pd.DataFrame:
+            received["source"] = source.copy()
+            received["edited"] = edited.copy()
+            received["edits"] = edits
+            committed = source.copy()
+            committed["a"] *= 10
+            return committed
+
+        df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+        _, proto1 = self._render(df, key="editor", commit_edits=commit)
+        self._simulate_edit_rerun(proto1.id, _CELL_EDIT)
+        result, proto2 = self._render(df, key="editor", commit_edits=commit)
+
+        # The callback received the baseline source and the edited copy.
+        assert received["source"]["a"].tolist() == [1, 2]
+        assert received["edited"]["a"].tolist() == [5, 2]
+
+        # The edits object supports both attribute and item access.
+        edits = received["edits"]
+        assert isinstance(edits, DataEditorState)
+        assert edits.edited_rows == {0: {"a": 5}}
+        assert edits["edited_rows"] == {0: {"a": 5}}
+
+        # On success the committed frame is rendered and clear_edits is set.
+        assert proto2.clear_edits is True
+        rendered = convert_arrow_bytes_to_pandas_df(proto2.arrow_data.data)
+        assert rendered["a"].tolist() == [10, 20]
+        assert result["a"].tolist() == [10, 20]
+
+    def test_reject_by_returning_source_is_success(self) -> None:
+        """Returning the source dataframe is a successful commit (edits cleared)."""
+        calls: list[Any] = []
+
+        def commit(
+            source: pd.DataFrame, edited: pd.DataFrame, edits: Any
+        ) -> pd.DataFrame:
+            calls.append(edits)
+            return source
+
+        df = pd.DataFrame({"a": [1, 2]})
+        _, proto1 = self._render(df, key="editor", commit_edits=commit)
+        self._simulate_edit_rerun(proto1.id, _CELL_EDIT)
+        result, proto2 = self._render(df, key="editor", commit_edits=commit)
+
+        assert len(calls) == 1
+        assert proto2.clear_edits is True
+        assert result["a"].tolist() == [1, 2]
+
+    def test_callback_exception_preserves_edits(self) -> None:
+        """A raising callback surfaces the exception and preserves the edits."""
+
+        def commit(
+            source: pd.DataFrame, edited: pd.DataFrame, edits: Any
+        ) -> pd.DataFrame:
+            raise ValueError("commit failed")
+
+        df = pd.DataFrame({"a": [1, 2]})
+        _, proto1 = self._render(df, key="editor", commit_edits=commit)
+        self._simulate_edit_rerun(proto1.id, _CELL_EDIT)
+        result, proto2 = self._render(df, key="editor", commit_edits=commit)
+
+        assert proto2.clear_edits is False
+        assert result["a"].tolist() == [1, 2]
+        exception_types = [
+            delta.new_element.exception.type
+            for delta in self.get_all_deltas_from_queue()
+            if delta.new_element.HasField("exception")
+        ]
+        assert "ValueError" in exception_types
+        stored = self.script_run_ctx.session_state["editor"]
+        assert stored["edited_rows"] == {0: {"a": 5}}
+
+    def test_validation_failure_preserves_edits(self) -> None:
+        """An incompatible callback result surfaces the exception and preserves edits."""
+
+        def commit(
+            source: pd.DataFrame, edited: pd.DataFrame, edits: Any
+        ) -> pd.DataFrame:
+            # Reordered columns are not editing-compatible.
+            return source[["b", "a"]]
+
+        df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+        _, proto1 = self._render(df, key="editor", commit_edits=commit)
+        self._simulate_edit_rerun(proto1.id, _CELL_EDIT)
+        result, proto2 = self._render(df, key="editor", commit_edits=commit)
+
+        assert proto2.clear_edits is False
+        assert list(result.columns) == ["a", "b"]
+        assert any(
+            delta.new_element.HasField("exception")
+            for delta in self.get_all_deltas_from_queue()
+        )
+        stored = self.script_run_ctx.session_state["editor"]
+        assert stored["edited_rows"] == {0: {"a": 5}}
+
+    def test_coroutine_returning_wrapper_rejected_on_commit(self) -> None:
+        """A sync wrapper that returns a coroutine is rejected with the async error.
+
+        Wrappers without ``__wrapped__`` cannot be detected when
+        ``st.data_editor`` is declared. On the first commit they must still
+        raise the async-callback error (not a misleading return-type error)
+        and close the coroutine so it is not reported as never awaited.
+        """
+
+        async def async_commit(
+            source: pd.DataFrame, edited: pd.DataFrame, edits: Any
+        ) -> pd.DataFrame:
+            return source
+
+        def commit(
+            source: pd.DataFrame, edited: pd.DataFrame, edits: Any
+        ) -> pd.DataFrame:
+            return async_commit(source, edited, edits)
+
+        df = pd.DataFrame({"a": [1, 2]})
+        _, proto1 = self._render(df, key="editor", commit_edits=commit)
+        self._simulate_edit_rerun(proto1.id, _CELL_EDIT)
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            result, proto2 = self._render(df, key="editor", commit_edits=commit)
+
+        assert proto2.clear_edits is False
+        assert result["a"].tolist() == [1, 2]
+        messages = [
+            delta.new_element.exception.message
+            for delta in self.get_all_deltas_from_queue()
+            if delta.new_element.HasField("exception")
+        ]
+        assert any(
+            "commit_edits does not support async callbacks" in message
+            for message in messages
+        )
+        stored = self.script_run_ctx.session_state["editor"]
+        assert stored["edited_rows"] == {0: {"a": 5}}
+        assert not any(
+            issubclass(warning.category, RuntimeWarning)
+            and "never awaited" in str(warning.message)
+            for warning in caught
+        )
+
+    def test_serialization_failure_after_commit_preserves_edits(self) -> None:
+        """If serializing the committed frame fails, edits are preserved.
+
+        Regression guard: ``clear_edits`` must not be set if the Arrow
+        serialization of the committed frame raises. Otherwise the frontend
+        would wipe the preserved edits even though the baseline (not the
+        committed frame) is rendered.
+        """
+
+        def commit(
+            source: pd.DataFrame, edited: pd.DataFrame, edits: Any
+        ) -> pd.DataFrame:
+            committed = source.copy()
+            committed["a"] *= 10
+            return committed
+
+        df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+        _, proto1 = self._render(df, key="editor", commit_edits=commit)
+        self._simulate_edit_rerun(proto1.id, _CELL_EDIT)
+
+        real_convert = dataframe_util.convert_arrow_table_to_arrow_bytes
+        call_count = {"n": 0}
+
+        def failing_convert(table: pa.Table) -> bytes:
+            call_count["n"] += 1
+            # The first call serializes the baseline frame; fail only on the
+            # second call, which serializes the committed frame on the success
+            # path (right before clear_edits would be set).
+            if call_count["n"] >= 2:
+                raise RuntimeError("arrow serialization failed")
+            return real_convert(table)
+
+        with patch.object(
+            dataframe_util,
+            "convert_arrow_table_to_arrow_bytes",
+            side_effect=failing_convert,
+        ):
+            result, proto2 = self._render(df, key="editor", commit_edits=commit)
+
+        # The failure is treated as a failed commit: edits preserved, clear_edits
+        # unset, baseline rendered, and the exception surfaced.
+        assert proto2.clear_edits is False
+        assert result["a"].tolist() == [1, 2]
+        assert any(
+            delta.new_element.HasField("exception")
+            for delta in self.get_all_deltas_from_queue()
+        )
+        stored = self.script_run_ctx.session_state["editor"]
+        assert stored["edited_rows"] == {0: {"a": 5}}
+
+    @parameterized.expand([("stop", StopException), ("rerun", RerunException)])
+    def test_control_flow_exception_propagates(
+        self, _name: str, exc_type: type[BaseException]
+    ) -> None:
+        """A ScriptControlException from the callback propagates and preserves edits."""
+
+        def commit(
+            source: pd.DataFrame, edited: pd.DataFrame, edits: Any
+        ) -> pd.DataFrame:
+            if exc_type is RerunException:
+                raise RerunException(RerunData())
+            raise StopException()
+
+        df = pd.DataFrame({"a": [1, 2]})
+        _, proto1 = self._render(df, key="editor", commit_edits=commit)
+        self._simulate_edit_rerun(proto1.id, _CELL_EDIT)
+
+        with pytest.raises(exc_type):
+            st.data_editor(df, key="editor", commit_edits=commit)
+
+        stored = self.script_run_ctx.session_state["editor"]
+        assert stored["edited_rows"] == {0: {"a": 5}}
+
+    def test_no_retry_when_widget_unchanged(self) -> None:
+        """A pending edit that is unchanged this run does not re-invoke the callback."""
+        calls: list[Any] = []
+
+        def commit(
+            source: pd.DataFrame, edited: pd.DataFrame, edits: Any
+        ) -> pd.DataFrame:
+            calls.append(edits)
+            return source
+
+        df = pd.DataFrame({"a": [1, 2]})
+        _, proto1 = self._render(df, key="editor", commit_edits=commit)
+        widget_id = proto1.id
+
+        # First edit submission commits.
+        self._simulate_edit_rerun(widget_id, _CELL_EDIT)
+        self._render(df, key="editor", commit_edits=commit)
+        assert len(calls) == 1
+
+        # Re-sending the same (unchanged) edit on an unrelated rerun does nothing.
+        self._simulate_edit_rerun(widget_id, _CELL_EDIT)
+        _, proto3 = self._render(df, key="editor", commit_edits=commit)
+        assert len(calls) == 1
+        assert proto3.clear_edits is False
+
+    def test_return_type_preserved_for_list_input(self) -> None:
+        """Commit mode returns the committed data in the original (list) input type."""
+
+        def commit(
+            source: pd.DataFrame, edited: pd.DataFrame, edits: Any
+        ) -> pd.DataFrame:
+            return source
+
+        data = [{"a": 1}, {"a": 2}]
+        _, proto1 = self._render(data, key="editor", commit_edits=commit)
+        self._simulate_edit_rerun(proto1.id, _CELL_EDIT)
+        result, proto2 = self._render(data, key="editor", commit_edits=commit)
+
+        assert isinstance(result, list)
+        assert proto2.clear_edits is True
+
+
+class DataEditorCommitEditsMetricsTest(DeltaGeneratorTestCase):
+    """Tests that commit_edits usage is tracked in command telemetry."""
+
+    def test_commit_edits_tracked_as_argument(self) -> None:
+        """commit_edits is captured as a tracked argument for the data_editor command."""
+        self.script_run_ctx.gather_usage_stats = True
+        self.script_run_ctx.command_tracking_deactivated = False
+
+        st.data_editor(
+            pd.DataFrame({"a": [1, 2]}),
+            key="editor",
+            commit_edits=lambda source, edited, edits: source,
+        )
+
+        commands = [
+            command
+            for command in self.script_run_ctx.shared.tracked_commands
+            if command.name.endswith("data_editor")
+        ]
+        assert len(commands) == 1
+        assert "commit_edits" in {arg.k for arg in commands[0].args}

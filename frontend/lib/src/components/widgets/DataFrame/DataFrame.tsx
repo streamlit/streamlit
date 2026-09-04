@@ -20,6 +20,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -53,6 +54,7 @@ import { BackendOperationContext } from "~lib/components/core/BackendOperationCo
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
+import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
@@ -63,6 +65,7 @@ import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import useTimeout from "~lib/hooks/useTimeout"
+import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -111,6 +114,36 @@ import "@glideapps/glide-data-grid-cells/dist/index.css"
 // a scrollbar size of ~8px to prevent clicks on the scrollbar to be applied
 // in the data grid.
 const SCROLLBAR_FALLBACK_SIZE_REM = "0.5rem"
+
+/**
+ * Identifies the script run that a commit-edits submission triggered, so the
+ * editor can tell when *that* run finishes and re-enable itself.
+ *
+ * Set when the editor submits an edit batch in commit-edits mode and cleared
+ * once the matching run completes. While it's set, the editor is disabled
+ * (no further cell edits or row operations are accepted); `undefined` means no
+ * submission is in flight.
+ *
+ * The fields pin down which completion counts as "our run" versus an unrelated
+ * run that happened to be in flight at submit time. Mirrors the equivalent type
+ * in ChatInput (st.chat_input submit_mode="disable").
+ */
+type SubmittedRunScope = {
+  /** The fragment that owns the editor, or null for a page-level widget. */
+  fragmentId: string | null
+  /**
+   * scriptRunId active when the edit was submitted. The run we trigger gets a
+   * fresh id once it starts, so comparing against this id lets us skip an
+   * unrelated run that was already in flight at submit time and avoid
+   * re-enabling too early.
+   */
+  scriptRunIdAtSubmit: string
+  /**
+   * scriptRunFinishedSequence at submit time. We react only to completions the
+   * frontend reports after this baseline.
+   */
+  scriptRunFinishedSequence: number
+}
 
 export interface DataFrameProps {
   element: DataframeProto
@@ -191,6 +224,67 @@ function DataFrame({
   } = useRequiredContext(ElementFullscreenContext)
 
   const { isInHorizontalLayout, isInRoot } = useRequiredContext(FlexContext)
+
+  // Commit-edits mode: st.data_editor was called with a commit_edits callback.
+  // In this mode the editor disables itself as soon as it submits an edit batch
+  // and stays disabled until the matching script/fragment rerun finishes
+  // (mirrors st.chat_input(submit_mode="disable")). Disable-in-flight logic
+  // below is inert when commitEditsActive is false. Note: ScriptRunContext is
+  // still subscribed unconditionally, so plain st.dataframe / data_editor also
+  // re-render on run-state transitions (tracked follow-up: isolate in-flight
+  // tracking behind a child mounted only when commitEditsActive).
+  const commitEditsActive = element.commitEdits
+
+  const {
+    scriptRunId,
+    scriptRunFinishedSequence,
+    scriptRunFinishedFragmentIds,
+  } = useContext(ScriptRunContext)
+
+  // Tracks the run our last edit submission triggered; undefined when idle.
+  // Persisted via the widget manager so it survives editor remounts. Only
+  // meaningful in commit-edits mode (which always has a widgetMgr, since it is
+  // a keyed widget); for st.dataframe (no widgetMgr) it falls back to local
+  // state and is never set.
+  const [submittedRunScope, setSubmittedRunScope] =
+    useWidgetManagerElementState<SubmittedRunScope | undefined>({
+      widgetMgr,
+      id: element.id,
+      key: "commitEditsRunScope",
+      defaultValue: undefined,
+    })
+
+  // True while a submitted edit batch is in flight (commit-edits mode only),
+  // independent of the explicit `disabled` prop. `effectiveDisabled` merges it
+  // with `disabled` and gates only the editing capabilities, not unrelated UI.
+  const isDisabledDuringRun =
+    commitEditsActive && submittedRunScope !== undefined
+  const effectiveDisabled = disabled || isDisabledDuringRun
+
+  // Called by useWidgetState right after an edit batch was written to the widget
+  // manager. Enters the disabled-in-flight state synchronously with the submit,
+  // intentionally not waiting for scriptRunState to flip to RUNNING (closing the
+  // brief window before the server reports the run, matching ChatInput).
+  const handleEditsSubmitted = useCallback(() => {
+    if (!commitEditsActive || !widgetMgr) {
+      return
+    }
+    // `fragmentId` is an empty string for top-level (non-fragment) widgets
+    // because it comes from a protobuf string field. Normalize falsy values to
+    // null so the run-scope matcher treats them as full-script runs.
+    setSubmittedRunScope({
+      fragmentId: fragmentId || null,
+      scriptRunIdAtSubmit: scriptRunId,
+      scriptRunFinishedSequence,
+    })
+  }, [
+    commitEditsActive,
+    widgetMgr,
+    fragmentId,
+    scriptRunId,
+    scriptRunFinishedSequence,
+    setSubmittedRunScope,
+  ])
 
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
@@ -280,7 +374,9 @@ function DataFrame({
     supportsRectangleSelection,
   } = useDataFrameCapabilities({
     editingMode,
-    disabled,
+    // Use the effective disabled flag so editing capabilities (edit/add/delete)
+    // are also gated while a commit-edits batch is in flight.
+    disabled: effectiveDisabled,
     numDataRows: originalNumRows,
     numDataColumns: dataDimensions.numDataColumns,
     isLazy,
@@ -302,7 +398,13 @@ function DataFrame({
     columns: originalColumns,
     allColumns,
     setColumnConfigMapping,
-  } = useColumnLoader(element, data, disabled, columnOrder, widthConfig)
+  } = useColumnLoader(
+    element,
+    data,
+    effectiveDisabled,
+    columnOrder,
+    widthConfig
+  )
 
   // Widget state management hook - handles editing state, syncing with widget manager,
   // and form clear handling
@@ -313,6 +415,7 @@ function DataFrame({
     updateNumRows,
     syncEditState,
     flushEditState,
+    clearEditsAndWidgetValue,
     createSyncSelectionState,
     onFormCleared: handleFormCleared,
     loadInitialSelectionState,
@@ -323,6 +426,8 @@ function DataFrame({
     fragmentId,
     originalNumRows,
     originalColumns,
+    commitEditsActive,
+    onEditsSubmitted: handleEditsSubmitted,
   })
 
   const flushEditStateOnFinishedEditingRef = useRef(false)
@@ -429,7 +534,9 @@ function DataFrame({
     getCellContent,
     getOriginalIndex,
     theme: gridTheme.glideTheme,
-    disabled,
+    // Block button-column clicks while a commit-edits batch is in flight so no
+    // further edit-driven submissions can be queued.
+    disabled: effectiveDisabled,
   })
 
   // Ref to access the latest getOriginalIndex in deferred callbacks.
@@ -701,6 +808,76 @@ function DataFrame({
     processSelectionChange,
     getOriginalIndex,
   ])
+
+  const submittedRunMatchesFragmentIds = useCallback(
+    (fragmentIds: Array<string>): boolean => {
+      if (submittedRunScope === undefined) {
+        return false
+      }
+
+      return submittedRunScope.fragmentId === null
+        ? fragmentIds.length === 0
+        : fragmentIds.includes(submittedRunScope.fragmentId)
+    },
+    [submittedRunScope]
+  )
+
+  // Commit-edits re-enable: stop tracking the submission once the run this
+  // editor triggered finishes and re-enable editing. We act on a scriptFinished
+  // only when it:
+  //   1. arrives after the submission (sequence guard), and
+  //   2. comes from a run that started after the submission (a fresh
+  //      scriptRunId), so an unrelated run that was already in flight at submit
+  //      time doesn't re-enable the editor too early.
+  // We then re-enable when the completion matches our run: the same fragment, or
+  // any full-script run (which supersedes pending fragment work and also covers
+  // st.rerun(), stops, and compile errors that report no fragment ids). Mirrors
+  // the equivalent effect in ChatInput.
+  useEffect(() => {
+    if (
+      submittedRunScope === undefined ||
+      scriptRunFinishedSequence <=
+        submittedRunScope.scriptRunFinishedSequence ||
+      scriptRunId === submittedRunScope.scriptRunIdAtSubmit
+    ) {
+      return
+    }
+
+    if (
+      submittedRunMatchesFragmentIds(scriptRunFinishedFragmentIds) ||
+      scriptRunFinishedFragmentIds.length === 0
+    ) {
+      setSubmittedRunScope(undefined)
+    }
+  }, [
+    scriptRunFinishedFragmentIds,
+    scriptRunFinishedSequence,
+    scriptRunId,
+    submittedRunMatchesFragmentIds,
+    submittedRunScope,
+    setSubmittedRunScope,
+  ])
+
+  // Commit-edits clear signal: reset the editing state and clear the stored
+  // widget value on the render right after a successful commit. The backend has
+  // already swapped element.arrowData to the committed frame on this render, so
+  // the grid then displays the committed data with an empty editing state.
+  //
+  // useLayoutEffect runs before paint so a transforming commit (committed value
+  // differs from the overlay the user just typed) does not flash the stale
+  // overlay for one frame.
+  //
+  // The effect is keyed on `element` (a fresh proto every rerun), so it runs
+  // exactly once per delivered proto. Keying on `element.clearEdits` instead
+  // would miss consecutive value-only commits, whose protos both carry
+  // clearEdits=true (and whose stable widget identity keeps
+  // clearEditsAndWidgetValue referentially unchanged), so the flag never
+  // transitions and the second clear is dropped.
+  useLayoutEffect(() => {
+    if (element.clearEdits) {
+      clearEditsAndWidgetValue()
+    }
+  }, [element, clearEditsAndWidgetValue])
 
   const { exportToCsv } = useDataExporter(
     getCellContent,

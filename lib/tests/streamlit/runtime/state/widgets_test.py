@@ -352,6 +352,10 @@ EXCLUDED_KWARGS_FOR_ELEMENT_ID_COMPUTATION = {
     "on_change",
     "on_click",
     "on_submit",
+    # commit_edits is a data_editor write-back callback; its presence is
+    # reflected in the data signature, but the callback itself does not affect
+    # widget identity.
+    "commit_edits",
     # Key should be provided via `user_key` instead.
     "key",
     # bind controls URL syncing, not widget identity

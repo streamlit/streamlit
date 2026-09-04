@@ -1251,6 +1251,16 @@ class SessionState:
         changed: bool = new_value != old_value
         return changed
 
+    def widget_changed(self, widget_id: str) -> bool:
+        """Return whether this widget's value changed this run.
+
+        This is the same signal that gates ``on_change`` callbacks. Widget
+        implementations (for example ``commit_edits``) use it to detect that a
+        fresh interaction was submitted this run. It is not a supported
+        app-facing API on ``st.session_state``.
+        """
+        return self._widget_changed(widget_id)
+
     def on_script_finished(
         self,
         widget_ids_this_run: frozenset[str],

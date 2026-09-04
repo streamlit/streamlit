@@ -98,6 +98,11 @@ class SafeSessionState:
         with self._lock:
             return self._state.is_new_state_value(user_key)
 
+    def widget_changed(self, widget_id: str) -> bool:
+        """True if the widget's value changed between the previous and current run."""
+        with self._lock:
+            return self._state.widget_changed(widget_id)
+
     def reset_state_value(self, user_key: str, value: Any | None) -> None:
         """Reset a new session state value to a given value
         without triggering the "state value cannot be modified" error.
