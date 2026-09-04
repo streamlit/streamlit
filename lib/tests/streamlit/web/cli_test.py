@@ -979,3 +979,133 @@ class HTTPServerIntegrationTest(unittest.TestCase):
                     response.raise_for_status()
             finally:
                 proc.kill()
+
+
+class CloudDeployTest(unittest.TestCase):
+    """Tests for the cloud deploy command."""
+
+    def setUp(self):
+        self.runner = CliRunner()
+
+    def test_cloud_deploy_with_git_repo_and_streamlit_app(self):
+        """Test cloud deploy opens browser with prefilled git info when streamlit_app.py exists."""
+        with patch("streamlit.cli_util.open_browser") as mock_open_browser:
+            with patch(
+                "streamlit.git_util.GitRepo.get_repo_info",
+                return_value=("owner/repo", "main", "streamlit_app.py"),
+            ):
+                with patch("pathlib.Path.is_dir", return_value=True):
+                    with patch("pathlib.Path.exists", return_value=True):
+                        result = self.runner.invoke(cli, ["cloud", "deploy"])
+
+        assert result.exit_code == 0
+        mock_open_browser.assert_called_once()
+        url = mock_open_browser.call_args[0][0]
+        assert "https://share.streamlit.io/deploy" in url
+        assert "repository=owner%2Frepo" in url
+        assert "branch=main" in url
+        assert "mainModule=streamlit_app.py" in url
+
+    def test_cloud_deploy_without_git_repo(self):
+        """Test cloud deploy shows error when not in a GitHub repo."""
+        with patch("streamlit.cli_util.open_browser") as mock_open_browser:
+            with patch("streamlit.git_util.GitRepo.get_repo_info", return_value=None):
+                with patch("pathlib.Path.is_dir", return_value=False):
+                    with patch("pathlib.Path.exists", return_value=True):
+                        result = self.runner.invoke(cli, ["cloud", "deploy"])
+
+        assert result.exit_code != 0
+        mock_open_browser.assert_not_called()
+        assert (
+            "Deploying to Community Cloud requires the code to be pushed to GitHub"
+            in result.output
+        )
+
+    def test_cloud_deploy_directory_without_streamlit_app(self):
+        """Test cloud deploy omits mainModule when no streamlit_app.py exists in directory."""
+        with patch("streamlit.cli_util.open_browser") as mock_open_browser:
+            with patch(
+                "streamlit.git_util.GitRepo.get_repo_info",
+                return_value=("owner/repo", "main", "."),
+            ):
+                with patch("pathlib.Path.is_dir", return_value=True):
+                    with patch("pathlib.Path.exists", return_value=False):
+                        result = self.runner.invoke(cli, ["cloud", "deploy"])
+
+        assert result.exit_code == 0
+        mock_open_browser.assert_called_once()
+        url = mock_open_browser.call_args[0][0]
+        assert "https://share.streamlit.io/deploy" in url
+        assert "repository=owner%2Frepo" in url
+        assert "branch=main" in url
+        # mainModule should NOT be in the URL
+        assert "mainModule" not in url
+        assert "not specified - please select on Cloud page" in result.output
+
+    def test_cloud_deploy_with_target_path(self):
+        """Test cloud deploy with an explicit target file path."""
+        with patch("streamlit.cli_util.open_browser") as mock_open_browser:
+            with patch(
+                "streamlit.git_util.GitRepo.get_repo_info",
+                return_value=("owner/repo", "develop", "app/main.py"),
+            ):
+                with patch("pathlib.Path.is_dir", return_value=False):
+                    with patch("pathlib.Path.exists", return_value=True):
+                        result = self.runner.invoke(
+                            cli, ["cloud", "deploy", "app/main.py"]
+                        )
+
+        assert result.exit_code == 0
+        mock_open_browser.assert_called_once()
+        url = mock_open_browser.call_args[0][0]
+        assert "https://share.streamlit.io/deploy" in url
+        assert "mainModule=app%2Fmain.py" in url
+
+    def test_cloud_deploy_nonexistent_file_shows_error(self):
+        """Test cloud deploy shows error when specified file doesn't exist."""
+        with patch("streamlit.cli_util.open_browser") as mock_open_browser:
+            with patch("pathlib.Path.is_dir", return_value=False):
+                with patch("pathlib.Path.exists", return_value=False):
+                    result = self.runner.invoke(
+                        cli, ["cloud", "deploy", "nonexistent.py"]
+                    )
+
+        assert result.exit_code != 0
+        assert "File does not exist: nonexistent.py" in result.output
+        assert "streamlit cloud deploy <your_script.py>" in result.output
+        mock_open_browser.assert_not_called()
+
+    def test_cloud_deploy_output_messages(self):
+        """Test cloud deploy outputs the correct information."""
+        with patch("streamlit.cli_util.open_browser"):
+            with patch(
+                "streamlit.git_util.GitRepo.get_repo_info",
+                return_value=("myorg/myrepo", "feature-branch", "src/app.py"),
+            ):
+                with patch("pathlib.Path.is_dir", return_value=False):
+                    with patch("pathlib.Path.exists", return_value=True):
+                        result = self.runner.invoke(
+                            cli, ["cloud", "deploy", "src/app.py"]
+                        )
+
+        assert "Opening Streamlit Community Cloud deploy page" in result.output
+        assert "Repository: myorg/myrepo" in result.output
+        assert "Branch: feature-branch" in result.output
+        assert "Main script: src/app.py" in result.output
+
+    def test_cloud_deploy_removes_git_suffix(self):
+        """Test cloud deploy removes .git suffix from repository name."""
+        with patch("streamlit.cli_util.open_browser") as mock_open_browser:
+            with patch(
+                "streamlit.git_util.GitRepo.get_repo_info",
+                return_value=("owner/repo.git", "main", "app.py"),
+            ):
+                with patch("pathlib.Path.is_dir", return_value=False):
+                    with patch("pathlib.Path.exists", return_value=True):
+                        result = self.runner.invoke(cli, ["cloud", "deploy", "app.py"])
+
+        assert result.exit_code == 0
+        url = mock_open_browser.call_args[0][0]
+        # Should have owner/repo without .git suffix
+        assert "repository=owner%2Frepo" in url
+        assert ".git" not in url
