@@ -76,6 +76,14 @@ const MAPBOX_MODEBAR_BUTTONS: Record<string, string> = {
   resetViewMapbox: "resetViewMap",
 }
 
+/**
+ * First-segment attrs of Plotly map subplot restyle/relayout paths
+ * (`mapbox.zoom`, `mapbox.layers[0].visible`). Used so hostnames such as
+ * `mapbox.com` are not treated as attribute paths.
+ */
+const MAPBOX_RESTYLE_FIRST_ATTR =
+  /^(?:accesstoken|accessToken|bearing|bounds|center|domain|fitbounds|layers|pitch|style|uirevision|zoom)\b/
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
 }
@@ -260,20 +268,45 @@ function migrateModeBarName(name: string): string {
   return MAPBOX_MODEBAR_BUTTONS[name] ?? name
 }
 
+function isMapboxRestylePath(value: string): boolean {
+  const match = /^(layout\.)?mapbox(\d*)(.*)$/.exec(value)
+  if (!match) {
+    return false
+  }
+  const rest = match[3]
+  return (
+    rest === "" ||
+    (rest.startsWith(".") && MAPBOX_RESTYLE_FIRST_ATTR.test(rest.slice(1)))
+  )
+}
+
+/**
+ * Rewrite a Plotly restyle/relayout attr string or subplot id.
+ * Unrelated text, URLs, and hostnames are returned unchanged.
+ */
+function migrateMapboxAttrString(value: string): string {
+  const modebarName = migrateModeBarName(value)
+  if (modebarName !== value) {
+    return modebarName
+  }
+  if (!isMapboxRestylePath(value)) {
+    return value
+  }
+  return value.replace(
+    /^(layout\.)?mapbox(\d*)(?=\.|$)/,
+    (_match, layoutPrefix: string | undefined, n: string) =>
+      `${layoutPrefix ?? ""}${n ? `map${n}` : "map"}`
+  )
+}
+
 /**
  * Rewrite leftover v3 Mapbox identifiers in nested layout values such as
- * `layout.modebar.add`/`remove` and updatemenu/slider `args` paths
- * (`mapbox.zoom` → `map.zoom`).
+ * `layout.modebar.add`/`remove` and updatemenu/slider `args` (string paths
+ * and object keys: `mapbox.zoom` → `map.zoom`, `{ mapbox: … }` → `{ map: … }`).
  */
 function migrateMapboxNestedRefs(value: unknown): unknown {
   if (typeof value === "string") {
-    const modebarName = migrateModeBarName(value)
-    if (modebarName !== value) {
-      return modebarName
-    }
-    return value
-      .replace(/\bmapbox(\d*)\./g, (_match, n: string) => `map${n}.`)
-      .replace(/^mapbox(\d*)$/, (_match, n: string) => (n ? `map${n}` : "map"))
+    return migrateMapboxAttrString(value)
   }
   if (Array.isArray(value)) {
     return value.map(item => migrateMapboxNestedRefs(item))
@@ -281,7 +314,13 @@ function migrateMapboxNestedRefs(value: unknown): unknown {
   if (isRecord(value)) {
     const next: Record<string, unknown> = {}
     for (const [key, nested] of Object.entries(value)) {
-      next[key] = migrateMapboxNestedRefs(nested)
+      const migratedKey = migrateMapboxAttrString(key)
+      const migratedValue = migrateMapboxNestedRefs(nested)
+      if (migratedKey !== key && migratedKey in next) {
+        // An existing v4 key wins over a migrated v3 key.
+        continue
+      }
+      next[migratedKey] = migratedValue
     }
     return next
   }

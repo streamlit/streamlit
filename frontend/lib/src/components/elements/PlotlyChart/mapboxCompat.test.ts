@@ -293,6 +293,84 @@ describe("migratePlotlyMapboxFigure", () => {
       ],
     })
   })
+
+  it("rewrites mapbox restyle object keys in updatemenus and sliders", () => {
+    const figure = migratePlotlyMapboxFigure({
+      data: [{ type: "scattermapbox" }],
+      layout: {
+        updatemenus: [
+          {
+            buttons: [
+              {
+                args: [{ "mapbox.zoom": 4, mapbox: { pitch: 30 } }],
+              },
+            ],
+          },
+        ],
+        sliders: [
+          {
+            steps: [
+              {
+                args: [{ "mapbox2.center": { lat: 0, lon: 0 } }],
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    expect(figure.layout).toEqual({
+      updatemenus: [
+        {
+          buttons: [
+            {
+              args: [{ "map.zoom": 4, map: { pitch: 30 } }],
+            },
+          ],
+        },
+      ],
+      sliders: [
+        {
+          steps: [
+            {
+              args: [{ "map2.center": { lat: 0, lon: 0 } }],
+            },
+          ],
+        },
+      ],
+    })
+  })
+
+  it("does not rewrite Mapbox hostnames or URLs in nested layout strings", () => {
+    const figure = migratePlotlyMapboxFigure({
+      data: [{ type: "scatter" }],
+      layout: {
+        title: "Tiles from api.mapbox.com",
+        annotations: [
+          {
+            text: "https://api.mapbox.com/v4/mapbox.satellite",
+            align: "center",
+          },
+        ],
+        images: [
+          { source: "https://api.mapbox.com/styles/v1/mapbox/light-v10" },
+        ],
+      },
+    })
+
+    expect(figure.layout).toEqual({
+      title: "Tiles from api.mapbox.com",
+      annotations: [
+        {
+          text: "https://api.mapbox.com/v4/mapbox.satellite",
+          align: "center",
+        },
+      ],
+      images: [
+        { source: "https://api.mapbox.com/styles/v1/mapbox/light-v10" },
+      ],
+    })
+  })
 })
 
 describe("migratePlotlyMapboxConfig", () => {
