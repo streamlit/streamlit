@@ -65,8 +65,8 @@ class HtmlMixin:
         untrusted input.
 
         .. note::
-            Prefer native Streamlit features and advanced theming over custom
-            CSS or custom HTML components.
+            Prefer native Streamlit features and theming over custom CSS or
+            HTML.
 
         Parameters
         ----------

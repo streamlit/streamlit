@@ -180,10 +180,10 @@ class MarkdownMixin:
             expressions within ``body`` will be rendered.
 
             Adding custom HTML to your app impacts safety, styling, and
-            maintainability. Don't use this to build custom components or
-            inject custom CSS. Prefer native Streamlit features and advanced
-            theming instead. If custom CSS or HTML (without Markdown) is
-            necessary, use ``st.html``.
+            maintainability. Don't use ``unsafe_allow_html`` to recreate UI
+            or inject CSS. Prefer native Streamlit features and theming
+            instead. If you need HTML or CSS without Markdown, use
+            ``st.html``.
 
             ``unsafe_allow_html=True`` cannot be combined with ``wrap=False``.
 
@@ -320,10 +320,10 @@ class MarkdownMixin:
             expressions within ``body`` will be rendered.
 
             Adding custom HTML to your app impacts safety, styling, and
-            maintainability. Don't use this to build custom components or
-            inject custom CSS. Prefer native Streamlit features and advanced
-            theming instead. If custom CSS or HTML (without Markdown) is
-            necessary, use ``st.html``.
+            maintainability. Don't use ``unsafe_allow_html`` to recreate UI
+            or inject CSS. Prefer native Streamlit features and theming
+            instead. If you need HTML or CSS without Markdown, use
+            ``st.html``.
 
             ``unsafe_allow_html=True`` cannot be combined with ``wrap=False``.
 
