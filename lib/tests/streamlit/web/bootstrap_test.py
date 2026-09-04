@@ -20,6 +20,7 @@ import os.path
 import sys
 import types
 from io import StringIO
+from typing import TYPE_CHECKING
 from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest.mock import Mock, patch
 
@@ -30,6 +31,9 @@ from streamlit.runtime.runtime import Runtime
 from streamlit.web import bootstrap
 from tests import testutil
 from tests.testutil import patch_config_options
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class BootstrapPrintTest(IsolatedAsyncioTestCase):
@@ -874,6 +878,23 @@ class BootstrapPydeckMapboxTest(TestCase):
             assert os.environ["MAPBOX_API_KEY"] == "external"
 
 
+class _ImmediateThread:
+    """Stand-in for threading.Thread that runs target() on start()."""
+
+    def __init__(
+        self,
+        target: Callable[..., object],
+        daemon: bool = False,
+        name: str | None = None,
+    ) -> None:
+        self._target = target
+        self.daemon = daemon
+        self.name = name
+
+    def start(self) -> None:
+        self._target()
+
+
 @patch("streamlit.web.bootstrap.prepare_streamlit_environment", Mock())
 @patch("streamlit.web.bootstrap._print_url", Mock())
 @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
@@ -885,9 +906,34 @@ class BootstrapOnServerStartBrowserTest(IsolatedAsyncioTestCase):
         # prepare_streamlit_environment is mocked at the class level to avoid
         # leaking changes to os.environ (MAPBOX_API_KEY) and the global
         # mimetypes registry across tests.
-        bootstrap._on_server_start(Mock(is_running_hello=False))
-        # Yield to the event loop so the call_soon callback runs.
-        await asyncio.sleep(0)
+        # Run the browser-open callback inline so tests do not wait on a thread.
+        with patch(
+            "streamlit.web.bootstrap.threading.Thread",
+            side_effect=_ImmediateThread,
+        ):
+            bootstrap._on_server_start(Mock(is_running_hello=False))
+
+    async def test_opens_browser_off_the_event_loop(self, mock_open_browser):
+        """maybe_open_browser runs on a daemon thread, not the asyncio loop."""
+        with (
+            testutil.patch_config_options(
+                {
+                    "server.headless": False,
+                    "server.port": 8501,
+                    "global.developmentMode": False,
+                }
+            ),
+            patch("streamlit.web.bootstrap.threading.Thread") as mock_thread,
+        ):
+            bootstrap._on_server_start(Mock(is_running_hello=False))
+
+            mock_thread.assert_called_once()
+            kwargs = mock_thread.call_args.kwargs
+            assert kwargs["daemon"] is True
+            assert kwargs["name"] == "streamlit-open-browser"
+            kwargs["target"]()
+
+        mock_open_browser.assert_called_once()
 
     async def test_does_not_open_browser_in_headless_mode(self, mock_open_browser):
         """The scheduled callback skips opening a browser when headless=True."""

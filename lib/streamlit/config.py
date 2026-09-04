@@ -1357,6 +1357,32 @@ def _browser_server_port() -> int:
     return int(get_option("server.port"))
 
 
+_create_option(
+    "browser.command",
+    description="""
+        Browser or command Streamlit uses when it opens a URL (for example,
+        streamlit run and streamlit docs).
+
+        If empty (default), Streamlit uses the operating system's default
+        handler. For streamlit run, this option has no effect when
+        server.headless is true. If the value cannot be resolved, Streamlit
+        logs a warning and falls back to the default handler.
+
+        Examples:
+        - A registered name such as "firefox", "safari", or "google-chrome"
+          when that name is registered on your OS.
+        - A command with "%s" as the URL placeholder, for example
+          'open -a "Google Chrome" %s' or 'open -a Firefox %s' on macOS.
+          webbrowser parses "%s" templates with POSIX shlex, so a Windows
+          path that contains backslashes should omit "%s".
+        - An executable path, including paths with spaces (for example WSL
+          Chrome). On Windows, use the path without "%s".
+    """,
+    default_val="",
+    type_=str,
+)
+
+
 _SSL_PRODUCTION_WARNING = [
     (
         "DO NOT USE THIS OPTION IN A PRODUCTION ENVIRONMENT. It has not gone through "
