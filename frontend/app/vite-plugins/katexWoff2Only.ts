@@ -71,6 +71,11 @@ export const katexWoff2Only = (): Plugin => {
       isBuild = config.command === "build"
     },
 
+    buildStart() {
+      // Re-armed per build, so a watching build cannot coast on an earlier pass.
+      sawStylesheet = false
+    },
+
     transform(code, id) {
       // Vite appends markers such as `?direct` to stylesheet ids.
       const [path] = id.split("?")
@@ -98,11 +103,14 @@ export const katexWoff2Only = (): Plugin => {
       return woff2Only === code ? null : { code: woff2Only, map: null }
     },
 
-    buildEnd() {
+    buildEnd(error) {
       // The checks above only fire once the stylesheet reaches us. If its path
       // moves, or Vite changes how it ids CSS, this plugin would silently do
       // nothing at all -- so require that it ran at least once per build.
-      if (isBuild && !sawStylesheet) {
+      //
+      // A build that failed for its own reasons may never have got as far as the
+      // stylesheet, so stay quiet rather than masking the real error.
+      if (!error && isBuild && !sawStylesheet) {
         this.error(
           "KaTeX's stylesheet never reached this plugin, so its woff and ttf " +
             "fonts were emitted. Check KATEX_STYLESHEET_PATH against the id " +
