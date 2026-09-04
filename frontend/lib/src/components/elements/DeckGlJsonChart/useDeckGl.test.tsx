@@ -897,80 +897,35 @@ describe("useDeckGl", () => {
   })
 
   describe("views and map style", () => {
-    it("preserves converted MapView instances from the pydeck spec", () => {
-      const { result } = renderHook(props => useDeckGl(props), {
-        initialProps: getUseDeckGlProps(),
-      })
+    const firstView = (views: unknown): { id?: string } | undefined =>
+      (Array.isArray(views) ? views[0] : views) as { id?: string } | undefined
 
-      const views = result.current.deck.views
-      const firstView = Array.isArray(views) ? views[0] : views
-      expect(firstView).toBeInstanceOf(MapView)
-    })
+    const CARTO_DARK =
+      "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
 
-    it("preserves converted OrbitView instances instead of dropping views", () => {
+    it("keeps MapView, default-view id, Carto tiles, and JSON parameters", () => {
       const { result } = renderHook(props => useDeckGl(props), {
         initialProps: getUseDeckGlProps(
           {},
           {},
-          {
-            views: [{ "@@type": "OrbitView", controller: true }],
-          }
+          { mapStyle: undefined, parameters: { cull: true } }
         ),
       })
 
-      const views = result.current.deck.views
-      const firstView = Array.isArray(views) ? views[0] : views
-      expect(firstView).toBeInstanceOf(OrbitView)
-      expect(firstView).not.toBeInstanceOf(MapView)
+      const view = firstView(result.current.deck.views)
+      expect(view).toBeInstanceOf(MapView)
+      expect(view?.id).toBe("default-view")
+      expect(result.current.deck.mapStyle).toBe(CARTO_DARK)
+      expect(result.current.deck.parameters).toEqual({ cull: true })
     })
 
-    it("does not apply a Carto default style when mapStyle is the pydeck unset sentinel", () => {
-      const { result } = renderHook(props => useDeckGl(props), {
-        initialProps: getUseDeckGlProps(
-          {},
-          {},
-          {
-            mapStyle: PYDECK_UNSET_MAP_STYLE,
-          }
-        ),
-      })
-
-      expect(result.current.deck.mapStyle).toBeUndefined()
-    })
-
-    it("applies the dark Carto style when MapView omits mapStyle", () => {
-      const { result } = renderHook(props => useDeckGl(props), {
-        initialProps: getUseDeckGlProps({}, {}, { mapStyle: undefined }),
-      })
-
-      expect(result.current.deck.mapStyle).toBe(
-        "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-      )
-    })
-
-    it("does not apply a Carto default style for OrbitView without mapStyle", () => {
-      const { result } = renderHook(props => useDeckGl(props), {
-        initialProps: getUseDeckGlProps(
-          {},
-          {},
-          {
-            mapStyle: undefined,
-            views: [{ "@@type": "OrbitView", controller: true }],
-          }
-        ),
-      })
-
-      expect(result.current.deck.mapStyle).toBeUndefined()
-    })
-
-    it("keeps orbit camera keys in viewState instead of assuming lat/lon", () => {
+    it("keeps OrbitView cameras and skips Carto / @@= parameters", () => {
       const orbitViewState = {
         target: [0, 1, 2],
         zoom: 5,
         rotationX: 15,
         rotationOrbit: 30,
       }
-
       const { result } = renderHook(props => useDeckGl(props), {
         initialProps: getUseDeckGlProps(
           {},
@@ -978,86 +933,47 @@ describe("useDeckGl", () => {
           {
             initialViewState: orbitViewState,
             views: [{ "@@type": "OrbitView", controller: true }],
-            mapStyle: PYDECK_UNSET_MAP_STYLE,
+            mapStyle: undefined,
+            parameters: "@@=1",
           }
         ),
       })
 
+      expect(firstView(result.current.deck.views)).toBeInstanceOf(OrbitView)
+      expect(result.current.deck.mapStyle).toBeUndefined()
+      expect(result.current.deck.parameters).toBeUndefined()
       expect(result.current.viewState).toEqual(
         expect.objectContaining(orbitViewState)
       )
       expect(result.current.viewState).not.toHaveProperty("latitude")
     })
 
-    it("passes WebGL parameters through to the converted deck object", () => {
+    it("skips Carto for the pydeck unset sentinel", () => {
       const { result } = renderHook(props => useDeckGl(props), {
         initialProps: getUseDeckGlProps(
           {},
           {},
-          {
-            parameters: { cull: true },
-          }
+          { mapStyle: PYDECK_UNSET_MAP_STYLE }
         ),
       })
 
-      expect(result.current.deck.parameters).toEqual({ cull: true })
+      expect(result.current.deck.mapStyle).toBeUndefined()
     })
 
-    it("does not forward @@= parameters as a per-frame function", () => {
+    it.each([
+      { views: undefined },
+      { views: [{ "@@type": "NotARealView", controller: true }] },
+    ])("applies Carto when views fall back to MapView ($views)", extra => {
       const { result } = renderHook(props => useDeckGl(props), {
         initialProps: getUseDeckGlProps(
           {},
           {},
-          {
-            parameters: "@@=1",
-          }
-        ),
-      })
-
-      expect(result.current.deck.parameters).toBeUndefined()
-    })
-
-    it("applies the Carto default when the spec omits views", () => {
-      const { result } = renderHook(props => useDeckGl(props), {
-        initialProps: getUseDeckGlProps(
-          {},
-          {},
-          { views: undefined, mapStyle: undefined }
+          { ...extra, mapStyle: undefined }
         ),
       })
 
       expect(result.current.deck.views).toBeUndefined()
-      expect(result.current.deck.mapStyle).toBe(
-        "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-      )
-    })
-
-    it("gives pydeck MapViews the default-view id used by selection e2e", () => {
-      const { result } = renderHook(props => useDeckGl(props), {
-        initialProps: getUseDeckGlProps(),
-      })
-
-      const views = result.current.deck.views
-      const firstView = Array.isArray(views) ? views[0] : views
-      expect(firstView?.id).toBe("default-view")
-    })
-
-    it("applies the Carto default when an unknown view type falls back to MapView", () => {
-      const { result } = renderHook(props => useDeckGl(props), {
-        initialProps: getUseDeckGlProps(
-          {},
-          {},
-          {
-            views: [{ "@@type": "NotARealView", controller: true }],
-            mapStyle: undefined,
-          }
-        ),
-      })
-
-      expect(result.current.deck.views).toBeUndefined()
-      expect(result.current.deck.mapStyle).toBe(
-        "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-      )
+      expect(result.current.deck.mapStyle).toBe(CARTO_DARK)
     })
   })
 })

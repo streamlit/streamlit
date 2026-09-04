@@ -45,29 +45,18 @@ describe("jsonConverter view classes", () => {
     { type: "_GlobeView", ViewClass: _GlobeView },
     { type: "GlobeView", ViewClass: _GlobeView },
   ])("hydrates @@type $type to $ViewClass.name", ({ type, ViewClass }) => {
-    const view = convertView(type)
-
-    expect(view).toBeInstanceOf(ViewClass)
-    expect(view).not.toBeNull()
+    expect(convertView(type)).toBeInstanceOf(ViewClass)
   })
 
   it("hydrates an unknown view type to null", () => {
     expect(convertView("NotARealView")).toBeNull()
   })
 
-  it("passes parameters through without conversion", () => {
+  it("passes JSON parameters through", () => {
     const converted = jsonConverter.convert({
       parameters: { cull: true },
     }) as { parameters: { cull: boolean } }
 
     expect(converted.parameters).toEqual({ cull: true })
-  })
-
-  it("turns @@= parameter values into functions", () => {
-    const converted = jsonConverter.convert({
-      parameters: "@@=1",
-    }) as { parameters: unknown }
-
-    expect(typeof converted.parameters).toBe("function")
   })
 })

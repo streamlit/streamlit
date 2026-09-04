@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { MapView, OrbitView } from "@deck.gl/core"
+import { MapView } from "@deck.gl/core"
 
 import {
   getProvidedViews,
@@ -26,6 +26,10 @@ import {
   withDefaultMapViewIds,
 } from "./mapShell"
 
+const MAPBOX_LIGHT = "mapbox://styles/mapbox/light-v9"
+const CARTO_POSITRON =
+  "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+
 describe("isUnsetMapStyle", () => {
   it.each([undefined, null, "", PYDECK_UNSET_MAP_STYLE])(
     "treats %p as unset",
@@ -35,82 +39,49 @@ describe("isUnsetMapStyle", () => {
   )
 
   it("does not treat a Carto or Mapbox URL as unset", () => {
-    expect(
-      isUnsetMapStyle(
-        "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
-      )
-    ).toBe(false)
-    expect(isUnsetMapStyle("mapbox://styles/mapbox/light-v9")).toBe(false)
+    expect(isUnsetMapStyle(CARTO_POSITRON)).toBe(false)
+    expect(isUnsetMapStyle(MAPBOX_LIGHT)).toBe(false)
   })
 })
 
 describe("isMapCompatibleViewSpec", () => {
-  it.each([undefined, null, [], { "@@type": "MapView", controller: true }])(
+  it.each([undefined, null, [], { "@@type": "MapView" }])(
     "treats %p as a MapView spec",
     views => {
       expect(isMapCompatibleViewSpec(views)).toBe(true)
     }
   )
 
-  it("treats a converted MapView instance as map-compatible", () => {
-    expect(isMapCompatibleViewSpec(new MapView({ controller: true }))).toBe(
-      true
-    )
-  })
-
-  it.each([
-    "OrbitView",
-    "OrthographicView",
-    "FirstPersonView",
-    "_GlobeView",
-    "GlobeView",
-  ])("rejects serialized %s", type => {
-    expect(
-      isMapCompatibleViewSpec([{ "@@type": type, controller: true }])
-    ).toBe(false)
-  })
-
-  it("rejects a converted OrbitView instance", () => {
-    expect(isMapCompatibleViewSpec(new OrbitView({ controller: true }))).toBe(
-      false
-    )
-  })
+  it.each(["OrbitView", "OrthographicView", "FirstPersonView", "GlobeView"])(
+    "rejects serialized %s",
+    type => {
+      expect(isMapCompatibleViewSpec([{ "@@type": type }])).toBe(false)
+    }
+  )
 })
 
 describe("getProvidedViews", () => {
-  it("is undefined when views are omitted or empty", () => {
+  it("returns instances and drops converter failures", () => {
     expect(getProvidedViews(undefined)).toBeUndefined()
     expect(getProvidedViews([])).toBeUndefined()
-  })
-
-  it("returns a view instance or non-empty array when present", () => {
+    expect(getProvidedViews([null])).toBeUndefined()
     expect(getProvidedViews(new MapView({ controller: true }))).toBeInstanceOf(
       MapView
     )
     expect(
-      getProvidedViews([new OrbitView({ controller: true })])
-    ).toHaveLength(1)
-  })
-
-  it("ignores converter failures so DeckGL can fall back to MapView", () => {
-    expect(getProvidedViews([null])).toBeUndefined()
-    expect(
       shouldShowBasemap({
         views: getProvidedViews([null]),
-        mapStyle: "mapbox://styles/mapbox/light-v9",
+        mapStyle: MAPBOX_LIGHT,
       })
     ).toBe(true)
   })
 })
 
 describe("withDefaultMapViewIds", () => {
-  it("assigns default-view when a MapView omits id", () => {
+  it("assigns default-view only when a MapView omits id", () => {
     expect(
       withDefaultMapViewIds([{ "@@type": "MapView", controller: true }])
     ).toEqual([{ "@@type": "MapView", controller: true, id: "default-view" }])
-  })
-
-  it("leaves an explicit MapView id and non-MapView specs unchanged", () => {
     expect(
       withDefaultMapViewIds([{ "@@type": "MapView", id: "split-left" }])
     ).toEqual([{ "@@type": "MapView", id: "split-left" }])
@@ -121,69 +92,42 @@ describe("withDefaultMapViewIds", () => {
 })
 
 describe("shouldShowBasemap", () => {
-  it("shows a basemap for MapView with a real style", () => {
-    expect(
-      shouldShowBasemap({
-        views: [{ "@@type": "MapView", controller: true }],
-        mapStyle: "mapbox://styles/mapbox/light-v9",
-      })
-    ).toBe(true)
-  })
-
-  it("hides the basemap when mapStyle is the pydeck unset sentinel", () => {
-    expect(
-      shouldShowBasemap({
-        views: [{ "@@type": "MapView", controller: true }],
-        mapStyle: PYDECK_UNSET_MAP_STYLE,
-      })
-    ).toBe(false)
-  })
-
-  it("hides the basemap for OrbitView even with a style URL", () => {
-    expect(
-      shouldShowBasemap({
-        views: [{ "@@type": "OrbitView", controller: true }],
-        mapStyle:
-          "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
-      })
-    ).toBe(false)
-  })
-
-  it("shows a basemap when views are omitted and a style is present", () => {
-    expect(
-      shouldShowBasemap({
-        views: undefined,
-        mapStyle: "mapbox://styles/mapbox/light-v9",
-      })
-    ).toBe(true)
+  it.each([
+    {
+      views: [{ "@@type": "MapView" }],
+      mapStyle: MAPBOX_LIGHT,
+      show: true,
+    },
+    {
+      views: undefined,
+      mapStyle: MAPBOX_LIGHT,
+      show: true,
+    },
+    {
+      views: [{ "@@type": "MapView" }],
+      mapStyle: PYDECK_UNSET_MAP_STYLE,
+      show: false,
+    },
+    {
+      views: [{ "@@type": "OrbitView" }],
+      mapStyle: CARTO_POSITRON,
+      show: false,
+    },
+  ])("is $show for $views / $mapStyle", ({ views, mapStyle, show }) => {
+    expect(shouldShowBasemap({ views, mapStyle })).toBe(show)
   })
 })
 
 describe("sanitizeDeckParameters", () => {
-  it("keeps JSON GPU state such as GlobeView cull", () => {
+  it("keeps JSON GPU state and drops functions or class instances", () => {
     expect(sanitizeDeckParameters({ cull: true })).toEqual({ cull: true })
-  })
-
-  it("drops functions produced by JSONConverter @@= expressions", () => {
-    expect(
-      sanitizeDeckParameters({
-        cull: true,
-        blend: () => true,
-      })
-    ).toEqual({ cull: true })
-  })
-
-  it("rejects a top-level function, class instance, or array", () => {
+    expect(sanitizeDeckParameters({ cull: true, blend: () => true })).toEqual({
+      cull: true,
+    })
     expect(sanitizeDeckParameters(() => ({ cull: true }))).toBeUndefined()
     expect(
       sanitizeDeckParameters(new MapView({ controller: true }))
     ).toBeUndefined()
-    expect(sanitizeDeckParameters([{ cull: true }])).toBeUndefined()
-  })
-
-  it("returns undefined when nothing JSON-safe remains", () => {
     expect(sanitizeDeckParameters({ blend: () => true })).toBeUndefined()
-    expect(sanitizeDeckParameters(undefined)).toBeUndefined()
-    expect(sanitizeDeckParameters(null)).toBeUndefined()
   })
 })

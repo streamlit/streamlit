@@ -40,14 +40,13 @@ const configuration = {
     ...geoLayers,
     ...meshLayers,
     ...CARTO_LAYERS,
-    // Named imports only: @deck.gl/core has many non-class exports.
+    // Named imports only; @deck.gl/core also exports non-classes.
     MapView,
     OrbitView,
     OrthographicView,
     FirstPersonView,
     _GlobeView,
-    // pydeck and deck.gl docs use GlobeView; the export is still experimental.
-    GlobeView: _GlobeView,
+    GlobeView: _GlobeView, // docs alias; export is still experimental
   },
   functions: {
     colorBins,

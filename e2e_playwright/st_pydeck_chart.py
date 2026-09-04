@@ -415,43 +415,32 @@ def height_parameter_subtest():
 
 
 def orbit_point_cloud_subtest():
-    st.write("""
-    ## Test OrbitView + PointCloudLayer
-
-    Should show a rotatable 3D point cloud with no street-map basemap or zoom buttons.
-    """)
-
+    st.write("## Test OrbitView + PointCloudLayer")
     rng = np.random.default_rng(0)
     n = 250
-    theta = rng.uniform(0, 2 * np.pi, n)
-    phi = rng.uniform(0, np.pi, n)
-    point_cloud = pd.DataFrame(
-        {
-            "x": np.sin(phi) * np.cos(theta),
-            "y": np.sin(phi) * np.sin(theta),
-            "z": np.cos(phi),
-            "r": rng.integers(40, 255, n),
-            "g": rng.integers(40, 255, n),
-            "b": rng.integers(40, 255, n),
-        }
-    )
-
+    theta, phi = rng.uniform(0, 2 * np.pi, n), rng.uniform(0, np.pi, n)
     st.pydeck_chart(
         pdk.Deck(
             layers=[
                 pdk.Layer(
                     "PointCloudLayer",
-                    data=point_cloud,
+                    data=pd.DataFrame(
+                        {
+                            "x": np.sin(phi) * np.cos(theta),
+                            "y": np.sin(phi) * np.sin(theta),
+                            "z": np.cos(phi),
+                            "r": rng.integers(40, 255, n),
+                            "g": rng.integers(40, 255, n),
+                            "b": rng.integers(40, 255, n),
+                        }
+                    ),
                     get_position=["x", "y", "z"],
                     get_color=["r", "g", "b"],
                     point_size=4,
                 ),
             ],
             initial_view_state=pdk.ViewState(
-                target=[0, 0, 0],
-                zoom=5,
-                rotation_x=15,
-                rotation_orbit=30,
+                target=[0, 0, 0], zoom=5, rotation_x=15, rotation_orbit=30
             ),
             views=[pdk.View(type="OrbitView", controller=True)],
             map_provider=None,
@@ -461,18 +450,12 @@ def orbit_point_cloud_subtest():
 
 
 def globe_view_subtest():
-    st.write("""
-    ## Test GlobeView
-
-    Should show a globe (not Web Mercator) with no street-map basemap or zoom buttons.
-    """)
-
-    countries = {
+    st.write("## Test GlobeView")
+    patch = {
         "type": "FeatureCollection",
         "features": [
             {
                 "type": "Feature",
-                "properties": {"name": "patch"},
                 "geometry": {
                     "type": "Polygon",
                     "coordinates": [
@@ -488,13 +471,12 @@ def globe_view_subtest():
             }
         ],
     }
-
     st.pydeck_chart(
         pdk.Deck(
             layers=[
                 pdk.Layer(
                     "GeoJsonLayer",
-                    data=countries,
+                    data=patch,
                     filled=True,
                     stroked=True,
                     get_fill_color=[30, 120, 180, 220],

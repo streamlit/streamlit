@@ -268,8 +268,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
             ContextProvider={MapContext.Provider}
             parameters={deck.parameters}
             views={providedViews}
-            // Deck copies a truthy controller onto views[0], which double-binds
-            // pydeck's View.controller. Omit that when the spec already has views.
+            // Deck copies a truthy controller onto views[0]; skip if views exist.
             controller={!providedViews}
             onClick={
               isSelectionModeActivated && !disabled ? handleClick : undefined

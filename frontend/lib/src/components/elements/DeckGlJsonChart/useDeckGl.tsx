@@ -439,7 +439,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     const jsonCopy = { ...parsedPydeckJson }
     jsonCopy.views = withDefaultMapViewIds(jsonCopy.views)
 
-    // pydeck's map_provider=None writes this sentinel instead of omitting mapStyle.
+    // pydeck map_provider=None writes this sentinel instead of omitting mapStyle.
     const hadUnsetMapStyleSentinel =
       jsonCopy.mapStyle === PYDECK_UNSET_MAP_STYLE
     if (hadUnsetMapStyleSentinel) {
@@ -579,8 +579,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     const converted = jsonConverter.convert(jsonCopy) as DeckObject
     const providedViews = getProvidedViews(converted.views)
 
-    // Apply the themed Carto default after conversion so unknown @@type
-    // values (which hydrate to null and fall back to MapView) still get tiles.
+    // Carto after convert so unknown @@type (null → MapView) still gets tiles.
     let { mapStyle, cartoKey } = converted
     if (
       !hadUnsetMapStyleSentinel &&
