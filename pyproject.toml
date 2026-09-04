@@ -138,7 +138,7 @@ test = [
   #   - auth -> Authlib, httpx
   #   - charts -> matplotlib, graphviz, plotly, orjson
   #   - pdf -> streamlit-pdf
-  #   - performance -> orjson, uvloop
+  #   - performance -> httptools, orjson, uvloop
   "streamlit[auth,charts,pdf,performance]",
   # Test-only packages not provided by any extra:
   "seaborn",
