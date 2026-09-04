@@ -412,10 +412,12 @@ def test_waiter_retries_after_in_flight_async_write_is_cleared(
 ) -> None:
     """A waiter wakes after the invalidated owner and becomes the retry owner."""
 
-    async def main() -> tuple[list[int], int]:
+    async def main() -> tuple[list[int], int, list[bool]]:
         computation_started = asyncio.Event()
         allow_computation_to_finish = asyncio.Event()
         waiter_registered = asyncio.Event()
+        replacement_claimed = asyncio.Event()
+        claims: list[bool] = []
         calls = 0
         original_claim = cache_utils.Cache.claim_async_compute
 
@@ -423,8 +425,12 @@ def test_waiter_retries_after_in_flight_async_write_is_cleared(
             cache: cache_utils.Cache[Any], value_key: str
         ) -> cache_utils.AsyncComputeClaim:
             claim = original_claim(cache, value_key)
-            if not claim[1]:
+            is_owner = claim[1]
+            claims.append(is_owner)
+            if not is_owner:
                 waiter_registered.set()
+            elif len(claims) > 1:
+                replacement_claimed.set()
             return claim
 
         monkeypatch.setattr(cache_utils.Cache, "claim_async_compute", tracking_claim)
@@ -445,17 +451,18 @@ def test_waiter_retries_after_in_flight_async_write_is_cleared(
         await asyncio.wait_for(waiter_registered.wait(), timeout=1)
 
         load.clear()
-        post_clear_caller = asyncio.create_task(load())
-        replacement_results = await asyncio.wait_for(
-            asyncio.gather(waiter, post_clear_caller), timeout=1
-        )
-        assert not owner.done()
+        assert not waiter.done()
+        assert not replacement_claimed.is_set()
+        assert claims == [True, False]
 
         allow_computation_to_finish.set()
         owner_result = await owner
-        return [owner_result, *replacement_results], calls
+        await asyncio.wait_for(replacement_claimed.wait(), timeout=1)
+        waiter_result = await waiter
+        cached_result = await load()
+        return [owner_result, waiter_result, cached_result], calls, claims
 
-    assert asyncio.run(main()) == ([1, 2, 2], 2)
+    assert asyncio.run(main()) == ([1, 2, 2], 2, [True, False, True])
 
 
 @pytest.mark.timeout(5)

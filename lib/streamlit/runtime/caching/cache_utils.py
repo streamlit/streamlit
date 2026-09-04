@@ -539,13 +539,6 @@ class Cache(Generic[R]):
             elif key in self._value_locks:
                 del self._value_locks[key]
         with self._async_compute_futures_lock:
-            if not key:
-                retired_futures = list(self._async_compute_futures.values())
-                self._async_compute_futures.clear()
-            else:
-                retired_future = self._async_compute_futures.pop(key, None)
-                retired_futures = [retired_future] if retired_future is not None else []
-
             # Use the same lock ordering as claim_async_compute so claiming ownership
             # and advancing the generation are atomic with respect to each other.
             with self._invalidation_lock:
@@ -558,8 +551,6 @@ class Cache(Generic[R]):
                     # A per-key clear invalidates only earlier writes for this key.
                     self._key_generations[key] = self._key_generations.get(key, 0) + 1
                     self._refresh_cooldowns.pop(key, None)
-        for retired_future in retired_futures:
-            self._wake_async_compute_waiters(retired_future)
         self._clear(key=key)
 
     @abstractmethod
