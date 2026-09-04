@@ -31,7 +31,7 @@ import {
 export const FORMATTING_MENU_CLASS = "stDataFrameColumnFormattingMenu"
 
 /**
- * A list of formats available for number columns (number & progress).
+ * Formats available for number columns.
  * Each format has a label, icon, and format ID.
  */
 const NUMBER_FORMATS: { format: string; label: string; icon: string }[] = [
@@ -85,7 +85,18 @@ const NUMBER_FORMATS: { format: string; label: string; icon: string }[] = [
     label: "Accounting",
     icon: ":material/finance_chip:",
   },
+  {
+    format: "duration",
+    label: "Duration",
+    icon: ":material/timelapse:",
+  },
 ]
+
+// Progress columns share numeric formats except for duration, which
+// interprets the value as seconds. Compact retains its numeric meaning.
+const PROGRESS_FORMATS = NUMBER_FORMATS.filter(
+  option => option.format !== "duration"
+)
 
 /**
  * A mapping of column kinds to their available formats.
@@ -98,7 +109,7 @@ const COLUMN_KIND_FORMAT_MAPPING: Record<
   { format: string; label: string; icon: string }[]
 > = {
   number: NUMBER_FORMATS,
-  progress: NUMBER_FORMATS,
+  progress: PROGRESS_FORMATS,
   datetime: [
     {
       format: "",

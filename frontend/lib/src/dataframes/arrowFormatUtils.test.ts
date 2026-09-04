@@ -48,8 +48,12 @@ import { TIMEDELTA } from "~lib/mocks/arrow/types/timedelta"
 import { UINT64 } from "~lib/mocks/arrow/types/uint64"
 
 import {
+  convertTimestampToSeconds,
   convertTimeToDate,
   format,
+  formatDurationClockFromSeconds,
+  formatDurationFromSeconds,
+  formatLocalizedDurationFromSeconds,
   formatPeriodFromFreq,
 } from "./arrowFormatUtils"
 import { DataFrameCellType } from "./arrowTypeUtils"
@@ -359,6 +363,22 @@ describe("format", () => {
     ).toEqual("a day")
   })
 
+  it("negative timedelta keeps a leading minus", () => {
+    expect(
+      format(BigInt(-3 * 86_400_000_000_000), {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("td", new Int64(), true),
+        pandasType: {
+          field_name: "td",
+          name: "td",
+          pandas_type: "object",
+          numpy_type: "timedelta64[ns]",
+          metadata: null,
+        },
+      })
+    ).toMatch(/^-/)
+  })
+
   it("decimal with scale 0 returns integer string", () => {
     const builder = new DecimalBuilder({
       type: new Decimal(0, 10),
@@ -583,5 +603,107 @@ describe("convertTimeToDate", () => {
       unit ? new Field("test", new Timestamp(unit), true, null) : undefined
     )
     expect(result.toISOString()).toBe(expected)
+  })
+})
+
+describe("formatDurationFromSeconds", () => {
+  it("humanizes a positive duration", () => {
+    expect(formatDurationFromSeconds(5)).toEqual("a few seconds")
+    expect(formatDurationFromSeconds(7200)).toMatch(/hour/i)
+  })
+
+  it("prefixes a minus for negative durations", () => {
+    expect(formatDurationFromSeconds(-7200)).toMatch(/^-/)
+  })
+})
+
+describe("formatDurationClockFromSeconds", () => {
+  it("formats a duration as an elapsed-time clock", () => {
+    expect(formatDurationClockFromSeconds(5)).toEqual("00:00:05")
+    expect(formatDurationClockFromSeconds(14 * 24 * 60 * 60)).toEqual(
+      "336:00:00"
+    )
+    expect(formatDurationClockFromSeconds(-7200)).toEqual("-02:00:00")
+  })
+
+  it("includes fractional seconds up to the requested precision", () => {
+    expect(formatDurationClockFromSeconds(1.5, 3)).toEqual("00:00:01.5")
+    expect(formatDurationClockFromSeconds(1.00025, 6)).toEqual(
+      "00:00:01.00025"
+    )
+    expect(formatDurationClockFromSeconds(0.000000125, 9)).toEqual(
+      "00:00:00.000000125"
+    )
+    expect(formatDurationClockFromSeconds(-0.5, 3)).toEqual("-00:00:00.5")
+  })
+
+  it("omits fractional seconds for whole values", () => {
+    expect(formatDurationClockFromSeconds(1, 9)).toEqual("00:00:01")
+  })
+
+  it("does not round unsupported fractions into whole seconds", () => {
+    expect(formatDurationClockFromSeconds(1.5, 0)).toEqual("00:00:01")
+  })
+})
+
+describe("convertTimestampToSeconds", () => {
+  it("keeps sub-second remainder for nanosecond bigints outside the safe integer range", () => {
+    // 200 days + 250ms in nanoseconds overflows Number.MAX_SAFE_INTEGER.
+    const twoHundredDaysNs = BigInt(200 * 24 * 60 * 60) * BigInt(1_000_000_000)
+    const remainderNs = BigInt(250_000_000)
+    expect(
+      convertTimestampToSeconds(
+        twoHundredDaysNs + remainderNs,
+        TimeUnit.NANOSECOND
+      )
+    ).toBe(200 * 24 * 60 * 60 + 0.25)
+  })
+
+  it("keeps a negative sub-second remainder for overflowing nanosecond bigints", () => {
+    const twoHundredDaysNs = BigInt(200 * 24 * 60 * 60) * BigInt(1_000_000_000)
+    const remainderNs = BigInt(250_000_000)
+    expect(
+      convertTimestampToSeconds(
+        -(twoHundredDaysNs + remainderNs),
+        TimeUnit.NANOSECOND
+      )
+    ).toBe(-(200 * 24 * 60 * 60 + 0.25))
+  })
+})
+
+const HAS_INTL_DURATION_FORMAT =
+  typeof (Intl as { DurationFormat?: unknown }).DurationFormat === "function"
+
+describe("formatLocalizedDurationFromSeconds", () => {
+  it.skipIf(!HAS_INTL_DURATION_FORMAT)(
+    "formats an exact locale duration using short units",
+    () => {
+      expect(formatLocalizedDurationFromSeconds(5)).toEqual("5 sec")
+      expect(formatLocalizedDurationFromSeconds(7200)).toEqual("2 hr")
+      expect(formatLocalizedDurationFromSeconds(1.5, 3)).toEqual(
+        "1 sec, 500 ms"
+      )
+      expect(formatLocalizedDurationFromSeconds(0.00025, 6)).toEqual("250 μs")
+      expect(formatLocalizedDurationFromSeconds(0.000000125, 9)).toEqual(
+        "125 ns"
+      )
+    }
+  )
+
+  it("prefixes a minus for negative durations", () => {
+    expect(formatLocalizedDurationFromSeconds(-7200)).toMatch(/^-/)
+  })
+
+  it("falls back to the elapsed-time clock when Intl.DurationFormat is missing", () => {
+    const intlObject = Intl as unknown as { DurationFormat?: unknown }
+    const original = intlObject.DurationFormat
+    intlObject.DurationFormat = undefined
+    try {
+      expect(formatLocalizedDurationFromSeconds(5)).toEqual("00:00:05")
+      expect(formatLocalizedDurationFromSeconds(7200)).toEqual("02:00:00")
+      expect(formatLocalizedDurationFromSeconds(1.5, 3)).toEqual("00:00:01.5")
+    } finally {
+      intlObject.DurationFormat = original
+    }
   })
 })

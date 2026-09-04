@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { TimeUnit } from "apache-arrow"
 import { getLogger } from "loglevel"
 
 import {
@@ -21,6 +22,8 @@ import {
   toSafeDate,
   toSafeNumber,
 } from "~lib/components/widgets/DataFrame/columns/utils"
+import { convertTimestampToSeconds } from "~lib/dataframes/arrowFormatUtils"
+import { ArrowType, isDurationType } from "~lib/dataframes/arrowTypeUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
@@ -190,6 +193,35 @@ export function supportsStatistics(columnKind: string): boolean {
 }
 
 /**
+ * Convert a Quiver cell to the value used for statistics.
+ *
+ * Duration cells store Arrow ticks; NumberColumn displays seconds, so
+ * numeric statistics use the same conversion.
+ */
+function toStatisticsValue(
+  cell: {
+    content: unknown
+    contentType?: ArrowType
+    field?: { type?: { unit?: TimeUnit } }
+  },
+  convertDurationToSeconds: boolean
+): unknown {
+  // Only numeric stats use the NumberColumn second-count. Other kinds
+  // (text/date/datetime on a timedelta) skip this conversion.
+  if (
+    convertDurationToSeconds &&
+    isDurationType(cell.contentType) &&
+    (typeof cell.content === "number" || typeof cell.content === "bigint")
+  ) {
+    return convertTimestampToSeconds(
+      cell.content,
+      cell.field?.type?.unit ?? TimeUnit.NANOSECOND
+    )
+  }
+  return cell.content
+}
+
+/**
  * Extract column values from Quiver data.
  * Applies sampling for large datasets.
  * Returns null if extraction fails (e.g., malformed Arrow buffer).
@@ -199,7 +231,8 @@ export function supportsStatistics(columnKind: string): boolean {
  */
 function extractColumnValues(
   data: Quiver,
-  columnIndex: number
+  columnIndex: number,
+  convertDurationToSeconds = false
 ): { values: unknown[]; isSampled: boolean } | null {
   try {
     const { numDataRows } = data.dimensions
@@ -220,12 +253,12 @@ function extractColumnValues(
         i += step
       ) {
         const cell = data.getCell(i, columnIndex)
-        values.push(cell.content)
+        values.push(toStatisticsValue(cell, convertDurationToSeconds))
       }
     } else {
       for (let i = 0; i < numDataRows; i++) {
         const cell = data.getCell(i, columnIndex)
-        values.push(cell.content)
+        values.push(toStatisticsValue(cell, convertDurationToSeconds))
       }
     }
 
@@ -631,7 +664,20 @@ export function computeStatistics(
   const statsType = getStatisticsType(columnKind)
   if (!statsType) return null
 
-  const result = extractColumnValues(data, columnIndex)
+  // Duration ticks are seconds only for numeric columns. Text/date/datetime
+  // on a timedelta have no meaningful stats view.
+  if (statsType !== "numeric" && data.dimensions.numDataRows > 0) {
+    const firstCell = data.getCell(0, columnIndex)
+    if (isDurationType(firstCell.contentType)) {
+      return null
+    }
+  }
+
+  const result = extractColumnValues(
+    data,
+    columnIndex,
+    statsType === "numeric"
+  )
   // If extraction failed (malformed data), return null to show "No data" state
   if (!result) return null
 

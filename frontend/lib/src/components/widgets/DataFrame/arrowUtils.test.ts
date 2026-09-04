@@ -13,13 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { type CustomCell, GridCellKind } from "@glideapps/glide-data-grid"
+import {
+  type CustomCell,
+  GridCellKind,
+  NumberCell,
+  TextCell,
+} from "@glideapps/glide-data-grid"
 import {
   Binary,
   Bool as BoolType,
   DateDay,
   Decimal,
   Dictionary,
+  Duration,
   Field,
   Float64,
   Int,
@@ -44,6 +50,7 @@ import { MULTI } from "~lib/mocks/arrow/multi"
 import { DISPLAY_VALUES, STYLER } from "~lib/mocks/arrow/styler"
 import { CATEGORICAL_COLUMN } from "~lib/mocks/arrow/types/categoricalColumn"
 import { DECIMAL } from "~lib/mocks/arrow/types/decimal"
+import { TIMEDELTA } from "~lib/mocks/arrow/types/timedelta"
 import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 
 import {
@@ -61,7 +68,10 @@ import {
   ColumnCreator,
   DateColumn,
   DateTimeColumn,
+  ErrorCell,
   getTextCell,
+  isErrorCell,
+  isMissingValueCell,
   ListColumn,
   NumberColumn,
   ObjectColumn,
@@ -115,6 +125,32 @@ const MOCK_NUMBER_COLUMN = NumberColumn({
     },
   },
 })
+
+function durationArrowType(unit: TimeUnit, numpyType: string): ArrowType {
+  return {
+    type: DataFrameCellType.DATA,
+    arrowField: new Field("td", new Duration(unit), true),
+    pandasType: {
+      field_name: "td",
+      name: "td",
+      pandas_type: "object",
+      numpy_type: numpyType,
+      metadata: null,
+    },
+  }
+}
+
+const DURATION_COLUMN_PROPS = {
+  id: "1",
+  name: "td",
+  title: "td",
+  indexNumber: 0,
+  isEditable: false,
+  isHidden: false,
+  isIndex: false,
+  isPinned: false,
+  isStretched: false,
+} as const
 
 describe("extractCssProperty", () => {
   it("should extract the correct property value", () => {
@@ -388,6 +424,22 @@ describe("initIndexFromArrow", () => {
     })
   })
 
+  it("marks duration index columns as not editable", () => {
+    const data = new Quiver({ data: TIMEDELTA })
+    const durationIndexType = {
+      ...durationArrowType(TimeUnit.NANOSECOND, "timedelta64[ns]"),
+      type: DataFrameCellType.INDEX,
+    }
+    vi.spyOn(data, "columnTypes", "get").mockReturnValue([
+      durationIndexType,
+      ...data.columnTypes.slice(1),
+    ])
+
+    const indexColumn = initIndexFromArrow(data, 0)
+    expect(indexColumn.isEditable).toEqual(false)
+    expect(getColumnTypeFromArrow(indexColumn.arrowType)).toEqual(NumberColumn)
+  })
+
   it("works with multi-index", () => {
     const element: ArrowData.$Properties = {
       data: MULTI,
@@ -476,6 +528,13 @@ describe("initColumnFromArrow", () => {
       isHidden: false,
       isStretched: false,
     })
+  })
+
+  it("marks duration columns as editable", () => {
+    const data = new Quiver({ data: TIMEDELTA })
+    const column = initColumnFromArrow(data, 1)
+    expect(column.isEditable).toEqual(true)
+    expect(getColumnTypeFromArrow(column.arrowType)).toEqual(NumberColumn)
   })
 
   it("works with multi-index headers", () => {
@@ -736,6 +795,192 @@ describe("getCellFromArrow", () => {
       style: "normal",
       thousandSeparator: "",
     })
+  })
+
+  it("converts duration ticks to seconds for number columns", () => {
+    const durationType = durationArrowType(
+      TimeUnit.MICROSECOND,
+      "timedelta64[us]"
+    )
+    const durationColumn = NumberColumn({
+      ...DURATION_COLUMN_PROPS,
+      arrowType: durationType,
+    })
+    const cell = getCellFromArrow(
+      durationColumn,
+      {
+        type: DataFrameCellType.DATA,
+        content: BigInt(7_200_000_000), // 2 hours in microseconds
+        contentType: durationType,
+        field: durationType.arrowField,
+      },
+      undefined,
+      undefined
+    )
+
+    expect(isErrorCell(cell)).toEqual(false)
+    expect((cell as NumberCell).data).toEqual(7200)
+    expect((cell as NumberCell).displayData).toMatch(/hour/i)
+  })
+
+  it("formats fractional duration ticks using their Arrow unit precision", () => {
+    const durationType = durationArrowType(
+      TimeUnit.MILLISECOND,
+      "timedelta64[ms]"
+    )
+    const durationColumn = NumberColumn({
+      ...DURATION_COLUMN_PROPS,
+      arrowType: durationType,
+      columnTypeOptions: { format: "compact" },
+    })
+    const cell = getCellFromArrow(
+      durationColumn,
+      {
+        type: DataFrameCellType.DATA,
+        content: BigInt(1250),
+        contentType: durationType,
+        field: durationType.arrowField,
+      },
+      undefined,
+      undefined
+    )
+
+    expect(isErrorCell(cell)).toEqual(false)
+    expect((cell as NumberCell).data).toEqual(1.25)
+    expect((cell as NumberCell).displayData).toEqual("00:00:01.25")
+  })
+
+  it("converts nanosecond duration ticks that overflow JS safe integers", () => {
+    const durationType = durationArrowType(
+      TimeUnit.NANOSECOND,
+      "timedelta64[ns]"
+    )
+    const durationColumn = NumberColumn({
+      ...DURATION_COLUMN_PROPS,
+      arrowType: durationType,
+    })
+    // 200 days in nanoseconds is larger than Number.MAX_SAFE_INTEGER.
+    const twoHundredDaysNs = BigInt(200 * 24 * 60 * 60) * BigInt(1_000_000_000)
+    const cell = getCellFromArrow(
+      durationColumn,
+      {
+        type: DataFrameCellType.DATA,
+        content: twoHundredDaysNs,
+        contentType: durationType,
+        field: durationType.arrowField,
+      },
+      undefined,
+      undefined
+    )
+
+    expect(isErrorCell(cell)).toEqual(false)
+    expect((cell as NumberCell).data).toEqual(200 * 24 * 60 * 60)
+  })
+
+  it("keeps sub-second precision for overflowing nanosecond duration ticks", () => {
+    const durationType = durationArrowType(
+      TimeUnit.NANOSECOND,
+      "timedelta64[ns]"
+    )
+    const durationColumn = NumberColumn({
+      ...DURATION_COLUMN_PROPS,
+      arrowType: durationType,
+    })
+    const twoHundredDaysNs = BigInt(200 * 24 * 60 * 60) * BigInt(1_000_000_000)
+    const remainderNs = BigInt(250_000_000)
+    const cell = getCellFromArrow(
+      durationColumn,
+      {
+        type: DataFrameCellType.DATA,
+        content: twoHundredDaysNs + remainderNs,
+        contentType: durationType,
+        field: durationType.arrowField,
+      },
+      undefined,
+      undefined
+    )
+
+    expect(isErrorCell(cell)).toEqual(false)
+    expect((cell as NumberCell).data).toEqual(200 * 24 * 60 * 60 + 0.25)
+  })
+
+  it("returns an error cell when a time column is applied to duration values", () => {
+    const durationType = durationArrowType(
+      TimeUnit.MICROSECOND,
+      "timedelta64[us]"
+    )
+    const timeColumn = TimeColumn({
+      ...DURATION_COLUMN_PROPS,
+      arrowType: durationType,
+    })
+    const cell = getCellFromArrow(
+      timeColumn,
+      {
+        type: DataFrameCellType.DATA,
+        content: BigInt(1_000_000), // 1 second in microseconds
+        contentType: durationType,
+        field: durationType.arrowField,
+      },
+      undefined,
+      undefined
+    )
+
+    expect(isErrorCell(cell)).toEqual(true)
+    expect((cell as ErrorCell).errorDetails).toContain("TimeColumn")
+    expect((cell as ErrorCell).errorDetails).toContain(
+      "st.column_config.NumberColumn"
+    )
+  })
+
+  it("treats a missing duration as empty when a time column is applied", () => {
+    const durationType = durationArrowType(
+      TimeUnit.MICROSECOND,
+      "timedelta64[us]"
+    )
+    const timeColumn = TimeColumn({
+      ...DURATION_COLUMN_PROPS,
+      arrowType: durationType,
+    })
+    const cell = getCellFromArrow(
+      timeColumn,
+      {
+        type: DataFrameCellType.DATA,
+        content: null,
+        contentType: durationType,
+        field: durationType.arrowField,
+      },
+      undefined,
+      undefined
+    )
+
+    expect(isErrorCell(cell)).toEqual(false)
+    expect(isMissingValueCell(cell)).toEqual(true)
+  })
+
+  it("keeps formatted duration text when a text column is applied", () => {
+    const durationType = durationArrowType(
+      TimeUnit.MICROSECOND,
+      "timedelta64[us]"
+    )
+    const textColumn = TextColumn({
+      ...DURATION_COLUMN_PROPS,
+      arrowType: durationType,
+    })
+    const cell = getCellFromArrow(
+      textColumn,
+      {
+        type: DataFrameCellType.DATA,
+        content: BigInt(7_200_000_000), // 2 hours in microseconds
+        contentType: durationType,
+        field: durationType.arrowField,
+      },
+      undefined,
+      undefined
+    )
+
+    expect(isErrorCell(cell)).toEqual(false)
+    expect((cell as TextCell).data).not.toEqual("7200")
+    expect((cell as TextCell).data).toMatch(/hour/i)
   })
 
   it("applies display content overwrite to time cells", () => {
@@ -1289,6 +1534,25 @@ describe("getColumnTypeFromArrow", () => {
         },
       },
       DateColumn,
+    ],
+    [
+      "duration",
+      {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field(
+          "test",
+          new Duration(TimeUnit.MICROSECOND),
+          true
+        ),
+        pandasType: {
+          field_name: "test",
+          name: "test",
+          pandas_type: "object",
+          numpy_type: "timedelta64[us]",
+          metadata: null,
+        },
+      },
+      NumberColumn,
     ],
   ])(
     "interprets %s type as the correct column",

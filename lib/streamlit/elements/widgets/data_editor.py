@@ -343,6 +343,10 @@ def _parse_value(
             return Decimal(str(value))
 
         if column_data_kind == ColumnDataKind.TIMEDELTA:
+            # Numeric edits arrive as seconds (NumberColumn's stored unit).
+            # pd.Timedelta(int) would treat the number as nanoseconds.
+            if isinstance(value, (int, float)):
+                return pd.Timedelta(seconds=value)
             return pd.Timedelta(value)
 
         if column_data_kind in {
@@ -364,7 +368,7 @@ def _parse_value(
             if column_data_kind == ColumnDataKind.TIME:
                 return datetime_value.time()
 
-    except (ValueError, pd.errors.ParserError, TypeError) as ex:
+    except (ValueError, pd.errors.ParserError, TypeError, OverflowError) as ex:
         _LOGGER.warning(
             "Failed to parse value %s as %s.",
             value,
@@ -410,9 +414,21 @@ def _apply_cell_edits(
                 )
             else:
                 col_pos = df.columns.get_loc(col_name)
-                df.iat[row_pos, col_pos] = _parse_value(  # type: ignore
-                    value, dataframe_schema[col_name]
-                )
+                try:
+                    df.iat[row_pos, col_pos] = _parse_value(  # type: ignore
+                        value, dataframe_schema[col_name]
+                    )
+                except (TypeError, ValueError) as ex:
+                    # Widget state is client-controlled. Ignore assignment
+                    # failures for any dtype so a crafted BackMsg cannot crash
+                    # the run. Duration columns are the usual trigger (pandas
+                    # 2+ raises on a value finer than the unit); older pandas
+                    # may accept or upcast instead, which is OK.
+                    _LOGGER.warning(
+                        "Failed to apply edit to column %s. Edit ignored.",
+                        col_name,
+                        exc_info=ex,
+                    )
 
 
 def _parse_added_row(
@@ -439,11 +455,13 @@ def _assign_row_values(
     df: pd.DataFrame,
     row_label: Any,
     row_values: list[Any],
-) -> None:
-    """Assign values to a dataframe row via a mapping.
+) -> bool:
+    """Assign a row via a mapping. Return False if pandas rejects the values.
 
-    This avoids numpy attempting to coerce nested sequences (e.g. lists) into
-    multi-dimensional arrays when a column legitimately stores list values.
+    Using a mapping avoids numpy coercing nested sequences (e.g. lists) into
+    multi-dimensional arrays. Widget state is client-controlled: a duration
+    finer than the column unit can raise or silently upcast. Catch the raise
+    so we don't crash; we don't try to undo an upcast.
     """
     import warnings
 
@@ -452,13 +470,21 @@ def _assign_row_values(
     # and warns (in pandas 2.1-2.x) about changing how it handles empty/NA columns.
     # The warning is not actionable by users and was removed in pandas 3.x.
     # See: https://github.com/streamlit/streamlit/issues/14321
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            message="The behavior of DataFrame concatenation with empty or all-NA entries is deprecated",
-            category=FutureWarning,
+    try:
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="The behavior of DataFrame concatenation with empty or all-NA entries is deprecated",
+                category=FutureWarning,
+            )
+            df.loc[row_label] = dict(zip(df.columns, row_values, strict=True))
+    except (TypeError, ValueError) as ex:
+        _LOGGER.warning(
+            "Failed to add row. Row addition skipped.",
+            exc_info=ex,
         )
-        df.loc[row_label] = dict(zip(df.columns, row_values, strict=True))
+        return False
+    return True
 
 
 def _apply_row_additions(
@@ -528,9 +554,8 @@ def _apply_row_additions(
         if index_stop is not None and index_step is not None:
             # Case 2: Range or integer index that can be auto incremented.
             # Add row using the next value in the sequence
-            _assign_row_values(df, index_stop, new_row)
-            # Increment to the next range index value
-            index_stop += index_step
+            if _assign_row_values(df, index_stop, new_row):
+                index_stop += index_step
             continue
 
         # Row cannot be added -> skip it and log a warning.
@@ -894,10 +919,7 @@ class DataEditorMixin:
                   ``memoryview``, ``dict``, ``set``, ``frozenset``,
                   ``fractions.Fraction``, ``pandas.Interval``, and
                   ``pandas.Period``.
-                - To prevent overflow in JavaScript, columns containing
-                  ``datetime.timedelta`` and ``pandas.Timedelta`` values will
-                  default to uneditable, but this can be changed through column
-                  configuration.
+                - Timedelta values are edited as a number of seconds.
 
         width : "stretch", "content", or int
             The width of the data editor. This can be one of the following:
