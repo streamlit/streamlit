@@ -16,7 +16,7 @@
 
 import { ReactElement } from "react"
 
-import { cleanup, screen, within } from "@testing-library/react"
+import { cleanup, screen, waitFor, within } from "@testing-library/react"
 import { transparentize } from "color2k"
 import type { Element } from "hast"
 import ReactMarkdown from "react-markdown"
@@ -36,6 +36,7 @@ import StreamlitMarkdown, {
   CustomCodeTagProps,
   CustomMediaTag,
   CustomPreTag,
+  encodeMaterialIconPrefix,
   HeadingWithActionElements,
   isValidCssColor,
   LinkWithTargetBlank,
@@ -294,6 +295,36 @@ describe("containsEmojiShortcodes", () => {
       expect(containsEmojiShortcodes(input)).toBe(expected)
     }
   )
+})
+
+describe("encodeMaterialIconPrefix", () => {
+  // The sentinel is deliberately not exported: tests assert the round trip through
+  // rendering (see "material icon prefix" below) rather than the wire format, so the
+  // encoding stays free to change. These cases only pin the properties the rest of
+  // the pipeline relies on.
+  it("encodes every occurrence, and nothing else", () => {
+    const encoded = encodeMaterialIconPrefix(
+      "a :material/one: b `:material/two:` c"
+    )
+    // The prefix is gone in its literal form...
+    expect(encoded).not.toContain(":material/")
+    // ...for both occurrences, code included -- this pass does not inspect syntax.
+    expect(encoded.match(/material\//g)).toHaveLength(2)
+    // Surrounding text is untouched.
+    expect(encoded).toContain("a ")
+    expect(encoded).toContain(" b `")
+    expect(encoded).toContain("` c")
+  })
+
+  it("leaves source without the prefix unchanged", () => {
+    const source = "no icons here, just :emoji: and :red[color]"
+    expect(encodeMaterialIconPrefix(source)).toBe(source)
+  })
+
+  it("does not encode a bare :material without a slash", () => {
+    const source = "the :material directive"
+    expect(encodeMaterialIconPrefix(source)).toBe(source)
+  })
 })
 
 describe("isValidCssColor", () => {
@@ -1122,6 +1153,366 @@ describe("StreamlitMarkdown", () => {
     expect(markdown).toHaveStyle(`user-select: none`)
     expect(markdown).toHaveStyle(`vertical-align: bottom`)
     expect(markdown).toHaveAttribute("translate", "no")
+  })
+
+  // The generous timeout is for the lazily imported code-block chunk. The global
+  // `asyncUtilTimeout` is 5s and so is the default per-test timeout, so a cold
+  // dynamic import under CI contention exhausts the test before `waitFor` can
+  // report anything useful.
+  describe("material icon prefix", { timeout: 20_000 }, () => {
+    // Whether a `:material/` prefix is an icon or literal text is the markdown
+    // parser's decision, so these assert the rendered result rather than any
+    // intermediate form. An icon renders as a <span> holding just the name; literal
+    // text must keep the slash the user typed.
+    // See: https://github.com/streamlit/streamlit/issues/10365
+
+    const PREFIX = ":material/search:"
+
+    /** An icon renders as this element -- see createRemarkMaterialIcons. */
+    const ICON = 'span[role="img"]'
+
+    /**
+     * Selector for content that only exists once the markdown has really rendered.
+     *
+     * `img` and `a` are included because an image-only or autolink-only source
+     * renders no text, so a text-based check would never settle for those.
+     */
+    const RENDERED_CONTENT =
+      "p, pre, h1, h2, h3, table, blockquote, ul, img, a"
+
+    /**
+     * Renders `source` and resolves once any lazily loaded content has arrived.
+     *
+     * Code blocks sit behind Suspense, so they render a skeleton first and their
+     * real content only appears on a later tick.
+     *
+     * Both conditions are needed. Waiting only for the skeleton to disappear is not
+     * enough, because it is also absent in the frame before it mounts, so the wait
+     * would return before anything had rendered -- which is how the block-code cases
+     * silently asserted against empty output.
+     */
+    const renderSettled = async (source: string): Promise<HTMLElement> => {
+      const { container } = render(
+        <StreamlitMarkdown source={source} allowHTML={false} />
+      )
+      await waitFor(
+        () => {
+          expect(
+            container.querySelector('[data-testid="stSkeleton"]')
+          ).not.toBeInTheDocument()
+          expect(container.querySelector(RENDERED_CONTENT)).toBeInTheDocument()
+        },
+        // Above the global `asyncUtilTimeout` of 5s, since this waits on a lazily
+        // imported chunk whose first load in a CI worker can exceed it.
+        { timeout: 15_000 }
+      )
+      return container
+    }
+
+    it("renders an icon in prose", async () => {
+      const container = await renderSettled(":material/search: hello")
+      expect(container.querySelector(ICON)).toHaveTextContent("search")
+      expect(container.textContent).not.toContain(":material/")
+    })
+
+    it("renders every icon in prose", () => {
+      render(
+        <StreamlitMarkdown
+          source="a :material/star: b :material/home:"
+          allowHTML={false}
+        />
+      )
+      expect(screen.getByText("star")).toBeVisible()
+      expect(screen.getByText("home")).toBeVisible()
+    })
+
+    it("renders adjacent icons with no separator", () => {
+      // The encoded prefix has to survive sitting immediately after the previous
+      // icon's closing colon -- a sentinel that can appear in a directive name gets
+      // swallowed here, dropping the second icon.
+      render(
+        <StreamlitMarkdown
+          source=":material/star::material/home:"
+          allowHTML={false}
+        />
+      )
+      expect(screen.getByText("star")).toBeVisible()
+      expect(screen.getByText("home")).toBeVisible()
+    })
+
+    it.each([
+      {
+        description: "single-backtick code span",
+        source: "`:material/search:`",
+      },
+      {
+        description: "double-backtick code span",
+        source: "``:material/search:``",
+      },
+      {
+        description: "code span containing a backtick",
+        source: "``:material/search: with ` inside``",
+      },
+      {
+        description: "code span crossing a line break",
+        source: "`multi\nline :material/search:`",
+      },
+      { description: "fenced block", source: "```\n:material/search:\n```" },
+      {
+        description: "fenced block with an info string",
+        source: "```python\n:material/search:\n```",
+      },
+      {
+        description: "fence closed by a longer run, which CommonMark allows",
+        source: "```\n:material/search:\n`````",
+      },
+      {
+        description: "tilde-fenced block",
+        source: "~~~\n:material/search:\n~~~",
+      },
+      {
+        description: "tilde fence closed by a longer run",
+        source: "~~~\n:material/search:\n~~~~",
+      },
+      { description: "indented fence", source: "  ```\n  :material/search:" },
+      {
+        description: "four-space indented code block",
+        source: "    :material/search:",
+      },
+      {
+        description: "unterminated fence",
+        source: "```\n:material/search:",
+      },
+      {
+        description: "code span in a table cell",
+        source: "| a |\n|---|\n| `:material/search:` |",
+      },
+      {
+        description: "code span in a blockquote",
+        source: "> `:material/search:`",
+      },
+    ])(
+      "keeps the literal prefix inside a $description",
+      async ({ source }) => {
+        // Four-space indented blocks are included: the previous regex-based
+        // approach could not see them, so #10365 persisted there.
+        const container = await renderSettled(source)
+        // Reads textContent because syntax highlighting splits a code block
+        // across many elements.
+        expect(container.textContent).toContain(PREFIX)
+        expect(container.querySelector(ICON)).not.toBeInTheDocument()
+      }
+    )
+
+    it("renders an icon outside code while preserving one inside code", () => {
+      render(
+        <StreamlitMarkdown
+          source=":material/search: and `:material/search:`"
+          allowHTML={false}
+        />
+      )
+      // The prose occurrence became an icon span holding just the name...
+      expect(screen.getByText("search").nodeName.toLowerCase()).toBe("span")
+      // ...while the code occurrence kept its literal text.
+      expect(
+        screen.getByText(":material/search:").nodeName.toLowerCase()
+      ).toBe("code")
+    })
+
+    it("renders an icon when a backtick in the info string disqualifies the fence", async () => {
+      // CommonMark forbids backticks in a backtick fence's info string, so this is
+      // prose and the icon must render. Deciding that needs block-vs-inline
+      // precedence, which is why preprocessing cannot judge code by itself.
+      const container = await renderSettled("```a`b\n:material/search:\n```")
+      expect(container.querySelector(ICON)).toHaveTextContent("search")
+      expect(container.textContent).not.toContain(":material/")
+    })
+
+    it("renders an icon after a mid-line run of backticks", async () => {
+      // A run of backticks that does not start a line cannot open a fence.
+      const container = await renderSettled("see ``` here :material/search:")
+      expect(container.querySelector(ICON)).toHaveTextContent("search")
+      expect(container.textContent).not.toContain(":material/")
+    })
+
+    it("renders an icon between unpaired backticks in separate blocks", async () => {
+      // Inline code cannot span a blank line, so neither backtick opens a span.
+      const container = await renderSettled(
+        "a ` tick\n\n:material/search:\n\nb ` tick"
+      )
+      expect(container.querySelector(ICON)).toHaveTextContent("search")
+      expect(container.textContent).not.toContain(":material/")
+    })
+
+    it("keeps a bare prefix with no icon name as literal text", () => {
+      // `:material` on its own is a directive remark would otherwise claim, taking
+      // the slash with it.
+      render(
+        <StreamlitMarkdown source="see :material/ alone" allowHTML={false} />
+      )
+      expect(screen.getByText("see :material/ alone")).toBeVisible()
+    })
+
+    it("renders an icon nested in a color directive", async () => {
+      const container = await renderSettled(":red[:material/search:]")
+      expect(container.querySelector(ICON)).toHaveTextContent("search")
+      expect(container.textContent).not.toContain(":material/")
+    })
+
+    it("renders an icon in a heading", async () => {
+      const container = await renderSettled("# :material/search: Title")
+      expect(container.querySelector(ICON)).toHaveTextContent("search")
+      expect(container.textContent).not.toContain(":material/")
+    })
+
+    it("renders an icon in a link's text", async () => {
+      // `findAndReplace` visits text nodes inside links too, so this is an icon --
+      // matching the behaviour before this change.
+      const container = await renderSettled(
+        "[:material/search:](https://example.com)"
+      )
+      expect(container.querySelector(ICON)).toHaveTextContent("search")
+      expect(container.textContent).not.toContain(":material/")
+    })
+
+    it("keeps a link's URL intact when it contains the prefix", async () => {
+      // The prefix is encoded everywhere, including inside a URL, where a leaked
+      // sentinel would silently break the link.
+      const container = await renderSettled(
+        "[text](https://example.com/:material/search:)"
+      )
+      expect(container.querySelector("a")).toHaveAttribute(
+        "href",
+        "https://example.com/:material/search:"
+      )
+    })
+
+    it("keeps an image's alt text and URL intact", async () => {
+      const container = await renderSettled(
+        "![alt :material/search:](https://example.com/:material/search:.png)"
+      )
+      const img = container.querySelector("img")
+      expect(img).toHaveAttribute("alt", "alt :material/search:")
+      expect(img).toHaveAttribute(
+        "src",
+        "https://example.com/:material/search:.png"
+      )
+    })
+
+    it("blocks a dangerous URL containing the prefix", () => {
+      // Keeping the colon means the encoded URL still begins `javascript:`, so the
+      // protocol blocklist matches it whether or not restore has run yet. Asserted
+      // anyway as defense in depth: restore runs first (it is a remark plugin, and
+      // `urlTransform` runs after the mdast phase), and nothing else pins that, so an
+      // encoding that did hide the scheme would still be caught here.
+      render(
+        <StreamlitMarkdown
+          source="[x](javascript:material/alert(1))"
+          allowHTML={false}
+        />
+      )
+      expect(screen.getByText("x")).toHaveAttribute("href", "#")
+    })
+
+    describe("with allowHTML", () => {
+      // `rehype-raw` re-parses raw HTML after the mdast phase, so these pin that
+      // restore has already run by then -- the markdown-only cases above cannot.
+      it("restores the prefix inside raw HTML", async () => {
+        const { container } = render(
+          <StreamlitMarkdown
+            source="<div>`:material/search:`</div>"
+            allowHTML={true}
+          />
+        )
+        await waitFor(() => expect(container.textContent).toContain(PREFIX))
+        expect(container.innerHTML).not.toContain("\uFFFC")
+      })
+
+      it("still blocks a dangerous URL", () => {
+        render(
+          <StreamlitMarkdown
+            source="[x](javascript:material/alert(1))"
+            allowHTML={true}
+          />
+        )
+        expect(screen.getByText("x")).toHaveAttribute("href", "#")
+      })
+
+      it("leaves no sentinel when the prefix is an icon", async () => {
+        const { container } = render(
+          <StreamlitMarkdown source=":material/search: hi" allowHTML={true} />
+        )
+        await waitFor(() =>
+          expect(container.querySelector(ICON)).toHaveTextContent("search")
+        )
+        expect(container.innerHTML).not.toContain("\uFFFC")
+      })
+    })
+
+    it("keeps a custom-scheme autolink working", () => {
+      // The sentinel goes after the colon precisely so the colon keeps its role as a
+      // scheme separator; replacing it would demote this to plain text.
+      render(
+        <StreamlitMarkdown source="<foo:material/bar>" allowHTML={false} />
+      )
+      expect(screen.getByText("foo:material/bar")).toHaveAttribute(
+        "href",
+        "foo:material/bar"
+      )
+    })
+
+    it("honours a backslash-escaped colon without leaking the escape", () => {
+      // CommonMark only escapes ASCII punctuation, so the colon has to survive
+      // encoding for `\:` to be recognised -- otherwise the backslash renders.
+      // Braces, not a quoted attribute: JSX passes attribute text through verbatim,
+      // so `source="\\:"` would send two backslashes rather than an escape.
+      const { container } = render(
+        <StreamlitMarkdown source={"\\:material/search:"} allowHTML={false} />
+      )
+      expect(container.textContent).not.toContain("\\")
+    })
+
+    it.each([
+      { description: "prose", source: ":material/search: hi" },
+      { description: "code span", source: "`:material/search:`" },
+      { description: "fenced block", source: "```\n:material/search:\n```" },
+      {
+        description: "a link URL",
+        source: "[t](https://example.com/:material/search:)",
+      },
+      {
+        description: "a link title",
+        source: '[t](https://example.com "ti :material/search:")',
+      },
+      {
+        description: "an image alt and URL",
+        source: "![a :material/search:](https://e.com/:material/search:.png)",
+      },
+      {
+        description: "a fence info string",
+        source: "```:material/search:\ncode\n```",
+      },
+      {
+        description: "a fence info string with meta",
+        source: "```python :material/search:\ncode\n```",
+      },
+      { description: "an autolink", source: "<https://e.com/:material/x:>" },
+      { description: "a heading", source: "# :material/search: T" },
+      {
+        description: "a table cell",
+        source: "| `:material/search:` |\n|---|",
+      },
+    ])(
+      "leaves no sentinel in the output for $description",
+      async ({ source }) => {
+        // Encoding is unconditional, so every string field the parser fills from the
+        // source can carry a sentinel. This is the catch-all: whatever the field, it
+        // must never reach the DOM. U+FFFC is spelled out rather than imported so the
+        // assertion does not depend on the constant it is checking.
+        const container = await renderSettled(source)
+        expect(container.innerHTML).not.toContain("\uFFFC")
+      }
+    )
   })
 
   it("does not remove unknown directive", () => {

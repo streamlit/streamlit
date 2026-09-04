@@ -119,6 +119,130 @@ export function containsEmojiShortcodes(source: string): boolean {
 }
 
 /**
+ * Inserted after the `:` of a `:material/` prefix while markdown is parsed.
+ *
+ * `:material/icon:` cannot survive parsing as written: `remark-directive` claims
+ * `:material` as a text directive and leaves `/icon:` behind as loose text, so the
+ * prefix has to be disguised before parsing and the icon plugin has to match the
+ * disguised form.
+ *
+ * The disguise has to be reversible, because whether a given occurrence is an icon
+ * or literal text is not knowable from the source alone -- it depends on where the
+ * markdown parser decides code begins and ends (see #10365). So every occurrence is
+ * encoded blindly, and whatever the parser did *not* hand to the icon plugin is
+ * restored verbatim.
+ *
+ * U+FFFC (OBJECT REPLACEMENT CHARACTER) is used because:
+ * - Unicode puts it in category So, which `micromark-util-character` classifies as
+ *   punctuation. A directive name can neither start with nor contain punctuation, so
+ *   sitting immediately after the `:` it stops the directive from being claimed.
+ * - That classification is the whole requirement, and it is what disqualifies the
+ *   invisible alternatives: private-use and format characters (U+E000, U+2063,
+ *   U+FFF9) are all name characters, so `:material/a::material/b:` would parse its
+ *   second prefix as a directive named "\uE000material" and eat the sentinel.
+ * - It is effectively never typed by hand, and it means "an object goes here", which
+ *   is what it is standing in for.
+ *
+ * It is inserted after the `:` rather than replacing it so that the colon keeps any
+ * syntactic role it already had. Replacing it turns `<foo:material/bar>` from a
+ * custom-scheme autolink into plain text, and leaves the backslash visible in
+ * `\:material/search:`, because CommonMark only escapes ASCII punctuation.
+ */
+const MATERIAL_ICON_SENTINEL = "\uFFFC"
+
+/** The parse-time form of a `:material/` prefix. */
+const ENCODED_MATERIAL_PREFIX = `:${MATERIAL_ICON_SENTINEL}material/`
+
+/**
+ * Matches an encoded prefix followed by an icon name.
+ *
+ * Lives next to `ENCODED_MATERIAL_PREFIX` because interpolating that constant into a
+ * pattern only stays correct while the sentinel is not a regex metacharacter.
+ */
+const ENCODED_MATERIAL_ICON_PATTERN = new RegExp(
+  `${ENCODED_MATERIAL_PREFIX}(\\w+):`,
+  "g"
+)
+
+/**
+ * Disguises every `:material/` prefix so it survives markdown parsing intact.
+ *
+ * Unconditional by design. Deciding here which occurrences are code -- and so should
+ * be left alone -- means reimplementing CommonMark's block and inline precedence in a
+ * regex, which does not work: a fence's info string may not contain a backtick, and a
+ * line-leading run of three or more backticks is claimed by block parsing before
+ * inline parsing runs. Both are decisions only the parser can make. Instead the
+ * parser makes them, and `createRemarkRestoreMaterialIconPrefix` undoes the disguise
+ * everywhere an icon was not produced.
+ *
+ * See: https://github.com/streamlit/streamlit/issues/10365
+ *
+ * @param source - The markdown source string to encode
+ * @returns The source with every `:material/` prefix replaced by its encoded form
+ */
+export function encodeMaterialIconPrefix(source: string): string {
+  return source.replaceAll(":material/", ENCODED_MATERIAL_PREFIX)
+}
+
+/**
+ * Factory function to create the plugin that undoes `encodeMaterialIconPrefix`.
+ *
+ * Must run after `createRemarkMaterialIcons`, which consumes the encoded prefixes
+ * that really are icons. Everything still encoded by this point is literal text the
+ * user asked to display -- inside a code span, a fenced or indented code block, raw
+ * HTML, or simply not a well-formed icon name -- and is restored verbatim.
+ *
+ * Restoring the whole prefix rather than a bare sentinel keeps a sentinel a user
+ * typed themselves untouched, so it can never be turned into a stray `:`.
+ */
+function createRemarkRestoreMaterialIconPrefix(): () => (
+  tree: MdastRoot
+) => MdastRoot {
+  /**
+   * Restores every encoded prefix reachable from `holder` without descending into
+   * child nodes.
+   *
+   * `children` is skipped because `visit` reaches those separately, and `position`
+   * because it holds only numbers. Everything else is walked, which is what picks up
+   * a directive's `attributes` -- a plain string map filled straight from the source,
+   * so `:color[x]{foreground=":material/red"}` hides a prefix one level down.
+   */
+  const restoreStrings = (holder: Record<string, unknown>): void => {
+    for (const key of Object.keys(holder)) {
+      if (key === "children" || key === "position") {
+        continue
+      }
+      const value = holder[key]
+      if (typeof value === "string") {
+        if (value.includes(MATERIAL_ICON_SENTINEL)) {
+          holder[key] = value.replaceAll(ENCODED_MATERIAL_PREFIX, ":material/")
+        }
+      } else if (value !== null && typeof value === "object") {
+        restoreStrings(value as Record<string, unknown>)
+      }
+    }
+  }
+
+  return () => (tree: MdastRoot) => {
+    visit(tree, node => {
+      // Any string field can hold an encoded prefix, not just `value`: a link's
+      // `url` and `title`, an image's `alt`, a fence's `lang` and `meta`, a
+      // footnote's `identifier` and `label`, and a directive's `attributes` all come
+      // straight from the source. A sentinel left in a URL breaks the link, so sweep
+      // every string field rather than enumerating the ones that exist today.
+      //
+      // Restoring unconditionally is safe in practice: a source that already
+      // contains the encoded prefix is vanishingly unlikely, since nobody types
+      // OBJECT REPLACEMENT CHARACTER. Matching the whole prefix rather than a bare
+      // sentinel also means a stray one a user did type is left alone instead of
+      // being turned into a colon.
+      restoreStrings(node as unknown as Record<string, unknown>)
+    })
+    return tree
+  }
+}
+
+/**
  * Detects if the markdown source contains math syntax that requires KaTeX.
  * Checks for inline math ($...$) and display math ($$...$$) patterns.
  * For inline math, ensures no whitespace immediately after opening $ or before closing $
@@ -988,7 +1112,10 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
     ): MdastTextWithHastData {
       return {
         type: "text",
-        value: fullMatch,
+        // Rendering comes from `data` below, so this is only a fallback -- but it
+        // holds the encoded prefix, so decode it to keep the sentinel out of any
+        // path that might read it.
+        value: fullMatch.replace(ENCODED_MATERIAL_PREFIX, ":material/"),
         data: {
           hName: "span",
           hProperties: {
@@ -1014,14 +1141,21 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
         },
       }
     }
-    // We replace all `:material/` occurrences with `:material_` to avoid
-    // conflicts with the directive plugin.
-    // Since all `:material/` already got replaced with `:material_`
-    // within the markdown text (see below), we need to use `:material_`
-    // within the regex.
+    // The prefix reaches this point in its encoded form -- see
+    // MATERIAL_ICON_SENTINEL for why it cannot be matched as `:material/`.
+    // `findAndReplace` visits `text` nodes only, so markdown code -- spans, fences
+    // and indented blocks -- is never offered here; whatever it leaves behind is
+    // restored by createRemarkRestoreMaterialIconPrefix.
+    //
+    // Raw HTML is only partly excluded. A block like `<div>...</div>` is one `html`
+    // node and is skipped, but phrasing HTML is tokenized as `html` + `text` + `html`,
+    // so `<code>:material/x:</code>` under `allowHTML` still yields an icon inside
+    // the code element. That asymmetry with markdown code predates this change --
+    // the previous `:material_` rewrite produced an icon there too -- and matching
+    // markdown would mean tracking the raw-HTML tag stack, so it is left alone.
     findAndReplace(tree, [
       [
-        /:material_(\w+):/g,
+        ENCODED_MATERIAL_ICON_PATTERN,
         replace as (fullMatch: string, iconName: string) => Text,
       ],
     ])
@@ -1256,6 +1390,13 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
 
   const needsKatex = useMemo(() => containsMathSyntax(source), [source])
   const needsEmoji = useMemo(() => containsEmojiShortcodes(source), [source])
+  // Gating on the raw source is sound because nothing downstream introduces a
+  // prefix: neither the label escaping below nor `remend` can add one, and
+  // `encodeMaterialIconPrefix` only rewrites prefixes already present.
+  const needsMaterialIcon = useMemo(
+    () => source.includes(":material/"),
+    [source]
+  )
 
   // Lazy load plugins only when needed
   const katexPlugin = useLazyPlugin<KatexPlugin>({
@@ -1312,18 +1453,31 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     const plugins: PluggableList = [
       ...BASE_REMARK_PLUGINS,
       createRemarkColoringAndSmall(theme, colorMapping),
-      createRemarkMaterialIcons(theme),
     ]
+
+    // Both icon plugins walk the whole tree, and every widget label goes through
+    // here, so skip them entirely when there is no prefix to act on.
+    if (needsMaterialIcon) {
+      plugins.push(createRemarkMaterialIcons(theme))
+    }
 
     if (needsEmoji && wrappedEmojiPlugin) {
       plugins.push(wrappedEmojiPlugin)
     }
 
-    // This plugin must run last to clean up any unsupported directives
+    // This plugin must run after any plugin that handles a directive, so it only
+    // sees the ones nothing claimed.
     plugins.push(createRemarkUnsupportedDirectivesCleanup())
 
+    // Must come after createRemarkMaterialIcons, so it only sees prefixes that did
+    // not become icons. It touches node values rather than directives, so its order
+    // relative to the cleanup above does not matter.
+    if (needsMaterialIcon) {
+      plugins.push(createRemarkRestoreMaterialIconPrefix())
+    }
+
     return plugins
-  }, [theme, colorMapping, needsEmoji, wrappedEmojiPlugin])
+  }, [theme, colorMapping, needsEmoji, wrappedEmojiPlugin, needsMaterialIcon])
 
   const rehypePlugins = useMemo<PluggableList>(() => {
     const plugins: PluggableList = []
@@ -1354,9 +1508,9 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   )
 
   const processedSource = useMemo(() => {
-    // Replace :material/ with :material_ to avoid conflicts with the directive plugin.
-    // The material icon regex in createMaterialIconPlugin uses :material_ to match.
-    let processed = source.replaceAll(":material/", ":material_")
+    // Disguise :material/ so it survives parsing; restored afterwards by
+    // createRemarkRestoreMaterialIconPrefix wherever it was not an icon.
+    let processed = encodeMaterialIconPrefix(source)
 
     if (isLabel) {
       // Escape markdown syntax that would be stripped in labels, leaving empty content.
