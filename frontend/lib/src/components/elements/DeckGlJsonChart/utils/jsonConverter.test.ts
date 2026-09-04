@@ -21,7 +21,7 @@ import {
 } from "@deck.gl/extensions"
 import { PathLayer, ScatterplotLayer } from "@deck.gl/layers"
 
-import { jsonConverter } from "./jsonConverter"
+import { convertDeckJson } from "./jsonConverter"
 
 type ConvertedLayer = {
   props: {
@@ -30,7 +30,7 @@ type ConvertedLayer = {
 }
 
 const convertLayer = (layerJson: Record<string, unknown>): ConvertedLayer => {
-  const converted = jsonConverter.convert({
+  const converted = convertDeckJson({
     layers: [layerJson],
   }) as { layers: Array<ConvertedLayer | null> }
 
@@ -77,27 +77,55 @@ describe("jsonConverter layer extensions", () => {
   })
 
   it("returns null for an unknown layer @@type", () => {
-    const converted = jsonConverter.convert({
+    const converted = convertDeckJson({
       layers: [{ "@@type": "NotARealLayer" }],
     }) as { layers: Array<ConvertedLayer | null> }
 
     expect(converted.layers[0]).toBeNull()
   })
 
-  it("throws when a known layer has an unknown extension @@type", () => {
-    expect(() =>
-      jsonConverter.convert({
-        layers: [
-          {
-            "@@type": "ScatterplotLayer",
-            id: "unknown-extension",
-            data: [{ position: [0, 0] }],
-            getPosition: "@@=position",
-            extensions: [{ "@@type": "NotARealExtension" }],
-          },
-        ],
-      })
-    ).toThrow(TypeError)
+  it("drops an unknown extension @@type and still hydrates the layer", () => {
+    const layer = convertLayer({
+      "@@type": "ScatterplotLayer",
+      id: "unknown-extension",
+      data: [{ position: [0, 0] }],
+      getPosition: "@@=position",
+      extensions: [{ "@@type": "NotARealExtension" }],
+    })
+
+    expect(layer).toBeInstanceOf(ScatterplotLayer)
+    expect(layer.props.extensions).toEqual([])
+  })
+
+  it("keeps registered extensions when mixed with an unknown @@type", () => {
+    const layer = convertLayer({
+      "@@type": "ScatterplotLayer",
+      id: "mixed-extensions",
+      data: [{ position: [0, 0], value: 1 }],
+      getPosition: "@@=position",
+      getFilterValue: "@@=value",
+      filterRange: [0, 10],
+      extensions: [
+        { "@@type": "DataFilterExtension", filterSize: 1 },
+        { "@@type": "NotARealExtension" },
+      ],
+    })
+
+    expect(layer).toBeInstanceOf(ScatterplotLayer)
+    expect(layer.props.extensions).toEqual([expect.any(DataFilterExtension)])
+  })
+
+  it("drops an extension object that has no @@type and still hydrates the layer", () => {
+    const layer = convertLayer({
+      "@@type": "ScatterplotLayer",
+      id: "malformed-extension",
+      data: [{ position: [0, 0] }],
+      getPosition: "@@=position",
+      extensions: [{ filterSize: 1 }],
+    })
+
+    expect(layer).toBeInstanceOf(ScatterplotLayer)
+    expect(layer.props.extensions).toEqual([])
   })
 
   it("resolves TerrainExtension from the pydeck JSON type name", () => {
