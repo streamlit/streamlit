@@ -147,7 +147,7 @@ describe("Radio widget", () => {
     })
   })
 
-  it("renders non-blank captions", () => {
+  it("skips blank captions", () => {
     const props = getProps({ captions: ["caption1", "", ""] })
     render(<Radio {...props} />)
 

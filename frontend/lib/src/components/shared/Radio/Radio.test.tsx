@@ -122,7 +122,7 @@ describe("Radio widget", () => {
     expect(screen.queryAllByTestId("stCaptionContainer")).toHaveLength(0)
   })
 
-  it("renders non-blank captions", () => {
+  it("skips blank captions", () => {
     const props = getProps({ captions: ["caption1", "", "caption2"] })
     render(<Radio {...props} />)
 
@@ -145,8 +145,6 @@ describe("Radio widget", () => {
     const props = getProps({ captions: ["fast", "slow", "medium"] })
     render(<Radio {...props} />)
 
-    // Separate from the description assertion above so that a caption leaking
-    // back into the name fails on its own rather than being masked by it.
     expect(screen.getAllByRole("radio")[0]).toHaveAccessibleName("a")
   })
 
@@ -160,9 +158,22 @@ describe("Radio widget", () => {
     // The spacer keeps partially-captioned horizontal rows aligned, so it has
     // to render content — but it must stay out of the accessible tree rather
     // than becoming a blank description.
-    const spacer = screen.getByTestId("stRadioSpacer")
+    const spacer = screen.getByTestId("stRadioCaptionSpacer")
     expect(spacer).toHaveAttribute("aria-hidden", "true")
     expect(screen.getAllByRole("radio")[1]).not.toHaveAccessibleDescription()
+  })
+
+  it("renders neither captions nor spacers when every caption is blank", () => {
+    const props = getProps({ horizontal: true, captions: ["", " ", ""] })
+    render(<Radio {...props} />)
+
+    // Captioning only some options is supported, but when none of them actually
+    // has one there is nothing to reserve space for.
+    expect(
+      screen.queryByTestId("stRadioCaptionSpacer")
+    ).not.toBeInTheDocument()
+    expect(screen.queryAllByTestId("stRadioCaption")).toHaveLength(0)
+    expect(screen.getAllByRole("radio")[0]).not.toHaveAccessibleDescription()
   })
 
   it("renders no caption spacer in vertical groups", () => {
@@ -170,14 +181,16 @@ describe("Radio widget", () => {
     render(<Radio {...props} />)
 
     // Vertical rows stack from the top, so nothing needs its space reserved.
-    expect(screen.queryByTestId("stRadioSpacer")).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stRadioCaptionSpacer")
+    ).not.toBeInTheDocument()
   })
 
   it.each([
     { disabled: true, color: fadedText40, cursor: "not-allowed" },
     { disabled: false, color: bodyText, cursor: "pointer" },
   ])(
-    "dims text and sets the click cursors when disabled=$disabled",
+    "dims option text and caption together and sets the label cursor when disabled=$disabled",
     ({ disabled, color, cursor }) => {
       const props = getProps({
         disabled,
@@ -186,8 +199,7 @@ describe("Radio widget", () => {
       render(<Radio {...props} />)
 
       // The field's data-disabled rule sets the colour that both the option text
-      // and the caption inherit. The label and the caption are each clickable,
-      // so both carry the cursor themselves.
+      // and the caption inherit; the label keeps its own cursor rule.
       expect(screen.getAllByTestId("stCaptionContainer")[0]).toHaveStyle({
         color,
       })
@@ -199,56 +211,10 @@ describe("Radio widget", () => {
         )
       ).toHaveStyle({ color })
       expect(screen.getAllByTestId("stRadioOption")[0]).toHaveStyle({ cursor })
-      expect(screen.getAllByTestId("stRadioCaption")[0]).toHaveStyle({
-        cursor,
-      })
     }
   )
 
-  it("selects an option when its caption is clicked", async () => {
-    const user = userEvent.setup()
-    const onChange = vi.fn()
-    const props = getProps({
-      onChange,
-      value: 0,
-      captions: ["fast", "slow", "medium"],
-    })
-    render(<Radio {...props} />)
-    const radioOptions = screen.getAllByRole("radio")
-
-    // The caption sits outside the label, so this click target comes from an
-    // explicit handler rather than from label semantics.
-    await user.click(screen.getByText("slow"))
-
-    expect(onChange).toHaveBeenCalledTimes(1)
-    expect(onChange).toHaveBeenCalledWith(1)
-    expect(radioOptions[1]).toBeChecked()
-    expect(radioOptions[0]).not.toBeChecked()
-    // Focus has to land on the input, as it does when the label is clicked, or
-    // arrow keys do nothing until the user tabs back into the group.
-    expect(radioOptions[1]).toHaveFocus()
-  })
-
-  it("does not fire onChange when the selected option's caption is clicked", async () => {
-    const user = userEvent.setup()
-    const onChange = vi.fn()
-    const props = getProps({
-      onChange,
-      value: 1,
-      captions: ["fast", "slow", "medium"],
-    })
-    render(<Radio {...props} />)
-
-    // React Aria drops a no-op selection on the label, so the caption must too:
-    // otherwise this reruns the script and dirties an enclosing form for a click
-    // that changes nothing.
-    await user.click(screen.getByText("slow"))
-
-    expect(onChange).not.toHaveBeenCalled()
-    expect(screen.getAllByRole("radio")[1]).toBeChecked()
-  })
-
-  it("does not select an option when a click ends a text selection", async () => {
+  it("does not select an option when its caption is clicked", async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
     const props = getProps({
@@ -258,40 +224,12 @@ describe("Radio widget", () => {
     })
     render(<Radio {...props} />)
 
-    // Dragging across caption text ends in a click, which must not also answer
-    // the question. jsdom has no real selection, so report a live one.
-    const selection = { isCollapsed: false } as Selection
-    const getSelectionSpy = vi
-      .spyOn(window, "getSelection")
-      .mockReturnValue(selection)
-
+    // The caption is supplementary text outside the label, not a click target.
     await user.click(screen.getByText("slow"))
 
     expect(onChange).not.toHaveBeenCalled()
     expect(screen.getAllByRole("radio")[1]).not.toBeChecked()
-
-    // With the selection collapsed again, the same click does select.
-    getSelectionSpy.mockReturnValue({ isCollapsed: true } as Selection)
-    await user.click(screen.getByText("slow"))
-
-    expect(onChange).toHaveBeenCalledWith(1)
-    getSelectionSpy.mockRestore()
-  })
-
-  it("does not select an option when a disabled caption is clicked", async () => {
-    const user = userEvent.setup()
-    const onChange = vi.fn()
-    const props = getProps({
-      onChange,
-      disabled: true,
-      captions: ["fast", "slow", "medium"],
-    })
-    render(<Radio {...props} />)
-
-    await user.click(screen.getByText("slow"))
-
-    expect(onChange).not.toHaveBeenCalled()
-    expect(screen.getAllByRole("radio")[1]).not.toBeChecked()
+    expect(screen.getAllByRole("radio")[0]).toBeChecked()
   })
 
   it("treats options past the end of captions as having no caption", () => {
@@ -314,6 +252,16 @@ describe("Radio widget", () => {
 
     expect(radioOptions[1]).not.toHaveAccessibleDescription()
     expect(radioOptions[1]).toHaveAccessibleName("b")
+  })
+
+  it("ignores a whitespace-only caption", () => {
+    const props = getProps({ captions: [" ", "slow", "medium"] })
+    render(<Radio {...props} />)
+
+    // Python preserves whitespace strings, which would otherwise claim the
+    // description slot and describe the option with nothing.
+    expect(screen.getAllByRole("radio")[0]).not.toHaveAccessibleDescription()
+    expect(screen.queryAllByTestId("stRadioCaption")).toHaveLength(2)
   })
 
   it("has the correct captions", () => {

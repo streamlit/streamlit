@@ -66,8 +66,9 @@ export const StyledRadioGroup = styled(RARadioGroup, {
  * folding it into the accessible name.
  *
  * Owns the text colour, including the disabled variant, because it is the nearest
- * ancestor of both the label and the caption — so the two dim together. The label
- * and the caption each set their own `cursor`, since each is clickable.
+ * ancestor of both the label and the caption — so the two dim together. React Aria
+ * marks this element `data-disabled` as well as the label, so the two split their
+ * state-driven styles: colour here, `cursor` on the label.
  */
 export const StyledRadioField = styled(RARadioField)(({ theme }) => ({
   display: "flex",
@@ -81,17 +82,22 @@ export const StyledRadioField = styled(RARadioField)(({ theme }) => ({
 /**
  * Clickable `<label>` for each radio option. It wraps the hidden input, the
  * circle indicator (`StyledRadioOuter`/`StyledRadioInner`), and the option text,
- * so the whole row is a click target. It stays a plain block container: the
- * children own the circle-and-text alignment so the caption can sit outside that
- * row without manual offset calculations.
+ * so the whole row is a click target. It stays a plain block container:
+ * `StyledRadioRow` owns circle-and-text alignment, so the field can stack the
+ * caption below the label with no offset maths.
  *
- * React Aria sets `data-focus-visible`, `data-disabled`, `data-selected` and
- * friends as data attributes — we use those for state-driven styles.
+ * React Aria sets `data-focus-visible`, `data-hovered`, `data-pressed` and
+ * friends here as data attributes — we use those for state-driven styles.
+ * `data-disabled` and `data-selected` also appear on `StyledRadioField`, so the
+ * two split those styles: colour on the field, `cursor` here.
+ *
+ * No `user-select` rule: React Aria's `usePress` suppresses selection for the
+ * duration of a press, so a standing rule would only stop users copying the
+ * option text. This matches `st.checkbox` and `st.toggle`.
  */
 export const StyledRadioButton = styled(RARadioButton)(({ theme }) => ({
   display: "block",
   cursor: "pointer",
-  userSelect: "none",
   paddingLeft: theme.spacing.none,
   paddingRight: theme.spacing.threeXS,
   marginTop: theme.spacing.none,
@@ -189,56 +195,44 @@ export const StyledRadioInner = styled.div<StyledRadioInnerProps>(
 )
 
 /**
- * Padding shared by the caption and its spacer, so both occupy the same box as
- * the option label above them.
+ * Aligns the caption's text with the label's: `paddingLeft` clears the circle,
+ * `paddingRight` matches the label's. Shared with the spacer so the two cannot
+ * drift.
  *
- * `paddingLeft` indents past the circle (`circle width + row gap`) so caption
- * text aligns with the option text rather than the circle; the field and label
- * share a left edge because `StyledRadioButton` has `paddingLeft: none`.
- * `paddingRight` matches `StyledRadioButton`'s so the caption's content box is as
- * wide as the label's. Drop it and the field shrinks by that much whenever the
- * caption is the wider of the two, shifting later options in a horizontal group
- * left.
+ * A caption wider than its label sets the option's width, so it needs the label's
+ * `paddingRight` too — without it the option is that much narrower and later
+ * options in a horizontal group shift left.
  */
-const captionBox = ({ theme }: { theme: EmotionTheme }): CSSObject => ({
+const captionBoxStyles = ({ theme }: { theme: EmotionTheme }): CSSObject => ({
   paddingLeft: `calc(${theme.sizes.checkbox} + ${theme.spacing.sm})`,
   paddingRight: theme.spacing.threeXS,
 })
-
-interface StyledRadioCaptionProps {
-  $isDisabled: boolean
-}
 
 /**
  * The caption, rendered as React Aria's `description` slot so it reaches the
  * option's `aria-describedby` instead of joining its accessible name.
  *
- * Rendered as a `<div>` (`elementType="div"`) because caption markdown can
- * contain block elements; `Text` defaults to a `<span>`.
+ * `Radio` renders this as a `<div>` (`elementType="div"`): `StreamlitMarkdown`
+ * wraps its output in a `<div>`, which is invalid inside the `<span>` that `Text`
+ * renders by default.
  *
- * Carries the label's cursor because clicking a caption selects its option, the
- * same as clicking the label does.
+ * React Aria drops the description id unless something mounts in this slot, which
+ * is why a blank caption renders nothing at all rather than an empty `Text`.
  *
- * Must stay the element React Aria's `descriptionProps.ref` lands on: wrapping it
- * in another element would leave `aria-describedby` pointing nowhere.
+ * Sets no `cursor`: as supplementary text outside the label it is not a click
+ * target, so the default text cursor correctly signals selectable prose.
  */
-export const StyledRadioCaption = styled(RAText, {
-  shouldForwardProp: (prop: string) => !prop.startsWith("$"),
-})<StyledRadioCaptionProps>(props => ({
-  ...captionBox(props),
-  cursor: props.$isDisabled ? "not-allowed" : "pointer",
-}))
+export const StyledRadioCaption = styled(RAText)(captionBoxStyles)
 
 /**
- * Reserves a caption's height for options that have none, so horizontal groups
- * with partial captions keep their rows aligned — the group centres items
- * vertically, so a shorter field would nudge its own row off the shared baseline.
+ * Keeps horizontal options without captions aligned with captioned ones, without
+ * claiming the `description` slot.
  *
- * - A plain `div`, not a `Text`: it must not claim the `description` slot and
- *   point `aria-describedby` at blank content, and `Text` throws against a
- *   slotted `TextContext` without a `slot` prop.
- * - Call sites fill it with a non-breaking space rather than setting a height,
+ * - A plain `div`, not a `Text`: it must not point `aria-describedby` at blank
+ *   content, and a `Text` inside `RadioField` has to name a slot — React Aria
+ *   throws `A slot prop is required.` otherwise — and the only slot here is
+ *   `description`.
+ * - `Radio` fills it with a non-breaking space rather than setting a height,
  *   because only a real caption line box matches the height exactly.
- * - It shares the caption's indent but not its cursor; there is nothing to click.
  */
-export const StyledRadioCaptionSpacer = styled.div(captionBox)
+export const StyledRadioCaptionSpacer = styled.div(captionBoxStyles)

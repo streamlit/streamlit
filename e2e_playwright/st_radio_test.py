@@ -114,7 +114,7 @@ def test_help_tooltip_works(app: Page):
     expect_help_tooltip(app, element_with_help, "help text")
 
 
-def test_captions_are_option_descriptions(app: Page):
+def test_captions_describe_options_without_being_click_targets(app: Page):
     """Captions reach assistive tech as descriptions, not as part of the name."""
     with_captions = get_radio(app, "radio 10 (with captions)")
 
@@ -136,11 +136,12 @@ def test_captions_are_option_descriptions(app: Page):
 
     # The caption is reachable instead through aria-describedby.
     option_a = get_radio_option(with_captions, "A").locator("input")
-    caption_a = with_captions.get_by_test_id("stRadioCaption").first
+    caption_a = with_captions.get_by_test_id("stRadioCaption").filter(
+        has_text="bold text"
+    )
     expect(caption_a).to_have_text("bold text")
-    # React Aria joins several ids into aria-describedby (group description,
-    # error message), so match the caption's id as one entry rather than the
-    # whole value.
+    # Match the caption's id as one entry rather than the whole value, so a
+    # group-level description added later cannot break this.
     caption_id = re.escape(caption_a.get_attribute("id") or "")
     expect(option_a).to_have_attribute(
         "aria-describedby", re.compile(rf"(^|\s){caption_id}(\s|$)")
@@ -150,26 +151,41 @@ def test_captions_are_option_descriptions(app: Page):
     horizontal = get_radio(app, "radio 11 (horizontal, captions)")
     # "maybe" is the option whose caption is "".
     no_caption = get_radio_option(horizontal, "maybe").locator("input")
-    # ".*" matches any present value, so this passes only when absent.
-    expect(no_caption).not_to_have_attribute("aria-describedby", re.compile(r".*"))
+    expect(no_caption).not_to_have_attribute("aria-describedby")
 
     # A sibling in the same group still gets one, so the check above is not just
     # observing a group-wide absence.
     with_caption = get_radio_option(horizontal, "yes").locator("input")
     expect(with_caption).to_have_attribute("aria-describedby", re.compile(r"\S"))
 
-    # Clicking a caption selects its option. The caption sits outside the label,
-    # so this comes from an explicit handler rather than label semantics.
-    # Done last because it changes the app's state.
-    #
-    # The handler also ignores a click that ends a text selection. That is not
-    # asserted here: synthetic mouse events do not drive native text selection in
-    # headless Chromium (a stepped drag across the caption leaves getSelection()
-    # empty), and a Range set from script is collapsed by mousedown before the
-    # click arrives. Radio.test.tsx covers it by stubbing getSelection instead.
+    # The caption is not a click target: it is supplementary text outside the
+    # label, so clicking it must leave the selection alone. Assert the input's
+    # checked state, not the written value: a regression would trigger a rerun,
+    # during which the value still reads "A".
+    option_b = get_radio_option(with_captions, "B").locator("input")
     with_captions.get_by_text("italics text").click()
+    expect(option_b).not_to_be_checked()
+    expect(option_a).to_be_checked()
+
+    # Clicking the label right above it does select, which proves the page was
+    # live and the caption click was ignored rather than merely not seen yet.
+    get_radio_option(with_captions, "B").click()
     wait_for_app_run(app)
-    expect_markdown(app, "value 10: B")
+    expect(option_b).to_be_checked()
+
+    # A link in a caption is a real anchor. Inside the label React Aria's
+    # preventDefault cancelled its navigation; outside it, nothing does.
+    expect(
+        with_captions.get_by_test_id("stRadioCaption").get_by_role(
+            "link", name="link text"
+        )
+    ).to_have_attribute("href", re.compile(r"example\.com"))
+
+    # Caption and option text are both selectable: neither carries a user-select
+    # rule. Check option A, not the B just clicked — react-aria's usePress sets
+    # `user-select: none` inline on a pressed label and clears it after pointer-up.
+    expect(caption_a).not_to_have_css("user-select", "none")
+    expect(get_radio_option(with_captions, "A")).not_to_have_css("user-select", "none")
 
 
 def test_radio_has_correct_default_values(app: Page):
