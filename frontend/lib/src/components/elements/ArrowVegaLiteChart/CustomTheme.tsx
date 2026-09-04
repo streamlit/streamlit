@@ -84,7 +84,9 @@ export function applyStreamlitTheme(
       titleFontWeight: theme.fontWeights.normal,
       titleFontStyle: "normal",
       titleColor: getGray70(theme),
-      titlePadding: convertRemToPx(theme.spacing.twoXS),
+      // Vega places entries at title.bounds.height() + titlePadding. Titles have
+      // no swatch, so this needs more than rowPadding to read as a header.
+      titlePadding: convertRemToPx(theme.spacing.md),
       labelPadding: convertRemToPx(theme.spacing.lg),
       columnPadding: convertRemToPx(theme.spacing.sm),
       rowPadding: convertRemToPx(theme.spacing.twoXS),
