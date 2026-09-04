@@ -23,6 +23,7 @@ import pytest
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.runtime.media_file_storage import MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import _calculate_file_id
 from streamlit.util import calc_hash
@@ -113,6 +114,7 @@ class VideoTest(DeltaGeneratorTestCase):
             loop=True,
             autoplay=True,
             muted=True,
+            alt="A short animated film",
         )
 
         el = self.get_delta_from_queue().new_element
@@ -121,6 +123,7 @@ class VideoTest(DeltaGeneratorTestCase):
         assert el.video.loop
         assert el.video.autoplay
         assert el.video.muted
+        assert el.video.alt == "A short animated film"
         assert el.video.url.startswith(MEDIA_ENDPOINT)
         assert _calculate_file_id(fake_video_data, "video/mp4") in el.video.url
 
@@ -135,8 +138,42 @@ class VideoTest(DeltaGeneratorTestCase):
         assert not el.video.loop
         assert not el.video.autoplay
         assert not el.video.muted
+        assert el.video.alt == ""
         assert el.video.url.startswith(MEDIA_ENDPOINT)
         assert _calculate_file_id(fake_video_data, "video/mp4") in el.video.url
+
+    def test_st_video_alt_on_youtube_url(self):
+        """alt should be forwarded for YouTube videos, which render an iframe."""
+        st.video("https://www.youtube.com/watch?v=dQw4w9WgXcQ", alt="A music video")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.video.alt == "A music video"
+        assert el.video.type == VideoProto.Type.YOUTUBE_IFRAME
+
+    def test_st_video_alt_is_independent_of_element_id(self):
+        """Changing only alt must not change the autoplay element ID.
+
+        The ID drives the frontend's "already autoplayed" flag, so refining a
+        description must not make the same video autoplay a second time.
+        """
+        fake_video_data = b"\x11\x22\x33\x44\x55\x66"
+
+        def video_id(**kwargs: object) -> str:
+            # Each call registers its ID, so clear the registry to simulate a
+            # fresh script run instead of tripping the duplicate-ID guard.
+            self.script_run_ctx.shared.widget_ids_this_run.clear()
+            st.video(fake_video_data, autoplay=True, **kwargs)
+            return self.get_delta_from_queue().new_element.video.id
+
+        with_alt = video_id(alt="First description")
+        with_other_alt = video_id(alt="A totally different description")
+
+        assert with_alt != ""
+        assert with_alt == with_other_alt
+
+        # Sanity check that the ID is sensitive to params that do belong in it,
+        # so the assertion above cannot pass vacuously.
+        assert video_id(alt="First description", muted=True) != with_alt
 
     def test_st_video_subtitles(self):
         """Test st.video with subtitles."""

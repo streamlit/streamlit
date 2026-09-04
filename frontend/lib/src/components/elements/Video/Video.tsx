@@ -41,8 +41,17 @@ function Video({
   const videoRef = useRef<HTMLVideoElement>(null)
 
   /* Element may contain "url" or "data" property. */
-  const { type, url, startTime, subtitles, endTime, loop, autoplay, muted } =
-    element
+  const {
+    type,
+    url,
+    startTime,
+    subtitles,
+    endTime,
+    loop,
+    autoplay,
+    muted,
+    alt,
+  } = element
 
   let crossOrigin = useCrossOriginAttribute(url)
 
@@ -217,7 +226,10 @@ function Video({
       <StyledVideoIframe
         className="stVideo"
         data-testid="stVideo"
-        title={url}
+        // An iframe always needs a title for its accessible name, so the URL
+        // stays as the fallback when the author did not provide a description.
+        // Blank input must fall back too, or the iframe ends up untitled.
+        title={alt?.trim() || url}
         src={getYoutubeSrc(url)}
         allow="autoplay; encrypted-media"
         allowFullScreen
@@ -250,6 +262,10 @@ function Video({
       data-testid="stVideo"
       ref={videoRef}
       controls
+      // Only set an accessible name when the author provided one. Blank input
+      // is treated as absent: aria-label=" " computes to an empty accessible
+      // name, which is worse than having no aria-label at all.
+      aria-label={alt?.trim() || undefined}
       muted={muted}
       autoPlay={autoplay && !preventAutoplay}
       src={endpoints.buildMediaURL(url)}

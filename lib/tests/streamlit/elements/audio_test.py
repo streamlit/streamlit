@@ -276,6 +276,7 @@ class AudioTest(DeltaGeneratorTestCase):
             end_time=21,
             loop=True,
             autoplay=True,
+            alt="A cat purring",
         )
 
         el = self.get_delta_from_queue().new_element
@@ -283,6 +284,7 @@ class AudioTest(DeltaGeneratorTestCase):
         assert el.audio.end_time == 21
         assert el.audio.loop
         assert el.audio.autoplay
+        assert el.audio.alt == "A cat purring"
         assert el.audio.url.startswith(MEDIA_ENDPOINT)
         assert _calculate_file_id(fake_audio_data, "audio/mp3"), el.audio.url
 
@@ -296,8 +298,34 @@ class AudioTest(DeltaGeneratorTestCase):
         assert el.audio.end_time == 0
         assert not el.audio.loop
         assert not el.audio.autoplay
+        assert el.audio.alt == ""
         assert el.audio.url.startswith(MEDIA_ENDPOINT)
         assert _calculate_file_id(fake_audio_data, "audio/wav"), el.audio.url
+
+    def test_st_audio_alt_is_independent_of_element_id(self):
+        """Changing only alt must not change the autoplay element ID.
+
+        The ID drives the frontend's "already autoplayed" flag, so refining a
+        description must not make the same audio autoplay a second time.
+        """
+        fake_audio_data = b"\x11\x22\x33\x44\x55\x66"
+
+        def audio_id(**kwargs: object) -> str:
+            # Each call registers its ID, so clear the registry to simulate a
+            # fresh script run instead of tripping the duplicate-ID guard.
+            self.script_run_ctx.shared.widget_ids_this_run.clear()
+            st.audio(fake_audio_data, autoplay=True, **kwargs)
+            return self.get_delta_from_queue().new_element.audio.id
+
+        with_alt = audio_id(alt="First description")
+        with_other_alt = audio_id(alt="A totally different description")
+
+        assert with_alt != ""
+        assert with_alt == with_other_alt
+
+        # Sanity check that the ID is sensitive to params that do belong in it,
+        # so the assertion above cannot pass vacuously.
+        assert audio_id(alt="First description", start_time=10) != with_alt
 
     @parameterized.expand(
         [
