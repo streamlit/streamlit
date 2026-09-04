@@ -122,6 +122,29 @@ describe("Radio widget", () => {
     expect(screen.queryAllByTestId("stCaptionContainer")).toHaveLength(0)
   })
 
+  it.each([true, false])(
+    "describes only the captioned options when some are skipped, horizontal=%s",
+    horizontal => {
+      const props = getProps({
+        horizontal,
+        options: ["o1", "o2", "o3", "o4"],
+        captions: ["c1", "c2", "", "c4"],
+      })
+      render(<Radio {...props} />)
+      const radioOptions = screen.getAllByRole("radio")
+
+      expect(screen.getAllByTestId("stRadioCaption")).toHaveLength(3)
+      expect(radioOptions[0]).toHaveAccessibleDescription("c1")
+      expect(radioOptions[2]).not.toHaveAccessibleDescription()
+      expect(radioOptions[3]).toHaveAccessibleDescription("c4")
+
+      // Only the horizontal layout reserves the skipped option's caption line.
+      expect(screen.queryAllByTestId("stRadioCaptionSpacer")).toHaveLength(
+        horizontal ? 1 : 0
+      )
+    }
+  )
+
   it("skips blank captions", () => {
     const props = getProps({ captions: ["caption1", "", "caption2"] })
     render(<Radio {...props} />)
@@ -161,6 +184,22 @@ describe("Radio widget", () => {
     const spacer = screen.getByTestId("stRadioCaptionSpacer")
     expect(spacer).toHaveAttribute("aria-hidden", "true")
     expect(screen.getAllByRole("radio")[1]).not.toHaveAccessibleDescription()
+  })
+
+  it("ignores captions past the last option when reserving space", () => {
+    const props = getProps({
+      horizontal: true,
+      options: ["a"],
+      captions: ["", "unused"],
+    })
+    render(<Radio {...props} />)
+
+    // "unused" is never rendered, so it must not make the group reserve caption
+    // space for a caption that no option shows.
+    expect(
+      screen.queryByTestId("stRadioCaptionSpacer")
+    ).not.toBeInTheDocument()
+    expect(screen.queryAllByTestId("stRadioCaption")).toHaveLength(0)
   })
 
   it("renders neither captions nor spacers when every caption is blank", () => {

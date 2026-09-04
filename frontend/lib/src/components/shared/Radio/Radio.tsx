@@ -78,12 +78,17 @@ function Radio({
     [onChange]
   )
 
-  // An all-blank captions list must lay out exactly like no captions at all, so
-  // blank entries don't count. Gates the vertical group's gap and the horizontal
-  // spacers; captioning only some options is supported.
-  const hasCaptions = captions.some(caption => caption.trim() !== "")
   const hasOptions = options.length > 0
   const cleanedOptions = hasOptions ? options : ["No options to select."]
+
+  // Gates the vertical group's gap and the horizontal spacers, so it has to mean
+  // "some option actually shows a caption". Captioning only part of a group is
+  // supported, and `captions` may be any length, so blank entries and entries
+  // past the last option are both ignored — otherwise a group with nothing to
+  // show still reserves the space for it.
+  const hasCaptions = captions
+    .slice(0, cleanedOptions.length)
+    .some(caption => caption.trim() !== "")
 
   // Either the user specified it as disabled or it's disabled because we don't have any options
   const shouldDisable = disabled || !hasOptions
