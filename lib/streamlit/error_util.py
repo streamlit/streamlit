@@ -108,7 +108,8 @@ def _log_uncaught_app_exception(ex: BaseException) -> None:
             error_logged = False
 
     if not error_logged:
-        # Only log error to console if not already logged by rich
+        # Log the full traceback, including Streamlit internals. The UI
+        # exception is filtered; this unfiltered log is for debugging.
         _LOGGER.error("Uncaught app execution", exc_info=ex)
 
 

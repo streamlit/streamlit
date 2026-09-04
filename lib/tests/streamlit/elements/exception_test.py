@@ -19,7 +19,7 @@ import traceback
 import unittest
 from pathlib import Path
 from typing import cast
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from parameterized import parameterized
@@ -29,10 +29,14 @@ from streamlit import errors
 from streamlit.elements import exception
 from streamlit.elements.exception import (
     _GENERIC_UNCAUGHT_EXCEPTION_TEXT,
+    _STREAMLIT_PACKAGE_DIR,
+    _filter_frames_with_fallback,
+    _filter_traceback_exception,
     _format_syntax_error_message,
+    _format_traceback_rows,
     _get_stack_trace_str_list,
-    _split_internal_streamlit_frames,
-    _split_list,
+    _is_under_dir,
+    _traceback_has_frames,
 )
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
@@ -88,25 +92,21 @@ SyntaxError: invalid syntax
 
     @parameterized.expand(
         [
-            (user_module.st_call_with_arguments_missing, 2),
-            (user_module.st_call_with_bad_arguments, 7),
-            (user_module.pandas_call_with_bad_arguments, 2),
-            (user_module.internal_python_call_with_bad_arguments, 2),
+            (user_module.st_call_with_arguments_missing, "st.text()"),
+            (user_module.st_call_with_bad_arguments, 'st.image("does not exist")'),
+            (user_module.pandas_call_with_bad_arguments, None),
+            (user_module.internal_python_call_with_bad_arguments, None),
         ]
     )
-    @patch("streamlit.elements.exception.get_script_run_ctx")
-    def test_external_error_stack_starts_with_user_module(
-        self, user_func, stack_len, patched_get_script_run_ctx
+    def test_external_error_stack_excludes_streamlit_frames(
+        self, user_func, expected_st_call
     ):
-        """Test stack traces for exceptions thrown by user code start from the first
-        line of user code.
+        """User-originated exceptions never include Streamlit package frames.
 
+        The user's ``st.*`` call site stays (that line lives in their file).
+        Library frames (pandas, the stdlib) stay; Streamlit runtime/widget
+        internals do not.
         """
-        ctx = MagicMock()
-        user_module_path = Path(user_module.__file__).parent
-        ctx.main_script_parent = user_module_path
-        patched_get_script_run_ctx.return_value = ctx
-
         err = None
 
         try:
@@ -116,29 +116,24 @@ SyntaxError: invalid syntax
 
         assert err is not None
 
-        # Marshall it.
         proto = ExceptionProto()
         exception.marshall(proto, cast("Exception", err), apply_show_error_details=True)
 
-        user_module_path = os.path.join(os.path.realpath(user_module_path), "")
-        assert user_module_path in proto.stack_trace[0], "Stack not stripped"
-        assert len(proto.stack_trace) == stack_len, (
-            f"Stack does not have length {stack_len}: {proto.stack_trace}"
+        user_module_dir = f"{Path(user_module.__file__).resolve().parent}{os.sep}"
+        streamlit_pkg = f"{_STREAMLIT_PACKAGE_DIR.resolve()}{os.sep}"
+        assert any(user_module_dir in t for t in proto.stack_trace), (
+            f"User module missing from traceback: {proto.stack_trace}"
         )
+        assert not any(streamlit_pkg in t for t in proto.stack_trace), (
+            f"Streamlit internals leaked into user traceback: {proto.stack_trace}"
+        )
+        if expected_st_call is not None:
+            assert any(expected_st_call in t for t in proto.stack_trace), (
+                f"Triggering Streamlit call missing from traceback: {proto.stack_trace}"
+            )
 
-    @patch("streamlit.elements.exception.get_script_run_ctx")
-    def test_internal_error_stack_doesnt_start_with_user_module(
-        self, patched_get_script_run_ctx
-    ):
-        """Test stack traces for exceptions thrown by Streamlit code *not* called by the
-        user.
-
-        """
-        ctx = MagicMock()
-        user_module_path = Path(user_module.__file__).parent
-        ctx.main_script_parent = user_module_path
-        patched_get_script_run_ctx.return_value = ctx
-
+    def test_non_streamlit_traceback_is_kept(self):
+        """An exception raised outside the Streamlit package keeps every frame."""
         err = None
 
         def func_with_error():
@@ -153,14 +148,13 @@ SyntaxError: invalid syntax
 
         original_stack_len = len(traceback.extract_tb(err.__traceback__))
 
-        # Marshall it.
         proto = ExceptionProto()
         exception.marshall(
             proto, cast("Exception", err), apply_show_error_details=False
         )
 
-        user_module_path = os.path.join(os.path.realpath(user_module_path), "")
-        assert not any(user_module_path in t for t in proto.stack_trace)
+        user_module_dir = f"{Path(user_module.__file__).resolve().parent}{os.sep}"
+        assert not any(user_module_dir in t for t in proto.stack_trace)
         assert len(proto.stack_trace) == original_stack_len, (
             f"Stack does not have length {original_stack_len}: {proto.stack_trace}"
         )
@@ -457,53 +451,314 @@ def test_format_syntax_error_without_text() -> None:
 
 
 def test_get_stack_trace_no_traceback() -> None:
-    """Test _get_stack_trace_str_list when __traceback__ is None.
-
-    When __traceback__ is None, extract_tb returns an empty StackSummary,
-    so _split_internal_streamlit_frames runs and yields empty lists.
-    """
+    """An exception with no traceback produces an empty row list."""
     err = RuntimeError("no traceback")
     err.__traceback__ = None
     result = _get_stack_trace_str_list(err)
     assert result == []
 
 
-def test_get_stack_trace_streamlit_api_warning_without_tacked_stack() -> None:
-    """A ``StreamlitAPIWarning`` with no tacked stack reports that extraction failed."""
-    warning = errors.StreamlitAPIWarning("msg")
-    warning.tacked_on_stack = None
-    result = _get_stack_trace_str_list(warning)
-    assert result == [
-        (
-            "Cannot extract the stack trace for this exception. "
-            "Try calling exception() within the `catch` block."
+def test_stack_trace_includes_cause() -> None:
+    """Chained exceptions keep the cause's type and message in the UI traceback.
+
+    The frontend header only shows the outermost exception, so without this
+    the original error (the useful one, when Streamlit wraps a library failure)
+    would disappear.
+    """
+    try:
+        try:
+            raise ValueError("root cause")
+        except ValueError as err:
+            raise RuntimeError("wrapper") from err
+    except RuntimeError as err:
+        rows = _get_stack_trace_str_list(err)
+
+    joined = "\n".join(rows)
+    assert "ValueError: root cause" in joined
+    assert "direct cause" in joined
+    assert "RuntimeError: wrapper" not in joined
+
+
+def test_stack_trace_includes_implicit_context() -> None:
+    """An implicit ``__context__`` is shown when there is no explicit cause."""
+    try:
+        try:
+            raise ValueError("root")
+        except ValueError:
+            raise RuntimeError("wrapper")
+    except RuntimeError as err:
+        rows = _get_stack_trace_str_list(err)
+
+    joined = "\n".join(rows)
+    assert "ValueError: root" in joined
+    assert "another exception occurred" in joined
+
+
+def test_stack_trace_hides_context_when_raised_from_none() -> None:
+    """``raise ... from None`` must not leak the suppressed context."""
+    try:
+        try:
+            raise ValueError("hidden")
+        except ValueError:
+            raise RuntimeError("wrapper") from None
+    except RuntimeError as err:
+        rows = _get_stack_trace_str_list(err)
+
+    joined = "\n".join(rows)
+    assert "hidden" not in joined
+    assert "another exception occurred" not in joined
+
+
+def test_streamlit_only_context_keeps_message_not_frames() -> None:
+    """A Streamlit-only ``__context__`` keeps its message, not its internals.
+
+    ``st.image("does not exist")`` raises FileNotFoundError inside Streamlit,
+    then a follow-on error. The user needs the file-not-found message and their
+    ``st.image`` call, not ``image_utils`` frames.
+    """
+    try:
+        user_module.st_call_with_bad_arguments()
+    except Exception as err:
+        rows = _get_stack_trace_str_list(err)
+
+    joined = "\n".join(rows)
+    streamlit_pkg = os.path.join(os.path.realpath(_STREAMLIT_PACKAGE_DIR), "")
+    assert any(
+        "FileNotFoundError:" in row and "does not exist" in row for row in rows
+    ), rows
+    assert 'st.image("does not exist")' in joined
+    assert streamlit_pkg not in joined
+
+
+def _frame(
+    filename: str | Path, lineno: int = 1, name: str = "func", line: str = "code"
+) -> traceback.FrameSummary:
+    return traceback.FrameSummary(str(filename), lineno, name, line=line)
+
+
+def _stack(*frames: traceback.FrameSummary) -> traceback.StackSummary:
+    summary = traceback.StackSummary()
+    summary.extend(frames)
+    return summary
+
+
+def test_filter_drops_streamlit_frames_between_user_frames() -> None:
+    """Callbacks and cache wrappers leave Streamlit frames in the middle of the stack.
+
+    Those internals are noise; the user wants their call site and their callback.
+    """
+    st_file = _STREAMLIT_PACKAGE_DIR / "runtime" / "scriptrunner" / "script_runner.py"
+    user_file = Path("/tmp/user_app.py").resolve()
+
+    filtered = _filter_frames_with_fallback(
+        _stack(
+            _frame(st_file, 10, "exec_code"),
+            _frame(user_file, 4, "main", "st.button('go', on_click=cb)"),
+            _frame(st_file, 80, "call_callback"),
+            _frame(user_file, 9, "cb", "1 / 0"),
         )
-    ]
-
-
-@patch("streamlit.elements.exception.get_script_run_ctx")
-def test_split_internal_frames_no_ctx(mock_ctx: MagicMock) -> None:
-    """Test _split_internal_streamlit_frames returns all frames when no ctx."""
-    mock_ctx.return_value = None
-    tb = traceback.StackSummary.from_list([("file.py", 1, "func", "code")])
-    internal, external = _split_internal_streamlit_frames(tb)
-    assert internal == []
-    assert len(external) == 1
-
-
-class SplitListTest(unittest.TestCase):
-    @parameterized.expand(
-        [
-            (["a", "b", "c", "-", "d", "e"], 3),
-            (["-", "a", "b", "c", "d", "e"], 0),
-            (["a", "b", "c", "d", "e", "-"], 5),
-            (["a", "b", "c", "d", "e", "f"], 100),
-            (["a", "-", "c", "d", "-", "f"], 1),
-            ([], 100),
-        ]
     )
-    def test_split_list(self, input_list, split_index):
-        before, after = _split_list(input_list, split_point=lambda x: x == "-")
 
-        assert before == input_list[:split_index]
-        assert after == input_list[split_index:]
+    assert [f.filename for f in filtered] == [str(user_file), str(user_file)]
+    assert [f.name for f in filtered] == ["main", "cb"]
+
+
+def test_filter_keeps_streamlit_only_traceback() -> None:
+    """Exceptions Streamlit raised with no user frames keep the internal stack."""
+    st_file = _STREAMLIT_PACKAGE_DIR / "runtime" / "runtime.py"
+
+    filtered = _filter_frames_with_fallback(
+        _stack(
+            _frame(st_file, 10, "instance"),
+            _frame(st_file, 20, "start"),
+        )
+    )
+
+    assert [f.filename for f in filtered] == [str(st_file), str(st_file)]
+
+
+def test_filter_keeps_user_file_outside_the_package_dir() -> None:
+    """A user file outside the Streamlit package is kept; package frames are not."""
+    st_file = _STREAMLIT_PACKAGE_DIR / "elements" / "image.py"
+    user_file = (_STREAMLIT_PACKAGE_DIR.parent.parent / "app.py").resolve()
+
+    filtered = _filter_frames_with_fallback(
+        _stack(
+            _frame(st_file, 10, "exec_code"),
+            _frame(user_file, 3, "<module>", 'st.image("missing.png")'),
+            _frame(st_file, 186, "image"),
+        )
+    )
+
+    assert [f.filename for f in filtered] == [str(user_file)]
+
+
+@pytest.mark.parametrize("error", [OSError("boom"), RuntimeError("symlink loop")])
+def test_is_under_dir_returns_false_on_resolve_error(error: Exception) -> None:
+    """Unresolvable frame paths (including 3.10-3.12 symlink loops) are kept."""
+    with patch.object(Path, "resolve", side_effect=error):
+        assert _is_under_dir("whatever.py", _STREAMLIT_PACKAGE_DIR) is False
+
+
+def test_traceback_has_frames_follows_cause_else_context() -> None:
+    """A frameless cause must not let a hidden context skip the fallback."""
+    user_file = Path("/tmp/user_app.py").resolve()
+    tbe = traceback.TracebackException.from_exception(RuntimeError("outer"))
+    cause = traceback.TracebackException.from_exception(ValueError("cause"))
+    context = traceback.TracebackException.from_exception(TypeError("context"))
+    tbe.stack[:] = _stack()
+    cause.stack[:] = _stack()
+    context.stack[:] = _stack(_frame(user_file, 3, "fn"))
+    tbe.__cause__ = cause
+    tbe.__context__ = context
+    tbe.__suppress_context__ = False
+    assert _traceback_has_frames(tbe) is False
+
+
+def test_format_skips_separator_when_outer_stack_is_empty() -> None:
+    """Do not emit a dangling 'following exception' sentence with no frames after it."""
+    user_file = Path("/tmp/user_app.py").resolve()
+    tbe = traceback.TracebackException.from_exception(RuntimeError("outer"))
+    cause = traceback.TracebackException.from_exception(ValueError("root"))
+    tbe.stack[:] = _stack()
+    cause.stack[:] = _stack(_frame(user_file, 3, "fn", "raise ValueError('root')"))
+    tbe.__cause__ = cause
+    rows = _format_traceback_rows(
+        tbe, include_exception_line=False, include_exception_message=True
+    )
+    joined = "\n".join(rows)
+    assert "direct cause" not in joined
+    assert any("ValueError" in row for row in rows)
+
+
+def _chained_secret_error() -> RuntimeError:
+    """Raise a wrapper whose cause message is not present on any source line."""
+    secret = "/secret/path/do-not-leak"
+    try:
+        try:
+            raise FileNotFoundError(secret)
+        except FileNotFoundError as err:
+            raise RuntimeError("wrapper") from err
+    except RuntimeError as err:
+        return err
+
+
+@pytest.mark.parametrize("show_error_details", [False, "false", "False", "stacktrace"])
+def test_uncaught_chained_exception_redacts_cause_message(
+    show_error_details: str | bool,
+) -> None:
+    """Cause messages must not leak through stack_trace when the header is redacted."""
+    err = _chained_secret_error()
+    secret = "/secret/path/do-not-leak"
+
+    with testutil.patch_config_options({"client.showErrorDetails": show_error_details}):
+        proto = ExceptionProto()
+        exception.marshall(proto, err, apply_show_error_details=True)
+
+    assert proto.message == _GENERIC_UNCAUGHT_EXCEPTION_TEXT
+    joined = "\n".join(proto.stack_trace)
+    assert secret not in joined
+    assert secret.encode() not in proto.SerializeToString()
+    assert any("direct cause" in row for row in proto.stack_trace)
+    assert any("FileNotFoundError" in row for row in proto.stack_trace)
+
+
+@pytest.mark.parametrize("show_error_details", [False, "stacktrace"])
+def test_uncaught_implicit_context_redacts_inner_message(
+    show_error_details: str | bool,
+) -> None:
+    """Implicit __context__ messages are redacted the same way as explicit causes."""
+    secret = "/secret/path/do-not-leak"
+    try:
+        try:
+            raise FileNotFoundError(secret)
+        except FileNotFoundError:
+            raise RuntimeError("wrapper")
+    except RuntimeError as err:
+        with testutil.patch_config_options(
+            {"client.showErrorDetails": show_error_details}
+        ):
+            proto = ExceptionProto()
+            exception.marshall(proto, err, apply_show_error_details=True)
+
+    joined = "\n".join(proto.stack_trace)
+    assert secret not in joined
+    assert secret.encode() not in proto.SerializeToString()
+    assert any("another exception occurred" in row for row in proto.stack_trace)
+
+
+def test_uncaught_chained_exception_keeps_cause_message_when_full() -> None:
+    """Full error details still include the cause type and message."""
+    err = _chained_secret_error()
+
+    with testutil.patch_config_options({"client.showErrorDetails": "full"}):
+        proto = ExceptionProto()
+        exception.marshall(proto, err, apply_show_error_details=True)
+
+    joined = "\n".join(proto.stack_trace)
+    assert "FileNotFoundError: /secret/path/do-not-leak" in joined
+
+
+_EXCEPTION_GROUP_TYPE = getattr(__import__("builtins"), "ExceptionGroup", None)
+
+
+def _exception_group_with_raised_child(message: str) -> BaseException:
+    """Build an ExceptionGroup whose child has a real traceback."""
+    assert _EXCEPTION_GROUP_TYPE is not None
+    try:
+        try:
+            raise ValueError(message)
+        except ValueError as child:
+            raise _EXCEPTION_GROUP_TYPE("g", [child]) from None
+    except BaseException as err:
+        return err
+
+
+@pytest.mark.skipif(
+    _EXCEPTION_GROUP_TYPE is None, reason="ExceptionGroup requires 3.11+"
+)
+def test_exception_group_includes_child_frames_and_messages() -> None:
+    """ExceptionGroup children are formatted so user frames are not dropped."""
+    rows = _get_stack_trace_str_list(_exception_group_with_raised_child("child boom"))
+
+    joined = "\n".join(rows)
+    assert "ValueError: child boom" in joined
+    assert "+---------------- 1 ----------------" in joined
+
+
+@pytest.mark.skipif(
+    _EXCEPTION_GROUP_TYPE is None, reason="ExceptionGroup requires 3.11+"
+)
+def test_exception_group_user_children_survive_streamlit_only_group_stack() -> None:
+    """A Streamlit-only group stack still surfaces user frames from children."""
+    tbe = traceback.TracebackException.from_exception(
+        _exception_group_with_raised_child("user child")
+    )
+
+    st_file = str(_STREAMLIT_PACKAGE_DIR / "runtime" / "runtime.py")
+    tbe.stack[:] = _stack(_frame(st_file, 10, "instance"))
+    _filter_traceback_exception(tbe)
+
+    assert _traceback_has_frames(tbe)
+    rows = _format_traceback_rows(
+        tbe, include_exception_line=False, include_exception_message=True
+    )
+    assert any("user child" in row for row in rows)
+    assert not any(st_file in row for row in rows)
+
+
+@pytest.mark.skipif(
+    _EXCEPTION_GROUP_TYPE is None, reason="ExceptionGroup requires 3.11+"
+)
+def test_exception_group_child_message_is_redacted() -> None:
+    """Group child messages honor include_exception_message like cause rows."""
+    secret = "user-child-do-not-leak"
+    tbe = traceback.TracebackException.from_exception(
+        _exception_group_with_raised_child(secret)
+    )
+
+    rows = _format_traceback_rows(
+        tbe, include_exception_line=False, include_exception_message=False
+    )
+    assert not any(secret in row for row in rows)
+    assert any("ValueError" in row for row in rows)
