@@ -22,6 +22,8 @@ import appPackage from "./package.json" with { type: "json" }
 
 import react from "@vitejs/plugin-react-swc"
 
+import { katexWoff2Only } from "./vite/katexWoff2Only.ts"
+
 const BASE = "./"
 const HASH = process.env.OMIT_HASH_FROM_MAIN_FILES ? "" : ".[hash]"
 // We do not explicitly set the DEV_BUILD in any of our processes
@@ -99,27 +101,7 @@ export default defineConfig(({ command }) => ({
     },
   },
   plugins: [
-    {
-      // KaTeX declares each of its 20 font faces with woff2, woff and ttf
-      // sources. Browsers download the first format they support, and every
-      // target in our browserslist supports woff2, so the woff and ttf files are
-      // emitted into the wheel but never requested. Strip them before Vite
-      // resolves the stylesheet's assets so only woff2 is emitted. Only `src`
-      // declarations change; faces, weights and font-display are untouched.
-      name: "streamlit-katex-woff2-only",
-      enforce: "pre" as const,
-      transform(code: string, id: string) {
-        if (!/[\\/]katex[\\/]dist[\\/]katex(\.min)?\.css(\?.*)?$/.test(id)) {
-          return null
-        }
-
-        const woff2Only = code.replace(
-          /,\s*url\([^)]*\.(?:woff|ttf)\)\s*format\("(?:woff|truetype)"\)/g,
-          ""
-        )
-        return woff2Only === code ? null : woff2Only
-      },
-    },
+    katexWoff2Only(),
     react({
       jsxImportSource: "@emotion/react",
       plugins: [["@swc/plugin-emotion", {}]],
