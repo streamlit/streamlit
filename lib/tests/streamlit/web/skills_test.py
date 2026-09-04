@@ -3447,20 +3447,20 @@ class TestVendoredMetaSkillDiscovery:
                 "vendored meta-skill or bundled content not present in this install"
             )
 
-        # Pin discover.py's interpreter detection to this test's own interpreter
-        # (which has Streamlit) by pointing VIRTUAL_ENV at its venv root. discover.py
-        # re-detects the project interpreter from VIRTUAL_ENV/PATH rather than
-        # reusing the launching sys.executable, so without this the test would fail
-        # (not skip) whenever the first python on PATH lacks Streamlit — e.g. when
-        # run outside ``uv``.
-        venv_root = os.path.dirname(os.path.dirname(sys.executable))
+        # Drop inherited VIRTUAL_ENV / CONDA_PREFIX so they cannot outrank
+        # this test interpreter, which has Streamlit and is itself a candidate.
+        env = os.environ.copy()
+        env.pop("VIRTUAL_ENV", None)
+        env.pop("CONDA_PREFIX", None)
+        env.pop("CLAUDE_PROJECT_DIR", None)
+        env.pop("CURSOR_PROJECT_DIR", None)
         result = subprocess.run(
             [sys.executable, str(discover_py), "--project-dir", str(tmp_path)],
             capture_output=True,
             text=True,
             timeout=60,
             check=False,
-            env={**os.environ, "VIRTUAL_ENV": venv_root},
+            env=env,
         )
 
         assert result.returncode == 0, result.stderr
