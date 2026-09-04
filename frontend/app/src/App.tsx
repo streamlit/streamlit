@@ -1169,6 +1169,7 @@ export class App extends PureComponent<Props, State> {
       initialSidebarState,
       initialSidebarWidth,
       menuItems,
+      lang,
     } = pageConfig
 
     this.appNavigation.handlePageConfigChanged(pageConfig)
@@ -1184,6 +1185,10 @@ export class App extends PureComponent<Props, State> {
 
     if (favicon) {
       this.onPageIconChanged(favicon)
+    }
+
+    if (lang) {
+      document.documentElement.lang = lang
     }
 
     // Only change layout/sidebar when the page config has changed.

@@ -24,6 +24,7 @@ message PageConfig {
   SidebarState initial_sidebar_state = 4;
   MenuItems menu_items = 5;
   optional SidebarWidthConfig initial_sidebar_width = 6;
+  string lang = 7;
 
   message MenuItems {
     string get_help_url = 1;
