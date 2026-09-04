@@ -637,4 +637,41 @@ describe("EChartsChart", () => {
     )
     clickSpy.mockRestore()
   })
+
+  it("prevents page scroll on wheel when inside dataZoom is enabled", () => {
+    render(
+      <Wrapper
+        element={createElement({
+          spec: JSON.stringify({
+            xAxis: {},
+            yAxis: {},
+            dataZoom: [{ type: "inside" }],
+            series: [{ type: "line", data: [1] }],
+          }),
+        })}
+      />
+    )
+
+    const chart = screen.getByTestId("stEChartsChart")
+    const event = new WheelEvent("wheel", {
+      bubbles: true,
+      cancelable: true,
+      deltaY: 40,
+    })
+    chart.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(true)
+  })
+
+  it("does not intercept wheel when the chart has no inside dataZoom", () => {
+    render(<Wrapper element={createElement()} />)
+
+    const chart = screen.getByTestId("stEChartsChart")
+    const event = new WheelEvent("wheel", {
+      bubbles: true,
+      cancelable: true,
+      deltaY: 40,
+    })
+    chart.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(false)
+  })
 })

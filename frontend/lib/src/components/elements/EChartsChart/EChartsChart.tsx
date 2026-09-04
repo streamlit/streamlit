@@ -49,6 +49,7 @@ import {
   applyStreamlitOptionDefaults,
   buildStreamlitEChartsTheme,
   EChartsOptionObject,
+  optionHasInsideDataZoom,
   STREAMLIT_THEME,
   withDefaultSeriesCursor,
 } from "./CustomTheme"
@@ -260,15 +261,30 @@ export function EChartsChart({
 
   // The option actually handed to setOption: Streamlit theming defaults plus
   // a default (non-pointer) series cursor so display-only charts don't look
-  // clickable.
+  // clickable. Grid insets are rem-derived, so they must rebuild when the
+  // spacing tokens or configured base font size change — not on every new
+  // theme object (a light/dark switch would re-apply the option and replay
+  // entry animations).
+  const { spacing, fontSizes } = theme
   const preparedOption = useMemo(() => {
     if (!option) {
       return null
     }
     return withDefaultSeriesCursor(
-      applyStreamlitOptionDefaults(option, element.theme)
+      applyStreamlitOptionDefaults(option, element.theme, theme)
     )
-  }, [option, element.theme])
+    // `theme` is read only for rem→px insets (spacing, title size, baseFontSize).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- color-only theme copies must not re-apply the option
+  }, [
+    option,
+    element.theme,
+    spacing.sm,
+    spacing.md,
+    spacing.lg,
+    spacing.twoXL,
+    fontSizes.sm,
+    fontSizes.baseFontSize,
+  ])
 
   const hasValidSpec = option !== null
   const hasValidDimensions = width > 0 && height > 0
@@ -422,6 +438,23 @@ export function EChartsChart({
       setOpError("resize", ensureError(error).message)
     }
   }, [chartInstance, width, height, setOpError])
+
+  // Inside dataZoom zooms on wheel. Without preventDefault the page scroll
+  // container wins, so the chart never zooms.
+  const hasInsideDataZoom = optionHasInsideDataZoom(option)
+  useEffect(() => {
+    const dom = containerRef.current
+    if (!dom || !hasInsideDataZoom) {
+      return
+    }
+    const handleWheel = (event: WheelEvent): void => {
+      event.preventDefault()
+    }
+    dom.addEventListener("wheel", handleWheel, { passive: false })
+    return () => {
+      dom.removeEventListener("wheel", handleWheel)
+    }
+  }, [containerRef, hasInsideDataZoom])
 
   const downloadType = rendererStr === "svg" ? "svg" : "png"
 

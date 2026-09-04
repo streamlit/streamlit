@@ -88,6 +88,60 @@ function buildAxisDefaults(
 }
 
 /**
+ * In-chart title styles shared by the init theme and option-level fill.
+ *
+ * ECharts' title default is 18px / ``fontWeight: "bold"``. In-plot titles
+ * should sit below Streamlit's own headings, so this uses the small body size
+ * and a normal weight, with bottom padding so a top legend does not crowd the
+ * text.
+ */
+function buildChartTitleDefaults(theme: EmotionTheme): {
+  padding: [number, number, number, number]
+  textStyle: {
+    fontFamily: string
+    color: string
+    fontSize: number
+    fontWeight: "normal"
+  }
+  subtextStyle: {
+    fontFamily: string
+    color: string
+    fontSize: number
+  }
+} {
+  const { colors, genericFonts, fontSizes, spacing } = theme
+  return {
+    padding: [0, 0, convertRemToPx(spacing.lg), 0],
+    textStyle: {
+      fontFamily: genericFonts.headingFont,
+      color: colors.headingColor,
+      fontSize: convertRemToPx(fontSizes.sm),
+      fontWeight: "normal",
+    },
+    subtextStyle: {
+      fontFamily: genericFonts.bodyFont,
+      color: colors.bodyText,
+      fontSize: convertRemToPx(fontSizes.twoSm),
+    },
+  }
+}
+
+/**
+ * Vertical offset for a legend lifted under a top title.
+ *
+ * Legend ``top`` is measured from the container, not the title box, so this
+ * covers ECharts' title inset (~``spacing.lg``), the title font, and the
+ * title's bottom padding.
+ */
+function liftedLegendTopPx(theme: EmotionTheme): number {
+  return (
+    convertRemToPx(theme.spacing.lg) +
+    convertRemToPx(theme.fontSizes.sm) +
+    convertRemToPx(theme.spacing.lg)
+  )
+}
+
+/**
  * Build an ECharts theme object derived from the active Emotion theme.
  *
  * The result is passed directly to ``echarts.init(dom, themeObject)`` (ECharts
@@ -106,6 +160,7 @@ export function buildStreamlitEChartsTheme(
   const labelColor = getGray70(theme)
   const axisLineColor = getGray30(theme)
   const axisDefaults = buildAxisDefaults(theme, bodyFontSize)
+  const titleDefaults = buildChartTitleDefaults(theme)
   // Shared text style for component labels/names that would otherwise fall back
   // to ECharts' default (un-themed) gray.
   const bodyTextStyle = {
@@ -126,18 +181,7 @@ export function buildStreamlitEChartsTheme(
       color: labelColor,
       fontSize: bodyFontSize,
     },
-    title: {
-      textStyle: {
-        fontFamily: genericFonts.headingFont,
-        color: colors.headingColor,
-        fontSize: convertRemToPx(fontSizes.md),
-      },
-      subtextStyle: {
-        fontFamily: genericFonts.bodyFont,
-        color: colors.bodyText,
-        fontSize: convertRemToPx(fontSizes.sm),
-      },
-    },
+    title: titleDefaults,
     legend: {
       textStyle: {
         color: labelColor,
@@ -429,6 +473,98 @@ function toComponentList(value: unknown): Array<Record<string, unknown>> {
 }
 
 /**
+ * Write title size, weight, and padding onto the option so they beat ECharts'
+ * component defaults (18px / bold / padding 5). Color and font family stay on
+ * the init theme so a light/dark ``setTheme`` can still retint them.
+ *
+ * User-set ``padding`` / ``textStyle`` keys are preserved.
+ */
+function withTitleStyleDefaults(
+  option: EChartsOptionObject,
+  theme: EmotionTheme
+): EChartsOptionObject {
+  const titles = toComponentList(option.title)
+  if (titles.length === 0) {
+    return option
+  }
+
+  const { padding, textStyle: titleTextStyle } = buildChartTitleDefaults(theme)
+  const sizeAndWeight = {
+    fontSize: titleTextStyle.fontSize,
+    fontWeight: titleTextStyle.fontWeight,
+  }
+
+  let changed = false
+  const next = titles.map(title => {
+    if (title.show === false) {
+      return title
+    }
+    const userTextStyle = isPlainObject(title.textStyle)
+      ? (title.textStyle as Record<string, unknown>)
+      : {}
+    changed = true
+    return {
+      ...title,
+      ...(title.padding === undefined ? { padding } : {}),
+      textStyle: { ...sizeAndWeight, ...userTextStyle },
+    }
+  })
+  if (!changed) {
+    return option
+  }
+  return {
+    ...option,
+    title: Array.isArray(option.title) ? next : next[0],
+  }
+}
+
+/**
+ * True when a component is visible, horizontal, and not anchored to the top.
+ * ECharts positions these relative to the chart container's bottom edge.
+ */
+function isBottomAnchored(component: Record<string, unknown>): boolean {
+  return (
+    component.show !== false &&
+    component.orient !== "vertical" &&
+    component.top === undefined
+  )
+}
+
+/**
+ * True when a bottom-anchored component is using ECharts' default bottom
+ * placement. ``bottom: 0`` is that default for ``visualMap``/``timeline`` (and
+ * the value ECharts' slider layout resolves to), so it is treated as unpinned.
+ * Any other ``bottom`` is an explicit offset we must not rewrite.
+ */
+function usesDefaultBottom(component: Record<string, unknown>): boolean {
+  return (
+    isBottomAnchored(component) &&
+    (component.bottom === undefined || component.bottom === 0)
+  )
+}
+
+/** Slider ``dataZoom`` entries (``type: "inside"`` draws nothing). */
+function sliderDataZooms(
+  option: EChartsOptionObject
+): Array<Record<string, unknown>> {
+  return toComponentList(option.dataZoom).filter(
+    zoom => zoom.type !== "inside"
+  )
+}
+
+/**
+ * A ``visualMap`` only lies flat along the bottom when explicitly horizontal;
+ * its default vertical layout sits beside the plot.
+ */
+function horizontalVisualMaps(
+  option: EChartsOptionObject
+): Array<Record<string, unknown>> {
+  return toComponentList(option.visualMap).filter(
+    visualMap => visualMap.orient === "horizontal"
+  )
+}
+
+/**
  * True if any ``dataZoom``/``visualMap``/``timeline`` component occupies the
  * strip below the plot, where it would otherwise be drawn over the x-axis
  * labels.
@@ -438,26 +574,36 @@ function toComponentList(value: unknown): Array<Record<string, unknown>> {
  * anchoring itself to the top.
  */
 function hasBottomAnchoredComponent(option: EChartsOptionObject): boolean {
-  const isAtBottom = (component: Record<string, unknown>): boolean =>
-    component.show !== false &&
-    component.orient !== "vertical" &&
-    component.top === undefined
-
-  // `type: "inside"` zooms via scroll/drag on the plot itself and draws nothing.
-  const sliders = toComponentList(option.dataZoom).filter(
-    zoom => zoom.type !== "inside"
-  )
-  // A visualMap only lies flat along the bottom when explicitly horizontal;
-  // its default vertical layout sits beside the plot.
-  const flatVisualMaps = toComponentList(option.visualMap).filter(
-    visualMap => visualMap.orient === "horizontal"
-  )
-
   return [
-    ...sliders,
-    ...flatVisualMaps,
+    ...sliderDataZooms(option),
+    ...horizontalVisualMaps(option),
     ...toComponentList(option.timeline),
-  ].some(isAtBottom)
+  ].some(isBottomAnchored)
+}
+
+/**
+ * True when the option enables an inside ``dataZoom`` that zooms on wheel.
+ *
+ * Used to prevent the page from scrolling while the pointer is over the chart.
+ */
+export function optionHasInsideDataZoom(
+  option: EChartsOptionObject | null
+): boolean {
+  if (option === null) {
+    return false
+  }
+  const targets: EChartsOptionObject[] = [option]
+  if (isPlainObject(option.baseOption)) {
+    targets.push(option.baseOption as EChartsOptionObject)
+  }
+  return targets.some(target =>
+    toComponentList(target.dataZoom).some(
+      zoom =>
+        zoom.type === "inside" &&
+        zoom.disabled !== true &&
+        zoom.zoomOnMouseWheel !== false
+    )
+  )
 }
 
 function isTitleAtBottom(title: Record<string, unknown>): boolean {
@@ -528,6 +674,188 @@ function titlePlacement(option: EChartsOptionObject): {
 }
 
 /**
+ * True when a legend is using ECharts' default bottom placement (no ``top``
+ * and no ``bottom``). Any explicit vertical anchor is treated as a user pin
+ * we must not rewrite.
+ */
+function isDefaultBottomLegend(legend: Record<string, unknown>): boolean {
+  return (
+    legend.show !== false &&
+    legend.top === undefined &&
+    legend.bottom === undefined
+  )
+}
+
+/**
+ * Copy ``legend`` with ``top`` filled in for default-bottom entries. Legend,
+ * dataZoom, visualMap, and timeline are positioned against the chart
+ * container, not the grid, so extra ``grid.bottom`` cannot unstack them.
+ */
+function withLegendLiftedToTop(
+  option: EChartsOptionObject,
+  legendTop: number
+): EChartsOptionObject {
+  const legends = toComponentList(option.legend)
+  if (legends.length === 0) {
+    if (option.legend !== undefined && option.legend !== false) {
+      return { ...option, legend: { top: legendTop } }
+    }
+    return option
+  }
+
+  let changed = false
+  const next = legends.map(legend => {
+    if (!isDefaultBottomLegend(legend)) {
+      return legend
+    }
+    changed = true
+    return { ...legend, top: legendTop }
+  })
+  if (!changed) {
+    return option
+  }
+  return {
+    ...option,
+    legend: Array.isArray(option.legend) ? next : next[0],
+  }
+}
+
+interface BottomBand {
+  components: Array<Record<string, unknown>>
+  heightPx: number
+}
+
+function componentBandHeight(
+  components: Array<Record<string, unknown>>,
+  fallbackPx: number
+): number {
+  let heightPx = fallbackPx
+  for (const component of components) {
+    if (typeof component.height === "number") {
+      heightPx = Math.max(heightPx, component.height)
+    }
+  }
+  return heightPx
+}
+
+/**
+ * Rewrite ``dataZoom``/``visualMap``/``timeline`` list entries that we are
+ * offsetting, preserving object identity for entries we leave alone.
+ */
+function withBottoms(
+  value: unknown,
+  bottoms: Map<Record<string, unknown>, number>
+): unknown {
+  if (isPlainObject(value)) {
+    const bottom = bottoms.get(value as Record<string, unknown>)
+    return bottom === undefined
+      ? value
+      : { ...(value as Record<string, unknown>), bottom }
+  }
+  if (Array.isArray(value)) {
+    return value.map(item => {
+      if (!isPlainObject(item)) {
+        return item
+      }
+      const record = item as Record<string, unknown>
+      const bottom = bottoms.get(record)
+      return bottom === undefined ? item : { ...record, bottom }
+    })
+  }
+  return value
+}
+
+/**
+ * Stack unpinned bottom-anchored controls so they do not share one strip.
+ *
+ * Order from the container edge: timeline, then slider dataZoom, then a
+ * horizontal visualMap (closest to the plot). A single bottom control is left
+ * to ECharts. Returns the pixel height the stacked chrome occupies, used as
+ * ``grid.bottom``.
+ */
+function stackBottomAnchoredControls(
+  option: EChartsOptionObject,
+  theme: EmotionTheme
+): { option: EChartsOptionObject; stackedBottom?: number } {
+  const sliders = sliderDataZooms(option).filter(usesDefaultBottom)
+  const visualMaps = horizontalVisualMaps(option).filter(usesDefaultBottom)
+  const timelines = toComponentList(option.timeline).filter(usesDefaultBottom)
+
+  const bandPx = convertRemToPx(theme.spacing.threeXL)
+  const bands: BottomBand[] = []
+  if (timelines.length > 0) {
+    bands.push({
+      components: timelines,
+      heightPx:
+        componentBandHeight(timelines, bandPx) +
+        convertRemToPx(theme.spacing.md),
+    })
+  }
+  if (sliders.length > 0) {
+    bands.push({
+      components: sliders,
+      heightPx: componentBandHeight(sliders, bandPx),
+    })
+  }
+  if (visualMaps.length > 0) {
+    bands.push({
+      components: visualMaps,
+      heightPx: componentBandHeight(visualMaps, bandPx),
+    })
+  }
+  if (bands.length < 2) {
+    return { option }
+  }
+
+  const gapPx = convertRemToPx(theme.spacing.xs)
+  let offset = convertRemToPx(theme.spacing.sm)
+  const bottoms = new Map<Record<string, unknown>, number>()
+  for (const band of bands) {
+    for (const component of band.components) {
+      bottoms.set(component, offset)
+    }
+    offset += band.heightPx + gapPx
+  }
+
+  return {
+    option: {
+      ...option,
+      ...(sliders.length > 0
+        ? { dataZoom: withBottoms(option.dataZoom, bottoms) }
+        : {}),
+      ...(visualMaps.length > 0
+        ? { visualMap: withBottoms(option.visualMap, bottoms) }
+        : {}),
+      ...(timelines.length > 0
+        ? { timeline: withBottoms(option.timeline, bottoms) }
+        : {}),
+    },
+    stackedBottom: offset,
+  }
+}
+
+/**
+ * Move a default-bottom legend off the footer when bottom-anchored controls
+ * are present, then stack those controls if more than one shares the strip.
+ */
+function applyControlLayout(
+  option: EChartsOptionObject,
+  theme: EmotionTheme
+): { option: EChartsOptionObject; stackedBottom?: number } {
+  let next = option
+  if (
+    hasBottomAnchoredComponent(next) &&
+    legendPlacement(next).occupiesBottom
+  ) {
+    const legendTop = titlePlacement(next).occupiesTop
+      ? liftedLegendTopPx(theme)
+      : 0
+    next = withLegendLiftedToTop(next, legendTop)
+  }
+  return stackBottomAnchoredControls(next, theme)
+}
+
+/**
  * Build the default cartesian ``grid`` layout so charts fill their container.
  *
  * ECharts' built-in grid reserves large margins (``left: '15%'``,
@@ -537,14 +865,22 @@ function titlePlacement(option: EChartsOptionObject): {
  * the plot. On a side that *does* carry a title, legend, or bottom-anchored
  * control we leave the margin unset so ECharts' generous default reserves room
  * for it (guessing a fixed pixel value risks clipping a title+subtitle, a
- * multi-item legend, or a dataZoom slider).
+ * multi-item legend, or a dataZoom slider). When Streamlit has stacked more
+ * than one bottom-anchored control, ``stackedBottom`` is that stack's height
+ * and is written as ``grid.bottom`` so the plot sits above the stack.
+ *
+ * Insets are rem spacing tokens converted to pixels so they track the
+ * configured base font size like axis labels. ECharts only accepts pixel
+ * numbers (or percent strings) for ``grid``, not CSS rem.
  *
  * ``outerBoundsMode: "same"`` keeps axis labels *and* axis names inside those
  * margins. It replaces the deprecated ``containLabel``, which ECharts 6 treats
  * as ``outerBoundsContain: "axisLabel"`` and which therefore clipped axis names.
  */
 function buildDefaultGrid(
-  option: EChartsOptionObject
+  option: EChartsOptionObject,
+  theme: EmotionTheme,
+  stackedBottom?: number
 ): Record<string, unknown> {
   const { occupiesTop: titleAtTop, occupiesBottom: titleAtBottom } =
     titlePlacement(option)
@@ -552,32 +888,35 @@ function buildDefaultGrid(
     legendPlacement(option)
 
   const grid: Record<string, unknown> = {
-    left: 8,
-    right: 24,
+    left: convertRemToPx(theme.spacing.sm),
+    right: convertRemToPx(theme.spacing.twoXL),
     outerBoundsMode: "same",
   }
   if (!titleAtTop && !legendAtTop) {
-    grid.top = 16
+    grid.top = convertRemToPx(theme.spacing.lg)
   }
   if (
     !titleAtBottom &&
     !legendAtBottom &&
     !hasBottomAnchoredComponent(option)
   ) {
-    grid.bottom = 8
+    grid.bottom = convertRemToPx(theme.spacing.sm)
+  } else if (stackedBottom !== undefined) {
+    grid.bottom = stackedBottom
   }
   return grid
 }
 
 /**
  * Non-destructively fill a small number of option-level gaps that the init
- * theme cannot cover (``aria.enabled`` and the ``grid`` layout).
+ * theme cannot cover (``aria.enabled``, title size/weight/padding, the
+ * ``grid`` layout, and stacking of bottom-anchored chart controls).
  *
  * ``aria.enabled`` is filled regardless of the theme: ``theme=None`` opts out of
  * Streamlit's *visual* styling, and dropping the screen-reader description along
  * with it would make an accessibility regression a side effect of a styling
- * choice. The ``grid`` layout is purely visual, so it only runs under
- * ``theme="streamlit"``.
+ * choice. Title size, ``grid``, and control stacking are purely visual, so they
+ * only run under ``theme="streamlit"``.
  *
  * Only keys the user has not set are written, so explicit user values (e.g.
  * ``series[0].itemStyle.color`` or a top-level ``color``) always survive. For
@@ -590,11 +929,13 @@ function buildDefaultGrid(
  *
  * @param option The parsed ECharts option object.
  * @param themeStr The chart's theme string (``"streamlit"`` or ``""``).
+ * @param theme The Emotion theme, used to derive rem-based grid insets.
  * @returns The option with defaults filled (a new object).
  */
 export function applyStreamlitOptionDefaults(
   option: EChartsOptionObject,
-  themeStr: string
+  themeStr: string,
+  theme: EmotionTheme
 ): EChartsOptionObject {
   const applyVisualDefaults = themeStr === STREAMLIT_THEME
 
@@ -604,17 +945,19 @@ export function applyStreamlitOptionDefaults(
       ...option,
       baseOption: fillOptionDefaults(
         baseOption as EChartsOptionObject,
-        applyVisualDefaults
+        applyVisualDefaults,
+        theme
       ),
     }
   }
-  return fillOptionDefaults(option, applyVisualDefaults)
+  return fillOptionDefaults(option, applyVisualDefaults, theme)
 }
 
 /** Fill the ``aria`` and ``grid`` defaults on a single (non-timeline) option. */
 function fillOptionDefaults(
   option: EChartsOptionObject,
-  applyVisualDefaults: boolean
+  applyVisualDefaults: boolean,
+  theme: EmotionTheme
 ): EChartsOptionObject {
   const result: EChartsOptionObject = { ...option }
 
@@ -633,21 +976,24 @@ function fillOptionDefaults(
     return result
   }
 
+  const titled = withTitleStyleDefaults(result, theme)
+  const { option: laidOut, stackedBottom } = applyControlLayout(titled, theme)
+
   // For cartesian charts, default the grid so the plot fills its container and
   // axis labels and names stay inside it. Any grid key the user set wins; we
   // only fill the gaps. Arrays (multiple grids) are left untouched.
-  const hasCartesianAxis = "xAxis" in result || "yAxis" in result
-  const grid = result.grid
+  const hasCartesianAxis = "xAxis" in laidOut || "yAxis" in laidOut
+  const grid = laidOut.grid
   if (hasCartesianAxis && !Array.isArray(grid)) {
-    const defaults = buildDefaultGrid(result)
+    const defaults = buildDefaultGrid(laidOut, theme, stackedBottom)
     if (grid === undefined) {
-      result.grid = defaults
+      laidOut.grid = defaults
     } else if (isPlainObject(grid)) {
-      result.grid = { ...defaults, ...(grid as Record<string, unknown>) }
+      laidOut.grid = { ...defaults, ...(grid as Record<string, unknown>) }
     }
   }
 
-  return result
+  return laidOut
 }
 
 /**

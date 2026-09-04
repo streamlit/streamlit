@@ -596,6 +596,15 @@ class EChartsMixin:
             data), and 3D or WebGL charts from the ECharts GL extension
             (``bar3D``, ``scatter3D``, ``globe``, and similar).
 
+        .. note::
+            Strings in the option object (``title.text``, legend names, labels)
+            are rendered by ECharts as plain text. Streamlit markdown does not
+            apply inside ``spec``. Put formatted copy in |st.markdown|_ next
+            to the chart instead.
+
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
         Parameters
         ----------
         spec : dict, str, or pyecharts chart
@@ -732,6 +741,88 @@ class EChartsMixin:
                    "series": [{"type": "bar"}, {"type": "bar"}],
                }
            )
+
+        **Example 3: Zoom slider, toolbox, and legend**
+
+        In-chart controls such as ``dataZoom`` and ``toolbox`` are configured
+        in the spec. Streamlit's hover toolbar (download, fullscreen) is
+        separate from ECharts' ``toolbox``: omit ``saveAsImage`` if you only
+        want Streamlit's download, or set ``toolbox.left`` so the two don't
+        stack in the top-right corner. Place ``legend`` at the top so it
+        doesn't share the footer with a bottom ``dataZoom`` slider.
+
+        .. code-block:: python
+           :filename: streamlit_app.py
+
+           import streamlit as st
+
+           st.echarts_chart(
+               {
+                   "legend": {"data": ["Revenue", "Cost"], "top": 28},
+                   "tooltip": {"trigger": "axis"},
+                   "toolbox": {
+                       "left": 0,
+                       "feature": {
+                           "magicType": {"type": ["line", "bar"]},
+                           "restore": {},
+                       },
+                   },
+                   "dataZoom": [
+                       {"type": "inside"},
+                       {"type": "slider"},
+                   ],
+                   "xAxis": {
+                       "type": "category",
+                       "data": ["Q1", "Q2", "Q3", "Q4"],
+                   },
+                   "yAxis": {"type": "value"},
+                   "series": [
+                       {
+                           "name": "Revenue",
+                           "type": "line",
+                           "data": [820, 932, 901, 934],
+                       },
+                       {
+                           "name": "Cost",
+                           "type": "bar",
+                           "data": [500, 610, 550, 700],
+                       },
+                   ],
+               }
+           )
+
+        .. output::
+           https://doc-echarts-chart-controls.streamlit.app/
+           height: 450px
+
+        **Example 4: Streamlit theme vs ECharts default**
+
+        ``theme="streamlit"`` (default) applies Streamlit colors, fonts, and
+        plot layout. ``theme=None`` leaves styling to ECharts' built-in
+        default theme.
+
+        .. code-block:: python
+           :filename: streamlit_app.py
+
+           import streamlit as st
+
+           spec = {
+               "xAxis": {"type": "category", "data": ["A", "B", "C", "D", "E"]},
+               "yAxis": {"type": "value"},
+               "series": [{"type": "bar", "data": [5, 20, 36, 10, 10]}],
+           }
+
+           col1, col2 = st.columns(2)
+           with col1:
+               st.caption("Streamlit theme")
+               st.echarts_chart(spec)
+           with col2:
+               st.caption("ECharts default")
+               st.echarts_chart(spec, theme=None)
+
+        .. output::
+           https://doc-echarts-chart-theme.streamlit.app/
+           height: 400px
 
         """
         validate_width(width, allow_content=True)
