@@ -211,7 +211,9 @@ class CachedMessageReplayContext:
             capture for capture in self._cached_message_stack.get() if capture.active
         )
         if message_stack:
-            id_to_save = self.select_dg_to_save(invoked_dg_id, used_dg_id)
+            id_to_save = self.select_dg_to_save(
+                invoked_dg_id, used_dg_id, message_stack
+            )
 
             media_data = self._media_data
 
@@ -228,7 +230,6 @@ class CachedMessageReplayContext:
 
         # Reset this context's media buffer now that it has been attached
         # to the associated element.
-        # associated element.
         self._media_data_var.set(())
 
         for capture in message_stack:
@@ -250,14 +251,19 @@ class CachedMessageReplayContext:
         if not captures:
             return
 
-        id_to_save = self.select_dg_to_save(invoked_dg_id, used_dg_id)
+        id_to_save = self.select_dg_to_save(invoked_dg_id, used_dg_id, captures)
         for capture in captures:
             capture.messages.append(
                 BlockMsgData(block_proto, id_to_save, returned_dg_id)
             )
             capture.seen_dgs.add(returned_dg_id)
 
-    def select_dg_to_save(self, invoked_id: str, acting_on_id: str) -> str:
+    def select_dg_to_save(
+        self,
+        invoked_id: str,
+        acting_on_id: str,
+        active_captures: tuple[_CachedMessageCapture, ...],
+    ) -> str:
         """Select the id of the DG that this message should be invoked on
         during message replay.
 
@@ -267,9 +273,6 @@ class CachedMessageReplayContext:
         acting_on_id is the DG the st function ultimately runs on, which may be different
         if the invoked DG delegated to another one because it was in a `with` block.
         """
-        active_captures = tuple(
-            capture for capture in self._cached_message_stack.get() if capture.active
-        )
         if active_captures and acting_on_id in active_captures[-1].seen_dgs:
             return acting_on_id
         return invoked_id
