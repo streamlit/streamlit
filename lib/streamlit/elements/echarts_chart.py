@@ -795,35 +795,6 @@ class EChartsMixin:
            https://doc-echarts-chart-controls.streamlit.app/
            height: 450px
 
-        **Example 4: Streamlit theme vs ECharts default**
-
-        ``theme="streamlit"`` (default) applies Streamlit colors, fonts, and
-        plot layout. ``theme=None`` leaves styling to ECharts' built-in
-        default theme.
-
-        .. code-block:: python
-           :filename: streamlit_app.py
-
-           import streamlit as st
-
-           spec = {
-               "xAxis": {"type": "category", "data": ["A", "B", "C", "D", "E"]},
-               "yAxis": {"type": "value"},
-               "series": [{"type": "bar", "data": [5, 20, 36, 10, 10]}],
-           }
-
-           col1, col2 = st.columns(2)
-           with col1:
-               st.caption("Streamlit theme")
-               st.echarts_chart(spec)
-           with col2:
-               st.caption("ECharts default")
-               st.echarts_chart(spec, theme=None)
-
-        .. output::
-           https://doc-echarts-chart-theme.streamlit.app/
-           height: 400px
-
         """
         validate_width(width, allow_content=True)
         validate_height(height, allow_content=True)
