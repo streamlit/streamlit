@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { vi } from "vitest"
+
 import { darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 
 import {
@@ -39,6 +41,11 @@ describe("getVegaBindingStyles", () => {
       expect(styles.colorScheme).toBe(colorScheme)
     }
   )
+
+  it("reuses the same style object for a given theme", () => {
+    const theme = lightTheme.emotion
+    expect(getVegaBindingStyles(theme)).toBe(getVegaBindingStyles(theme))
+  })
 
   it("styles Vega bind labels, selects, and range value readouts", () => {
     const theme = lightTheme.emotion
@@ -126,5 +133,17 @@ describe("bindVegaRangeProgress", () => {
     input.value = "0"
     input.dispatchEvent(new Event("input", { bubbles: true }))
     expect(input.style.getPropertyValue(VEGA_RANGE_PROGRESS_VAR)).toBe("75%")
+  })
+
+  it("does not attach an input listener when there are no range bindings", () => {
+    const root = document.createElement("div")
+    const addSpy = vi.spyOn(root, "addEventListener")
+    const removeSpy = vi.spyOn(root, "removeEventListener")
+
+    const unbind = bindVegaRangeProgress(root)
+    expect(addSpy).not.toHaveBeenCalled()
+
+    unbind()
+    expect(removeSpy).not.toHaveBeenCalled()
   })
 })

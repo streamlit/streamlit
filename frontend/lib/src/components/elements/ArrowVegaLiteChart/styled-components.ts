@@ -28,7 +28,8 @@ import type { EmotionTheme } from "~lib/theme/types"
 export const VEGA_RANGE_PROGRESS_VAR = "--vega-range-progress"
 
 export const syncVegaRangeProgress = (input: HTMLInputElement): void => {
-  // HTML range defaults: min 0, max 100, value = min.
+  // HTML range defaults: min 0, max 100, value = midpoint. Empty `value` is a
+  // defensive fallback to min; it is not the platform default.
   const min = input.min === "" ? 0 : Number(input.min)
   const max = input.max === "" ? 100 : Number(input.max)
   const value = input.value === "" ? min : Number(input.value)
@@ -47,10 +48,19 @@ export const syncVegaRangeProgress = (input: HTMLInputElement): void => {
 
 /**
  * Keeps WebKit range fills in sync with input value via `--vega-range-progress`.
+ * Syncs ranges present at bind time and subsequent user `input` events.
+ * Programmatic Vega writes (`view.signal(...).run()`, expression-driven
+ * params) set the DOM value without dispatching `input`, so the WebKit fill
+ * can go stale; Firefox uses `::-moz-range-progress` and does not need this.
  * Call after vega-embed creates the bindings form; invoke the return value
  * before Vega's finalize so the delegated input listener is removed.
  */
 export const bindVegaRangeProgress = (root: HTMLElement): (() => void) => {
+  const ranges = root.querySelectorAll<HTMLInputElement>("input[type='range']")
+  if (ranges.length === 0) {
+    return () => {}
+  }
+
   const onInput = (event: Event): void => {
     if (
       event.target instanceof HTMLInputElement &&
@@ -59,9 +69,7 @@ export const bindVegaRangeProgress = (root: HTMLElement): (() => void) => {
       syncVegaRangeProgress(event.target)
     }
   }
-  root
-    .querySelectorAll<HTMLInputElement>("input[type='range']")
-    .forEach(syncVegaRangeProgress)
+  ranges.forEach(syncVegaRangeProgress)
   root.addEventListener("input", onInput)
   return () => root.removeEventListener("input", onInput)
 }
@@ -72,7 +80,14 @@ export const bindVegaRangeProgress = (root: HTMLElement): (() => void) => {
  * as unstyled browser controls. Uses Streamlit fonts, colors, radius, and
  * focus treatment rather than replacing the native controls.
  */
+const vegaBindingStylesCache = new WeakMap<EmotionTheme, CSSObject>()
+
 export const getVegaBindingStyles = (theme: EmotionTheme): CSSObject => {
+  const cached = vegaBindingStylesCache.get(theme)
+  if (cached) {
+    return cached
+  }
+
   const controlBorderColor =
     theme.colors.widgetBorderColor ?? theme.colors.secondaryBg
   const rangeFill = `var(${VEGA_RANGE_PROGRESS_VAR}, 0%)`
@@ -117,7 +132,7 @@ export const getVegaBindingStyles = (theme: EmotionTheme): CSSObject => {
     },
   }
 
-  return {
+  const styles: CSSObject = {
     display: "flex",
     flexDirection: "column",
     alignItems: "flex-start",
@@ -248,6 +263,9 @@ export const getVegaBindingStyles = (theme: EmotionTheme): CSSObject => {
       gap: theme.spacing.md,
     },
   }
+
+  vegaBindingStylesCache.set(theme, styles)
+  return styles
 }
 
 export const StyledVegaLiteChartTooltips = (
