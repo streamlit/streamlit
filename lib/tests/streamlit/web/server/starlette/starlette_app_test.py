@@ -15,12 +15,15 @@
 from __future__ import annotations
 
 import asyncio
+import importlib
+import inspect
 import json
 import os
 import sys
 import threading
 import time
 from contextlib import asynccontextmanager
+from functools import partial, wraps
 from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -1616,6 +1619,186 @@ class TestAppInit:
         app = App(Path("main.py"))
         assert app.script_path == Path("main.py")
 
+    def test_app_preserves_script_path_keyword(self) -> None:
+        """The script_path constructor keyword still accepts path strings."""
+        app = App(script_path="main.py")
+
+        assert app.script_path == Path("main.py")
+
+    def test_app_accepts_callable_and_infers_source_path(self) -> None:
+        """A callable entrypoint uses its source file as the script anchor."""
+
+        def main() -> None:
+            pass
+
+        app = App(main)
+
+        assert app.script_path == Path(__file__).resolve()
+        assert app._script_entrypoint is main
+
+    def test_app_accepts_partial_callable(self) -> None:
+        """functools.partial entrypoints resolve via the wrapped function."""
+
+        def main(prefix: str = "hi") -> None:
+            pass
+
+        entry = partial(main, prefix="hello")
+        app = App(entry)
+
+        assert app.script_path == Path(__file__).resolve()
+        assert app._script_entrypoint is entry
+
+    def test_app_accepts_nested_partial_callable(self) -> None:
+        """Nested functools.partial entrypoints resolve through all layers."""
+
+        def main(prefix: str = "hi", suffix: str = "!") -> None:
+            pass
+
+        entry = partial(partial(main, prefix="hello"), suffix="?")
+        app = App(entry)
+
+        assert app.script_path == Path(__file__).resolve()
+        assert app._script_entrypoint is entry
+
+    def test_app_accepts_partial_of_callable_instance(self) -> None:
+        """partial wrapping a callable instance resolves via type.__call__."""
+
+        class Main:
+            def __call__(self, prefix: str = "hi") -> None:
+                pass
+
+        entry = partial(Main(), prefix="hello")
+        app = App(entry)
+
+        assert app.script_path == Path(__file__).resolve()
+        assert app._script_entrypoint is entry
+
+    def test_app_accepts_callable_instance(self) -> None:
+        """Callable class instances resolve via their type's __call__."""
+
+        class Main:
+            def __call__(self) -> None:
+                pass
+
+        entry = Main()
+        app = App(entry)
+
+        assert app.script_path == Path(__file__).resolve()
+        assert app._script_entrypoint is entry
+
+    def test_app_resolves_decorated_callable_to_wrapped_source(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Decorated entrypoints anchor to the wrapped function, not the decorator."""
+        decorator_file = tmp_path / "st_app_callable_deco.py"
+        decorator_file.write_text(
+            "import functools\n"
+            "\n"
+            "def deco(fn):\n"
+            "    @functools.wraps(fn)\n"
+            "    def wrapper(*args, **kwargs):\n"
+            "        return fn(*args, **kwargs)\n"
+            "    return wrapper\n"
+        )
+        app_file = tmp_path / "st_app_callable_wrapped.py"
+        app_file.write_text(
+            "from st_app_callable_deco import deco\n\n@deco\ndef main():\n    pass\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        for module_name in ("st_app_callable_deco", "st_app_callable_wrapped"):
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_wrapped")
+        try:
+            app = App(app_mod.main)
+        finally:
+            for module_name in ("st_app_callable_deco", "st_app_callable_wrapped"):
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+        assert app._script_entrypoint is app_mod.main
+
+    def test_app_rejects_async_callable(self) -> None:
+        """st.App rejects async function callables."""
+
+        async def main() -> None:
+            pass
+
+        with pytest.raises(StreamlitAPIException, match="does not support async"):
+            App(main)
+
+    def test_app_accepts_sync_wraps_wrapper_around_async(self) -> None:
+        """Construction does not unwrap @wraps; a sync wrapper around async is accepted."""
+
+        def deco(fn: Any) -> Any:
+            @wraps(fn)
+            def wrapper() -> Any:
+                return fn()
+
+            return wrapper
+
+        @deco
+        async def main() -> None:
+            pass
+
+        app = App(main)
+        assert app._script_entrypoint is main
+
+    def test_app_rejects_async_partial_callable(self) -> None:
+        """st.App rejects functools.partial wrapping an async callable."""
+
+        async def main() -> None:
+            pass
+
+        with pytest.raises(StreamlitAPIException, match="does not support async"):
+            App(partial(main))
+
+    def test_app_rejects_async_generator_callable(self) -> None:
+        """st.App rejects async generator callables."""
+
+        async def main() -> AsyncIterator[None]:
+            yield
+
+        with pytest.raises(StreamlitAPIException, match="does not support async"):
+            App(main)  # type: ignore[arg-type]
+
+    def test_app_rejects_generator_callable(self) -> None:
+        """st.App rejects sync generator callables."""
+
+        def main() -> Iterator[None]:
+            yield
+
+        with pytest.raises(StreamlitAPIException, match="does not support generator"):
+            App(main)  # type: ignore[arg-type]
+
+    def test_app_rejects_callable_that_requires_arguments(self) -> None:
+        """st.App rejects callables that require arguments."""
+
+        def main(required: str) -> None:
+            pass
+
+        with pytest.raises(StreamlitAPIException, match="without arguments"):
+            App(main)
+
+    def test_app_rejects_callable_without_source_file(self) -> None:
+        """st.App rejects callables that are not backed by a source file."""
+
+        def main() -> None:
+            pass
+
+        with (
+            patch.object(inspect, "getsourcefile", return_value=None),
+            patch.object(inspect, "getfile", side_effect=TypeError),
+            pytest.raises(StreamlitAPIException, match="filesystem-backed"),
+        ):
+            App(main)
+
+    def test_app_rejects_unsupported_entrypoint_type(self) -> None:
+        """Non-path, non-callable entrypoints raise StreamlitInvalidParameterTypeError."""
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError, match=r"Invalid `script_path` type"
+        ):
+            App(42)  # type: ignore[arg-type]
+
     def test_app_state_is_empty_initially(self) -> None:
         """Test that App state is empty on initialization."""
         app = App("main.py")
@@ -1736,6 +1919,29 @@ class TestAppRun:
             {"server.port": 8502},
             server_mode="starlette-app-direct",
         )
+        runner_cls.assert_called_once_with(app)
+        runner_cls.return_value.run.assert_called_once()
+
+    def test_run_uses_existing_callable_app_instance(
+        self, monkeypatch: pytest.MonkeyPatch, reset_runtime: None
+    ) -> None:
+        """Direct callable launch passes the already-created App to Uvicorn."""
+
+        def main() -> None:
+            pass
+
+        monkeypatch.setattr(sys, "argv", [__file__])
+        app = App(main)
+
+        with (
+            patch("streamlit.web.bootstrap.load_config_options"),
+            patch("streamlit.web.bootstrap._prepare_asgi_app_run_context"),
+            patch(
+                "streamlit.web.server.starlette.starlette_server.UvicornRunner"
+            ) as runner_cls,
+        ):
+            app.run()
+
         runner_cls.assert_called_once_with(app)
         runner_cls.return_value.run.assert_called_once()
 
@@ -2223,6 +2429,20 @@ class TestAppScriptPathResolution:
         # Error message should include the path and be descriptive
         assert "does_not_exist.py" in str(exc_info.value)
         assert "not found" in str(exc_info.value).lower()
+
+    def test_create_runtime_passes_callable_entrypoint(
+        self, reset_runtime: None
+    ) -> None:
+        """RuntimeConfig receives the callable entrypoint from App."""
+
+        def main() -> None:
+            pass
+
+        app = App(main)
+        runtime = app._create_runtime()
+
+        assert runtime._main_script_path == str(Path(__file__).resolve())
+        assert runtime._script_entrypoint is main
 
     def test_init_sets_main_script_path_when_unset(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

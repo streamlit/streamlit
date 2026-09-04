@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import gc
+import inspect
 import sys
 import threading
 import types
@@ -25,7 +26,7 @@ from timeit import default_timer as timer
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from streamlit import config, runtime, util
-from streamlit.errors import FragmentStorageKeyError
+from streamlit.errors import FragmentStorageKeyError, StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -75,6 +76,36 @@ if TYPE_CHECKING:
     from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 
 _LOGGER: Final = get_logger(__name__)
+
+
+def _invoke_script_entrypoint(entrypoint: Callable[[], Any]) -> None:
+    """Call a retained App entrypoint and reject coroutine or generator results.
+
+    Construction-time checks cannot follow ``@functools.wraps`` wrappers, so a
+    synchronous wrapper around an async or generator function can still be
+    retained. Invoking it would otherwise discard the returned coroutine or
+    generator. Valid sync wrappers that drive the inner coroutine themselves
+    return ``None`` and are allowed.
+    """
+    result: Any = entrypoint()
+    if not (
+        inspect.isawaitable(result)
+        or inspect.isgenerator(result)
+        or inspect.isasyncgen(result)
+    ):
+        return
+
+    if inspect.isasyncgen(result):
+        result.aclose().close()
+    else:
+        closer = getattr(result, "close", None)
+        if callable(closer):
+            closer()
+
+    raise StreamlitAPIException(
+        "st.App callable entrypoints must not return a coroutine or generator. "
+        "Pass a synchronous callable instead."
+    )
 
 
 class ScriptRunnerEvent(Enum):
@@ -170,6 +201,15 @@ def _mpa_v1(main_script_path: str) -> None:
     page.run()
 
 
+def _exec_script(code: types.CodeType | None, module: types.ModuleType | None) -> None:
+    """Execute compiled bytecode for a path-based entrypoint."""
+    if code is None or module is None:  # pragma: no cover - defensive
+        raise RuntimeError(
+            "Script bytecode and module are required for path-based entrypoints."
+        )
+    exec(code, module.__dict__)  # noqa: S102
+
+
 class ScriptRunner:
     def __init__(
         self,
@@ -185,6 +225,7 @@ class ScriptRunner:
         event_loop: asyncio.AbstractEventLoop,
         on_script_error: OnScriptErrorHandler | None = None,
         local_sources_watcher: LocalSourcesWatcher | None = None,
+        script_entrypoint: Callable[[], None] | None = None,
     ) -> None:
         """Initialize the ScriptRunner.
 
@@ -240,6 +281,11 @@ class ScriptRunner:
             never closes it. After this runner emits ``SHUTDOWN``, it no longer
             uses the loop. The caller determines when no other runner is using
             the loop and it is safe to close.
+
+        script_entrypoint
+            Optional callable to execute for full app runs instead of compiling
+            and executing ``main_script_path``. The path remains the app's
+            filesystem anchor.
         """
         self._session_id = session_id
         self._main_script_path = main_script_path
@@ -254,6 +300,7 @@ class ScriptRunner:
 
         self._pages_manager = pages_manager
         self._local_sources_watcher = local_sources_watcher
+        self._script_entrypoint = script_entrypoint
         self._requests = ScriptRequests()
         self._requests.request_rerun(initial_rerun_data)
 
@@ -705,9 +752,9 @@ class ScriptRunner:
                 pages=self._pages_manager.get_pages(),
             )
 
-            # Compile the script. Any errors thrown here will be surfaced
-            # to the user via a modal dialog in the frontend, and won't result
-            # in their previous script elements disappearing.
+            # Resolve the active script and compile path-based entrypoints. Any
+            # errors thrown here will be surfaced to the user via a modal dialog
+            # in the frontend, without removing their previous script elements.
             try:
                 if active_script is not None:
                     script_path = active_script["script_path"]
@@ -726,7 +773,10 @@ class ScriptRunner:
                     msg.page_not_found.page_name = rerun_data.page_name
                     ctx.enqueue(msg)
 
-                code = self._script_cache.get_bytecode(script_path)
+                if self._script_entrypoint is None:
+                    code = self._script_cache.get_bytecode(script_path)
+                else:
+                    code = None
 
             except Exception as ex:
                 # We got a compile error. Send an error event and bail immediately.
@@ -741,31 +791,37 @@ class ScriptRunner:
                 )
                 return
 
-            # If we get here, we've successfully compiled our script. The next step
-            # is to run it. Errors thrown during execution will be shown to the
-            # user as ExceptionElements.
+            # If we get here, we've successfully prepared the entrypoint. Errors
+            # thrown during execution will be shown to the user as ExceptionElements.
 
-            # Create fake module. This gives us a name global namespace to
-            # execute the code in.
-            module = self._new_module("__main__")
+            # Callable entrypoints keep the process's real ``__main__`` module.
+            # Installing a fake ``__main__`` would re-enter
+            # ``if __name__ == "__main__": app.run()`` for same-file
+            # ``python app.py`` launchers, and would break pickle of classes
+            # defined on the real launcher module.
+            module: types.ModuleType | None = None
+            if self._script_entrypoint is None:
+                # Create fake module. This gives us a named global namespace to
+                # execute the code in.
+                module = self._new_module("__main__")
 
-            # Install the fake module as the __main__ module. This allows
-            # the pickle module to work inside the user's code, since it now
-            # can know the module where the pickled objects stem from.
-            # IMPORTANT: This means we can't use "if __name__ == '__main__'" in
-            # our code, as it will point to the wrong module!!!
-            sys.modules["__main__"] = module
+                # Install the fake module as the __main__ module. This allows
+                # the pickle module to work inside the user's code, since it now
+                # can know the module where the pickled objects stem from.
+                # IMPORTANT: This means we can't use "if __name__ == '__main__'" in
+                # our code, as it will point to the wrong module!!!
+                sys.modules["__main__"] = module
 
-            # Add special variables to the module's globals dict.
-            # Note: The following is a requirement for the CodeHasher to
-            # work correctly. The CodeHasher is scoped to
-            # files contained in the directory of __main__.__file__, which we
-            # assume is the main script directory.
-            module.__dict__["__file__"] = script_path
+                # Add special variables to the module's globals dict.
+                # Note: The following is a requirement for the CodeHasher to
+                # work correctly. The CodeHasher is scoped to
+                # files contained in the directory of __main__.__file__, which we
+                # assume is the main script directory.
+                module.__dict__["__file__"] = script_path
 
             def code_to_exec(
-                code: str = code,
-                module: types.ModuleType = module,
+                code: types.CodeType | None = code,
+                module: types.ModuleType | None = module,
                 ctx: ScriptRunContext = ctx,
                 rerun_data: RerunData = rerun_data,
                 fragment_ids_this_run: list[str] | None = fragment_ids_this_run,
@@ -899,10 +955,12 @@ class ScriptRunner:
                             ctx.parallel_coordinator,
                         )
                         try:
-                            if PagesManager.uses_pages_directory:
+                            if self._script_entrypoint is not None:
+                                _invoke_script_entrypoint(self._script_entrypoint)
+                            elif PagesManager.uses_pages_directory:
                                 _mpa_v1(self._main_script_path)
                             else:
-                                exec(code, module.__dict__)  # noqa: S102
+                                _exec_script(code, module)
                             coordinator.join()
                         except BaseException:
                             # Always drain so in-flight worker fragments
