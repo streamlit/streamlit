@@ -15,10 +15,11 @@
 from __future__ import annotations
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+from streamlit.proto.Common_pb2 import ChatInputValue, StringTriggerValue
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.scriptrunner_utils.script_requests import (
     RerunData,
@@ -268,72 +269,238 @@ class ScriptRequestsTest(unittest.TestCase):
         assert reqs._rerun_data.fragment_id_queue == []
         assert reqs._rerun_data.is_fragment_scoped_rerun is False
 
-    def test_suppress_callbacks_preserved_during_coalescing(self):
-        """suppress_callbacks=True survives coalescing with a regular request."""
+    def test_replay_state_survives_coalescing_with_stateless_request(self):
         reqs = ScriptRequests()
-        reqs.request_rerun(
-            RerunData(fragment_id_queue=["frag"], is_fragment_scoped_rerun=True)
-        )
-        reqs.request_rerun(RerunData(suppress_callbacks=True))
-        assert reqs._rerun_data.suppress_callbacks is True
+        replay = WidgetStates()
+        _create_widget("btn_a", replay).trigger_value = True
+        reqs.request_rerun(RerunData(replay_trigger_states=replay))
+        reqs.request_rerun(RerunData(fragment_id_queue=["frag"], is_auto_rerun=True))
 
-    def test_suppress_callbacks_false_when_neither_sets_it(self):
-        """Two non-suppressing requests coalesce to suppress_callbacks=False."""
-        reqs = ScriptRequests()
-        reqs.request_rerun(RerunData())
-        reqs.request_rerun(RerunData(query_string="new"))
-        assert reqs._rerun_data.suppress_callbacks is False
+        result = reqs._rerun_data.replay_trigger_states
+        assert result is not None
+        assert _get_widget("btn_a", result).trigger_value is True
 
-    def test_suppressed_old_triggers_not_preserved_during_coalescing(self):
-        """Old triggers whose callbacks already ran are dropped during coalescing.
-
-        When the old request had suppress_callbacks=True (an escalated replay),
-        its button triggers should not carry forward into the merged request —
-        preserving them would cause duplicate callback execution.
-        """
+    def test_older_fresh_triggers_remain_active_when_coalesced(self):
+        """The fresh channel preserves active triggers from rapid interactions."""
         reqs = ScriptRequests()
 
         old_states = WidgetStates()
         _create_widget("btn_a", old_states).trigger_value = True
-        _create_widget("slider", old_states).int_value = 50
-        reqs.request_rerun(RerunData(widget_states=old_states, suppress_callbacks=True))
+        reqs.request_rerun(RerunData(widget_states=old_states))
 
         new_states = WidgetStates()
         _create_widget("btn_b", new_states).trigger_value = True
-        _create_widget("slider", new_states).int_value = 75
-        reqs.request_rerun(
-            RerunData(widget_states=new_states, suppress_callbacks=False)
-        )
-
-        result = reqs._rerun_data.widget_states
-        assert _get_widget("btn_a", result) is None
-        assert _get_widget("btn_b", result).trigger_value is True
-        assert _get_widget("slider", result).int_value == 75
-        assert reqs._rerun_data.suppress_callbacks is False
-
-    def test_normal_old_triggers_preserved_during_coalescing(self):
-        """Old triggers from a non-suppressed request are still preserved.
-
-        Rapid clicks where neither request has suppress_callbacks should
-        continue preserving both triggers (the existing behavior).
-        """
-        reqs = ScriptRequests()
-
-        old_states = WidgetStates()
-        _create_widget("btn_a", old_states).trigger_value = True
-        reqs.request_rerun(
-            RerunData(widget_states=old_states, suppress_callbacks=False)
-        )
-
-        new_states = WidgetStates()
-        _create_widget("btn_b", new_states).trigger_value = True
-        reqs.request_rerun(
-            RerunData(widget_states=new_states, suppress_callbacks=False)
-        )
+        reqs.request_rerun(RerunData(widget_states=new_states))
 
         result = reqs._rerun_data.widget_states
         assert _get_widget("btn_a", result).trigger_value is True
         assert _get_widget("btn_b", result).trigger_value is True
+
+    def test_fresh_and_replay_channels_coalesce_independently(self):
+        reqs = ScriptRequests()
+        older_fresh_states = WidgetStates()
+        _create_widget("scalar", older_fresh_states).int_value = 1
+        older_replay_states = WidgetStates()
+        _create_widget("bool", older_replay_states).trigger_value = True
+        _create_widget("string", older_replay_states).string_trigger_value.CopyFrom(
+            StringTriggerValue(data="old")
+        )
+        reqs.request_rerun(
+            RerunData(
+                widget_states=older_fresh_states,
+                replay_trigger_states=older_replay_states,
+            )
+        )
+
+        newer_fresh_states = WidgetStates()
+        _create_widget("scalar", newer_fresh_states).int_value = 2
+        newer_replay_states = WidgetStates()
+        _create_widget("chat", newer_replay_states).chat_input_value.CopyFrom(
+            ChatInputValue(data="hello")
+        )
+        _create_widget("string", newer_replay_states).string_trigger_value.CopyFrom(
+            StringTriggerValue(data="new")
+        )
+        _create_widget(
+            "json", newer_replay_states
+        ).json_trigger_value = '{"event":"go"}'
+        _create_widget("non_trigger", newer_replay_states).int_value = 99
+        reqs.request_rerun(
+            RerunData(
+                widget_states=newer_fresh_states,
+                replay_trigger_states=newer_replay_states,
+            )
+        )
+
+        fresh = reqs._rerun_data.widget_states
+        assert fresh is not None
+        assert [(state.id, state.int_value) for state in fresh.widgets] == [
+            ("scalar", 2)
+        ]
+        replay = reqs._rerun_data.replay_trigger_states
+        assert replay is not None
+        assert [state.id for state in replay.widgets] == [
+            "bool",
+            "string",
+            "chat",
+            "json",
+        ]
+        assert _get_widget("string", replay).string_trigger_value.data == "new"
+        assert _get_widget("chat", replay).chat_input_value.data == "hello"
+        assert _get_widget("json", replay).json_trigger_value == '{"event":"go"}'
+        assert _get_widget("scalar", replay) is None
+
+    def test_inactive_and_non_trigger_values_are_not_replayed(self):
+        reqs = ScriptRequests()
+        replay = WidgetStates()
+        _create_widget("bool", replay).trigger_value = False
+        _create_widget("string", replay).string_trigger_value.CopyFrom(
+            StringTriggerValue(data=None)
+        )
+        _create_widget("chat", replay).chat_input_value.CopyFrom(
+            ChatInputValue(data=None)
+        )
+        _create_widget("json", replay).json_trigger_value = ""
+        _create_widget("scalar", replay).int_value = 1
+
+        reqs.request_rerun(RerunData(replay_trigger_states=replay))
+
+        assert reqs._rerun_data.replay_trigger_states is None
+
+    def test_present_message_fields_are_replayed_even_when_data_is_empty(self):
+        """Present message fields remain active even when their payload is falsy."""
+        reqs = ScriptRequests()
+        replay = WidgetStates()
+        _create_widget("string", replay).string_trigger_value.CopyFrom(
+            StringTriggerValue(data="")
+        )
+        file_chat = _create_widget("file_chat", replay).chat_input_value
+        file_chat.data = ""
+        file_chat.file_uploader_state.uploaded_file_info.add().file_id = "file"
+        audio_chat = _create_widget("audio_chat", replay).chat_input_value
+        audio_chat.data = ""
+        audio_chat.audio_file_info.file_id = "audio"
+
+        reqs.request_rerun(RerunData(replay_trigger_states=replay))
+
+        replayed = reqs._rerun_data.replay_trigger_states
+        assert replayed is not None
+        assert [state.id for state in replayed.widgets] == [
+            "string",
+            "file_chat",
+            "audio_chat",
+        ]
+
+    def test_hydrated_chat_value_tracks_winning_replay_proto(self):
+        """A newer active chat proto replaces both parts of an older replay entry."""
+        reqs = ScriptRequests()
+        older_replay = WidgetStates()
+        _create_widget("chat", older_replay).chat_input_value.data = "older"
+        older_value = object()
+        reqs.request_rerun(
+            RerunData(
+                replay_trigger_states=older_replay,
+                replay_trigger_values={"chat": older_value},
+            )
+        )
+
+        inactive_replay = WidgetStates()
+        _create_widget("chat", inactive_replay).chat_input_value.CopyFrom(
+            ChatInputValue(data=None)
+        )
+        reqs.request_rerun(RerunData(replay_trigger_states=inactive_replay))
+
+        assert reqs._rerun_data.replay_trigger_values == {"chat": older_value}
+
+        newer_replay = WidgetStates()
+        _create_widget("chat", newer_replay).chat_input_value.data = "newer"
+        reqs.request_rerun(RerunData(replay_trigger_states=newer_replay))
+
+        replayed = reqs._rerun_data.replay_trigger_states
+        assert replayed is not None
+        assert _get_widget("chat", replayed).chat_input_value.data == "newer"
+        assert reqs._rerun_data.replay_trigger_values is None
+
+    def test_consuming_request_releases_queued_hydrated_values(self):
+        """The request queue drops its reference after transferring a replay value."""
+        reqs = ScriptRequests()
+        replay = WidgetStates()
+        _create_widget("chat", replay).chat_input_value.data = "message"
+        hydrated_value = object()
+        reqs.request_rerun(
+            RerunData(
+                replay_trigger_states=replay,
+                replay_trigger_values={"chat": hydrated_value},
+            )
+        )
+
+        request = reqs.on_scriptrunner_ready()
+
+        assert request.rerun_data.replay_trigger_values == {"chat": hydrated_value}
+        assert reqs._rerun_data.replay_trigger_values is None
+
+    def test_stopping_releases_queued_hydrated_values(self):
+        """Stopping a runner releases hydrated values from its abandoned rerun."""
+        reqs = ScriptRequests()
+        replay = WidgetStates()
+        _create_widget("chat", replay).chat_input_value.data = "message"
+        reqs.request_rerun(
+            RerunData(
+                replay_trigger_states=replay,
+                replay_trigger_values={"chat": object()},
+            )
+        )
+
+        reqs.request_stop()
+
+        assert reqs._rerun_data.replay_trigger_values is None
+
+    def test_preempting_request_releases_queued_hydrated_values(self):
+        """Yield-time consumption transfers and releases a hydrated replay value."""
+        reqs = ScriptRequests()
+        replay = WidgetStates()
+        _create_widget("chat", replay).chat_input_value.data = "message"
+        hydrated_value = object()
+        reqs.request_rerun(
+            RerunData(
+                fragment_id_queue=["target"],
+                is_fragment_scoped_rerun=True,
+                replay_trigger_states=replay,
+                replay_trigger_values={"chat": hydrated_value},
+            )
+        )
+
+        request = reqs.on_scriptrunner_yield()
+
+        assert request is not None
+        assert request.rerun_data.replay_trigger_values == {"chat": hydrated_value}
+        assert reqs._rerun_data.replay_trigger_values is None
+
+    def test_request_rerun_batch_coalesces_fragment_targets(self):
+        reqs = ScriptRequests()
+        reqs.request_rerun_batch(
+            [
+                RerunData(fragment_id_queue=["frag-a"]),
+                RerunData(fragment_id_queue=["frag-b"]),
+            ]
+        )
+
+        assert reqs._rerun_data.fragment_id_queue == ["frag-a", "frag-b"]
+
+    def test_request_rerun_batch_acquires_lock_once(self):
+        reqs = ScriptRequests()
+        lock = MagicMock()
+        reqs._lock = lock
+
+        reqs.request_rerun_batch(
+            [
+                RerunData(fragment_id_queue=["frag-a"]),
+                RerunData(fragment_id_queue=["frag-b"]),
+            ]
+        )
+
+        lock.__enter__.assert_called_once_with()
+        lock.__exit__.assert_called_once()
 
     def test_on_script_yield_with_no_request(self):
         """Return None; remain in the CONTINUE state."""

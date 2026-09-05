@@ -17,13 +17,17 @@ from __future__ import annotations
 import threading
 from dataclasses import dataclass, field, replace
 from enum import Enum
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
+
+from google.protobuf.message import Message
 
 from streamlit import util
 from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from streamlit.proto.ClientState_pb2 import ContextInfo
 
 
@@ -61,10 +65,14 @@ class RerunData:
     is_fragment_scoped_rerun: bool = False
     # set to true when a script is rerun by the fragment auto-rerun mechanism
     is_auto_rerun: bool = False
-    # When True, apply widget_states but skip callback dispatch.
-    # Set by _request_full_app_rerun when a normally returning callback
-    # requests the interaction default after callbacks have already run.
-    suppress_callbacks: bool = False
+    # Active trigger values whose callbacks already ran. These are applied after
+    # fresh widget callbacks so the script body can observe them without
+    # dispatching their callbacks again.
+    replay_trigger_states: WidgetStates | None = None
+    # Already-deserialized chat input values corresponding to replay_trigger_states.
+    # Chat deserialization consumes uploaded file records, so replaying only its
+    # protobuf would lose file and audio payloads.
+    replay_trigger_values: Mapping[str, Any] | None = None
     # Hashes of messages that are cached in the client browser:
     cached_message_hashes: frozenset[str] = field(default_factory=frozenset)
     # context_info is used to store information from the user browser (e.g. timezone)
@@ -117,15 +125,12 @@ def _fragment_run_should_not_preempt_script(
 def _coalesce_widget_states(
     old_states: WidgetStates | None,
     new_states: WidgetStates | None,
-    *,
-    old_suppress_callbacks: bool = False,
 ) -> WidgetStates | None:
     """Merge an older WidgetStates into a newer one, returning the result.
 
     For most widgets the newer value wins.  Button and chat-input triggers are
     special: an active trigger in ``old_states`` carries forward so rapid clicks
-    aren't lost — unless ``old_suppress_callbacks`` is True, meaning those
-    triggers' callbacks already ran and re-preserving them would fire duplicates.
+    aren't lost.
     """
     if not old_states and not new_states:
         return None
@@ -138,42 +143,126 @@ def _coalesce_widget_states(
         wstate.id: wstate for wstate in new_states.widgets
     }
 
-    if not old_suppress_callbacks:
-        trigger_value_types = [
-            ("trigger_value", False),
-            ("chat_input_value", ChatInputValueProto(data=None)),
-        ]
-        for old_state in old_states.widgets:
-            for trigger_value_type, unset_value in trigger_value_types:
-                if (
-                    old_state.WhichOneof("value") == trigger_value_type
-                    and getattr(old_state, trigger_value_type) != unset_value
+    trigger_value_types = [
+        ("trigger_value", False),
+        ("chat_input_value", ChatInputValueProto(data=None)),
+    ]
+    for old_state in old_states.widgets:
+        for trigger_value_type, unset_value in trigger_value_types:
+            if (
+                old_state.WhichOneof("value") == trigger_value_type
+                and getattr(old_state, trigger_value_type) != unset_value
+            ):
+                new_trigger_val = states_by_id.get(old_state.id)
+                # It should nearly always be the case that new_trigger_val
+                # is None here as trigger values are deleted from the
+                # client's WidgetStateManager as soon as a rerun_script
+                # BackMsg is sent to the server. Since it's impossible to
+                # test that the client sends us state in the expected
+                # format in a unit test, we test for this behavior in
+                # e2e_playwright/test_fragment_queue_test.py
+                if not new_trigger_val or (
+                    # Ensure the corresponding new_state is also a trigger;
+                    # otherwise, a widget that was previously a
+                    # button/chat_input but no longer is could get a bad
+                    # value.
+                    new_trigger_val.WhichOneof("value") == trigger_value_type
+                    # We only want to take the value of old_state if
+                    # new_trigger_val is unset as the old value may be
+                    # stale if a newer one was entered.
+                    and getattr(new_trigger_val, trigger_value_type) == unset_value
                 ):
-                    new_trigger_val = states_by_id.get(old_state.id)
-                    # It should nearly always be the case that new_trigger_val
-                    # is None here as trigger values are deleted from the
-                    # client's WidgetStateManager as soon as a rerun_script
-                    # BackMsg is sent to the server. Since it's impossible to
-                    # test that the client sends us state in the expected
-                    # format in a unit test, we test for this behavior in
-                    # e2e_playwright/test_fragment_queue_test.py
-                    if not new_trigger_val or (
-                        # Ensure the corresponding new_state is also a trigger;
-                        # otherwise, a widget that was previously a
-                        # button/chat_input but no longer is could get a bad
-                        # value.
-                        new_trigger_val.WhichOneof("value") == trigger_value_type
-                        # We only want to take the value of old_state if
-                        # new_trigger_val is unset as the old value may be
-                        # stale if a newer one was entered.
-                        and getattr(new_trigger_val, trigger_value_type) == unset_value
-                    ):
-                        states_by_id[old_state.id] = old_state
+                    states_by_id[old_state.id] = old_state
 
     coalesced = WidgetStates()
     coalesced.widgets.extend(states_by_id.values())
 
     return coalesced
+
+
+_TRIGGER_PROTO_FIELDS = frozenset(
+    {
+        "trigger_value",
+        "string_trigger_value",
+        "chat_input_value",
+        "json_trigger_value",
+    }
+)
+
+
+def _has_active_trigger_value(state: WidgetState) -> bool:
+    value_type = state.WhichOneof("value")
+    if value_type not in _TRIGGER_PROTO_FIELDS:
+        return False
+
+    value = getattr(state, value_type)
+    if isinstance(value, Message):
+        return bool(value.ListFields())
+    return bool(value)
+
+
+def _coalesce_replay_trigger_states(
+    old_states: WidgetStates | None,
+    new_states: WidgetStates | None,
+) -> WidgetStates | None:
+    """Union active replay triggers, with newer duplicate IDs taking precedence."""
+    states_by_id: dict[str, WidgetState] = {}
+    for states in (old_states, new_states):
+        if states is None:
+            continue
+        for state in states.widgets:
+            if _has_active_trigger_value(state):
+                states_by_id[state.id] = state
+
+    if not states_by_id:
+        return None
+
+    coalesced = WidgetStates()
+    coalesced.widgets.extend(states_by_id.values())
+    return coalesced
+
+
+def _coalesce_replay_trigger_values(
+    new_states: WidgetStates | None,
+    old_values: Mapping[str, Any] | None,
+    new_values: Mapping[str, Any] | None,
+    coalesced_states: WidgetStates | None,
+) -> Mapping[str, Any] | None:
+    """Coalesce hydrated chat values in lockstep with their replay protos."""
+    values_by_id = dict(old_values or {})
+
+    # A newer proto replaces the complete replay entry. Drop any older hydrated
+    # value even when the newer request does not carry one.
+    new_chat_ids: set[str] = set()
+    if new_states is not None:
+        for state in new_states.widgets:
+            if _has_active_trigger_value(state):
+                values_by_id.pop(state.id, None)
+                if state.WhichOneof("value") == "chat_input_value":
+                    new_chat_ids.add(state.id)
+    if new_values is not None:
+        values_by_id.update(
+            {
+                widget_id: value
+                for widget_id, value in new_values.items()
+                if widget_id in new_chat_ids
+            }
+        )
+
+    if coalesced_states is None:
+        return None
+
+    active_chat_ids = {
+        state.id
+        for state in coalesced_states.widgets
+        if state.WhichOneof("value") == "chat_input_value"
+    }
+    coalesced_values = {
+        widget_id: value
+        for widget_id, value in values_by_id.items()
+        if widget_id in active_chat_ids
+    }
+    return coalesced_values or None
 
 
 class ScriptRequests:
@@ -194,6 +283,8 @@ class ScriptRequests:
         """
         with self._lock:
             self._state = ScriptRequestType.STOP
+            if self._rerun_data.replay_trigger_values is not None:
+                self._rerun_data = replace(self._rerun_data, replay_trigger_values=None)
 
     def request_rerun(self, new_data: RerunData) -> bool:
         """Request that the ScriptRunner rerun its script.
@@ -206,86 +297,115 @@ class ScriptRequests:
         """
 
         with self._lock:
-            if self._state == ScriptRequestType.STOP:
-                # We can't rerun after being stopped.
-                return False
+            return self._request_rerun_locked(new_data)
 
-            if self._state == ScriptRequestType.CONTINUE:
-                # The script is currently running, and we haven't received a request to
-                # rerun it as of yet. We can handle a rerun request unconditionally so
-                # just change self._state and set self._rerun_data.
-                self._state = ScriptRequestType.RERUN
+    def request_rerun_batch(self, rerun_batch: list[RerunData]) -> bool:
+        """Submit an ordered rerun batch under one lock so requests cannot interleave."""
+        with self._lock:
+            return all(
+                self._request_rerun_locked(rerun_data) for rerun_data in rerun_batch
+            )
 
-                # Convert from a single fragment_id into fragment_id_queue.
-                if new_data.fragment_id:
-                    new_data = replace(
-                        new_data,
-                        fragment_id=None,
-                        fragment_id_queue=[new_data.fragment_id],
-                    )
+    def _request_rerun_locked(self, new_data: RerunData) -> bool:
+        """Fold one rerun into the pending request.
 
-                self._rerun_data = new_data
-                return True
+        The caller must hold ``self._lock`` so batch requests cannot interleave.
+        """
+        if self._state == ScriptRequestType.STOP:
+            return False
 
-            if self._state == ScriptRequestType.RERUN:
-                # We already have an existing Rerun request, so we can coalesce the new
-                # rerun request into the existing one.
+        if self._state == ScriptRequestType.CONTINUE:
+            self._state = ScriptRequestType.RERUN
 
-                coalesced_states = _coalesce_widget_states(
-                    self._rerun_data.widget_states,
-                    new_data.widget_states,
-                    old_suppress_callbacks=self._rerun_data.suppress_callbacks,
+            if new_data.fragment_id:
+                new_data = replace(
+                    new_data,
+                    fragment_id=None,
+                    fragment_id_queue=[new_data.fragment_id],
                 )
 
-                # Fold a bare fragment_id into fragment_id_queue so the coalescing
-                # below only has to read one field.
-                if new_data.fragment_id:
-                    new_data = replace(
-                        new_data,
-                        fragment_id=None,
-                        fragment_id_queue=[
-                            new_data.fragment_id,
-                            *new_data.fragment_id_queue,
-                        ],
-                    )
+            coalesced_replay_states = _coalesce_replay_trigger_states(
+                None, new_data.replay_trigger_states
+            )
+            new_data = replace(
+                new_data,
+                replay_trigger_states=coalesced_replay_states,
+                replay_trigger_values=_coalesce_replay_trigger_values(
+                    new_data.replay_trigger_states,
+                    None,
+                    new_data.replay_trigger_values,
+                    coalesced_replay_states,
+                ),
+            )
+            self._rerun_data = new_data
+            return True
 
-                if _is_full_app_rerun(self._rerun_data) or _is_full_app_rerun(new_data):
-                    # A full-app rerun anywhere in the interaction trumps every
-                    # fragment-targeted one, since it reruns those fragments too.
-                    # Collapse to a single full-app rerun, whichever arrived first.
-                    fragment_id_queue: list[str] = []
-                    is_fragment_scoped_rerun = False
-                else:
-                    # Both requests still need their fragments to run, so take the
-                    # union (deduped, order-preserving). Stay fragment-scoped if either
-                    # request was, since that is what lets the coalesced rerun preempt
-                    # the run in progress.
-                    fragment_id_queue = [*self._rerun_data.fragment_id_queue]
-                    for fragment_id in new_data.fragment_id_queue:
-                        if fragment_id not in fragment_id_queue:
-                            fragment_id_queue.append(fragment_id)
-                    is_fragment_scoped_rerun = (
-                        self._rerun_data.is_fragment_scoped_rerun
-                        or new_data.is_fragment_scoped_rerun
-                    )
+        if self._state == ScriptRequestType.RERUN:
+            coalesced_states = _coalesce_widget_states(
+                self._rerun_data.widget_states,
+                new_data.widget_states,
+            )
+            coalesced_replay_states = _coalesce_replay_trigger_states(
+                self._rerun_data.replay_trigger_states,
+                new_data.replay_trigger_states,
+            )
+            coalesced_replay_values = _coalesce_replay_trigger_values(
+                new_data.replay_trigger_states,
+                self._rerun_data.replay_trigger_values,
+                new_data.replay_trigger_values,
+                coalesced_replay_states,
+            )
 
-                self._rerun_data = RerunData(
-                    query_string=new_data.query_string,
-                    widget_states=coalesced_states,
-                    page_script_hash=new_data.page_script_hash,
-                    page_name=new_data.page_name,
-                    fragment_id_queue=fragment_id_queue,
-                    cached_message_hashes=new_data.cached_message_hashes,
-                    is_fragment_scoped_rerun=is_fragment_scoped_rerun,
-                    is_auto_rerun=new_data.is_auto_rerun,
-                    suppress_callbacks=new_data.suppress_callbacks,
-                    context_info=new_data.context_info,
+            # Fold a bare fragment_id into fragment_id_queue so the coalescing
+            # below only has to read one field.
+            if new_data.fragment_id:
+                new_data = replace(
+                    new_data,
+                    fragment_id=None,
+                    fragment_id_queue=[
+                        new_data.fragment_id,
+                        *new_data.fragment_id_queue,
+                    ],
                 )
 
-                return True
+            if _is_full_app_rerun(self._rerun_data) or _is_full_app_rerun(new_data):
+                # A full-app rerun anywhere in the interaction trumps every
+                # fragment-targeted one, since it reruns those fragments too.
+                # Collapse to a single full-app rerun, whichever arrived first.
+                fragment_id_queue: list[str] = []
+                is_fragment_scoped_rerun = False
+            else:
+                # Both requests still need their fragments to run, so take the
+                # union (deduped, order-preserving). Stay fragment-scoped if either
+                # request was, since that is what lets the coalesced rerun preempt
+                # the run in progress.
+                fragment_id_queue = [*self._rerun_data.fragment_id_queue]
+                for fragment_id in new_data.fragment_id_queue:
+                    if fragment_id not in fragment_id_queue:
+                        fragment_id_queue.append(fragment_id)
+                is_fragment_scoped_rerun = (
+                    self._rerun_data.is_fragment_scoped_rerun
+                    or new_data.is_fragment_scoped_rerun
+                )
 
-            # We'll never get here
-            raise RuntimeError(f"Unrecognized ScriptRunnerState: {self._state}")
+            self._rerun_data = RerunData(
+                query_string=new_data.query_string,
+                widget_states=coalesced_states,
+                page_script_hash=new_data.page_script_hash,
+                page_name=new_data.page_name,
+                fragment_id_queue=fragment_id_queue,
+                cached_message_hashes=new_data.cached_message_hashes,
+                is_fragment_scoped_rerun=is_fragment_scoped_rerun,
+                is_auto_rerun=new_data.is_auto_rerun,
+                replay_trigger_states=coalesced_replay_states,
+                replay_trigger_values=coalesced_replay_values,
+                context_info=new_data.context_info,
+            )
+
+            return True
+
+        # STOP, CONTINUE, and RERUN are all handled above.
+        raise RuntimeError(f"Unrecognized ScriptRunnerState: {self._state}")
 
     def on_scriptrunner_yield(self) -> ScriptRequest | None:
         """Called by the ScriptRunner when it's at a yield point.
@@ -322,7 +442,10 @@ class ScriptRequests:
                     return None
 
                 self._state = ScriptRequestType.CONTINUE
-                return ScriptRequest(ScriptRequestType.RERUN, self._rerun_data)
+                rerun_data = self._rerun_data
+                if rerun_data.replay_trigger_values is not None:
+                    self._rerun_data = replace(rerun_data, replay_trigger_values=None)
+                return ScriptRequest(ScriptRequestType.RERUN, rerun_data)
 
             if self._state != ScriptRequestType.STOP:  # pragma: no cover - defensive
                 raise RuntimeError(
@@ -343,9 +466,14 @@ class ScriptRequests:
         with self._lock:
             if self._state == ScriptRequestType.RERUN:
                 self._state = ScriptRequestType.CONTINUE
-                return ScriptRequest(ScriptRequestType.RERUN, self._rerun_data)
+                rerun_data = self._rerun_data
+                if rerun_data.replay_trigger_values is not None:
+                    self._rerun_data = replace(rerun_data, replay_trigger_values=None)
+                return ScriptRequest(ScriptRequestType.RERUN, rerun_data)
 
             # If we don't have a rerun request, unconditionally change our
             # state to STOP.
             self._state = ScriptRequestType.STOP
+            if self._rerun_data.replay_trigger_values is not None:
+                self._rerun_data = replace(self._rerun_data, replay_trigger_values=None)
             return ScriptRequest(ScriptRequestType.STOP)

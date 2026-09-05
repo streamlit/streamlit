@@ -31,6 +31,7 @@ from hypothesis import strategies as hst
 import streamlit as st
 import tests.streamlit.runtime.state.strategies as stst
 from streamlit.components.v2.bidi_component.main import _make_trigger_id
+from streamlit.elements.widgets.chat import ChatInputValue
 from streamlit.errors import (
     StreamlitWidgetAlreadyInstantiatedError,
     UnserializableSessionStateError,
@@ -947,7 +948,7 @@ def test_rerun_exception_requeues_and_restores_run_location() -> None:
 
     assert ThreadState.get().in_fragment_callback is False
     # Rerun is re-queued rather than swallowed.
-    mock_ctx.script_requests.request_rerun.assert_called_once()
+    mock_ctx.script_requests.request_rerun_batch.assert_called_once()
 
 
 def test_on_change_callback_rerun_is_requeued() -> None:
@@ -972,8 +973,8 @@ def test_on_change_callback_rerun_is_requeued() -> None:
     ss._new_widget_state.set_from_value(wid, 1)
 
     mock_ctx = MagicMock()
-    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
-        d
+    mock_ctx.script_requests.request_rerun_batch.side_effect = lambda batch: (
+        requeue_calls.extend(batch)
     )
     ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
@@ -1010,7 +1011,7 @@ def test_normal_callback_return_queues_no_rerun() -> None:
     ):
         ss._call_callbacks()
 
-    mock_ctx.script_requests.request_rerun.assert_not_called()
+    mock_ctx.script_requests.request_rerun_batch.assert_not_called()
 
 
 def test_plain_rerun_plus_normal_callback_queues_one_rerun() -> None:
@@ -1049,7 +1050,7 @@ def test_plain_rerun_plus_normal_callback_queues_one_rerun() -> None:
 
     # Only the re-queued rerun from the explicit st.rerun() call. No extra forced
     # rerun because neither callback requested a targeted rerun — no conflict.
-    assert mock_ctx.script_requests.request_rerun.call_count == 1
+    mock_ctx.script_requests.request_rerun_batch.assert_called_once()
 
 
 def test_fragment_widget_callback_rerun_is_requeued() -> None:
@@ -1075,8 +1076,8 @@ def test_fragment_widget_callback_rerun_is_requeued() -> None:
     ss._new_widget_state.set_from_value(wid, 1)
 
     mock_ctx = MagicMock()
-    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
-        d
+    mock_ctx.script_requests.request_rerun_batch.side_effect = lambda batch: (
+        requeue_calls.extend(batch)
     )
     ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
@@ -1131,8 +1132,8 @@ def _call_callbacks_in_main_script(ss: SessionState) -> list[RerunData]:
     # fragment interaction.
     mock_ctx.fragment_ids_this_run = None
     mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
-    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
-        d
+    mock_ctx.script_requests.request_rerun_batch.side_effect = lambda batch: (
+        requeue_calls.extend(batch)
     )
     ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
@@ -1211,8 +1212,8 @@ def test_fragment_origin_target_with_callback_less_change_does_not_escalate() ->
     mock_ctx = MagicMock()
     mock_ctx.fragment_ids_this_run = ["enclosing-frag"]
     mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
-    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
-        d
+    mock_ctx.script_requests.request_rerun_batch.side_effect = lambda batch: (
+        requeue_calls.extend(batch)
     )
     ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
@@ -1241,13 +1242,11 @@ def test_changed_widgets_without_callbacks_queue_no_rerun() -> None:
     assert _call_callbacks_in_main_script(ss) == []
 
 
-def test_forced_full_app_rerun_carries_only_trigger_states_with_suppress() -> None:
-    """_request_full_app_rerun forwards only trigger widget_states with suppress_callbacks.
+def test_forced_full_app_rerun_carries_only_replay_trigger_states() -> None:
+    """Only ephemeral triggers are replayed by a forced full-app rerun.
 
-    The forced full-app rerun that escalates a targeted rerun carries only trigger-type
-    widget states (whose values are ephemeral and must be replayed for the body). Non-
-    trigger values already live in session state from callback execution; replaying them
-    would overwrite callback mutations.
+    Non-trigger state already contains callback mutations, so replaying fresh browser
+    values could overwrite them.
 
     Escalation requires a callback that explicitly wants the default (returns normally)
     alongside a targeted rerun.
@@ -1289,13 +1288,17 @@ def test_forced_full_app_rerun_carries_only_trigger_states_with_suppress() -> No
     nontrigger_ws = proto_states.widgets.add()
     nontrigger_ws.id = "normal_btn"
     nontrigger_ws.int_value = 1
+    file_chat_ws = proto_states.widgets.add()
+    file_chat_ws.id = "file_chat"
+    file_chat_ws.chat_input_value.data = ""
+    file_chat_ws.chat_input_value.file_uploader_state.uploaded_file_info.add().file_id = "file"
     ss._current_interaction_widget_states = proto_states
 
     mock_ctx = MagicMock()
     mock_ctx.fragment_ids_this_run = None
     mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
-    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
-        d
+    mock_ctx.script_requests.request_rerun_batch.side_effect = lambda batch: (
+        requeue_calls.extend(batch)
     )
     ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
@@ -1309,21 +1312,23 @@ def test_forced_full_app_rerun_carries_only_trigger_states_with_suppress() -> No
     forced = requeue_calls[-1]
     assert not forced.fragment_id_queue
     assert not forced.is_fragment_scoped_rerun
-    assert forced.suppress_callbacks is True
-    # Only the trigger widget should be forwarded; non-trigger filtered out.
-    assert forced.widget_states is not None
-    assert len(forced.widget_states.widgets) == 1
-    assert forced.widget_states.widgets[0].id == "targeted_btn"
-    assert forced.widget_states.widgets[0].trigger_value is True
+    assert forced.widget_states is None
+    assert forced.replay_trigger_states is None
+    replay_carrier = requeue_calls[0]
+    assert replay_carrier.replay_trigger_states is not None
+    assert [state.id for state in replay_carrier.replay_trigger_states.widgets] == [
+        "targeted_btn",
+        "file_chat",
+    ]
+    assert replay_carrier.replay_trigger_states.widgets[0].trigger_value is True
 
 
 def test_callback_session_state_mutation_survives_escalation_replay() -> None:
-    """Callback writes to st.session_state are not overwritten by the escalated rerun.
+    """Escalation does not overwrite callback mutations with stale browser state.
 
-    Scenario: A form has a text_input (on_change strips whitespace via
-    st.session_state["name"] = stripped) and a submit button (on_click targets a
-    fragment). The escalated full-app rerun must NOT replay the original un-stripped
-    value from the proto — only trigger values should be replayed.
+    A text input callback normalizes its value while a submit callback targets a
+    fragment. The full-app rerun replays only the submit trigger, not the original
+    unnormalized input from the browser.
     """
 
     requeue_calls: list[RerunData] = []
@@ -1372,8 +1377,8 @@ def test_callback_session_state_mutation_survives_escalation_replay() -> None:
     mock_ctx.query_string = ""
     mock_ctx.cached_message_hashes = frozenset()
     mock_ctx.context_info = None
-    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
-        d
+    mock_ctx.script_requests.request_rerun_batch.side_effect = lambda batch: (
+        requeue_calls.extend(batch)
     )
     ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
@@ -1386,8 +1391,11 @@ def test_callback_session_state_mutation_survives_escalation_replay() -> None:
     # The escalated rerun must NOT include the text_input's string_value.
     assert len(requeue_calls) == 2
     forced = requeue_calls[-1]
-    assert forced.suppress_callbacks is True
-    forwarded_ids = [w.id for w in forced.widget_states.widgets]
+    assert forced.widget_states is None
+    assert forced.replay_trigger_states is None
+    replay_carrier = requeue_calls[0]
+    assert replay_carrier.replay_trigger_states is not None
+    forwarded_ids = [w.id for w in replay_carrier.replay_trigger_states.widgets]
     assert "submit_btn_wid" in forwarded_ids
     assert "text_input_wid" not in forwarded_ids
 
@@ -1395,11 +1403,8 @@ def test_callback_session_state_mutation_survives_escalation_replay() -> None:
     assert ss["name"] == "stripped"
 
 
-def test_suppress_callbacks_skips_dispatch_but_applies_values() -> None:
-    """on_script_will_rerun with suppress_callbacks applies values without callbacks.
-
-    The trigger value is set (so the body sees it) but no callback fires.
-    """
+def test_replay_only_state_applies_values_without_callbacks() -> None:
+    """Consumed replay triggers remain visible without dispatching callbacks again."""
     ss = SessionState()
     trigger_wid = "submit_btn"
     meta = WidgetMetadata(
@@ -1416,10 +1421,343 @@ def test_suppress_callbacks_skips_dispatch_but_applies_values() -> None:
     ws.id = trigger_wid
     ws.trigger_value = True
 
-    ss.on_script_will_rerun(proto_states, suppress_callbacks=True)
+    ss.on_script_will_rerun(None, replay_trigger_states=proto_states)
 
     assert ss[trigger_wid] is True
     assert ss._current_interaction_widget_states is None
+
+
+def test_fresh_callbacks_run_before_replay_overlay() -> None:
+    """Fresh input dispatches once while replay input remains body-visible."""
+    calls: list[str] = []
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+    ss = SessionState()
+    for wid in ("fresh", "replay"):
+        ss._set_widget_metadata(
+            WidgetMetadata(
+                id=wid,
+                deserializer=lambda v: v,
+                serializer=lambda v: v,
+                value_type="trigger_value",
+                callback=lambda wid=wid: calls.append(wid),
+            )
+        )
+        ss._old_state[wid] = False
+
+    fresh = WidgetStatesProto()
+    fresh.widgets.add(id="fresh", trigger_value=True)
+    replay = WidgetStatesProto()
+    replay.widgets.add(id="replay", trigger_value=True)
+
+    ss.on_script_will_rerun(fresh, replay_trigger_states=replay)
+
+    assert calls == ["fresh"]
+    assert ss["fresh"] is True
+    assert ss["replay"] is True
+
+
+def test_active_fresh_trigger_wins_over_replay_with_same_id() -> None:
+    """An active fresh trigger takes precedence over replay for the same widget."""
+    calls: list[str] = []
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+    ss = SessionState()
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="trigger",
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="string_trigger_value",
+            callback=lambda: calls.append("fresh"),
+        )
+    )
+    ss._old_state["trigger"] = None
+    fresh = WidgetStatesProto()
+    fresh.widgets.add(id="trigger").string_trigger_value.data = "new"
+    replay = WidgetStatesProto()
+    replay.widgets.add(id="trigger").string_trigger_value.data = "old"
+
+    ss.on_script_will_rerun(fresh, replay_trigger_states=replay)
+
+    assert calls == ["fresh"]
+    assert ss["trigger"] == "new"
+
+
+def test_active_fresh_chat_wins_over_hydrated_replay_with_same_id() -> None:
+    """Fresh chat input is not overwritten by an older hydrated replay value."""
+    calls: list[str] = []
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+    ss = SessionState()
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="chat",
+            deserializer=lambda value: value.data,
+            serializer=lambda value: ChatInputValueProto(data=value),
+            value_type="chat_input_value",
+            callback=lambda: calls.append("fresh"),
+        )
+    )
+    ss._old_state["chat"] = None
+    fresh = WidgetStatesProto()
+    fresh.widgets.add(id="chat").chat_input_value.data = "new"
+    replay = WidgetStatesProto()
+    replay.widgets.add(id="chat").chat_input_value.data = "old"
+
+    ss.on_script_will_rerun(
+        fresh,
+        replay_trigger_states=replay,
+        replay_trigger_values={"chat": "hydrated-old"},
+    )
+
+    assert calls == ["fresh"]
+    assert ss["chat"] == "new"
+
+
+def test_callback_mutation_survives_replay_overlay() -> None:
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+    ss = SessionState()
+    ss["result"] = "before"
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="fresh",
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="trigger_value",
+            callback=lambda: ss.__setitem__("result", "after"),
+        )
+    )
+    ss._old_state["fresh"] = False
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="replay",
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="trigger_value",
+            callback=lambda: (_ for _ in ()).throw(
+                AssertionError("replay callback should not run")
+            ),
+        )
+    )
+    ss._old_state["replay"] = False
+    fresh = WidgetStatesProto()
+    fresh.widgets.add(id="fresh", trigger_value=True)
+    replay = WidgetStatesProto()
+    replay.widgets.add(id="replay", trigger_value=True)
+
+    ss.on_script_will_rerun(fresh, replay_trigger_states=replay)
+
+    assert ss["result"] == "after"
+    assert ss["replay"] is True
+
+
+def test_preempting_callback_batch_carries_incoming_replay_state() -> None:
+    """A second callback preemption forwards replay state from the interrupted run."""
+    ss = _state_with_changed_widgets([("target", _raise_targeted_rerun)])
+    replay = WidgetStatesProto()
+    replay.widgets.add(id="already-processed", trigger_value=True)
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = ["source"]
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks(replay)
+
+    mock_ctx.script_requests.request_rerun.assert_not_called()
+    mock_ctx.script_requests.request_rerun_batch.assert_called_once()
+    batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
+    assert batch[0].replay_trigger_states == replay
+
+
+def test_preempting_callback_batch_carries_hydrated_chat_replay() -> None:
+    """A second callback preemption forwards a hydrated chat replay value."""
+    ss = _state_with_changed_widgets([("target", _raise_targeted_rerun)])
+    replay = WidgetStatesProto()
+    replay.widgets.add(id="chat").chat_input_value.data = ""
+    hydrated_chat = object()
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = ["source"]
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks(replay, {"chat": hydrated_chat})
+
+    batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
+    assert batch[0].replay_trigger_states == replay
+    assert batch[0].replay_trigger_values == {"chat": hydrated_chat}
+
+
+def test_targeted_callback_batch_replays_current_interaction_trigger() -> None:
+    ss = _state_with_changed_widgets([("target", _raise_targeted_rerun)])
+    interaction = WidgetStatesProto()
+    interaction.widgets.add(id="submit", trigger_value=True)
+    ss._current_interaction_widget_states = interaction
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = ["source"]
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
+    assert batch[0].replay_trigger_states == interaction
+
+
+def test_targeted_chat_replay_preserves_hydrated_uploaded_files() -> None:
+    """A targeted callback rerun restores chat files without deserializing twice."""
+    file_rec = UploadedFileRec("file", "payload.txt", "text/plain", b"contents")
+    uploaded_file = UploadedFile(
+        file_rec,
+        FileURLsProto(file_id="file", delete_url="delete", upload_url="upload"),
+    )
+    audio_rec = UploadedFileRec("audio", "recording.wav", "audio/wav", b"audio")
+    uploaded_audio = UploadedFile(
+        audio_rec,
+        FileURLsProto(file_id="audio", delete_url="delete", upload_url="upload"),
+    )
+    chat_value = ChatInputValue(
+        text="",
+        files=[uploaded_file],
+        audio=uploaded_audio,
+        _include_files=True,
+        _include_audio=True,
+    )
+
+    ss = SessionState()
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="chat",
+            deserializer=lambda _: (_ for _ in ()).throw(
+                AssertionError("hydrated replay must not deserialize again")
+            ),
+            serializer=lambda value: ChatInputValueProto(data=value.text),
+            value_type="chat_input_value",
+            callback=_raise_targeted_rerun,
+        )
+    )
+    ss._old_state["chat"] = None
+    ss._new_widget_state.set_from_value("chat", chat_value)
+    interaction = WidgetStatesProto()
+    interaction_chat = interaction.widgets.add(id="chat").chat_input_value
+    interaction_chat.data = ""
+    interaction_chat.file_uploader_state.uploaded_file_info.add().file_id = "file"
+    ss._current_interaction_widget_states = interaction
+
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = ["source"]
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
+    rerun_data = batch[0]
+    assert rerun_data.replay_trigger_values == {"chat": chat_value}
+
+    ss.on_script_will_rerun(
+        None,
+        replay_trigger_states=rerun_data.replay_trigger_states,
+        replay_trigger_values=rerun_data.replay_trigger_values,
+    )
+
+    replayed_value = ss._new_widget_state["chat"]
+    assert replayed_value is chat_value
+    assert replayed_value.files[0].name == "payload.txt"
+    assert replayed_value.files[0].getvalue() == b"contents"
+    assert replayed_value.audio is uploaded_audio
+    assert replayed_value.audio.getvalue() == b"audio"
+
+
+def test_app_wide_escalation_preserves_hydrated_chat_through_request_queue() -> None:
+    """A later full-app batch item does not discard the chat replay payload."""
+    hydrated_chat = object()
+    ss = SessionState()
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="chat",
+            deserializer=lambda _: (_ for _ in ()).throw(
+                AssertionError("hydrated replay must not deserialize again")
+            ),
+            serializer=lambda value: value,
+            value_type="chat_input_value",
+            callback=_raise_targeted_rerun,
+        )
+    )
+    ss._old_state["chat"] = None
+    ss._new_widget_state.set_from_value("chat", hydrated_chat)
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="normal",
+            deserializer=lambda value: value,
+            serializer=lambda value: value,
+            value_type="int_value",
+            callback=lambda: None,
+        )
+    )
+    ss._old_state["normal"] = 0
+    ss._new_widget_state.set_from_value("normal", 1)
+    interaction = WidgetStatesProto()
+    interaction.widgets.add(id="chat").chat_input_value.data = ""
+    ss._current_interaction_widget_states = interaction
+
+    script_requests = ScriptRequests()
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    mock_ctx.script_requests = script_requests
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    request = script_requests.on_scriptrunner_yield()
+    assert request is not None
+    assert request.rerun_data.fragment_id_queue == []
+    assert request.rerun_data.replay_trigger_values == {"chat": hydrated_chat}
+
+
+def test_targeted_preemption_combines_incoming_and_current_replay_triggers() -> None:
+    ss = _state_with_changed_widgets([("target", _raise_targeted_rerun)])
+    incoming_replay = WidgetStatesProto()
+    incoming_replay.widgets.add(id="already-processed", trigger_value=True)
+    current_interaction = WidgetStatesProto()
+    current_interaction.widgets.add(id="submit", trigger_value=True)
+    ss._current_interaction_widget_states = current_interaction
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = ["source"]
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks(incoming_replay)
+
+    batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
+    replay = batch[0].replay_trigger_states
+    assert replay is not None
+    assert [(state.id, state.trigger_value) for state in replay.widgets] == [
+        ("already-processed", True),
+        ("submit", True),
+    ]
 
 
 def test_disabled_widget_change_does_not_force_app_wide_rerun() -> None:
@@ -1475,8 +1813,8 @@ def test_main_script_interaction_escalates_targeted_rerun_to_full_app() -> None:
     # Main-script interaction; see _call_callbacks_in_main_script for why this is pinned.
     mock_ctx.fragment_ids_this_run = None
     mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
-    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
-        d
+    mock_ctx.script_requests.request_rerun_batch.side_effect = lambda batch: (
+        requeue_calls.extend(batch)
     )
     ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
@@ -1527,8 +1865,8 @@ def test_fragment_interaction_does_not_escalate_targeted_rerun() -> None:
 
     mock_ctx = MagicMock()
     mock_ctx.fragment_ids_this_run = ["frag-1"]
-    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
-        d
+    mock_ctx.script_requests.request_rerun_batch.side_effect = lambda batch: (
+        requeue_calls.extend(batch)
     )
     ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
@@ -1580,8 +1918,8 @@ def test_callbacks_all_targeted_do_not_force_full_app_rerun() -> None:
     # force" result then comes from no callback voting for the default, not from the
     # fragment gate suppressing it.
     mock_ctx.fragment_ids_this_run = None
-    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
-        d
+    mock_ctx.script_requests.request_rerun_batch.side_effect = lambda batch: (
+        requeue_calls.extend(batch)
     )
     ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 

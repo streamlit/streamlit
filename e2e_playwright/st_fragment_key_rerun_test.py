@@ -14,7 +14,8 @@
 
 """Playwright tests for @st.fragment(key=...) and st.rerun(scope=<key>)."""
 
-from playwright.sync_api import Page, expect
+import pytest
+from playwright.sync_api import FilePayload, Page, expect
 
 from e2e_playwright.shared.app_utils import (
     click_button,
@@ -24,11 +25,20 @@ from e2e_playwright.shared.app_utils import (
 )
 
 
+@pytest.fixture(scope="module")
+def app_server_extra_args() -> list[str]:
+    return ["--runner.fastReruns=true"]
+
+
 def _text(app: Page, key: str) -> str:
     """Return the text content of a container identified by its Streamlit key."""
     content = get_element_by_key(app, key).text_content()
     assert content is not None
     return content
+
+
+def _run_count(app: Page, key: str) -> int:
+    return int(_text(app, key).rsplit(": ", 1)[1])
 
 
 def test_single_key_rerun_updates_only_fragment(app: Page) -> None:
@@ -93,3 +103,80 @@ def test_unknown_key_raises_visible_exception(app: Page) -> None:
     click_button(app, "Rerun unknown fragment")
 
     expect_exception(app, "No fragment found for target 'nonexistent_key'")
+
+
+def test_fresh_fragment_interaction_preserves_pending_callback_replay(
+    app: Page,
+) -> None:
+    source_uuid = _text(app, "coalescing_source_uuid")
+    fresh_uuid = _text(app, "coalescing_fresh_uuid")
+    result_uuid = _text(app, "coalescing_result_uuid")
+    source_runs = _run_count(app, "coalescing_source_runs")
+    fresh_runs = _run_count(app, "coalescing_fresh_runs")
+    result_runs = _run_count(app, "coalescing_result_runs")
+
+    app.get_by_label("Source value").fill("  retained  ")
+    app.get_by_role("button", name="Submit source").click()
+    expect(
+        app.get_by_text("Source callback waiting for fresh fragment input")
+    ).to_be_visible()
+    app.get_by_role("button", name="Fresh fragment interaction").click()
+
+    results = get_element_by_key(app, "coalescing_results")
+    expect(results.get_by_text("Source callbacks: 1", exact=True)).to_be_visible()
+    expect(results.get_by_text("Fresh callbacks: 1", exact=True)).to_be_visible()
+    expect(
+        results.get_by_text("Normalized value: retained", exact=True)
+    ).to_be_visible()
+    expect(results.get_by_text("Result saw submit: True", exact=True)).to_be_visible()
+    expect(get_element_by_key(app, "coalescing_source_uuid")).to_have_text(source_uuid)
+    expect(get_element_by_key(app, "coalescing_fresh_uuid")).not_to_have_text(
+        fresh_uuid
+    )
+    expect(get_element_by_key(app, "coalescing_result_uuid")).not_to_have_text(
+        result_uuid
+    )
+    expect(get_element_by_key(app, "coalescing_source_runs")).to_have_text(
+        f"Source runs: {source_runs}"
+    )
+    expect(get_element_by_key(app, "coalescing_fresh_runs")).to_have_text(
+        f"Fresh runs: {fresh_runs + 1}"
+    )
+    expect(get_element_by_key(app, "coalescing_result_runs")).to_have_text(
+        f"Result runs: {result_runs + 1}"
+    )
+    expect_no_exception(app)
+
+
+def test_targeted_chat_callback_replay_retains_uploaded_file(app: Page) -> None:
+    """A targeted callback replay preserves an attachment-only chat value."""
+    chat_input = get_element_by_key(app, "replay_chat")
+    upload_button = chat_input.get_by_test_id("stChatInputFileUploadButton")
+    with app.expect_file_chooser() as chooser_info:
+        upload_button.click()
+    chooser_info.value.set_files(
+        FilePayload(
+            name="replay.txt",
+            mimeType="text/plain",
+            buffer=b"replayed contents",
+        )
+    )
+
+    expect(chat_input.get_by_text("replay.txt")).to_be_visible()
+    submit_button = chat_input.get_by_test_id("stChatInputSubmitButton")
+    expect(submit_button).to_be_enabled()
+    submit_button.click()
+
+    results = get_element_by_key(app, "chat_replay_results")
+    expect(results.get_by_text("Replayed text: ''", exact=True)).to_be_visible()
+    expect(results.get_by_text("Replayed files: 1", exact=True)).to_be_visible()
+    expect(
+        results.get_by_text("Replayed filename: replay.txt", exact=True)
+    ).to_be_visible()
+    expect(
+        results.get_by_text(
+            "Replayed contents: replayed contents",
+            exact=True,
+        )
+    ).to_be_visible()
+    expect_no_exception(app)
