@@ -23,6 +23,14 @@ import type { Plugin } from "vite"
 const KATEX_STYLESHEET_PATH = /[\\/]katex[\\/]dist[\\/]katex(\.min)?\.css$/
 
 /**
+ * Coarse prefilter for the transform hook so Rolldown does not call into JS for
+ * every module in the graph. Unanchored, because ids arrive with query markers.
+ * Drift against KATEX_STYLESHEET_PATH is safe both ways: too tight and `buildEnd`
+ * fails the build, too loose and the handler's own check rejects the id.
+ */
+const KATEX_STYLESHEET_FILTER = /[\\/]katex[\\/]dist[\\/]katex(\.min)?\.css/
+
+/**
  * Vite suffixes that ask for a module's contents or URL rather than routing it
  * through the CSS asset pipeline. Those imports emit no font files, so rewriting
  * them would alter a string someone is reading without saving anything.
@@ -38,11 +46,16 @@ const NON_CSS_PIPELINE_QUERY = /(\?|&)(raw|url)(?:&|$)|[?&]inline\b/
 const NON_WOFF2_SRC =
   /,\s*url\([^)]*\.(?:woff|ttf)\)\s*format\("(?:woff|truetype)"\)/g
 
+/** A whole `src` declaration -- the only place a font file is referenced. */
+const SRC_DECLARATION = /src:[^;}]*/g
+
 /**
- * Any surviving woff or ttf reference. Deliberately looser than NON_WOFF2_SRC:
- * if KaTeX starts quoting its urls or appending query strings, the strip stops
- * matching, and a guard sharing that assumption would go quiet with it. `\b`
- * keeps `.woff2` from matching, since `2` is a word character.
+ * Any surviving woff or ttf reference. Deliberately looser than NON_WOFF2_SRC: if
+ * KaTeX starts quoting its urls or appending query strings, the strip stops
+ * matching, and a guard sharing that assumption would go quiet with it. `\b` keeps
+ * `.woff2` from matching, since `2` is a word character -- but it would match a
+ * name like `Foo.ttf.woff2`, so this is applied per `src` declaration rather than
+ * to the whole stylesheet.
  */
 const SURVIVING_NON_WOFF2 = /\.(?:woff|ttf)\b/
 
@@ -56,9 +69,10 @@ const SURVIVING_NON_WOFF2 = /\.(?:woff|ttf)\b/
  * stylesheet's assets keeps those urls from becoming files at all. Only `src`
  * declarations change; faces, weights and `font-display` are untouched.
  *
- * `frontend/lib` imports the stylesheet (`StreamlitMarkdown/Heading.tsx`), and
- * only `frontend/app/build/` is rsynced into `lib/streamlit/static/`, so this is
- * the build whose font output ships.
+ * `frontend/lib` imports the stylesheet twice -- statically in
+ * `StreamlitMarkdown/Heading.tsx` and as a prefetch in `StreamlitMarkdown/utils.ts`
+ * -- and only `frontend/app/build/` is rsynced into `lib/streamlit/static/`, so
+ * this is the build whose font output ships.
  */
 export const katexWoff2Only = (): Plugin => {
   let sawStylesheet = false
@@ -81,45 +95,48 @@ export const katexWoff2Only = (): Plugin => {
       sawStylesheet = false
     },
 
-    transform(code, id) {
-      // Vite appends markers such as `?direct` to stylesheet ids.
-      const [path] = id.split("?")
-      if (!KATEX_STYLESHEET_PATH.test(path)) {
-        return null
-      }
-      if (NON_CSS_PIPELINE_QUERY.test(id)) {
-        return null
-      }
+    transform: {
+      filter: { id: KATEX_STYLESHEET_FILTER },
 
-      sawStylesheet = true
-      const woff2Only = code.replace(NON_WOFF2_SRC, "")
+      handler(code, id) {
+        // Vite appends markers such as `?direct` to stylesheet ids.
+        const [path] = id.split("?")
+        if (!KATEX_STYLESHEET_PATH.test(path)) {
+          return null
+        }
+        if (NON_CSS_PIPELINE_QUERY.test(id)) {
+          return null
+        }
 
-      if (SURVIVING_NON_WOFF2.test(woff2Only)) {
-        // Fail loudly: returning quietly would put ~600 KiB of fonts nothing
-        // fetches back into the wheel, with nothing else to notice. Reaching here
-        // means KaTeX reformatted its `src` declarations and NON_WOFF2_SRC needs
-        // updating to match.
-        this.error(
-          "KaTeX's stylesheet still references woff or ttf fonts after " +
-            "stripping. Its `src` format changed -- update NON_WOFF2_SRC."
-        )
-      }
+        sawStylesheet = true
+        const woff2Only = code.replace(NON_WOFF2_SRC, "")
 
-      return woff2Only === code ? null : { code: woff2Only, map: null }
+        const srcDeclarations = woff2Only.match(SRC_DECLARATION) ?? []
+        if (srcDeclarations.some(src => SURVIVING_NON_WOFF2.test(src))) {
+          // Fail loudly: returning quietly would put ~600 KiB of fonts nothing
+          // fetches back into the wheel, with nothing else to notice. Reaching
+          // here means KaTeX reformatted its `src` declarations and
+          // NON_WOFF2_SRC needs updating to match.
+          this.error(
+            "KaTeX's stylesheet still references woff or ttf fonts after " +
+              "stripping. Its `src` format changed -- update NON_WOFF2_SRC."
+          )
+        }
+
+        return woff2Only === code ? null : { code: woff2Only, map: null }
+      },
     },
 
     buildEnd(error) {
-      // The checks above only fire once the stylesheet reaches us. If its path
-      // moves, if nothing imports it any more, or if Vite changes how it ids CSS,
-      // this plugin would silently do nothing at all -- so require that it ran at
-      // least once per build.
+      // Fail if the stylesheet never reached us; a path or id change, or nothing
+      // importing it any more, would otherwise restore the fonts with a green
+      // build. Stay quiet when:
+      // - the build already failed (do not mask that error)
+      // - this is `serve` (nothing is emitted)
       //
-      // A build that failed for its own reasons may never have got as far as the
-      // stylesheet, so stay quiet rather than masking the real error.
-      //
-      // Note these hooks are per-environment. The app build resolves a single
-      // (client) environment today; adding a second one would need this narrowed
-      // to it, since the extra environment's buildStart would clear the flag.
+      // These hooks are per-environment. Today's app build resolves one client
+      // environment; a second one would need this narrowed to it, because that
+      // environment's buildStart would clear the flag.
       if (!error && isBuild && !sawStylesheet) {
         this.error(
           "Could not verify that KaTeX's woff and ttf fonts were stripped: its " +

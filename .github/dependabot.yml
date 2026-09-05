@@ -52,7 +52,8 @@ updates:
         # bring the JS that renders math, and both resolve 0.16.x. Matching that
         # version keeps one copy of katex in the bundle and keeps the CSS in step
         # with the markup the renderer emits -- KaTeX 0.18 prefixed its internal
-        # class names, so a mismatched major breaks styling outright.
+        # class names, so shipping CSS from a different 0.x minor breaks styling
+        # outright.
         # Raise this only together with rehype-katex and mermaid.
         versions: [">=0.17.0"]
 

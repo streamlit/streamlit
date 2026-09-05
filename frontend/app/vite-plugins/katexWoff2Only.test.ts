@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import type { Plugin } from "vite"
+
 import { existsSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 
@@ -53,6 +55,12 @@ type TransformFn = (
   id: string
 ) => { code: string } | string | null
 
+/** `transform` is an ObjectHook; ours carries a `filter` alongside the handler. */
+const transformHandler = (plugin: Plugin): unknown =>
+  typeof plugin.transform === "function"
+    ? plugin.transform
+    : plugin.transform?.handler
+
 /**
  * Runs the plugin's transform with a minimal plugin context, turning
  * `this.error` into a thrown error so tests can assert on it. Neither Vite nor
@@ -60,12 +68,12 @@ type TransformFn = (
  */
 const transform = (code: string, id: string): string | null => {
   const plugin = katexWoff2Only()
-  // `transform` is an ObjectHook, so it may legitimately be { handler, filter }.
-  if (typeof plugin.transform !== "function") {
-    throw new TypeError("expected a transform function")
+  const handler = transformHandler(plugin)
+  if (typeof handler !== "function") {
+    throw new TypeError("expected a transform handler")
   }
 
-  const hook = plugin.transform as unknown as TransformFn
+  const hook = handler as unknown as TransformFn
   const result = hook.call(
     {
       error: (message: string) => {
@@ -111,7 +119,7 @@ const runBuildLifecycle = (options: {
   call(plugin.configResolved, { command: options.command })
   call(plugin.buildStart, {})
   if (options.transformsStylesheet) {
-    call(plugin.transform, INSTALLED_KATEX_CSS, KATEX_ID)
+    call(transformHandler(plugin), INSTALLED_KATEX_CSS, KATEX_ID)
   }
   call(plugin.buildEnd, options.error)
 }
