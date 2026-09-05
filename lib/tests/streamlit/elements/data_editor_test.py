@@ -1377,6 +1377,26 @@ class DataEditorTest(DeltaGeneratorTestCase):
         assert columns_config["c"]["disabled"]
         assert columns_config["d"]["disabled"]
 
+    def test_disables_columns_with_inconsistently_nested_lists(self):
+        """Test that columns of lists PyArrow cannot serialize are disabled.
+
+        Regression test for https://github.com/streamlit/streamlit/issues/9380
+        """
+        data_df = pd.DataFrame(
+            {
+                "a": pd.Series([[1, 2], [3, 4]]),
+                # PyArrow cannot mix list nesting levels within one column:
+                "b": pd.Series([[1, 2], [[1, 2], [3, 4]]]),
+            }
+        )
+        st.data_editor(data_df)
+
+        proto = self.get_delta_from_queue().new_element.dataframe
+        columns_config = json.loads(proto.columns)
+
+        assert "a" not in columns_config
+        assert columns_config["b"]["disabled"]
+
     @parameterized.expand(
         [
             (pd.PeriodIndex(["2020-01-01", "2020-01-02", "2020-01-03"], freq="D"),),
