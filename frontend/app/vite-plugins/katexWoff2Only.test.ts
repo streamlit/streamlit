@@ -163,13 +163,22 @@ describe("katexWoff2Only", () => {
     expect(transform(INSTALLED_KATEX_CSS, id)).toBeNull()
   })
 
-  it("matches the unminified stylesheet and any Vite query marker", () => {
-    for (const id of [
-      "/repo/node_modules/katex/dist/katex.css",
-      `${KATEX_ID}?direct`,
-      `${KATEX_ID}?v=abc123`,
-    ]) {
-      expect(transform(INSTALLED_KATEX_CSS, id)).not.toBeNull()
+  it.each([
+    ["the unminified stylesheet", "/repo/node_modules/katex/dist/katex.css"],
+    ["Vite's ?direct marker", `${KATEX_ID}?direct`],
+    ["an arbitrary query", `${KATEX_ID}?v=abc123`],
+    // Vite's rawRE/urlRE require the token to end the query segment, so these
+    // are CSS imports rather than raw/URL ones and their fonts must be stripped.
+    ["?raw= with a value", `${KATEX_ID}?raw=value`],
+    ["?url= with a value", `${KATEX_ID}?url=value`],
+    ["?no-inline", `${KATEX_ID}?no-inline`],
+  ])("transforms %s", (_label, id) => {
+    expect(transform(INSTALLED_KATEX_CSS, id)).not.toBeNull()
+  })
+
+  it("ignores raw and url markers that do end the query segment", () => {
+    for (const id of [`${KATEX_ID}?raw&x=1`, `${KATEX_ID}?x=1&url`]) {
+      expect(transform(INSTALLED_KATEX_CSS, id)).toBeNull()
     }
   })
 
@@ -206,7 +215,7 @@ describe("katexWoff2Only", () => {
       // check can see: the transform simply never runs.
       expect(() =>
         runBuildLifecycle({ command: "build", transformsStylesheet: false })
-      ).toThrow(/never transformed/)
+      ).toThrow(/never reached this plugin/)
     })
 
     it("stays quiet when the build already failed", () => {

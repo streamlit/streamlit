@@ -25,10 +25,14 @@ const KATEX_STYLESHEET_PATH = /[\\/]katex[\\/]dist[\\/]katex(\.min)?\.css$/
 /**
  * Vite suffixes that ask for a module's contents or URL rather than routing it
  * through the CSS asset pipeline. Those imports emit no font files, so rewriting
- * them would alter a string someone is reading without saving anything. Mirrors
- * Vite's own `rawRE`, `urlRE` and `inlineRE`.
+ * them would alter a string someone is reading without saving anything.
+ *
+ * The delimiters match Vite's own: `raw` and `url` must end the query segment,
+ * so `?url=value` is a CSS import and belongs to us, while `inline` uses Vite's
+ * looser word-boundary form. Keeping these in step matters — anything Vite treats
+ * as CSS but we skip would emit the fonts we are trying to drop.
  */
-const NON_CSS_PIPELINE_QUERY = /[?&](raw|url|inline)\b/
+const NON_CSS_PIPELINE_QUERY = /(\?|&)(raw|url)(?:&|$)|[?&]inline\b/
 
 /** A woff or ttf entry in a `src` list, including its leading comma. */
 const NON_WOFF2_SRC =
@@ -118,9 +122,9 @@ export const katexWoff2Only = (): Plugin => {
       // to it, since the extra environment's buildStart would clear the flag.
       if (!error && isBuild && !sawStylesheet) {
         this.error(
-          "KaTeX's stylesheet was never transformed, so its woff and ttf fonts " +
-            "were emitted. Check that frontend/lib still imports the stylesheet, " +
-            "and that KATEX_STYLESHEET_PATH matches the id Vite gives " +
+          "Could not verify that KaTeX's woff and ttf fonts were stripped: its " +
+            "stylesheet never reached this plugin. Either nothing imports it any " +
+            "more, or KATEX_STYLESHEET_PATH no longer matches the id Vite gives " +
             "katex/dist/katex.min.css."
         )
       }
