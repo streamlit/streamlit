@@ -665,7 +665,11 @@ export function useEChartsSelections(
 
   const restoreSelection = useCallback(
     (chart: EChartsSelectionInstance): void => {
-      if (!chartId) {
+      // Keyed display-only charts also have an element ID (CSS class + remount
+      // identity). Restoring against that ID would re-apply leftover widget
+      // state after ``on_select`` is turned off, with no handlers bound to
+      // clear the highlight.
+      if (!chartId || !isSelectionActivated) {
         return
       }
       isRestoringRef.current = true
@@ -705,7 +709,7 @@ export function useEChartsSelections(
         isRestoringRef.current = false
       }
     },
-    [chartId, widgetMgr]
+    [chartId, isSelectionActivated, widgetMgr]
   )
 
   const clearSelection = useCallback(

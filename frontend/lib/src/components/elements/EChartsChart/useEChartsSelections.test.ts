@@ -235,6 +235,50 @@ describe("useEChartsSelections", () => {
     })
   })
 
+  it("does not restore leftover selection on a keyed display-only chart", () => {
+    widgetMgr.getElementState.mockImplementation(
+      (_id: string, key: string) => {
+        if (key === "selectedPoints") {
+          return [{ seriesIndex: 0, dataIndex: [0] }]
+        }
+        if (key === "brushSelection") {
+          return [
+            createBrushSelection({
+              areas: [
+                {
+                  brushType: "rect",
+                  coordRange: [
+                    [0, 1],
+                    [0, 1],
+                  ],
+                },
+              ],
+            }),
+          ]
+        }
+        return undefined
+      }
+    )
+    const { result } = renderHook(() =>
+      useEChartsSelections(
+        new EChartsChartProto({
+          id: "styled_chart",
+          formId: "",
+          selectionActivated: false,
+        }),
+        widgetMgr
+      )
+    )
+    const chart = createFakeChart()
+    act(() => {
+      result.current.restoreSelection(chart)
+    })
+
+    expect(result.current.isSelectionActivated).toBe(false)
+    expect(widgetMgr.getElementState).not.toHaveBeenCalled()
+    expect(chart.dispatchAction).not.toHaveBeenCalled()
+  })
+
   it("binds and cleans up all selection listeners", () => {
     const { result } = renderHook(() =>
       useEChartsSelections(createElement(), widgetMgr)
