@@ -1397,6 +1397,36 @@ class DataEditorTest(DeltaGeneratorTestCase):
         assert "a" not in columns_config
         assert columns_config["b"]["disabled"]
 
+    def test_stringifies_and_disables_columns_fixed_after_arrow_failure(self):
+        """Test that columns fixed after a failed Arrow conversion are stringified
+        and disabled.
+
+        These columns are only detected once the Arrow serialization fails, so the
+        column config has to be updated from that retry as well.
+        """
+        data_df = pd.DataFrame(
+            {
+                "geometry": pd.Series(
+                    [
+                        [[[0, 0], [1, 0], [1, 1], [0, 0]]],
+                        [[[[0, 0], [1, 0], [1, 1], [0, 0]]]],
+                    ]
+                ),
+            }
+        )
+        expected_values = [str(value) for value in data_df["geometry"]]
+
+        return_df = st.data_editor(data_df)
+
+        proto = self.get_delta_from_queue().new_element.dataframe
+        columns_config = json.loads(proto.columns)
+
+        assert columns_config["geometry"]["disabled"]
+        # The values reaching the frontend are the stringified ones:
+        reconstructed_df = convert_arrow_bytes_to_pandas_df(proto.arrow_data.data)
+        assert reconstructed_df["geometry"].tolist() == expected_values
+        assert return_df["geometry"].tolist() == expected_values
+
     @parameterized.expand(
         [
             (pd.PeriodIndex(["2020-01-01", "2020-01-02", "2020-01-03"], freq="D"),),
