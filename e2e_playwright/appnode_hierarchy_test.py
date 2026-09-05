@@ -17,7 +17,11 @@ from __future__ import annotations
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import get_button, get_selectbox
+from e2e_playwright.shared.app_utils import (
+    expect_script_state,
+    get_button,
+    get_selectbox,
+)
 
 
 def _select_mode(app: Page, mode: str) -> None:
@@ -90,6 +94,41 @@ def test_long_compute_shows_spinner_only_during_run(
     expect(app.get_by_text("second to last")).not_to_be_visible()
     for index, text in enumerate(texts + stale_texts):
         expect(app.get_by_test_id("stMarkdown").nth(index)).to_have_text(text)
+
+
+def test_stopping_long_compute_keeps_stale_elements_stale(app: Page) -> None:
+    """Stale elements must stay dimmed while a stop is pending.
+
+    Regression test for #9904: STOP_REQUESTED used to fall through to
+    "not stale", so already-stale elements visibly un-dimmed the moment the
+    user hit Stop.
+    """
+    _select_mode(app, "long_compute")
+
+    get_button(app, "run long compute").click()
+
+    # Wait for the elements to be marked stale (and the fade animation to
+    # finish). Unfortunately, we have to rely on a timeout here.
+    app.wait_for_timeout(1000)
+
+    stale_elements = app.locator("[data-stale='true']")
+    expect(stale_elements).to_have_count(2)
+
+    # The Stop button only appears after ~500ms of the script running, so by now
+    # it is present.
+    app.get_by_test_id("stStatusWidget").get_by_role("button", name="Stop").click()
+
+    # The stop is pending: the script is still running, so the elements must
+    # remain stale rather than flipping back to not-stale.
+    expect_script_state(app, "stopRequested")
+    expect(stale_elements).to_have_count(2)
+
+    # Once the run finishes, the leftovers must actually be cleaned up. This
+    # guards against routing user stops to FINISHED_EARLY_FOR_RERUN, which
+    # would skip clearStaleNodes and leave them dimmed forever.
+    wait_for_app_run(app)
+    expect(app.get_by_text("second to last")).not_to_be_visible()
+    expect(app.locator("[data-stale='true']")).to_have_count(0)
 
 
 def test_placeholder_updates_do_not_leave_stale_elements(app: Page) -> None:
