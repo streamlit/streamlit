@@ -97,38 +97,47 @@ def test_long_compute_shows_spinner_only_during_run(
 
 
 def test_stopping_long_compute_keeps_stale_elements_stale(app: Page) -> None:
-    """Stale elements must stay dimmed while a stop is pending.
+    """Elements from earlier runs stay stale while a stop is pending.
 
-    Regression test for #9904: STOP_REQUESTED used to fall through to
-    "not stale", so already-stale elements visibly un-dimmed the moment the
-    user hit Stop.
+    Regression test for #9904: a pending stop does not end the run, so leftover
+    elements must keep their stale marking until the run actually finishes.
     """
     _select_mode(app, "long_compute")
 
+    stale_elements = app.locator("[data-stale='true']")
+    stale_texts = ["second to last", "bottom"]
+
+    def expect_stale_leftovers() -> None:
+        """Expect exactly the leftovers of the previous run to be stale."""
+        for text in stale_texts:
+            expect(
+                app.get_by_test_id("stElementContainer").filter(has_text=text)
+            ).to_have_attribute("data-stale", "true")
+        expect(stale_elements).to_have_count(len(stale_texts))
+
     get_button(app, "run long compute").click()
 
-    # Wait for the elements to be marked stale (and the fade animation to
-    # finish). Unfortunately, we have to rely on a timeout here.
-    app.wait_for_timeout(1000)
+    expect_stale_leftovers()
 
-    stale_elements = app.locator("[data-stale='true']")
-    expect(stale_elements).to_have_count(2)
-
-    # The Stop button only appears after ~500ms of the script running, so by now
-    # it is present.
+    # The status widget only reveals the Stop button after 500 ms of running
+    # (RUNNING_MAN_DISPLAY_DELAY_TIME_MS).
     app.get_by_test_id("stStatusWidget").get_by_role("button", name="Stop").click()
 
     # The stop is pending: the script is still running, so the elements must
     # remain stale rather than flipping back to not-stale.
     expect_script_state(app, "stopRequested")
-    expect(stale_elements).to_have_count(2)
+    expect_stale_leftovers()
 
     # Once the run finishes, the leftovers must actually be cleaned up. This
     # guards against routing user stops to FINISHED_EARLY_FOR_RERUN, which
     # would skip clearStaleNodes and leave them dimmed forever.
     wait_for_app_run(app)
-    expect(app.get_by_text("second to last")).not_to_be_visible()
-    expect(app.locator("[data-stale='true']")).to_have_count(0)
+    expect(stale_elements).to_have_count(0)
+    # The stop is handled at the enqueue checkpoint before "bottom" is
+    # re-emitted, so neither leftover survives a stopped run. A run that
+    # completes normally keeps "bottom" instead.
+    for text in stale_texts:
+        expect(app.get_by_text(text)).not_to_be_visible()
 
 
 def test_placeholder_updates_do_not_leave_stale_elements(app: Page) -> None:

@@ -52,9 +52,9 @@ export function isElementStale(
     return true
   }
 
-  // STOP_REQUESTED means the script is still running while it winds down, so
-  // elements from earlier script runs must keep reporting as stale until the
-  // run actually finishes.
+  // STOP_REQUESTED means the user asked to stop but the script is still
+  // executing, so elements from earlier runs must stay stale until the run
+  // actually finishes.
   if (
     scriptRunState === ScriptRunState.RUNNING ||
     scriptRunState === ScriptRunState.STOP_REQUESTED
