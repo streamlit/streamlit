@@ -114,6 +114,94 @@ def test_help_tooltip_works(app: Page):
     expect_help_tooltip(app, element_with_help, "help text")
 
 
+def test_captions_are_option_descriptions_not_labels(app: Page):
+    """Captions reach assistive tech as descriptions, not as part of the name."""
+    with_captions = get_radio(app, "radio 10 (with captions)")
+
+    # The accessible name is the option text alone. Captions also render as
+    # sibling nodes, which this snapshot deliberately leaves unpinned: the
+    # contract under test is the names, not how caption markdown nests.
+    expect(with_captions).to_match_aria_snapshot(
+        """
+        - radiogroup "radio 10 (with captions)":
+          - radio "A" [checked]
+          - radio "B"
+          - radio "C"
+          - radio "D"
+          - radio "E"
+          - radio "F"
+          - radio "G"
+        """
+    )
+
+    # The caption is reachable instead through aria-describedby.
+    option_a = get_radio_option(with_captions, "A").get_by_role("radio")
+    caption_a = with_captions.get_by_test_id("stRadioCaption").filter(
+        has_text="bold text"
+    )
+    expect(caption_a).to_have_text("bold text")
+    expect(caption_a).to_have_attribute("id", re.compile(r"\S"))
+    caption_id = caption_a.get_attribute("id")
+    assert caption_id is not None  # narrowed for the type checker
+    # Match the caption's id as one entry rather than the whole value, so a
+    # group-level description added later cannot break this.
+    expect(option_a).to_have_attribute(
+        "aria-describedby", re.compile(rf"(^|\s){re.escape(caption_id)}(\s|$)")
+    )
+
+    # An empty caption must not point the description at blank content.
+    horizontal = get_radio(app, "radio 11 (horizontal, captions)")
+    # "maybe" is the option whose caption is "".
+    no_caption = get_radio_option(horizontal, "maybe").get_by_role("radio")
+    expect(no_caption).not_to_have_attribute("aria-describedby")
+
+    # A sibling in the same group still gets one, so the check above is not just
+    # observing a group-wide absence.
+    with_caption = get_radio_option(horizontal, "yes").get_by_role("radio")
+    expect(with_caption).to_have_attribute("aria-describedby", re.compile(r"\S"))
+
+    # The caption is not a click target: it is supplementary text outside the
+    # label, so clicking it must leave the selection alone. Assert the input's
+    # checked state, not the written value: a regression would trigger a rerun,
+    # during which the value still reads "A".
+    option_b = get_radio_option(with_captions, "B").get_by_role("radio")
+    with_captions.get_by_text("italics text").click()
+    expect(option_b).not_to_be_checked()
+    expect(option_a).to_be_checked()
+
+    # Clicking the label right above it does select, which proves the page was
+    # live and the caption click was ignored rather than merely not seen yet.
+    get_radio_option(with_captions, "B").click()
+    wait_for_app_run(app)
+    expect(option_b).to_be_checked()
+
+    # Caption links stay navigable because captions sit outside the option label,
+    # where React Aria cancels clicks. Assert the click survives uncancelled
+    # rather than the href, which would pass even when navigation is blocked.
+    # Reads defaultPrevented on document, after React's delegated handlers, then
+    # suppresses the navigation itself — the same trick st_link_button_test.py
+    # uses to avoid flaky popups.
+    caption_link = with_captions.get_by_test_id("stRadioCaption").get_by_role(
+        "link", name="link text"
+    )
+    # Seeded so a probe that never runs is distinguishable from a cancelled click.
+    app.evaluate("() => { window.__captionLinkPrevented = 'listener never fired' }")
+    app.evaluate(
+        "() => document.addEventListener('click', e => {"
+        "  window.__captionLinkPrevented = e.defaultPrevented;"
+        "  e.preventDefault();"
+        "}, {once: true})"
+    )
+    caption_link.click()
+    assert app.evaluate("() => window.__captionLinkPrevented") is False
+
+    # Caption and option text are both selectable: neither carries a user-select
+    # rule. Check option A, not the B just clicked — react-aria's usePress sets
+    # `user-select: none` inline on a pressed label and clears it after pointer-up.
+    expect(caption_a).not_to_have_css("user-select", "none")
+    expect(get_radio_option(with_captions, "A")).not_to_have_css("user-select", "none")
+
+
 def test_radio_has_correct_default_values(app: Page):
     """Verify initial markdown values using helper."""
     expect_markdown(app, "value 1: female")
@@ -179,8 +267,8 @@ def test_set_value_correctly_when_click(app: Page):
     # radio 9 (markdown options) -> italics text
     select_radio_option(app, option="italics text", label="radio 9 (markdown options)")
 
-    # radio 10 (with captions) -> B (match at start to avoid caption text)
-    select_radio_option(app, option=re.compile(r"^B"), label="radio 10 (with captions)")
+    # radio 10 (with captions) -> B
+    select_radio_option(app, option="B", label="radio 10 (with captions)")
 
     # radio 11 (horizontal, captions) -> maybe
     select_radio_option(app, option="maybe", label="radio 11 (horizontal, captions)")

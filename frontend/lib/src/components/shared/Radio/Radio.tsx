@@ -25,7 +25,7 @@ import { LabelVisibilityOptions } from "~lib/util/utils"
 import {
   StyledRadioButton,
   StyledRadioCaption,
-  StyledRadioContent,
+  StyledRadioCaptionSpacer,
   StyledRadioField,
   StyledRadioGroup,
   StyledRadioInner,
@@ -78,19 +78,25 @@ function Radio({
     [onChange]
   )
 
-  const hasCaptions = captions.length > 0
   const hasOptions = options.length > 0
   const cleanedOptions = hasOptions ? options : ["No options to select."]
 
+  // Only captions that line up with a user option apply. Extra entries and the
+  // no-options placeholder are ignored.
+  const optionCaptions = captions
+    .slice(0, options.length)
+    // A whitespace-only caption counts as no caption, which keeps
+    // `aria-describedby` off content with nothing to announce: captioning only
+    // part of a group is supported, and the backend passes whitespace through
+    // unchanged.
+    .map(caption => (caption.trim() === "" ? "" : caption))
+
+  // True when any option has a non-blank caption, so an all-blank list lays out
+  // like no captions.
+  const hasCaptions = optionCaptions.some(caption => caption !== "")
+
   // Either the user specified it as disabled or it's disabled because we don't have any options
   const shouldDisable = disabled || !hasOptions
-
-  const spacerNeeded = (caption: string): string => {
-    // When captions are provided for only some options in horizontal layout
-    // we need to add a spacer for the options without captions
-    const spacer = caption === "" && horizontal && hasCaptions
-    return spacer ? "&nbsp;" : caption
-  }
 
   return (
     <div className="stRadio" data-testid="stRadio">
@@ -117,15 +123,22 @@ function Radio({
         $horizontal={horizontal}
         $hasCaptions={hasCaptions}
       >
-        {cleanedOptions.map((option: string, index: number) => (
-          <StyledRadioField
-            // eslint-disable-next-line @eslint-react/no-array-index-key
-            key={index}
-            value={index.toString()}
-          >
-            <StyledRadioButton data-testid="stRadioOption">
-              {({ isSelected, isDisabled }) => (
-                <StyledRadioContent $isDisabled={isDisabled}>
+        {cleanedOptions.map((option: string, index: number) => {
+          const caption = optionCaptions[index] ?? ""
+
+          // In a horizontal group, an option without a caption still needs that
+          // vertical space reserved, or its label stops lining up with the
+          // captioned ones.
+          const needsSpacer = caption === "" && horizontal && hasCaptions
+
+          return (
+            <StyledRadioField
+              // eslint-disable-next-line @eslint-react/no-array-index-key
+              key={index}
+              value={index.toString()}
+            >
+              <StyledRadioButton data-testid="stRadioOption">
+                {({ isSelected, isDisabled }) => (
                   <StyledRadioRow>
                     <StyledRadioOuter
                       $isSelected={isSelected}
@@ -139,21 +152,38 @@ function Radio({
                       isLabel
                     />
                   </StyledRadioRow>
-                  {hasCaptions && (
-                    <StyledRadioCaption>
-                      <StreamlitMarkdown
-                        source={spacerNeeded(captions[index])}
-                        allowHTML={false}
-                        isCaption
-                        isLabel
-                      />
-                    </StyledRadioCaption>
-                  )}
-                </StyledRadioContent>
+                )}
+              </StyledRadioButton>
+              {caption !== "" && (
+                <StyledRadioCaption
+                  slot="description"
+                  elementType="div"
+                  data-testid="stRadioCaption"
+                >
+                  <StreamlitMarkdown
+                    source={caption}
+                    allowHTML={false}
+                    isCaption
+                    isLabel
+                  />
+                </StyledRadioCaption>
               )}
-            </StyledRadioButton>
-          </StyledRadioField>
-        ))}
+              {needsSpacer && (
+                <StyledRadioCaptionSpacer
+                  aria-hidden="true"
+                  data-testid="stRadioCaptionSpacer"
+                >
+                  <StreamlitMarkdown
+                    source="&nbsp;"
+                    allowHTML={false}
+                    isCaption
+                    isLabel
+                  />
+                </StyledRadioCaptionSpacer>
+              )}
+            </StyledRadioField>
+          )
+        })}
       </StyledRadioGroup>
     </div>
   )
