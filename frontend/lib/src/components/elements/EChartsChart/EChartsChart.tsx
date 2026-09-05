@@ -281,9 +281,9 @@ export function EChartsChart({
     prunePixelOnlyBrushAfterResize,
   } = useEChartsSelections(element, widgetMgr, fragmentId, disabled)
 
-  // The option actually handed to setOption: Streamlit theming defaults plus
-  // selection configuration when selections are active. Display-only charts
-  // get a default (non-pointer) series cursor so they don't look clickable.
+  // The option handed to setOption: Streamlit theme defaults, plus a
+  // non-pointer series cursor on display-only charts so they do not look
+  // clickable. Selection widgets pass the option through unchanged.
   // Grid insets are rem-derived, so they must rebuild when the spacing tokens
   // or configured base font size change — not on every new theme object (a
   // light/dark switch would re-apply the option and replay entry animations).

@@ -273,7 +273,7 @@ selection_event = st.echarts_chart(
                 "select": {"itemStyle": {"color": "#ff4b4b"}},
             }
         ],
-        "animation": False,
+        **_NO_ANIM,
     },
     key="selection_chart",
     on_select="rerun",
@@ -283,6 +283,37 @@ selection_groups = selection_event["selection"]["selected"]
 selection_indices = selection_groups[0]["data_indices"] if selection_groups else []
 st.write(f"echarts selection groups: {len(selection_groups)}")
 st.write(f"echarts selection indices: {selection_indices}")
+
+# 11b) A brush-selection chart. Rect brush is enabled via the toolbox; the E2E
+#      test draws a box, checks persistence across rerun, then clears it.
+brush_event = st.echarts_chart(
+    {
+        "toolbox": {
+            "right": 8,
+            "feature": {"brush": {"type": ["rect"]}},
+        },
+        "brush": {
+            "xAxisIndex": "all",
+            "throttleType": "debounce",
+            "throttleDelay": 0,
+        },
+        "grid": {"containLabel": True, "top": 40, "bottom": 24},
+        "xAxis": {"type": "category", "data": ["A", "B", "C", "D"]},
+        "yAxis": {"type": "value", "max": 100},
+        "series": [
+            {
+                "type": "bar",
+                "data": [80, 80, 80, 80],
+                "barWidth": "70%",
+            }
+        ],
+        **_NO_ANIM,
+    },
+    key="brush_chart",
+    on_select="rerun",
+    height=_HEIGHT,
+)
+st.write(f"echarts brush areas: {len(brush_event['selection']['areas'])}")
 
 # 12) A tooltip/label XSS payload: the data item name is an HTML/script payload.
 #     Under theme="streamlit" it must render as escaped text and never execute.
@@ -360,8 +391,9 @@ with st.expander("Chart in expander", expanded=False):
             height=_HEIGHT,
         )
 
-# 14) A selection chart inside a form (exercises the form_id / form-clear path).
-with st.form("echarts_form"):
+# 14) A selection chart inside a form. ``clear_on_submit=True`` so submit both
+#     delivers the pending selection and then clears it.
+with st.form("echarts_form", clear_on_submit=True):
     form_event = st.echarts_chart(
         {
             "xAxis": {"type": "category", "data": ["Selected"]},
@@ -374,7 +406,7 @@ with st.form("echarts_form"):
                     "selectedMode": "multiple",
                 }
             ],
-            "animation": False,
+            **_NO_ANIM,
         },
         key="form_selection_chart",
         on_select="rerun",

@@ -23,21 +23,21 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
+    click_form_button,
     get_element_by_key,
 )
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
 # (including the ones inside the collapsed expander and the form).
-_EXPECTED_CHART_COUNT = 17
+_EXPECTED_CHART_COUNT = 18
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
 
 
 def _get_chart(page: Page, key: str) -> Locator:
-    """Return the ECharts canvas/SVG container for the chart in the given container.
+    """Return the ECharts container inside the element identified by ``key``.
 
-    Charts targeted individually are wrapped in ``st.container(key="c_<name>")``
-    in the app script; ``key`` is that container key.
+    ``key`` may belong to a wrapping ``st.container`` or to the chart itself.
     """
     return get_element_by_key(page, key).get_by_test_id("stEChartsChart")
 
@@ -203,6 +203,62 @@ def test_point_selection_persists_and_toggles(
     wait_for_app_run(app)
     expect(app.get_by_text("echarts selection groups: 0")).to_be_visible()
     expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+
+
+@pytest.mark.only_browser("chromium")
+def test_brush_selection_persists_and_clears(app: Page):
+    """A rect brush is reported, kept across rerun, and cleared from the toolbox."""
+    expect(app.get_by_text("echarts brush areas: 0")).to_be_visible()
+
+    chart = _get_chart(app, "brush_chart")
+    expect(chart.locator("canvas")).to_be_visible()
+    chart.scroll_into_view_if_needed()
+
+    chart.get_by_title("Box Select").click()
+    box = chart.bounding_box()
+    assert box is not None
+    app.mouse.move(box["x"] + box["width"] * 0.15, box["y"] + box["height"] * 0.25)
+    app.mouse.down()
+    app.mouse.move(box["x"] + box["width"] * 0.85, box["y"] + box["height"] * 0.85)
+    app.mouse.up()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("echarts brush areas: 1")).to_be_visible()
+    expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+
+    click_button(app, "rerun helper")
+    expect(app.get_by_text("echarts brush areas: 1")).to_be_visible()
+
+    chart.get_by_title("Clear Selections").click()
+    wait_for_app_run(app)
+    expect(app.get_by_text("echarts brush areas: 0")).to_be_visible()
+    expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+
+
+@pytest.mark.only_browser("chromium")
+def test_form_selection_is_deferred_until_submit_and_clears(
+    app: Page,
+):
+    """In-form selection does not rerun until submit, then clear_on_submit resets it."""
+    expect(app.get_by_text("echarts form groups: 0")).to_be_visible()
+
+    chart = _get_chart(app, "form_selection_chart")
+    expect(chart.locator("canvas")).to_be_visible()
+    chart.scroll_into_view_if_needed()
+    chart.click()
+
+    # Must NOT happen: selecting inside the form does not rerun the app.
+    expect(app.get_by_text("echarts form groups: 0")).to_be_visible()
+
+    # Selection writes are debounced; submitting too early would send empty state.
+    app.wait_for_timeout(210)
+    click_form_button(app, "Submit selection")
+    expect(app.get_by_text("echarts form groups: 1")).to_be_visible()
+    expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+
+    # ``fromUser: false`` form-clear commits empty, so the next rerun reports it.
+    click_button(app, "rerun helper")
+    expect(app.get_by_text("echarts form groups: 0")).to_be_visible()
 
 
 def test_tooltip_and_label_xss_payloads_are_escaped(app: Page):

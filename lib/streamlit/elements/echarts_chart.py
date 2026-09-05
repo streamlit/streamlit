@@ -1119,8 +1119,9 @@ class EChartsMixin:
             _LOGGER.warning(
                 "`st.echarts_chart` has selections activated through `on_select`, "
                 "but the provided spec doesn't enable any: no series sets "
-                "`selectedMode` and there is no `brush` component. The chart will "
-                "render, but it will never return a selection.",
+                "`selectedMode`, there is no `brush` component, and no "
+                "`toolbox.feature.brush`. The chart will render, but it will never "
+                "return a selection.",
                 stack_info=True,
             )
 
@@ -1155,21 +1156,19 @@ class EChartsMixin:
             echarts_chart_proto.id = compute_and_register_element_id(
                 "echarts_chart",
                 user_key=key,
-                # A key is the whole identity, so a keyed chart keeps its
-                # selection and frontend instance across data, theme, and
-                # renderer changes (the frontend re-applies the selection
-                # after a re-init). Without a key, every rendering parameter
-                # participates, so any change makes this a new element and
-                # resets the selection.
-                # ``dg`` is reserved for widgets; keyed display-only charts
-                # pass None so they stay off the widget path.
-                key_as_main_identity=True,
+                # A key is the identity except for selection activation: a keyed
+                # chart that switches between widget and display-only must not
+                # reuse the same ID, or the frontend keeps stale widget/selection
+                # state. Spec, theme, and renderer stay out of the keyed identity
+                # so data-only reruns keep the instance (and restored selection).
+                key_as_main_identity={"is_selection_activated"},
                 dg=self.dg if is_selection_activated else None,
                 spec=echarts_chart_proto.spec,
                 theme=theme,
                 renderer=renderer,
                 width=width,
                 height=height,
+                is_selection_activated=is_selection_activated,
             )
 
         layout_config = LayoutConfig(width=final_width, height=final_height)

@@ -709,6 +709,25 @@ class EChartsChartTest(DeltaGeneratorTestCase):
 
         assert id_a == id_b
 
+    def test_id_changes_when_keyed_chart_toggles_selection(self):
+        """A keyed chart's ID changes when on_select switches widget vs display-only.
+
+        Reusing the ID would leave stale widget and private selection state on the
+        frontend after the chart became display-only.
+        """
+        st.echarts_chart(_BASIC_SPEC, key="toggle", on_select="rerun")
+        id_widget = self.get_delta_from_queue().new_element.echarts_chart.id
+
+        self.script_run_ctx.shared.reset()
+        self.clear_queue()
+
+        st.echarts_chart(_BASIC_SPEC, key="toggle")
+        id_display = self.get_delta_from_queue().new_element.echarts_chart.id
+
+        assert id_widget != id_display
+        assert id_widget.endswith("toggle")
+        assert id_display.endswith("toggle")
+
     @parameterized.expand(
         [
             ("stretch", "use_stretch", True),

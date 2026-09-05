@@ -1090,7 +1090,7 @@ describe("useEChartsSelections", () => {
     expect(widgetMgr.setElementState).toHaveBeenCalledWith(
       "chart-id",
       "brushSelection",
-      [{ ...pixelOnly, areas: [] }, withCoord]
+      [{ ...pixelOnly, areas: [], selected: [] }, withCoord]
     )
     expect(chart.dispatchAction).toHaveBeenCalledWith({
       type: "brush",
@@ -1102,6 +1102,76 @@ describe("useEChartsSelections", () => {
       brushIndex: 1,
       areas: withCoord.areas,
     })
+  })
+
+  it("prunes mixed brushes after bind without a user-gesture rerun", () => {
+    const pixelOnly = createBrushSelection({
+      brushId: "brush-0",
+      brushIndex: 0,
+      areas: [
+        {
+          brushType: "rect",
+          range: [
+            [10, 20],
+            [30, 40],
+          ],
+        },
+      ],
+      selected: selectedWithMainHits([9]),
+    })
+    const withCoord = createBrushSelection({
+      brushId: "brush-1",
+      brushIndex: 1,
+      areas: [{ brushType: "lineX", coordRange: [1, 3] }],
+      selected: selectedWithMainHits([1]),
+    })
+    widgetMgr.getElementState.mockImplementation(
+      (_id: string, key: string) => {
+        if (key === "brushSelection") {
+          return [pixelOnly, withCoord]
+        }
+        if (key === "selectedPoints") {
+          return []
+        }
+        return undefined
+      }
+    )
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+    const chart = createFakeChart()
+
+    act(() => {
+      result.current.bindSelections(chart)
+      result.current.prunePixelOnlyBrushAfterResize(chart)
+    })
+    flush()
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      "chart-id",
+      JSON.stringify({
+        selection: {
+          selected: [
+            {
+              series_index: 0,
+              series_id: null,
+              series_name: null,
+              data_type: "main",
+              data_indices: [1],
+            },
+          ],
+          areas: [
+            {
+              brush_index: 1,
+              brush_type: "lineX",
+              coord_range: [1, 3],
+            },
+          ],
+        },
+      }),
+      { formId: "", fragmentId: undefined, fromUser: false }
+    )
   })
 
   it.each([

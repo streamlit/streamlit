@@ -174,6 +174,18 @@ function resolveChartOption(
     : null
 }
 
+function parseOptionSpec(spec: string): Record<string, unknown> | null {
+  if (!spec) {
+    return null
+  }
+  try {
+    const parsed: unknown = JSON.parse(spec)
+    return isPlainObject(parsed) ? (parsed as Record<string, unknown>) : null
+  } catch {
+    return null
+  }
+}
+
 const DATA_TYPE_RANK: Readonly<Record<string, number>> = {
   main: 0,
   node: 1,
@@ -190,6 +202,11 @@ function normalizeDataType(dataType: string | undefined): string {
   return dataType ?? "main"
 }
 
+/**
+ * User-configured series id/name only. ECharts ``getOption()`` backfills
+ * auto-generated internal ids/names that contain a NUL separator; those must
+ * not be reported as ``series_id`` / ``series_name``.
+ */
 function normalizeSeriesMetadata(value: unknown): string | number | null {
   if (typeof value === "number") {
     return value
@@ -264,23 +281,22 @@ function getGraphSeriesSelection(
  * typed action to our previous snapshot instead, preserving independent groups.
  */
 function normalizeNativeSelection(
-  chart: EChartsSelectionInstance,
   previous: SelectedEntry[],
-  params: SelectChangedParams
+  params: SelectChangedParams,
+  resolvedOption: Record<string, unknown> | null
 ): SelectedEntry[] {
   const payload = params.fromActionPayload
   const seriesIndex = payload?.seriesIndex
   const dataType = payload?.dataType
-  const resolvedOption = resolveChartOption(chart)
-  const seriesOption =
-    typeof seriesIndex === "number"
-      ? getSeriesOption(resolvedOption, seriesIndex)
-      : null
+  // Cheap payload checks first so non-graph clicks never clone ``getOption()``.
   if (
     typeof seriesIndex !== "number" ||
-    (dataType !== "node" && dataType !== "edge") ||
-    seriesOption?.type !== "graph"
+    (dataType !== "node" && dataType !== "edge")
   ) {
+    return params.selected ?? []
+  }
+  const seriesOption = getSeriesOption(resolvedOption, seriesIndex)
+  if (seriesOption?.type !== "graph") {
     return params.selected ?? []
   }
 
@@ -307,6 +323,7 @@ function normalizeNativeSelection(
       : [...next, ...getGraphSeriesSelection(seriesIndex, seriesOption)]
   }
 
+  // ECharts treats boolean ``true`` as ``"single"`` (see Series._innerSelect).
   if (selectedMode === "single" || selectedMode === true) {
     const wasSelected = actionIndices.every(index =>
       previousIndices.has(index)
@@ -388,7 +405,7 @@ function compareDataTypes(left: string, right: string): number {
 }
 
 function buildSelectedGroups(
-  chart: EChartsSelectionInstance,
+  resolvedOption: Record<string, unknown> | null,
   nativeSelection: SelectedEntry[],
   brushSelection: BrushSelection[]
 ): Array<Record<string, unknown>> {
@@ -398,7 +415,6 @@ function buildSelectedGroups(
     appendSelectedEntries(groups, brush.selected ?? [])
   }
 
-  const resolvedOption = resolveChartOption(chart)
   return Array.from(groups.values())
     .filter(group => group.dataIndices.size > 0)
     .sort(
@@ -452,12 +468,16 @@ function buildAreas(
 }
 
 function buildSelectionState(
-  chart: EChartsSelectionInstance,
+  resolvedOption: Record<string, unknown> | null,
   nativeSelection: SelectedEntry[],
   brushSelection: BrushSelection[]
 ): EChartsSelectionState {
   return {
-    selected: buildSelectedGroups(chart, nativeSelection, brushSelection),
+    selected: buildSelectedGroups(
+      resolvedOption,
+      nativeSelection,
+      brushSelection
+    ),
     areas: buildAreas(brushSelection),
   }
 }
@@ -465,10 +485,18 @@ function buildSelectionState(
 function prunePixelOnlyBrushAreas(
   brushSelection: BrushSelection[]
 ): BrushSelection[] {
-  return brushSelection.map(brush => ({
-    ...brush,
-    areas: (brush.areas ?? []).filter(area => Array.isArray(area.coordRange)),
-  }))
+  return brushSelection.map(brush => {
+    const areas = (brush.areas ?? []).filter(area =>
+      Array.isArray(area.coordRange)
+    )
+    return {
+      ...brush,
+      areas,
+      // Drop hit indices that belonged only to the removed overlay. Remaining
+      // coord-range areas keep their previous ``selected`` snapshot.
+      selected: areas.length === 0 ? [] : brush.selected,
+    }
+  })
 }
 
 function hasNoBrushAreas(brushSelection: BrushSelection[]): boolean {
@@ -579,6 +607,10 @@ export function useEChartsSelections(
   // widget (``on_select != "ignore"``). A key also assigns an ID for CSS /
   // remount identity, so a non-empty ID is not enough.
   const isSelectionActivated = element.selectionActivated && !disabled
+  const parsedOption = useMemo(
+    () => parseOptionSpec(element.spec),
+    [element.spec]
+  )
 
   // Keep the latest bound chart so form-clear resets can clear the visible brush.
   const chartRef = useRef<EChartsSelectionInstance | null>(null)
@@ -706,9 +738,11 @@ export function useEChartsSelections(
   )
 
   const onFormCleared = useCallback((): void => {
-    // The submitted value has already moved from the form into committed widget
-    // state. Clear that committed value so subsequent unrelated reruns don't
-    // send the stale selection back to Python.
+    // Form-clear writes empty into *committed* widget state (``fromUser:
+    // false``), unlike Plotly/Vega/basic widgets which clear with
+    // ``fromUser: true`` (pending only). After ``clear_on_submit``, the visual
+    // overlay is gone; committing empty keeps Python in sync on the next
+    // unrelated rerun instead of resurrecting the last submitted selection.
     if (clearBoundSelectionRef.current) {
       clearBoundSelectionRef.current(false)
     } else {
@@ -735,25 +769,45 @@ export function useEChartsSelections(
       latestBrushSelectionRef.current = pruned
       committedBrushSelectionRef.current = pruned
       widgetMgr.setElementState(chartId, BRUSH_SELECTION_STATE_KEY, pruned)
-      for (const brush of current) {
-        const nextAreas =
-          pruned.find(item => item.brushIndex === brush.brushIndex)?.areas ??
-          []
-        try {
-          chart.dispatchAction({
-            type: "brush",
-            brushIndex: brush.brushIndex,
-            areas: nextAreas,
-          })
-        } catch (error) {
-          LOG.warn(
-            "Failed to prune pixel-only brush areas after resize",
-            error
-          )
+      const nativeSelection = widgetMgr.getElementState<SelectedEntry[]>(
+        chartId,
+        SELECTED_POINTS_STATE_KEY
+      )
+      // Programmatic ``brush`` dispatches would otherwise re-enter the bound
+      // handlers (empty snapshots look like toolbox-clear). Restore-style
+      // suppression keeps resize from emitting a user rerun.
+      isRestoringRef.current = true
+      try {
+        for (const brush of current) {
+          const nextAreas =
+            pruned.find(item => item.brushIndex === brush.brushIndex)?.areas ??
+            []
+          try {
+            chart.dispatchAction({
+              type: "brush",
+              brushIndex: brush.brushIndex,
+              areas: nextAreas,
+            })
+          } catch (error) {
+            LOG.warn(
+              "Failed to prune pixel-only brush areas after resize",
+              error
+            )
+          }
         }
+      } finally {
+        isRestoringRef.current = false
       }
+      writeSelection(
+        buildSelectionState(
+          parsedOption ?? resolveChartOption(chart),
+          Array.isArray(nativeSelection) ? nativeSelection : [],
+          pruned
+        ),
+        false
+      )
     },
-    [chartId, isSelectionActivated, widgetMgr]
+    [chartId, isSelectionActivated, parsedOption, widgetMgr, writeSelection]
   )
 
   const bindSelections = useCallback(
@@ -792,10 +846,13 @@ export function useEChartsSelections(
         }
       }
 
+      const resolveLiveOption = (): Record<string, unknown> | null =>
+        parsedOption ?? resolveChartOption(chart)
+
       const emitSelection = debounce((): void => {
         writeSelection(
           buildSelectionState(
-            chart,
+            resolveLiveOption(),
             latestNativeSelection,
             committedBrushSelectionRef.current
           )
@@ -821,9 +878,9 @@ export function useEChartsSelections(
         }
         const params = raw as SelectChangedParams
         const selected = normalizeNativeSelection(
-          chart,
           latestNativeSelection,
-          params
+          params,
+          resolveLiveOption()
         )
         latestNativeSelection = selected
         // Persist the dispatchable native selection so it can be re-applied
@@ -972,7 +1029,14 @@ export function useEChartsSelections(
         zr.off("dblclick", handleDoubleClick)
       }
     },
-    [isSelectionActivated, chartId, widgetMgr, writeSelection, clearSelection]
+    [
+      isSelectionActivated,
+      chartId,
+      parsedOption,
+      widgetMgr,
+      writeSelection,
+      clearSelection,
+    ]
   )
 
   return {
