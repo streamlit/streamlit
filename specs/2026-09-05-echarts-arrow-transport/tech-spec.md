@@ -196,10 +196,15 @@ data column:
 - **Polars LazyFrame and other unevaluated frames:** keep the existing 10k-row truncation
   and caption from `dataframe_util`, then the Polars `to_arrow()` path (or the pandas path
   below if the object is not Polars).
-- **`pyarrow.Table`:** drop physical fields listed as strings in
-  `schema.pandas_metadata["index_columns"]` (ignore range-index metadata dicts that are
-  not physical fields). Serialize the remaining columns. `dimensions` and the duplicate
-  check use those remaining field names.
+- **`pyarrow.Table`:** if `schema.pandas_metadata` is present, `table.to_pandas()` then
+  `convert_pandas_df_to_arrow_table(df, preserve_index=False)`. Do **not** drop physical
+  index fields while leaving `pandas_metadata["index_columns"]` pointing at them —
+  `table.select` / `drop` keep the pandas schema, and Quiver throws
+  `Index field … not found in arrow schema` during parse. Going through pandas restores
+  the index and then omits it, so leftover metadata cannot name a missing field.
+  Tables with no pandas metadata (Polars / raw Arrow) serialize with
+  `convert_arrow_table_to_arrow_bytes` as-is. `dimensions` and the duplicate check use
+  the remaining data field names.
 - **Everything else** (pandas, Snowpark, numpy, …): `convert_anything_to_pandas_df` then
   `convert_pandas_df_to_arrow_table(df, preserve_index=False)`. `False` **omits** the
   index entirely (`None` would store a RangeIndex as pandas metadata and a non-RangeIndex
@@ -325,7 +330,7 @@ before `typeof`: period is an int, time/duration are bigints, decimal is a
 | `isDurationType` / timedelta | `bigint`/`number` in the field's unit (pandas default ns) | `ObjectColumn` + `formatDuration` → `"a few seconds"` (not plottable) | passthrough raw | `convertDurationToMilliseconds(content, field.unit ?? NANOSECOND)` — **milliseconds**, bigint÷ms *before* `Number()` so values ≳104 days keep whole-ms precision |
 | `isPeriodType` | `bigint` ordinal, not a timestamp | `ObjectColumn` + `formatPeriod` → `"2020-01"` | `Number(bigint)` (meaningless ordinal) | `format(content, type)` string — category label, same as the table |
 | `isIntervalType` | `StructRow` (also `isObjectType`) | `formatInterval` → `"(0, 1]"` | passthrough struct | `format(content, type)` string |
-| `isListType` | Arrow `Vector` | `ListColumn` via `toSafeArray` (stringifies for the editor) | passthrough `Vector` | Plain JS array: `Array.from(vector.toArray())`, then map each child with this same function using the list child field. `toArray()` returns a typed array for primitive children; `.map()` on it keeps that container, coerces `null`→`0`, and `BigInt64Array.map()` throws when the callback returns `Number`. Do **not** call `toSafeArray`. If `toArray` fails, `format` string (table `formatObject`) |
+| `isListType` | Arrow `Vector` | `ListColumn` via `toSafeArray` (stringifies for the editor) | passthrough `Vector` | Plain JS array built with `vector.get(i)` (null slots stay `null`). Do **not** use `vector.toArray()`: for primitive children it returns the values buffer as a typed array and ignores the validity bitmap, so nulls become `0` before `Array.from`. Do **not** call `toSafeArray`. If the value is not a Vector with `get`/`length`, `format` string (table `formatObject`) |
 | `isObjectType` / struct / map | `StructRow` / object | `formatObject` JSON string | passthrough | `format(content, type)` string |
 | `isBytesType` | `Uint8Array` | object column, formatted | passthrough | `format(content, type)` string |
 | anything else | unknown | `String(x)` fallback in `format` | passthrough | `format(content, type)` string |
@@ -386,8 +391,11 @@ function cellToEChartsValue(
     return convertDurationToMilliseconds(content, unit)
   }
   if (isListType(type)) {
-    const vector = content as { toArray?: () => unknown[] }
-    if (typeof vector.toArray === "function") {
+    const vector = content as {
+      length?: number
+      get?: (index: number) => unknown
+    }
+    if (typeof vector.length === "number" && typeof vector.get === "function") {
       const childField =
         field?.type instanceof List || field?.type instanceof FixedSizeList
           ? field.type.children[0]
@@ -395,8 +403,10 @@ function cellToEChartsValue(
       const childType = childField
         ? { ...type, arrowField: childField, pandasType: undefined }
         : type
-      return Array.from(vector.toArray()).map(value =>
-        cellToEChartsValue(value as DataType, childType, childField)
+      // vector.get(i) returns null for invalid slots. Do not use toArray():
+      // primitive lists ignore the validity bitmap and fill nulls with 0.
+      return Array.from({ length: vector.length }, (_, i) =>
+        cellToEChartsValue(vector.get(i) as DataType, childType, childField)
       )
     }
     return format(content, type)
@@ -530,8 +540,10 @@ Python (`echarts_chart_test.py`):
   `dimensions` equal to the data-column field names.
 - A pandas frame with a **named** (non-Range) index does not put that index on the wire
   or in `dimensions` — guards against an accidental `preserve_index=None` fallback.
-- A `pyarrow.Table` that already contains a materialized pandas index field is stripped
-  before hashing; `dimensions` are the remaining data field names.
+- A `pyarrow.Table` from `pa.Table.from_pandas` with a materialized pandas index does not
+  put that index on the wire or in `dimensions`, and the serialized pandas metadata does
+  not name a missing index field (Quiver would throw `Index field … not found in arrow
+  schema`).
 - User-provided `dimensions` are not overwritten.
 - Duplicate stringified column labels still raise `echarts-dataset-duplicate-columns`.
 - List of datasets, `baseOption`, timeline `options`, and `media[*].option` each extract.
@@ -582,7 +594,7 @@ Frontend (`EChartsChart.test.tsx` + `arrowDataset` unit tests):
   | period | `formatPeriod` string (e.g. `"2020-01"`) | table / ObjectColumn |
   | interval | `formatInterval` string (e.g. `"(0, 1]"`) | table |
   | bool | `boolean` | all three |
-  | list (float, int64, nullable, nested) | plain `Array` (`Array.isArray`; not a typed array); null children stay `null` | chart-usable lists; table would stringify |
+  | list (float, int64, nullable, nested) | plain `Array` (`Array.isArray`; not a typed array); null children stay `null` (`vector.get(i)`, not `toArray()`) | chart-usable lists; table would stringify |
   | bytes / struct | `format` string | table / ObjectColumn |
 
   Assert every value is `null`, `boolean`, `number`, `string`, or a plain array of those
