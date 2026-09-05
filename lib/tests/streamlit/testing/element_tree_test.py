@@ -25,8 +25,17 @@ import pytest
 from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
 from streamlit.dataframe import lazy_df_source as dataframe_source
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
+from streamlit.proto.Alert_pb2 import Alert as AlertProto
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
+from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.testing.v1.app_test import AppTest
-from streamlit.testing.v1.element_tree import AppTestError, _format_value_for_widget
+from streamlit.testing.v1.element_tree import (
+    AppTestError,
+    UnknownElement,
+    _format_value_for_widget,
+    parse_tree_from_messages,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -1336,6 +1345,40 @@ def test_unknown_element():
     at = AppTest.from_function(script).run()
     # markdown elements are recognized, not unknown
     assert at.markdown[0].value == "Hello"
+
+
+def test_parse_tree_unknown_proto_subtypes_become_unknown_element() -> None:
+    """Unknown markdown, heading, alert, and slider subtypes parse as UnknownElement."""
+
+    def element_msg(index: int) -> ForwardMsg:
+        msg = ForwardMsg()
+        msg.metadata.delta_path.extend([0, index])
+        return msg
+
+    code_msg = element_msg(0)
+    code_msg.delta.new_element.markdown.body = "print('hi')"
+    code_msg.delta.new_element.markdown.element_type = MarkdownProto.Type.CODE
+
+    heading_msg = element_msg(1)
+    heading_msg.delta.new_element.heading.body = "Section"
+    heading_msg.delta.new_element.heading.tag = "h4"
+
+    alert_msg = element_msg(2)
+    alert_msg.delta.new_element.alert.body = "unused format"
+    alert_msg.delta.new_element.alert.format = AlertProto.Format.UNUSED
+
+    slider_msg = element_msg(3)
+    slider_msg.delta.new_element.slider.label = "pager"
+    slider_msg.delta.new_element.slider.type = SliderProto.Type.UNSPECIFIED
+
+    tree = parse_tree_from_messages([code_msg, heading_msg, alert_msg, slider_msg])
+    nodes = [tree.main[i] for i in range(4)]
+
+    assert all(isinstance(node, UnknownElement) for node in nodes)
+    assert [node.type for node in nodes] == ["markdown", "heading", "alert", "slider"]
+    assert nodes[0].value == "print('hi')"
+    assert nodes[1].value == "Section"
+    assert nodes[2].value == "unused format"
 
 
 def test_element_list_equality():
