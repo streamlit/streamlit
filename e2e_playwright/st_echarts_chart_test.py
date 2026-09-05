@@ -217,12 +217,13 @@ def test_brush_selection_persists_and_clears(app: Page):
 
     box = canvas.bounding_box()
     assert box is not None
-    # Toolbox icons are zrender paths on the canvas (no HTML ``title``), so
-    # click the enlarged top-right rect-brush control by position.
-    app.mouse.click(box["x"] + box["width"] - 18, box["y"] + 18)
-    app.mouse.move(box["x"] + box["width"] * 0.15, box["y"] + box["height"] * 0.4)
+    # Toolbox icons are zrender paths (no HTML title). Put the rect-brush
+    # control on the left-middle so the Streamlit hover toolbar cannot steal
+    # the click.
+    app.mouse.click(box["x"] + 24, box["y"] + box["height"] * 0.5)
+    app.mouse.move(box["x"] + box["width"] * 0.3, box["y"] + box["height"] * 0.25)
     app.mouse.down()
-    app.mouse.move(box["x"] + box["width"] * 0.85, box["y"] + box["height"] * 0.9)
+    app.mouse.move(box["x"] + box["width"] * 0.9, box["y"] + box["height"] * 0.85)
     app.mouse.up()
     wait_for_app_run(app)
 

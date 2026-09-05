@@ -289,9 +289,10 @@ st.write(f"echarts selection indices: {selection_indices}")
 brush_event = st.echarts_chart(
     {
         "toolbox": {
-            "top": 4,
-            "right": 4,
-            "itemSize": 28,
+            "orient": "vertical",
+            "left": 8,
+            "top": "middle",
+            "itemSize": 32,
             "feature": {"brush": {"type": ["rect"]}},
         },
         "brush": {
@@ -299,7 +300,13 @@ brush_event = st.echarts_chart(
             "throttleType": "debounce",
             "throttleDelay": 0,
         },
-        "grid": {"containLabel": True, "top": 48, "bottom": 24},
+        "grid": {
+            "containLabel": True,
+            "left": 56,
+            "top": 24,
+            "bottom": 32,
+            "right": 16,
+        },
         "xAxis": {"type": "category", "data": ["A", "B", "C", "D"]},
         "yAxis": {"type": "value", "max": 100},
         "series": [
