@@ -203,10 +203,13 @@ data column:
   and caption from `dataframe_util`, then the Polars DataFrame path above (or the pandas
   path below if the object is not Polars).
 - **`pyarrow.Table`:** if `schema.pandas_metadata` is present, drop named index fields and
-  rewrite schema metadata in the same step (`replace_schema_metadata` with
-  `index_columns` emptied, or `replace_schema_metadata(None)`). Do **not** drop physical
-  index fields while leaving `pandas_metadata["index_columns"]` pointing at them —
-  `table.select` / `drop` keep the pandas schema, and Quiver throws
+  rewrite schema metadata in the same step: keep the pandas JSON blob and empty
+  `index_columns` (and drop the matching index entries from `columns`). Do **not** call
+  `replace_schema_metadata(None)` — wiping schema metadata also removes the pandas
+  `columns` type tags `getPandasTypeName` reads, so period (and similar pandas-only)
+  classifiers lose their fallback and can emit ordinals instead of labels. Do **not**
+  drop physical index fields while leaving `pandas_metadata["index_columns"]` pointing at
+  them — `table.select` / `drop` keep the pandas schema, and Quiver throws
   `Index field … not found in arrow schema` during parse. If metadata rewrite is not
   possible (malformed pandas metadata), fall back to `table.to_pandas()` then
   `convert_pandas_df_to_arrow_table(df, preserve_index=False)`. Do not round-trip a
@@ -578,7 +581,10 @@ Python (`echarts_chart_test.py`):
 - A `pyarrow.Table` from `pa.Table.from_pandas` with a materialized pandas index does not
   put that index on the wire or in `dimensions`, and the serialized pandas metadata does
   not name a missing index field (Quiver would throw `Index field … not found in arrow
-  schema`). The primary path is drop-fields + rewrite metadata, not a pandas round trip.
+  schema`). The primary path is drop-fields + empty `index_columns` in the existing
+  pandas blob, not `replace_schema_metadata(None)` and not a pandas round trip. A period
+  (or interval) data column still has its pandas type tag so `getPandasTypeName` classifies
+  it; wiping schema metadata would fall through to ordinals.
 - A Polars Series `dataset.source` round-trips through `to_frame()` then
   `convert_arrow_table_to_arrow_bytes` (not `Series.to_arrow()`). The spec contains
   `{"name": <hash>}` and `dimensions` is the Series name (or the default column name).
