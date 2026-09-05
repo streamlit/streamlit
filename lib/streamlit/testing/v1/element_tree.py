@@ -28,6 +28,7 @@ from typing import (
     Any,
     ClassVar,
     Generic,
+    NoReturn,
     TypeAlias,
     TypeVar,
     cast,
@@ -181,9 +182,10 @@ class Element(ABC):
     def __getattr__(self, name: str) -> Any:
         """Fallback attempt to get an attribute from the proto.
 
-        ``set_value`` and ``click`` return callables that raise
-        ``AppTestError``. Some inspectable-only protos define those names as
-        fields (pagination's ``set_value`` is a bool).
+        Treat ``set_value`` and ``click`` as unsupported AppTest
+        interactions, even when a proto defines those names as fields
+        (pagination's ``set_value`` is a bool). Other missing names still
+        fall through to the proto.
         """
         if name in {"set_value", "click"}:
 
@@ -193,13 +195,18 @@ class Element(ABC):
             return unsupported_interaction
         return getattr(self.proto, name)
 
-    def _raise_unsupported_interaction(self, method: str) -> None:
+    def _raise_unsupported_interaction(self, method: str) -> NoReturn:
         key_part = f" (key={self.key!r})" if self.key else ""
+        if isinstance(self, Widget):
+            raise AppTestError(
+                f"{method}() is not supported for {self.type}{key_part}. "
+                "Use set_value() or one of this widget's typed interaction "
+                "methods."
+            )
         raise AppTestError(
             f"{method}() is not supported for {self.type}{key_part}. "
             "This element is inspectable in AppTest but is not interactive. "
-            "Use a typed widget wrapper when one exists, or Playwright e2e "
-            "tests for browser-only behavior."
+            "Use Playwright e2e tests for browser-only behavior."
         )
 
     def run(self, *, timeout: float | None = None) -> AppTest:

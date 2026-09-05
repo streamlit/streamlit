@@ -1381,12 +1381,12 @@ def test_parse_tree_unknown_proto_subtypes_become_unknown_element() -> None:
     assert nodes[2].value == "unused format"
 
 
-def test_unknown_element_unsupported_interaction_raises_app_test_error() -> None:
+def test_inspectable_elements_reject_unsupported_interactions() -> None:
     """Inspectable-only nodes reject set_value/click with AppTestError.
 
     ``st.pagination`` is inspectable (key and current page) but has no typed
     wrapper. Its proto field ``set_value: bool`` must not leak through
-    ``Element.__getattr__`` as a callable.
+    ``Element.__getattr__`` as a callable. Typed ``Markdown`` is covered too.
     """
 
     def script():
@@ -1413,6 +1413,25 @@ def test_unknown_element_unsupported_interaction_raises_app_test_error() -> None
         AppTestError, match=r"set_value\(\) is not supported for markdown"
     ):
         at.markdown[0].set_value("nope")
+
+
+def test_typed_widget_without_click_raises_app_test_error() -> None:
+    """Typed widgets without click() point testers at set_value()."""
+
+    def script():
+        import streamlit as st
+
+        st.checkbox("ok")
+
+    at = AppTest.from_function(script).run()
+    with pytest.raises(
+        AppTestError,
+        match=(
+            r"click\(\) is not supported for checkbox\. "
+            r"Use set_value\(\) or one of this widget's typed interaction methods\."
+        ),
+    ):
+        at.checkbox[0].click()
 
 
 def test_element_list_equality():
