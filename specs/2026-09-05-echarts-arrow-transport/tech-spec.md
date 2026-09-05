@@ -18,11 +18,15 @@ no `view.insert`, and we do not call Vega's `getDataArray`. Parsing still goes t
 `Quiver`, the same as `st.dataframe` / `st.table` / Vega. Per-cell values follow the
 dataframe/table type helpers (not Vega's passthrough), except datetime/date which stay
 ISO-8601 strings so ECharts category axes and default `useUTC: false` keep today's
-wall-clock labels. Duration is milliseconds.
+wall-clock labels: naive datetime is `YYYY-MM-DDTHH:mm:ss.SSS`, date is `YYYY-MM-DD`.
+Duration is milliseconds.
 
 The public API does not change. Users still pass a dataframe at `dataset.source`; Streamlit
 still fills `dataset.dimensions` when the user omitted it. What changes is the wire format
-that today inlines every row as a JSON object.
+that today inlines every row as a JSON object. `st.echarts_chart` is unreleased, so these
+dtype mappings are pre-release refinements, not compatibility breaks with shipped
+behavior. Prefer consistency with `st.dataframe` / `st.table` over matching today's
+`to_json` where those diverge.
 
 This is the transport follow-up from the internal charting-libraries audit (Arrow is
 the only Vega-exclusive advantage that ECharts still lacks on the wire) and a pure
@@ -83,8 +87,8 @@ No new parameters, no new input sites, no change to the "dataframes only at
 
 The product spec's sentence that Streamlit "converts each to JSON-compatible rows" is
 amended to: Streamlit converts each dataframe-like `source` to Arrow, and the frontend
-materializes it as ECharts `source` rows (datetime/date as ISO-8601 strings, duration as
-milliseconds). Call sites do not change:
+materializes it as ECharts `source` rows (naive datetime as `YYYY-MM-DDTHH:mm:ss.SSS`,
+date as `YYYY-MM-DD`, duration as milliseconds). Call sites do not change:
 
 ```python
 st.echarts_chart(
@@ -129,12 +133,10 @@ message EChartsChart {
 Do **not** add Vega's top-level `ArrowData data` field. `st.echarts_chart` has no separate
 `data=` argument; every extracted table is a named `dataset.source`.
 
-Always set `has_name = true` and `name = calc_hash(ipc_bytes)`. Leave `data.styler` unset.
-
-The join key is the hash, and it lives in the spec on purpose: `preparedOption` is memoized
-on `element.spec`, so a data-only change must change the spec string. A positional index
-(`datasets[0]`) would leave `spec` byte-identical across data updates and skip `setOption`
-— see [alternatives](#alternatives-considered).
+The join key is the hash, and it lives in the spec on purpose: the parse/hydrate memo is
+keyed on `element.spec`, so a data-only change must change the spec string. A positional
+index (`datasets[0]`) would leave `spec` byte-identical across data updates and skip
+`setOption` — see [alternatives](#alternatives-considered).
 
 ### Python: extract, hash, marshal
 
@@ -191,25 +193,35 @@ do not guarantee that by themselves:
 Do not call `convert_anything_to_arrow_bytes`. Route so the pandas index never becomes a
 data column:
 
-- **Polars DataFrame / Series:** `to_arrow()` (no pandas index). Data field names are the
-  `dimensions` labels and the frontend row keys.
+- **Polars DataFrame / Series:** Series → `to_frame()` first (`Series.to_arrow()` is a
+  `pyarrow.Array`, and `is_dataframe_like` includes `POLARS_SERIES`). Then `to_arrow()`
+  and `convert_arrow_table_to_arrow_bytes` (downcasts `large_list` for Arrow JS). Mirror
+  `convert_anything_to_arrow_bytes`, which already does `data.to_frame()` before
+  `_convert_polars_to_arrow_bytes`. Data field names are the `dimensions` labels and the
+  frontend row keys.
 - **Polars LazyFrame and other unevaluated frames:** keep the existing 10k-row truncation
-  and caption from `dataframe_util`, then the Polars `to_arrow()` path (or the pandas path
-  below if the object is not Polars).
-- **`pyarrow.Table`:** if `schema.pandas_metadata` is present, `table.to_pandas()` then
-  `convert_pandas_df_to_arrow_table(df, preserve_index=False)`. Do **not** drop physical
+  and caption from `dataframe_util`, then the Polars DataFrame path above (or the pandas
+  path below if the object is not Polars).
+- **`pyarrow.Table`:** if `schema.pandas_metadata` is present, drop named index fields and
+  rewrite schema metadata in the same step (`replace_schema_metadata` with
+  `index_columns` emptied, or `replace_schema_metadata(None)`). Do **not** drop physical
   index fields while leaving `pandas_metadata["index_columns"]` pointing at them —
   `table.select` / `drop` keep the pandas schema, and Quiver throws
-  `Index field … not found in arrow schema` during parse. Going through pandas restores
-  the index and then omits it, so leftover metadata cannot name a missing field.
-  Tables with no pandas metadata (Polars / raw Arrow) serialize with
-  `convert_arrow_table_to_arrow_bytes` as-is. `dimensions` and the duplicate check use
-  the remaining data field names.
+  `Index field … not found in arrow schema` during parse. If metadata rewrite is not
+  possible (malformed pandas metadata), fall back to `table.to_pandas()` then
+  `convert_pandas_df_to_arrow_table(df, preserve_index=False)`. Do not round-trip a
+  well-formed Arrow table through pandas as the primary path: that materializes the one
+  input that already arrived as Arrow and requires pandas for a pure-Arrow value.
+  Tables with no pandas metadata (Polars / raw Arrow) serialize as-is. Every branch
+  finishes with `convert_arrow_table_to_arrow_bytes`. `dimensions` and the duplicate
+  check use the remaining data field names.
 - **Everything else** (pandas, Snowpark, numpy, …): `convert_anything_to_pandas_df` then
-  `convert_pandas_df_to_arrow_table(df, preserve_index=False)`. `False` **omits** the
-  index entirely (`None` would store a RangeIndex as pandas metadata and a non-RangeIndex
-  as a real column). `dimensions` are `str(column)` of the pandas columns, which match
-  the Arrow data field names the frontend uses as row keys.
+  `convert_pandas_df_to_arrow_table(df, preserve_index=False)`, then
+  `convert_arrow_table_to_arrow_bytes`. `False` **omits** the index entirely (`None`
+  would store a RangeIndex as pandas metadata and a non-RangeIndex as a real column).
+  `dimensions` are the Arrow data field names (same strings as frontend row keys), not
+  `str(column)` of the pandas columns — those can differ for MultiIndex headers
+  (`"('A', 'x')"` vs a flattened `arrowField.name`).
 
 Do not send pandas Styler CSS; only the underlying data. Type-incompatible pandas columns
 are already stringified by `convert_pandas_df_to_arrow_table` /
@@ -259,28 +271,31 @@ Policy, matching how the three surfaces already treat Arrow:
   `arrowFormatUtils` (period, interval, struct/map/object, bytes). Table always runs
   `format` on every cell; we must not do that for floats or we break value axes.
 - **Duration** is the one chart-specific numeric mapping: table/`formatDuration` shows
-  `"a few seconds"`; Vega passes the raw unit; we emit **milliseconds** with bigint
-  arithmetic at millisecond precision (do not reuse `convertTimestampToSeconds * 1000`,
-  which truncates unsafe nanosecond bigints to whole seconds). Same idea as a value-axis
-  number, not the table string.
+  `"a few seconds"`; Vega passes the raw unit; we emit **milliseconds**. Convert in
+  `Number` when the raw count is a safe integer so sub-millisecond fractions survive;
+  use bigint division only above `MAX_SAFE_INTEGER`. Do not reuse
+  `convertTimestampToSeconds * 1000` (truncates unsafe nanosecond bigints to whole
+  seconds). Same idea as a value-axis number, not the table string.
 - **Do not copy Vega `getDataArray`**, dataframe `toSafeArray` (JSON-stringifies lists
   for the grid editor), or Vega's naive-datetime `getTimezoneOffset` hack. Datetime/date
   use ISO strings instead of offset epoch ms.
 
 `convertTimeToDate` is already exported from `arrowFormatUtils.ts`. Add a thin exported
-`convertDurationToMilliseconds` next to it (pandas timedelta default unit **nanoseconds**).
-Convert to milliseconds in bigint *before* `Number()` so timedeltas whose nanosecond count
-exceeds `MAX_SAFE_INTEGER` (≳104 days) still keep whole-millisecond precision. Do not
-implement duration as `convertTimestampToSeconds(...) * 1000` — that helper truncates
-unsafe bigints to whole seconds, then multiplying by 1000 cannot recover the lost
-fractional second. Do not copy the unit table into ECharts code.
+`convertDurationToMilliseconds(timestamp, field?)` next to it with the same call shape
+(pandas timedelta default unit **nanoseconds**; unit lives on `field.type`, not `field`).
+Convert with `Number(timestamp) / 1e6` (ns) when the count fits in `MAX_SAFE_INTEGER` so
+`1.5ms` stays `1.5`; bigint-divide only when the raw count is outside that range (≳104
+days) so those values still keep whole-millisecond precision. Do not always
+`Number(timestamp / 1_000_000n)` — that truncates every bigint duration to a whole
+millisecond. Do not implement duration as `convertTimestampToSeconds(...) * 1000`. Do not
+copy the unit table into ECharts code.
 
 | Reuse | Do not reuse |
 |---|---|
 | `Quiver` / `parseArrowIpcBytes` — IPC parse, pandas schema, index vs data split, categoricals, column names | `getDataArray` — injects `(index)`, keeps only one index level, shifts naive datetimes into the local zone (a Vega JS assumption) |
 | `arrowTypeUtils` classifiers (the full set `getColumnTypeFromArrow` uses, plus duration/period/interval which that function leaves as `ObjectColumn`) plus `getTimezone` | DataFrame `getColumnTypeFromArrow` / `GridCell` mapping |
 | `Quiver.getCell` — the decoded Arrow JS cell | DataFrame `toSafeArray` |
-| `convertTimeToDate`, new `convertDurationToMilliseconds` (from `arrowFormatUtils`) — same unit math as dataframe time cells; duration at millisecond precision | Vega's naive-datetime `getTimezoneOffset` hack; `convertTimestampToSeconds * 1000` for duration |
+| `convertTimeToDate`, new `convertDurationToMilliseconds` (from `arrowFormatUtils`) — same `field?` call shape; duration in milliseconds with sub-ms when the count is a safe `Number` | Vega's naive-datetime `getTimezoneOffset` hack; `convertTimestampToSeconds * 1000` for duration |
 | `format` (`arrowFormatUtils`) — **only** for types that are not plottable numbers/dates (period, interval, object, bytes). Same strings `st.table` / `st.dataframe` show | `format` for floats (those must stay numeric for axes). Datetime/date use a dedicated ISO conversion, not table `format` |
 
 Wrap each `ArrowNamedDataSet` in `Quiver` the same way Vega's `wrapDatasets` does. Then a
@@ -293,9 +308,9 @@ would report `numIndexColumns === 1` for a default RangeIndex. The walk is the f
 invariant even if a `pyarrow.Table` still carries leftover pandas index metadata.
 
 Row keys are `contentType.arrowField.name`. Those strings are what Python used for
-`dataset.dimensions` (`str(column)`), so `encode` / auto-assigned series keep working.
-Do not use `columnNames[0][colPos]` (Vega): that is only the first header level and
-breaks MultiIndex columns.
+`dataset.dimensions` (Arrow data field names on every conversion branch), so `encode` /
+auto-assigned series keep working. Do not use `columnNames[0][colPos]` (Vega): that is
+only the first header level and breaks MultiIndex columns.
 
 Walk option variants with the same shape as Python `_iter_option_variants` (the PNG-export
 background check already mirrors this). Hydrate each matching `dataset.source` in place on
@@ -325,9 +340,9 @@ before `typeof`: period is an int, time/duration are bigints, decimal is a
 | `isIntegerType` / `isUnsignedIntegerType` (not period) | `number` or `bigint` | `toSafeNumber`; unsafe ints error in the grid | `Number(bigint)` | `Number(content)` (same `MAX_SAFE_INTEGER` caveat as Vega) |
 | `isDecimalType` | `Uint32Array` (Arrow JS cannot decode scale) | `format` → decimal string → number cell | **passthrough `Uint32Array` (broken for Vega)** | `Number(format(content, type))` — DataFrame's decimal workaround, then a plottable number; non-finite → `null` |
 | `isDatetimeType` | epoch `number` or `Date` (already ms, regardless of unit) | `getCellFromArrow` → `moment.utc(Number)`; tz only affects `DateTimeColumn` display | naive: add `getTimezoneOffset` so Vega JS treats UTC wall time as local; tz-aware: passthrough ms | **ISO-8601 string**. Naive: timezone-less `YYYY-MM-DDTHH:mm:ss.SSS` (matches `to_json(date_format="iso")`). Tz-aware (`getTimezone(type)` set): same with a trailing `Z`. Not epoch ms — see [Datetime/date display contract](#datetimedate-display-contract) |
-| `isDateType` | epoch `number` or `Date` (already ms) | `moment.utc` → `YYYY-MM-DD` display | same local-offset hack as naive datetime | Same timezone-less ISO as naive datetime (`YYYY-MM-DDTHH:mm:ss.SSS` at midnight), matching pandas `to_json` for `datetime.date` |
+| `isDateType` | epoch `number` or `Date` (already ms) | `moment.utc` → `YYYY-MM-DD` display | same local-offset hack as naive datetime | Timezone-less `YYYY-MM-DD` (same as `st.dataframe` / pandas object-dtype `datetime.date`). Not the datetime midnight form `T00:00:00.000` |
 | `isTimeType` | raw `bigint`/`number` **in the field's unit** (s/ms/us/ns) | `convertTimeToDate` then `HH:mm:ss` | `Number(bigint)` **without unit conversion (wrong for ns)** | `convertTimeToDate(content, field).valueOf()` — DataFrame unit math (default unit **seconds**, pandas time), as epoch ms on 1970-01-01 UTC |
-| `isDurationType` / timedelta | `bigint`/`number` in the field's unit (pandas default ns) | `ObjectColumn` + `formatDuration` → `"a few seconds"` (not plottable) | passthrough raw | `convertDurationToMilliseconds(content, field.unit ?? NANOSECOND)` — **milliseconds**, bigint÷ms *before* `Number()` so values ≳104 days keep whole-ms precision |
+| `isDurationType` / timedelta | `bigint`/`number` in the field's unit (pandas default ns) | `ObjectColumn` + `formatDuration` → `"a few seconds"` (not plottable) | passthrough raw | `convertDurationToMilliseconds(content, field)` — **milliseconds**. Unit from `field?.type?.unit` (same `field?` shape as `convertTimeToDate`). `Number(timestamp) / 1e6` when the ns count is a safe integer so `1.5ms` stays `1.5`; bigint÷ms only above `MAX_SAFE_INTEGER` |
 | `isPeriodType` | `bigint` ordinal, not a timestamp | `ObjectColumn` + `formatPeriod` → `"2020-01"` | `Number(bigint)` (meaningless ordinal) | `format(content, type)` string — category label, same as the table |
 | `isIntervalType` | `StructRow` (also `isObjectType`) | `formatInterval` → `"(0, 1]"` | passthrough struct | `format(content, type)` string |
 | `isListType` | Arrow `Vector` | `ListColumn` via `toSafeArray` (stringifies for the editor) | passthrough `Vector` | Plain JS array built with `vector.get(i)` (null slots stay `null`). Do **not** use `vector.toArray()`: for primitive children it returns the values buffer as a typed array and ignores the validity bitmap, so nulls become `0` before `Array.from`. Do **not** call `toSafeArray`. If the value is not a Vector with `get`/`length`, `format` string (table `formatObject`) |
@@ -344,17 +359,21 @@ Helper sketch (normative):
 ```ts
 function convertDurationToMilliseconds(
   timestamp: number | bigint,
-  unit: TimeUnit
+  field?: Field
 ): number {
-  // Convert to milliseconds in bigint before Number() so nanosecond values
-  // above MAX_SAFE_INTEGER (timedeltas ≳104 days) keep whole-ms precision.
+  // Unit lives on field.type, matching convertTimeToDate(timestamp, field?).
+  const unit = field?.type?.unit ?? TimeUnit.NANOSECOND
+  const maxSafe = BigInt(Number.MAX_SAFE_INTEGER)
+  const isUnsafeBigint = (value: number | bigint): value is bigint =>
+    typeof value === "bigint" && (value > maxSafe || value < -maxSafe)
+
   if (unit === TimeUnit.NANOSECOND) {
-    return typeof timestamp === "bigint"
+    return isUnsafeBigint(timestamp)
       ? Number(timestamp / 1_000_000n)
       : Number(timestamp) / 1e6
   }
   if (unit === TimeUnit.MICROSECOND) {
-    return typeof timestamp === "bigint"
+    return isUnsafeBigint(timestamp)
       ? Number(timestamp / 1_000n)
       : Number(timestamp) / 1e3
   }
@@ -380,15 +399,19 @@ function cellToEChartsValue(
   if (isTimeType(type) && (typeof content === "number" || typeof content === "bigint")) {
     return convertTimeToDate(content, field).valueOf()
   }
-  if (isDatetimeType(type) || isDateType(type)) {
+  if (isDateType(type)) {
+    const n = content instanceof Date ? content.valueOf() : Number(content)
+    if (!Number.isFinite(n)) return null
+    return moment.utc(n).format("YYYY-MM-DD")
+  }
+  if (isDatetimeType(type)) {
     const n = content instanceof Date ? content.valueOf() : Number(content)
     if (!Number.isFinite(n)) return null
     const iso = moment.utc(n).format("YYYY-MM-DDTHH:mm:ss.SSS")
     return getTimezone(type) ? `${iso}Z` : iso
   }
   if (isDurationType(type) && (typeof content === "number" || typeof content === "bigint")) {
-    const unit = field?.type?.unit ?? TimeUnit.NANOSECOND
-    return convertDurationToMilliseconds(content, unit)
+    return convertDurationToMilliseconds(content, field)
   }
   if (isListType(type)) {
     const vector = content as {
@@ -396,8 +419,12 @@ function cellToEChartsValue(
       get?: (index: number) => unknown
     }
     if (typeof vector.length === "number" && typeof vector.get === "function") {
+      // Classify with ArrowDataType (same as arrowTypeUtils.isListType).
+      // instanceof List fails across duplicate apache-arrow copies.
       const childField =
-        field?.type instanceof List || field?.type instanceof FixedSizeList
+        field?.type &&
+        (ArrowDataType.isList(field.type) ||
+          ArrowDataType.isFixedSizeList(field.type))
           ? field.type.children[0]
           : undefined
       const childType = childField
@@ -450,10 +477,13 @@ is the dataframe cell's storage form:
 
 **Normative mapping:** emit ISO-8601 strings (not epoch numbers):
 
-- Naive datetime / date: timezone-less `YYYY-MM-DDTHH:mm:ss.SSS`, matching
+- Naive datetime (`isDatetimeType`): timezone-less `YYYY-MM-DDTHH:mm:ss.SSS`, matching
   `DataFrame.to_json(date_format="iso")`. ECharts local-parse keeps the wall-clock
   calendar date; category axes show the ISO string.
-- Timezone-aware datetime (`getTimezone(type)` is set): the same string with a trailing
+- Date (`isDateType`): timezone-less `YYYY-MM-DD` (same as `st.dataframe` /
+  pandas object-dtype `datetime.date`). Category axes show a date, not
+  `T00:00:00.000`.
+- Timezone-aware datetime (`getTimezone(type)` is set): the datetime form with a trailing
   `Z`. ECharts treats `Z` as a UTC instant and displays it in the browser zone — correct
   for an absolute instant, and the same policy Vega uses for tz-aware columns.
 
@@ -464,12 +494,17 @@ user spec are unchanged (still whatever the user wrote). `isTimeType` is unchang
 `convertTimeToDate(content, field).valueOf()` (dummy 1970-01-01 UTC, dataframe TimeColumn
 unit math).
 
-Order of operations, inserted into the current `preparedOption` memo:
+Order of operations — hydrate in the `element.spec`-keyed parse memo (`option` in
+`EChartsChart.tsx`), not in `preparedOption`:
 
-1. `JSON.parse(element.spec)`
-2. Hydrate `{name}` → row arrays via `cellToEChartsValue`
-3. `applyStreamlitOptionDefaults` / `withDefaultSeriesCursor` (these shallow-copy; they
-   must not `JSON.stringify` the hydrated option, and today they do not)
+1. `JSON.parse(element.spec)` and hydrate `{name}` → row arrays via `cellToEChartsValue`
+   (same `useMemo` deps as today's parse: `[element.spec]`). When `element.spec` changes,
+   read `element.datasets` from that render.
+2. `preparedOption` applies `applyStreamlitOptionDefaults` / `withDefaultSeriesCursor`
+   over the already-hydrated option. Those helpers shallow-copy; they must not
+   `JSON.stringify` the hydrated option, and today they do not. `preparedOption` also
+   depends on `element.theme`, spacing tokens, and `fontSizes.baseFontSize` — hydrating
+   there would re-parse Arrow on a base-font-size or spacing-token change.
 
 `setOption` still receives a fully materialized option. ECharts never sees a `{name}`
 placeholder.
@@ -480,11 +515,11 @@ Unrelated reruns skip `setOption` when `preparedOption` identity is unchanged. T
 what preserves `dataZoom` / legend / toolbox / timeline state. Hydration must not produce a
 new array identity on every render.
 
-Memoize hydration on `element.spec` only. The placeholder names *are* content hashes, so
-an unchanged spec implies unchanged data. `element.datasets` is a new protobuf object every
-rerun even when the bytes are equal; putting it in the dep list would re-hydrate, rebuild
-`preparedOption`, and reset interaction state. When `element.spec` *does* change, read
-`element.datasets` from that render and hydrate.
+Memoize hydration on `element.spec` only (the parse memo, not `preparedOption`). The
+placeholder names *are* content hashes, so an unchanged spec implies unchanged data.
+`element.datasets` is a new protobuf object every rerun even when the bytes are equal;
+putting it in the dep list would re-hydrate, rebuild `preparedOption`, and reset
+interaction state.
 
 ### Identity (display-only today, widgets later)
 
@@ -508,8 +543,8 @@ On implementation, update:
 - The `st.echarts_chart` docstring: Streamlit accepts dataframe-like values in
   `dataset.source` and preserves column order through `dataset.dimensions` when it is not
   provided. Do not explain Arrow transport or browser injection in the public docstring.
-  Document user-visible dtype mapping (datetime ISO strings, duration as milliseconds)
-  separately on the implementation PR.
+  Document user-visible dtype mapping (datetime ISO strings, date as `YYYY-MM-DD`,
+  duration as milliseconds) separately on the implementation PR.
 - [`specs/2026-07-06-echarts-chart/product-spec.md`](../2026-07-06-echarts-chart/product-spec.md)
   "DataFrames in `dataset.source`" — amend "converts each to JSON-compatible rows" to
   match the transport. The public examples stay identical.
@@ -543,7 +578,10 @@ Python (`echarts_chart_test.py`):
 - A `pyarrow.Table` from `pa.Table.from_pandas` with a materialized pandas index does not
   put that index on the wire or in `dimensions`, and the serialized pandas metadata does
   not name a missing index field (Quiver would throw `Index field … not found in arrow
-  schema`).
+  schema`). The primary path is drop-fields + rewrite metadata, not a pandas round trip.
+- A Polars Series `dataset.source` round-trips through `to_frame()` then
+  `convert_arrow_table_to_arrow_bytes` (not `Series.to_arrow()`). The spec contains
+  `{"name": <hash>}` and `dimensions` is the Series name (or the default column name).
 - User-provided `dimensions` are not overwritten.
 - Duplicate stringified column labels still raise `echarts-dataset-duplicate-columns`.
 - List of datasets, `baseOption`, timeline `options`, and `media[*].option` each extract.
@@ -571,13 +609,13 @@ Frontend (`EChartsChart.test.tsx` + `arrowDataset` unit tests):
 - Pandas index is omitted from rows (RangeIndex **and** a named index).
 - Row keys equal `arrowField.name` / Python `dimensions` (including integer column labels
   like `2015` and a MultiIndex column).
-- Naive datetime/date axis labels under a **non-UTC** timezone match today's wall-clock
-  calendar date (ISO without `Z`); a `type: "category"` axis shows the ISO string, not an
-  epoch number.
+- Naive datetime axis labels under a **non-UTC** timezone match today's wall-clock
+  calendar date (ISO without `Z`); a date column's `type: "category"` axis shows
+  `YYYY-MM-DD`, not `T00:00:00.000` or an epoch number.
 - Type fixtures — reuse `frontend/lib/src/mocks/arrow/types/` (same IPC Vega and
   `arrowFormatUtils` already test) and construct apache-arrow tables for types those
   mocks do not cover (time, bool, list, tz-aware datetime, duration > `MAX_SAFE_INTEGER`
-  nanoseconds):
+  nanoseconds, sub-millisecond duration):
 
   | Fixture / dtype | Expected ECharts cell | Must match |
   |---|---|---|
@@ -585,12 +623,14 @@ Frontend (`EChartsChart.test.tsx` + `arrowDataset` unit tests):
   | `INT64` / `UINT64` | `number` (not `bigint`) | Vega `Number(bigint)` |
   | `UNICODE` | strings | all three |
   | `CATEGORICAL` / dictionary | decoded labels | Quiver / SelectboxColumn |
-  | `DATETIME` / `DATE` | timezone-less ISO `YYYY-MM-DDTHH:mm:ss.SSS` | today's `to_json`; wall-clock under `useUTC: false` |
+  | `DATETIME` | timezone-less ISO `YYYY-MM-DDTHH:mm:ss.SSS` | today's `to_json`; wall-clock under `useUTC: false` |
+  | `DATE` | timezone-less `YYYY-MM-DD` | `st.dataframe` / pandas object-dtype `datetime.date` |
   | `DATETIMETZ` | ISO with trailing `Z` (UTC instant) | absolute instant, local display |
   | time (`isTimeType`) | `convertTimeToDate(...).valueOf()` | dataframe TimeColumn unit math |
   | decimal | finite `number` (not `Uint32Array`) | dataframe decimal workaround |
   | timedelta / duration | milliseconds `number` | `convertDurationToMilliseconds`; not `formatDuration`'s string |
-  | duration `bigint` ns > `MAX_SAFE_INTEGER` (≳104 days + a fractional second) | milliseconds with whole-ms precision | not `convertTimestampToSeconds * 1000` |
+  | duration `bigint` ns `1_500_000n` (`1.5ms`) | `1.5` (sub-ms kept) | `Number(timestamp) / 1e6`, not `Number(timestamp / 1_000_000n)` |
+  | duration `bigint` ns > `MAX_SAFE_INTEGER` (≳104 days + a fractional second) | milliseconds with whole-ms precision | bigint÷ms only in this range; not `convertTimestampToSeconds * 1000` |
   | period | `formatPeriod` string (e.g. `"2020-01"`) | table / ObjectColumn |
   | interval | `formatInterval` string (e.g. `"(0, 1]"`) | table |
   | bool | `boolean` | all three |
@@ -677,10 +717,10 @@ the chart so a missed hydrate or a leaked Arrow object cannot ship as an empty p
 
 **Datetime/date as ISO-8601 strings** ✅ PREFERRED (datetime/date only)
 
-- Pros: Matches today's `to_json(date_format="iso")` display: naive timestamps stay
-  wall-clock under ECharts' default `useUTC: false`; category axes show ISO labels, not
-  epoch numbers. Time axes still parse ISO. No Streamlit `useUTC` default, so
-  user-authored timezone-less ISO already in the spec JSON is unchanged.
+- Pros: Naive timestamps stay wall-clock under ECharts' default `useUTC: false`; category
+  axes show ISO labels, not epoch numbers. Dates use `YYYY-MM-DD` (readable category
+  labels, same as `st.dataframe`). Time axes still parse ISO. No Streamlit `useUTC`
+  default, so user-authored timezone-less ISO already in the spec JSON is unchanged.
 - Cons: Extra FE formatting vs passing Arrow's epoch through; diverges from the
   dataframe/table *cell* (UTC epoch ms). Acceptable: ECharts `useUTC: false` means that
   cell value is not the displayed value.
