@@ -2693,9 +2693,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 elif alert_format == AlertProto.Format.WARNING:
                     new_node = Warning(elt.alert, root=root)
                 else:
-                    raise ValueError(
-                        f"Unknown alert type with format {elt.alert.format}"
-                    )
+                    new_node = UnknownElement(elt, root=root)
             elif ty == "dataframe":
                 new_node = Dataframe(elt.dataframe, root=root)
             elif ty == "table":
@@ -2736,7 +2734,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 elif elt.heading.tag == HeadingProtoTag.SUBHEADER_TAG.value:
                     new_node = Subheader(elt.heading, root=root)
                 else:
-                    raise ValueError(f"Unknown heading type with tag {elt.heading.tag}")
+                    new_node = UnknownElement(elt, root=root)
             elif ty == "imgs":
                 new_node = Image(elt.imgs, root=root)
             elif ty == "json":
@@ -2751,9 +2749,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 elif elt.markdown.element_type == MarkdownProto.Type.DIVIDER:
                     new_node = Divider(elt.markdown, root=root)
                 else:
-                    raise ValueError(
-                        f"Unknown markdown type {elt.markdown.element_type}"
-                    )
+                    new_node = UnknownElement(elt, root=root)
             elif ty == "menu_button":
                 new_node = MenuButton(elt.menu_button, root=root)
             elif ty == "metric":
@@ -2772,7 +2768,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 elif elt.slider.type == SliderProto.Type.SELECT_SLIDER:
                     new_node = SelectSlider(elt.slider, root=root)
                 else:
-                    raise ValueError(f"Slider with unknown type {elt.slider}")
+                    new_node = UnknownElement(elt, root=root)
             elif ty == "text":
                 new_node = Text(elt.text, root=root)
             elif ty == "text_area":
