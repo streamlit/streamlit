@@ -211,15 +211,18 @@ def test_brush_selection_persists_and_clears(app: Page):
     expect(app.get_by_text("echarts brush areas: 0")).to_be_visible()
 
     chart = _get_chart(app, "brush_chart")
-    expect(chart.locator("canvas")).to_be_visible()
+    canvas = chart.locator("canvas")
+    expect(canvas).to_be_visible()
     chart.scroll_into_view_if_needed()
 
-    chart.get_by_title("Box Select").click()
-    box = chart.bounding_box()
+    box = canvas.bounding_box()
     assert box is not None
-    app.mouse.move(box["x"] + box["width"] * 0.15, box["y"] + box["height"] * 0.25)
+    # Toolbox icons are zrender paths on the canvas (no HTML ``title``), so
+    # click the enlarged top-right rect-brush control by position.
+    app.mouse.click(box["x"] + box["width"] - 18, box["y"] + 18)
+    app.mouse.move(box["x"] + box["width"] * 0.15, box["y"] + box["height"] * 0.4)
     app.mouse.down()
-    app.mouse.move(box["x"] + box["width"] * 0.85, box["y"] + box["height"] * 0.85)
+    app.mouse.move(box["x"] + box["width"] * 0.85, box["y"] + box["height"] * 0.9)
     app.mouse.up()
     wait_for_app_run(app)
 
@@ -229,7 +232,7 @@ def test_brush_selection_persists_and_clears(app: Page):
     click_button(app, "rerun helper")
     expect(app.get_by_text("echarts brush areas: 1")).to_be_visible()
 
-    chart.get_by_title("Clear Selections").click()
+    canvas.dblclick()
     wait_for_app_run(app)
     expect(app.get_by_text("echarts brush areas: 0")).to_be_visible()
     expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
