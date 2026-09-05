@@ -199,9 +199,14 @@ data column:
   `convert_anything_to_arrow_bytes`, which already does `data.to_frame()` before
   `_convert_polars_to_arrow_bytes`. Data field names are the `dimensions` labels and the
   frontend row keys.
-- **Polars LazyFrame and other unevaluated frames:** keep the existing 10k-row truncation
-  and caption from `dataframe_util`, then the Polars DataFrame path above (or the pandas
-  path below if the object is not Polars).
+- **Polars LazyFrame and other unevaluated frames:** extract a shared truncate-and-caption
+  helper that both `convert_anything_to_arrow_bytes` and `_serialize_echarts_arrow` call.
+  The 10k-row `limit` / `collect` / `head` plus `_show_data_information` caption currently
+  live only inside `convert_anything_to_arrow_bytes`; `_show_data_information` and
+  `_MAX_UNEVALUATED_DF_ROWS` are module-private, so this path cannot call them. Do not
+  copy that block. Then take the Polars DataFrame path above (or the pandas path below if
+  the object is not Polars). Other unevaluated frames already truncate inside
+  `convert_anything_to_pandas_df`.
 - **`pyarrow.Table`:** if `schema.pandas_metadata` is present, drop named index fields and
   rewrite schema metadata in the same step: keep the pandas JSON blob and empty
   `index_columns` (and drop the matching index entries from `columns`). Do **not** call
@@ -338,7 +343,7 @@ before `typeof`: period is an int, time/duration are bigints, decimal is a
 | missing / `isEmptyType` | `null` | empty / text cell | omitted/null | `null` (`pd.NA` / `NaT` / Arrow null decode as nullish content) |
 | `isBooleanType` | `boolean` | checkbox | passthrough | `boolean` |
 | `isStringType` | `string` | text | passthrough | `string` |
-| `isCategoricalType` | decoded dict value (`string` / number) | selectbox label | passthrough | decoded value (`string`, or `Number` if `bigint`) |
+| `isCategoricalType` | decoded dict value (`string` / number / `Date` / `StructRow`) | selectbox label | passthrough | Reclassify against the dictionary *value* type (`field.type.dictionary`) and recurse. String/int labels stay decoded values; datetime/date cats take the ISO rows; `pd.cut` interval cats take `format`. Do not leave a `Date` / `StructRow` as `content`. |
 | `isFloatType` | `number` (`NaN` / `±Infinity` possible) | number; `NaN` is missing/error | passthrough including `NaN` | `Number.isFinite` ? number : `null` (same gap as today's `to_json`) |
 | `isIntegerType` / `isUnsignedIntegerType` (not period) | `number` or `bigint` | `toSafeNumber`; unsafe ints error in the grid | `Number(bigint)` | `Number(content)` (same `MAX_SAFE_INTEGER` caveat as Vega) |
 | `isDecimalType` | `Uint32Array` (Arrow JS cannot decode scale) | `format` → decimal string → number cell | **passthrough `Uint32Array` (broken for Vega)** | `Number(format(content, type))` — DataFrame's decimal workaround, then a plottable number; non-finite → `null` |
@@ -350,7 +355,7 @@ before `typeof`: period is an int, time/duration are bigints, decimal is a
 | `isIntervalType` | `StructRow` (also `isObjectType`) | `formatInterval` → `"(0, 1]"` | passthrough struct | `format(content, type)` string |
 | `isListType` | Arrow `Vector` | `ListColumn` via `toSafeArray` (stringifies for the editor) | passthrough `Vector` | Plain JS array built with `vector.get(i)` (null slots stay `null`). Do **not** use `vector.toArray()`: for primitive children it returns the values buffer as a typed array and ignores the validity bitmap, so nulls become `0` before `Array.from`. Do **not** call `toSafeArray`. If the value is not a Vector with `get`/`length`, `format` string (table `formatObject`) |
 | `isObjectType` / struct / map | `StructRow` / object | `formatObject` JSON string | passthrough | `format(content, type)` string |
-| `isBytesType` | `Uint8Array` | object column, formatted | passthrough | `format(content, type)` string |
+| `isBytesType` | `Uint8Array` | object column, formatted | passthrough | `format(content, type)` string. `FixedSizeBinary` is **not** `isBytesType` (`isBinary` / `isLargeBinary` only); it hits the primitive allowlist and then `format`. |
 | anything else | unknown | `String(x)` fallback in `format` | passthrough | `format(content, type)` string |
 
 Python-side, `fix_arrow_incompatible_column_types` already stringifies geometry, mixed
@@ -392,6 +397,33 @@ function cellToEChartsValue(
   field?: Field
 ): unknown {
   if (content == null || isEmptyType(type)) return null
+  if (isCategoricalType(type)) {
+    // Dictionary columns classify as categorical; isDatetimeType/isDateType
+    // inspect arrowField.type (Dictionary) and getPandasTypeName is
+    // "categorical", so a decoded Date/StructRow would miss those rows.
+    const dictType =
+      field?.type && ArrowDataType.isDictionary(field.type)
+        ? field.type.dictionary
+        : undefined
+    if (dictType && field) {
+      const valueField = new Field(field.name, dictType, field.nullable)
+      const valueType = {
+        ...type,
+        arrowField: valueField,
+        pandasType: undefined,
+      }
+      return cellToEChartsValue(content, valueType, valueField)
+    }
+    if (typeof content === "bigint") return Number(content)
+    if (
+      typeof content === "string" ||
+      typeof content === "boolean" ||
+      (typeof content === "number" && Number.isFinite(content))
+    ) {
+      return content
+    }
+    return format(content, type)
+  }
   if (isFloatType(type) && typeof content === "number" && !Number.isFinite(content)) {
     return null
   }
@@ -450,8 +482,9 @@ function cellToEChartsValue(
     return format(content, type)
   }
   if (typeof content === "bigint") return Number(content)
-  if (typeof content === "number" && !Number.isFinite(content)) return null
-  return content
+  if (typeof content === "number") return Number.isFinite(content) ? content : null
+  if (typeof content === "string" || typeof content === "boolean") return content
+  return format(content, type)
 }
 ```
 
@@ -629,6 +662,9 @@ Frontend (`EChartsChart.test.tsx` + `arrowDataset` unit tests):
   | `INT64` / `UINT64` | `number` (not `bigint`) | Vega `Number(bigint)` |
   | `UNICODE` | strings | all three |
   | `CATEGORICAL` / dictionary | decoded labels | Quiver / SelectboxColumn |
+  | categorical of datetime / date | ISO strings (same as the datetime/date rows) | dictionary value type, not `return content` |
+  | `pd.cut` categorical of interval | `formatInterval` string | dictionary value type → `isIntervalType` |
+  | `FixedSizeBinary` | `format` string | not `isBytesType`; primitive allowlist then `format` |
   | `DATETIME` | timezone-less ISO `YYYY-MM-DDTHH:mm:ss.SSS` | today's `to_json`; wall-clock under `useUTC: false` |
   | `DATE` | timezone-less `YYYY-MM-DD` | `st.dataframe` / pandas object-dtype `datetime.date` |
   | `DATETIMETZ` | ISO with trailing `Z` (UTC instant) | absolute instant, local display |
