@@ -1177,7 +1177,11 @@ def determine_arrow_column_fix(
     - "string": convert column values to strings
     - "list": convert iterable values (e.g., frozensets, ExtensionArrays) to lists
     - None: column is already Arrow-compatible
+
+    For mixed object columns holding list-like values, this attempts a trial
+    PyArrow conversion, which is O(n) in the length of the column.
     """
+    import pyarrow as pa
     from pandas.api.extensions import ExtensionArray
     from pandas.api.types import infer_dtype, is_dict_like, is_list_like
 
@@ -1240,6 +1244,25 @@ def determine_arrow_column_fix(
             # are list-like but not directly serializable by PyArrow - convert to lists.
             if isinstance(first_value, (frozenset, ExtensionArray)):
                 return "list"
+
+            # A list-like first value doesn't prove that the whole column is
+            # serializable: PyArrow rejects columns that mix list nesting levels
+            # (e.g. ``[1, 2]`` next to ``[[1, 2], [3, 4]]``) or hold values it
+            # cannot infer a common type for. Ask PyArrow instead of guessing
+            # from a single value.
+            # This discards the converted array, so it costs a full conversion
+            # pass over the column. Only columns that get this far pay it, and
+            # for them the alternative is a failed serialization.
+            # These are the same errors we catch around ``pa.Table.from_pandas``
+            # in ``convert_pandas_df_to_arrow_table``.
+            try:
+                pa.array(column, from_pandas=True)
+            except (
+                pa.ArrowTypeError,
+                pa.ArrowInvalid,
+                pa.ArrowNotImplementedError,
+            ):
+                return "string"
             return None
     # We did not detect an incompatible type, so we assume it is compatible:
     return None
