@@ -27,5 +27,6 @@ class AppTestError(Exception):
 
     AppTest can run apps that contain unimplemented or browser-only elements.
     This error is reserved for an explicit test action that a browser user
-    could not perform, such as updating a disabled widget.
+    could not perform, such as updating a disabled widget or calling
+    ``set_value`` / ``click`` on an inspectable-only node.
     """

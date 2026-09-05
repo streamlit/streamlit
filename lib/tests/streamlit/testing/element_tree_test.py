@@ -1381,6 +1381,40 @@ def test_parse_tree_unknown_proto_subtypes_become_unknown_element() -> None:
     assert nodes[2].value == "unused format"
 
 
+def test_unknown_element_unsupported_interaction_raises_app_test_error() -> None:
+    """Inspectable-only nodes reject set_value/click with AppTestError.
+
+    ``st.pagination`` is inspectable (key and current page) but has no typed
+    wrapper. Its proto field ``set_value: bool`` must not leak through
+    ``Element.__getattr__`` as a callable.
+    """
+
+    def script():
+        import streamlit as st
+
+        st.pagination(5, key="pager")
+        st.markdown("hi")
+
+    at = AppTest.from_function(script).run()
+    node = at.get("pagination")[0]
+    assert isinstance(node, UnknownElement)
+    assert node.key == "pager"
+    assert node.value == 1
+
+    with pytest.raises(
+        AppTestError, match=r"set_value\(\) is not supported for pagination"
+    ):
+        node.set_value(2)
+    with pytest.raises(
+        AppTestError, match=r"click\(\) is not supported for pagination"
+    ):
+        node.click()
+    with pytest.raises(
+        AppTestError, match=r"set_value\(\) is not supported for markdown"
+    ):
+        at.markdown[0].set_value("nope")
+
+
 def test_element_list_equality():
     """Test ElementList equality comparison."""
 

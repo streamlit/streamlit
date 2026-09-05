@@ -179,8 +179,28 @@ class Element(ABC):
         ...
 
     def __getattr__(self, name: str) -> Any:
-        """Fallback attempt to get an attribute from the proto."""
+        """Fallback attempt to get an attribute from the proto.
+
+        ``set_value`` and ``click`` return callables that raise
+        ``AppTestError``. Some inspectable-only protos define those names as
+        fields (pagination's ``set_value`` is a bool).
+        """
+        if name in {"set_value", "click"}:
+
+            def unsupported_interaction(*_args: Any, **_kwargs: Any) -> None:
+                self._raise_unsupported_interaction(name)
+
+            return unsupported_interaction
         return getattr(self.proto, name)
+
+    def _raise_unsupported_interaction(self, method: str) -> None:
+        key_part = f" (key={self.key!r})" if self.key else ""
+        raise AppTestError(
+            f"{method}() is not supported for {self.type}{key_part}. "
+            "This element is inspectable in AppTest but is not interactive. "
+            "Use a typed widget wrapper when one exists, or Playwright e2e "
+            "tests for browser-only behavior."
+        )
 
     def run(self, *, timeout: float | None = None) -> AppTest:
         """Run the ``AppTest`` script which contains the element.
