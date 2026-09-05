@@ -21,8 +21,8 @@
     "testCoverage": "vitest run --coverage",
     "format": "yarn workspaces foreach --all --parallel run format",
     "formatCheck": "yarn workspaces foreach --all --parallel run formatCheck",
-    "oxlint": "yarn exec oxlint --config ./.oxlintrc.json --deny-warnings app/src component-lib/src component-v2-lib/src connection/src eslint-plugin-streamlit-custom/src lib/src utils/src",
-    "oxlint:fix": "yarn exec oxlint --config ./.oxlintrc.json --fix --deny-warnings app/src component-lib/src component-v2-lib/src connection/src eslint-plugin-streamlit-custom/src lib/src utils/src",
+    "oxlint": "yarn exec oxlint --config ./.oxlintrc.json --deny-warnings app/src app/vite-plugins component-lib/src component-v2-lib/src connection/src eslint-plugin-streamlit-custom/src lib/src utils/src",
+    "oxlint:fix": "yarn exec oxlint --config ./.oxlintrc.json --fix --deny-warnings app/src app/vite-plugins component-lib/src component-v2-lib/src connection/src eslint-plugin-streamlit-custom/src lib/src utils/src",
     "lint": "yarn oxlint && yarn workspaces foreach --all --parallel run lint",
     "lint:fix": "yarn oxlint:fix && yarn workspaces foreach --all --parallel run lint:fix",
     "knip": "knip"
