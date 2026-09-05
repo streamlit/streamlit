@@ -53,7 +53,7 @@ from streamlit.elements.widgets.data_editor import (
     _compute_data_editor_signature,
     _parse_value,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitDataframeConversionError
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
@@ -1397,7 +1397,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         assert "a" not in columns_config
         assert columns_config["b"]["disabled"]
 
-    def test_stringifies_and_disables_columns_fixed_after_arrow_failure(self):
+    def test_disables_and_stringifies_columns_detected_by_arrow_retry(self):
         """Test that columns fixed after a failed Arrow conversion are stringified
         and disabled.
 
@@ -1426,6 +1426,19 @@ class DataEditorTest(DeltaGeneratorTestCase):
         reconstructed_df = convert_arrow_bytes_to_pandas_df(proto.arrow_data.data)
         assert reconstructed_df["geometry"].tolist() == expected_values
         assert return_df["geometry"].tolist() == expected_values
+
+    def test_raises_when_arrow_retry_cannot_fix_the_dataframe(self):
+        """Test that a dataframe that stays Arrow incompatible raises.
+
+        The retry only stringifies columns, so a mixed-type index still fails the
+        second Arrow conversion.
+        """
+        data_df = pd.DataFrame({"a": [1, 2]}, index=pd.Index([1, "x"]))
+
+        with pytest.raises(
+            StreamlitDataframeConversionError, match="Unable to convert dataframe"
+        ):
+            st.data_editor(data_df)
 
     @parameterized.expand(
         [

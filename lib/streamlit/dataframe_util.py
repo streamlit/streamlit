@@ -1182,15 +1182,13 @@ def determine_arrow_column_fix(
 
     Parameters
     ----------
-    column
-        The column to determine the fix for.
-
     trial_conversion
         Whether to also detect incompatible values that only a PyArrow conversion
-        can rule out, such as lists with inconsistent nesting levels. This
-        converts the column, so it is O(n) in the length of the column. Callers
-        that serialize the column right after and can recover from a failed
-        serialization should pass ``False`` and rely on that failure instead.
+        can rule out, such as lists with inconsistent nesting levels. Detecting
+        those requires materializing the column as an Arrow array, which costs
+        about as much as the real serialization. Callers that serialize the column
+        right after and can recover from a failed serialization should pass
+        ``False`` and rely on that failure instead.
     """
     from pandas.api.extensions import ExtensionArray
     from pandas.api.types import infer_dtype, is_dict_like, is_list_like
@@ -1261,17 +1259,16 @@ def determine_arrow_column_fix(
                 # A list-like first value doesn't prove that the whole column is
                 # serializable: PyArrow rejects columns that mix list nesting
                 # levels (e.g. ``[1, 2]`` next to ``[[1, 2], [3, 4]]``) or hold
-                # values it cannot infer a common type for. Ask PyArrow instead
-                # of guessing from a single value.
-                # These are the same errors we catch around
-                # ``pa.Table.from_pandas`` in ``convert_pandas_df_to_arrow_table``.
+                # values it cannot infer a common type for.
                 try:
                     pa.array(column, from_pandas=True)
-                except (
-                    pa.ArrowTypeError,
-                    pa.ArrowInvalid,
-                    pa.ArrowNotImplementedError,
-                ):
+                except Exception:
+                    # Any failure of this one call means the column isn't
+                    # serializable, which is the verdict we return. Catching
+                    # broadly also keeps values PyArrow rejects outside of its own
+                    # error types (e.g. integers too large for int64, which raise
+                    # ``OverflowError``) from escaping to callers that have no way
+                    # to recover from them.
                     return "string"
             return None
     # We did not detect an incompatible type, so we assume it is compatible:

@@ -455,7 +455,7 @@ class DataframeUtilTest(unittest.TestCase):
             (pd.Series([frozenset([1, 2]), frozenset([3, 4])]), "list"),
             # Dicts serialize fine in PyArrow, but are stringified because of
             # Arrow JS issues (see comments in Quiver.ts). This check has to stay
-            # ahead of the PyArrow probe, which would let dicts through:
+            # ahead of the trial conversion, which would let dicts through:
             (pd.Series([{"a": 1}, {"b": 2}]), "string"),
             # Complex types:
             (pd.Series([TestObject(), TestObject()]), "string"),
@@ -476,8 +476,11 @@ class DataframeUtilTest(unittest.TestCase):
                 "string",
             ),
             # A list next to a dict: the first value isn't dict-like, so only the
-            # PyArrow probe catches this:
+            # trial conversion catches this:
             (pd.Series([[1, 2], {"a": 1}]), "string"),
+            # Values PyArrow rejects without one of its own error types (an int
+            # that doesn't fit into int64 raises ``OverflowError``):
+            (pd.Series([[2**70], [1]]), "string"),
             # Supported types:
             # Consistently nested lists are serializable by PyArrow:
             (pd.Series([[[1, 2], [3, 4]], [[5, 6], [7, 8]]]), None),
@@ -503,6 +506,29 @@ class DataframeUtilTest(unittest.TestCase):
         assert dataframe_util.determine_arrow_column_fix(column) == fix_type, (
             f"Expected {column} to have fix_type={fix_type!r}."
         )
+
+    def test_determine_arrow_column_fix_without_trial_conversion(self) -> None:
+        """Test that `trial_conversion=False` skips the trial PyArrow conversion.
+
+        Callers that serialize right after pass ``trial_conversion=False`` to keep
+        the check cheap (see `st.data_editor`), so these columns must stay
+        undetected here and be caught by the failing serialization instead.
+        """
+        undetectable_columns = [
+            pd.Series([[1, 2], [[1, 2], [3, 4]]]),
+            pd.Series([[1, 2], {"a": 1}]),
+            pd.Series([[2**70], [1]]),
+        ]
+
+        for column in undetectable_columns:
+            assert (
+                dataframe_util.determine_arrow_column_fix(
+                    column, trial_conversion=False
+                )
+                is None
+            ), f"Expected {column.tolist()} to require a trial conversion."
+            # The trial conversion is what detects them:
+            assert dataframe_util.determine_arrow_column_fix(column) == "string"
 
     @parameterized.expand(
         [

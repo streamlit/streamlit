@@ -655,9 +655,9 @@ def _stringify_arrow_incompatible_columns(
     edits back in the column's original type.
 
     With ``trial_conversion=False``, only the checks that don't require converting
-    the column are applied. The remaining columns are detected by the failing
-    Arrow serialization, which is retried after another call with
-    ``trial_conversion=True``.
+    the column are applied. The caller is then expected to catch the failing Arrow
+    serialization, call this again with ``trial_conversion=True``, and retry the
+    serialization.
     """
     for column_name, column_data in data_df.items():
         if (
@@ -1267,10 +1267,10 @@ class DataEditorMixin:
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(processed_column_config)
 
-        # Deactivate editing for columns that are not compatible with arrow.
-        # The columns that can only be detected by a trial conversion are left to
-        # the Arrow serialization below, so that a rerun with editable data
-        # doesn't pay for one conversion per column.
+        # Deactivate editing for columns that are not compatible with Arrow.
+        # Columns that only a trial conversion can detect are left to the Arrow
+        # serialization below: it fails on them anyway, and this way a dataframe
+        # that serializes fine never pays for a trial conversion.
         _stringify_arrow_incompatible_columns(
             data_df, column_config_mapping, trial_conversion=False
         )
