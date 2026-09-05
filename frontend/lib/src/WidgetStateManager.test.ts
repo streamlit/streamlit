@@ -1301,8 +1301,8 @@ describe("Widget State Manager", () => {
       value: true,
     })
 
-    // A genuinely stale widget, to pin that retention is targeted at in-flight
-    // triggers rather than blanket. `fromUser: false` avoids an extra flush.
+    // A genuinely stale widget: retention must apply only to in-flight
+    // triggers, not to every widget. `fromUser: false` avoids an extra flush.
     widgetMgr.setStringValue("staleWidget", "gone", {
       formId: "",
       fragmentId: undefined,
@@ -1333,17 +1333,16 @@ describe("Widget State Manager", () => {
       fragmentId: undefined,
       fromUser: true,
     })
-    // A stale non-trigger widget in the same form, to pin that retention is
-    // targeted rather than sparing the whole form dict.
+    // A stale non-trigger widget in the same form: retention must not spare the
+    // whole form dict.
     widgetMgr.setStringValue(MOCK_FORM_WIDGET.id, "stale", {
       formId,
       fragmentId: undefined,
       fromUser: true,
     })
 
-    // Form-scoped trigger state lives in the form's own dict. CCv2 no-ops
-    // triggers inside forms, so this is defense in depth for the other
-    // form-capable trigger writers rather than a reachable CCv2 path.
+    // Defense in depth for form-scoped trigger writers. CCv2 no-ops triggers
+    // inside forms, so this is not a reachable CCv2 path.
     widgetMgr.removeInactive(new Set())
     widgetMgr.submitForm(formId, undefined)
 
@@ -1359,7 +1358,7 @@ describe("Widget State Manager", () => {
     )
   })
 
-  it("drops widget state for a spent trigger id on a later removeInactive", async () => {
+  it("drops widget state for a trigger id after its flush has run", async () => {
     const aggregatorId = makeTriggerAggregatorId("myComponent")
 
     await widgetMgr.setTriggerValue(

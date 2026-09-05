@@ -104,7 +104,11 @@ def test_trigger_interactions(app: Page) -> None:
     expect(trigger.get_by_text("Foo count: 1")).to_be_visible()
     expect(trigger.get_by_text("Bar count: 0")).to_be_visible()
     expect(trigger.get_by_text("Result: {'foo': True, 'bar': None}")).to_be_visible()
-    expect(trigger.get_by_text("Session state: {'foo': True}")).to_be_visible()
+    # exact=True because this is a strict prefix of "{'foo': True, 'bar': True}",
+    # so substring matching would pass even if a stale bar leaked into state.
+    expect(
+        trigger.get_by_text("Session state: {'foo': True}", exact=True)
+    ).to_be_visible()
 
     trigger.get_by_text("Trigger bar").click()
     expect(trigger.get_by_text("Foo count: 1")).to_be_visible()
@@ -117,7 +121,11 @@ def test_trigger_interactions(app: Page) -> None:
     expect(trigger.get_by_text("Foo count: 2")).to_be_visible()
     expect(trigger.get_by_text("Bar count: 1")).to_be_visible()
     expect(trigger.get_by_text("Result: {'foo': True, 'bar': None}")).to_be_visible()
-    expect(trigger.get_by_text("Session state: {'foo': True}")).to_be_visible()
+    # exact=True because this is a strict prefix of "{'foo': True, 'bar': True}",
+    # so substring matching would pass even if a stale bar leaked into state.
+    expect(
+        trigger.get_by_text("Session state: {'foo': True}", exact=True)
+    ).to_be_visible()
 
     trigger.get_by_text("Trigger both").click()
     expect(trigger.get_by_text("Foo count: 3")).to_be_visible()
