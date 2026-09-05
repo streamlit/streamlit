@@ -946,6 +946,10 @@ export class WidgetStateManager {
    * Remove the state of widgets that are not contained in `activeIds`.
    * This is called when a script finishes running, so that we don't retain
    * data for widgets that have been removed from the app.
+   *
+   * Widget ids in `pendingTriggerIds` are kept even when absent from
+   * `activeIds`, because they are in-flight for the next batched flush.
+   * Element state always follows `activeIds` alone.
    */
   public removeInactive(activeIds: Set<string>): void {
     // Trigger states awaiting the macrotask flush are in-flight, not stale, and
@@ -953,7 +957,11 @@ export class WidgetStateManager {
     // ids that never appear in `activeIds`. Dropping one leaves the
     // already-scheduled flush to send a rerun with no trigger, silently losing
     // the interaction (GitHub issue #16732).
-    const retainedIds = new Set([...activeIds, ...this.pendingTriggerIds])
+    // Nothing in flight is the common case, so avoid copying the set for it.
+    const retainedIds =
+      this.pendingTriggerIds.size === 0
+        ? activeIds
+        : new Set([...activeIds, ...this.pendingTriggerIds])
 
     this.widgetStates.removeInactive(retainedIds)
     this.forms.forEach(form => form.widgetStates.removeInactive(retainedIds))

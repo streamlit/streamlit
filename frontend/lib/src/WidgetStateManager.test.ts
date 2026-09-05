@@ -28,6 +28,8 @@ import {
   WidgetState,
 } from "@streamlit/protobuf"
 
+import { makeTriggerAggregatorId } from "~lib/components/widgets/BidiComponent/utils/idBuilder"
+
 import {
   createFormsData,
   FormsData,
@@ -1284,11 +1286,10 @@ describe("Widget State Manager", () => {
   })
 
   it("keeps in-flight trigger values on removeInactive until they are flushed", async () => {
-    // The Custom Components v2 trigger aggregator writes to a synthetic id that
-    // is never an active element id, so a removeInactive landing between the
-    // write and the batched flush used to destroy it, leaving the flush to send
-    // a rerun with no trigger.
-    const aggregatorId = "_streamlit_internal_myComponent:events"
+    // Custom Components v2 aggregators use a synthetic id that is never an
+    // active element id. removeInactive must keep that state in flight until
+    // the batched flush, or the flush sends a rerun carrying no trigger.
+    const aggregatorId = makeTriggerAggregatorId("myComponent")
     const update = { formId: "", fragmentId: undefined, fromUser: true }
 
     void widgetMgr.setTriggerValue(aggregatorId, update, {
@@ -1340,8 +1341,9 @@ describe("Widget State Manager", () => {
       fromUser: true,
     })
 
-    // Form-scoped trigger state lives in the form's own dict, so it needs the
-    // same protection from a removeInactive landing before the flush.
+    // Form-scoped trigger state lives in the form's own dict. CCv2 no-ops
+    // triggers inside forms, so this is defense in depth for the other
+    // form-capable trigger writers rather than a reachable CCv2 path.
     widgetMgr.removeInactive(new Set())
     widgetMgr.submitForm(formId, undefined)
 
@@ -1358,7 +1360,7 @@ describe("Widget State Manager", () => {
   })
 
   it("drops widget state for a spent trigger id on a later removeInactive", async () => {
-    const aggregatorId = "_streamlit_internal_myComponent:events"
+    const aggregatorId = makeTriggerAggregatorId("myComponent")
 
     await widgetMgr.setTriggerValue(
       aggregatorId,
