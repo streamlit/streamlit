@@ -31,16 +31,18 @@ const KATEX_STYLESHEET_PATH = /[\\/]katex[\\/]dist[\\/]katex(\.min)?\.css$/
 const KATEX_STYLESHEET_FILTER = /[\\/]katex[\\/]dist[\\/]katex(\.min)?\.css/
 
 /**
- * Vite suffixes that ask for a module's contents or URL rather than routing it
- * through the CSS asset pipeline. Those imports emit no font files, so rewriting
- * them would alter a string someone is reading without saving anything.
+ * Ids Vite keeps out of the CSS pipeline, mirroring its own `SPECIAL_QUERY_RE`,
+ * which is the `exclude` filter on `vite:css`, `vite:css-post` and
+ * `vite:css-analysis`. Those imports hand back the module's contents or URL and
+ * emit no font files, so rewriting them would alter a string someone is reading
+ * without saving anything.
  *
- * The delimiters match Vite's own: `raw` and `url` must end the query segment,
- * so `?url=value` is a CSS import and belongs to us, while `inline` uses Vite's
- * looser word-boundary form. Keeping these in step matters — anything Vite treats
- * as CSS but we skip would emit the fonts we are trying to drop.
+ * This has to match Vite exactly: anything Vite CSS-processes but we skip emits
+ * the fonts we are trying to drop. Note `inline` is deliberately absent — an
+ * `?inline` stylesheet still runs through `compileCSS`, which resolves its
+ * `url()`s into emitted assets, so it belongs to us.
  */
-const NON_CSS_PIPELINE_QUERY = /(\?|&)(raw|url)(?:&|$)|[?&]inline\b/
+const NON_CSS_PIPELINE_QUERY = /[?&](?:worker|sharedworker|raw|url)\b/
 
 /** A woff or ttf entry in a `src` list, including its leading comma. */
 const NON_WOFF2_SRC =

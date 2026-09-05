@@ -162,11 +162,13 @@ describe("katexWoff2Only", () => {
       "/repo/node_modules/katex/dist/katex-swap.min.css",
     ],
     ["katex's JavaScript", "/repo/node_modules/katex/dist/katex.mjs"],
-    // These read the file's contents or URL instead of emitting font assets, so
-    // there is nothing to save and the contents must not be rewritten.
+    // Vite's SPECIAL_QUERY_RE keeps these out of the CSS pipeline, so they hand
+    // back contents or a URL and emit no fonts; their text must not be rewritten.
     ["a ?raw import of the stylesheet", `${KATEX_ID}?raw`],
     ["a ?url import of the stylesheet", `${KATEX_ID}?url`],
-    ["an ?inline import of the stylesheet", `${KATEX_ID}?inline`],
+    ["?raw= with a value", `${KATEX_ID}?raw=value`],
+    ["?url= with a value", `${KATEX_ID}?url=value`],
+    ["a ?worker import", `${KATEX_ID}?worker`],
   ])("ignores %s", (_label, id) => {
     expect(transform(INSTALLED_KATEX_CSS, id)).toBeNull()
   })
@@ -175,16 +177,15 @@ describe("katexWoff2Only", () => {
     ["the unminified stylesheet", "/repo/node_modules/katex/dist/katex.css"],
     ["Vite's ?direct marker", `${KATEX_ID}?direct`],
     ["an arbitrary query", `${KATEX_ID}?v=abc123`],
-    // Vite's rawRE/urlRE require the token to end the query segment, so these
-    // are CSS imports rather than raw/URL ones and their fonts must be stripped.
-    ["?raw= with a value", `${KATEX_ID}?raw=value`],
-    ["?url= with a value", `${KATEX_ID}?url=value`],
+    // `inline` is absent from SPECIAL_QUERY_RE: an ?inline stylesheet still runs
+    // through compileCSS, which turns its url()s into emitted font assets.
+    ["an ?inline import", `${KATEX_ID}?inline`],
     ["?no-inline", `${KATEX_ID}?no-inline`],
   ])("transforms %s", (_label, id) => {
     expect(transform(INSTALLED_KATEX_CSS, id)).not.toBeNull()
   })
 
-  it("ignores raw and url markers that do end the query segment", () => {
+  it("ignores raw and url anywhere in the query", () => {
     for (const id of [`${KATEX_ID}?raw&x=1`, `${KATEX_ID}?x=1&url`]) {
       expect(transform(INSTALLED_KATEX_CSS, id)).toBeNull()
     }
