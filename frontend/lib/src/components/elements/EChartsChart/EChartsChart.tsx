@@ -38,12 +38,14 @@ import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscre
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
+import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { downloadDataUrl } from "~lib/util/downloadDataUrl"
 import { ensureError } from "~lib/util/ErrorHandling"
 import { isNullOrUndefined } from "~lib/util/utils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   applyStreamlitOptionDefaults,
@@ -52,7 +54,6 @@ import {
   insideDataZoomConsumesWheelEvent,
   optionHasInsideDataZoom,
   STREAMLIT_THEME,
-  withDefaultSeriesCursor,
 } from "./CustomTheme"
 import {
   StyledEChartsChartContainer,
@@ -62,6 +63,7 @@ import {
   StyledEChartsError,
   StyledEChartsErrorOverlay,
 } from "./styled-components"
+import { useEChartsSelections } from "./useEChartsSelections"
 
 const LOG = getLogger("EChartsChart")
 
@@ -69,6 +71,13 @@ type ChartErrorSource = "theme" | "option" | "resize"
 
 interface EChartsChartProps {
   element: EChartsChartProto
+  widgetMgr: WidgetStateManager
+  /**
+   * When true, the chart does not bind selection handlers or write widget
+   * state. Mirrors st.plotly_chart (e.g. a disconnected app).
+   */
+  disabled?: boolean
+  fragmentId?: string
   disableFullscreenMode?: boolean
   heightConfig?: streamlit.HeightConfig.$Properties | null
 }
@@ -163,7 +172,10 @@ function reconcileEChartsAria(
 
 export function EChartsChart({
   element,
+  widgetMgr,
+  fragmentId,
   disableFullscreenMode,
+  disabled = false,
   heightConfig,
 }: Readonly<EChartsChartProps>): ReactElement {
   const theme = useEmotionTheme()
@@ -189,7 +201,7 @@ export function EChartsChart({
   // coincides with (re)creating the instance (see the resize effect below).
   const resizedInstanceRef = useRef<echarts.ECharts | null>(null)
   // The live ECharts instance, tracked in state so recreating it (on a
-  // renderer change) re-runs the option effect.
+  // renderer change) re-runs the option and selection effects.
   const [chartInstance, setChartInstance] = useState<echarts.ECharts | null>(
     null
   )
@@ -260,18 +272,27 @@ export function EChartsChart({
   themeArgRef.current = themeArg
   const appliedThemeRef = useRef(themeArg)
 
-  // The option actually handed to setOption: Streamlit theming defaults plus
-  // a default (non-pointer) series cursor so display-only charts don't look
-  // clickable. Grid insets are rem-derived, so they must rebuild when the
-  // spacing tokens or configured base font size change — not on every new
-  // theme object (a light/dark switch would re-apply the option and replay
-  // entry animations).
+  const {
+    isSelectionActivated,
+    configureSelectionOption,
+    bindSelections,
+    restoreSelection,
+    onFormCleared,
+    prunePixelOnlyBrushAfterResize,
+  } = useEChartsSelections(element, widgetMgr, fragmentId, disabled)
+
+  // The option handed to setOption: Streamlit theme defaults, plus a
+  // non-pointer series cursor on display-only charts so they do not look
+  // clickable. Selection widgets pass the option through unchanged.
+  // Grid insets are rem-derived, so they must rebuild when the spacing tokens
+  // or configured base font size change — not on every new theme object (a
+  // light/dark switch would re-apply the option and replay entry animations).
   const { spacing, fontSizes } = theme
   const preparedOption = useMemo(() => {
     if (!option) {
       return null
     }
-    return withDefaultSeriesCursor(
+    return configureSelectionOption(
       applyStreamlitOptionDefaults(option, element.theme, theme)
     )
     // `theme` is read only for rem→px insets (spacing, title size, baseFontSize).
@@ -279,6 +300,7 @@ export function EChartsChart({
   }, [
     option,
     element.theme,
+    configureSelectionOption,
     spacing.sm,
     spacing.md,
     spacing.lg,
@@ -295,6 +317,9 @@ export function EChartsChart({
   // but the current measurement is 0), the first positive-size pass must
   // ``resize()`` instead of being treated as the coincident init skip.
   const needsResizeAfterZeroInitRef = useRef(false)
+  const lastPositiveSizeRef = useRef<{ width: number; height: number } | null>(
+    null
+  )
 
   // Latch: once the container has been measured with non-zero dimensions, keep
   // the chart mounted. Dimensions can transiently report 0 during layout
@@ -365,13 +390,17 @@ export function EChartsChart({
       chartInstance.setTheme(themeArg ?? "default")
       appliedThemeRef.current = themeArg
       setOpError("theme", null)
+      // Re-theming re-runs the render pipeline, which drops the native
+      // select/brush visuals, so put them back.
+      restoreSelection(chartInstance)
     } catch (error) {
       setOpError("theme", ensureError(error).message)
     }
-  }, [chartInstance, themeArg, setOpError])
+  }, [chartInstance, themeArg, restoreSelection, setOpError])
 
   // Apply the option whenever it (or the underlying instance) changes. Skips
-  // no-op setOption calls so unrelated reruns don't replay entry animations.
+  // no-op setOption calls so unrelated reruns don't replay entry animations,
+  // then re-applies the persisted selection afterwards.
   useEffect(() => {
     // When the instance is recreated (renderer change), an effect keyed on
     // the previous `chartInstance` can still run once against the just-disposed
@@ -398,10 +427,29 @@ export function EChartsChart({
       }
       setOpError("option", null)
       setHasRendered(true)
+      // A full replacement clears the selected/brushed state, so restore it.
+      restoreSelection(chartInstance)
     } catch (error) {
       setOpError("option", ensureError(error).message)
     }
-  }, [chartInstance, preparedOption, containerRef, setOpError])
+  }, [
+    chartInstance,
+    preparedOption,
+    containerRef,
+    restoreSelection,
+    setOpError,
+  ])
+
+  // Bind selection handlers to the current instance (no-op for display-only).
+  // This effect is intentionally declared *after* the option-apply effect so
+  // that, when the instance is (re)created, `restoreSelection` runs before
+  // these handlers are bound and its dispatch does not re-emit a selection.
+  useEffect(() => {
+    if (!chartInstance || chartInstance.isDisposed()) {
+      return
+    }
+    return bindSelections(chartInstance)
+  }, [chartInstance, bindSelections])
 
   // Resize the chart when its container dimensions change. Entering/exiting
   // fullscreen changes the measured width/height, so this covers it too.
@@ -423,6 +471,7 @@ export function EChartsChart({
     // first positive observation must resize.
     if (resizedInstanceRef.current !== chartInstance) {
       resizedInstanceRef.current = chartInstance
+      lastPositiveSizeRef.current = { width, height }
       if (!needsResizeAfterZeroInitRef.current) {
         return
       }
@@ -431,6 +480,14 @@ export function EChartsChart({
     try {
       chartInstance.resize()
       setOpError("resize", null)
+      const previousSize = lastPositiveSizeRef.current
+      lastPositiveSizeRef.current = { width, height }
+      if (
+        previousSize &&
+        (previousSize.width !== width || previousSize.height !== height)
+      ) {
+        prunePixelOnlyBrushAfterResize(chartInstance)
+      }
     } catch (error) {
       // `resize` re-runs the full render pipeline, so an option that already
       // failed in `setOption` throws again here. Surface it as an in-chart
@@ -438,7 +495,31 @@ export function EChartsChart({
       // replace the element with an unrecoverable stack trace.
       setOpError("resize", ensureError(error).message)
     }
-  }, [chartInstance, width, height, setOpError])
+  }, [
+    chartInstance,
+    width,
+    height,
+    setOpError,
+    prunePixelOnlyBrushAfterResize,
+  ])
+
+  // Reset the selection when the surrounding form is cleared.
+  useEffect(() => {
+    if (!element.formId || !isSelectionActivated) {
+      return
+    }
+
+    const formClearHelper = new FormClearHelper()
+    formClearHelper.manageFormClearListener(
+      widgetMgr,
+      element.formId,
+      onFormCleared
+    )
+
+    return () => {
+      formClearHelper.disconnect()
+    }
+  }, [element.formId, widgetMgr, isSelectionActivated, onFormCleared])
 
   // Inside dataZoom zooms (or pans) on wheel. Without preventDefault the page
   // scroll container wins, so the chart never zooms. Only block the event when

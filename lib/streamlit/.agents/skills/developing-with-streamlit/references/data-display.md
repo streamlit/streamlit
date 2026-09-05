@@ -303,7 +303,7 @@ selected_data = df.iloc[selected_indices]
 
 Selection modes: `"single-row"`, `"multi-row"`, `"single-column"`, `"multi-column"`, `"single-cell"`, `"multi-cell"`.
 
-Import `DataframeState` from `streamlit.typing` when annotating the returned event. The same public namespace exposes `PlotlyState`, `VegaLiteState`, and `PydeckState` for selection events from `st.plotly_chart`, `st.altair_chart`/`st.vega_lite_chart`, and `st.pydeck_chart`, respectively. Do not import these types from Streamlit's internal modules.
+Import `DataframeState` from `streamlit.typing` when annotating the returned event. The same public namespace exposes `PlotlyState`, `VegaLiteState`, `PydeckState`, and `EChartsState` for selection events from `st.plotly_chart`, `st.altair_chart`/`st.vega_lite_chart`, `st.pydeck_chart`, and `st.echarts_chart`, respectively. Do not import these types from Streamlit's internal modules.
 
 ## Empty DataFrames
 

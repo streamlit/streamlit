@@ -24,17 +24,25 @@ message EChartsChart {
   // are accepted.
   string theme = 2;
 
-  // The unique element ID of this chart. Populated when the user provided a
-  // key (CSS class + remount identity). Unkeyed charts skip the ID entirely.
+  // The unique element ID of this chart. Populated when selections are
+  // activated (on_select != "ignore") or the user provided a key.
   string id = 3;
 
-  // Held for selection fields in the follow-up on_select PR.
-  reserved 4, 5;
+  // Field 4 is unused so a future `selection_mode` can take this slot.
+  // Not `reserved`: reserved forbids reuse, which is the opposite of holding
+  // the number for v2. v1 activates selection via `on_select` and returns
+  // whatever the user configured in the spec.
+
+  // Form ID, filled if selections are activated.
+  string form_id = 5;
 
   // Renderer passed to echarts.init.
   Renderer renderer = 6;
 
-  // Next ID: 7
+  // True when ``on_select`` is not ``"ignore"``. Keyed display-only charts
+  // also receive an element ID (CSS class + remount identity), so the
+  // frontend cannot treat a non-empty ID as "this is a selection widget".
+  bool selection_activated = 7;
 
   // Available renderers:
   enum Renderer {

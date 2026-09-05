@@ -24,6 +24,7 @@ import { EChartsChart as EChartsChartProto } from "@streamlit/protobuf"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { EChartsChart } from "./EChartsChart"
 
@@ -35,6 +36,12 @@ const { mockInit, mockChart } = vi.hoisted(() => {
     dispose: vi.fn(),
     isDisposed: vi.fn(() => false),
     getDataURL: vi.fn(() => "data:image/png;base64,AAA"),
+    on: vi.fn(),
+    off: vi.fn(),
+    getZr: vi.fn(() => ({ on: vi.fn(), off: vi.fn() })),
+    dispatchAction: vi.fn(),
+    convertFromPixel: vi.fn(),
+    getOption: vi.fn(() => ({})),
   }
   return {
     mockInit: vi.fn(
@@ -75,6 +82,13 @@ vi.mock("~lib/hooks/useEmotionTheme", () => ({
   useEmotionTheme: () => themeHolder.override ?? mockTheme.emotion,
 }))
 
+vi.mock("~lib/components/widgets/Form/FormClearHelper", () => ({
+  FormClearHelper: vi.fn().mockImplementation(() => ({
+    manageFormClearListener: vi.fn(),
+    disconnect: vi.fn(),
+  })),
+}))
+
 const DEFAULT_SPEC = JSON.stringify({
   xAxis: { type: "category", data: ["A", "B", "C"] },
   yAxis: { type: "value" },
@@ -89,6 +103,7 @@ function createElement(
     theme: "streamlit",
     renderer: EChartsChartProto.Renderer.CANVAS,
     id: "",
+    formId: "",
     ...overrides,
   })
 }
@@ -122,12 +137,16 @@ function applyMockEchartsAria(option: Record<string, unknown>): void {
 }
 
 describe("EChartsChart", () => {
+  let widgetMgr: WidgetStateManager
+
   const Wrapper = ({
     element,
     isFullScreen = false,
+    disabled = false,
   }: {
     element: EChartsChartProto
     isFullScreen?: boolean
+    disabled?: boolean
   }): ReactElement => {
     const contextValue = useMemo(
       () => ({
@@ -141,7 +160,11 @@ describe("EChartsChart", () => {
     )
     return (
       <ElementFullscreenContext.Provider value={contextValue}>
-        <EChartsChart element={element} />
+        <EChartsChart
+          element={element}
+          widgetMgr={widgetMgr}
+          disabled={disabled}
+        />
       </ElementFullscreenContext.Provider>
     )
   }
@@ -160,6 +183,10 @@ describe("EChartsChart", () => {
         applyMockEchartsAria(option)
       }
     )
+    widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg: vi.fn(),
+      formsDataChanged: vi.fn(),
+    })
   })
 
   it("initializes an ECharts instance and applies the option", () => {
@@ -225,6 +252,54 @@ describe("EChartsChart", () => {
 
     expect(mockChart.dispose).toHaveBeenCalledTimes(disposeCalls)
     expect(mockChart.resize).not.toHaveBeenCalled()
+  })
+
+  it("does not bind selection handlers when disabled", () => {
+    render(
+      <Wrapper
+        element={createElement({ id: "chart-id", selectionActivated: true })}
+        disabled={true}
+      />
+    )
+
+    expect(mockInit).toHaveBeenCalledTimes(1)
+    expect(mockChart.on).not.toHaveBeenCalled()
+  })
+
+  it("does not bind selection handlers for a keyed display-only chart", () => {
+    render(
+      <Wrapper
+        element={createElement({
+          id: "styled_chart",
+          spec: JSON.stringify({
+            xAxis: { type: "category", data: ["A", "B", "C"] },
+            yAxis: { type: "value" },
+            series: [{ type: "bar", data: [1, 2, 3], selectedMode: true }],
+          }),
+        })}
+      />
+    )
+
+    expect(mockInit).toHaveBeenCalledTimes(1)
+    expect(mockChart.on).not.toHaveBeenCalled()
+  })
+
+  it("binds selection handlers when selection is activated", () => {
+    render(
+      <Wrapper
+        element={createElement({ id: "chart-id", selectionActivated: true })}
+      />
+    )
+
+    expect(mockChart.on).toHaveBeenCalled()
+  })
+
+  it("renders display-only charts (empty id) without binding selection handlers", () => {
+    render(<Wrapper element={createElement({ id: "" })} />)
+
+    expect(mockInit).toHaveBeenCalledTimes(1)
+    expect(mockChart.on).not.toHaveBeenCalled()
+    expect(screen.queryByTestId("stEChartsChartError")).not.toBeInTheDocument()
   })
 
   it("passes the SVG renderer through to echarts.init", () => {
