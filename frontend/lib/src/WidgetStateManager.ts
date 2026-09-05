@@ -948,8 +948,17 @@ export class WidgetStateManager {
    * data for widgets that have been removed from the app.
    */
   public removeInactive(activeIds: Set<string>): void {
-    this.widgetStates.removeInactive(activeIds)
-    this.forms.forEach(form => form.widgetStates.removeInactive(activeIds))
+    // Trigger states awaiting the macrotask flush are in-flight, not stale, and
+    // some (such as the Custom Components v2 trigger aggregator) use synthetic
+    // ids that never appear in `activeIds`. Dropping one leaves the
+    // already-scheduled flush to send a rerun with no trigger, silently losing
+    // the interaction (GitHub issue #16732).
+    const retainedIds = new Set([...activeIds, ...this.pendingTriggerIds])
+
+    this.widgetStates.removeInactive(retainedIds)
+    this.forms.forEach(form => form.widgetStates.removeInactive(retainedIds))
+    // Element states never enter the rerun message, so they follow `activeIds`
+    // exactly.
     this.elementStates.forEach((_, elementId) => {
       if (!activeIds.has(elementId)) {
         this.deleteElementState(elementId)

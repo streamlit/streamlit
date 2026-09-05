@@ -82,7 +82,9 @@ def test_stateful_interactions(app: Page) -> None:
     expect(
         stateful.get_by_text("Result: {'range': '10', 'text': 'Hello'}")
     ).to_be_visible()
-    expect(stateful.get_by_text("session_state: {'range': '10', 'text': 'Hello'}"))
+    expect(
+        stateful.get_by_text("session_state: {'range': '10', 'text': 'Hello'}")
+    ).to_be_visible()
     expect(stateful.get_by_text("Range change count: 1")).to_be_visible()
     expect(stateful.get_by_text("Text change count: 1")).to_be_visible()
 
@@ -91,7 +93,8 @@ def test_trigger_interactions(app: Page) -> None:
     """Test the interactions with trigger callbacks and state in the Bidi Component."""
     trigger = section(app, "Trigger")
 
-    # Bidi components load JS/HTML in an iframe; allow extra time on slower browsers
+    # The component's JS/HTML loads in an iframe, so its first paint can lag
+    # the page load.
     expect(trigger.get_by_text("Foo count: 0")).to_be_visible(timeout=10000)
     expect(trigger.get_by_text("Bar count: 0")).to_be_visible()
     expect(trigger.get_by_text("Result: {'foo': None, 'bar': None}")).to_be_visible()
@@ -101,35 +104,35 @@ def test_trigger_interactions(app: Page) -> None:
     expect(trigger.get_by_text("Foo count: 1")).to_be_visible()
     expect(trigger.get_by_text("Bar count: 0")).to_be_visible()
     expect(trigger.get_by_text("Result: {'foo': True, 'bar': None}")).to_be_visible()
-    expect(trigger.get_by_text("Session state: {'foo': True}"))
+    expect(trigger.get_by_text("Session state: {'foo': True}")).to_be_visible()
 
     trigger.get_by_text("Trigger bar").click()
     expect(trigger.get_by_text("Foo count: 1")).to_be_visible()
     expect(trigger.get_by_text("Bar count: 1")).to_be_visible()
     expect(trigger.get_by_text("Result: {'foo': None, 'bar': True}")).to_be_visible()
-    expect(trigger.get_by_text("Session state: {'bar': True}"))
+    expect(trigger.get_by_text("Session state: {'bar': True}")).to_be_visible()
 
     # Trigger foo again so it has a different value from bar
     trigger.get_by_text("Trigger foo").click()
     expect(trigger.get_by_text("Foo count: 2")).to_be_visible()
     expect(trigger.get_by_text("Bar count: 1")).to_be_visible()
     expect(trigger.get_by_text("Result: {'foo': True, 'bar': None}")).to_be_visible()
-    expect(trigger.get_by_text("Session state: {'foo': True}"))
+    expect(trigger.get_by_text("Session state: {'foo': True}")).to_be_visible()
 
     trigger.get_by_text("Trigger both").click()
-    # "Trigger both" fires two setTriggerValue calls from the iframe; on WebKit
-    # the round-trip can be slower, so allow extra time for the rerun to complete.
-    expect(trigger.get_by_text("Foo count: 3")).to_be_visible(timeout=10000)
+    expect(trigger.get_by_text("Foo count: 3")).to_be_visible()
     expect(trigger.get_by_text("Bar count: 2")).to_be_visible()
     expect(trigger.get_by_text("Result: {'foo': True, 'bar': True}")).to_be_visible()
-    expect(trigger.get_by_text("Session state: {'foo': True, 'bar': True}"))
+    expect(
+        trigger.get_by_text("Session state: {'foo': True, 'bar': True}")
+    ).to_be_visible()
 
     # Trigger a streamlit button to ensure the trigger values in the Bidi Component get reset
     trigger.get_by_text("st.button trigger").click()
     expect(trigger.get_by_text("Foo count: 3")).to_be_visible()
     expect(trigger.get_by_text("Bar count: 2")).to_be_visible()
     expect(trigger.get_by_text("Result: {'foo': None, 'bar': None}")).to_be_visible()
-    expect(trigger.get_by_text("Session state: {}"))
+    expect(trigger.get_by_text("Session state: {}")).to_be_visible()
 
 
 def test_form_interactions_deferred_until_submit(app: Page) -> None:
@@ -154,7 +157,7 @@ def test_form_interactions_deferred_until_submit(app: Page) -> None:
     expect(form.get_by_text("Form Clicked count: 0")).to_be_visible()
 
     # Also the displayed state should still be empty before submit.
-    expect(form.get_by_text("Form session state: {}"))
+    expect(form.get_by_text("Form session state: {}")).to_be_visible()
 
     # Submit the form and verify rerun + updates (only stateful changes apply).
     click_form_button(app, "Submit Form")
@@ -176,7 +179,7 @@ def test_fragment_interactions_rerun_only_fragment(app: Page) -> None:
 
     # Initial state for fragments
     expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
-    expect(fragment.get_by_text("Fragment session state: {}"))
+    expect(fragment.get_by_text("Fragment session state: {}")).to_be_visible()
     expect(fragment.get_by_text("Fragment Text changes: 0")).to_be_visible()
     expect(fragment.get_by_text("Fragment Clicked count: 0")).to_be_visible()
 

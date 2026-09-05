@@ -25,6 +25,7 @@ import {
   Button as ButtonProto,
   FileUploaderState as FileUploaderStateProto,
   UploadedFileInfo as UploadedFileInfoProto,
+  WidgetState,
 } from "@streamlit/protobuf"
 
 import {
@@ -1280,6 +1281,102 @@ describe("Widget State Manager", () => {
     expect(widgetMgr.getElementState(elementId2, "key2")).toEqual(
       "elementState2"
     )
+  })
+
+  it("keeps in-flight trigger values on removeInactive until they are flushed", async () => {
+    // The Custom Components v2 trigger aggregator writes to a synthetic id that
+    // is never an active element id, so a removeInactive landing between the
+    // write and the batched flush used to destroy it, leaving the flush to send
+    // a rerun with no trigger.
+    const aggregatorId = "_streamlit_internal_myComponent:events"
+    const update = { formId: "", fragmentId: undefined, fromUser: true }
+
+    void widgetMgr.setTriggerValue(aggregatorId, update, {
+      event: "foo",
+      value: true,
+    })
+    void widgetMgr.setTriggerValue(aggregatorId, update, {
+      event: "bar",
+      value: true,
+    })
+
+    // A genuinely stale widget, to pin that retention is targeted at in-flight
+    // triggers rather than blanket. `fromUser: false` avoids an extra flush.
+    widgetMgr.setStringValue("staleWidget", "gone", {
+      formId: "",
+      fragmentId: undefined,
+      fromUser: false,
+    })
+
+    widgetMgr.removeInactive(new Set(["myComponent"]))
+
+    await waitFor(() => expect(sendBackMsg).toHaveBeenCalledTimes(1))
+
+    const { widgets } = sendBackMsg.mock.calls[0][0]
+    expect(widgets).toHaveLength(1)
+    expect(widgets[0].id).toEqual(aggregatorId)
+    // Both payloads batched in the same macrotask must survive.
+    expect(JSON.parse(widgets[0].jsonTriggerValue)).toEqual([
+      { event: "foo", value: true },
+      { event: "bar", value: true },
+    ])
+    expect(widgetMgr.getStringValue({ id: "staleWidget" })).toBeUndefined()
+  })
+
+  it("keeps in-flight trigger values for widgets inside a form", () => {
+    const triggerId = "formTriggerWidget"
+    const { formId } = MOCK_FORM_WIDGET
+
+    widgetMgr.setStringTriggerValue(triggerId, "typed", {
+      formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+    // A stale non-trigger widget in the same form, to pin that retention is
+    // targeted rather than sparing the whole form dict.
+    widgetMgr.setStringValue(MOCK_FORM_WIDGET.id, "stale", {
+      formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+
+    // Form-scoped trigger state lives in the form's own dict, so it needs the
+    // same protection from a removeInactive landing before the flush.
+    widgetMgr.removeInactive(new Set())
+    widgetMgr.submitForm(formId, undefined)
+
+    // The pending flush has not run yet, so the submit is the only message.
+    expect(sendBackMsg).toHaveBeenCalledTimes(1)
+    const { widgets } = sendBackMsg.mock.calls[0][0]
+    expect(
+      widgets.find((widget: WidgetState) => widget.id === triggerId)
+        ?.stringTriggerValue?.data
+    ).toEqual("typed")
+    expect(widgets.map((widget: WidgetState) => widget.id)).not.toContain(
+      MOCK_FORM_WIDGET.id
+    )
+  })
+
+  it("drops widget state for a spent trigger id on a later removeInactive", async () => {
+    const aggregatorId = "_streamlit_internal_myComponent:events"
+
+    await widgetMgr.setTriggerValue(
+      aggregatorId,
+      { formId: "", fragmentId: undefined, fromUser: true },
+      { event: "foo", value: true }
+    )
+
+    // Give the spent id fresh state. If the flush failed to clear it from
+    // `pendingTriggerIds`, removeInactive would wrongly retain this.
+    widgetMgr.setStringValue(aggregatorId, "stale", {
+      formId: "",
+      fragmentId: undefined,
+      fromUser: false,
+    })
+
+    widgetMgr.removeInactive(new Set(["myComponent"]))
+
+    expect(widgetMgr.getStringValue({ id: aggregatorId })).toBeUndefined()
   })
 
   it("cleans up inactive form widget states on removeInactive", () => {
