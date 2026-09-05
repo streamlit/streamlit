@@ -1400,19 +1400,29 @@ def test_inspectable_elements_reject_unsupported_interactions() -> None:
     assert isinstance(node, UnknownElement)
     assert node.key == "pager"
     assert node.value == 1
+    assert node.proto.set_value is False
 
-    with pytest.raises(
-        AppTestError, match=r"set_value\(\) is not supported for pagination"
-    ):
+    inspectable_guidance = (
+        "AppTest can inspect this element but does not implement "
+        "interactions for it. Set its value through at.session_state if it "
+        "has a key, or use a Playwright e2e test."
+    )
+    with pytest.raises(AppTestError) as set_value_info:
         node.set_value(2)
-    with pytest.raises(
-        AppTestError, match=r"click\(\) is not supported for pagination"
-    ):
+    assert str(set_value_info.value) == (
+        "set_value() is not supported for pagination (key='pager'). "
+        f"{inspectable_guidance}"
+    )
+    with pytest.raises(AppTestError) as click_info:
         node.click()
-    with pytest.raises(
-        AppTestError, match=r"set_value\(\) is not supported for markdown"
-    ):
+    assert str(click_info.value) == (
+        f"click() is not supported for pagination (key='pager'). {inspectable_guidance}"
+    )
+    with pytest.raises(AppTestError) as markdown_info:
         at.markdown[0].set_value("nope")
+    assert str(markdown_info.value) == (
+        f"set_value() is not supported for markdown. {inspectable_guidance}"
+    )
 
 
 def test_typed_widget_without_click_raises_app_test_error() -> None:

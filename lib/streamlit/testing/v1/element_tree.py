@@ -180,12 +180,11 @@ class Element(ABC):
         ...
 
     def __getattr__(self, name: str) -> Any:
-        """Fallback attempt to get an attribute from the proto.
+        """Look up missing names on the element's proto, except AppTest interactions.
 
-        Treat ``set_value`` and ``click`` as unsupported AppTest
-        interactions, even when a proto defines those names as fields
-        (pagination's ``set_value`` is a bool). Other missing names still
-        fall through to the proto.
+        ``set_value`` and ``click`` are unsupported AppTest interactions even when a
+        proto defines those names as fields (pagination's ``set_value`` is a bool).
+        Other missing names still fall through to the proto.
         """
         if name in {"set_value", "click"}:
 
@@ -196,6 +195,7 @@ class Element(ABC):
         return getattr(self.proto, name)
 
     def _raise_unsupported_interaction(self, method: str) -> NoReturn:
+        """Raise AppTestError: typed widgets already have interaction methods; other nodes do not."""
         key_part = f" (key={self.key!r})" if self.key else ""
         if isinstance(self, Widget):
             raise AppTestError(
@@ -205,8 +205,9 @@ class Element(ABC):
             )
         raise AppTestError(
             f"{method}() is not supported for {self.type}{key_part}. "
-            "This element is inspectable in AppTest but is not interactive. "
-            "Use Playwright e2e tests for browser-only behavior."
+            "AppTest can inspect this element but does not implement "
+            "interactions for it. Set its value through at.session_state if it "
+            "has a key, or use a Playwright e2e test."
         )
 
     def run(self, *, timeout: float | None = None) -> AppTest:
