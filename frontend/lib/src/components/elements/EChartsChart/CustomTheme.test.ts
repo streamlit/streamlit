@@ -17,15 +17,26 @@
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { getGray30, getGray70 } from "~lib/theme/getColors"
 import { darkTheme, lightTheme } from "~lib/theme/themeConfigs"
+import { convertRemToPx } from "~lib/theme/utils"
 
 import {
   applyStreamlitOptionDefaults,
   buildStreamlitEChartsTheme,
+  type EChartsOptionObject,
+  insideDataZoomConsumesWheelEvent,
+  optionHasInsideDataZoom,
   STREAMLIT_THEME,
   withDefaultSeriesCursor,
 } from "./CustomTheme"
 
 const theme = mockTheme.emotion
+const gridLeft = convertRemToPx(theme.spacing.sm)
+const gridRight = convertRemToPx(theme.spacing.twoXL)
+const gridTop = convertRemToPx(theme.spacing.lg)
+const gridBottom = convertRemToPx(theme.spacing.sm)
+const controlBand = convertRemToPx(theme.spacing.threeXL)
+const controlGap = convertRemToPx(theme.spacing.xs)
+const controlEdge = convertRemToPx(theme.spacing.sm)
 
 describe("buildStreamlitEChartsTheme", () => {
   it("maps the Emotion palette, fonts, and dark mode", () => {
@@ -45,9 +56,13 @@ describe("buildStreamlitEChartsTheme", () => {
   it("themes title, tooltip, legend, and axes", () => {
     const echartsTheme = buildStreamlitEChartsTheme(theme)
 
-    const title = echartsTheme.title as Record<string, Record<string, unknown>>
-    expect(title.textStyle.fontFamily).toBe(theme.genericFonts.headingFont)
-    expect(title.textStyle.color).toBe(theme.colors.headingColor)
+    const title = echartsTheme.title as Record<string, unknown>
+    const titleText = title.textStyle as Record<string, unknown>
+    expect(titleText.fontFamily).toBe(theme.genericFonts.headingFont)
+    expect(titleText.color).toBe(theme.colors.headingColor)
+    expect(titleText.fontSize).toBe(convertRemToPx(theme.fontSizes.sm))
+    expect(titleText.fontWeight).toBe("normal")
+    expect(title.padding).toEqual([0, 0, convertRemToPx(theme.spacing.lg), 0])
 
     const tooltip = echartsTheme.tooltip as Record<string, unknown>
     expect(tooltip.backgroundColor).toBe(theme.colors.bgColor)
@@ -281,13 +296,19 @@ describe("buildStreamlitEChartsTheme", () => {
 })
 
 describe("applyStreamlitOptionDefaults", () => {
+  const applyDefaults = (
+    option: EChartsOptionObject,
+    themeStr: string = STREAMLIT_THEME
+  ): EChartsOptionObject =>
+    applyStreamlitOptionDefaults(option, themeStr, theme)
+
   it("skips visual defaults but still enables ARIA when theme is not 'streamlit'", () => {
     const option = {
       xAxis: {},
       yAxis: {},
       series: [{ type: "bar", data: [1] }],
     }
-    const result = applyStreamlitOptionDefaults(option, "")
+    const result = applyDefaults(option, "")
 
     // theme=None opts out of visual styling only; the screen-reader
     // description must not disappear along with it.
@@ -297,25 +318,19 @@ describe("applyStreamlitOptionDefaults", () => {
   })
 
   it("does not enable ARIA when the user explicitly disabled it and theme is None", () => {
-    const result = applyStreamlitOptionDefaults(
-      { aria: { enabled: false }, series: [] },
-      ""
-    )
+    const result = applyDefaults({ aria: { enabled: false }, series: [] }, "")
 
     expect(result.aria).toEqual({ enabled: false })
   })
 
   it("enables ARIA by default when the user hasn't set it", () => {
-    const result = applyStreamlitOptionDefaults(
-      { series: [] },
-      STREAMLIT_THEME
-    )
+    const result = applyDefaults({ series: [] }, STREAMLIT_THEME)
 
     expect(result.aria).toEqual({ enabled: true })
   })
 
   it("preserves an explicit aria configuration", () => {
-    const result = applyStreamlitOptionDefaults(
+    const result = applyDefaults(
       { aria: { enabled: false }, series: [] },
       STREAMLIT_THEME
     )
@@ -330,86 +345,179 @@ describe("applyStreamlitOptionDefaults", () => {
       yAxis: { type: "value" },
       series: [{ type: "bar", itemStyle: { color: "#abcdef" }, data: [1] }],
     }
-    const result = applyStreamlitOptionDefaults(option, STREAMLIT_THEME)
+    const result = applyDefaults(option, STREAMLIT_THEME)
 
     expect(result.color).toEqual(["#123456"])
     const series = result.series as Array<Record<string, unknown>>
     expect(series[0].itemStyle).toEqual({ color: "#abcdef" })
   })
 
+  it("fills in-chart title size, weight, and padding without mutating the spec", () => {
+    const title = { text: "Sales" }
+    const result = applyDefaults({
+      xAxis: {},
+      yAxis: {},
+      title,
+      series: [],
+    })
+
+    expect(title).toEqual({ text: "Sales" })
+    expect(result.title).toEqual({
+      text: "Sales",
+      padding: [0, 0, convertRemToPx(theme.spacing.lg), 0],
+      textStyle: {
+        fontSize: convertRemToPx(theme.fontSizes.sm),
+        fontWeight: "normal",
+      },
+    })
+  })
+
+  it("fills missing title textStyle keys around user values", () => {
+    const result = applyDefaults({
+      title: { text: "Sales", textStyle: { color: "red" } },
+      series: [],
+    })
+
+    expect(result.title).toEqual({
+      text: "Sales",
+      padding: [0, 0, convertRemToPx(theme.spacing.lg), 0],
+      textStyle: {
+        fontSize: convertRemToPx(theme.fontSizes.sm),
+        fontWeight: "normal",
+        color: "red",
+      },
+    })
+  })
+
+  it("preserves an explicit title padding and textStyle", () => {
+    const result = applyDefaults({
+      title: {
+        text: "Sales",
+        padding: 10,
+        textStyle: { fontSize: 24, fontWeight: "bold" },
+      },
+      series: [],
+    })
+
+    expect(result.title).toEqual({
+      text: "Sales",
+      padding: 10,
+      textStyle: { fontSize: 24, fontWeight: "bold" },
+    })
+  })
+
+  it("does not restyle a hidden title or when theme is None", () => {
+    const hidden = applyDefaults({
+      title: { text: "Sales", show: false },
+      series: [],
+    })
+    expect(hidden.title).toEqual({ text: "Sales", show: false })
+
+    const unthemed = applyDefaults(
+      { title: { text: "Sales" }, series: [] },
+      ""
+    )
+    expect(unthemed.title).toEqual({ text: "Sales" })
+  })
+
   it("defaults a container-filling grid for cartesian charts only", () => {
-    const cartesian = applyStreamlitOptionDefaults(
+    const cartesian = applyDefaults(
       { xAxis: { type: "category" }, yAxis: { type: "value" }, series: [] },
       STREAMLIT_THEME
     )
-    // Tight margins so the plot fills the container, with `outerBoundsMode`
-    // keeping axis labels and names inside them. With no title/legend, minimal
-    // top/bottom room is reserved.
+    // Tight rem-derived margins so the plot fills the container, with
+    // `outerBoundsMode` keeping axis labels and names inside them. With no
+    // title/legend, minimal top/bottom room is reserved.
     expect(cartesian.grid).toEqual({
-      left: 8,
-      right: 24,
-      top: 16,
-      bottom: 8,
+      left: gridLeft,
+      right: gridRight,
+      top: gridTop,
+      bottom: gridBottom,
       outerBoundsMode: "same",
     })
 
     // A pie chart has no cartesian axes, so no grid should be injected.
-    const nonCartesian = applyStreamlitOptionDefaults(
+    const nonCartesian = applyDefaults(
       { series: [{ type: "pie", data: [] }] },
       STREAMLIT_THEME
     )
     expect(nonCartesian.grid).toBeUndefined()
   })
 
+  it("derives grid insets from rem spacing tokens", () => {
+    const scaledTheme = {
+      ...theme,
+      spacing: {
+        ...theme.spacing,
+        sm: "1rem",
+        lg: "2rem",
+        twoXL: "3rem",
+      },
+    }
+    const result = applyStreamlitOptionDefaults(
+      { xAxis: {}, yAxis: {}, series: [] },
+      STREAMLIT_THEME,
+      scaledTheme
+    )
+
+    expect(result.grid).toEqual({
+      left: convertRemToPx(scaledTheme.spacing.sm),
+      right: convertRemToPx(scaledTheme.spacing.twoXL),
+      top: convertRemToPx(scaledTheme.spacing.lg),
+      bottom: convertRemToPx(scaledTheme.spacing.sm),
+      outerBoundsMode: "same",
+    })
+  })
+
   it("defers to ECharts' default margin on the side with a title or legend", () => {
     // ECharts places the legend at the bottom by default: leave `bottom` unset
     // (its generous default reserves room) and keep the top tight.
-    const withLegend = applyStreamlitOptionDefaults(
+    const withLegend = applyDefaults(
       { xAxis: {}, yAxis: {}, legend: { data: ["a"] }, series: [] },
       STREAMLIT_THEME
     )
     const legendGrid = withLegend.grid as Record<string, unknown>
     expect(legendGrid.bottom).toBeUndefined()
-    expect(legendGrid.top).toBe(16)
+    expect(legendGrid.top).toBe(gridTop)
 
     // A title sits at the top: leave `top` unset, keep the bottom tight.
-    const withTitle = applyStreamlitOptionDefaults(
+    const withTitle = applyDefaults(
       { xAxis: {}, yAxis: {}, title: { text: "Sales" }, series: [] },
       STREAMLIT_THEME
     )
     const titleGrid = withTitle.grid as Record<string, unknown>
     expect(titleGrid.top).toBeUndefined()
-    expect(titleGrid.bottom).toBe(8)
+    expect(titleGrid.bottom).toBe(gridBottom)
 
     // A legend explicitly positioned at the top leaves `top` unset.
-    const topLegend = applyStreamlitOptionDefaults(
+    const topLegend = applyDefaults(
       { xAxis: {}, yAxis: {}, legend: { top: 0 }, series: [] },
       STREAMLIT_THEME
     )
     const topLegendGrid = topLegend.grid as Record<string, unknown>
     expect(topLegendGrid.top).toBeUndefined()
-    expect(topLegendGrid.bottom).toBe(8)
+    expect(topLegendGrid.bottom).toBe(gridBottom)
 
     // A hidden legend with `top` set must not reserve the default top margin.
-    const hiddenLegend = applyStreamlitOptionDefaults(
+    const hiddenLegend = applyDefaults(
       { xAxis: {}, yAxis: {}, legend: { show: false, top: 10 }, series: [] },
       STREAMLIT_THEME
     )
     const hiddenLegendGrid = hiddenLegend.grid as Record<string, unknown>
-    expect(hiddenLegendGrid.top).toBe(16)
-    expect(hiddenLegendGrid.bottom).toBe(8)
+    expect(hiddenLegendGrid.top).toBe(gridTop)
+    expect(hiddenLegendGrid.bottom).toBe(gridBottom)
 
     // A hidden title is the same: don't treat it as occupying the top strip.
-    const hiddenTitle = applyStreamlitOptionDefaults(
+    const hiddenTitle = applyDefaults(
       { xAxis: {}, yAxis: {}, title: { show: false }, series: [] },
       STREAMLIT_THEME
     )
     const hiddenTitleGrid = hiddenTitle.grid as Record<string, unknown>
-    expect(hiddenTitleGrid.top).toBe(16)
-    expect(hiddenTitleGrid.bottom).toBe(8)
+    expect(hiddenTitleGrid.top).toBe(gridTop)
+    expect(hiddenTitleGrid.bottom).toBe(gridBottom)
 
     // A bottom-placed title occupies the bottom strip, not the top.
-    const bottomTitle = applyStreamlitOptionDefaults(
+    const bottomTitle = applyDefaults(
       {
         xAxis: {},
         yAxis: {},
@@ -419,11 +527,11 @@ describe("applyStreamlitOptionDefaults", () => {
       STREAMLIT_THEME
     )
     const bottomTitleGrid = bottomTitle.grid as Record<string, unknown>
-    expect(bottomTitleGrid.top).toBe(16)
+    expect(bottomTitleGrid.top).toBe(gridTop)
     expect(bottomTitleGrid.bottom).toBeUndefined()
 
     // Title arrays can occupy both strips independently.
-    const titleArray = applyStreamlitOptionDefaults(
+    const titleArray = applyDefaults(
       {
         xAxis: {},
         yAxis: {},
@@ -435,19 +543,75 @@ describe("applyStreamlitOptionDefaults", () => {
     const titleArrayGrid = titleArray.grid as Record<string, unknown>
     expect(titleArrayGrid.top).toBeUndefined()
     expect(titleArrayGrid.bottom).toBeUndefined()
+
+    // Legend arrays are walked the same way: a top-anchored entry must not
+    // fall through to the default bottom slot (which would keep a tight `top`).
+    const topLegendArray = applyDefaults(
+      {
+        xAxis: {},
+        yAxis: {},
+        legend: [{ data: ["a"], top: 0 }],
+        series: [],
+      },
+      STREAMLIT_THEME
+    )
+    const topLegendArrayGrid = topLegendArray.grid as Record<string, unknown>
+    expect(topLegendArrayGrid.top).toBeUndefined()
+    expect(topLegendArrayGrid.bottom).toBe(gridBottom)
+
+    const mixedLegendArray = applyDefaults(
+      {
+        xAxis: {},
+        yAxis: {},
+        legend: [{ data: ["a"] }, { data: ["b"], top: 0 }],
+        series: [],
+      },
+      STREAMLIT_THEME
+    )
+    const mixedLegendArrayGrid = mixedLegendArray.grid as Record<
+      string,
+      unknown
+    >
+    expect(mixedLegendArrayGrid.top).toBeUndefined()
+    expect(mixedLegendArrayGrid.bottom).toBeUndefined()
+
+    const hiddenLegendArray = applyDefaults(
+      {
+        xAxis: {},
+        yAxis: {},
+        legend: [{ show: false, top: 10 }],
+        series: [],
+      },
+      STREAMLIT_THEME
+    )
+    const hiddenLegendArrayGrid = hiddenLegendArray.grid as Record<
+      string,
+      unknown
+    >
+    expect(hiddenLegendArrayGrid.top).toBe(gridTop)
+    expect(hiddenLegendArrayGrid.bottom).toBe(gridBottom)
+
+    // Boolean ``false`` hides the legend; do not reserve the default bottom.
+    const legendFalse = applyDefaults(
+      { xAxis: {}, yAxis: {}, legend: false, series: [] },
+      STREAMLIT_THEME
+    )
+    const legendFalseGrid = legendFalse.grid as Record<string, unknown>
+    expect(legendFalseGrid.top).toBe(gridTop)
+    expect(legendFalseGrid.bottom).toBe(gridBottom)
   })
 
   it("fills only the grid gaps the user left unset (user values win)", () => {
-    const result = applyStreamlitOptionDefaults(
+    const result = applyDefaults(
       { xAxis: {}, grid: { containLabel: false, left: 40 }, series: [] },
       STREAMLIT_THEME
     )
     // User keys win; the rest are filled from the container-filling defaults.
     expect(result.grid).toEqual({
       left: 40,
-      right: 24,
-      top: 16,
-      bottom: 8,
+      right: gridRight,
+      top: gridTop,
+      bottom: gridBottom,
       containLabel: false,
       outerBoundsMode: "same",
     })
@@ -461,7 +625,7 @@ describe("applyStreamlitOptionDefaults", () => {
   ])(
     "defers to ECharts' default bottom margin for %s",
     (_name, bottomComponent) => {
-      const result = applyStreamlitOptionDefaults(
+      const result = applyDefaults(
         { xAxis: {}, yAxis: {}, series: [], ...bottomComponent },
         STREAMLIT_THEME
       )
@@ -469,7 +633,7 @@ describe("applyStreamlitOptionDefaults", () => {
       // A tight `bottom` would let the component overlap the x-axis labels.
       const grid = result.grid as Record<string, unknown>
       expect(grid.bottom).toBeUndefined()
-      expect(grid.top).toBe(16)
+      expect(grid.top).toBe(gridTop)
     }
   )
 
@@ -483,16 +647,193 @@ describe("applyStreamlitOptionDefaults", () => {
     ["a hidden slider is not rendered", { dataZoom: { show: false } }],
     ["a visualMap defaults to vertical", { visualMap: { min: 0, max: 1 } }],
   ])("keeps the tight bottom margin when %s", (_name, component) => {
-    const result = applyStreamlitOptionDefaults(
+    const result = applyDefaults(
       { xAxis: {}, yAxis: {}, series: [], ...component },
       STREAMLIT_THEME
     )
 
-    expect((result.grid as Record<string, unknown>).bottom).toBe(8)
+    expect((result.grid as Record<string, unknown>).bottom).toBe(gridBottom)
+  })
+
+  it("lifts a default-bottom legend off a dataZoom slider", () => {
+    const legend = { data: ["a"] }
+    const option = {
+      xAxis: {},
+      yAxis: {},
+      legend,
+      dataZoom: [{ type: "slider" }],
+      series: [],
+    }
+    const result = applyDefaults(option)
+
+    expect(result.legend).toEqual({ data: ["a"], top: 0 })
+    // The input spec is not rewritten in place.
+    expect(legend).toEqual({ data: ["a"] })
+    const grid = result.grid as Record<string, unknown>
+    // Legend now occupies the top; the slider still owns the bottom.
+    expect(grid.top).toBeUndefined()
+    expect(grid.bottom).toBeUndefined()
+  })
+
+  it("clears a title when lifting the legend off bottom controls", () => {
+    const result = applyDefaults({
+      xAxis: {},
+      yAxis: {},
+      title: { text: "Sales" },
+      legend: { data: ["a"] },
+      dataZoom: [{ type: "slider" }],
+      series: [],
+    })
+
+    expect(result.legend).toEqual({
+      data: ["a"],
+      top:
+        convertRemToPx(theme.spacing.lg) +
+        convertRemToPx(theme.fontSizes.sm) +
+        convertRemToPx(theme.spacing.lg),
+    })
+  })
+
+  it("does not lift a legend the user pinned to the bottom", () => {
+    const pinned = applyDefaults({
+      xAxis: {},
+      yAxis: {},
+      legend: { data: ["a"], bottom: 0 },
+      dataZoom: [{ type: "slider" }],
+      series: [],
+    })
+    expect(pinned.legend).toEqual({ data: ["a"], bottom: 0 })
+
+    const explicitBottom = applyDefaults({
+      xAxis: {},
+      yAxis: {},
+      legend: { top: "bottom" },
+      dataZoom: [{ type: "slider" }],
+      series: [],
+    })
+    expect(explicitBottom.legend).toEqual({ top: "bottom" })
+  })
+
+  it("does not lift a legend when there is no bottom-anchored control", () => {
+    const result = applyDefaults({
+      xAxis: {},
+      yAxis: {},
+      legend: { data: ["a"] },
+      series: [],
+    })
+    expect(result.legend).toEqual({ data: ["a"] })
+    expect((result.grid as Record<string, unknown>).bottom).toBeUndefined()
+    expect((result.grid as Record<string, unknown>).top).toBe(gridTop)
+  })
+
+  it("does not lift a legend when theme is not streamlit", () => {
+    const result = applyDefaults(
+      {
+        xAxis: {},
+        yAxis: {},
+        legend: { data: ["a"] },
+        dataZoom: [{ type: "slider" }],
+        series: [],
+      },
+      ""
+    )
+    expect(result.legend).toEqual({ data: ["a"] })
+    expect(result.grid).toBeUndefined()
+  })
+
+  it("stacks a slider dataZoom and a horizontal visualMap", () => {
+    const visualMap = { orient: "horizontal", bottom: 0 }
+    const result = applyDefaults({
+      xAxis: {},
+      yAxis: {},
+      dataZoom: [{ type: "slider" }],
+      visualMap,
+      series: [],
+    })
+
+    const dataZoom = result.dataZoom as Array<Record<string, unknown>>
+    expect(dataZoom[0].bottom).toBe(controlEdge)
+    expect(result.visualMap).toEqual({
+      orient: "horizontal",
+      bottom: controlEdge + controlBand + controlGap,
+    })
+    expect(visualMap).toEqual({ orient: "horizontal", bottom: 0 })
+    expect((result.grid as Record<string, unknown>).bottom).toBe(
+      controlEdge + controlBand + controlGap + controlBand + controlGap
+    )
+  })
+
+  it("leaves a user-offset visualMap unstacked", () => {
+    const result = applyDefaults({
+      xAxis: {},
+      yAxis: {},
+      dataZoom: [{ type: "slider" }],
+      visualMap: { orient: "horizontal", bottom: 50 },
+      series: [],
+    })
+
+    expect(result.visualMap).toEqual({ orient: "horizontal", bottom: 50 })
+    expect((result.dataZoom as Array<Record<string, unknown>>)[0].bottom).toBe(
+      undefined
+    )
+    expect((result.grid as Record<string, unknown>).bottom).toBeUndefined()
+  })
+
+  it("preserves a user grid.bottom over the stacked default", () => {
+    const result = applyDefaults({
+      xAxis: {},
+      yAxis: {},
+      dataZoom: [{ type: "slider" }],
+      visualMap: { orient: "horizontal" },
+      grid: { bottom: 12 },
+      series: [],
+    })
+    expect((result.grid as Record<string, unknown>).bottom).toBe(12)
+  })
+
+  it("lifts the legend and stacks remaining bottom controls together", () => {
+    const result = applyDefaults({
+      xAxis: {},
+      yAxis: {},
+      legend: { data: ["a"] },
+      dataZoom: [{ type: "slider" }],
+      visualMap: { orient: "horizontal" },
+      series: [],
+    })
+
+    expect(result.legend).toEqual({ data: ["a"], top: 0 })
+    expect((result.dataZoom as Array<Record<string, unknown>>)[0].bottom).toBe(
+      controlEdge
+    )
+    expect((result.visualMap as Record<string, unknown>).bottom).toBe(
+      controlEdge + controlBand + controlGap
+    )
+    expect((result.grid as Record<string, unknown>).top).toBeUndefined()
+    expect((result.grid as Record<string, unknown>).bottom).toBe(
+      controlEdge + controlBand + controlGap + controlBand + controlGap
+    )
+  })
+
+  it("stacks timeline below a slider dataZoom", () => {
+    const result = applyDefaults({
+      xAxis: {},
+      yAxis: {},
+      dataZoom: [{ type: "slider" }],
+      timeline: { data: ["2015"] },
+      series: [],
+    })
+
+    const timelineHeight = controlBand + convertRemToPx(theme.spacing.md)
+    expect((result.timeline as Record<string, unknown>).bottom).toBe(
+      controlEdge
+    )
+    expect((result.dataZoom as Array<Record<string, unknown>>)[0].bottom).toBe(
+      controlEdge + timelineHeight + controlGap
+    )
   })
 
   it("fills defaults inside baseOption for timeline specs", () => {
-    const result = applyStreamlitOptionDefaults(
+    const result = applyDefaults(
       {
         baseOption: { xAxis: {}, yAxis: {}, series: [] },
         options: [{ series: [{ data: [1] }] }],
@@ -504,14 +845,14 @@ describe("applyStreamlitOptionDefaults", () => {
     // level of a timeline spec would have no effect.
     const baseOption = result.baseOption as Record<string, unknown>
     expect(baseOption.aria).toEqual({ enabled: true })
-    expect((baseOption.grid as Record<string, unknown>).left).toBe(8)
+    expect((baseOption.grid as Record<string, unknown>).left).toBe(gridLeft)
     expect(result.aria).toBeUndefined()
     expect(result.grid).toBeUndefined()
   })
 
   it("leaves an array of grids untouched", () => {
     const grids = [{ left: 1 }, { left: 2 }]
-    const result = applyStreamlitOptionDefaults(
+    const result = applyDefaults(
       { xAxis: [{}, {}], grid: grids, series: [] },
       STREAMLIT_THEME
     )
@@ -530,7 +871,7 @@ describe("applyStreamlitOptionDefaults", () => {
         },
       ],
     }
-    const result = applyStreamlitOptionDefaults(option, STREAMLIT_THEME)
+    const result = applyDefaults(option, STREAMLIT_THEME)
 
     // The tooltip is left entirely untouched: no formatter, no renderMode.
     expect(result.tooltip).toBe(option.tooltip)
@@ -604,5 +945,97 @@ describe("withDefaultSeriesCursor", () => {
         ).series as Array<Record<string, unknown>>
       )[0].cursor
     ).toBe("default")
+  })
+})
+
+describe("optionHasInsideDataZoom", () => {
+  it("detects an inside dataZoom that zooms on wheel", () => {
+    expect(optionHasInsideDataZoom({ dataZoom: [{ type: "inside" }] })).toBe(
+      true
+    )
+    expect(optionHasInsideDataZoom({ dataZoom: { type: "inside" } })).toBe(
+      true
+    )
+    expect(
+      optionHasInsideDataZoom({
+        baseOption: { dataZoom: [{ type: "inside" }] },
+      })
+    ).toBe(true)
+  })
+
+  it("detects modifier-gated zoom and move-on-wheel", () => {
+    expect(
+      optionHasInsideDataZoom({
+        dataZoom: [{ type: "inside", zoomOnMouseWheel: "shift" }],
+      })
+    ).toBe(true)
+    expect(
+      optionHasInsideDataZoom({
+        dataZoom: [
+          { type: "inside", zoomOnMouseWheel: false, moveOnMouseWheel: true },
+        ],
+      })
+    ).toBe(true)
+  })
+
+  it("ignores slider zoom and disabled inside zoom", () => {
+    expect(optionHasInsideDataZoom(null)).toBe(false)
+    expect(optionHasInsideDataZoom({ dataZoom: [{ type: "slider" }] })).toBe(
+      false
+    )
+    expect(
+      optionHasInsideDataZoom({
+        dataZoom: [{ type: "inside", disabled: true }],
+      })
+    ).toBe(false)
+    expect(
+      optionHasInsideDataZoom({
+        dataZoom: [{ type: "inside", zoomOnMouseWheel: false }],
+      })
+    ).toBe(false)
+  })
+})
+
+describe("insideDataZoomConsumesWheelEvent", () => {
+  const noModifiers = { shiftKey: false, ctrlKey: false, altKey: false }
+  const shift = { shiftKey: true, ctrlKey: false, altKey: false }
+  const ctrl = { shiftKey: false, ctrlKey: true, altKey: false }
+  const alt = { shiftKey: false, ctrlKey: false, altKey: true }
+
+  it("consumes unmodified wheel when zoomOnMouseWheel defaults to true", () => {
+    const option = { dataZoom: [{ type: "inside" }] }
+    expect(insideDataZoomConsumesWheelEvent(option, noModifiers)).toBe(true)
+    expect(insideDataZoomConsumesWheelEvent(option, shift)).toBe(true)
+  })
+
+  it("consumes wheel only with the configured modifier", () => {
+    const option = {
+      dataZoom: [{ type: "inside", zoomOnMouseWheel: "shift" as const }],
+    }
+    expect(insideDataZoomConsumesWheelEvent(option, noModifiers)).toBe(false)
+    expect(insideDataZoomConsumesWheelEvent(option, shift)).toBe(true)
+    expect(insideDataZoomConsumesWheelEvent(option, ctrl)).toBe(false)
+
+    expect(
+      insideDataZoomConsumesWheelEvent(
+        { dataZoom: [{ type: "inside", zoomOnMouseWheel: "ctrl" }] },
+        ctrl
+      )
+    ).toBe(true)
+    expect(
+      insideDataZoomConsumesWheelEvent(
+        { dataZoom: [{ type: "inside", zoomOnMouseWheel: "alt" }] },
+        alt
+      )
+    ).toBe(true)
+  })
+
+  it("consumes wheel for moveOnMouseWheel when zoom is off", () => {
+    const option = {
+      dataZoom: [
+        { type: "inside", zoomOnMouseWheel: false, moveOnMouseWheel: true },
+      ],
+    }
+    expect(insideDataZoomConsumesWheelEvent(option, noModifiers)).toBe(true)
   })
 })

@@ -513,6 +513,16 @@ def _render_charts(minor_version: int) -> None:
                 Delta --> Browser[Browser render]
         """)
 
+    if hasattr(st, "echarts_chart"):
+        st.echarts_chart(
+            {
+                "animation": False,
+                "xAxis": {"type": "category", "data": ["A", "B", "C", "D", "E"]},
+                "yAxis": {"type": "value"},
+                "series": [{"type": "bar", "data": [5, 20, 36, 10, 10]}],
+            }
+        )
+
 
 def _render_custom_ui(minor_version: int) -> None:
     st.header("Custom UI elements")

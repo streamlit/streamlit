@@ -371,3 +371,64 @@ st.button(
     key="update_chart_data_btn",
     on_click=increment_chart_data,
 )
+
+# BINDING WIDGETS WITH ON_SELECT (#8765)
+st.header("Selection bindings:")
+
+region_options = ["USA", "Europe", "Japan"]
+radio_bind = alt.binding_radio(
+    options=region_options, labels=region_options, name="Region: "
+)
+select_bind = alt.binding_select(
+    options=region_options, labels=region_options, name="Region: "
+)
+
+bind_radio_click = alt.selection_point(name="bind_radio_click", toggle=False)
+bind_radio_origin = alt.selection_point(
+    name="bind_radio_origin",
+    fields=["Origin"],
+    bind=radio_bind,
+    value="USA",
+    toggle=False,
+)
+st.altair_chart(
+    alt.Chart(cars)
+    .mark_point()
+    .encode(
+        x="Miles_per_Gallon:Q",
+        y="Horsepower:Q",
+        color=alt.condition(bind_radio_click, "Origin:N", alt.value("lightgray")),
+        tooltip=alt.value(None),
+    )
+    .transform_filter(bind_radio_origin)
+    .add_params(bind_radio_click, bind_radio_origin),
+    on_select="rerun",
+    selection_mode="bind_radio_click",
+    key="bind_radio_rerun",
+    width="stretch",
+)
+
+bind_select_click = alt.selection_point(name="bind_select_click", toggle=False)
+bind_select_origin = alt.selection_point(
+    name="bind_select_origin",
+    fields=["Origin"],
+    bind=select_bind,
+    value="USA",
+    toggle=False,
+)
+st.altair_chart(
+    alt.Chart(cars)
+    .mark_point()
+    .encode(
+        x="Miles_per_Gallon:Q",
+        y="Horsepower:Q",
+        color=alt.condition(bind_select_click, "Origin:N", alt.value("lightgray")),
+        tooltip=alt.value(None),
+    )
+    .transform_filter(bind_select_origin)
+    .add_params(bind_select_click, bind_select_origin),
+    on_select="rerun",
+    selection_mode="bind_select_click",
+    key="bind_select_rerun",
+    width="stretch",
+)

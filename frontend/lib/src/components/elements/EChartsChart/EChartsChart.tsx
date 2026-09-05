@@ -42,6 +42,7 @@ import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { downloadDataUrl } from "~lib/util/downloadDataUrl"
 import { ensureError } from "~lib/util/ErrorHandling"
 import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -50,6 +51,8 @@ import {
   applyStreamlitOptionDefaults,
   buildStreamlitEChartsTheme,
   EChartsOptionObject,
+  insideDataZoomConsumesWheelEvent,
+  optionHasInsideDataZoom,
   STREAMLIT_THEME,
 } from "./CustomTheme"
 import {
@@ -76,7 +79,7 @@ interface EChartsChartProps {
   disabled?: boolean
   fragmentId?: string
   disableFullscreenMode?: boolean
-  heightConfig?: streamlit.IHeightConfig | null
+  heightConfig?: streamlit.HeightConfig.$Properties | null
 }
 
 function optionHasBackgroundColor(target: unknown): boolean {
@@ -90,33 +93,42 @@ function optionHasBackgroundColor(target: unknown): boolean {
  * Whether the option (or a timeline/media variant) sets ``backgroundColor``.
  *
  * PNG export supplies the Streamlit page background when the chart itself has
- * none, so a background configured only on ``baseOption`` or
- * ``media[*].option`` still counts as explicit.
+ * none, so a background configured only on ``baseOption``, ``options[]``, or
+ * nested ``media[*].option`` (including ``baseOption.media`` and
+ * ``options[*].media``) still counts as explicit. This matches the Python
+ * ``_iter_option_variants`` walker.
  */
 function hasExplicitBackgroundColor(
   option: EChartsOptionObject | null
 ): boolean {
-  if (isNullOrUndefined(option)) {
+  if (isNullOrUndefined(option) || !isPlainObject(option)) {
     return false
   }
   if (optionHasBackgroundColor(option)) {
     return true
   }
-  if (optionHasBackgroundColor(option.baseOption)) {
+  if (
+    hasExplicitBackgroundColor(option.baseOption as EChartsOptionObject | null)
+  ) {
     return true
   }
   if (
     Array.isArray(option.options) &&
-    option.options.some(optionHasBackgroundColor)
+    option.options.some(entry =>
+      hasExplicitBackgroundColor(entry as EChartsOptionObject | null)
+    )
   ) {
     return true
   }
   if (Array.isArray(option.media)) {
-    return option.media.some(
-      entry =>
-        isPlainObject(entry) &&
-        optionHasBackgroundColor((entry as Record<string, unknown>).option)
-    )
+    return option.media.some(entry => {
+      if (!isPlainObject(entry)) {
+        return false
+      }
+      return hasExplicitBackgroundColor(
+        (entry as Record<string, unknown>).option as EChartsOptionObject | null
+      )
+    })
   }
   return false
 }
@@ -270,15 +282,32 @@ export function EChartsChart({
   } = useEChartsSelections(element, widgetMgr, fragmentId, disabled)
 
   // The option actually handed to setOption: Streamlit theming defaults plus
-  // selection (brush/toolbox) configuration when selections are active.
+  // selection configuration when selections are active. Display-only charts
+  // get a default (non-pointer) series cursor so they don't look clickable.
+  // Grid insets are rem-derived, so they must rebuild when the spacing tokens
+  // or configured base font size change — not on every new theme object (a
+  // light/dark switch would re-apply the option and replay entry animations).
+  const { spacing, fontSizes } = theme
   const preparedOption = useMemo(() => {
     if (!option) {
       return null
     }
     return configureSelectionOption(
-      applyStreamlitOptionDefaults(option, element.theme)
+      applyStreamlitOptionDefaults(option, element.theme, theme)
     )
-  }, [option, element.theme, configureSelectionOption])
+    // `theme` is read only for rem→px insets (spacing, title size, baseFontSize).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- color-only theme copies must not re-apply the option
+  }, [
+    option,
+    element.theme,
+    configureSelectionOption,
+    spacing.sm,
+    spacing.md,
+    spacing.lg,
+    spacing.twoXL,
+    fontSizes.sm,
+    fontSizes.baseFontSize,
+  ])
 
   const hasValidSpec = option !== null
   const hasValidDimensions = width > 0 && height > 0
@@ -321,9 +350,16 @@ export function EChartsChart({
     const { width: initWidth, height: initHeight } = sizeRef.current
     needsResizeAfterZeroInitRef.current = initWidth <= 0 || initHeight <= 0
 
-    const chart = echarts.init(dom, themeArgRef.current, {
-      renderer: rendererStr,
-    })
+    let chart: echarts.ECharts
+    try {
+      chart = echarts.init(dom, themeArgRef.current, {
+        renderer: rendererStr,
+      })
+    } catch (error) {
+      // Uncaught throws trip the error boundary and replace the element.
+      setOpError("option", ensureError(error).message)
+      return
+    }
     appliedThemeRef.current = themeArgRef.current
     // Force the setOption effect to re-apply against the fresh instance.
     appliedOptionRef.current = null
@@ -336,7 +372,7 @@ export function EChartsChart({
       setChartInstance(null)
       setHasRendered(false)
     }
-  }, [containerRef, rendererStr, hasValidSpec, hasBeenSized])
+  }, [containerRef, rendererStr, hasValidSpec, hasBeenSized, setOpError])
 
   // Re-theme in place when the app switches between light and dark. ECharts
   // 6's `setTheme` keeps the current option model, so this avoids the
@@ -485,6 +521,28 @@ export function EChartsChart({
     }
   }, [element.formId, widgetMgr, isSelectionActivated, onFormCleared])
 
+  // Inside dataZoom zooms (or pans) on wheel. Without preventDefault the page
+  // scroll container wins, so the chart never zooms. Only block the event when
+  // this wheel would actually be consumed — `zoomOnMouseWheel` may require a
+  // modifier (`"shift"` / `"ctrl"` / `"alt"`), and unmodified wheels must still
+  // scroll the page.
+  const hasInsideDataZoom = optionHasInsideDataZoom(option)
+  useEffect(() => {
+    const dom = containerRef.current
+    if (!dom || !hasInsideDataZoom) {
+      return
+    }
+    const handleWheel = (event: WheelEvent): void => {
+      if (insideDataZoomConsumesWheelEvent(option, event)) {
+        event.preventDefault()
+      }
+    }
+    dom.addEventListener("wheel", handleWheel, { passive: false })
+    return () => {
+      dom.removeEventListener("wheel", handleWheel)
+    }
+  }, [containerRef, hasInsideDataZoom, option])
+
   const downloadType = rendererStr === "svg" ? "svg" : "png"
 
   const handleDownloadChart = useCallback((): void => {
@@ -504,23 +562,9 @@ export function EChartsChart({
             }
           : {}),
       })
-      // Build a `YYYY-MM-DDTHH-MM` timestamp from local time so the filename
-      // reflects the user's wall-clock time rather than UTC. Matches the
-      // download naming used by st.vega_lite_chart / st.altair_chart.
-      const now = new Date()
-      const pad = (value: number): string => String(value).padStart(2, "0")
-      const timestamp =
-        `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
-        `T${pad(now.getHours())}-${pad(now.getMinutes())}`
-      const link = document.createElement("a")
       // SVG renderer: getDataURL returns an SVG payload, so the extension
       // must match. Canvas renderer stays PNG.
-      link.download = `${timestamp}_chart.${downloadType}`
-      link.href = dataUrl
-      link.style.display = "none"
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+      downloadDataUrl(dataUrl, downloadType)
     } catch (error) {
       LOG.error(
         `Failed to export ECharts chart as ${downloadType.toUpperCase()}`,

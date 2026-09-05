@@ -254,6 +254,73 @@ def mapbox_subtest():
     )
 
 
+def layer_extensions_subtest():
+    st.write("""
+    ## Test deck.gl layer extensions
+
+    Should show two high-value points (DataFilterExtension) and a dashed
+    path (PathStyleExtension).
+    """)
+
+    points = pd.DataFrame(
+        [
+            {"lat": 37.75, "lon": -122.45, "value": 10},
+            {"lat": 37.76, "lon": -122.42, "value": 80},
+            {"lat": 37.77, "lon": -122.4, "value": 90},
+            {"lat": 37.76, "lon": -122.38, "value": 20},
+        ]
+    )
+    path_data = [
+        {
+            "path": [
+                [-122.45, 37.75],
+                [-122.42, 37.76],
+                [-122.4, 37.77],
+                [-122.38, 37.76],
+            ],
+        }
+    ]
+
+    st.pydeck_chart(
+        pdk.Deck(
+            map_style="light",
+            initial_view_state=pdk.ViewState(
+                latitude=37.76,
+                longitude=-122.42,
+                zoom=12,
+                pitch=0,
+            ),
+            layers=[
+                pdk.Layer(
+                    "ScatterplotLayer",
+                    data=points,
+                    id="filtered-points",
+                    get_position="[lon, lat]",
+                    get_fill_color="[200, 30, 0, 200]",
+                    get_radius=120,
+                    radius_min_pixels=8,
+                    get_filter_value="value",
+                    filter_range=[50, 100],
+                    # pydeck has no Extension class, so extensions are passed as @@type dicts.
+                    extensions=[{"@@type": "DataFilterExtension", "filterSize": 1}],
+                ),
+                pdk.Layer(
+                    "PathLayer",
+                    data=path_data,
+                    id="dashed-path",
+                    get_path="path",
+                    get_color=[220, 20, 60],
+                    get_width=20,
+                    width_min_pixels=6,
+                    get_dash_array=[8, 4],
+                    extensions=[{"@@type": "PathStyleExtension", "dash": True}],
+                ),
+            ],
+        ),
+        height=400,
+    )
+
+
 def width_parameter_subtest():
     st.write("""
     ## Test width parameter
@@ -411,6 +478,83 @@ def height_parameter_subtest():
             ],
         ),
         height=50,
+    )
+
+
+def orbit_point_cloud_subtest():
+    st.write("## Test OrbitView + PointCloudLayer")
+    rng = np.random.default_rng(0)
+    n = 250
+    theta, phi = rng.uniform(0, 2 * np.pi, n), rng.uniform(0, np.pi, n)
+    st.pydeck_chart(
+        pdk.Deck(
+            layers=[
+                pdk.Layer(
+                    "PointCloudLayer",
+                    data=pd.DataFrame(
+                        {
+                            "x": np.sin(phi) * np.cos(theta),
+                            "y": np.sin(phi) * np.sin(theta),
+                            "z": np.cos(phi),
+                            "r": rng.integers(40, 255, n),
+                            "g": rng.integers(40, 255, n),
+                            "b": rng.integers(40, 255, n),
+                        }
+                    ),
+                    get_position=["x", "y", "z"],
+                    get_color=["r", "g", "b"],
+                    point_size=4,
+                ),
+            ],
+            initial_view_state=pdk.ViewState(
+                target=[0, 0, 0], zoom=5, rotation_x=15, rotation_orbit=30
+            ),
+            views=[pdk.View(type="OrbitView", controller=True)],
+            map_provider=None,
+        ),
+        height=400,
+    )
+
+
+def globe_view_subtest():
+    st.write("## Test GlobeView")
+    patch = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            [-20.0, -10.0],
+                            [50.0, -10.0],
+                            [50.0, 40.0],
+                            [-20.0, 40.0],
+                            [-20.0, -10.0],
+                        ]
+                    ],
+                },
+            }
+        ],
+    }
+    st.pydeck_chart(
+        pdk.Deck(
+            layers=[
+                pdk.Layer(
+                    "GeoJsonLayer",
+                    data=patch,
+                    filled=True,
+                    stroked=True,
+                    get_fill_color=[30, 120, 180, 220],
+                    get_line_color=[255, 255, 255],
+                ),
+            ],
+            views=[pdk.View(type="_GlobeView", controller=True)],
+            initial_view_state=pdk.ViewState(latitude=20, longitude=10, zoom=0),
+            map_provider=None,
+        ),
+        height=400,
     )
 
 

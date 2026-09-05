@@ -14,7 +14,15 @@
  * limitations under the License.
  */
 
-import { FC, memo, useCallback, useContext, useEffect, useState } from "react"
+import {
+  FC,
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
 
 import "./patchLumaCanvasContext"
 
@@ -45,6 +53,7 @@ import {
 } from "./styled-components"
 import type { DeckGlElementState, DeckGLProps } from "./types"
 import { EMPTY_STATE, useDeckGl } from "./useDeckGl"
+import { shouldShowBasemap } from "./utils/mapShell"
 
 registerLoaders([CSVLoader, GLTFLoader])
 
@@ -95,6 +104,14 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   const usesMapbox =
     deck.mapProvider == "mapbox" ||
     (deck?.mapStyle && deck.mapStyle?.indexOf("mapbox") >= 0)
+  const showBasemap = useMemo(
+    () =>
+      shouldShowBasemap({
+        views: deck.views,
+        mapStyle: deck.mapStyle,
+      }),
+    [deck.views, deck.mapStyle]
+  )
 
   const [isInitialized, setIsInitialized] = useState(false)
 
@@ -245,26 +262,30 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
             getTooltip={createTooltip}
             // @ts-expect-error There is a type mismatch due to our versions of the libraries
             ContextProvider={MapContext.Provider}
-            controller
+            parameters={deck.parameters}
+            views={deck.views}
+            // Deck copies a truthy controller onto views[0]; skip if views exist.
+            controller={!deck.views}
             onClick={
               isSelectionModeActivated && !disabled ? handleClick : undefined
             }
           >
-            <StaticMap
-              mapStyle={
-                deck.mapStyle &&
-                (typeof deck.mapStyle === "string"
-                  ? deck.mapStyle
-                  : deck.mapStyle[0])
-              }
-              mapboxApiAccessToken={mapboxToken}
-            />
-            <StyledNavigationControlContainer>
-              <NavigationControl
-                data-testid="stDeckGlJsonChartZoomButton"
-                showCompass={false}
-              />
-            </StyledNavigationControlContainer>
+            {showBasemap && (
+              <>
+                <StaticMap
+                  mapStyle={
+                    deck.mapStyle &&
+                    (typeof deck.mapStyle === "string"
+                      ? deck.mapStyle
+                      : deck.mapStyle[0])
+                  }
+                  mapboxApiAccessToken={mapboxToken}
+                />
+                <StyledNavigationControlContainer data-testid="stDeckGlJsonChartZoomButton">
+                  <NavigationControl showCompass={false} />
+                </StyledNavigationControlContainer>
+              </>
+            )}
           </DeckGL>
         </StyledMapContainer>
       )}

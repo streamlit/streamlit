@@ -222,6 +222,33 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         assert source[1]["x"] is None
         assert source[2]["x"] is None
 
+    def test_dataset_source_nullable_numeric_dtypes(self):
+        """Nullable and mixed numeric dtypes convert without crashing the inf check."""
+        df = pd.DataFrame(
+            {
+                "i": pd.Series([1, None], dtype="Int64"),
+                "f": pd.Series([2.5, 3.5], dtype="Float64"),
+            }
+        )
+        st.echarts_chart({"dataset": {"source": df}})
+
+        source = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)[
+            "dataset"
+        ]["source"]
+        assert source == [{"i": 1, "f": 2.5}, {"i": None, "f": 3.5}]
+
+    def test_dataset_source_nullable_float_infinities_become_null(self):
+        """Infinities in a nullable float column become ``null``."""
+        df = pd.DataFrame({"x": pd.Series([1.0, float("inf"), None], dtype="Float64")})
+        st.echarts_chart({"dataset": {"source": df}})
+
+        source = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)[
+            "dataset"
+        ]["source"]
+        assert source[0]["x"] == 1.0
+        assert source[1]["x"] is None
+        assert source[2]["x"] is None
+
     def test_dataset_source_preserves_high_precision_floats(self):
         """Dataframe floats keep more than pandas' default 10 significant digits."""
         value = 1.23456789012345
@@ -232,6 +259,22 @@ class EChartsChartTest(DeltaGeneratorTestCase):
             "dataset"
         ]["source"][0]
         assert record["x"] == pytest.approx(value, rel=1e-15)
+
+    def test_dataset_source_to_json_failure_is_targeted(self):
+        """A ``to_json`` TypeError is re-raised with the dataset error_id.
+
+        Pandas serialization of unusual dtypes varies by version, so this
+        patches ``to_json`` rather than relying on a specific dtype to fail.
+        """
+        df = pd.DataFrame({"x": [1]})
+        with (
+            patch.object(pd.DataFrame, "to_json", side_effect=TypeError("boom")),
+            pytest.raises(StreamlitAPIException) as exc,
+        ):
+            st.echarts_chart({"dataset": {"source": df}})
+
+        assert "dataset.source" in str(exc.value)
+        assert exc.value.error_id == "echarts-dataset-not-json-serializable"
 
     @parameterized.expand(
         [
@@ -369,12 +412,52 @@ class EChartsChartTest(DeltaGeneratorTestCase):
 
         assert exc.value.error_id == "echarts-js-callbacks-not-supported"
 
+    def test_sentinel_text_in_json_string_label_is_allowed(self):
+        """Literal ``--x_x--`` in a label is not treated as a pyecharts callback."""
+        raw = json.dumps(
+            {
+                "title": {"text": "Warning --x_x-- do not click"},
+                "series": [{"type": "bar", "data": [1]}],
+            }
+        )
+        st.echarts_chart(raw)
+
+        spec = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)
+        assert spec["title"]["text"] == "Warning --x_x-- do not click"
+
+    def test_sentinel_text_in_pyecharts_label_is_allowed(self):
+        """A pyecharts dump whose only sentinel is chart text is accepted."""
+        chart = _FakeEChart(
+            {
+                "title": {"text": "Warning --x_x-- do not click"},
+                "series": [{"type": "bar", "data": [1]}],
+            }
+        )
+        st.echarts_chart(chart)
+
+        spec = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)
+        assert spec["title"]["text"] == "Warning --x_x-- do not click"
+
     def test_malformed_json_mentioning_function_is_parse_error(self):
         """The word ``function`` in a label is not treated as a JS callback."""
         with pytest.raises(StreamlitAPIException) as exc:
             st.echarts_chart('{ "title": "my function"')
 
         assert exc.value.error_id == "echarts-spec-invalid-json"
+
+    def test_malformed_json_with_arrow_in_string_is_parse_error(self):
+        """``=>`` inside an already-parsed JSON string is not a JS callback."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.echarts_chart('{"title": {"text": "a => b"')
+
+        assert exc.value.error_id == "echarts-spec-invalid-json"
+
+    def test_arrow_function_callback_string_raises(self):
+        """A JSON string with an arrow-function callback raises a helpful error."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.echarts_chart('{"tooltip": {"formatter": (p) => p}}')
+
+        assert exc.value.error_id == "echarts-js-callbacks-not-supported"
 
     def test_function_word_in_valid_json_is_allowed(self):
         """A title containing the word ``function`` is still valid JSON."""
@@ -391,6 +474,22 @@ class EChartsChartTest(DeltaGeneratorTestCase):
 
         assert "could not be parsed as JSON" in str(exc.value)
         assert exc.value.error_id == "echarts-spec-invalid-json"
+
+    def test_non_list_media_raises(self):
+        """A non-list ``media`` value raises a Streamlit API error, not TypeError."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.echarts_chart({**_BASIC_SPEC, "media": 1})
+
+        assert exc.value.error_id == "echarts-spec-invalid-structure"
+        assert "`media`" in str(exc.value)
+
+    def test_non_list_options_raises(self):
+        """A non-list ``options`` value raises a Streamlit API error, not TypeError."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.echarts_chart({**_BASIC_SPEC, "options": 1})
+
+        assert exc.value.error_id == "echarts-spec-invalid-structure"
+        assert "`options`" in str(exc.value)
 
     def test_lambda_in_dict_raises(self):
         """A callable embedded in the option dict raises instead of stringifying."""
@@ -572,20 +671,14 @@ class EChartsChartTest(DeltaGeneratorTestCase):
 
     @parameterized.expand([("renderer", "svg"), ("theme", None)])
     def test_id_stable_with_key_across_render_params(self, parameter, other_value):
-        """With a key, neither renderer nor theme participates in the identity.
-
-        Both force a dispose/re-init in the frontend, which re-applies the
-        persisted selection, so neither should be treated as a new widget.
-        """
-        st.echarts_chart(_BASIC_SPEC, on_select="rerun", key="keyed")
+        """With a key, neither renderer nor theme participates in the identity."""
+        st.echarts_chart(_BASIC_SPEC, key="keyed")
         id_a = self.get_delta_from_queue().new_element.echarts_chart.id
 
         self.script_run_ctx.shared.reset()
         self.clear_queue()
 
-        st.echarts_chart(
-            _BASIC_SPEC, on_select="rerun", key="keyed", **{parameter: other_value}
-        )
+        st.echarts_chart(_BASIC_SPEC, key="keyed", **{parameter: other_value})
         id_b = self.get_delta_from_queue().new_element.echarts_chart.id
 
         assert id_a == id_b
@@ -979,6 +1072,17 @@ def test_resolve_content_warns_and_defaults_on_unsupported_unit() -> None:
 
     assert "unsupported" in mock_warning.call_args.args[0]
     assert mock_warning.call_args.kwargs["stack_info"] is True
+
+
+def test_resolve_content_treats_blank_pyecharts_size_as_unset() -> None:
+    """Blank InitOpts width/height are treated as unset, not unsupported."""
+    chart = _FakeEChart(_BASIC_SPEC, width="", height="   ")
+
+    with patch.object(echarts_chart_module._LOGGER, "warning") as mock_warning:
+        assert _resolve_content_width("content", spec=chart) == 700
+        assert _resolve_content_height("content", spec=chart) == 350
+
+    mock_warning.assert_not_called()
 
 
 def test_resolve_content_height_passthrough() -> None:

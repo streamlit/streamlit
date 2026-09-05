@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-import { waitFor } from "@testing-library/dom"
+import { waitFor } from "@testing-library/react"
 import { enableMapSet, enablePatches } from "immer"
 import { getLogger } from "loglevel"
+import { type Long, util } from "protobufjs/minimal"
 import { Mock } from "vitest"
 
 import {
@@ -113,7 +114,6 @@ describe("Widget State Manager", () => {
       expect(sendBackMsg).not.toHaveBeenCalled()
     } else {
       await waitFor(() => {
-        expect(sendBackMsg).toHaveBeenCalledTimes(1)
         expect(sendBackMsg).toHaveBeenCalledWith(
           expect.anything(),
           undefined, // fragmentId
@@ -121,6 +121,7 @@ describe("Widget State Manager", () => {
           undefined
         )
       })
+      expect(sendBackMsg).toHaveBeenCalledTimes(1)
     }
   }
 
@@ -317,6 +318,56 @@ describe("Widget State Manager", () => {
     })
 
     expect(widgetMgr.getIntValue(MOCK_WIDGET)).toBe(Number.MIN_SAFE_INTEGER)
+  })
+
+  describe("handles protobuf sint64 Long values safely", () => {
+    // Cover the Long branch of requireNumberInt directly. Widget int fields are
+    // sint64 (`number | Long`), but the frontend never decodes a WidgetState
+    // (values only go client -> server), so that branch is otherwise unreachable.
+
+    // `false` selects a signed Long, matching sint64 widget int fields.
+    const asLong = (value: number): Long =>
+      util.LongBits.from(value).toLong(false)
+
+    const update = {
+      formId: MOCK_WIDGET.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    }
+
+    const setRawIntValue = (raw: number | Long): void => {
+      widgetMgr.setIntValue(MOCK_WIDGET.id, 0, update)
+      // @ts-expect-error -- widgetStates is private; reach in to simulate a decoded proto
+      widgetMgr.widgetStates.getState(MOCK_WIDGET.id).intValue = raw
+    }
+
+    it.each([0, 42, -42, Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER])(
+      "converts a Long holding %i",
+      value => {
+        setRawIntValue(asLong(value))
+        expect(widgetMgr.getIntValue(MOCK_WIDGET)).toBe(value)
+      }
+    )
+
+    it("converts Longs inside an int array", () => {
+      widgetMgr.setIntArrayValue(MOCK_WIDGET.id, [0, 0], update)
+      const data = [asLong(42), asLong(Number.MIN_SAFE_INTEGER)]
+      // @ts-expect-error -- widgetStates is private; reach in to simulate a decoded proto
+      widgetMgr.widgetStates.getState(MOCK_WIDGET.id).intArrayValue.data = data
+
+      expect(widgetMgr.getIntArrayValue(MOCK_WIDGET)).toEqual([
+        42,
+        Number.MIN_SAFE_INTEGER,
+      ])
+    })
+
+    it("throws when a Long exceeds the safe integer range", () => {
+      // 2^53 is the first positive integer outside JavaScript's safe integer range.
+      setRawIntValue(asLong(2 ** 53))
+      expect(() => widgetMgr.getIntValue(MOCK_WIDGET)).toThrow(
+        /cannot be converted to number without a loss of precision/
+      )
+    })
   })
 
   it("setIntArrayValue can handle MIN_ and MAX_SAFE_INTEGER", () => {

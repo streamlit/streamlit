@@ -434,22 +434,20 @@ describe("EChartsChart", () => {
       throw new Error("theme failed")
     })
 
-    const { rerender } = render(
-      <Wrapper element={createElement({ id: "chart-a" })} />
-    )
+    const { rerender } = render(<Wrapper element={createElement()} />)
     expect(screen.queryByTestId("stEChartsChartError")).not.toBeInTheDocument()
 
     // Keep the option identity stable so a successful setOption cannot mask
     // the theme error. A settings-menu switch rebuilds the theme object.
     themeHolder.override = { ...mockTheme.emotion }
-    rerender(<Wrapper element={createElement({ id: "chart-a" })} />)
+    rerender(<Wrapper element={createElement()} />)
     expect(screen.getByTestId("stEChartsChartError")).toBeVisible()
     expect(mockChart.setTheme).toHaveBeenCalledTimes(1)
 
-    // Same theme object; changing the element id rebuilds restoreSelection,
-    // which re-runs the theme effect. appliedThemeRef must not have been
+    // A new theme object retries setTheme. appliedThemeRef must not have been
     // advanced on the failed attempt, or this retry would be skipped.
-    rerender(<Wrapper element={createElement({ id: "chart-b" })} />)
+    themeHolder.override = { ...mockTheme.emotion }
+    rerender(<Wrapper element={createElement()} />)
     expect(mockChart.setTheme).toHaveBeenCalledTimes(2)
     expect(screen.queryByTestId("stEChartsChartError")).not.toBeInTheDocument()
   })
@@ -494,6 +492,19 @@ describe("EChartsChart", () => {
     const error = screen.getByTestId("stEChartsChartError")
     expect(error).toBeVisible()
     expect(error).toHaveTextContent("invalid option")
+  })
+
+  it("renders a styled error instead of throwing when echarts.init fails", () => {
+    mockInit.mockImplementationOnce(() => {
+      throw new Error("init failed")
+    })
+
+    render(<Wrapper element={createElement()} />)
+
+    const error = screen.getByTestId("stEChartsChartError")
+    expect(error).toBeVisible()
+    expect(error).toHaveTextContent("init failed")
+    expect(mockChart.setOption).not.toHaveBeenCalled()
   })
 
   it("renders a styled error instead of throwing when a resize fails", () => {
@@ -625,6 +636,37 @@ describe("EChartsChart", () => {
         ],
       },
     },
+    {
+      name: "nested baseOption media",
+      spec: {
+        baseOption: {
+          series: [{ type: "bar", data: [1] }],
+          media: [
+            {
+              query: { maxWidth: 500 },
+              option: { backgroundColor: "#333" },
+            },
+          ],
+        },
+        options: [{}],
+      },
+    },
+    {
+      name: "nested timeline options media",
+      spec: {
+        baseOption: { series: [{ type: "bar", data: [1] }] },
+        options: [
+          {
+            media: [
+              {
+                query: { maxWidth: 500 },
+                option: { backgroundColor: "#444" },
+              },
+            ],
+          },
+        ],
+      },
+    },
   ])(
     "does not override the export background from a $name backgroundColor",
     async ({ spec }) => {
@@ -669,5 +711,75 @@ describe("EChartsChart", () => {
       /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}_chart\.svg$/
     )
     clickSpy.mockRestore()
+  })
+
+  it("prevents page scroll on wheel when inside dataZoom is enabled", () => {
+    render(
+      <Wrapper
+        element={createElement({
+          spec: JSON.stringify({
+            xAxis: {},
+            yAxis: {},
+            dataZoom: [{ type: "inside" }],
+            series: [{ type: "line", data: [1] }],
+          }),
+        })}
+      />
+    )
+
+    const chart = screen.getByTestId("stEChartsChart")
+    const event = new WheelEvent("wheel", {
+      bubbles: true,
+      cancelable: true,
+      deltaY: 40,
+    })
+    chart.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(true)
+  })
+
+  it("does not intercept unmodified wheel when zoomOnMouseWheel requires a modifier", () => {
+    render(
+      <Wrapper
+        element={createElement({
+          spec: JSON.stringify({
+            xAxis: {},
+            yAxis: {},
+            dataZoom: [{ type: "inside", zoomOnMouseWheel: "shift" }],
+            series: [{ type: "line", data: [1] }],
+          }),
+        })}
+      />
+    )
+
+    const chart = screen.getByTestId("stEChartsChart")
+    const unmodified = new WheelEvent("wheel", {
+      bubbles: true,
+      cancelable: true,
+      deltaY: 40,
+    })
+    chart.dispatchEvent(unmodified)
+    expect(unmodified.defaultPrevented).toBe(false)
+
+    const withShift = new WheelEvent("wheel", {
+      bubbles: true,
+      cancelable: true,
+      deltaY: 40,
+      shiftKey: true,
+    })
+    chart.dispatchEvent(withShift)
+    expect(withShift.defaultPrevented).toBe(true)
+  })
+
+  it("does not intercept wheel when the chart has no inside dataZoom", () => {
+    render(<Wrapper element={createElement()} />)
+
+    const chart = screen.getByTestId("stEChartsChart")
+    const event = new WheelEvent("wheel", {
+      bubbles: true,
+      cancelable: true,
+      deltaY: 40,
+    })
+    chart.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(false)
   })
 })
