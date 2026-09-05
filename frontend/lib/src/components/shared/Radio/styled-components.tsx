@@ -65,10 +65,10 @@ export const StyledRadioGroup = styled(RARadioGroup, {
  * React Aria can expose it as the option's `aria-describedby` target rather than
  * folding it into the accessible name.
  *
- * Owns the text colour, including the disabled variant, because it is the nearest
- * ancestor of both the label and the caption — so the two dim together. React Aria
- * marks this element `data-disabled` as well as the label, so the two split their
- * state-driven styles: colour here, `cursor` on the label.
+ * Owns the text colour, including the disabled variant, so the label and the
+ * caption dim together. React Aria marks both this element and the label
+ * `data-disabled`, so they split state-driven styles: colour here, `cursor` on
+ * the label.
  */
 export const StyledRadioField = styled(RARadioField)(({ theme }) => ({
   display: "flex",
@@ -195,11 +195,9 @@ export const StyledRadioInner = styled.div<StyledRadioInnerProps>(
 )
 
 /**
- * Aligns the caption's text with the label's, shared with the spacer so the two
- * cannot drift. `paddingLeft` clears the circle. `paddingRight` mirrors the
- * label's, because a caption wider than its label sets the option's width — drop
- * it and the option is that much narrower, shifting later options in a horizontal
- * group left.
+ * Aligns caption and spacer text with the label so the two cannot drift.
+ * `paddingLeft` clears the circle. `paddingRight` matches the label's so a
+ * caption wider than its label cannot shift later options in a horizontal group.
  */
 const captionBoxStyles = ({ theme }: { theme: EmotionTheme }): CSSObject => ({
   paddingLeft: `calc(${theme.sizes.checkbox} + ${theme.spacing.sm})`,

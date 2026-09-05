@@ -184,6 +184,8 @@ def test_captions_are_option_descriptions_not_labels(app: Page):
     caption_link = with_captions.get_by_test_id("stRadioCaption").get_by_role(
         "link", name="link text"
     )
+    # Seeded so a probe that never runs is distinguishable from a cancelled click.
+    app.evaluate("() => { window.__captionLinkPrevented = 'listener never fired' }")
     app.evaluate(
         "() => document.addEventListener('click', e => {"
         "  window.__captionLinkPrevented = e.defaultPrevented;"

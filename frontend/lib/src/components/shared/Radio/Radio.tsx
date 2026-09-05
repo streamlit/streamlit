@@ -81,13 +81,19 @@ function Radio({
   const hasOptions = options.length > 0
   const cleanedOptions = hasOptions ? options : ["No options to select."]
 
-  // `captions` can be any length, and the no-options placeholder is ours rather
-  // than a user option — so only entries lining up with a real option apply.
-  const optionCaptions = captions.slice(0, options.length)
+  // Only captions that line up with a user option apply. Extra entries and the
+  // no-options placeholder are ignored.
+  const optionCaptions = captions
+    .slice(0, options.length)
+    // A whitespace-only caption counts as no caption, which keeps
+    // `aria-describedby` off content with nothing to announce: captioning only
+    // part of a group is supported, and the backend passes whitespace through
+    // unchanged.
+    .map(caption => (caption.trim() === "" ? "" : caption))
 
-  // Blank entries do not count, so a group with nothing to show reserves no
-  // caption space.
-  const hasCaptions = optionCaptions.some(caption => caption.trim() !== "")
+  // True when any option has a non-blank caption, so an all-blank list lays out
+  // like no captions.
+  const hasCaptions = optionCaptions.some(caption => caption !== "")
 
   // Either the user specified it as disabled or it's disabled because we don't have any options
   const shouldDisable = disabled || !hasOptions
@@ -118,12 +124,7 @@ function Radio({
         $hasCaptions={hasCaptions}
       >
         {cleanedOptions.map((option: string, index: number) => {
-          // A missing or whitespace-only caption counts as no caption: captioning
-          // only part of a group is supported, and the backend passes whitespace
-          // through unchanged. Either would otherwise point `aria-describedby` at
-          // content with nothing to announce.
-          const rawCaption = optionCaptions[index] ?? ""
-          const caption = rawCaption.trim() === "" ? "" : rawCaption
+          const caption = optionCaptions[index] ?? ""
 
           // In a horizontal group, an option without a caption still needs that
           // vertical space reserved, or its label stops lining up with the

@@ -280,7 +280,7 @@ describe("Radio widget", () => {
     expect(radioOptions[0]).toHaveAccessibleDescription("only one")
     expect(radioOptions[1]).not.toHaveAccessibleDescription()
     expect(radioOptions[2]).not.toHaveAccessibleDescription()
-    expect(screen.getAllByTestId("stCaptionContainer")).toHaveLength(1)
+    expect(screen.getAllByTestId("stRadioCaption")).toHaveLength(1)
   })
 
   it.each(["", " "])(
