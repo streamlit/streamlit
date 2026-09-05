@@ -52,7 +52,13 @@ export function isElementStale(
     return true
   }
 
-  if (scriptRunState === ScriptRunState.RUNNING) {
+  // STOP_REQUESTED means the script is still running while it winds down, so
+  // elements from earlier script runs must keep reporting as stale until the
+  // run actually finishes.
+  if (
+    scriptRunState === ScriptRunState.RUNNING ||
+    scriptRunState === ScriptRunState.STOP_REQUESTED
+  ) {
     if (fragmentIdsThisRun?.length) {
       // if the fragmentId is set, we only want to mark elements as stale
       // that belong to the same fragmentId and have a different scriptRunId.

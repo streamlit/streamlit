@@ -100,10 +100,47 @@ describe("isElementStale", () => {
     ).toBe(false)
   })
 
+  // A pending stop does not end the script run, so STOP_REQUESTED must stay
+  // staleness-aware in exactly the same way as RUNNING.
+  it("if stop requested and currentFragmentId is set, compares with node's fragmentId and scriptrunId", () => {
+    expect(
+      isElementStale(node, ScriptRunState.STOP_REQUESTED, "myScriptRunId", [
+        "myFragmentId",
+      ])
+    ).toBe(false)
+
+    expect(
+      isElementStale(node, ScriptRunState.STOP_REQUESTED, "otherScriptRunId", [
+        "myFragmentId",
+      ])
+    ).toBe(true)
+
+    expect(
+      isElementStale(node, ScriptRunState.STOP_REQUESTED, "myScriptRunId", [
+        "someFragmentId",
+        "someOtherFragmentId",
+      ])
+    ).toBe(false)
+  })
+
+  it("if stop requested and currentFragmentId is not set, compares with node's scriptRunId", () => {
+    expect(
+      isElementStale(
+        node,
+        ScriptRunState.STOP_REQUESTED,
+        "someOtherScriptRunId",
+        []
+      )
+    ).toBe(true)
+
+    expect(
+      isElementStale(node, ScriptRunState.STOP_REQUESTED, "myScriptRunId", [])
+    ).toBe(false)
+  })
+
   it("returns false for all other script run states", () => {
     const states = [
       ScriptRunState.NOT_RUNNING,
-      ScriptRunState.STOP_REQUESTED,
       ScriptRunState.COMPILATION_ERROR,
     ]
     states.forEach(s => {
