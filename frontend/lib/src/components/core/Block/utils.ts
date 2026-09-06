@@ -33,6 +33,8 @@ export function getClassnamePrefix(direction: Direction): string {
     : "stVerticalBlock"
 }
 
+// Only RUNNING: during a pending stop, placeholder updates should still be
+// allowed to render.
 export function shouldComponentBeEnabled(
   elementType: string,
   scriptRunState: ScriptRunState

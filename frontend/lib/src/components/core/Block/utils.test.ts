@@ -64,9 +64,8 @@ describe("isElementStale", () => {
     ).toBe(true)
   })
 
-  // A pending stop does not end the script run, so STOP_REQUESTED must behave
-  // exactly like RUNNING: both mean the script is still executing, and staleness
-  // is decided the same way for each.
+  // A pending stop does not end the script run, so STOP_REQUESTED uses the
+  // same staleness rules as RUNNING.
   describe.each([ScriptRunState.RUNNING, ScriptRunState.STOP_REQUESTED])(
     "while the script is executing (%s)",
     state => {
@@ -104,6 +103,14 @@ describe("isElementStale", () => {
         )
 
         expect(isElementStale(node, state, "myScriptRunId", [])).toBe(false)
+      })
+
+      // fragmentIdsThisRun is optional, so omitting it has to behave like
+      // passing no fragment ids rather than throwing.
+      it("if fragmentIdsThisRun is omitted, compares the node's scriptRunId", () => {
+        expect(isElementStale(node, state, "someOtherScriptRunId")).toBe(true)
+
+        expect(isElementStale(node, state, "myScriptRunId")).toBe(false)
       })
     }
   )

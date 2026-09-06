@@ -108,7 +108,6 @@ def test_stopping_long_compute_keeps_stale_elements_stale(app: Page) -> None:
     leftover_texts = ["second to last", "bottom"]
 
     def expect_stale_leftovers() -> None:
-        """Expect exactly the leftovers of the previous run to be stale."""
         for text in leftover_texts:
             expect(
                 app.get_by_test_id("stElementContainer").filter(has_text=text)
@@ -120,8 +119,12 @@ def test_stopping_long_compute_keeps_stale_elements_stale(app: Page) -> None:
     expect_stale_leftovers()
 
     # The status widget only reveals the Stop button after 500 ms of running
-    # (RUNNING_MAN_DISPLAY_DELAY_TIME_MS).
-    app.get_by_test_id("stStatusWidget").get_by_role("button", name="Stop").click()
+    # (RUNNING_MAN_DISPLAY_DELAY_TIME_MS). The click has to land inside the app's
+    # 5 s sleep; time out fast so overshooting fails clearly instead of hanging
+    # on the default 30 s action timeout.
+    app.get_by_test_id("stStatusWidget").get_by_role("button", name="Stop").click(
+        timeout=3000
+    )
 
     # The stop is pending: the script is still running, so the elements must
     # remain stale rather than flipping back to not-stale.
@@ -133,9 +136,9 @@ def test_stopping_long_compute_keeps_stale_elements_stale(app: Page) -> None:
     # ever routed as FINISHED_EARLY_FOR_RERUN, since that skips clearStaleNodes.
     wait_for_app_run(app)
     expect(stale_elements).to_have_count(0)
-    # The stop is handled at the enqueue checkpoint before "bottom" is
-    # re-emitted, so neither leftover survives a stopped run. A run that
-    # completes normally keeps "bottom" instead.
+    # Stop is applied when the script next tries to send output, before "bottom"
+    # is written, so both leftovers disappear. A run that completes normally
+    # keeps "bottom".
     for text in leftover_texts:
         expect(app.get_by_text(text)).not_to_be_visible()
 
