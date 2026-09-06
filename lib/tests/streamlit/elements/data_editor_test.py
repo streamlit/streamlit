@@ -1428,10 +1428,33 @@ class DataEditorTest(DeltaGeneratorTestCase):
         columns_config = json.loads(proto.columns)
 
         assert columns_config["col1"]["disabled"]
-        # The values reaching the frontend are the stringified ones:
         reconstructed_df = convert_arrow_bytes_to_pandas_df(proto.arrow_data.data)
         assert reconstructed_df["col1"].tolist() == expected_values
         assert return_df["col1"].tolist() == expected_values
+
+    def test_disables_incompatible_columns_under_flattened_multiindex_name(
+        self,
+    ) -> None:
+        """Test that the disabled config uses the flattened MultiIndex column name.
+
+        Hierarchical column headers are flattened for editing, so a config keyed by
+        the original tuple would not match any column on the frontend.
+        """
+        data_df = pd.DataFrame(
+            {
+                ("a", "b"): pd.Series([1, "foo"]),  # Incompatible
+                ("c", "d"): pd.Series([1, 2]),
+            }
+        )
+        assert isinstance(data_df.columns, pd.MultiIndex)
+
+        st.data_editor(data_df)
+
+        proto = self.get_delta_from_queue().new_element.dataframe
+        columns_config = json.loads(proto.columns)
+
+        assert columns_config["a_b"]["disabled"]
+        assert "c_d" not in columns_config
 
     def test_raises_when_arrow_retry_cannot_fix_the_dataframe(self) -> None:
         """Test that a dataframe that stays Arrow incompatible raises.

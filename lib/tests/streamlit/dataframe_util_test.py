@@ -482,6 +482,7 @@ class DataframeUtilTest(unittest.TestCase):
             # that doesn't fit into int64 raises ``OverflowError``):
             (pd.Series([[2**70], [1]]), "string"),
             # Supported types:
+            #
             # Consistently nested lists are serializable by PyArrow:
             (pd.Series([[[1, 2], [3, 4]], [[5, 6], [7, 8]]]), None),
             (pd.Series([[[[1]]], [[[2]]]]), None),
@@ -507,28 +508,27 @@ class DataframeUtilTest(unittest.TestCase):
             f"Expected {column} to have fix_type={fix_type!r}."
         )
 
-    def test_determine_arrow_column_fix_without_trial_conversion(self) -> None:
+    @parameterized.expand(
+        [
+            (pd.Series([[1, 2], [[1, 2], [3, 4]]]),),
+            (pd.Series([[1, 2], {"a": 1}]),),
+            (pd.Series([[2**70], [1]]),),
+        ]
+    )
+    def test_determine_arrow_column_fix_without_trial_conversion(
+        self, column: pd.Series
+    ) -> None:
         """Test that `trial_conversion=False` skips the trial PyArrow conversion.
 
         Callers that serialize right after pass ``trial_conversion=False`` to keep
         the check cheap (see `st.data_editor`), so these columns must stay
         undetected here and be caught by the failing serialization instead.
         """
-        undetectable_columns = [
-            pd.Series([[1, 2], [[1, 2], [3, 4]]]),
-            pd.Series([[1, 2], {"a": 1}]),
-            pd.Series([[2**70], [1]]),
-        ]
-
-        for column in undetectable_columns:
-            assert (
-                dataframe_util.determine_arrow_column_fix(
-                    column, trial_conversion=False
-                )
-                is None
-            ), f"Expected {column.tolist()} to require a trial conversion."
-            # The trial conversion is what detects them:
-            assert dataframe_util.determine_arrow_column_fix(column) == "string"
+        assert (
+            dataframe_util.determine_arrow_column_fix(column, trial_conversion=False)
+            is None
+        ), f"Expected {column.tolist()} to require a trial conversion."
+        assert dataframe_util.determine_arrow_column_fix(column) == "string"
 
     @parameterized.expand(
         [

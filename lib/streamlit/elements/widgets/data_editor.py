@@ -649,16 +649,13 @@ def _stringify_arrow_incompatible_columns(
     *,
     trial_conversion: bool,
 ) -> None:
-    """Convert Arrow-incompatible columns of the dataframe to strings inplace and
-    deactivate editing for them.
+    """Stringify Arrow-incompatible columns in place and disable editing for them.
 
     A converted column has to be read-only because the frontend sends edits back
     in the column's original type, which the stringified data no longer matches.
 
     With ``trial_conversion=False``, only the checks that don't require converting
-    the column are applied. The caller is then expected to catch the failing Arrow
-    serialization, call this again with ``trial_conversion=True``, and retry the
-    serialization.
+    the column are applied.
     """
     for column_name, column_data in data_df.items():
         if (
@@ -670,6 +667,10 @@ def _stringify_arrow_incompatible_columns(
             update_column_config(
                 column_config_mapping, str(column_name), {"disabled": True}
             )
+            # Every fix becomes a string here, including the ones
+            # ``fix_arrow_incompatible_column_types`` would turn into lists: the
+            # editor cannot round-trip converted values, so the column is disabled
+            # either way and a string is the more readable representation.
             data_df[cast("Any", column_name)] = column_data.astype("string")
 
 
@@ -1268,18 +1269,20 @@ class DataEditorMixin:
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(processed_column_config)
 
+        apply_data_specific_configs(column_config_mapping, data_format)
+
+        # Fix the column headers to work correctly for data editing:
+        _fix_column_headers(data_df)
+
         # Deactivate editing for columns that are not compatible with Arrow.
+        # This has to run after the column headers are fixed, so that the column
+        # config is keyed by the same names the frontend receives.
         # Columns that only a trial conversion can detect are left to the Arrow
         # serialization below: it fails on them anyway, and this way a dataframe
         # that serializes fine never pays for a trial conversion.
         _stringify_arrow_incompatible_columns(
             data_df, column_config_mapping, trial_conversion=False
         )
-
-        apply_data_specific_configs(column_config_mapping, data_format)
-
-        # Fix the column headers to work correctly for data editing:
-        _fix_column_headers(data_df)
 
         has_range_index = isinstance(data_df.index, pd.RangeIndex)
 
@@ -1336,6 +1339,8 @@ class DataEditorMixin:
             try:
                 arrow_table = pa.Table.from_pandas(data_df)
             except arrow_conversion_errors as retry_ex:
+                # The retry only stringifies columns, never the index: the data
+                # editor identifies rows by their index values.
                 raise StreamlitDataframeConversionError(
                     f"Unable to convert dataframe to Arrow table.\n{retry_ex}"
                 ) from retry_ex

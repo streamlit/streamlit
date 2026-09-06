@@ -1346,6 +1346,8 @@ def fix_arrow_incompatible_column_types(
     # causing Arrow issues during conversion.
     # Skipping multi-indices since they won't return
     # the correct value from infer_dtype
+    # ``trial_conversion`` has no effect here: an index has no ``iloc``, so a mixed
+    # one is reported as incompatible before the trial conversion is reached.
     if not selected_columns and (
         not isinstance(
             df.index,
