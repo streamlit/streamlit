@@ -1377,7 +1377,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         assert columns_config["c"]["disabled"]
         assert columns_config["d"]["disabled"]
 
-    def test_disables_columns_with_inconsistently_nested_lists(self):
+    def test_disables_columns_with_inconsistently_nested_lists(self) -> None:
         """Test that columns of lists PyArrow cannot serialize are disabled.
 
         Regression test for https://github.com/streamlit/streamlit/issues/9380
@@ -1412,7 +1412,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
     )
     def test_disables_and_stringifies_columns_detected_by_arrow_retry(
         self, _name: str, values: list[Any]
-    ):
+    ) -> None:
         """Test that columns fixed after a failed Arrow conversion are stringified
         and disabled.
 
@@ -1433,7 +1433,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         assert reconstructed_df["col1"].tolist() == expected_values
         assert return_df["col1"].tolist() == expected_values
 
-    def test_raises_when_arrow_retry_cannot_fix_the_dataframe(self):
+    def test_raises_when_arrow_retry_cannot_fix_the_dataframe(self) -> None:
         """Test that a dataframe that stays Arrow incompatible raises.
 
         The retry only stringifies columns, so a mixed-type index still fails the

@@ -649,10 +649,11 @@ def _stringify_arrow_incompatible_columns(
     *,
     trial_conversion: bool,
 ) -> None:
-    """Convert Arrow-incompatible columns of the dataframe to strings inplace.
+    """Convert Arrow-incompatible columns of the dataframe to strings inplace and
+    deactivate editing for them.
 
-    Editing is deactivated for every converted column, since the frontend sends
-    edits back in the column's original type.
+    A converted column has to be read-only because the frontend sends edits back
+    in the column's original type, which the stringified data no longer matches.
 
     With ``trial_conversion=False``, only the checks that don't require converting
     the column are applied. The caller is then expected to catch the failing Arrow
@@ -1320,15 +1321,7 @@ class DataEditorMixin:
         # Convert the dataframe to an arrow table which is used as the main
         # serialization format for sending the data to the frontend.
         # We also utilize the arrow schema to determine the data kinds of every column.
-        arrow_conversion_errors = (
-            pa.ArrowTypeError,
-            pa.ArrowInvalid,
-            pa.ArrowNotImplementedError,
-            # PyArrow reports values that don't fit its target type with the plain
-            # Python error instead of one of its own, e.g. an int too large for
-            # int64.
-            OverflowError,
-        )
+        arrow_conversion_errors = dataframe_util.get_arrow_conversion_errors()
         try:
             arrow_table = pa.Table.from_pandas(data_df)
         except arrow_conversion_errors as ex:
