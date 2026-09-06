@@ -105,15 +105,15 @@ def test_stopping_long_compute_keeps_stale_elements_stale(app: Page) -> None:
     _select_mode(app, "long_compute")
 
     stale_elements = app.locator("[data-stale='true']")
-    stale_texts = ["second to last", "bottom"]
+    leftover_texts = ["second to last", "bottom"]
 
     def expect_stale_leftovers() -> None:
         """Expect exactly the leftovers of the previous run to be stale."""
-        for text in stale_texts:
+        for text in leftover_texts:
             expect(
                 app.get_by_test_id("stElementContainer").filter(has_text=text)
             ).to_have_attribute("data-stale", "true")
-        expect(stale_elements).to_have_count(len(stale_texts))
+        expect(stale_elements).to_have_count(len(leftover_texts))
 
     get_button(app, "run long compute").click()
 
@@ -128,15 +128,15 @@ def test_stopping_long_compute_keeps_stale_elements_stale(app: Page) -> None:
     expect_script_state(app, "stopRequested")
     expect_stale_leftovers()
 
-    # Once the run finishes, the leftovers must actually be cleaned up. This
-    # guards against routing user stops to FINISHED_EARLY_FOR_RERUN, which
-    # would skip clearStaleNodes and leave them dimmed forever.
+    # Once the stopped run finishes, leftovers must be removed. They must not
+    # be left dimmed forever, which is what would happen if a user stop were
+    # ever routed as FINISHED_EARLY_FOR_RERUN, since that skips clearStaleNodes.
     wait_for_app_run(app)
     expect(stale_elements).to_have_count(0)
     # The stop is handled at the enqueue checkpoint before "bottom" is
     # re-emitted, so neither leftover survives a stopped run. A run that
     # completes normally keeps "bottom" instead.
-    for text in stale_texts:
+    for text in leftover_texts:
         expect(app.get_by_text(text)).not_to_be_visible()
 
 

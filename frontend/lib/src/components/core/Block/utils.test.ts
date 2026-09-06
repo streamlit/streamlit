@@ -64,98 +64,49 @@ describe("isElementStale", () => {
     ).toBe(true)
   })
 
-  // When running in a fragment, the only elements that should be set to stale
-  // are those belonging to the fragment that's currently running and only if the script run id is different.
-  // If the script run id is the same, the element has just been updated and is not stale.
-  it("if running and fragmentIdsThisRun is set, compares the node's fragmentId and scriptRunId", () => {
-    expect(
-      isElementStale(node, ScriptRunState.RUNNING, "myScriptRunId", [
-        "myFragmentId",
-      ])
-    ).toBe(false)
-
-    expect(
-      isElementStale(node, ScriptRunState.RUNNING, "otherScriptRunId", [
-        "myFragmentId",
-      ])
-    ).toBe(true)
-
-    expect(
-      isElementStale(node, ScriptRunState.RUNNING, "myScriptRunId", [
-        "someFragmentId",
-        "someOtherFragmentId",
-      ])
-    ).toBe(false)
-
-    // A differing scriptRunId alone is not enough: with the node's fragment
-    // absent from this run, only the fragment guard can keep this false.
-    expect(
-      isElementStale(node, ScriptRunState.RUNNING, "otherScriptRunId", [
-        "someFragmentId",
-      ])
-    ).toBe(false)
-  })
-
-  // When not running in a fragment, all elements from script runs aside from
-  // the current one should be set to stale.
-  it("if running and fragmentIdsThisRun is not set, compares the node's scriptRunId", () => {
-    expect(
-      isElementStale(node, ScriptRunState.RUNNING, "someOtherScriptRunId", [])
-    ).toBe(true)
-
-    expect(
-      isElementStale(node, ScriptRunState.RUNNING, "myScriptRunId", [])
-    ).toBe(false)
-  })
-
   // A pending stop does not end the script run, so STOP_REQUESTED must behave
-  // exactly like RUNNING here. Within a fragment, that means only elements of
-  // a fragment running this time and carrying an older scriptRunId are stale.
-  it("if stop requested and fragmentIdsThisRun is set, compares the node's fragmentId and scriptRunId", () => {
-    expect(
-      isElementStale(node, ScriptRunState.STOP_REQUESTED, "myScriptRunId", [
-        "myFragmentId",
-      ])
-    ).toBe(false)
+  // exactly like RUNNING: both mean the script is still executing, and staleness
+  // is decided the same way for each.
+  describe.each([ScriptRunState.RUNNING, ScriptRunState.STOP_REQUESTED])(
+    "while the script is executing (%s)",
+    state => {
+      // When running in a fragment, the only elements that should be set to stale
+      // are those belonging to the fragment that's currently running and only if the script run id is different.
+      // If the script run id is the same, the element has just been updated and is not stale.
+      it("if fragmentIdsThisRun is set, compares the node's fragmentId and scriptRunId", () => {
+        expect(
+          isElementStale(node, state, "myScriptRunId", ["myFragmentId"])
+        ).toBe(false)
 
-    expect(
-      isElementStale(node, ScriptRunState.STOP_REQUESTED, "otherScriptRunId", [
-        "myFragmentId",
-      ])
-    ).toBe(true)
+        expect(
+          isElementStale(node, state, "otherScriptRunId", ["myFragmentId"])
+        ).toBe(true)
 
-    expect(
-      isElementStale(node, ScriptRunState.STOP_REQUESTED, "myScriptRunId", [
-        "someFragmentId",
-        "someOtherFragmentId",
-      ])
-    ).toBe(false)
+        expect(
+          isElementStale(node, state, "myScriptRunId", [
+            "someFragmentId",
+            "someOtherFragmentId",
+          ])
+        ).toBe(false)
 
-    // A differing scriptRunId alone is not enough: with the node's fragment
-    // absent from this run, only the fragment guard can keep this false.
-    expect(
-      isElementStale(node, ScriptRunState.STOP_REQUESTED, "otherScriptRunId", [
-        "someFragmentId",
-      ])
-    ).toBe(false)
-  })
+        // A fragment that is not running this time is not stale, even when its
+        // scriptRunId differs.
+        expect(
+          isElementStale(node, state, "otherScriptRunId", ["someFragmentId"])
+        ).toBe(false)
+      })
 
-  // Outside a fragment, a pending stop leaves every element of an earlier
-  // script run stale, exactly as RUNNING does.
-  it("if stop requested and fragmentIdsThisRun is not set, compares the node's scriptRunId", () => {
-    expect(
-      isElementStale(
-        node,
-        ScriptRunState.STOP_REQUESTED,
-        "someOtherScriptRunId",
-        []
-      )
-    ).toBe(true)
+      // When not running in a fragment, all elements from script runs aside from
+      // the current one should be set to stale.
+      it("if fragmentIdsThisRun is not set, compares the node's scriptRunId", () => {
+        expect(isElementStale(node, state, "someOtherScriptRunId", [])).toBe(
+          true
+        )
 
-    expect(
-      isElementStale(node, ScriptRunState.STOP_REQUESTED, "myScriptRunId", [])
-    ).toBe(false)
-  })
+        expect(isElementStale(node, state, "myScriptRunId", [])).toBe(false)
+      })
+    }
+  )
 
   it("returns false for all other script run states", () => {
     const states = [
