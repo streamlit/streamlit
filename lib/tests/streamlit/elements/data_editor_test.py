@@ -1397,35 +1397,41 @@ class DataEditorTest(DeltaGeneratorTestCase):
         assert "a" not in columns_config
         assert columns_config["b"]["disabled"]
 
-    def test_disables_and_stringifies_columns_detected_by_arrow_retry(self):
+    @parameterized.expand(
+        [
+            (
+                "polygon_and_multipolygon",
+                [
+                    [[[0, 0], [1, 0], [1, 1], [0, 0]]],
+                    [[[[0, 0], [1, 0], [1, 1], [0, 0]]]],
+                ],
+            ),
+            # PyArrow raises OverflowError instead of one of its own errors here:
+            ("int_too_large_for_int64", [[2**70], [1]]),
+        ]
+    )
+    def test_disables_and_stringifies_columns_detected_by_arrow_retry(
+        self, _name: str, values: list[Any]
+    ):
         """Test that columns fixed after a failed Arrow conversion are stringified
         and disabled.
 
         These columns are only detected once the Arrow serialization fails, so the
         column config has to be updated from that retry as well.
         """
-        data_df = pd.DataFrame(
-            {
-                "geometry": pd.Series(
-                    [
-                        [[[0, 0], [1, 0], [1, 1], [0, 0]]],
-                        [[[[0, 0], [1, 0], [1, 1], [0, 0]]]],
-                    ]
-                ),
-            }
-        )
-        expected_values = [str(value) for value in data_df["geometry"]]
+        data_df = pd.DataFrame({"col1": pd.Series(values)})
+        expected_values = [str(value) for value in values]
 
         return_df = st.data_editor(data_df)
 
         proto = self.get_delta_from_queue().new_element.dataframe
         columns_config = json.loads(proto.columns)
 
-        assert columns_config["geometry"]["disabled"]
+        assert columns_config["col1"]["disabled"]
         # The values reaching the frontend are the stringified ones:
         reconstructed_df = convert_arrow_bytes_to_pandas_df(proto.arrow_data.data)
-        assert reconstructed_df["geometry"].tolist() == expected_values
-        assert return_df["geometry"].tolist() == expected_values
+        assert reconstructed_df["col1"].tolist() == expected_values
+        assert return_df["col1"].tolist() == expected_values
 
     def test_raises_when_arrow_retry_cannot_fix_the_dataframe(self):
         """Test that a dataframe that stays Arrow incompatible raises.

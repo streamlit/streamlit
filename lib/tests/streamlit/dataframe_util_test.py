@@ -664,6 +664,8 @@ class DataframeUtilTest(unittest.TestCase):
                     [[[[0, 0], [1, 0], [1, 1], [0, 0]]]],
                 ],
             ),
+            # PyArrow raises OverflowError instead of one of its own errors here:
+            ("int_too_large_for_int64", [[2**70], [1]]),
         ]
     )
     def test_arrow_conversion_stringifies_unserializable_list_columns(

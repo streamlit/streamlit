@@ -1324,6 +1324,10 @@ class DataEditorMixin:
             pa.ArrowTypeError,
             pa.ArrowInvalid,
             pa.ArrowNotImplementedError,
+            # PyArrow reports values that don't fit its target type with the plain
+            # Python error instead of one of its own, e.g. an int too large for
+            # int64.
+            OverflowError,
         )
         try:
             arrow_table = pa.Table.from_pandas(data_df)
