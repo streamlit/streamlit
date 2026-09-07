@@ -3291,7 +3291,7 @@ __metadata:
     "@testing-library/dom": "npm:^10.4.1"
     "@testing-library/jest-dom": "npm:^7.0.1"
     "@testing-library/react": "npm:^16.3.3"
-    "@testing-library/user-event": "npm:^14.6.6"
+    "@testing-library/user-event": "npm:^14.6.7"
     "@types/hoist-non-react-statics": "npm:^3.3.7"
     "@types/iframe-resizer": "npm:~4.0.0"
     "@types/lodash-es": "npm:~4.17.12"
@@ -3400,7 +3400,7 @@ __metadata:
     "@testing-library/dom": "npm:^10.4.1"
     "@testing-library/jest-dom": "npm:^7.0.1"
     "@testing-library/react": "npm:^16.3.3"
-    "@testing-library/user-event": "npm:^14.6.6"
+    "@testing-library/user-event": "npm:^14.6.7"
     "@types/d3-graphviz": "npm:^3.1.0"
     "@types/d3-selection": "npm:~3.0.11"
     "@types/hast": "npm:^3.0.5"
@@ -3746,12 +3746,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@testing-library/user-event@npm:^14.6.6":
-  version: 14.6.6
-  resolution: "@testing-library/user-event@npm:14.6.6"
+"@testing-library/user-event@npm:^14.6.7":
+  version: 14.6.7
+  resolution: "@testing-library/user-event@npm:14.6.7"
   peerDependencies:
     "@testing-library/dom": ">=7.21.4"
-  checksum: 10c0/2cb82d3a364a2a29da19bb5d2a614aedaa474ac6f599a42fc28c1926056f7b91f5cec37b33452bafcb3f6b37a950024da289dea88ead3c2056c6005c91c7f942
+  checksum: 10c0/21f5e01bea2699b069947ae06d0b0fbabe0e90d2a2206b8f56a3f46126d09bd85320cba3fd3910c4d18710b1873e6966fb9021668966c615aaa14bf35d7df3ef
   languageName: node
   linkType: hard
 
