@@ -117,10 +117,8 @@ async def load_config():
 config = asyncio.run(load_config())
 ```
 
-Define the function with `async def` rather than returning an awaitable from a sync `def`.
 Cache loop-independent results such as API payloads, dataframes, and config — not live
-event-loop-bound clients or connections. `refresh_mode="background"` is not supported on
-coroutine functions; use the default foreground refresh.
+event-loop-bound clients or connections.
 
 ### Prevent unbounded cache growth
 
