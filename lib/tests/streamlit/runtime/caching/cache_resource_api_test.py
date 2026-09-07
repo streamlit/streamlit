@@ -16,8 +16,11 @@
 
 from __future__ import annotations
 
+import functools
+import gc
 import threading
 import unittest
+import warnings
 from unittest.mock import Mock, patch
 
 import pytest
@@ -25,6 +28,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import (
+    StreamlitAPIException,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
@@ -326,6 +330,149 @@ class CacheResourceValidateTest(unittest.TestCase):
             assert expected_call_count == f()
             validate.assert_called_once_with(expected_call_count - 1)
             validate.reset_mock()
+
+
+def _assert_no_unawaited_coroutine_warning(
+    caught: list[warnings.WarningMessage],
+) -> None:
+    """Fail if a RuntimeWarning about an unawaited coroutine was recorded."""
+    assert not any(
+        issubclass(warning.category, RuntimeWarning)
+        and "never awaited" in str(warning.message)
+        for warning in caught
+    )
+
+
+class CacheResourceAsyncLifecycleCallbackTest(unittest.TestCase):
+    def setUp(self) -> None:
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+
+    def tearDown(self) -> None:
+        st.cache_resource.clear()
+        cache_resource_api.CACHE_RESOURCE_MESSAGE_REPLAY_CTX._cached_func_stack = []
+
+    @parameterized.expand([("validate",), ("on_release",)])
+    def test_rejects_async_function(self, param_name: str) -> None:
+        """Ordinary ``async def`` lifecycle callbacks fail when the decorator is built."""
+
+        async def async_callback(value: int) -> bool:
+            return True
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            with pytest.raises(StreamlitAPIException, match=param_name) as exc_info:
+                st.cache_resource(**{param_name: async_callback})(lambda: 1)
+            gc.collect()
+
+        assert exc_info.value.error_id == "cache-resource-async-lifecycle-callback"
+        _assert_no_unawaited_coroutine_warning(caught)
+
+    @parameterized.expand([("validate",), ("on_release",)])
+    def test_rejects_async_callable_object(self, param_name: str) -> None:
+        """Callable objects with async ``__call__`` fail when the decorator is built."""
+
+        class AsyncCallback:
+            async def __call__(self, value: int) -> bool:
+                return True
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            with pytest.raises(StreamlitAPIException, match=param_name) as exc_info:
+                st.cache_resource(**{param_name: AsyncCallback()})(lambda: 1)
+            gc.collect()
+
+        assert exc_info.value.error_id == "cache-resource-async-lifecycle-callback"
+        _assert_no_unawaited_coroutine_warning(caught)
+
+    @parameterized.expand([("validate",), ("on_release",)])
+    def test_rejects_partial_of_async_function(self, param_name: str) -> None:
+        """Partials of coroutine functions fail when the decorator is built."""
+
+        async def async_callback(ignored: object, value: int) -> bool:
+            return True
+
+        callback = functools.partial(async_callback, None)
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            with pytest.raises(StreamlitAPIException, match=param_name) as exc_info:
+                st.cache_resource(**{param_name: callback})(lambda: 1)
+            gc.collect()
+
+        assert exc_info.value.error_id == "cache-resource-async-lifecycle-callback"
+        _assert_no_unawaited_coroutine_warning(caught)
+
+    def test_rejects_sync_validate_returning_coroutine(self) -> None:
+        """A sync validator that returns a native coroutine is rejected on access."""
+
+        def validate(value: int) -> bool:
+            async def _inner() -> bool:
+                return True
+
+            return _inner()  # type: ignore[return-value]
+
+        @st.cache_resource(validate=validate)
+        def f() -> int:
+            return 1
+
+        assert f() == 1
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            with pytest.raises(StreamlitAPIException, match="validate") as exc_info:
+                f()
+            gc.collect()
+
+        assert exc_info.value.error_id == "cache-resource-async-lifecycle-callback"
+        _assert_no_unawaited_coroutine_warning(caught)
+
+    def test_rejects_sync_on_release_returning_coroutine(self) -> None:
+        """A sync release callback that returns a native coroutine is rejected on eviction."""
+        released: list[int] = []
+
+        def on_release(value: int) -> None:
+            released.append(value)
+
+            async def _inner() -> None:
+                return None
+
+            return _inner()  # type: ignore[return-value]
+
+        @st.cache_resource(max_entries=1, on_release=on_release)
+        def f(value: int) -> int:
+            return value
+
+        assert f(1) == 1
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            with pytest.raises(StreamlitAPIException, match="on_release") as exc_info:
+                f(2)
+            gc.collect()
+
+        assert released == [1]
+        assert exc_info.value.error_id == "cache-resource-async-lifecycle-callback"
+        _assert_no_unawaited_coroutine_warning(caught)
+
+    def test_sync_validate_and_on_release_still_work(self) -> None:
+        """Synchronous validate, eviction, clear, and release behavior is unchanged."""
+        released: list[int] = []
+
+        def validate(value: int) -> bool:
+            return True
+
+        def on_release(value: int) -> None:
+            released.append(value)
+
+        @st.cache_resource(max_entries=2, validate=validate, on_release=on_release)
+        def f(value: int) -> int:
+            return value
+
+        assert f(1) == 1
+        assert f(1) == 1
+        assert f(2) == 2
+        assert f(3) == 3
+        assert released == [1]
+
+        f.clear()
+        assert released == [1, 2, 3]
 
 
 class CacheResourceStatsProviderTest(unittest.TestCase):

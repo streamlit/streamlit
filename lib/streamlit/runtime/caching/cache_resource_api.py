@@ -17,6 +17,8 @@
 
 from __future__ import annotations
 
+import functools
+import inspect
 import math
 import threading
 from collections.abc import Callable, Sequence
@@ -33,7 +35,7 @@ from typing_extensions import ParamSpec
 
 import streamlit as st
 from streamlit import config
-from streamlit.errors import StreamlitValueError
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
@@ -88,6 +90,68 @@ def _equal_validate_funcs(a: ValidateFunc | None, b: ValidateFunc | None) -> boo
 
 def _no_op_release(ignored: Any) -> None:
     """No-op OnRelease function."""
+
+
+_ASYNC_LIFECYCLE_CALLBACK_ERROR_ID: Final = "cache-resource-async-lifecycle-callback"
+
+
+def _is_async_callable(func: Callable[..., Any]) -> bool:
+    """Return True if ``func`` is a coroutine or async-generator callable.
+
+    ``inspect.iscoroutinefunction`` is False for callable instances whose
+    ``__call__`` is async, so those objects are inspected via ``__call__``.
+    """
+    unwrapped: Any = func
+    while isinstance(unwrapped, functools.partial):
+        unwrapped = unwrapped.func
+    unwrapped = inspect.unwrap(unwrapped)
+    if inspect.iscoroutinefunction(unwrapped) or inspect.isasyncgenfunction(unwrapped):
+        return True
+    # Inspect the type's ``__call__`` so callable instances with an async
+    # ``__call__`` are detected. ``inspect.iscoroutinefunction(instance)`` is
+    # False on some supported Python versions.
+    call = type(unwrapped).__call__
+    if call is unwrapped:
+        return False
+    call = inspect.unwrap(call)
+    return inspect.iscoroutinefunction(call) or inspect.isasyncgenfunction(call)
+
+
+def _async_lifecycle_callback_message(param_name: str) -> str:
+    return (
+        f"The `{param_name}` callback of `st.cache_resource` must be a synchronous "
+        "function. Async callbacks are not supported and are never awaited."
+    )
+
+
+def _require_sync_lifecycle_callback(
+    callback: Callable[..., Any] | None, *, param_name: str
+) -> Callable[..., Any] | None:
+    """Reject async lifecycle callbacks and discard returned native coroutines."""
+    if callback is None:
+        return None
+    if _is_async_callable(callback):
+        raise StreamlitAPIException(
+            _async_lifecycle_callback_message(param_name),
+            error_id=_ASYNC_LIFECYCLE_CALLBACK_ERROR_ID,
+        )
+
+    def _sync_lifecycle_callback(*args: Any, **kwargs: Any) -> Any:
+        result = callback(*args, **kwargs)
+        if inspect.iscoroutine(result):
+            result.close()
+            raise StreamlitAPIException(
+                _async_lifecycle_callback_message(param_name),
+                error_id=_ASYNC_LIFECYCLE_CALLBACK_ERROR_ID,
+            )
+        if inspect.isawaitable(result):
+            raise StreamlitAPIException(
+                _async_lifecycle_callback_message(param_name),
+                error_id=_ASYNC_LIFECYCLE_CALLBACK_ERROR_ID,
+            )
+        return result
+
+    return _sync_lifecycle_callback
 
 
 class ResourceCaches(StatsProvider):
@@ -482,7 +546,8 @@ class CacheResourceAPI:
         validate : callable or None
             An optional validation function for cached resources. ``validate`` is called
             each time the cached value is accessed. It receives the cached value as
-            its only parameter and it must return a boolean. If ``validate`` returns
+            its only parameter and it must return a boolean. ``validate`` must be
+            synchronous; async callbacks are not supported. If ``validate`` returns
             False, the current cached value is discarded, and the decorated function
             is called to compute a new value. This is useful e.g. to check the
             health of database connections.
@@ -498,6 +563,7 @@ class CacheResourceAPI:
         on_release : callable or None
             A function to call when an entry is removed from the cache.
             The removed item will be provided to the function as an argument.
+            ``on_release`` must be synchronous; async callbacks are not supported.
 
             This is only useful for caches that remove entries normally.
             Most commonly, this is used session-scoped caches to release
@@ -680,6 +746,11 @@ class CacheResourceAPI:
         validate_refresh_mode(
             refresh_mode,
             time_to_seconds(ttl, coerce_none_to_inf=False),
+        )
+
+        validate = _require_sync_lifecycle_callback(validate, param_name="validate")
+        on_release = _require_sync_lifecycle_callback(
+            on_release, param_name="on_release"
         )
 
         # Support passing the params via function decorator, e.g.
