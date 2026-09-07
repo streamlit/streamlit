@@ -1,6 +1,6 @@
 ---
 author: lukasmasuch
-created: 2026-09-06
+created: 2026-08-28
 ---
 
 # Agent-accessible Streamlit apps
@@ -8,7 +8,7 @@ created: 2026-09-06
 ## Summary
 
 Streamlit already models an application as repeated transitions from typed widget state to
-a typed output tree. That makes an app an *executable semantic layer* over its data
+a typed output tree. That makes an app an _executable semantic layer_ over its data
 rather than merely a UI over Python — and it is essentially the same observe → act →
 observe loop an agent runs. Today that loop is only reachable through a browser.
 
@@ -44,7 +44,7 @@ ask the deployed app a question   ← no supported answer at all
 
 An agent that just wrote an app has two ways to check it: `AppTest`, which is in-process,
 Python-only, and does not model production behavior; or a headless browser, which is slow
-and reads charts as pixels. An agent that wants to *use* a deployed app has only the
+and reads charts as pixels. An agent that wants to _use_ a deployed app has only the
 browser option, driving a DOM that is explicitly not a compatibility contract. Both steps
 are possible today; neither is effective, and neither is something we support.
 
@@ -84,7 +84,7 @@ write apps embed definitions and units, which makes those apps better semantic v
 which makes agents consuming them more accurate.
 
 Two honest limits. The interface surfaces author-provided meaning; it does not invent
-it, so an unexplained table stays unexplained. And choosing *which* app answers a
+it, so an unexplained table stays unexplained. And choosing _which_ app answers a
 question is a catalog problem outside this spec.
 
 ### Streamlit's execution model is already agent-shaped
@@ -93,20 +93,18 @@ An agent loop is observe → choose an action → observe the result. Streamlit'
 widget state → script run → element tree. These are the same loop, and the framework
 holds a typed description of both halves plus an explicit boundary between them:
 
-
 | What an agent needs          | Streamlit's starting point                                                                                         | Typical lower-level web app                                                                   |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| What can I do right now?     | The current widgets *are* the action space: type, `label`, `help`, `options`, bounds, `disabled`, form membership. | Meaning is split across DOM, client JS, validation, and a separate API.                       |
+| What can I do right now?     | The current widgets _are_ the action space: type, `label`, `help`, `options`, bounds, `disabled`, form membership. | Meaning is split across DOM, client JS, validation, and a separate API.                       |
 | When did my action finish?   | Script and fragment completion are explicit events.                                                                | One click may fan out to several requests and local updates with no shared completion signal. |
-| What did I get back?         | Python emitted typed elements, container nesting, Arrow tables, and chart specs *before* they became pixels.       | Meaning must be reconstructed from HTML, the accessibility tree, or a screenshot.             |
+| What did I get back?         | Python emitted typed elements, container nesting, Arrow tables, and chart specs _before_ they became pixels.       | Meaning must be reconstructed from HTML, the accessibility tree, or a screenshot.             |
 | Where is the business logic? | In the script a human already wrote; agent input enters the same callback and rerun path.                          | Usually duplicated into a second service so an agent can call it.                             |
 
-
 Conditional rendering makes this better still: `if region == "Europe":` means the widgets
-that appear after choosing Europe *are* the next legal moves, and a form *is* the
+that appear after choosing Europe _are_ the next legal moves, and a form _is_ the
 declaration that several inputs constitute one operation. An agent infers neither.
 
-Gradio can flip on `mcp_server=True` because a Gradio app *is* a typed function. Copying
+Gradio can flip on `mcp_server=True` because a Gradio app _is_ a typed function. Copying
 that model would fight Streamlit, whose legal inputs change after every rerun. The right
 interface is the rerun loop itself, published as JSON.
 
@@ -130,7 +128,7 @@ trigger a rerun. A bespoke agent schema — however well designed — would have
 learned from documentation on every model that has not been trained on it.
 
 This turns into a hard design constraint. The representation is only pre-learned if it
-stays *rigorously* aligned with the public namespace: the element `type` is the command
+stays _rigorously_ aligned with the public namespace: the element `type` is the command
 name, `props` keys are the parameter names, and Streamlit's standardized
 vocabulary rules apply unchanged — `label` not `title`, `help` not `tooltip`, `key` not
 `id`. Every place the interface invents its own name, it spends the
@@ -139,21 +137,21 @@ CI enforcement is a release gate.
 
 ### But it is unreachable without a browser
 
-Fetching a Streamlit URL over HTTP returns the app *shell*. All live content and every
+Fetching a Streamlit URL over HTTP returns the app _shell_. All live content and every
 interaction travel over `/_stcore/stream` as protobuf `ForwardMsg`/`BackMsg`. There is no
 supported structured way to read output or submit input, so an agent has three bad
 options:
 
 1. **Drive a browser.** Expensive per turn; dataframes and charts degrade to pixels; it
-  depends on Streamlit's private DOM and `st-*` test IDs, which are explicitly not a
+   depends on Streamlit's private DOM and `st-*` test IDs, which are explicitly not a
    compatibility contract; and it cannot easily complete cookie-based OIDC login.
 2. **Reimplement the protocol.** Delta-path merging into four root containers,
-  run-scoped stale-node cleanup with fragment ownership, widget codecs across 15
+   run-scoped stale-node cleanup with fragment ownership, widget codecs across 15
    `WidgetState` value arms, form buffering, navigation, the message hash cache, and
    run-chain synchronization — for something that wanted to set a filter and read a
    number.
 3. **Write a second app.** `st.App(routes=...)` supports custom HTTP and MCP endpoints,
-  and is the right answer when an author *wants* a service API. But the agent then talks
+   and is the right answer when an author _wants_ a service API. But the agent then talks
    to something the author must write, secure, document, and keep in sync, and the
    thousands of existing dashboards get nothing.
 
@@ -173,22 +171,22 @@ Long-standing requests confirm the demand:
 access to a running app), and
 [#439](https://github.com/streamlit/streamlit/issues/439) (custom HTTP beside
 Streamlit). [VISION.md](https://github.com/streamlit/streamlit/pull/14255) commits to
-being agent-native; so far that has meant apps *authored* by agents. Apps *consumed* by
+being agent-native; so far that has meant apps _authored_ by agents. Apps _consumed_ by
 agents is the half nobody owns.
 
 ### Use cases
 
 1. **Verify an app after editing it.** A coding agent starts the app it just wrote,
-  drives the filters, and checks that the metric changed — from any language, against
+   drives the filters, and checks that the metric changed — from any language, against
    the real runtime. This is the use case v1 serves best and the cheapest to ship.
 2. **Ask a dashboard a question.** "What was Q3 revenue in Japan?" — set the filters,
-  read the metric and table *as data*, using the app's own logic and access controls.
+   read the metric and table _as data_, using the app's own logic and access controls.
 3. **Operate an internal tool.** Fill a Streamlit form (ticket, forecast, SQL runner) on
-  a user's behalf, reusing existing callbacks, validation, and auth.
+   a user's behalf, reusing existing callbacks, validation, and auth.
 4. **Publish an app as a tool.** Expose a deployed app to an assistant or orchestration
-  system without writing a parallel API.
+   system without writing a parallel API.
 5. **Fall back deliberately.** Detect a browser-only element and hand off to browser
-  automation instead of silently returning incomplete output.
+   automation instead of silently returning incomplete output.
 
 ## Proposal
 
@@ -214,20 +212,18 @@ Later calls reference keys from the snapshot they just read:
 ```json
 {
   "session_id": "s_7f3a",
-  "widget_state": {"region": "Europe"},
-  "trigger": {"key": "$$ID-8f2c9a1d4b6e7f30-None"}
+  "widget_state": { "region": "Europe" },
+  "trigger": { "key": "$$ID-8f2c9a1d4b6e7f30-None" }
 }
 ```
-
 
 | Field          | Meaning                                                                                                                                                                                                                 |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `session_id`   | Optional opaque handle. Absent means **create**. An unknown or expired handle is an error, never a silent fresh start.                                                                                                  |
-| `widget_state` | Optional patch of element keys → JSON values, the same shape as `st.session_state`. Unmentioned widgets keep their current values. This is *not* arbitrary session state — only currently addressable elements.                                                                                 |
-| `trigger`      | Optional, at most one `{"key": ...}`. Payload-bearing triggers such as `st.chat_input` also carry `"value"`.                                                                                                             |
+| `widget_state` | Optional patch of element keys → JSON values, the same shape as `st.session_state`. Unmentioned widgets keep their current values. This is _not_ arbitrary session state — only currently addressable elements.         |
+| `trigger`      | Optional, at most one `{"key": ...}`. Payload-bearing triggers such as `st.chat_input` also carry `"value"`.                                                                                                            |
 | `page`         | Optional `url_path` of a page listed in the snapshot's `pages`, resolved by normal navigation. Defaults to the app's default page on creation, the current page otherwise. Never a Python path or internal script hash. |
 | `query_params` | Optional replacement mapping of name → list of strings. `{}` clears; omission preserves.                                                                                                                                |
-
 
 The request blocks until the run chain settles, then returns the snapshot. An accepted
 interaction may cause more than one script run through callbacks, `st.rerun()`, or a page
@@ -246,7 +242,10 @@ declared with `bind="query-params"` can be set on the creating call, so "run thi
 parameterized report" is a single request:
 
 ```json
-{"page": "revenue", "query_params": {"region": ["Europe"], "quarter": ["2026-Q2"]}}
+{
+  "page": "revenue",
+  "query_params": { "region": ["Europe"], "quarter": ["2026-Q2"] }
+}
 ```
 
 `widget_state` is not accepted on a creating call, because element keys only resolve once
@@ -285,10 +284,18 @@ right now. Naming follows the public API, for the reason above:
   "session_id": "s_7f3a",
   "status": "ready",
   "observed_at": "2026-09-06T10:00:00Z",
-  "page": {"url_path": "", "title": "Regional revenue", "icon": ":material/payments:"},
+  "page": {
+    "url_path": "",
+    "title": "Regional revenue",
+    "icon": ":material/payments:"
+  },
   "pages": [
-    {"url_path": "", "title": "Regional revenue", "icon": ":material/payments:"},
-    {"url_path": "reports", "title": "Reports"}
+    {
+      "url_path": "",
+      "title": "Regional revenue",
+      "icon": ":material/payments:"
+    },
+    { "url_path": "reports", "title": "Reports" }
   ],
   "query_params": {},
   "tree": {
@@ -297,9 +304,13 @@ right now. Naming follows the public API, for the reason above:
       {
         "type": "main",
         "children": [
-          {"type": "title", "props": {"body": "Regional revenue"}},
-          {"type": "caption", "props": {
-            "body": "Net revenue excludes refunds. Periods are UTC. Source: finance ledger."}},
+          { "type": "title", "props": { "body": "Regional revenue" } },
+          {
+            "type": "caption",
+            "props": {
+              "body": "Net revenue excludes refunds. Periods are UTC. Source: finance ledger."
+            }
+          },
           {
             "key": "region",
             "type": "selectbox",
@@ -314,19 +325,34 @@ right now. Naming follows the public API, for the reason above:
           {
             "key": "$$ID-8f2c9a1d4b6e7f30-None",
             "type": "button",
-            "props": {"label": "Refresh data", "type": "secondary", "disabled": false}
+            "props": {
+              "label": "Refresh data",
+              "type": "secondary",
+              "disabled": false
+            }
           },
-          {"type": "metric", "props": {"label": "Net revenue", "value": "€1.2M", "delta": "+8%"}},
+          {
+            "type": "metric",
+            "props": {
+              "label": "Net revenue",
+              "value": "€1.2M",
+              "delta": "+8%"
+            }
+          },
           {
             "type": "dataframe",
-            "props": {"column_config": {"month": {"label": "Month"}}},
+            "props": { "column_config": { "month": { "label": "Month" } } },
             "data": {
-              "columns": [{"name": "month", "type": "string"},
-                          {"name": "revenue", "type": "number"}],
+              "columns": [
+                { "name": "month", "type": "string" },
+                { "name": "revenue", "type": "number" }
+              ],
               "row_count": 24,
               "column_count": 2,
-              "preview": {"truncated": true,
-                          "rows": [{"month": "2026-01", "revenue": 120000}]},
+              "preview": {
+                "truncated": true,
+                "rows": [{ "month": "2026-01", "revenue": 120000 }]
+              },
               "url": "/media/4f1c8ab27d9e5306.arrow"
             }
           },
@@ -338,20 +364,24 @@ right now. Naming follows the public API, for the reason above:
               "expanded": false
             },
             "children": [
-              {"type": "markdown", "props": {
-                "body": "Gross invoiced amounts minus refunds and credit notes, converted to EUR at the invoice-date rate."}}
+              {
+                "type": "markdown",
+                "props": {
+                  "body": "Gross invoiced amounts minus refunds and credit notes, converted to EUR at the invoice-date rate."
+                }
+              }
             ]
           }
         ]
       },
-      {"type": "sidebar", "children": []},
-      {"type": "event", "children": []},
-      {"type": "bottom", "children": []}
+      { "type": "sidebar", "children": [] },
+      { "type": "event", "children": [] },
+      { "type": "bottom", "children": [] }
     ]
   },
   "actions": [
-    {"key": "region", "kind": "value"},
-    {"key": "$$ID-8f2c9a1d4b6e7f30-None", "kind": "trigger"}
+    { "key": "region", "kind": "value" },
+    { "key": "$$ID-8f2c9a1d4b6e7f30-None", "kind": "trigger" }
   ],
   "limitations": []
 }
@@ -372,43 +402,43 @@ persisted; see [Data, charts, and media in v1](#data-charts-and-media-in-v1).
 Rules:
 
 - **Structure is preserved.** All four root containers and every emitted container keep
-their ordered `children` — columns, tabs, expanders, forms, chat messages, dialogs —
-because grouping conveys meaning even without pixel dimensions. Blocks that render no
-DOM node are elided, and a layout container with one child and no configured
-properties collapses into it. Eagerly rendered collapsed content is included; hiding it
-would be a browser fiction. Content for a tab that never executed is never invented.
+  their ordered `children` — columns, tabs, expanders, forms, chat messages, dialogs —
+  because grouping conveys meaning even without pixel dimensions. Blocks that render no
+  DOM node are elided, and a layout container with one child and no configured
+  properties collapses into it. Eagerly rendered collapsed content is included; hiding it
+  would be a browser fiction. Content for a tab that never executed is never invented.
 - **Construction versus current state.** `props` is how the element was built; `value` is
   what it holds now. A widget's live value comes from
-reconciled client state, since proto defaults stop being accurate after the first
-interaction.
+  reconciled client state, since proto defaults stop being accurate after the first
+  interaction.
 - **Pages are identified by `url_path`.** There is no page ID in the public API, and
-`url_path` is the handle `st.Page` already exposes — it is unique, appears in the URL,
-and is auto-derived from the filename when the author does not set it (`""` for the
-default page). The internal page script hash stays internal.
+  `url_path` is the handle `st.Page` already exposes — it is unique, appears in the URL,
+  and is auto-derived from the filename when the author does not set it (`""` for the
+  default page). The internal page script hash stays internal.
 - **The `actions` list is an index, not a duplicate.** It lists the key of every element that
-can be set (`value`) or fired (`trigger`) right now, so a model can see the action space
-at a glance; type and constraints are read from the element in the tree. A `disabled`
-widget appears in the tree but not in `actions`. Form membership is visible from
-nesting.
+  can be set (`value`) or fired (`trigger`) right now, so a model can see the action space
+  at a glance; type and constraints are read from the element in the tree. A `disabled`
+  widget appears in the tree but not in `actions`. Form membership is visible from
+  nesting.
 - **Unsupported things stay visible.** Every element declares whether it is inspectable,
-interactive, or browser-required, and unsupported interactions appear in `limitations`
-with a machine-readable reason. CI asserts that every `Element` and `Block` variant has
-a declaration, so nothing silently degrades to a placeholder.
+  interactive, or browser-required, and unsupported interactions appear in `limitations`
+  with a machine-readable reason. CI asserts that every `Element` and `Block` variant has
+  a declaration, so nothing silently degrades to a placeholder.
 - **It is an observation, not a Python dump.** Callbacks, arbitrary objects, secrets,
-source, caches, and `st.session_state` are absent by construction. Password values are
-write-only. Markdown, code, and LaTeX stay source strings.
+  source, caches, and `st.session_state` are absent by construction. Password values are
+  write-only. Markdown, code, and LaTeX stay source strings.
 - **App text is untrusted content.** Labels, help, captions, and data can carry prompt
-injection. The response marks app-authored content as such; server-generated fields are
-a separate trust domain.
+  injection. The response marks app-authored content as such; server-generated fields are
+  a separate trust domain.
 - **The `status` field reports the run, not the transport.** `ready` means the run chain
   settled and the app did not raise. See [When a run fails](#when-a-run-fails).
 - **Versioned.** Additive optional fields are compatible within `schema_version: 1`;
-clients tolerate unknown fields and unknown element types.
+  clients tolerate unknown fields and unknown element types.
 
 ### When a run fails
 
 An uncaught exception is not a transport failure. The script ran, produced output up to
-the point it raised, and Streamlit reports the run as *finished successfully* — the finish
+the point it raised, and Streamlit reports the run as _finished successfully_ — the finish
 marker describes the runner, not the app. So the response is `200` with `status: "error"`
 and a snapshot that is real but incomplete.
 
@@ -430,12 +460,12 @@ Three details matter for an agent reading that snapshot:
 Callbacks and external side effects that already ran are not rolled back. The session
 stays usable, so an agent can correct its input and interact again.
 
-| Outcome | Response |
-|---|---|
-| Invalid request — unknown key, disabled widget, out-of-range value, cross-form batch | Error before any execution. Nothing ran and the app is unchanged. |
-| App raised during the run | `200` with `status: "error"` and the truncated snapshot described above. |
-| Script failed to compile | `status: "error"` with the compile error and no usable action list. |
-| Run exceeded `server.agentRunTimeout` | `run_timed_out`. Whether app code is still finishing is not knowable from the response, so the session may stay busy briefly afterwards. |
+| Outcome                                                                              | Response                                                                                                                                 |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Invalid request — unknown key, disabled widget, out-of-range value, cross-form batch | Error before any execution. Nothing ran and the app is unchanged.                                                                        |
+| App raised during the run                                                            | `200` with `status: "error"` and the truncated snapshot described above.                                                                 |
+| Script failed to compile                                                             | `status: "error"` with the compile error and no usable action list.                                                                      |
+| Run exceeded `server.agentRunTimeout`                                                | `run_timed_out`. Whether app code is still finishing is not knowable from the response, so the session may stay busy briefly afterwards. |
 
 ### Actions in v1
 
@@ -468,17 +498,15 @@ live element state, so a stale, guessed, or forged key cannot set a disabled wid
 out-of-range value, or a control that no longer exists. Validation rejects the whole
 request before anything is applied.
 
-
-| Situation                | v1 behavior                                                                                                                                                                                                                                                                                                            |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| One widget change        | Set the value, run normal callbacks, rerun.                                                                                                                                                                                                                                                                            |
-| Several widget changes   | One batch, one rerun. A request is one **client-state transition**, not a replay of several human gestures: the patch is validated atomically, merged into the session's current widget state, and handed to the same runtime path the browser uses, which decides what changed and which callbacks run. This skips intermediate observations, so a widget that only appears after its parent changes needs a second request.                                                                                                                                                               |
-| Form                     | Send that form's fields plus exactly one of its submit triggers. Omitted fields keep current values. Reject fields without a submit, fields from two forms, and unrelated controls in the same call. `clear_on_submit` discards the form's mirrored values after submit, so the next snapshot shows declared defaults. |
-| Trigger                  | At most one per request. Triggers reset and never persist as `true`.                                                                                                                                                                                                                                                   |
-| Navigation               | `page` and `query_params` are a navigation transition and cannot be combined with widget changes.                                                                                                                                                                                                                      |
-| Widget inside a fragment | Interactive, but v1 always performs a **full** rerun and reports the widened scope. See below.                                                                                                                                                                                                                         |
-| Widget with `on_change="ignore"` | Interactive, like any other widget. The mode only tells the browser not to rerun on change; it carries no backend meaning, so the endpoint applies the value and reruns. An agent that wants browser-equivalent deferral batches the value with whatever trigger should cause the rerun.                                                                                                                                                                                                                         |
-
+| Situation                        | v1 behavior                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| One widget change                | Set the value, run normal callbacks, rerun.                                                                                                                                                                                                                                                                                                                                                                                   |
+| Several widget changes           | One batch, one rerun. A request is one **client-state transition**, not a replay of several human gestures: the patch is validated atomically, merged into the session's current widget state, and handed to the same runtime path the browser uses, which decides what changed and which callbacks run. This skips intermediate observations, so a widget that only appears after its parent changes needs a second request. |
+| Form                             | Send that form's fields plus exactly one of its submit triggers. Omitted fields keep current values. Reject fields without a submit, fields from two forms, and unrelated controls in the same call. `clear_on_submit` discards the form's mirrored values after submit, so the next snapshot shows declared defaults.                                                                                                        |
+| Trigger                          | At most one per request. Triggers reset and never persist as `true`.                                                                                                                                                                                                                                                                                                                                                          |
+| Navigation                       | `page` and `query_params` are a navigation transition and cannot be combined with widget changes.                                                                                                                                                                                                                                                                                                                             |
+| Widget inside a fragment         | Interactive, but v1 always performs a **full** rerun and reports the widened scope. See below.                                                                                                                                                                                                                                                                                                                                |
+| Widget with `on_change="ignore"` | Interactive, like any other widget. The mode only tells the browser not to rerun on change; it carries no backend meaning, so the endpoint applies the value and reruns. An agent that wants browser-equivalent deferral batches the value with whatever trigger should cause the rerun.                                                                                                                                      |
 
 **v1 always reruns the whole script.** A widget inside `st.fragment` is still
 interactive, because a full rerun produces a correct app state and this covers apps that
@@ -506,16 +534,14 @@ or safe, and clients keep their own confirmation policy.
 The goal is a useful observation that does not put a dataset in a model's context window,
 without introducing a new authorization surface.
 
-
 | Output                         | v1 representation                                                                                                                                                                                                                                          |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dataframe, table, data editor  | `column_config` in `props`; `data` carries `columns` with logical types, `row_count` and `column_count` when known, a bounded typed `preview` marked `truncated`, and a `url` serving the full Arrow bytes. |
-| Lazy dataframe                 | The same shape, with the chunk already emitted as the preview and `complete: false`. `data.url` serves that chunk; fetching further ranges is a follow-up. |
-| Chart                          | Public properties in `props`, the native specification inline when it fits the size budget and behind `data.url` otherwise, and chart data under `data` exactly as a dataframe's. |
+| Dataframe, table, data editor  | `column_config` in `props`; `data` carries `columns` with logical types, `row_count` and `column_count` when known, a bounded typed `preview` marked `truncated`, and a `url` serving the full Arrow bytes.                                                |
+| Lazy dataframe                 | The same shape, with the chunk already emitted as the preview and `complete: false`. `data.url` serves that chunk; fetching further ranges is a follow-up.                                                                                                 |
+| Chart                          | Public properties in `props`, the native specification inline when it fits the size budget and behind `data.url` otherwise, and chart data under `data` exactly as a dataframe's.                                                                          |
 | Image, audio, video, PDF       | Caption, MIME type, and the existing `/media/...` URL the app already exposed to its own client.                                                                                                                                                           |
 | HTML, iframe, custom component | Type, safe metadata, and a `browser_required` limitation. Component JavaScript is never executed.                                                                                                                                                          |
 | Download                       | Label, file metadata, and the existing media URL. `st.download_button` with eager `data` already registers its bytes and carries a `url`, so it needs nothing new; only deferred generation (which carries a file ID instead of a URL) requires an action. |
-
 
 Arrow bytes and oversized chart specifications are registered in the existing media-file
 storage and served from the existing `/media/...` endpoint, which is the agent-session
@@ -538,7 +564,7 @@ re-resolve it later. Two reasons that contract matters:
   principal-scoped or expiring links. Because clients were never allowed to persist a URL,
   that tightening changes guarantees rather than shape.
 
-Note what content-hash IDs do *not* imply: an identical URL means identical bytes, so this
+Note what content-hash IDs do _not_ imply: an identical URL means identical bytes, so this
 is not a confidentiality hole between sessions of one app, and storage belongs to the
 server's single runtime instance, so it does not span app processes.
 
@@ -552,19 +578,17 @@ budget, the request fails rather than truncating silently.
 
 ### What v1 does not support
 
-Each of these is *declared* in the snapshot, never silently missing, so an agent can
+Each of these is _declared_ in the snapshot, never silently missing, so an agent can
 explain the gap or fall back to a browser:
 
-
-| Not in v1                                                    | Behavior                                                                                                                                                           |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Fragment-scoped reruns                                       | Every interaction is a full rerun, with the widened scope reported. Widgets in fragments still work; `st.dialog` contents do not and are declared non-interactive. |
-| `st.file_uploader`, `st.camera_input`, `st.audio_input`      | Inspectable, not interactive.                                                                                                                                      |
-| `st.data_editor` edits, dataframe and chart selections       | Read-only.                                                                                                                                                         |
-| Deferred downloads and download callbacks                    | Not triggerable. Eager downloads expose their existing URL.                                                                                                        |
-| `run_every` fragments                                        | Initial run works; background timers are inactive and reported as a limitation.                                                                                    |
-| Long-running interactions                                    | No polling or partial results; the request either settles or returns `run_timed_out`.                                                                              |
-
+| Not in v1                                               | Behavior                                                                                                                                                           |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Fragment-scoped reruns                                  | Every interaction is a full rerun, with the widened scope reported. Widgets in fragments still work; `st.dialog` contents do not and are declared non-interactive. |
+| `st.file_uploader`, `st.camera_input`, `st.audio_input` | Inspectable, not interactive.                                                                                                                                      |
+| `st.data_editor` edits, dataframe and chart selections  | Read-only.                                                                                                                                                         |
+| Deferred downloads and download callbacks               | Not triggerable. Eager downloads expose their existing URL.                                                                                                        |
+| `run_every` fragments                                   | Initial run works; background timers are inactive and reported as a limitation.                                                                                    |
+| Long-running interactions                               | No polling or partial results; the request either settles or returns `run_timed_out`.                                                                              |
 
 ### Security
 
@@ -573,28 +597,28 @@ This is a new programmatic execution surface and needs an explicit review.
 - **Conservatively gated in v1.** Upgrading Streamlit must not open a new API, and the
   first release cannot be reached from another host. See [Enablement](#enablement).
 - **Validate semantically, then serialize.** Never accept a raw `BackMsg`, element ID,
-delta path, fragment ID, or `WidgetState` protobuf. Reject stale, disabled, removed,
-out-of-range, cross-form, and oversized requests atomically, before any callback runs.
-General server-side validation of currently browser-enforced widget constraints
-([#16203](https://github.com/streamlit/streamlit/issues/16203)) should land with or
-before this; the agent boundary is not a substitute for defense in depth.
+  delta path, fragment ID, or `WidgetState` protobuf. Reject stale, disabled, removed,
+  out-of-range, cross-form, and oversized requests atomically, before any callback runs.
+  General server-side validation of currently browser-enforced widget constraints
+  ([#16203](https://github.com/streamlit/streamlit/issues/16203)) should land with or
+  before this; the agent boundary is not a substitute for defense in depth.
 - **Preserve the existing output boundary.** Expose only content already emitted to this
-session's client, with the same error redaction. No secrets, session state, Python
-values, local paths, or source.
+  session's client, with the same error redaction. No secrets, session state, Python
+  values, local paths, or source.
 - **Bound everything.** One in-flight interaction per session, plus limits on sessions,
-request bytes, response bytes, preview size, run time, and request rate.
+  request bytes, response bytes, preview size, run time, and request rate.
 - **Audit without content.** Log session hashes, action kinds, outcomes, latency, and
-sizes — never labels, values, table contents, or queries.
+  sizes — never labels, values, table contents, or queries.
 
 Two things must be built before the interface can be reached remotely, and they are the
 reason v1 is loopback-only:
 
 1. **Identity mapping.** Verified deployment identity must be mapped explicitly into
-  `st.user`; routing behind middleware does not do that by itself, and identity is never
+   `st.user`; routing behind middleware does not do that by itself, and identity is never
    accepted from the request body. Without this, an agent session acts with the app's
    privileges and no user identity.
 2. **Resource authorization.** The media route is currently a bare content-hash lookup
-  with no session check, and identical bytes deduplicate to the same URL across
+   with no session check, and identical bytes deduplicate to the same URL across
    sessions. That is acceptable for media an app already chose to display; it is not
    acceptable for newly externalized table and chart data, which is why that
    externalization is a follow-up rather than part of v1.
@@ -623,15 +647,15 @@ very agents this serves, so neither obscurity nor implementation difficulty is a
 boundary worth defending. Meanwhile, requiring every author to find and flip a flag would
 forfeit the installed base of existing apps, which is most of the value here.
 
-What is genuinely new is not capability but *practicality*, and that is what has to be
+What is genuinely new is not capability but _practicality_, and that is what has to be
 settled before the default flips:
 
-| Concern | Why it is new | What resolves it |
-|---|---|---|
-| Bulk data access | A dataframe becomes typed data rather than a scrolled viewport, and v1 serves the full Arrow bytes over a link. The same data an app already sent its client, far easier to take in one request. | Response, preview, and artifact-size budgets in v1; principal-scoped or expiring resource links before remote enablement. |
-| Request volume | An agent loops faster than a human clicks. | Session caps, one in-flight interaction per session, and request rate limits. |
-| Cross-origin POST | The WebSocket has origin checks; a new cookie-authenticated mutating route needs its own. | Origin and XSRF handling on the route. |
-| Identity | Without explicit mapping, an agent session acts with the app's privileges and no `st.user`, so an app behind SSO could be reached by something that never authenticated. | Identity **parity**: the caller resolves to the same principal, the same `st.user`, and the same access-control branches as an equivalent browser session. This is a hard requirement for default-on, not a later refinement. |
+| Concern           | Why it is new                                                                                                                                                                                    | What resolves it                                                                                                                                                                                                              |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bulk data access  | A dataframe becomes typed data rather than a scrolled viewport, and v1 serves the full Arrow bytes over a link. The same data an app already sent its client, far easier to take in one request. | Response, preview, and artifact-size budgets in v1; principal-scoped or expiring resource links before remote enablement.                                                                                                     |
+| Request volume    | An agent loops faster than a human clicks.                                                                                                                                                       | Session caps, one in-flight interaction per session, and request rate limits.                                                                                                                                                 |
+| Cross-origin POST | The WebSocket has origin checks; a new cookie-authenticated mutating route needs its own.                                                                                                        | Origin and XSRF handling on the route.                                                                                                                                                                                        |
+| Identity          | Without explicit mapping, an agent session acts with the app's privileges and no `st.user`, so an app behind SSO could be reached by something that never authenticated.                         | Identity **parity**: the caller resolves to the same principal, the same `st.user`, and the same access-control branches as an equivalent browser session. This is a hard requirement for default-on, not a later refinement. |
 
 So v1 is **off by default and served only to loopback peers**, matching the existing
 conservative gate used for the skills-install backend operation. That makes the first
@@ -686,14 +710,14 @@ ordered roughly by expected value.
 1. **Remote enablement, then on by default.** Identity mapping into `st.user`, Origin
    and XSRF handling, and the response and rate budgets that make bulk access and request
    volume safe — then flip the flag to opt-out. Per-platform
-  routing, session affinity for multi-worker deployments, and quotas. Unlocks use cases
+   routing, session affinity for multi-worker deployments, and quotas. Unlocks use cases
    2–4.
 2. **Fragment-scoped reruns.** Derive scope from the action instead of always
-  full-rerunning, with fragment-scoped stale-node cleanup. This restores browser parity
+   full-rerunning, with fragment-scoped stale-node cleanup. This restores browser parity
    for fragment interactions, avoids re-running work the author deliberately scoped away,
    and is what makes `st.dialog` contents interactive.
 3. **Authored descriptions** — a standalone project worth doing on its own accessibility
-  merits: static `app_title`/`app_description` on `st.App`, `page_description` on
+   merits: static `app_title`/`app_description` on `st.App`, `page_description` on
    `st.set_page_config`, author-written alternative text for images, charts, and tabular
    displays ([#8563](https://github.com/streamlit/streamlit/issues/8563)), and `help` on
    media ([#3133](https://github.com/streamlit/streamlit/issues/3133)). No such parameter
@@ -708,26 +732,26 @@ ordered roughly by expected value.
    rather than an addition to the v1 shape. Then add range reads for lazy dataframes,
    reusing the existing chunk machinery and its limits rather than building a query API.
 5. **Long-run handling.** `202` with an operation handle,
-  `GET /_stcore/agent/v1/sessions/{id}` to poll the committed snapshot without executing
+   `GET /_stcore/agent/v1/sessions/{id}` to poll the committed snapshot without executing
    code, and `DELETE` to close early. Once clients poll rather than resubmit, add
    optional `request_id` (retry idempotency) and `expected_revision` (reject actions based
    on a stale observation) for callers that batch or parallelize.
 6. **CLI.** `streamlit agent interact <url> --json @request.json` over the same routes, as
-  a debugging and verification convenience. An agent with shell access can already curl
+   a debugging and verification convenience. An agent with shell access can already curl
    the endpoint, which is why this is not v1.
 7. **MCP adapter.** A small fixed tool set (`interact`, `get_state`, `close_session`)
-  over the same controller, behind an optional extra, with dynamic actions in the tool
-   *result*. Per-widget tools are not an option: `tools/list` "MUST NOT vary
+   over the same controller, behind an optional extra, with dynamic actions in the tool
+   _result_. Per-widget tools are not an option: `tools/list` "MUST NOT vary
    per-connection or as a side effect of other requests on the connection"
    ([MCP tools](https://modelcontextprotocol.io/specification/2026-07-28/server/tools)),
    and the specification's own guidance for this shape is the opaque-handle pattern
    `session_id` already implements. `interact` must never be annotated read-only.
 8. **Static app descriptor.** An authenticated route returning app title, description,
-  and protocol capabilities *without* executing app code, so an agent can choose among
+   and protocol capabilities _without_ executing app code, so an agent can choose among
    available apps. It must never publish widget schemas or user-dependent page lists from
    a shared warm-up run.
 9. **Remaining interaction coverage.** Uploads, `st.data_editor` edits, dataframe and
-  chart selections, lazy-data continuation, deferred downloads, `run_every` scheduling,
+   chart selections, lazy-data continuation, deferred downloads, `run_every` scheduling,
    and per-action JSON Schema.
 
 ## Success criteria
@@ -762,7 +786,6 @@ Track that with a monthly benchmark over at least 20 representative apps spannin
 filtered dashboards, forms, chat, multipage flows, fragments, large data, and
 browser-only boundaries:
 
-
 | Measure                  | Method                                                                                                                                                                                       |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Verification quality     | Can an agent detect deliberately seeded logic bugs through the interface, and does it recognize when a browser is required? Track false positives.                                           |
@@ -770,7 +793,6 @@ browser-only boundaries:
 | Build and deploy success | Did generated Streamlit code run, pass independent acceptance tests, and deploy? Record the failure stage.                                                                                   |
 | Framework selection      | Given an open-ended brief where several frameworks are viable, which does the agent choose? Recorded with model, prompt, skills, and environment; kept separate from forced-Streamlit tasks. |
 | Efficiency               | Tokens, turns, latency, and response bytes — reported only alongside correctness.                                                                                                            |
-
 
 Task success is the metric Streamlit most directly controls, so it is the primary
 outcome. Framework selection is a strategic indicator, not a release gate: it is a
@@ -781,7 +803,7 @@ uncertainty.
 
 Because model knowledge lags releases, a feature is not done when its code merges. Every
 new command or significant parameter should ship with complete type annotations and
-docstrings, canonical examples that explain the app's *meaning*, updated bundled skills
+docstrings, canonical examples that explain the app's _meaning_, updated bundled skills
 and templates, `AppTest` capability registration, a coverage declaration and serializer
 for this interface, browser E2E coverage where browser behavior matters, defined
 accessibility behavior, content-free telemetry, and migration guidance for the CSS or
@@ -796,26 +818,24 @@ apply.
 - Attaching to or taking over a human's live browser session.
 - A Markdown dialect, standalone semantic renderer, or a second observation format.
 - Built-in scheduling, email delivery, report templates, or standalone HTML export.
-External agents can build these on the same snapshot.
+  External agents can build these on the same snapshot.
 - Author-declared domain tools (`@st.tool`). A form already provides a typed operation
-boundary, and authors who need a stable service contract should keep using
-`st.App(routes=...)`.
+  boundary, and authors who need a stable service contract should keep using
+  `st.App(routes=...)`.
 - Executing custom-component or iframe JavaScript in the backend.
 - Replacing visual, keyboard, accessibility, or custom-component browser testing.
 
 ## Checklist
 
-
-| Item                       | ✅ or comment                                                                                                                                                                                                                                                            |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Works on SiS, Cloud, etc?  | ⚠️ v1 is loopback-only. Self-hosted, Cloud, and SiS each require identity mapping, routing, session affinity, and quota validation first.                                                                                                                               |
-| No breaking API changes    | ✅ Additive: one config option, off in v1, and new routes under `/_stcore/agent/`. No `st.*` changes in v1. Flipping the default later is itself a reviewed change, not a silent one.                                                                                                                                                       |
-| No new dependencies        | ✅ Existing Starlette and JSON. The follow-up MCP adapter should use the official SDK behind an optional extra.                                                                                                                                                          |
-| Metrics collected          | Enablement, session opens, action kinds, outcome classes, latency, response sizes, and unsupported-capability hits. No labels, keys, values, queries, URLs, or data.                                                                                                    |
+| Item                       | ✅ or comment                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Works on SiS, Cloud, etc?  | ⚠️ v1 is loopback-only. Self-hosted, Cloud, and SiS each require identity mapping, routing, session affinity, and quota validation first.                                                                                                                                                                                                                                                                                                                                                                     |
+| No breaking API changes    | ✅ Additive: one config option, off in v1, and new routes under `/_stcore/agent/`. No `st.*` changes in v1. Flipping the default later is itself a reviewed change, not a silent one.                                                                                                                                                                                                                                                                                                                         |
+| No new dependencies        | ✅ Existing Starlette and JSON. The follow-up MCP adapter should use the official SDK behind an optional extra.                                                                                                                                                                                                                                                                                                                                                                                               |
+| Metrics collected          | Enablement, session opens, action kinds, outcome classes, latency, response sizes, and unsupported-capability hits. No labels, keys, values, queries, URLs, or data.                                                                                                                                                                                                                                                                                                                                          |
 | Any security/legal impact? | ⚠️ Significant, and the main review risk. New execution surface: off and loopback-gated in v1, every interaction validated server-side, no session-state or secret exposure. The interface is an alternate encoding of what the browser protocol already exposes, so the review question is bulk-access practicality, request volume, cross-origin POST, and identity mapping — the four gates on making it opt-out. App content is untrusted input to the calling agent, so no action may be annotated safe. |
-| Any docs changes needed?   | Protocol reference and coverage matrix, an authoring guide ("write `key=`, explain the app in the app"), verification guidance next to `AppTest` and Playwright, and a security/deployment page.                                                                        |
-| Any other risks?           | The snapshot is a long-lived compatibility surface and needs a version field and a written stability policy from the first release. Adoption risk: if it stays experimental too long, the ecosystem standardizes on browser automation instead.                         |
-
+| Any docs changes needed?   | Protocol reference and coverage matrix, an authoring guide ("write `key=`, explain the app in the app"), verification guidance next to `AppTest` and Playwright, and a security/deployment page.                                                                                                                                                                                                                                                                                                              |
+| Any other risks?           | The snapshot is a long-lived compatibility surface and needs a version field and a written stability policy from the first release. Adoption risk: if it stays experimental too long, the ecosystem standardizes on browser automation instead.                                                                                                                                                                                                                                                               |
 
 ## Open questions
 
@@ -823,13 +843,13 @@ boundary, and authors who need a stable service contract should keep using
    the default flip everywhere at once or per platform? Hosted platforms may want to
    keep their own policy override regardless.
 2. Which hosted credential flow can map an agent to the correct `st.user` without
-  introducing a second identity system? A browser's signed auth cookie is not a general
+   introducing a second identity system? A browser's signed auth cookie is not a general
    agent credential.
 3. Which resource authorization mechanism — principal-scoped references or expiring
-  signed capabilities — can reuse media storage across OSS, Cloud, and SiS without
+   signed capabilities — can reuse media storage across OSS, Cloud, and SiS without
    turning resource URLs into durable bearer tokens?
 4. What run timeout, session, preview, and response budgets do prototype measurements
-  justify?
+   justify?
 5. Which exact JSON encodings should be standardized for dates, datetimes, decimals,
    large integers, non-finite numbers, ranges, and object-valued options? These must be
    settled before v1 ships, with or without per-action schemas.
