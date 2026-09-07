@@ -270,15 +270,16 @@ export default defineConfig([
       "no-console": "error",
       // Prevent unintentional use of `debugger`
       "no-debugger": "error",
-      // Bug-class lock-ins not covered by eslint:recommended
+      // Correctness rules that eslint.configs.recommended does not enable
       "no-self-compare": "error",
       "no-return-assign": ["error", "always"],
-      "no-sequences": "error",
+      "no-sequences": ["error", { allowInParentheses: false }],
       "no-template-curly-in-string": "error",
       "no-extend-native": "error",
+      // Keep default as the last switch clause
+      "default-case-last": "error",
       // Safety net if the ForInStatement ban in no-restricted-syntax is relaxed
       "guard-for-in": "error",
-      "default-case-last": "error",
       // Safety net if the LabeledStatement ban in no-restricted-syntax is relaxed
       "no-labels": "error",
       // Oxlint eslint/preserve-caught-error owns this check.
@@ -297,7 +298,8 @@ export default defineConfig([
       "@eslint-react/no-unstable-context-value": "error",
       // Default-arg object/array literals are a new reference each render
       "@eslint-react/no-unstable-default-props": "error",
-      // Unsandboxed iframes and target=_blank without rel=noopener
+      // Require sandbox on raw <iframe> JSX, and rel=noopener on raw <a target=_blank>.
+      // Intrinsic elements only — styled.iframe / styled anchors are not checked.
       "@eslint-react/dom-no-missing-iframe-sandbox": "error",
       "@eslint-react/dom-no-unsafe-target-blank": "error",
       // We want to enforce display names for context providers for better debugging
@@ -369,7 +371,8 @@ export default defineConfig([
       "@typescript-eslint/return-await": ["error", "in-try-catch"],
       // Treat @deprecated API usage as errors
       "@typescript-eslint/no-deprecated": "error",
-      // Mixed string/numeric enum members are easy to confuse with protobuf enums
+      // Mixed string/numeric members compare and reverse-map inconsistently;
+      // keep hand-written enums single-typed like generated protobuf ones.
       "@typescript-eslint/no-mixed-enums": "error",
       // Permit for-of loops
       "no-restricted-syntax": [
@@ -400,6 +403,8 @@ export default defineConfig([
         },
       ],
       "import-x/prefer-default-export": "off",
+      // Catch import specifiers that resolve to nothing useful: self-imports,
+      // redundant path segments, empty named blocks.
       "import-x/no-self-import": "error",
       "import-x/no-useless-path-segments": "error",
       "import-x/no-empty-named-blocks": "error",
@@ -502,7 +507,7 @@ export default defineConfig([
       "no-restricted-properties": getNoRestrictedProperties({
         includeUseTimeout: true,
       }),
-      // Buttons without an explicit type submit their enclosing form by default.
+      // Require type on raw <button> JSX (not styled.button); omitted type submits the enclosing form.
       // Tests still use <button> fixtures without type, so this stays production-only.
       "@eslint-react/dom-no-missing-button-type": "error",
     },
