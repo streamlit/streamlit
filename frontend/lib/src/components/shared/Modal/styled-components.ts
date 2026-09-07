@@ -78,9 +78,8 @@ export const StyledDialogOverlay = styled(ModalOverlay, {
  * so the panel grows to fit its content; the overlay handles scrolling for
  * very tall dialogs.
  *
- * Side drawers are full height and flush to the viewport. Square corners on
- * the attached edge and theme.radii.xxl on the inner edge make them read as
- * a drawer rather than a floating card.
+ * Side drawers are full height and flush to the viewport with square
+ * corners so they read as a sheet, not a floating card.
  */
 export const StyledDialogPanel = styled(RAModal, {
   shouldForwardProp: shouldForwardNonTransientProp,
@@ -112,10 +111,7 @@ export const StyledDialogPanel = styled(RAModal, {
     ...(isDrawer
       ? {
           height: "100%",
-          borderTopLeftRadius: $position === "left" ? 0 : theme.radii.xxl,
-          borderBottomLeftRadius: $position === "left" ? 0 : theme.radii.xxl,
-          borderTopRightRadius: $position === "left" ? theme.radii.xxl : 0,
-          borderBottomRightRadius: $position === "left" ? theme.radii.xxl : 0,
+          borderRadius: 0,
         }
       : {
           borderRadius: theme.radii.xxl,

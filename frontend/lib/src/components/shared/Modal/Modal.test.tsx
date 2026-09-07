@@ -297,28 +297,9 @@ describe("Modal subcomponents", () => {
     }
   )
 
-  it.each([
-    {
-      position: "left" as const,
-      attached: {
-        borderTopLeftRadius: "0",
-        borderBottomLeftRadius: "0",
-        borderTopRightRadius: mockTheme.emotion.radii.xxl,
-        borderBottomRightRadius: mockTheme.emotion.radii.xxl,
-      },
-    },
-    {
-      position: "right" as const,
-      attached: {
-        borderTopLeftRadius: mockTheme.emotion.radii.xxl,
-        borderBottomLeftRadius: mockTheme.emotion.radii.xxl,
-        borderTopRightRadius: "0",
-        borderBottomRightRadius: "0",
-      },
-    },
-  ])(
-    "makes a $position drawer panel flush and full height with attached-edge radii",
-    ({ position, attached }) => {
+  it.each(["left", "right"] as const)(
+    "makes a %s drawer panel flush, full height, and square-cornered",
+    position => {
       render(
         <Modal isOpen position={position}>
           <ModalBody>content</ModalBody>
@@ -330,7 +311,7 @@ describe("Modal subcomponents", () => {
         margin: "0",
         height: "100%",
         maxWidth: "100%",
-        ...attached,
+        borderRadius: "0",
       })
     }
   )
