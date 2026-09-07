@@ -302,6 +302,21 @@ describe("Dialog container", () => {
   })
 
   describe("dialog position", () => {
+    it("renders a centered dialog when position is omitted", () => {
+      const props = getProps()
+      // Simulate a payload that never set the enum (proto3 default not applied).
+      delete (props.element as { position?: BlockProto.Dialog.DialogPosition })
+        .position
+      render(
+        <Dialog {...props}>
+          <div>test</div>
+        </Dialog>
+      )
+
+      expect(screen.getByRole("dialog")).toBeVisible()
+      expect(screen.getByText("test")).toBeVisible()
+    })
+
     it.each([
       { position: BlockProto.Dialog.DialogPosition.CENTER },
       { position: BlockProto.Dialog.DialogPosition.LEFT },

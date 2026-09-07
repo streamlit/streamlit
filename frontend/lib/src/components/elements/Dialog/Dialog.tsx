@@ -56,10 +56,11 @@ function mapDialogWidthToModalSize(
 
 /**
  * Maps the dialog position proto enum to Modal placement.
- * CENTER is 0, so a truthy check would treat centered dialogs as unset.
+ * Match CENTER explicitly: it is 0, so a truthy check would treat centered dialogs as unset.
+ * Treat a missing value as center so payloads that omit the enum still render.
  */
 function mapDialogPositionToModalPosition(
-  dialogPosition: BlockProto.Dialog.DialogPosition
+  dialogPosition: BlockProto.Dialog.DialogPosition | undefined
 ): "left" | "center" | "right" {
   switch (dialogPosition) {
     case BlockProto.Dialog.DialogPosition.LEFT:
@@ -67,6 +68,7 @@ function mapDialogPositionToModalPosition(
     case BlockProto.Dialog.DialogPosition.RIGHT:
       return "right"
     case BlockProto.Dialog.DialogPosition.CENTER:
+    case undefined:
       return "center"
     default: {
       assertNever(dialogPosition)

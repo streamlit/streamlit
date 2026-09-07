@@ -166,7 +166,8 @@ def dialog_decorator(
     render inside the modal dialog.
 
     By default, the dialog is a centered modal. Set ``position`` to ``"left"``
-    or ``"right"`` to show the dialog as a full-height side drawer. ``width``,
+    or ``"right"`` to show the dialog as a full-height side drawer. Side
+    drawers stay modal: the rest of the app is inert, and ``width``,
     ``dismissible``, ``icon``, and ``on_dismiss`` apply the same way in every
     position.
 

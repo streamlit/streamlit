@@ -297,24 +297,43 @@ describe("Modal subcomponents", () => {
     }
   )
 
-  it("makes a left drawer panel flush and full height with attached-edge radii", () => {
-    render(
-      <Modal isOpen position="left">
-        <ModalBody>content</ModalBody>
-      </Modal>
-    )
+  it.each([
+    {
+      position: "left" as const,
+      attached: {
+        borderTopLeftRadius: "0",
+        borderBottomLeftRadius: "0",
+        borderTopRightRadius: mockTheme.emotion.radii.xxl,
+        borderBottomRightRadius: mockTheme.emotion.radii.xxl,
+      },
+    },
+    {
+      position: "right" as const,
+      attached: {
+        borderTopLeftRadius: mockTheme.emotion.radii.xxl,
+        borderBottomLeftRadius: mockTheme.emotion.radii.xxl,
+        borderTopRightRadius: "0",
+        borderBottomRightRadius: "0",
+      },
+    },
+  ])(
+    "makes a $position drawer panel flush and full height with attached-edge radii",
+    ({ position, attached }) => {
+      render(
+        <Modal isOpen position={position}>
+          <ModalBody>content</ModalBody>
+        </Modal>
+      )
 
-    const panel = document.querySelector("[role='dialog']")?.parentElement
-    expect(panel).toHaveStyle({
-      margin: "0",
-      height: "100%",
-      maxWidth: "100%",
-      borderTopLeftRadius: "0",
-      borderBottomLeftRadius: "0",
-      borderTopRightRadius: mockTheme.emotion.radii.xxl,
-      borderBottomRightRadius: mockTheme.emotion.radii.xxl,
-    })
-  })
+      const panel = document.querySelector("[role='dialog']")?.parentElement
+      expect(panel).toHaveStyle({
+        margin: "0",
+        height: "100%",
+        maxWidth: "100%",
+        ...attached,
+      })
+    }
+  )
 
   it("still dismisses a left-positioned dialog via Escape, close button, and overlay click", async () => {
     const user = userEvent.setup()

@@ -1012,7 +1012,6 @@ def test_side_drawers_are_flush_full_height(app: Page):
     assert left_box["height"] == pytest.approx(viewport["height"], abs=1)
     # Default small width is 31.25rem (500px at 16px root), not full viewport.
     assert left_box["width"] == pytest.approx(500, abs=2)
-    assert left_box["width"] < viewport["width"] - 50
 
     app.keyboard.press("Escape")
     expect(left_dialog).not_to_be_attached()

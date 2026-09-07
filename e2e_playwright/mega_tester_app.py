@@ -19,7 +19,7 @@ import re
 import sys
 from datetime import date, datetime, time
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -560,17 +560,22 @@ def _render_custom_ui(minor_version: int) -> None:
             st.write(f"Clicked link: {clicked_link}")
 
 
+_dialog_kwargs: dict[str, Any] = {}
+if _minor_version() >= 63:
+    _dialog_kwargs["position"] = cast(
+        "Literal['left', 'center', 'right']",
+        st.session_state.get("dialog_position", "center"),
+    )
+
+
 @st.dialog(
     "Test dialog",
     width=cast(
         "Literal['small', 'medium', 'large']",
         st.session_state.get("dialog_width", "small"),
     ),
-    position=cast(
-        "Literal['left', 'center', 'right']",
-        st.session_state.get("dialog_position", "center"),
-    ),
     dismissible=st.session_state.get("dialog_dismissible", True),
+    **_dialog_kwargs,
 )
 def _dialog(item: str) -> None:
     reason = st.text_input("Dialog reason", key="dialog_reason")
@@ -823,12 +828,13 @@ def _render_inputs(minor_version: int, help_text: str | None, disabled: bool) ->
         default="small",
         key="dialog_width",
     )
-    st.segmented_control(
-        "Dialog position",
-        ["center", "left", "right"],
-        default="center",
-        key="dialog_position",
-    )
+    if minor_version >= 63:
+        st.segmented_control(
+            "Dialog position",
+            ["center", "left", "right"],
+            default="center",
+            key="dialog_position",
+        )
     st.toggle(
         "Dialog dismissible",
         True,
