@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
-import styled from "@emotion/styled"
+import styled, { CSSObject } from "@emotion/styled"
 import {
   RadioButton as RARadioButton,
   RadioField as RARadioField,
   RadioGroup as RARadioGroup,
+  Text as RAText,
 } from "react-aria-components"
 
+import type { EmotionTheme } from "~lib/theme/types"
 import { convertRemToPx } from "~lib/theme/utils"
 
 interface StyledRadioGroupProps {
@@ -59,30 +61,43 @@ export const StyledRadioGroup = styled(RARadioGroup, {
  * selection state to its `RadioButton` child via context. `RadioButton` must
  * nest inside this field.
  *
- * It needs no styles of its own — as a block-level flex item it shrink-wraps the
- * label, so `StyledRadioGroup`'s `alignItems` and `gap` still apply to the
- * option's visible box.
+ * Stacks the clickable label above the caption, which sits outside the label so
+ * React Aria can expose it as the option's `aria-describedby` target rather than
+ * folding it into the accessible name.
  *
- * Keep state-driven styles on the label's class: React Aria also sets
- * `data-selected`/`data-disabled` on this div, so styling both elements would
- * apply those rules twice.
+ * Owns the text colour, including the disabled variant, so the label and the
+ * caption dim together. React Aria marks both this element and the label
+ * `data-disabled`, so they split state-driven styles: colour here, `cursor` on
+ * the label.
  */
-export const StyledRadioField = styled(RARadioField)()
+export const StyledRadioField = styled(RARadioField)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  color: theme.colors.bodyText,
+  "&[data-disabled]": {
+    color: theme.colors.fadedText40,
+  },
+}))
 
 /**
  * Clickable `<label>` for each radio option. It wraps the hidden input, the
  * circle indicator (`StyledRadioOuter`/`StyledRadioInner`), and the option text,
- * so the whole row is a click target. It stays a plain block container: the
- * children own the circle-and-text alignment so the caption can sit outside that
- * row without manual offset calculations.
+ * so the whole row is a click target. It stays a plain block container:
+ * `StyledRadioRow` owns circle-and-text alignment, so the field can stack the
+ * caption below the label with no offset maths.
  *
- * React Aria sets `data-focus-visible`, `data-disabled`, `data-selected` and
- * friends as data attributes — we use those for state-driven styles.
+ * React Aria sets `data-focus-visible`, `data-hovered`, `data-pressed` and
+ * friends here as data attributes — we use those for state-driven styles.
+ * `data-disabled` and `data-selected` also appear on `StyledRadioField`, which
+ * owns the colour; this element owns `cursor`.
+ *
+ * No `user-select` rule: React Aria's `usePress` suppresses selection for the
+ * duration of a press, so a standing rule would only stop users copying the
+ * option text. This matches `st.checkbox` and `st.toggle`.
  */
 export const StyledRadioButton = styled(RARadioButton)(({ theme }) => ({
   display: "block",
   cursor: "pointer",
-  userSelect: "none",
   paddingLeft: theme.spacing.none,
   paddingRight: theme.spacing.threeXS,
   marginTop: theme.spacing.none,
@@ -94,23 +109,6 @@ export const StyledRadioButton = styled(RARadioButton)(({ theme }) => ({
     cursor: "not-allowed",
   },
 }))
-
-interface StyledRadioContentProps {
-  $isDisabled: boolean
-}
-
-/**
- * Flex column that wraps all visible content (option row + caption) for a
- * single radio option. Owns the disabled text-colour so both the option label
- * and the caption dim together without each needing their own prop.
- */
-export const StyledRadioContent = styled.div<StyledRadioContentProps>(
-  ({ theme, $isDisabled }) => ({
-    display: "flex",
-    flexDirection: "column",
-    color: $isDisabled ? theme.colors.fadedText40 : theme.colors.bodyText,
-  })
-)
 
 /**
  * Flex row that contains only the radio circle and the option label text.
@@ -197,11 +195,36 @@ export const StyledRadioInner = styled.div<StyledRadioInnerProps>(
 )
 
 /**
- * Indents the caption text so it aligns with the option label (i.e. starts
- * after the radio circle + gap), not with the circle itself.
- * `paddingLeft = circle width + row gap` is derived entirely from theme tokens
- * with no hardcoded values.
+ * Aligns caption and spacer text with the label so the two cannot drift.
+ * `paddingLeft` clears the circle. `paddingRight` matches the label's so a
+ * caption wider than its label cannot shift later options in a horizontal group.
  */
-export const StyledRadioCaption = styled.div(({ theme }) => ({
+const captionBoxStyles = ({ theme }: { theme: EmotionTheme }): CSSObject => ({
   paddingLeft: `calc(${theme.sizes.checkbox} + ${theme.spacing.sm})`,
-}))
+  paddingRight: theme.spacing.threeXS,
+})
+
+/**
+ * The caption, rendered as React Aria's `description` slot so it reaches the
+ * option's `aria-describedby` instead of joining its accessible name.
+ *
+ * - Rendered as a `<div>` (`elementType="div"`) because `StreamlitMarkdown` wraps
+ *   its output in a `<div>`, which is invalid inside `Text`'s default `<span>`.
+ * - Blank captions render nothing rather than an empty `Text`: React Aria drops
+ *   the description id unless this slot mounts content.
+ * - No `cursor` rule: it is not a click target, so the default text cursor
+ *   signals selectable prose.
+ */
+export const StyledRadioCaption = styled(RAText)(captionBoxStyles)
+
+/**
+ * Keeps horizontal options without captions aligned with captioned ones, without
+ * claiming the `description` slot.
+ *
+ * - A plain `div`, not a `Text`: it holds no description, and a `Text` here
+ *   would either claim the `description` slot or need `slot={null}` to opt out
+ *   of it.
+ * - `Radio` fills it with a non-breaking space rather than setting a height,
+ *   because only a real caption line box matches the height exactly.
+ */
+export const StyledRadioCaptionSpacer = styled.div(captionBoxStyles)
