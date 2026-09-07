@@ -864,7 +864,7 @@ def test_selectbox_on_change_ignore(app: Page):
 
     ignore_input = get_selectbox_input(app, "Ignore change selectbox")
 
-    # Filtering is not a commit - URL and Python should stay unchanged.
+    # Filtering does not commit the value, so Python and the URL remain unchanged.
     ignore_input.click()
     ignore_input.fill("be")
     expect(ignore_input).to_have_value("be")
@@ -873,10 +873,14 @@ def test_selectbox_on_change_ignore(app: Page):
     expect_prefixed_markdown(app, "Ignore selectbox value:", "alpha")
     expect(app).not_to_have_url(re.compile(r"[?&]ignore_select="))
 
-    # Commit with option click - should NOT trigger a rerun, but should update the URL
+    # Reset the combobox so the later option click does not toggle an already-open dropdown.
+    ignore_input.press("Escape")
+    expect(app.get_by_test_id("stSelectboxVirtualDropdown")).not_to_be_visible()
+
+    # Choosing an option updates the URL without rerunning the app.
     select_selectbox_option(app, "Ignore change selectbox", "beta")
 
-    # Give a spurious rerun a chance to land before asserting the counter.
+    # Extra settle on top of select_selectbox_option's wait_for_app_run, to catch a delayed rerun.
     wait_for_app_run(app)
 
     # Verify no rerun occurred (run count should still be 1)

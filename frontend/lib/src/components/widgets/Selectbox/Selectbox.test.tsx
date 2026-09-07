@@ -242,7 +242,7 @@ describe("on_change='ignore' mode", () => {
     vi.restoreAllMocks()
   })
 
-  // WidgetStateManager reaches sendRerunBackMsg via scheduleFlush → setTimeout(0).
+  // Let a scheduled rerun flush before asserting whether one was sent.
   async function flushScheduledRerun(): Promise<void> {
     await act(async () => {
       await new Promise(resolve => {

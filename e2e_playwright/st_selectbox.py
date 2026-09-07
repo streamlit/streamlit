@@ -296,13 +296,13 @@ v_bound_clear = st.selectbox(
 )
 st.write("bound select clear value:", v_bound_clear)
 
+# --- on_change="ignore" selectbox ---
 # Run counter so test_selectbox_on_change_ignore can detect an unexpected rerun.
 if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
 
-# --- on_change="ignore" selectbox ---
 ignore_select = st.selectbox(
     "Ignore change selectbox",
     ["alpha", "beta", "gamma"],
