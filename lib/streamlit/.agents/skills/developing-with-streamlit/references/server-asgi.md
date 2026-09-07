@@ -236,9 +236,7 @@ a lifespan task to periodically call the cached function with the arguments for 
 should stay warm. Calls made while an entry is fresh are cheap cache hits. The first scheduled
 call after its `ttl` returns the stale value to the task and triggers a deduplicated background
 refresh for that specific key. Run synchronous cached functions in a worker thread (via
-`anyio`, already a Streamlit dependency) so they don't block the ASGI event loop. This
-pattern is for synchronous cached functions; coroutine functions reject
-`refresh_mode="background"`.
+`anyio`, already a Streamlit dependency) so they don't block the ASGI event loop.
 
 ```python
 # resources.py
