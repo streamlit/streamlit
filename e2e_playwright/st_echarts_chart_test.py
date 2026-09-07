@@ -253,8 +253,6 @@ def test_form_selection_is_deferred_until_submit_and_clears(
     # Must NOT happen: selecting inside the form does not rerun the app.
     expect(app.get_by_text("echarts form groups: 0")).to_be_visible()
 
-    # Selection writes are debounced; submitting too early would send empty state.
-    app.wait_for_timeout(210)
     click_form_button(app, "Submit selection")
     expect(app.get_by_text("echarts form groups: 1")).to_be_visible()
     expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)

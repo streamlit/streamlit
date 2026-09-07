@@ -2278,6 +2278,13 @@ describe("useEChartsSelections", () => {
     )
     const chart = createFakeChart()
 
+    chart.dispatchAction.mockImplementation(
+      (payload: Record<string, unknown>) => {
+        if (payload.type === "unselect" || payload.type === "brush") {
+          chart.trigger("selectchanged", { selected: [] })
+        }
+      }
+    )
     act(() => {
       result.current.bindSelections(chart)
       chart.trigger("selectchanged", {

@@ -755,20 +755,30 @@ export function useEChartsSelections(
     (fromUser = true): void => {
       const chart = chartRef.current
       if (chart) {
+        // Programmatic unselect/brush-clear fire the same events as a user
+        // gesture. Suppress the emit so a form-clear's ``fromUser: false``
+        // committed write is not skipped: an event-driven empty write would
+        // land in the form dict first, and ``getStringValue`` would then
+        // treat the committed empty as a no-op.
+        isRestoringRef.current = true
         try {
-          chart.dispatchAction({ type: "brush", areas: [] })
-        } catch (error) {
-          LOG.warn("Failed to clear brush selection", error)
-        }
-        // Deselect any natively selected points as well.
-        const selectedPoints = chartId
-          ? widgetMgr.getElementState<SelectedEntry[]>(
-              chartId,
-              SELECTED_POINTS_STATE_KEY
-            )
-          : undefined
-        if (Array.isArray(selectedPoints)) {
-          dispatchPointSelection(chart, selectedPoints, "unselect")
+          try {
+            chart.dispatchAction({ type: "brush", areas: [] })
+          } catch (error) {
+            LOG.warn("Failed to clear brush selection", error)
+          }
+          // Deselect any natively selected points as well.
+          const selectedPoints = chartId
+            ? widgetMgr.getElementState<SelectedEntry[]>(
+                chartId,
+                SELECTED_POINTS_STATE_KEY
+              )
+            : undefined
+          if (Array.isArray(selectedPoints)) {
+            dispatchPointSelection(chart, selectedPoints, "unselect")
+          }
+        } finally {
+          isRestoringRef.current = false
         }
       }
       if (chartId) {
