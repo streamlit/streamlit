@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from e2e_playwright.conftest import ImageCompareFunction
 
 
-NUM_SELECTBOXES = 30
+NUM_SELECTBOXES = 31
 
 
 def get_selectbox_input(
@@ -853,3 +853,51 @@ def test_selectbox_in_sidebar_flips_up_within_viewport(app: Page):
     assert dropdown_box["y"] < trigger_box["y"], (
         f"dropdown did not flip up: dropdown={dropdown_box}, trigger={trigger_box}"
     )
+
+
+def test_selectbox_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun and sends value on next rerun."""
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore selectbox value:", "alpha")
+    # Default is omitted from the URL.
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_select="))
+
+    ignore_input = get_selectbox_input(app, "Ignore change selectbox")
+
+    # Filtering is not a commit - URL and Python should stay unchanged.
+    ignore_input.click()
+    ignore_input.fill("be")
+    expect(ignore_input).to_have_value("be")
+    wait_for_app_run(app)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore selectbox value:", "alpha")
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_select="))
+
+    # Commit with option click - should NOT trigger a rerun, but should update the URL
+    select_selectbox_option(app, "Ignore change selectbox", "beta")
+
+    # Give a spurious rerun a chance to land before asserting the counter.
+    wait_for_app_run(app)
+
+    # Verify no rerun occurred (run count should still be 1)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(ignore_input).to_have_value("beta")
+    expect_prefixed_markdown(app, "Ignore selectbox value:", "alpha")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_select=beta"))
+
+    # Click button to trigger a rerun - buffered value should be sent
+    app.get_by_role("button", name="Apply ignore selectbox", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore selectbox value: beta", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore selectbox value: beta", exact=True)
+    ).to_be_visible()
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(get_selectbox_input(app, "Ignore change selectbox")).to_have_value("beta")
+    expect_prefixed_markdown(app, "Ignore selectbox value:", "beta")
