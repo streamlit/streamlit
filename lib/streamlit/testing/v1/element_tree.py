@@ -28,6 +28,7 @@ from typing import (
     Any,
     ClassVar,
     Generic,
+    NoReturn,
     TypeAlias,
     TypeVar,
     cast,
@@ -179,8 +180,35 @@ class Element(ABC):
         ...
 
     def __getattr__(self, name: str) -> Any:
-        """Fallback attempt to get an attribute from the proto."""
+        """Look up missing names on the element's proto, except AppTest interactions.
+
+        ``set_value`` and ``click`` are unsupported AppTest interactions even when a
+        proto defines those names as fields (pagination's ``set_value`` is a bool).
+        Other missing names still fall through to the proto.
+        """
+        if name in {"set_value", "click"}:
+
+            def unsupported_interaction(*_args: Any, **_kwargs: Any) -> None:
+                self._raise_unsupported_interaction(name)
+
+            return unsupported_interaction
         return getattr(self.proto, name)
+
+    def _raise_unsupported_interaction(self, method: str) -> NoReturn:
+        """Raise AppTestError: typed widgets already have interaction methods; other nodes do not."""
+        key_part = f" (key={self.key!r})" if self.key else ""
+        if isinstance(self, Widget):
+            raise AppTestError(
+                f"{method}() is not supported for {self.type}{key_part}. "
+                "Use set_value() or one of this widget's typed interaction "
+                "methods."
+            )
+        raise AppTestError(
+            f"{method}() is not supported for {self.type}{key_part}. "
+            "AppTest can inspect this element but does not implement "
+            "interactions for it. Set its value through at.session_state if it "
+            "has a key, or use a Playwright e2e test."
+        )
 
     def run(self, *, timeout: float | None = None) -> AppTest:
         """Run the ``AppTest`` script which contains the element.

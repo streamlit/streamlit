@@ -1381,6 +1381,69 @@ def test_parse_tree_unknown_proto_subtypes_become_unknown_element() -> None:
     assert nodes[2].value == "unused format"
 
 
+def test_inspectable_elements_reject_unsupported_interactions() -> None:
+    """Inspectable-only nodes reject set_value/click with AppTestError.
+
+    ``st.pagination`` is inspectable (key and current page) but has no typed
+    wrapper. Its proto field ``set_value: bool`` must not leak through
+    ``Element.__getattr__`` as a callable. Typed ``Markdown`` is covered too.
+    """
+
+    def script():
+        import streamlit as st
+
+        st.pagination(5, key="pager")
+        st.markdown("hi")
+
+    at = AppTest.from_function(script).run()
+    node = at.get("pagination")[0]
+    assert isinstance(node, UnknownElement)
+    assert node.key == "pager"
+    assert node.value == 1
+    assert node.proto.set_value is False
+
+    inspectable_guidance = (
+        "AppTest can inspect this element but does not implement "
+        "interactions for it. Set its value through at.session_state if it "
+        "has a key, or use a Playwright e2e test."
+    )
+    with pytest.raises(AppTestError) as set_value_info:
+        node.set_value(2)
+    assert str(set_value_info.value) == (
+        "set_value() is not supported for pagination (key='pager'). "
+        f"{inspectable_guidance}"
+    )
+    with pytest.raises(AppTestError) as click_info:
+        node.click()
+    assert str(click_info.value) == (
+        f"click() is not supported for pagination (key='pager'). {inspectable_guidance}"
+    )
+    with pytest.raises(AppTestError) as markdown_info:
+        at.markdown[0].set_value("nope")
+    assert str(markdown_info.value) == (
+        f"set_value() is not supported for markdown. {inspectable_guidance}"
+    )
+
+
+def test_typed_widget_without_click_raises_app_test_error() -> None:
+    """Typed widgets without click() point testers at set_value()."""
+
+    def script():
+        import streamlit as st
+
+        st.checkbox("ok")
+
+    at = AppTest.from_function(script).run()
+    with pytest.raises(
+        AppTestError,
+        match=(
+            r"click\(\) is not supported for checkbox\. "
+            r"Use set_value\(\) or one of this widget's typed interaction methods\."
+        ),
+    ):
+        at.checkbox[0].click()
+
+
 def test_element_list_equality():
     """Test ElementList equality comparison."""
 
