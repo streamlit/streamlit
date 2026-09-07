@@ -73,7 +73,8 @@ def get_metrics():
 Requirements and caveats: a `ttl` is required, and `refresh_mode="background"` can't be
 combined with `persist`. The function can't use session-specific features (e.g.
 `st.session_state`) or render Streamlit elements—pass any needed values as arguments. Works
-with both `st.cache_data` and `st.cache_resource`.
+with both `st.cache_data` and `st.cache_resource`, but not with `async def` cached
+functions.
 
 By default Streamlit hard-expires a background-refresh entry at `2 × ttl`, serving
 it stale for one extra `ttl`. Set `runner.cacheBackgroundRefreshTTLMultiplier` to a
@@ -95,6 +96,31 @@ initiate background refreshes for specific global cache keys even without user t
 an `st.App` lifespan task to periodically call the cached function with those arguments. See
 [Scheduled background refresh for specific
 keys](server-asgi.md#scheduled-background-refresh-for-specific-keys).
+
+### Async functions
+
+`@st.cache_data` and `@st.cache_resource` can decorate `async def` functions. The decorated
+call returns an awaitable; you must await it (for example with `asyncio.run()` in a Streamlit
+script). Streamlit caches the awaited return value, not the coroutine.
+
+```python
+import asyncio
+
+import streamlit as st
+
+
+@st.cache_data
+async def load_config():
+    return await fetch_config()
+
+
+config = asyncio.run(load_config())
+```
+
+Define the function with `async def` rather than returning an awaitable from a sync `def`.
+Cache loop-independent results such as API payloads, dataframes, and config — not live
+event-loop-bound clients or connections. `refresh_mode="background"` is not supported on
+coroutine functions; use the default foreground refresh.
 
 ### Prevent unbounded cache growth
 
