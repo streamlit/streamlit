@@ -270,6 +270,18 @@ export default defineConfig([
       "no-console": "error",
       // Prevent unintentional use of `debugger`
       "no-debugger": "error",
+      // Correctness rules that eslint.configs.recommended does not enable
+      "no-self-compare": "error",
+      "no-return-assign": ["error", "always"],
+      "no-sequences": ["error", { allowInParentheses: false }],
+      "no-template-curly-in-string": "error",
+      "no-extend-native": "error",
+      // Keep default as the last switch clause
+      "default-case-last": "error",
+      // Safety net if the ForInStatement ban in no-restricted-syntax is relaxed
+      "guard-for-in": "error",
+      // Safety net if the LabeledStatement ban in no-restricted-syntax is relaxed
+      "no-labels": "error",
       // Oxlint eslint/preserve-caught-error owns this check.
       "preserve-caught-error": "off",
       // We do want to discourage the usage of flushSync
@@ -284,6 +296,12 @@ export default defineConfig([
       "@eslint-react/jsx-no-useless-fragment": "off",
       // Prevent context values from being recreated on every render
       "@eslint-react/no-unstable-context-value": "error",
+      // Default-arg object/array literals are a new reference each render
+      "@eslint-react/no-unstable-default-props": "error",
+      // Require sandbox on raw <iframe> JSX, and rel=noopener on raw <a target=_blank>.
+      // Intrinsic elements only — styled.iframe / styled anchors are not checked.
+      "@eslint-react/dom-no-missing-iframe-sandbox": "error",
+      "@eslint-react/dom-no-unsafe-target-blank": "error",
       // We want to enforce display names for context providers for better debugging
       "@eslint-react/no-missing-context-display-name": "error",
       // New rules in @eslint-react v4/v5 — disable until existing violations are addressed
@@ -353,6 +371,9 @@ export default defineConfig([
       "@typescript-eslint/return-await": ["error", "in-try-catch"],
       // Treat @deprecated API usage as errors
       "@typescript-eslint/no-deprecated": "error",
+      // Mixed string/numeric members compare and reverse-map inconsistently;
+      // keep hand-written enums single-typed like generated protobuf ones.
+      "@typescript-eslint/no-mixed-enums": "error",
       // Permit for-of loops
       "no-restricted-syntax": [
         "error",
@@ -382,6 +403,11 @@ export default defineConfig([
         },
       ],
       "import-x/prefer-default-export": "off",
+      // Catch import specifiers that resolve to nothing useful: self-imports,
+      // redundant path segments, empty named blocks.
+      "import-x/no-self-import": "error",
+      "import-x/no-useless-path-segments": "error",
+      "import-x/no-empty-named-blocks": "error",
       "max-classes-per-file": "off",
       "no-shadow": "off",
       "no-param-reassign": "off",
@@ -459,6 +485,8 @@ export default defineConfig([
       "react-hooks/set-state-in-effect": "off",
       // Enforce "You Might Not Need an Effect" pattern - don't derive state in effects
       "react-hooks/no-deriving-state-in-effects": "error",
+      // useMemo must return a value; side-effect-only memos belong in useEffect
+      "react-hooks/void-use-memo": "error",
     },
     settings: {
       "import-x/resolver": {
@@ -479,6 +507,9 @@ export default defineConfig([
       "no-restricted-properties": getNoRestrictedProperties({
         includeUseTimeout: true,
       }),
+      // Require type on raw <button> JSX (not styled.button); omitted type submits the enclosing form.
+      // Tests still use <button> fixtures without type, so this stays production-only.
+      "@eslint-react/dom-no-missing-button-type": "error",
     },
   },
   // Test files specific configuration
