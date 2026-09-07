@@ -206,6 +206,7 @@ if st.button("Delete item"):
 - Confirmation prompts
 - Settings panels
 - Forms that don't need to be always visible
+- Drill-down into details (for example, a `ButtonColumn` click that opens a dialog to inspect that row)
 
 ## Spacing
 
