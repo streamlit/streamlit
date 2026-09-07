@@ -1876,8 +1876,8 @@ def test_chat_input_value_reflects_set_value_before_run():
     assert at.chat_input[0].value == "hello"
 
 
-def test_chat_input_empty_string_is_visible_before_run() -> None:
-    """ChatInput.value keeps an empty pending submit, not None."""
+def test_chat_input_preserves_empty_string_value() -> None:
+    """Empty chat submit is visible before and after run, then resets."""
 
     def script():
         import streamlit as st
@@ -1889,6 +1889,8 @@ def test_chat_input_empty_string_is_visible_before_run() -> None:
     assert at.chat_input[0].value == ""
     at.run()
     assert at.chat_input[0].value == ""
+    at.run()
+    assert at.chat_input[0].value is None
 
 
 def test_chat_input_value_repr_when_accept_file() -> None:

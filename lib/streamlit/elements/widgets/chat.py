@@ -202,15 +202,23 @@ class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
             delattr(self, key)
         except AttributeError:  # pragma: no cover - defensive
             raise KeyError(f"Invalid key: {key}") from None
+        object.__setattr__(
+            self,
+            "_included_keys",
+            tuple(k for k in self._included_keys if k != key),
+        )
 
     def to_dict(self) -> dict[str, _ChatInputValueItem]:
-        stored = vars(self)
-        return {key: stored[key] for key in self._get_included_keys() if key in stored}
+        """Return the included fields still stored on this value.
+
+        Keys removed with ``del value[key]`` are omitted.
+        """
+        return {key: getattr(self, key) for key in self._get_included_keys()}
 
     def __repr__(self) -> str:
-        # Generated dataclass repr always reads .files/.audio; __getattribute__
-        # raises when those fields are excluded. Derive from to_dict() so
-        # omitted and deleted keys stay out of the representation.
+        # Build the repr from to_dict() so excluded and deleted keys do not raise.
+        # The generated dataclass repr always reads .files/.audio, which
+        # __getattribute__ rejects when those inputs were not accepted.
         args = ", ".join(f"{key}={value!r}" for key, value in self.to_dict().items())
         return f"{type(self).__name__}({args})"
 

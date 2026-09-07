@@ -1247,6 +1247,8 @@ def test_chat_input_value_repr_skips_deleted_keys() -> None:
         _include_audio=True,
     )
     del value["files"]
+    assert "files" not in value
+    assert list(value) == ["text", "audio"]
     assert value.to_dict() == {"text": "hi", "audio": None}
     assert repr(value) == "ChatInputValue(text='hi', audio=None)"
 
