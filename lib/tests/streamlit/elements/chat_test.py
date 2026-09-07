@@ -1214,6 +1214,29 @@ class ChatInputValueExtraTest(DeltaGeneratorTestCase):
         assert "text" in value
 
 
+@pytest.mark.parametrize(
+    ("include_files", "include_audio", "expected"),
+    [
+        (False, False, "ChatInputValue(text='hi')"),
+        (True, False, "ChatInputValue(text='hi', files=[])"),
+        (False, True, "ChatInputValue(text='hi', audio=None)"),
+        (True, True, "ChatInputValue(text='hi', files=[], audio=None)"),
+    ],
+)
+def test_chat_input_value_repr_includes_only_enabled_keys(
+    include_files: bool, include_audio: bool, expected: str
+) -> None:
+    """repr omits files/audio unless those inputs were accepted."""
+    value = ChatInputValue(
+        text="hi",
+        files=[],
+        audio=None,
+        _include_files=include_files,
+        _include_audio=include_audio,
+    )
+    assert repr(value) == expected
+
+
 class AvatarProcessingTest(DeltaGeneratorTestCase):
     """Cover _process_avatar_input branches for missing avatars and material icons."""
 

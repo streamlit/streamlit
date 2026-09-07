@@ -211,6 +211,14 @@ class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
             result["audio"] = self.audio
         return result
 
+    def __repr__(self) -> str:
+        parts = [f"text={self.text!r}"]
+        if self._include_files:
+            parts.append(f"files={self.files!r}")
+        if self._include_audio:
+            parts.append(f"audio={self.audio!r}")
+        return f"{type(self).__name__}({', '.join(parts)})"
+
 
 class PresetNames(str, Enum):
     USER = "user"

@@ -524,7 +524,7 @@ class ChatInput(Widget):
     @property
     def value(self) -> str | None:
         """The value of the widget. (str)"""  # noqa: D400
-        if self._value:
+        if self._value is not None:
             return self._value
         state = self.root.session_state
         assert state

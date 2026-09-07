@@ -36,6 +36,7 @@ from streamlit.testing.v1.element_tree import (
     _format_value_for_widget,
     parse_tree_from_messages,
 )
+from streamlit.typing import ChatInputValue
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -1873,6 +1874,34 @@ def test_chat_input_value_reflects_set_value_before_run():
     at = AppTest.from_function(script).run()
     at.chat_input[0].set_value("hello")
     assert at.chat_input[0].value == "hello"
+
+
+def test_chat_input_empty_string_is_visible_before_run() -> None:
+    """ChatInput.value keeps an empty pending submit, not None."""
+
+    def script():
+        import streamlit as st
+
+        st.chat_input("say something")
+
+    at = AppTest.from_function(script).run()
+    at.chat_input[0].set_value("")
+    assert at.chat_input[0].value == ""
+
+
+def test_chat_input_value_repr_when_accept_file() -> None:
+    """ChatInputValue from accept_file is printable without an audio field."""
+
+    def script():
+        import streamlit as st
+
+        st.chat_input("say something", accept_file=True)
+
+    at = AppTest.from_function(script).run()
+    at.chat_input[0].set_value("hello").run()
+    value = at.chat_input[0].value
+    assert isinstance(value, ChatInputValue)
+    assert repr(value) == "ChatInputValue(text='hello', files=[])"
 
 
 def test_color_picker_pick_adds_hash_prefix():
