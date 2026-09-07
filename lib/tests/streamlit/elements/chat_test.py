@@ -1237,6 +1237,20 @@ def test_chat_input_value_repr_includes_only_enabled_keys(
     assert repr(value) == expected
 
 
+def test_chat_input_value_repr_skips_deleted_keys() -> None:
+    """repr does not raise after an included key is deleted."""
+    value = ChatInputValue(
+        text="hi",
+        files=[],
+        audio=None,
+        _include_files=True,
+        _include_audio=True,
+    )
+    del value["files"]
+    assert value.to_dict() == {"text": "hi", "audio": None}
+    assert repr(value) == "ChatInputValue(text='hi', audio=None)"
+
+
 class AvatarProcessingTest(DeltaGeneratorTestCase):
     """Cover _process_avatar_input branches for missing avatars and material icons."""
 

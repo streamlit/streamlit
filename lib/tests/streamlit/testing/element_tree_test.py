@@ -1887,6 +1887,8 @@ def test_chat_input_empty_string_is_visible_before_run() -> None:
     at = AppTest.from_function(script).run()
     at.chat_input[0].set_value("")
     assert at.chat_input[0].value == ""
+    at.run()
+    assert at.chat_input[0].value == ""
 
 
 def test_chat_input_value_repr_when_accept_file() -> None:

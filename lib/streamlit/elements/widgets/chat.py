@@ -98,7 +98,7 @@ _ACCEPTED_AUDIO_MIME_TYPES: frozenset[str] = frozenset(
 _ChatInputValueItem: TypeAlias = str | list[UploadedFile] | UploadedFile | None
 
 
-@dataclass
+@dataclass(repr=False)
 class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
     """Represents the value returned by `st.chat_input` after user interaction.
 
@@ -204,20 +204,15 @@ class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
             raise KeyError(f"Invalid key: {key}") from None
 
     def to_dict(self) -> dict[str, _ChatInputValueItem]:
-        result: dict[str, _ChatInputValueItem] = {"text": self.text}
-        if self._include_files:
-            result["files"] = self.files
-        if self._include_audio:
-            result["audio"] = self.audio
-        return result
+        stored = vars(self)
+        return {key: stored[key] for key in self._get_included_keys() if key in stored}
 
     def __repr__(self) -> str:
-        parts = [f"text={self.text!r}"]
-        if self._include_files:
-            parts.append(f"files={self.files!r}")
-        if self._include_audio:
-            parts.append(f"audio={self.audio!r}")
-        return f"{type(self).__name__}({', '.join(parts)})"
+        # Generated dataclass repr always reads .files/.audio; __getattribute__
+        # raises when those fields are excluded. Derive from to_dict() so
+        # omitted and deleted keys stay out of the representation.
+        args = ", ".join(f"{key}={value!r}" for key, value in self.to_dict().items())
+        return f"{type(self).__name__}({args})"
 
 
 class PresetNames(str, Enum):
