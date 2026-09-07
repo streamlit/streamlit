@@ -74,6 +74,16 @@ if TYPE_CHECKING:
         tuple[int, int],
     )
 
+    # Check on_change parameter modes
+    assert_type(select_slider("foo", [1, 2, 3], on_change=None), int)
+    assert_type(select_slider("foo", [1, 2, 3], on_change="rerun"), int)
+    assert_type(select_slider("foo", [1, 2, 3], on_change="ignore"), int)
+    assert_type(select_slider("foo", [1, 2, 3], on_change=lambda: None), int)
+    assert_type(
+        select_slider("foo", [1, 2, 3], value=(1, 3), on_change="ignore"),
+        tuple[int, int],
+    )
+
     def on_select_slider_change(prefix: str) -> None: ...
 
     # Common parameters combined
