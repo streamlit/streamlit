@@ -846,6 +846,9 @@ describe("BlockNodeRenderer container types", () => {
 
     expect(screen.getByTestId("stDialog")).toBeVisible()
     expect(screen.getByText("dialog body")).toBeVisible()
+    expect(screen.getByTestId("stDialogContentEndPad")).toHaveStyle({
+      height: "2rem",
+    })
   })
 
   it("renders a tab container", () => {
