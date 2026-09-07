@@ -283,13 +283,13 @@ def test_slider_with_float_formatting(
     # Once unhovered the tick bar fades out (opacity 300ms after a 200ms delay), so
     # wait for it to reach 0 rather than capturing it mid-fade.
     expect(slider.get_by_test_id("stSliderTickBar")).to_have_css("opacity", "0")
-    # Playwright's screenshot already waits for fonts; kept as belt and braces.
+    # An unloaded Source Sans would drop the label rather than shift it; failing here
+    # reports that as a font timeout instead of an opaque snapshot mismatch.
     expect_font(app, "Source Sans")
-    # The thumb value label sits at a fractional offset, so its glyphs can snap to
-    # either of two adjacent pixel rows. On chromium that 1px shift measures 116px
-    # (0.239%) of this 704x69 element, just over the 0.002 default; 0.003 (145px)
-    # absorbs it while still failing a 2px shift (147px) or a retained focus ring
-    # (187px). Firefox and webkit have never shown it, so they keep the default.
+    # This label is fractionally positioned, so its glyphs can snap one pixel up or
+    # down. Chromium only: 0.003 (145px) absorbs the observed 116px shift, while a 2px
+    # shift (147px) or a leftover focus ring (187px) still fails. Firefox and webkit
+    # have never shown it, so they keep the 0.002 default.
     assert_snapshot(
         slider,
         name="st_slider-float_formatting",
