@@ -153,6 +153,7 @@ message Block {
     // Optional icon shown next to the dialog title.
     string icon = 6;
 
+    // Placement of the dialog. LEFT/RIGHT render it as a full-height side drawer.
     DialogPosition position = 7;
   }
 

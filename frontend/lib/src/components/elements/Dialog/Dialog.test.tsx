@@ -313,26 +313,39 @@ describe("Dialog container", () => {
         </Dialog>
       )
 
-      expect(screen.getByRole("dialog")).toBeVisible()
+      expect(screen.getByTestId("stDialog")).toHaveStyle({
+        justifyContent: "center",
+      })
       expect(screen.getByText("test")).toBeVisible()
     })
 
     it.each([
-      { position: BlockProto.Dialog.DialogPosition.CENTER },
-      { position: BlockProto.Dialog.DialogPosition.LEFT },
-      { position: BlockProto.Dialog.DialogPosition.RIGHT },
-    ])("renders dialog when position is $position", ({ position }) => {
-      const props = getProps({ position })
-      render(
-        <Dialog {...props}>
-          <div>test</div>
-        </Dialog>
-      )
+      {
+        position: BlockProto.Dialog.DialogPosition.CENTER,
+        justifyContent: "center",
+      },
+      {
+        position: BlockProto.Dialog.DialogPosition.LEFT,
+        justifyContent: "flex-start",
+      },
+      {
+        position: BlockProto.Dialog.DialogPosition.RIGHT,
+        justifyContent: "flex-end",
+      },
+    ])(
+      "places a $position dialog with overlay justifyContent $justifyContent",
+      ({ position, justifyContent }) => {
+        const props = getProps({ position })
+        render(
+          <Dialog {...props}>
+            <div>test</div>
+          </Dialog>
+        )
 
-      const modal = screen.getByRole("dialog")
-      expect(modal).toBeVisible()
-      expect(screen.getByText("test")).toBeVisible()
-    })
+        expect(screen.getByTestId("stDialog")).toHaveStyle({ justifyContent })
+        expect(screen.getByText("test")).toBeVisible()
+      }
+    )
   })
 
   describe("keyboard handling", () => {

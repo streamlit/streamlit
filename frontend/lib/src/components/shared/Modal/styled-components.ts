@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import isPropValid from "@emotion/is-prop-valid"
 import styled from "@emotion/styled"
 import {
   Dialog,
@@ -31,6 +32,11 @@ const isSideDrawer = (position: ModalPosition): boolean =>
 // React Aria forwards unknown props to the DOM; drop emotion transient `$` props.
 const shouldForwardNonTransientProp = (prop: string): boolean =>
   !prop.startsWith("$")
+
+// String tags replace emotion's default is-prop-valid filter when a custom
+// shouldForwardProp is set, so keep both the HTML allowlist and `$` drop.
+const shouldForwardValidNonTransientProp = (prop: string): boolean =>
+  isPropValid(prop) && !prop.startsWith("$")
 
 /**
  * Full-screen backdrop overlay rendered in a portal.
@@ -57,8 +63,8 @@ export const StyledDialogOverlay = styled(ModalOverlay, {
       ? {
           alignItems: "stretch",
           justifyContent: $position === "left" ? "flex-start" : "flex-end",
-          paddingTop: 0,
-          paddingBottom: 0,
+          paddingTop: theme.spacing.none,
+          paddingBottom: theme.spacing.none,
           overflowY: "hidden",
         }
       : {
@@ -102,7 +108,7 @@ export const StyledDialogPanel = styled(RAModal, {
     display: "flex",
     flexDirection: "column",
     position: "relative",
-    margin: isDrawer ? 0 : theme.spacing.lg,
+    margin: isDrawer ? theme.spacing.none : theme.spacing.lg,
     // Cap minWidth so the panel can shrink below minPopupWidth on very narrow
     // screens instead of overflowing the viewport.
     minWidth: `min(${theme.sizes.minPopupWidth}, ${maxWidth})`,
@@ -179,7 +185,7 @@ export const StyledModalHeader = styled(Heading)(({ theme }) => ({
 }))
 
 export const StyledModalBody = styled("div", {
-  shouldForwardProp: shouldForwardNonTransientProp,
+  shouldForwardProp: shouldForwardValidNonTransientProp,
 })<{ $position?: ModalPosition }>(({ theme, $position = "center" }) => ({
   padding: `${theme.spacing.md} ${theme.spacing.twoXL} ${theme.spacing.twoXL}`,
   color: theme.colors.bodyText,

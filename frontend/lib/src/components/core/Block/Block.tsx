@@ -115,7 +115,7 @@ interface ContainerContentsWrapperProps extends BaseBlockProps {
   node: BlockNode
   height: React.CSSProperties["height"]
   isRoot?: boolean
-  /** Extra in-flow space after the last widget. Used by st.dialog. */
+  /** Extra in-flow space after the last widget. Used by side-drawer dialogs. */
   padContentEnd?: boolean
 }
 
@@ -354,9 +354,13 @@ export const BlockNodeRenderer = (
   }
 
   if (node.deltaBlock.dialog) {
+    const dialog = node.deltaBlock.dialog as BlockProto.Dialog
+    const isDrawer =
+      dialog.position === BlockProto.Dialog.DialogPosition.LEFT ||
+      dialog.position === BlockProto.Dialog.DialogPosition.RIGHT
     return (
       <Dialog
-        element={node.deltaBlock.dialog as BlockProto.Dialog}
+        element={dialog}
         deltaMsgReceivedAt={node.deltaMsgReceivedAt}
         widgetMgr={props.widgetMgr}
         fragmentId={node.fragmentId}
@@ -365,7 +369,7 @@ export const BlockNodeRenderer = (
           {...childProps}
           disableFullscreenMode={disableFullscreenMode}
           height="100%"
-          padContentEnd
+          padContentEnd={isDrawer}
         />
       </Dialog>
     )
