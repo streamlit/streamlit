@@ -13,10 +13,10 @@ rather than merely a UI over Python â€” and it is essentially the same observe â
 observe loop an agent runs. Today that loop is only reachable through a browser.
 
 This spec adds an HTTP operation (with CLI and MCP adapters as follow-ups) that lets an
-agent run a real Streamlit app without
-one: send JSON widget values, get back the finished app as a typed tree of containers
-and elements named after the public `st.*` API, plus the list of things it can do next.
-It is a second client of the execution model Streamlit already has, not a new one.
+agent run a real Streamlit app without a browser: send JSON widget values, get back the
+finished app as a typed tree of containers and elements named after the public `st.*`
+API, plus the list of things it can do next. It is a second client of the execution
+model Streamlit already has, not a new one.
 
 v1 is deliberately one endpoint, and existing apps work with no code changes. One
 representation then serves a range of things that have no shared answer today:
