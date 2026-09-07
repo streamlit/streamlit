@@ -199,6 +199,8 @@ if st.button("Delete item"):
     confirm_delete("My Document")
 ```
 
+`position="left"` / `"right"` shows the dialog as a full-height side drawer. Dismissal and other parameters work the same way.
+
 **When to use dialogs:**
 
 - Confirmation prompts

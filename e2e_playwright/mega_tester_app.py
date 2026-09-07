@@ -566,6 +566,10 @@ def _render_custom_ui(minor_version: int) -> None:
         "Literal['small', 'medium', 'large']",
         st.session_state.get("dialog_width", "small"),
     ),
+    position=cast(
+        "Literal['left', 'center', 'right']",
+        st.session_state.get("dialog_position", "center"),
+    ),
     dismissible=st.session_state.get("dialog_dismissible", True),
 )
 def _dialog(item: str) -> None:
@@ -818,6 +822,12 @@ def _render_inputs(minor_version: int, help_text: str | None, disabled: bool) ->
         ["small", "medium", "large"],
         default="small",
         key="dialog_width",
+    )
+    st.segmented_control(
+        "Dialog position",
+        ["center", "left", "right"],
+        default="center",
+        key="dialog_position",
     )
     st.toggle(
         "Dialog dismissible",

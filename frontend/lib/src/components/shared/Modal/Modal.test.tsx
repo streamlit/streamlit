@@ -267,4 +267,90 @@ describe("Modal subcomponents", () => {
       maxWidth: "calc(100% - 1rem - 1rem)",
     })
   })
+
+  it.each([
+    {
+      position: "left" as const,
+      justifyContent: "flex-start",
+      side: "start",
+    },
+    {
+      position: "right" as const,
+      justifyContent: "flex-end",
+      side: "end",
+    },
+  ])(
+    "aligns a $position drawer overlay to the $side of the viewport",
+    ({ position, justifyContent }) => {
+      render(
+        <Modal isOpen position={position}>
+          <ModalBody>content</ModalBody>
+        </Modal>
+      )
+
+      expect(screen.getByTestId("stDialog")).toHaveStyle({
+        justifyContent,
+        alignItems: "stretch",
+        paddingTop: "0",
+        paddingBottom: "0",
+      })
+    }
+  )
+
+  it("makes a left drawer panel flush and full height with attached-edge radii", () => {
+    render(
+      <Modal isOpen position="left">
+        <ModalBody>content</ModalBody>
+      </Modal>
+    )
+
+    const panel = document.querySelector("[role='dialog']")?.parentElement
+    expect(panel).toHaveStyle({
+      margin: "0",
+      height: "100%",
+      maxWidth: "100%",
+      borderTopLeftRadius: "0",
+      borderBottomLeftRadius: "0",
+      borderTopRightRadius: mockTheme.emotion.radii.xxl,
+      borderBottomRightRadius: mockTheme.emotion.radii.xxl,
+    })
+  })
+
+  it("still dismisses a left-positioned dialog via Escape, close button, and overlay click", async () => {
+    const user = userEvent.setup()
+    const handleClose = vi.fn()
+    const { rerender } = render(
+      <Modal isOpen position="left" onClose={handleClose} />
+    )
+
+    await user.keyboard("{Escape}")
+    expect(handleClose).toHaveBeenCalledTimes(1)
+
+    handleClose.mockClear()
+    rerender(<Modal isOpen position="left" onClose={handleClose} />)
+    await user.click(screen.getByRole("button", { name: "Close" }))
+    expect(handleClose).toHaveBeenCalledTimes(1)
+
+    handleClose.mockClear()
+    rerender(<Modal isOpen position="left" onClose={handleClose} />)
+    await user.click(screen.getByTestId("stDialog"))
+    expect(handleClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not dismiss a non-closeable left-positioned dialog", async () => {
+    const user = userEvent.setup()
+    const handleClose = vi.fn()
+
+    render(
+      <Modal isOpen position="left" closeable={false} onClose={handleClose} />
+    )
+
+    await user.keyboard("{Escape}")
+    await user.click(screen.getByTestId("stDialog"))
+
+    expect(handleClose).not.toHaveBeenCalled()
+    expect(
+      screen.queryByRole("button", { name: "Close" })
+    ).not.toBeInTheDocument()
+  })
 })

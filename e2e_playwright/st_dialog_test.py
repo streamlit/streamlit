@@ -130,6 +130,18 @@ def open_on_dismiss_callback_dialog(app: Page):
     click_button(app, "Open on_dismiss callback Dialog")
 
 
+def open_left_drawer_dialog(app: Page):
+    click_button(app, "Open Left Drawer")
+
+
+def open_right_drawer_dialog(app: Page):
+    click_button(app, "Open Right Drawer")
+
+
+def open_tall_left_drawer_dialog(app: Page):
+    click_button(app, "Open Tall Left Drawer")
+
+
 def click_to_dismiss(app: Page):
     # Click somewhere outside the close popover container:
     app.keyboard.press("Escape")
@@ -962,3 +974,103 @@ def test_switching_dialogs_does_not_show_stale_content(app: Page):
     expect(dialog).to_contain_text("Slow dialog content")
     expect(dialog.get_by_text("Fast dialog content")).not_to_be_attached()
     expect(dialog.get_by_test_id("stTextInput")).not_to_be_attached()
+
+
+def test_side_drawers_display_correctly(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that left- and right-positioned dialogs display as side drawers."""
+    open_left_drawer_dialog(app)
+    left_dialog = app.get_by_role("dialog")
+    left_dialog.get_by_text("Left drawer", exact=True).click()
+    get_button(left_dialog, "Submit").hover()
+    assert_snapshot(left_dialog, name="st_dialog-position_left")
+
+    app.keyboard.press("Escape")
+    expect(left_dialog).not_to_be_attached()
+
+    open_right_drawer_dialog(app)
+    right_dialog = app.get_by_role("dialog")
+    right_dialog.get_by_text("Right drawer", exact=True).click()
+    get_button(right_dialog, "Submit").hover()
+    assert_snapshot(right_dialog, name="st_dialog-position_right")
+
+
+@pytest.mark.only_browser("chromium")
+def test_side_drawers_are_flush_full_height(app: Page):
+    """Test that left/right drawers are flush to the viewport edge and full height."""
+    viewport = app.viewport_size
+    assert viewport is not None
+
+    open_left_drawer_dialog(app)
+    left_dialog = app.get_by_role("dialog")
+    expect(left_dialog).to_be_visible()
+    left_box = left_dialog.bounding_box()
+    assert left_box is not None
+    assert left_box["x"] == pytest.approx(0, abs=1)
+    assert left_box["y"] == pytest.approx(0, abs=1)
+    assert left_box["height"] == pytest.approx(viewport["height"], abs=1)
+    # Default small width is 31.25rem (500px at 16px root), not full viewport.
+    assert left_box["width"] == pytest.approx(500, abs=2)
+    assert left_box["width"] < viewport["width"] - 50
+
+    app.keyboard.press("Escape")
+    expect(left_dialog).not_to_be_attached()
+
+    open_right_drawer_dialog(app)
+    right_dialog = app.get_by_role("dialog")
+    expect(right_dialog).to_be_visible()
+    right_box = right_dialog.bounding_box()
+    assert right_box is not None
+    assert right_box["y"] == pytest.approx(0, abs=1)
+    assert right_box["height"] == pytest.approx(viewport["height"], abs=1)
+    assert right_box["x"] + right_box["width"] == pytest.approx(
+        viewport["width"], abs=1
+    )
+    assert right_box["width"] == pytest.approx(500, abs=2)
+
+
+def test_left_drawer_dismisses_like_center_dialog(app: Page):
+    """Test that side drawers use the same dismiss contract as centered dialogs."""
+    open_left_drawer_dialog(app)
+    dialog = app.get_by_role("dialog")
+    expect(dialog).to_be_visible()
+
+    app.keyboard.press("Escape")
+    expect(dialog).not_to_be_attached()
+    expect(app.get_by_test_id(modal_test_id)).to_have_count(0)
+
+    open_left_drawer_dialog(app)
+    dialog = app.get_by_role("dialog")
+    expect(dialog).to_be_visible()
+    overlay = app.get_by_test_id(modal_test_id)
+    overlay_box = overlay.bounding_box()
+    assert overlay_box is not None
+    # Click the uncovered main-app side of the left drawer (right of the panel).
+    app.mouse.click(
+        overlay_box["x"] + overlay_box["width"] - 20,
+        overlay_box["y"] + overlay_box["height"] / 2,
+    )
+    expect(dialog).not_to_be_attached()
+    expect(app.get_by_test_id(modal_test_id)).to_have_count(0)
+
+
+def test_tall_left_drawer_scrolls_inside(app: Page):
+    """Test that tall side-drawer content scrolls inside the panel, not the overlay."""
+    open_tall_left_drawer_dialog(app)
+    dialog = app.get_by_role("dialog")
+    expect(dialog).to_be_visible()
+
+    submit_button = get_button(dialog, "Submit")
+    expect(submit_button).not_to_be_in_viewport()
+
+    dialog_box_before = dialog.bounding_box()
+    assert dialog_box_before is not None
+    assert dialog_box_before["y"] == pytest.approx(0, abs=1)
+
+    submit_button.scroll_into_view_if_needed()
+    expect(submit_button).to_be_in_viewport()
+
+    dialog_box_after = dialog.bounding_box()
+    assert dialog_box_after is not None
+    assert dialog_box_after["y"] == pytest.approx(0, abs=1)

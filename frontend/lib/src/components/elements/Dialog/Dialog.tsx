@@ -54,6 +54,27 @@ function mapDialogWidthToModalSize(
   }
 }
 
+/**
+ * Maps the dialog position proto enum to Modal placement.
+ * CENTER is 0, so a truthy check would treat centered dialogs as unset.
+ */
+function mapDialogPositionToModalPosition(
+  dialogPosition: BlockProto.Dialog.DialogPosition
+): "left" | "center" | "right" {
+  switch (dialogPosition) {
+    case BlockProto.Dialog.DialogPosition.LEFT:
+      return "left"
+    case BlockProto.Dialog.DialogPosition.RIGHT:
+      return "right"
+    case BlockProto.Dialog.DialogPosition.CENTER:
+      return "center"
+    default: {
+      assertNever(dialogPosition)
+      return "center"
+    }
+  }
+}
+
 export interface Props {
   element: BlockProto.Dialog
   deltaMsgReceivedAt?: number
@@ -75,6 +96,7 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     isOpen: initialIsOpen,
     id,
     icon,
+    position,
   } = element
   const [isOpen, setIsOpen] = useState<boolean>(false)
 
@@ -153,6 +175,7 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
       closeable={dismissible}
       onClose={handleClose}
       size={mapDialogWidthToModalSize(width)}
+      position={mapDialogPositionToModalPosition(position)}
     >
       <ModalHeader>
         <StyledDialogTitle>

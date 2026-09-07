@@ -22,6 +22,16 @@ import {
   Modal as RAModal,
 } from "react-aria-components"
 
+/** `"center"` is a floating modal; `"left"` / `"right"` are full-height drawers. */
+export type ModalPosition = "left" | "center" | "right"
+
+const isSideDrawer = (position: ModalPosition): boolean =>
+  position === "left" || position === "right"
+
+// React Aria forwards unknown props to the DOM; drop emotion transient `$` props.
+const shouldForwardNonTransientProp = (prop: string): boolean =>
+  !prop.startsWith("$")
+
 /**
  * Full-screen backdrop overlay rendered in a portal.
  *
@@ -29,19 +39,37 @@ import {
  * scroll via the backdrop when content is taller than the viewport. This keeps
  * the body free of any overflow container so that absolutely-positioned element
  * toolbars (which use top: -2.65rem) are never clipped.
+ *
+ * Side drawers are viewport-tall, so the overlay does not scroll; overflow
+ * moves inside the panel instead.
  */
-export const StyledDialogOverlay = styled(ModalOverlay)(({ theme }) => ({
-  position: "fixed",
-  inset: 0,
-  background: theme.colors.darkenedBgMix25,
-  display: "flex",
-  alignItems: "flex-start",
-  justifyContent: "center",
-  paddingTop: theme.spacing.threeXL,
-  paddingBottom: theme.spacing.threeXL,
-  zIndex: theme.zIndices.modal,
-  overflowY: "auto",
-}))
+export const StyledDialogOverlay = styled(ModalOverlay, {
+  shouldForwardProp: shouldForwardNonTransientProp,
+})<{ $position?: ModalPosition }>(({ theme, $position = "center" }) => {
+  const isDrawer = isSideDrawer($position)
+  return {
+    position: "fixed",
+    inset: 0,
+    background: theme.colors.darkenedBgMix25,
+    display: "flex",
+    zIndex: theme.zIndices.modal,
+    ...(isDrawer
+      ? {
+          alignItems: "stretch",
+          justifyContent: $position === "left" ? "flex-start" : "flex-end",
+          paddingTop: 0,
+          paddingBottom: 0,
+          overflowY: "hidden",
+        }
+      : {
+          alignItems: "flex-start",
+          justifyContent: "center",
+          paddingTop: theme.spacing.threeXL,
+          paddingBottom: theme.spacing.threeXL,
+          overflowY: "auto",
+        }),
+  }
+})
 
 /**
  * The white dialog panel box. Accepts an optional explicit CSS width via $dialogWidth.
@@ -49,28 +77,49 @@ export const StyledDialogOverlay = styled(ModalOverlay)(({ theme }) => ({
  * overflow: hidden clips content to the rounded corners. No maxHeight is set
  * so the panel grows to fit its content; the overlay handles scrolling for
  * very tall dialogs.
+ *
+ * Side drawers are full height and flush to the viewport. Square corners on
+ * the attached edge and theme.radii.xxl on the inner edge make them read as
+ * a drawer rather than a floating card.
  */
-export const StyledDialogPanel = styled(RAModal)<{ $dialogWidth?: string }>(({
+export const StyledDialogPanel = styled(RAModal, {
+  shouldForwardProp: shouldForwardNonTransientProp,
+})<{ $dialogWidth?: string; $position?: ModalPosition }>(({
   theme,
   $dialogWidth,
+  $position = "center",
 }) => {
-  // Keep a minimum viewport gutter (one lg on each side) on narrow screens.
-  const gutterAwareWidth = `calc(100% - ${theme.spacing.lg} - ${theme.spacing.lg})`
+  const isDrawer = isSideDrawer($position)
+  // Centered dialogs keep a minimum viewport gutter (one lg on each side).
+  // Drawers are flush, so they cap at 100%.
+  const maxWidth = isDrawer
+    ? "100%"
+    : `calc(100% - ${theme.spacing.lg} - ${theme.spacing.lg})`
   return {
     outline: "none",
     background: theme.colors.bgColor,
-    borderRadius: theme.radii.xxl,
     boxShadow: theme.shadows.popover,
-    margin: theme.spacing.lg,
-    // Cap minWidth by the gutter-aware width so the panel can shrink below
-    // minPopupWidth on very narrow screens instead of overflowing the viewport.
-    minWidth: `min(${theme.sizes.minPopupWidth}, ${gutterAwareWidth})`,
-    maxWidth: gutterAwareWidth,
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
     position: "relative",
+    margin: isDrawer ? 0 : theme.spacing.lg,
+    // Cap minWidth so the panel can shrink below minPopupWidth on very narrow
+    // screens instead of overflowing the viewport.
+    minWidth: `min(${theme.sizes.minPopupWidth}, ${maxWidth})`,
+    maxWidth,
     ...($dialogWidth !== undefined && { width: $dialogWidth }),
+    ...(isDrawer
+      ? {
+          height: "100%",
+          borderTopLeftRadius: $position === "left" ? 0 : theme.radii.xxl,
+          borderBottomLeftRadius: $position === "left" ? 0 : theme.radii.xxl,
+          borderTopRightRadius: $position === "left" ? theme.radii.xxl : 0,
+          borderBottomRightRadius: $position === "left" ? theme.radii.xxl : 0,
+        }
+      : {
+          borderRadius: theme.radii.xxl,
+        }),
   }
 })
 
@@ -80,13 +129,22 @@ export const StyledDialogPanel = styled(RAModal)<{ $dialogWidth?: string }>(({
  *
  * overflow: visible ensures absolutely-positioned toolbar overlays (top: -2.65rem)
  * are not clipped between the body and the panel boundary.
+ *
+ * Side drawers fill the panel height so the body can scroll instead.
  */
-export const StyledDialogInner = styled(Dialog)({
+export const StyledDialogInner = styled(Dialog, {
+  shouldForwardProp: shouldForwardNonTransientProp,
+})<{ $position?: ModalPosition }>(({ $position = "center" }) => ({
   outline: "none",
   display: "flex",
   flexDirection: "column",
   overflow: "visible",
-})
+  ...(isSideDrawer($position) && {
+    flex: 1,
+    minHeight: 0,
+    height: "100%",
+  }),
+}))
 
 /** Absolutely-positioned close (×) button in the top-right of the dialog. */
 export const StyledDialogClose = styled.button(({ theme }) => ({
@@ -124,10 +182,17 @@ export const StyledModalHeader = styled(Heading)(({ theme }) => ({
   flexShrink: 0,
 }))
 
-export const StyledModalBody = styled.div(({ theme }) => ({
+export const StyledModalBody = styled("div", {
+  shouldForwardProp: shouldForwardNonTransientProp,
+})<{ $position?: ModalPosition }>(({ theme, $position = "center" }) => ({
   padding: `${theme.spacing.md} ${theme.spacing.twoXL} ${theme.spacing.twoXL}`,
   color: theme.colors.bodyText,
   fontSize: theme.fontSizes.md,
+  ...(isSideDrawer($position) && {
+    flex: 1,
+    minHeight: 0,
+    overflowY: "auto",
+  }),
 }))
 
 export const StyledModalFooter = styled.div(({ theme }) => ({

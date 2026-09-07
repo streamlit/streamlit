@@ -301,6 +301,25 @@ describe("Dialog container", () => {
     )
   })
 
+  describe("dialog position", () => {
+    it.each([
+      { position: BlockProto.Dialog.DialogPosition.CENTER },
+      { position: BlockProto.Dialog.DialogPosition.LEFT },
+      { position: BlockProto.Dialog.DialogPosition.RIGHT },
+    ])("renders dialog when position is $position", ({ position }) => {
+      const props = getProps({ position })
+      render(
+        <Dialog {...props}>
+          <div>test</div>
+        </Dialog>
+      )
+
+      const modal = screen.getByRole("dialog")
+      expect(modal).toBeVisible()
+      expect(screen.getByText("test")).toBeVisible()
+    })
+  })
+
   describe("keyboard handling", () => {
     it("prevents R keydown from triggering rerun when dialog is non-dismissible", () => {
       const props = getProps({ dismissible: false })

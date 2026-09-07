@@ -2228,6 +2228,10 @@ class DialogTest(DeltaGeneratorTestCase):
         assert not dialog_block.add_block.dialog.is_open
         assert dialog_block.add_block.dialog.dismissible
         assert not dialog_block.add_block.dialog.id
+        assert (
+            dialog_block.add_block.dialog.position
+            == BlockProto.Dialog.DialogPosition.CENTER
+        )
 
     @parameterized.expand(
         [
@@ -2246,6 +2250,26 @@ class DialogTest(DeltaGeneratorTestCase):
             pass
         dialog_block = self.get_delta_from_queue()
         assert dialog_block.add_block.dialog.width == expected_width
+
+    @parameterized.expand(
+        [
+            ("center", BlockProto.Dialog.DialogPosition.CENTER),
+            ("left", BlockProto.Dialog.DialogPosition.LEFT),
+            ("right", BlockProto.Dialog.DialogPosition.RIGHT),
+        ]
+    )
+    def test_dialog_position(
+        self,
+        position: str,
+        expected_position: BlockProto.Dialog.DialogPosition.ValueType,
+    ):
+        """Test that the dialog position parameter maps to the proto enum."""
+        dialog = st._main._dialog(DialogTest.title, position=position)
+        with dialog:
+            # No content so that 'get_delta_from_queue' returns the dialog.
+            pass
+        dialog_block = self.get_delta_from_queue()
+        assert dialog_block.add_block.dialog.position == expected_position
 
     def test_dialog_sets_icon(self):
         """Test that the dialog icon is propagated."""
@@ -2268,6 +2292,21 @@ class DialogTest(DeltaGeneratorTestCase):
         deltas = self.get_all_deltas_from_queue()
         assert any(
             delta.add_block.dialog.icon == "✅"
+            for delta in deltas
+            if delta.HasField("add_block") and delta.add_block.HasField("dialog")
+        )
+
+    def test_dialog_decorator_sets_position(self):
+        """Test that the dialog decorator propagates the position."""
+
+        @st.dialog("With position", position="left")
+        def test_dialog():
+            st.write("content")
+
+        test_dialog()
+        deltas = self.get_all_deltas_from_queue()
+        assert any(
+            delta.add_block.dialog.position == BlockProto.Dialog.DialogPosition.LEFT
             for delta in deltas
             if delta.HasField("add_block") and delta.add_block.HasField("dialog")
         )
@@ -2434,6 +2473,18 @@ class DialogTest(DeltaGeneratorTestCase):
             test_dialog()
 
         assert "Invalid `on_dismiss` value" in str(exc_info.value)
+
+    def test_dialog_decorator_invalid_position(self):
+        """Test dialog decorator with invalid position raises error"""
+        with pytest.raises(StreamlitValueError) as exc_info:
+
+            @dialog_decorator("Test Dialog", position="top")
+            def test_dialog():
+                pass
+
+            test_dialog()
+
+        assert "Invalid `position` value" in str(exc_info.value)
 
     def test_dialog_on_dismiss_rerun(self):
         """Test that the dialog decorator with on_dismiss='rerun'."""
