@@ -28,7 +28,6 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_form_button,
     click_toggle,
-    expect_font,
     expect_help_tooltip,
     expect_markdown,
     expect_prefixed_markdown,
@@ -275,15 +274,18 @@ def test_slider_with_float_formatting(app: Page, assert_snapshot: ImageCompareFu
     reset_hovering(app)
     reset_focus(app)
     expect(app.get_by_text("Slider 11: 0.8")).to_be_visible()
-    # Wait for the tick bar (min/max labels) to fully fade out (transition: 300ms + 200ms delay)
-    # so the snapshot is stable and not captured mid-transition.
+    # Assert the formatted label directly. This, not the snapshot, is what pins
+    # down `format="%f%%"`: the markdown above only shows the raw value (0.8).
+    expect(slider.get_by_test_id("stSliderThumbValue")).to_have_text("0.8%")
+    # The tick bar's opacity flips instantly (it has no transition), so this just
+    # confirms reset_hovering above actually took effect before we snapshot.
     expect(slider.get_by_test_id("stSliderTickBar")).to_have_css("opacity", "0")
-    # The "0.8%" thumb value label only renders after this interaction, so on a
-    # cold page load it can be captured before the "Source Sans" web font finishes
-    # loading (flash-of-fallback-text). Wait for the font to avoid a snapshot flake
-    # where only the value label differs.
-    expect_font(app, "Source Sans")
-    assert_snapshot(slider, name="st_slider-float_formatting")
+    # The thumb value label is positioned at a fractional offset, so its glyphs
+    # can snap to either of two adjacent pixel rows. That 1px shift measures
+    # 116px (0.239%) on this 704x69 element, just over the 0.002 default. 0.003
+    # (145px) absorbs it while still failing a 2px shift (147px) or a retained
+    # focus ring (187px).
+    assert_snapshot(slider, name="st_slider-float_formatting", image_threshold=0.003)
 
 
 def test_check_top_level_class(app: Page):
