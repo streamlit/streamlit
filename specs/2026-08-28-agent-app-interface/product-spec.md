@@ -599,9 +599,15 @@ This is a new programmatic execution surface and needs an explicit review.
 - **Validate semantically, then serialize.** Never accept a raw `BackMsg`, element ID,
   delta path, fragment ID, or `WidgetState` protobuf. Reject stale, disabled, removed,
   out-of-range, cross-form, and oversized requests atomically, before any callback runs.
-  General server-side validation of currently browser-enforced widget constraints
-  ([#16203](https://github.com/streamlit/streamlit/issues/16203)) should land with or
-  before this; the agent boundary is not a substitute for defense in depth.
+  Note that this makes the agent path *stricter* than the WebSocket path, where several
+  constraints are still only browser-enforced
+  ([#16203](https://github.com/streamlit/streamlit/issues/16203)). That gap is
+  pre-existing and already reachable by anyone scripting the WebSocket, so this interface
+  neither creates nor widens it, and closing it is not a prerequisite. It is still worth
+  investing in: two validation implementations will drift, and the per-element validators
+  defined here are the natural foundation for doing it runtime-wide. Meanwhile the
+  guidance for authors is unchanged — a widget's range or option list is a UI affordance,
+  not an access control, so anything that actually matters belongs in app code.
 - **Preserve the existing output boundary.** Expose only content already emitted to this
   session's client, with the same error redaction. No secrets, session state, Python
   values, local paths, or source.
