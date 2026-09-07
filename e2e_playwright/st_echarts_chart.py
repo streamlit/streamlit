@@ -400,8 +400,9 @@ with st.expander("Chart in expander", expanded=False):
             height=_HEIGHT,
         )
 
-# 14) A selection chart inside a form. ``clear_on_submit=True`` so submit both
-#     delivers the pending selection and then clears it.
+# 14) A selection chart inside a form. ``clear_on_submit=True`` so submit
+#     delivers the pending selection and then clears the overlay (Python still
+#     reports the last submitted value until the next submit).
 with st.form("echarts_form", clear_on_submit=True):
     form_event = st.echarts_chart(
         {

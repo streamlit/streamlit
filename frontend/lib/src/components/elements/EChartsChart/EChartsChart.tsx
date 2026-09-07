@@ -279,7 +279,7 @@ export function EChartsChart({
     restoreSelection,
     onFormCleared,
     prunePixelOnlyBrushAfterResize,
-  } = useEChartsSelections(element, widgetMgr, fragmentId, disabled)
+  } = useEChartsSelections(element, widgetMgr, fragmentId, disabled, option)
 
   // The option handed to setOption: Streamlit theme defaults, plus a
   // non-pointer series cursor on display-only charts so they do not look
@@ -621,6 +621,7 @@ export function EChartsChart({
                   className="stEChartsChart"
                   data-testid="stEChartsChart"
                   aria-busy={!hasRendered && renderError === null}
+                  isDisabled={disabled}
                 />
                 {renderError !== null && (
                   <StyledEChartsErrorOverlay

@@ -679,188 +679,194 @@ describe("useEChartsSelections", () => {
     )
   })
 
-  it("tracks graph node and edge actions as independent data types", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
-    const chart = createFakeChart()
-    chart.getOption.mockReturnValue({
-      series: [
-        {
-          id: "network",
-          name: "Network",
-          type: "graph",
-          selectedMode: "multiple",
-          data: [{ id: "a" }, { id: "b" }],
-          links: [{ source: "a", target: "b" }],
-        },
-      ],
-    })
-    act(() => {
-      result.current.bindSelections(chart)
-      chart.trigger("selectchanged", {
-        fromAction: "select",
-        fromActionPayload: {
-          seriesIndex: 0,
-          dataType: "node",
-          dataIndexInside: 0,
-        },
-        // ECharts repeats its shared internal selection map for both types.
-        selected: [
-          { seriesIndex: 0, dataType: "node", dataIndex: [0] },
-          { seriesIndex: 0, dataType: "edge", dataIndex: [0] },
+  it.each(["graph", "sankey"] as const)(
+    "tracks %s node and edge actions as independent data types",
+    seriesType => {
+      const { result } = renderHook(() =>
+        useEChartsSelections(createElement(), widgetMgr)
+      )
+      const chart = createFakeChart()
+      chart.getOption.mockReturnValue({
+        series: [
+          {
+            id: "network",
+            name: "Network",
+            type: seriesType,
+            selectedMode: "multiple",
+            data: [{ id: "a" }, { id: "b" }],
+            links: [{ source: "a", target: "b" }],
+          },
         ],
       })
-    })
-    flush()
+      act(() => {
+        result.current.bindSelections(chart)
+        chart.trigger("selectchanged", {
+          fromAction: "select",
+          fromActionPayload: {
+            seriesIndex: 0,
+            dataType: "node",
+            dataIndexInside: 0,
+          },
+          // ECharts repeats its shared internal selection map for both types.
+          selected: [
+            { seriesIndex: 0, dataType: "node", dataIndex: [0] },
+            { seriesIndex: 0, dataType: "edge", dataIndex: [0] },
+          ],
+        })
+      })
+      flush()
 
-    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
-    expectSelectionWrite(
-      [
-        {
-          series_index: 0,
-          series_id: "network",
-          series_name: "Network",
-          data_type: "node",
-          data_indices: [0],
-        },
-      ],
-      []
-    )
+      expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+      expectSelectionWrite(
+        [
+          {
+            series_index: 0,
+            series_id: "network",
+            series_name: "Network",
+            data_type: "node",
+            data_indices: [0],
+          },
+        ],
+        []
+      )
 
-    ;(widgetMgr.setStringValue as Mock).mockClear()
-    act(() => {
-      chart.trigger("selectchanged", {
-        fromAction: "select",
-        fromActionPayload: {
-          seriesIndex: 0,
-          dataType: "edge",
-          dataIndexInside: 1,
-        },
-        selected: [
-          { seriesIndex: 0, dataType: "node", dataIndex: [0, 1] },
-          { seriesIndex: 0, dataType: "edge", dataIndex: [0, 1] },
+      ;(widgetMgr.setStringValue as Mock).mockClear()
+      act(() => {
+        chart.trigger("selectchanged", {
+          fromAction: "select",
+          fromActionPayload: {
+            seriesIndex: 0,
+            dataType: "edge",
+            dataIndexInside: 1,
+          },
+          selected: [
+            { seriesIndex: 0, dataType: "node", dataIndex: [0, 1] },
+            { seriesIndex: 0, dataType: "edge", dataIndex: [0, 1] },
+          ],
+        })
+      })
+      flush()
+
+      expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+      expectSelectionWrite(
+        [
+          {
+            series_index: 0,
+            series_id: "network",
+            series_name: "Network",
+            data_type: "node",
+            data_indices: [0],
+          },
+          {
+            series_index: 0,
+            series_id: "network",
+            series_name: "Network",
+            data_type: "edge",
+            data_indices: [1],
+          },
+        ],
+        []
+      )
+
+      ;(widgetMgr.setStringValue as Mock).mockClear()
+      act(() => {
+        chart.trigger("selectchanged", {
+          fromAction: "unselect",
+          fromActionPayload: {
+            seriesIndex: 0,
+            dataType: "node",
+            dataIndexInside: 0,
+          },
+          selected: [
+            { seriesIndex: 0, dataType: "node", dataIndex: [1] },
+            { seriesIndex: 0, dataType: "edge", dataIndex: [1] },
+          ],
+        })
+      })
+      flush()
+
+      expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+      expectSelectionWrite(
+        [
+          {
+            series_index: 0,
+            series_id: "network",
+            series_name: "Network",
+            data_type: "edge",
+            data_indices: [1],
+          },
+        ],
+        []
+      )
+    }
+  )
+
+  it.each(["graph", "sankey"] as const)(
+    "replaces the previous %s data type in single-selection mode",
+    seriesType => {
+      const { result } = renderHook(() =>
+        useEChartsSelections(createElement(), widgetMgr)
+      )
+      const chart = createFakeChart()
+      chart.getOption.mockReturnValue({
+        series: [
+          {
+            type: seriesType,
+            selectedMode: "single",
+            data: [{ id: "a" }],
+            links: [{ source: "a", target: "a" }],
+          },
         ],
       })
-    })
-    flush()
-
-    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
-    expectSelectionWrite(
-      [
-        {
-          series_index: 0,
-          series_id: "network",
-          series_name: "Network",
-          data_type: "node",
-          data_indices: [0],
-        },
-        {
-          series_index: 0,
-          series_id: "network",
-          series_name: "Network",
-          data_type: "edge",
-          data_indices: [1],
-        },
-      ],
-      []
-    )
-
-    ;(widgetMgr.setStringValue as Mock).mockClear()
-    act(() => {
-      chart.trigger("selectchanged", {
-        fromAction: "unselect",
-        fromActionPayload: {
-          seriesIndex: 0,
-          dataType: "node",
-          dataIndexInside: 0,
-        },
-        selected: [
-          { seriesIndex: 0, dataType: "node", dataIndex: [1] },
-          { seriesIndex: 0, dataType: "edge", dataIndex: [1] },
-        ],
+      act(() => {
+        result.current.bindSelections(chart)
+        chart.trigger("selectchanged", {
+          fromAction: "select",
+          fromActionPayload: {
+            seriesIndex: 0,
+            dataType: "node",
+            dataIndexInside: 0,
+          },
+          selected: [
+            { seriesIndex: 0, dataType: "node", dataIndex: [0] },
+            { seriesIndex: 0, dataType: "edge", dataIndex: [0] },
+          ],
+        })
       })
-    })
-    flush()
+      flush()
+      ;(widgetMgr.setStringValue as Mock).mockClear()
 
-    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
-    expectSelectionWrite(
-      [
-        {
-          series_index: 0,
-          series_id: "network",
-          series_name: "Network",
-          data_type: "edge",
-          data_indices: [1],
-        },
-      ],
-      []
-    )
-  })
-
-  it("replaces the previous graph data type in single-selection mode", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
-    const chart = createFakeChart()
-    chart.getOption.mockReturnValue({
-      series: [
-        {
-          type: "graph",
-          selectedMode: "single",
-          data: [{ id: "a" }],
-          links: [{ source: "a", target: "a" }],
-        },
-      ],
-    })
-    act(() => {
-      result.current.bindSelections(chart)
-      chart.trigger("selectchanged", {
-        fromAction: "select",
-        fromActionPayload: {
-          seriesIndex: 0,
-          dataType: "node",
-          dataIndexInside: 0,
-        },
-        selected: [
-          { seriesIndex: 0, dataType: "node", dataIndex: [0] },
-          { seriesIndex: 0, dataType: "edge", dataIndex: [0] },
-        ],
+      act(() => {
+        chart.trigger("selectchanged", {
+          fromAction: "select",
+          fromActionPayload: {
+            seriesIndex: 0,
+            dataType: "edge",
+            dataIndexInside: 0,
+          },
+          selected: [
+            { seriesIndex: 0, dataType: "node", dataIndex: [0] },
+            { seriesIndex: 0, dataType: "edge", dataIndex: [0] },
+          ],
+        })
       })
-    })
-    flush()
-    ;(widgetMgr.setStringValue as Mock).mockClear()
+      flush()
 
-    act(() => {
-      chart.trigger("selectchanged", {
-        fromAction: "select",
-        fromActionPayload: {
-          seriesIndex: 0,
-          dataType: "edge",
-          dataIndexInside: 0,
-        },
-        selected: [
-          { seriesIndex: 0, dataType: "node", dataIndex: [0] },
-          { seriesIndex: 0, dataType: "edge", dataIndex: [0] },
+      expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+      expectSelectionWrite(
+        [
+          {
+            series_index: 0,
+            series_id: null,
+            series_name: null,
+            data_type: "edge",
+            data_indices: [0],
+          },
         ],
-      })
-    })
-    flush()
-
-    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
-    expectSelectionWrite(
-      [
-        {
-          series_index: 0,
-          series_id: null,
-          series_name: null,
-          data_type: "edge",
-          data_indices: [0],
-        },
-      ],
-      []
-    )
-  })
+        []
+      )
+    }
+  )
 
   it("uses graph node and edge lengths for whole-series selection", () => {
     const { result } = renderHook(() =>
@@ -1460,6 +1466,146 @@ describe("useEChartsSelections", () => {
         },
       }),
       { formId: "", fragmentId: undefined, fromUser: false }
+    )
+  })
+
+  it("commits a delayed prune snapshot after a throttled brushSelected", () => {
+    const mixed = createBrushSelection({
+      brushId: "brush-0",
+      brushIndex: 0,
+      areas: [
+        {
+          brushType: "rect",
+          range: [
+            [10, 20],
+            [30, 40],
+          ],
+        },
+        { brushType: "lineX", coordRange: [1, 3] },
+      ],
+      selected: selectedWithMainHits([9, 1]),
+    })
+    const remaining = createBrushSelection({
+      brushId: "brush-0",
+      brushIndex: 0,
+      areas: [{ brushType: "lineX", coordRange: [1, 3] }],
+      selected: selectedWithMainHits([1]),
+    })
+    widgetMgr.getElementState.mockImplementation(
+      (_id: string, key: string) => {
+        if (key === "brushSelection") {
+          return [mixed]
+        }
+        if (key === "selectedPoints") {
+          return []
+        }
+        return undefined
+      }
+    )
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+    const chart = createFakeChart()
+
+    act(() => {
+      result.current.bindSelections(chart)
+      result.current.prunePixelOnlyBrushAfterResize(chart)
+    })
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    ;(widgetMgr.setStringValue as Mock).mockClear()
+
+    act(() => {
+      chart.trigger("brushSelected", { batch: [remaining] })
+    })
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      "chart-id",
+      JSON.stringify({
+        selection: {
+          selected: [
+            {
+              series_index: 0,
+              series_id: null,
+              series_name: null,
+              data_type: "main",
+              data_indices: [1],
+            },
+          ],
+          areas: [
+            {
+              brush_index: 0,
+              brush_type: "lineX",
+              coord_range: [1, 3],
+            },
+          ],
+        },
+      }),
+      { formId: "", fragmentId: undefined, fromUser: false }
+    )
+  })
+
+  it("routes a form prune write through the pending form dict", () => {
+    const mixed = createBrushSelection({
+      brushId: "brush-0",
+      brushIndex: 0,
+      areas: [
+        {
+          brushType: "rect",
+          range: [
+            [10, 20],
+            [30, 40],
+          ],
+        },
+        { brushType: "lineX", coordRange: [1, 3] },
+      ],
+      selected: selectedWithMainHits([1]),
+    })
+    widgetMgr.getElementState.mockImplementation(
+      (_id: string, key: string) => {
+        if (key === "brushSelection") {
+          return [mixed]
+        }
+        if (key === "selectedPoints") {
+          return []
+        }
+        return undefined
+      }
+    )
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement("chart-id", "form-id"), widgetMgr)
+    )
+    const chart = createFakeChart()
+
+    act(() => {
+      result.current.bindSelections(chart)
+      result.current.prunePixelOnlyBrushAfterResize(chart)
+    })
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      "chart-id",
+      JSON.stringify({
+        selection: {
+          selected: [
+            {
+              series_index: 0,
+              series_id: null,
+              series_name: null,
+              data_type: "main",
+              data_indices: [1],
+            },
+          ],
+          areas: [
+            {
+              brush_index: 0,
+              brush_type: "lineX",
+              coord_range: [1, 3],
+            },
+          ],
+        },
+      }),
+      { formId: "form-id", fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -2192,8 +2338,13 @@ describe("useEChartsSelections", () => {
     act(() => {
       result.current.bindSelections(chart)
       triggerBrushGesture(chart, brush)
+      chart.trigger("dblclick", {})
     })
     flush()
+    expect(chart.dispatchAction).not.toHaveBeenCalledWith({
+      type: "brush",
+      areas: [],
+    })
     ;(widgetMgr.setStringValue as Mock).mockClear()
     widgetMgr.getStringValue.mockReturnValue(
       JSON.stringify({
@@ -2327,7 +2478,7 @@ describe("useEChartsSelections", () => {
       2,
       "chart-id",
       JSON.stringify({ selection: { selected: [], areas: [] } }),
-      { formId: "form-id", fragmentId: undefined, fromUser: false }
+      { formId: "form-id", fragmentId: undefined, fromUser: true }
     )
     expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(2)
   })

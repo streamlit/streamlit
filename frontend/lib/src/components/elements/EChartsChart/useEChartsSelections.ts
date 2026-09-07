@@ -21,6 +21,7 @@ import { getLogger } from "loglevel"
 
 import { EChartsChart as EChartsChartProto } from "@streamlit/protobuf"
 
+import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { EChartsOptionObject, withDefaultSeriesCursor } from "./CustomTheme"
@@ -41,13 +42,6 @@ const BRUSH_SELECTION_STATE_KEY = "brushSelection"
  * re-applied visually after an option-replacing ``setOption`` or a remount.
  */
 const SELECTED_POINTS_STATE_KEY = "selectedPoints"
-
-/**
- * How long after a polygon lands its completing ``dblclick`` may still arrive.
- * The two fire in the same interaction, so this only has to outlast one event
- * turn — short enough that a deliberate double-click later still clears.
- */
-const POLYGON_COMPLETION_WINDOW_MS = 100
 
 /**
  * The shared selection-state contract serialized to the widget state. Keys are
@@ -312,7 +306,7 @@ function getGraphSeriesSelection(
 function normalizeNativeSelection(
   previous: SelectedEntry[],
   params: SelectChangedParams,
-  resolvedOption: Record<string, unknown> | null
+  getResolvedOption: () => Record<string, unknown> | null
 ): SelectedEntry[] {
   const payload = params.fromActionPayload
   const seriesIndex = payload?.seriesIndex
@@ -324,8 +318,11 @@ function normalizeNativeSelection(
   ) {
     return params.selected ?? []
   }
-  const seriesOption = getSeriesOption(resolvedOption, seriesIndex)
-  if (seriesOption?.type !== "graph") {
+  // Graph and Sankey (and any other linked node/edge series) share one
+  // internal selected-index map, so the snapshot repeats matching raw
+  // indices for both data types.
+  const seriesOption = getSeriesOption(getResolvedOption(), seriesIndex)
+  if (isNullOrUndefined(seriesOption)) {
     return params.selected ?? []
   }
 
@@ -627,7 +624,8 @@ export function useEChartsSelections(
   element: EChartsChartProto,
   widgetMgr: WidgetStateManager,
   fragmentId?: string,
-  disabled = false
+  disabled = false,
+  parsedOptionInput?: Record<string, unknown> | null
 ): UseEChartsSelectionsOutput {
   const chartId = element.id
   const formId = element.formId
@@ -637,8 +635,11 @@ export function useEChartsSelections(
   // remount identity, so a non-empty ID is not enough.
   const isSelectionActivated = element.selectionActivated && !disabled
   const parsedOption = useMemo(
-    () => parseOptionSpec(element.spec),
-    [element.spec]
+    () =>
+      parsedOptionInput !== undefined
+        ? parsedOptionInput
+        : parseOptionSpec(element.spec),
+    [parsedOptionInput, element.spec]
   )
   // Keep the parsed spec in a ref so bind/prune callbacks stay stable across
   // data-only updates (keyed live data, fragment reruns). Rebinding would
@@ -655,6 +656,9 @@ export function useEChartsSelections(
   // rerun cannot loop: ``restoreSelection`` runs while handlers are already
   // bound, and ECharts fires ``selectchanged`` for ``dispatchAction("select")``.
   const isRestoringRef = useRef(false)
+  // Programmatic ``brush`` dispatches still go through ECharts' throttle.
+  // A delayed ``brushSelected`` after prune must update widget state.
+  const awaitingPrunedBrushRef = useRef(false)
   const latestBrushSelectionRef = useRef<BrushSelection[]>([])
   const committedBrushSelectionRef = useRef<BrushSelection[]>([])
 
@@ -756,10 +760,7 @@ export function useEChartsSelections(
       const chart = chartRef.current
       if (chart) {
         // Programmatic unselect/brush-clear fire the same events as a user
-        // gesture. Suppress the emit so a form-clear's ``fromUser: false``
-        // committed write is not skipped: an event-driven empty write would
-        // land in the form dict first, and ``getStringValue`` would then
-        // treat the committed empty as a no-op.
+        // gesture. Suppress the emit so we write empty once via this path.
         isRestoringRef.current = true
         try {
           try {
@@ -791,15 +792,13 @@ export function useEChartsSelections(
   )
 
   const onFormCleared = useCallback((): void => {
-    // Form-clear writes empty into *committed* widget state (``fromUser:
-    // false``), unlike Plotly/Vega/basic widgets which clear with
-    // ``fromUser: true`` (pending only). After ``clear_on_submit``, the visual
-    // overlay is gone; committing empty keeps Python in sync on the next
-    // unrelated rerun instead of resurrecting the last submitted selection.
+    // Match Plotly/Vega/basic widgets: ``fromUser: true`` writes into the
+    // form's pending dict. Python keeps the last submitted selection until
+    // the next submit.
     if (clearBoundSelectionRef.current) {
-      clearBoundSelectionRef.current(false)
+      clearBoundSelectionRef.current()
     } else {
-      clearSelection(false)
+      clearSelection()
     }
   }, [clearSelection])
 
@@ -829,6 +828,7 @@ export function useEChartsSelections(
       // Programmatic ``brush`` dispatches would otherwise re-enter the bound
       // handlers (empty snapshots look like toolbox-clear). Restore-style
       // suppression keeps resize from emitting a user rerun.
+      awaitingPrunedBrushRef.current = true
       isRestoringRef.current = true
       try {
         for (const brush of current) {
@@ -863,23 +863,31 @@ export function useEChartsSelections(
           BRUSH_SELECTION_STATE_KEY,
           nextBrush
         )
+        awaitingPrunedBrushRef.current = false
       }
+      // Inside a form, route through the pending dict so resize does not
+      // commit a new value without submit. Outside a form, ``fromUser:
+      // false`` updates committed state without a user rerun.
       writeSelection(
         buildSelectionState(
           resolveSelectionOption(parsedOptionRef.current, chart),
           Array.isArray(nativeSelection) ? nativeSelection : [],
           nextBrush
         ),
-        false
+        Boolean(formId)
       )
     },
-    [chartId, isSelectionActivated, widgetMgr, writeSelection]
+    [chartId, formId, isSelectionActivated, widgetMgr, writeSelection]
   )
 
   const bindSelections = useCallback(
     (chart: EChartsSelectionInstance): (() => void) => {
       if (!isSelectionActivated) {
-        // Display-only charts bind nothing and emit nothing.
+        // Display-only charts bind nothing. A disabled selection widget still
+        // re-applies persisted overlay so in-chart edits cannot leak.
+        if (element.selectionActivated) {
+          restoreSelection(chart)
+        }
         return () => {}
       }
 
@@ -953,7 +961,7 @@ export function useEChartsSelections(
         const selected = normalizeNativeSelection(
           latestNativeSelection,
           params,
-          resolveLiveOption()
+          resolveLiveOption
         )
         latestNativeSelection = selected
         // Persist the dispatchable native selection so it can be re-applied
@@ -972,6 +980,26 @@ export function useEChartsSelections(
         const params = raw as BrushSelectedParams
         latestBrushSelectionRef.current = params.batch ?? []
         if (isRestoringRef.current) {
+          return
+        }
+        if (awaitingPrunedBrushRef.current) {
+          awaitingPrunedBrushRef.current = false
+          committedBrushSelectionRef.current = latestBrushSelectionRef.current
+          if (chartId) {
+            widgetMgr.setElementState(
+              chartId,
+              BRUSH_SELECTION_STATE_KEY,
+              latestBrushSelectionRef.current
+            )
+          }
+          writeSelection(
+            buildSelectionState(
+              resolveLiveOption(),
+              latestNativeSelection,
+              latestBrushSelectionRef.current
+            ),
+            Boolean(formId)
+          )
           return
         }
 
@@ -994,17 +1022,17 @@ export function useEChartsSelections(
         }
       }
 
-      let polygonCompletedAt = 0
+      let polygonJustCompleted = false
       let deferredClearTimer: ReturnType<typeof setTimeout> | undefined
 
       const handleBrushEnd = (raw: unknown): void => {
         const params = raw as BrushEndParams
         const areas = params.areas ?? []
-        // Completing a lasso is itself a double-click on zrender, so record
-        // when one landed and let the paired `dblclick` through without
-        // clearing. Only a *new* polygon arms this: with the polygon tool still
-        // active, double-clicking on top of a finished lasso re-commits the
-        // same areas, and re-arming on that would make the lasso impossible to
+        // Completing a lasso is itself a double-click on zrender. Arm a
+        // consume-once flag so the paired ``dblclick`` does not clear it.
+        // Only a *new* polygon arms this: with the polygon tool still active,
+        // double-clicking on top of a finished lasso re-commits the same
+        // areas, and re-arming on that would make the lasso impossible to
         // clear.
         const committedBrush = findBrushSelectionForEnd(
           committedBrushSelectionRef.current,
@@ -1019,7 +1047,7 @@ export function useEChartsSelections(
           areasChanged &&
           areas.some(area => area.brushType === "polygon")
         ) {
-          polygonCompletedAt = Date.now()
+          polygonJustCompleted = true
         }
         if (isRestoringRef.current) {
           return
@@ -1055,11 +1083,9 @@ export function useEChartsSelections(
         // eslint-disable-next-line no-restricted-globals -- Coalesce zr dblclick with ECharts polygon brushEnd; not a React render timer.
         deferredClearTimer = setTimeout(() => {
           deferredClearTimer = undefined
-          // Ignore only the double-click that completed a polygon. The window
-          // expires so a later, deliberate double-click still clears a lasso
-          // that was finished by dragging rather than double-clicking.
-          if (Date.now() - polygonCompletedAt < POLYGON_COMPLETION_WINDOW_MS) {
-            polygonCompletedAt = 0
+          // Ignore only the double-click that completed a polygon.
+          if (polygonJustCompleted) {
+            polygonJustCompleted = false
             return
           }
           clearBoundSelection()
@@ -1106,11 +1132,13 @@ export function useEChartsSelections(
     },
     [
       isSelectionActivated,
+      element.selectionActivated,
       chartId,
       formId,
       widgetMgr,
       writeSelection,
       clearSelection,
+      restoreSelection,
     ]
   )
 

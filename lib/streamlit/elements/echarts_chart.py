@@ -871,17 +871,18 @@ class EChartsMixin:
 
         key : str, int, or None
             An optional key that gives this element a stable identity. If this
-            is ``None`` (default), the chart's identity is determined by its
-            position in the app, so moving it can reset the chart and replay
-            its entry animation. When selections are activated, identity is
-            also determined by the other parameters, so any change to the
-            chart resets its selection.
+            is ``None`` (default) and the chart is display-only, identity
+            follows its position in the app, so moving it can reset the chart
+            and replay its entry animation. If this is ``None`` and selections
+            are activated, identity also includes the chart's parameters, so a
+            change to the spec, theme, renderer, or size resets the selection.
 
             If selections are activated and ``key`` is provided, Streamlit
             will register the key in Session State to store the selection
             state, and the selection survives changes to your ``spec``,
-            ``theme``, and ``renderer``. The selection state is read-only. For
-            more details, see `Widget behavior
+            ``theme``, and ``renderer``. Indices are not revalidated against
+            the new data, so check them before indexing. The selection state
+            is read-only. For more details, see `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
             If ``key`` is provided, it will be used as a CSS class name
@@ -917,11 +918,6 @@ class EChartsMixin:
             Selections are re-applied visually after reruns. If your ``spec``
             enables neither, the chart still renders but never returns a
             selection, and Streamlit logs a warning.
-
-            Inside a ``st.form`` with ``clear_on_submit=True``, Streamlit
-            clears the chart's committed selection after submit so the empty
-            overlay stays in sync with Python on a later rerun. Other form
-            widgets keep their last submitted value until the next submit.
 
         renderer : "canvas" or "svg"
             The renderer passed to ECharts. This can be one of the following:
