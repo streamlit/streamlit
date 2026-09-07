@@ -272,14 +272,14 @@ export default defineConfig([
       "no-debugger": "error",
       // Bug-class lock-ins not covered by eslint:recommended
       "no-self-compare": "error",
-      "no-return-assign": "error",
+      "no-return-assign": ["error", "always"],
       "no-sequences": "error",
       "no-template-curly-in-string": "error",
       "no-extend-native": "error",
-      // Complements the ForInStatement ban in no-restricted-syntax
+      // Safety net if the ForInStatement ban in no-restricted-syntax is relaxed
       "guard-for-in": "error",
       "default-case-last": "error",
-      // Complements the LabeledStatement ban in no-restricted-syntax
+      // Safety net if the LabeledStatement ban in no-restricted-syntax is relaxed
       "no-labels": "error",
       // Oxlint eslint/preserve-caught-error owns this check.
       "preserve-caught-error": "off",
@@ -502,8 +502,8 @@ export default defineConfig([
       "no-restricted-properties": getNoRestrictedProperties({
         includeUseTimeout: true,
       }),
-      // Implicit type="submit" is a real form-submit footgun in app source.
-      // Tests still use bare <button> as fixtures (~29 hits).
+      // Buttons without an explicit type submit their enclosing form by default.
+      // Tests still use <button> fixtures without type, so this stays production-only.
       "@eslint-react/dom-no-missing-button-type": "error",
     },
   },
