@@ -17,9 +17,13 @@ one: send JSON widget values, get back the finished app as a typed tree of conta
 and elements named after the public `st.*` API, plus the list of things it can do next.
 It is a second client of the execution model Streamlit already has, not a new one.
 
-v1 is deliberately one endpoint, and existing apps work with no code changes. The same
-operation serves two jobs that have no shared answer today: an agent verifying an app it
-just wrote, and an agent using a deployed app to answer a question.
+v1 is deliberately one endpoint, and existing apps work with no code changes. One
+representation then serves a range of things that have no shared answer today:
+interactive app testing, and semantic snapshots for both `AppTest` and browser e2e tests;
+talking to your app, whether from an outside assistant or a chat panel inside the app
+itself; treating apps as semantic models over data someone already explained. External
+tooling can build on the same observed app state for static HTML export and personalized
+email reports.
 
 ## Problem
 
@@ -185,7 +189,14 @@ agents is the half nobody owns.
    a user's behalf, reusing existing callbacks, validation, and auth.
 4. **Publish an app as a tool.** Expose a deployed app to an assistant or orchestration
    system without writing a parallel API.
-5. **Fall back deliberately.** Detect a browser-only element and hand off to browser
+5. **Add a conversational interface to your own app.** An author drops in `st.chat_input`
+   and hands the question to an agent that reads the app through this interface, so
+   "which region dropped?" is answered from the app's own numbers and definitions. This
+   needs nothing beyond v1, since the agent runs server-side and calls loopback. Two
+   caveats: it gets its own session, so it reports rather than changing what the human is
+   looking at; and it does not inherit the asking user's identity unless the deployment
+   maps it, which matters in an app with per-user data access.
+6. **Fall back deliberately.** Detect a browser-only element and hand off to browser
    automation instead of silently returning incomplete output.
 
 ## Proposal
@@ -599,7 +610,7 @@ This is a new programmatic execution surface and needs an explicit review.
 - **Validate semantically, then serialize.** Never accept a raw `BackMsg`, element ID,
   delta path, fragment ID, or `WidgetState` protobuf. Reject stale, disabled, removed,
   out-of-range, cross-form, and oversized requests atomically, before any callback runs.
-  Note that this makes the agent path *stricter* than the WebSocket path, where several
+  Note that this makes the agent path _stricter_ than the WebSocket path, where several
   constraints are still only browser-enforced
   ([#16203](https://github.com/streamlit/streamlit/issues/16203)). That gap is
   pre-existing and already reachable by anyone scripting the WebSocket, so this interface
