@@ -3472,7 +3472,7 @@ __metadata:
     unist-util-visit: "npm:^5.1.0"
     urlpattern-polyfill: "npm:^10.1.0"
     vega: "npm:^6.4.0"
-    vega-embed: "npm:^7.1.0"
+    vega-embed: "npm:^7.2.0"
     vega-interpreter: "npm:^2.3.2"
     vega-lite: "npm:6.4.3"
     vfile: "npm:^6.0.0"
@@ -13577,12 +13577,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"semver@npm:^7.3.5, semver@npm:^7.5.3, semver@npm:^7.7.0, semver@npm:^7.7.1, semver@npm:^7.7.2, semver@npm:^7.7.3":
-  version: 7.7.4
-  resolution: "semver@npm:7.7.4"
+"semver@npm:^7.3.5, semver@npm:^7.5.3, semver@npm:^7.7.0, semver@npm:^7.7.1, semver@npm:^7.7.2, semver@npm:^7.7.3, semver@npm:^7.8.5":
+  version: 7.8.5
+  resolution: "semver@npm:7.8.5"
   bin:
     semver: bin/semver.js
-  checksum: 10c0/5215ad0234e2845d4ea5bb9d836d42b03499546ddafb12075566899fc617f68794bb6f146076b6881d755de17d6c6cc73372555879ec7dce2c2feee947866ad2
+  checksum: 10c0/b1f3127a5be8125a94f37188b361c212466c292c6910adce3ec106cff5dc211ccaedc4739c11bb70fda59d6fc1f040a9bca289f4e093451521a2372e5231fe0c
   languageName: node
   linkType: hard
 
@@ -15028,22 +15028,22 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vega-embed@npm:^7.1.0":
-  version: 7.1.0
-  resolution: "vega-embed@npm:7.1.0"
+"vega-embed@npm:^7.2.0":
+  version: 7.2.0
+  resolution: "vega-embed@npm:7.2.0"
   dependencies:
     fast-json-patch: "npm:^3.1.1"
     json-stringify-pretty-compact: "npm:^4.0.0"
-    semver: "npm:^7.7.2"
+    semver: "npm:^7.8.5"
     tslib: "npm:^2.8.1"
-    vega-interpreter: "npm:^2.0.0"
+    vega-interpreter: "npm:^2.3.2"
     vega-schema-url-parser: "npm:^3.0.2"
     vega-themes: "npm:3.0.0"
-    vega-tooltip: "npm:1.0.0"
+    vega-tooltip: "npm:1.1.0"
   peerDependencies:
     vega: "*"
     vega-lite: "*"
-  checksum: 10c0/d51d26ca7e457693b4e609995e9cb4d28c4df72865baa23cdd5fe80a7a981d8234ac6307c4c312d4166d58ca83ea7e5a520a19f352806d9a79bf06fbadd7543e
+  checksum: 10c0/406d0249c788d971b3b8f1b94154d086962a523ce0080750fb94ed5b66bb4faf0b6de6a57a2818a6eb3caf1227672defcb49ddc6946701c7912fbb524b92ca92
   languageName: node
   linkType: hard
 
@@ -15158,7 +15158,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vega-interpreter@npm:^2.0.0, vega-interpreter@npm:^2.3.2":
+"vega-interpreter@npm:^2.3.2":
   version: 2.3.2
   resolution: "vega-interpreter@npm:2.3.2"
   dependencies:
@@ -15334,12 +15334,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vega-tooltip@npm:1.0.0":
-  version: 1.0.0
-  resolution: "vega-tooltip@npm:1.0.0"
+"vega-tooltip@npm:1.1.0":
+  version: 1.1.0
+  resolution: "vega-tooltip@npm:1.1.0"
   dependencies:
-    vega-util: "npm:^2.0.0"
-  checksum: 10c0/f96c908f3981d35257c2577e68b2ed2989b7a075cb3375ff003673035f9f67cbc1bd18fe7a788aca3c51ff65534cd2c3355efff227454d29cd1e84ecca361948
+    vega-util: "npm:^2.1.0"
+  checksum: 10c0/ea07d63a30da9c3adaa25d6e7b3477f2becd89e80da04465e53586672ef4493894f43f0138b64e8f42e1f34fc8caf501094715dc6c15244386ed0391cb0c0968
   languageName: node
   linkType: hard
 
@@ -15368,7 +15368,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vega-util@npm:^2.0.0, vega-util@npm:^2.1.0, vega-util@npm:^2.1.3, vega-util@npm:~2.1.0, vega-util@npm:~2.1.3":
+"vega-util@npm:^2.1.0, vega-util@npm:^2.1.3, vega-util@npm:~2.1.0, vega-util@npm:~2.1.3":
   version: 2.1.3
   resolution: "vega-util@npm:2.1.3"
   checksum: 10c0/9c89f20439c63252f0bd5af3a2019c7c00fedf8f9a1d72e4bca36114ce5616c07f661009187244f351b2096df2cbf78c21e11709c469a7c632811e0a807f007c
