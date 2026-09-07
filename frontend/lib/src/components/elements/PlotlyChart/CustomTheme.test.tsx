@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+import { getLogger } from "loglevel"
+import { vi } from "vitest"
+
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { getGray70 } from "~lib/theme/getColors"
 
@@ -121,16 +124,71 @@ describe("PlotlyChart CustomTheme", () => {
       expect(spec.layout.template.layout).toHaveProperty("paper_bgcolor")
     })
 
-    it("handles missing template gracefully", () => {
-      const spec = {
+    it("bolds layout.title when it is a plain string", () => {
+      const spec: Record<string, unknown> = {
         layout: {
-          title: { text: "My Chart" },
-          // missing template
+          title: "My Chart",
+          template: {
+            layout: {},
+          },
         },
       }
 
-      // Should not throw
+      applyStreamlitTheme(spec, theme)
+
+      expect((spec.layout as { title: { text: string } }).title.text).toBe(
+        "<b>My Chart</b>"
+      )
+    })
+
+    it("creates a template when missing so Streamlit colors still apply", () => {
+      const errorSpy = vi
+        .spyOn(getLogger("PlotlyChart:CustomTheme"), "error")
+        .mockImplementation(() => {})
+      const spec: Record<string, unknown> = {
+        layout: {
+          title: { text: "My Chart" },
+          // missing template — raw figure JSON / plotly.js v4 defaults
+        },
+      }
+
       expect(() => applyStreamlitTheme(spec, theme)).not.toThrow()
+      const layout = spec.layout as {
+        title: { text: string }
+        template: { layout: { paper_bgcolor: string; plot_bgcolor: string } }
+      }
+      expect(layout.title.text).toBe("<b>My Chart</b>")
+      expect(layout.template.layout.paper_bgcolor).toBe(theme.colors.bgColor)
+      expect(layout.template.layout.plot_bgcolor).toBe(theme.colors.bgColor)
+      expect(errorSpy).not.toHaveBeenCalled()
+
+      errorSpy.mockRestore()
+    })
+
+    it("replaces a named string template with Streamlit layout colors", () => {
+      const spec: Record<string, unknown> = {
+        layout: {
+          template: "plotly",
+        },
+      }
+
+      applyStreamlitTheme(spec, theme)
+
+      const layout = spec.layout as {
+        template: { layout: { paper_bgcolor: string } }
+      }
+      expect(layout.template.layout.paper_bgcolor).toBe(theme.colors.bgColor)
+    })
+
+    it("creates layout and template when both are missing", () => {
+      const spec: Record<string, unknown> = {}
+
+      applyStreamlitTheme(spec, theme)
+
+      const layout = spec.layout as {
+        template: { layout: { paper_bgcolor: string } }
+      }
+      expect(layout.template.layout.paper_bgcolor).toBe(theme.colors.bgColor)
     })
 
     it("scrubs sankey template textfont.color when user set layout.font.color", () => {

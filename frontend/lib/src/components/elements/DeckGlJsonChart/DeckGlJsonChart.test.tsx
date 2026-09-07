@@ -26,6 +26,7 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { DeckGlJsonChart } from "./DeckGlJsonChart"
 import type { DeckGlElementState, DeckGLProps } from "./types"
+import { PYDECK_UNSET_MAP_STYLE } from "./utils/mapShell"
 
 type MockPickingInfo = {
   index: number
@@ -80,9 +81,10 @@ vi.mock("~lib/theme/getColors", async () => ({
 
 const getProps = (
   elementProps: Partial<DeckGlJsonChartProto> = {},
-  initialViewStateProps: Record<string, unknown> = {}
+  initialViewStateProps: Record<string, unknown> = {},
+  jsonOverrides: Record<string, unknown> = {}
 ): DeckGLProps => {
-  const json = {
+  const json: Record<string, unknown> = {
     initialViewState: mockInitialViewState,
     layers: [
       {
@@ -100,10 +102,11 @@ const getProps = (
     ],
     mapStyle: "mapbox://styles/mapbox/light-v9",
     views: [{ "@@type": "MapView", controller: true }],
+    ...jsonOverrides,
   }
 
   json.initialViewState = {
-    ...json.initialViewState,
+    ...(json.initialViewState as Record<string, unknown>),
     ...initialViewStateProps,
   }
 
@@ -127,6 +130,44 @@ describe("DeckGlJsonChart", () => {
     const element = screen.getByTestId("stDeckGlJsonChart")
     expect(element).toBeVisible()
     expect(element).toHaveClass("stDeckGlJsonChart")
+  })
+
+  describe("basemap chrome", () => {
+    it.each([
+      { name: "MapView", extra: {} },
+      {
+        name: "unknown view type",
+        extra: { views: [{ "@@type": "NotARealView", controller: true }] },
+      },
+    ])("shows zoom for $name", async ({ extra }) => {
+      render(<DeckGlJsonChart {...getProps({}, {}, extra)} />)
+      await waitFor(() => {
+        expect(screen.getByTestId("mockDeckGL")).toBeVisible()
+      })
+      expect(screen.getByTestId("stDeckGlJsonChartZoomButton")).toBeVisible()
+      expect(screen.getByTitle("Zoom In")).toBeVisible()
+    })
+
+    it.each([
+      { name: "unset sentinel", extra: { mapStyle: PYDECK_UNSET_MAP_STYLE } },
+      {
+        name: "OrbitView",
+        extra: {
+          views: [{ "@@type": "OrbitView", controller: true }],
+          mapStyle: PYDECK_UNSET_MAP_STYLE,
+          initialViewState: { target: [0, 0, 0], zoom: 5 },
+        },
+      },
+    ])("hides zoom for $name", async ({ extra }) => {
+      render(<DeckGlJsonChart {...getProps({}, {}, extra)} />)
+      await waitFor(() => {
+        expect(screen.getByTestId("mockDeckGL")).toBeVisible()
+      })
+      expect(
+        screen.queryByTestId("stDeckGlJsonChartZoomButton")
+      ).not.toBeInTheDocument()
+      expect(screen.queryByTitle("Zoom In")).not.toBeInTheDocument()
+    })
   })
 
   it.each([

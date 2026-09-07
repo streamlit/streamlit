@@ -1874,8 +1874,9 @@ describe("App", () => {
     it("does not override the pathname when resetting query params", () => {
       renderApp(getProps())
       const pathname = "/foo/bar/"
-      // Set the value of document.location.pathname to pathname.
-      window.history.pushState({}, "", pathname)
+      // Seed a query string so that resetting it is an actual URL change.
+      window.history.pushState({}, "", `${pathname}?flying=spaghetti`)
+      pushStateSpy.mockClear()
 
       sendForwardMessage("pageInfoChanged", {
         queryString: "",
@@ -1886,8 +1887,9 @@ describe("App", () => {
 
     it("resets query params as expected when at the root pathname", () => {
       renderApp(getProps())
-      // Note: One would typically set the value of document.location.pathname to '/' here,
-      // However, this is already taking place in beforeEach().
+      // Seed a query string so that resetting it is an actual URL change.
+      window.history.pushState({}, "", "/?flying=spaghetti")
+      pushStateSpy.mockClear()
 
       sendForwardMessage("pageInfoChanged", {
         queryString: "",
@@ -1909,6 +1911,50 @@ describe("App", () => {
 
       const expectedUrl = `/?${queryString}`
       expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", expectedUrl)
+    })
+
+    it("does not push history when the query string is unchanged", () => {
+      renderApp(getProps())
+      const queryString = "flying=spaghetti&monster=omg"
+      window.history.pushState({}, "", `/?${queryString}`)
+      pushStateSpy.mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString,
+      })
+
+      expect(pushStateSpy).not.toHaveBeenCalled()
+    })
+
+    it("does not push history when resetting already-empty query params", () => {
+      renderApp(getProps())
+      pushStateSpy.mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "",
+      })
+
+      expect(pushStateSpy).not.toHaveBeenCalled()
+    })
+
+    it("still sends SET_QUERY_PARAM to the host when the query string is unchanged", () => {
+      renderApp(getProps())
+      const queryString = "flying=spaghetti&monster=omg"
+      window.history.pushState({}, "", `/?${queryString}`)
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      ;(hostCommunicationMgr.sendMessageToHost as Mock).mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString,
+      })
+
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "SET_QUERY_PARAM",
+        queryParams: `?${queryString}`,
+      })
     })
   })
 

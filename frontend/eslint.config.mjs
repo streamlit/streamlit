@@ -93,11 +93,26 @@ export const getNoRestrictedImports = (
           message: "Test utilities must stay in test files.",
         },
       ]
+
+  // Only protobufjs' minimal runtime (Reader/Writer/util) belongs in the app
+  // bundle, which is what the generated proto code already imports. The full
+  // entry point adds the reflection layer and the .proto parser, and
+  // `protobufjs/light` still ships the reflection layer. Matched as a pattern
+  // rather than by name so deep and extensioned specifiers cannot slip past.
+  // Note that `protobufjs/minimal.d.ts` re-exports the full typings, so
+  // reflection classes like `Root` type-check when imported from
+  // `protobufjs/minimal` but are undefined at runtime.
+  const restrictedProtobufjs = {
+    regex: "^protobufjs$|^protobufjs/(?!minimal(\\.js)?$)",
+    message:
+      "Please import from `protobufjs/minimal` to keep the reflection layer and .proto parser out of the bundle.",
+  }
+
   return [
     "error",
     {
       paths: [...basePaths],
-      patterns: [...additionalPatterns],
+      patterns: [...additionalPatterns, restrictedProtobufjs],
     },
   ]
 }

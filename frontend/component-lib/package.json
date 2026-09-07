@@ -62,7 +62,7 @@
     "typescript": "^6.0.3",
     "typesync": "^0.14.3",
     "vite": "^8.2.2",
-    "vite-plugin-dts": "^5.0.3",
+    "vite-plugin-dts": "^5.1.0",
     "vitest": "^4.1.11"
   },
   "packageManager": "yarn@4.13.0"

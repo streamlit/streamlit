@@ -51,7 +51,17 @@ import {
   getContextualFillColor,
   LAYER_TYPE_TO_FILL_FUNCTION,
 } from "./utils/colors"
-import { jsonConverter } from "./utils/jsonConverter"
+import { convertDeckJson } from "./utils/jsonConverter"
+import {
+  getProvidedViews,
+  isMapCompatibleViewSpec,
+  PYDECK_UNSET_MAP_STYLE,
+  sanitizeDeckParameters,
+  withDefaultMapViewIds,
+} from "./utils/mapShell"
+
+// Manually created by Carto for Streamlit stats only — not a paid/secure key.
+const CARTO_STREAMLIT_API_KEY = "x7g2plm9yq8vfrc"
 
 /**
  * Extracted type from the DeckGL library since it is not exported correctly.
@@ -430,12 +440,13 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
   const deck = useMemo<DeckObject>(() => {
     const jsonCopy = { ...parsedPydeckJson }
+    jsonCopy.views = withDefaultMapViewIds(jsonCopy.views)
 
-    // If unset, use either the light or dark style based on Streamlit's theme.
-    if (!jsonCopy.mapStyle) {
-      jsonCopy.mapStyle = isLightTheme
-        ? "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
-        : "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+    // pydeck map_provider=None writes this sentinel instead of omitting mapStyle.
+    const hadUnsetMapStyleSentinel =
+      jsonCopy.mapStyle === PYDECK_UNSET_MAP_STYLE
+    if (hadUnsetMapStyleSentinel) {
+      delete jsonCopy.mapStyle
     }
 
     const isUsingCarto =
@@ -443,11 +454,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       (jsonCopy?.mapStyle && jsonCopy.mapStyle?.indexOf("cartocdn") >= 0)
 
     if (isUsingCarto && !jsonCopy.cartoKey) {
-      // This key was manually created by Carto just for Streamlit. It is NOT
-      // connected to any paid accounts, or secure API access, or anything of
-      // the sort. It's is just used for Carto to be able to separate Streamlit
-      // usage from other types in their own internal stats.
-      jsonCopy.cartoKey = "x7g2plm9yq8vfrc"
+      jsonCopy.cartoKey = CARTO_STREAMLIT_API_KEY
     }
 
     if (jsonCopy.layers) {
@@ -568,9 +575,36 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       })
     }
 
-    delete jsonCopy?.views // We are not using views. This avoids a console warning.
+    const converted = convertDeckJson(jsonCopy) as DeckObject
+    const providedViews = getProvidedViews(converted.views)
 
-    return jsonConverter.convert(jsonCopy) as DeckObject
+    // Carto after convert so unknown @@type (null → MapView) still gets tiles.
+    let { mapStyle, cartoKey } = converted
+    if (
+      !hadUnsetMapStyleSentinel &&
+      !mapStyle &&
+      isMapCompatibleViewSpec(providedViews)
+    ) {
+      mapStyle = isLightTheme
+        ? "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+        : "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+    }
+
+    if (
+      !cartoKey &&
+      typeof mapStyle === "string" &&
+      mapStyle.indexOf("cartocdn") >= 0
+    ) {
+      cartoKey = CARTO_STREAMLIT_API_KEY
+    }
+
+    return {
+      ...converted,
+      views: providedViews,
+      mapStyle,
+      cartoKey,
+      parameters: sanitizeDeckParameters(converted.parameters),
+    }
   }, [
     data.selection.indices,
     isLightTheme,
