@@ -194,7 +194,6 @@ def test_point_selection_persists_and_toggles(
 
     # An unrelated rerun must keep the selection (state and visual) intact.
     click_button(app, "rerun helper")
-    wait_for_app_run(app)
     expect(app.get_by_text("echarts selection groups: 1")).to_be_visible()
     expect(app.get_by_text("echarts selection indices: [0]")).to_be_visible()
 
@@ -207,7 +206,7 @@ def test_point_selection_persists_and_toggles(
 
 @pytest.mark.only_browser("chromium")
 def test_brush_selection_persists_and_clears(app: Page):
-    """A rect brush is reported, kept across rerun, and cleared from the toolbox."""
+    """A rect brush is reported, kept across rerun, and cleared by double-click."""
     expect(app.get_by_text("echarts brush areas: 0")).to_be_visible()
 
     chart = _get_chart(app, "brush_chart")

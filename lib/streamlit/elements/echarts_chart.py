@@ -465,8 +465,8 @@ def _enables_selection(option: dict[str, Any]) -> bool:
         if "brush" in variant:
             return True
         toolbox = variant.get("toolbox")
-        # ECharts accepts either a single toolbox or a list of them.
-        for entry in toolbox if isinstance(toolbox, list) else [toolbox]:
+        # ECharts accepts a single toolbox or a list/tuple of them.
+        for entry in toolbox if isinstance(toolbox, (list, tuple)) else [toolbox]:
             if (
                 isinstance(entry, dict)
                 and isinstance(feature := entry.get("feature"), dict)
@@ -918,6 +918,11 @@ class EChartsMixin:
             enables neither, the chart still renders but never returns a
             selection, and Streamlit logs a warning.
 
+            Inside a ``st.form`` with ``clear_on_submit=True``, Streamlit
+            clears the chart's committed selection after submit so the empty
+            overlay stays in sync with Python on a later rerun. Other form
+            widgets keep their last submitted value until the next submit.
+
         renderer : "canvas" or "svg"
             The renderer passed to ECharts. This can be one of the following:
 
@@ -1159,9 +1164,13 @@ class EChartsMixin:
                 # A key is the identity except for selection activation: a keyed
                 # chart that switches between widget and display-only must not
                 # reuse the same ID, or the frontend keeps stale widget/selection
-                # state. Spec, theme, and renderer stay out of the keyed identity
-                # so data-only reruns keep the instance (and restored selection).
-                key_as_main_identity={"is_selection_activated"},
+                # state. Display-only keyed charts stay key-only (same as
+                # charts without ``on_select``) so they don't remount when this
+                # flag is added. Spec, theme, and renderer stay out of the
+                # keyed identity so data-only reruns keep the instance.
+                key_as_main_identity=(
+                    {"is_selection_activated"} if is_selection_activated else True
+                ),
                 dg=self.dg if is_selection_activated else None,
                 spec=echarts_chart_proto.spec,
                 theme=theme,

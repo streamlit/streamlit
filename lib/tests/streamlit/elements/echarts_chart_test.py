@@ -792,6 +792,10 @@ class EChartsChartTest(DeltaGeneratorTestCase):
                 {"toolbox": {"feature": {"brush": {}}}, "series": []},
             ),
             (
+                "toolbox_tuple",
+                {"toolbox": ({"feature": {"brush": {}}},), "series": []},
+            ),
+            (
                 "timeline_variant",
                 {
                     "baseOption": {"timeline": {"data": ["2015"]}},

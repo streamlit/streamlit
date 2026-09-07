@@ -186,6 +186,35 @@ function parseOptionSpec(spec: string): Record<string, unknown> | null {
   }
 }
 
+/** True when the option has a top-level ``series`` ECharts can address. */
+function optionHasUsableSeries(
+  option: Record<string, unknown> | null
+): boolean {
+  if (option === null) {
+    return false
+  }
+  const series = option.series
+  if (Array.isArray(series)) {
+    return series.length > 0
+  }
+  return isPlainObject(series)
+}
+
+/**
+ * Prefer the parsed spec when it has series; otherwise use ``getOption()``.
+ *
+ * Timeline and media specs keep series on nested variants, so the raw spec
+ * has no top-level ``series``. ECharts' resolved option does.
+ */
+function resolveSelectionOption(
+  parsedOption: Record<string, unknown> | null,
+  chart: EChartsSelectionInstance
+): Record<string, unknown> | null {
+  return optionHasUsableSeries(parsedOption)
+    ? parsedOption
+    : resolveChartOption(chart)
+}
+
 const DATA_TYPE_RANK: Readonly<Record<string, number>> = {
   main: 0,
   node: 1,
@@ -611,6 +640,11 @@ export function useEChartsSelections(
     () => parseOptionSpec(element.spec),
     [element.spec]
   )
+  // Keep the parsed spec in a ref so bind/prune callbacks stay stable across
+  // data-only updates (keyed live data, fragment reruns). Rebinding would
+  // cancel a pending debounce and drop the widget write.
+  const parsedOptionRef = useRef(parsedOption)
+  parsedOptionRef.current = parsedOption
 
   // Keep the latest bound chart so form-clear resets can clear the visible brush.
   const chartRef = useRef<EChartsSelectionInstance | null>(null)
@@ -651,7 +685,10 @@ export function useEChartsSelections(
 
   const configureSelectionOption = useCallback(
     (option: EChartsOptionObject): EChartsOptionObject => {
-      if (!isSelectionActivated) {
+      // Gate the cursor default on the proto flag, not ``isSelectionActivated``.
+      // Folding in ``disabled`` would rewrite the option on disconnect and
+      // replay the entry animation.
+      if (!element.selectionActivated) {
         // Display-only charts aren't clickable, so don't imply it via the
         // default "pointer" cursor on series items.
         return withDefaultSeriesCursor(option)
@@ -660,7 +697,7 @@ export function useEChartsSelections(
       // their own spec (`selectedMode`, `brush`); we only listen and report.
       return option
     },
-    [isSelectionActivated]
+    [element.selectionActivated]
   )
 
   const restoreSelection = useCallback(
@@ -668,8 +705,10 @@ export function useEChartsSelections(
       // Keyed display-only charts also have an element ID (CSS class + remount
       // identity). Restoring against that ID would re-apply leftover widget
       // state after ``on_select`` is turned off, with no handlers bound to
-      // clear the highlight.
-      if (!chartId || !isSelectionActivated) {
+      // clear the highlight. Gate on the proto flag, not ``isSelectionActivated``:
+      // a disabled selection widget (script running / websocket drop) still
+      // needs its overlay put back after ``setOption`` clears native select/brush.
+      if (!chartId || !element.selectionActivated) {
         return
       }
       isRestoringRef.current = true
@@ -709,7 +748,7 @@ export function useEChartsSelections(
         isRestoringRef.current = false
       }
     },
-    [chartId, isSelectionActivated, widgetMgr]
+    [chartId, element.selectionActivated, widgetMgr]
   )
 
   const clearSelection = useCallback(
@@ -802,16 +841,29 @@ export function useEChartsSelections(
       } finally {
         isRestoringRef.current = false
       }
+      // ``brushSelected`` still updates the snapshot during restore. When the
+      // same component mixed coord + pixel-only areas, that rebuilds
+      // ``selected`` from the remaining areas. Fake ``dispatchAction`` in
+      // tests does not fire events, so fall back to the locally pruned copy.
+      const nextBrush = latestBrushSelectionRef.current
+      if (nextBrush !== pruned) {
+        committedBrushSelectionRef.current = nextBrush
+        widgetMgr.setElementState(
+          chartId,
+          BRUSH_SELECTION_STATE_KEY,
+          nextBrush
+        )
+      }
       writeSelection(
         buildSelectionState(
-          parsedOption ?? resolveChartOption(chart),
+          resolveSelectionOption(parsedOptionRef.current, chart),
           Array.isArray(nativeSelection) ? nativeSelection : [],
-          pruned
+          nextBrush
         ),
         false
       )
     },
-    [chartId, isSelectionActivated, parsedOption, widgetMgr, writeSelection]
+    [chartId, isSelectionActivated, widgetMgr, writeSelection]
   )
 
   const bindSelections = useCallback(
@@ -851,9 +903,9 @@ export function useEChartsSelections(
       }
 
       const resolveLiveOption = (): Record<string, unknown> | null =>
-        parsedOption ?? resolveChartOption(chart)
+        resolveSelectionOption(parsedOptionRef.current, chart)
 
-      const emitSelection = debounce((): void => {
+      const emitSelectionNow = (): void => {
         writeSelection(
           buildSelectionState(
             resolveLiveOption(),
@@ -861,7 +913,14 @@ export function useEChartsSelections(
             committedBrushSelectionRef.current
           )
         )
-      }, DEBOUNCE_TIME_MS)
+      }
+      // Forms submit the current widget values immediately. Debouncing would
+      // race a fast submit and drop the selection.
+      const emitSelectionDebounced = debounce(
+        emitSelectionNow,
+        DEBOUNCE_TIME_MS
+      )
+      const emitSelection = formId ? emitSelectionNow : emitSelectionDebounced
 
       const commitBrushSelection = (): void => {
         committedBrushSelectionRef.current = latestBrushSelectionRef.current
@@ -968,7 +1027,7 @@ export function useEChartsSelections(
       }
 
       const clearBoundSelection = (fromUser = true): void => {
-        emitSelection.cancel()
+        emitSelectionDebounced.cancel()
         latestNativeSelection = []
         latestBrushSelectionRef.current = []
         committedBrushSelectionRef.current = []
@@ -1012,7 +1071,9 @@ export function useEChartsSelections(
       zr.on("dblclick", handleDoubleClick)
 
       return () => {
-        emitSelection.cancel()
+        // Flush a pending write even if the instance is already disposed —
+        // the widget value does not need the chart. Cancel would drop it.
+        emitSelectionDebounced.flush()
         if (deferredClearTimer !== undefined) {
           clearTimeout(deferredClearTimer)
         }
@@ -1036,7 +1097,7 @@ export function useEChartsSelections(
     [
       isSelectionActivated,
       chartId,
-      parsedOption,
+      formId,
       widgetMgr,
       writeSelection,
       clearSelection,

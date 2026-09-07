@@ -279,6 +279,44 @@ describe("useEChartsSelections", () => {
     expect(chart.dispatchAction).not.toHaveBeenCalled()
   })
 
+  it("restores persisted selection on a disabled selection widget", () => {
+    widgetMgr.getElementState.mockImplementation(
+      (_id: string, key: string) => {
+        if (key === "selectedPoints") {
+          return [{ seriesIndex: 0, dataIndex: [0] }]
+        }
+        if (key === "brushSelection") {
+          return [
+            createBrushSelection({
+              areas: [{ brushType: "lineX", coordRange: [0, 2] }],
+            }),
+          ]
+        }
+        return undefined
+      }
+    )
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr, undefined, true)
+    )
+    const chart = createFakeChart()
+
+    act(() => {
+      result.current.restoreSelection(chart)
+    })
+
+    expect(result.current.isSelectionActivated).toBe(false)
+    expect(chart.dispatchAction).toHaveBeenCalledWith({
+      type: "select",
+      seriesIndex: 0,
+      dataIndex: [0],
+    })
+    expect(chart.dispatchAction).toHaveBeenCalledWith({
+      type: "brush",
+      brushIndex: 0,
+      areas: [{ brushType: "lineX", coordRange: [0, 2] }],
+    })
+  })
+
   it("binds and cleans up all selection listeners", () => {
     const { result } = renderHook(() =>
       useEChartsSelections(createElement(), widgetMgr)
@@ -324,6 +362,60 @@ describe("useEChartsSelections", () => {
     expect(chart.zr.off).not.toHaveBeenCalled()
   })
 
+  it("keeps bindSelections stable across spec changes and still writes a pending selection", () => {
+    const firstSpec = JSON.stringify({
+      series: [{ type: "bar", data: [1] }],
+    })
+    const secondSpec = JSON.stringify({
+      series: [{ type: "bar", data: [9] }],
+    })
+    const { result, rerender } = renderHook(
+      ({ spec }) =>
+        useEChartsSelections(
+          new EChartsChartProto({
+            id: "chart-id",
+            formId: "",
+            spec,
+            selectionActivated: true,
+          }),
+          widgetMgr
+        ),
+      { initialProps: { spec: firstSpec } }
+    )
+    const chart = createFakeChart()
+    const bindSelections = result.current.bindSelections
+    const prune = result.current.prunePixelOnlyBrushAfterResize
+
+    act(() => {
+      result.current.bindSelections(chart)
+      chart.trigger("selectchanged", {
+        selected: [{ seriesIndex: 0, dataIndex: [0] }],
+      })
+    })
+
+    rerender({ spec: secondSpec })
+
+    expect(result.current.bindSelections).toBe(bindSelections)
+    expect(result.current.prunePixelOnlyBrushAfterResize).toBe(prune)
+    expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+
+    flush()
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expectSelectionWrite(
+      [
+        {
+          series_index: 0,
+          series_id: null,
+          series_name: null,
+          data_type: "main",
+          data_indices: [0],
+        },
+      ],
+      []
+    )
+  })
+
   it("leaves a selection widget option untouched", () => {
     const { result } = renderHook(() =>
       useEChartsSelections(createElement(), widgetMgr)
@@ -338,6 +430,19 @@ describe("useEChartsSelections", () => {
     const series = configured.series as Array<Record<string, unknown>>
     expect(series[0].selectedMode).toBeUndefined()
     expect(series[0].select).toBeUndefined()
+  })
+
+  it("does not rewrite a disabled selection widget's option", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr, undefined, true)
+    )
+    const option = { series: [{ type: "bar", data: [1, 2, 3] }] }
+
+    const configured = result.current.configureSelectionOption(option)
+
+    expect(configured).toBe(option)
+    const series = configured.series as Array<Record<string, unknown>>
+    expect(series[0].cursor).toBeUndefined()
   })
 
   it("uses a default cursor only for display-only series without one", () => {
@@ -450,6 +555,68 @@ describe("useEChartsSelections", () => {
       []
     )
   })
+
+  it.each([
+    [
+      "timeline",
+      {
+        baseOption: { timeline: { data: ["2015"] } },
+        options: [{ series: [{ type: "bar" }] }],
+      },
+    ],
+    [
+      "media",
+      {
+        media: [
+          {
+            query: { maxWidth: 600 },
+            option: { series: [{ type: "bar" }] },
+          },
+        ],
+      },
+    ],
+    ["empty series array", { series: [] }],
+  ])(
+    "resolves series metadata from getOption for a %s spec",
+    (_name, spec) => {
+      const { result } = renderHook(() =>
+        useEChartsSelections(
+          new EChartsChartProto({
+            id: "chart-id",
+            formId: "",
+            spec: JSON.stringify(spec),
+            selectionActivated: true,
+          }),
+          widgetMgr
+        )
+      )
+      const chart = createFakeChart()
+      chart.getOption.mockReturnValue({
+        series: [{ id: "sales", name: "Sales" }],
+      })
+      act(() => {
+        result.current.bindSelections(chart)
+        chart.trigger("selectchanged", {
+          selected: [{ seriesIndex: 0, dataIndex: [4] }],
+        })
+      })
+      flush()
+
+      expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+      expectSelectionWrite(
+        [
+          {
+            series_index: 0,
+            series_id: "sales",
+            series_name: "Sales",
+            data_type: "main",
+            data_indices: [4],
+          },
+        ],
+        []
+      )
+    }
+  )
 
   it("groups selections deterministically and sorts and deduplicates indices", () => {
     const { result } = renderHook(() =>
@@ -1208,6 +1375,84 @@ describe("useEChartsSelections", () => {
           areas: [
             {
               brush_index: 1,
+              brush_type: "lineX",
+              coord_range: [1, 3],
+            },
+          ],
+        },
+      }),
+      { formId: "", fragmentId: undefined, fromUser: false }
+    )
+  })
+
+  it("rebuilds same-component selected hits after pruning a pixel-only area", () => {
+    const mixed = createBrushSelection({
+      brushId: "brush-0",
+      brushIndex: 0,
+      areas: [
+        {
+          brushType: "rect",
+          range: [
+            [10, 20],
+            [30, 40],
+          ],
+        },
+        { brushType: "lineX", coordRange: [1, 3] },
+      ],
+      selected: selectedWithMainHits([9, 1]),
+    })
+    const remaining = createBrushSelection({
+      brushId: "brush-0",
+      brushIndex: 0,
+      areas: [{ brushType: "lineX", coordRange: [1, 3] }],
+      selected: selectedWithMainHits([1]),
+    })
+    widgetMgr.getElementState.mockImplementation(
+      (_id: string, key: string) => {
+        if (key === "brushSelection") {
+          return [mixed]
+        }
+        if (key === "selectedPoints") {
+          return []
+        }
+        return undefined
+      }
+    )
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+    const chart = createFakeChart()
+    chart.dispatchAction.mockImplementation(
+      (action: Record<string, unknown>) => {
+        if (action.type === "brush") {
+          chart.trigger("brushSelected", { batch: [remaining] })
+        }
+      }
+    )
+
+    act(() => {
+      result.current.bindSelections(chart)
+      result.current.prunePixelOnlyBrushAfterResize(chart)
+    })
+    flush()
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      "chart-id",
+      JSON.stringify({
+        selection: {
+          selected: [
+            {
+              series_index: 0,
+              series_id: null,
+              series_name: null,
+              data_type: "main",
+              data_indices: [1],
+            },
+          ],
+          areas: [
+            {
+              brush_index: 0,
               brush_type: "lineX",
               coord_range: [1, 3],
             },
@@ -1985,6 +2230,40 @@ describe("useEChartsSelections", () => {
     expectSelectionWrite([], [])
   })
 
+  it("writes selection immediately when the chart is in a form", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement("chart-id", "form-id"), widgetMgr)
+    )
+    const chart = createFakeChart()
+
+    act(() => {
+      result.current.bindSelections(chart)
+      chart.trigger("selectchanged", {
+        selected: [{ seriesIndex: 0, dataIndex: [2] }],
+      })
+    })
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      "chart-id",
+      JSON.stringify({
+        selection: {
+          selected: [
+            {
+              series_index: 0,
+              series_id: null,
+              series_name: null,
+              data_type: "main",
+              data_indices: [2],
+            },
+          ],
+          areas: [],
+        },
+      }),
+      { formId: "form-id", fragmentId: undefined, fromUser: true }
+    )
+  })
+
   it("clears selection state when its form is cleared", () => {
     widgetMgr.getStringValue.mockReturnValue(
       JSON.stringify({
@@ -2018,11 +2297,31 @@ describe("useEChartsSelections", () => {
       "selectedPoints",
       []
     )
-    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+    expect(widgetMgr.setStringValue).toHaveBeenNthCalledWith(
+      1,
+      "chart-id",
+      JSON.stringify({
+        selection: {
+          selected: [
+            {
+              series_index: 0,
+              series_id: null,
+              series_name: null,
+              data_type: "main",
+              data_indices: [2],
+            },
+          ],
+          areas: [],
+        },
+      }),
+      { formId: "form-id", fragmentId: undefined, fromUser: true }
+    )
+    expect(widgetMgr.setStringValue).toHaveBeenNthCalledWith(
+      2,
       "chart-id",
       JSON.stringify({ selection: { selected: [], areas: [] } }),
       { formId: "form-id", fragmentId: undefined, fromUser: false }
     )
-    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(2)
   })
 })

@@ -28,10 +28,9 @@ message EChartsChart {
   // activated (on_select != "ignore") or the user provided a key.
   string id = 3;
 
-  // Field 4 is unused so a future `selection_mode` can take this slot.
-  // Not `reserved`: reserved forbids reuse, which is the opposite of holding
-  // the number for v2. v1 activates selection via `on_select` and returns
-  // whatever the user configured in the spec.
+  // Held for a future `selection_mode`. v1 activates selection via
+  // `on_select` and returns whatever the user configured in the spec.
+  reserved 4;
 
   // Form ID, filled if selections are activated.
   string form_id = 5;
@@ -43,6 +42,8 @@ message EChartsChart {
   // also receive an element ID (CSS class + remount identity), so the
   // frontend cannot treat a non-empty ID as "this is a selection widget".
   bool selection_activated = 7;
+
+  // Next ID: 8
 
   // Available renderers:
   enum Renderer {
