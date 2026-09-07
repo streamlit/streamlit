@@ -28,6 +28,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_form_button,
     click_toggle,
+    expect_font,
     expect_help_tooltip,
     expect_markdown,
     expect_prefixed_markdown,
@@ -264,7 +265,9 @@ def test_slider_works_with_fragments(app: Page):
     expect(app.get_by_text("Runs: 1")).to_be_visible()
 
 
-def test_slider_with_float_formatting(app: Page, assert_snapshot: ImageCompareFunction):
+def test_slider_with_float_formatting(
+    app: Page, assert_snapshot: ImageCompareFunction, browser_name: str
+):
     slider = get_slider(app, "Slider 11 (formatted float)")
     slider.click()
 
@@ -277,15 +280,21 @@ def test_slider_with_float_formatting(app: Page, assert_snapshot: ImageCompareFu
     # Assert the formatted label directly. This, not the snapshot, is what pins
     # down `format="%f%%"`: the markdown above only shows the raw value (0.8).
     expect(slider.get_by_test_id("stSliderThumbValue")).to_have_text("0.8%")
-    # The tick bar's opacity flips instantly (it has no transition), so this just
-    # confirms reset_hovering above actually took effect before we snapshot.
+    # Once unhovered the tick bar fades out (opacity 300ms after a 200ms delay), so
+    # wait for it to reach 0 rather than capturing it mid-fade.
     expect(slider.get_by_test_id("stSliderTickBar")).to_have_css("opacity", "0")
-    # The thumb value label is positioned at a fractional offset, so its glyphs
-    # can snap to either of two adjacent pixel rows. That 1px shift measures
-    # 116px (0.239%) on this 704x69 element, just over the 0.002 default. 0.003
-    # (145px) absorbs it while still failing a 2px shift (147px) or a retained
-    # focus ring (187px).
-    assert_snapshot(slider, name="st_slider-float_formatting", image_threshold=0.003)
+    # Playwright's screenshot already waits for fonts; kept as belt and braces.
+    expect_font(app, "Source Sans")
+    # The thumb value label sits at a fractional offset, so its glyphs can snap to
+    # either of two adjacent pixel rows. On chromium that 1px shift measures 116px
+    # (0.239%) of this 704x69 element, just over the 0.002 default; 0.003 (145px)
+    # absorbs it while still failing a 2px shift (147px) or a retained focus ring
+    # (187px). Firefox and webkit have never shown it, so they keep the default.
+    assert_snapshot(
+        slider,
+        name="st_slider-float_formatting",
+        image_threshold=0.003 if browser_name == "chromium" else 0.002,
+    )
 
 
 def test_check_top_level_class(app: Page):
