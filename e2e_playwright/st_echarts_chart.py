@@ -75,8 +75,9 @@ with st.container(key="c_basic_bar"):
 
 # An unrelated widget: clicking it reruns the app. Used to verify that a
 # display-only chart is not remounted / duplicated / reset by unrelated reruns.
-if st.button("rerun helper"):
-    st.write("rerun helper clicked")
+# Do not write extra markdown here: inserting a block above later charts
+# shifts them onto a fractional Y and makes snapshots 1px taller.
+st.button("rerun helper")
 
 # 2) A chart with theme=None (uses ECharts' built-in default theme; the spec is
 #    left untouched).
