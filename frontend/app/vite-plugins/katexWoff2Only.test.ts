@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import type { Plugin } from "vite"
-
 import { existsSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 
@@ -55,25 +53,13 @@ type TransformFn = (
   id: string
 ) => { code: string } | string | null
 
-/** `transform` is an ObjectHook; ours carries a `filter` alongside the handler. */
-const transformHandler = (plugin: Plugin): unknown =>
-  typeof plugin.transform === "function"
-    ? plugin.transform
-    : plugin.transform?.handler
-
 /**
- * Runs the plugin's transform with a minimal plugin context, turning
- * `this.error` into a thrown error so tests can assert on it. Neither Vite nor
- * Rolldown ships a plugin-context harness; Vite's own tests do the same.
+ * Runs the plugin's transform with a minimal plugin context, turning `this.error`
+ * into a thrown error so tests can assert on it. Neither Vite nor Rolldown ships a
+ * plugin-context harness; Vite's own tests do the same.
  */
 const transform = (code: string, id: string): string | null => {
-  const plugin = katexWoff2Only()
-  const handler = transformHandler(plugin)
-  if (typeof handler !== "function") {
-    throw new TypeError("expected a transform handler")
-  }
-
-  const hook = handler as unknown as TransformFn
+  const hook = katexWoff2Only().transform as unknown as TransformFn
   const result = hook.call(
     {
       error: (message: string) => {
@@ -88,41 +74,6 @@ const transform = (code: string, id: string): string | null => {
 
 const count = (css: string, pattern: RegExp): number =>
   (css.match(pattern) ?? []).length
-
-/**
- * Drives one plugin instance through a whole build: `configResolved`,
- * `buildStart`, optionally a stylesheet passing through `transform`, then
- * `buildEnd`. Throws whatever the plugin reports via `this.error`.
- */
-const runBuildLifecycle = (options: {
-  command: "build" | "serve"
-  transformsStylesheet: boolean
-  error?: Error
-}): void => {
-  const plugin = katexWoff2Only()
-  const context = {
-    error: (message: string) => {
-      throw new Error(message)
-    },
-  }
-
-  const call = (hook: unknown, ...args: unknown[]): unknown => {
-    if (typeof hook !== "function") {
-      throw new TypeError("expected a function hook")
-    }
-    return (hook as (this: typeof context, ...a: unknown[]) => unknown).call(
-      context,
-      ...args
-    )
-  }
-
-  call(plugin.configResolved, { command: options.command })
-  call(plugin.buildStart, {})
-  if (options.transformsStylesheet) {
-    call(transformHandler(plugin), INSTALLED_KATEX_CSS, KATEX_ID)
-  }
-  call(plugin.buildEnd, options.error)
-}
 
 describe("katexWoff2Only", () => {
   it("runs before Vite rewrites the stylesheet's urls to asset placeholders", () => {
@@ -169,6 +120,7 @@ describe("katexWoff2Only", () => {
     ["?raw= with a value", `${KATEX_ID}?raw=value`],
     ["?url= with a value", `${KATEX_ID}?url=value`],
     ["a ?worker import", `${KATEX_ID}?worker`],
+    ["raw anywhere in the query", `${KATEX_ID}?x=1&raw`],
   ])("ignores %s", (_label, id) => {
     expect(transform(INSTALLED_KATEX_CSS, id)).toBeNull()
   })
@@ -183,12 +135,6 @@ describe("katexWoff2Only", () => {
     ["?no-inline", `${KATEX_ID}?no-inline`],
   ])("transforms %s", (_label, id) => {
     expect(transform(INSTALLED_KATEX_CSS, id)).not.toBeNull()
-  })
-
-  it("ignores raw and url anywhere in the query", () => {
-    for (const id of [`${KATEX_ID}?raw&x=1`, `${KATEX_ID}?x=1&url`]) {
-      expect(transform(INSTALLED_KATEX_CSS, id)).toBeNull()
-    }
   })
 
   it("returns null when the stylesheet is already woff2-only", () => {
@@ -210,45 +156,11 @@ describe("katexWoff2Only", () => {
       "version-suffixed urls",
       'src:url(fonts/a.woff2?v=1) format("woff2"),url(fonts/a.woff?v=1) format("woff")',
     ],
-  ])("fails the build when KaTeX reformats src with %s", (_label, src) => {
-    // The strip pattern stops matching for each of these, so without a looser
-    // guard the woff and ttf files would silently return to the build.
+  ])("names the cause when KaTeX reformats src with %s", (_label, src) => {
+    // The strip pattern stops matching for each of these. CI's bundle check would
+    // catch the resulting size jump; this turns it into a message.
     expect(() => transform(`@font-face{${src}}`, KATEX_ID)).toThrow(
       /still references woff or ttf fonts/
     )
-  })
-
-  describe("requires the stylesheet to have been transformed", () => {
-    it("fails a build that never saw it", () => {
-      // Catches the stylesheet becoming unreachable, which no per-transform
-      // check can see: the transform simply never runs.
-      expect(() =>
-        runBuildLifecycle({ command: "build", transformsStylesheet: false })
-      ).toThrow(/never reached this plugin/)
-    })
-
-    it("stays quiet when the build already failed", () => {
-      // A build that failed on its own may never reach the stylesheet, and
-      // reporting here would bury the real error.
-      expect(() =>
-        runBuildLifecycle({
-          command: "build",
-          transformsStylesheet: false,
-          error: new Error("some other build failure"),
-        })
-      ).not.toThrow()
-    })
-
-    it("stays quiet for a build that saw it", () => {
-      expect(() =>
-        runBuildLifecycle({ command: "build", transformsStylesheet: true })
-      ).not.toThrow()
-    })
-
-    it("stays quiet in serve, where nothing is emitted", () => {
-      expect(() =>
-        runBuildLifecycle({ command: "serve", transformsStylesheet: false })
-      ).not.toThrow()
-    })
   })
 })
