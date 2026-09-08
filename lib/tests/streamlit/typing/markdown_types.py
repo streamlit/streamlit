@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     markdown = MarkdownMixin().markdown
     caption = MarkdownMixin().caption
     latex = MarkdownMixin().latex
+    divider = MarkdownMixin().divider
     badge = MarkdownMixin().badge
 
     # =====================================================================
@@ -302,3 +303,32 @@ if TYPE_CHECKING:
 
     # st.badge does not take wrap
     badge("New", wrap=False)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
+
+    # =====================================================================
+    # st.divider return type tests
+    # =====================================================================
+
+    # Basic usage - returns DeltaGenerator; width defaults to "stretch"
+    assert_type(divider(), DeltaGenerator)
+
+    # width parameter (keyword-only) - WidthWithoutContent
+    assert_type(divider(width="stretch"), DeltaGenerator)
+    assert_type(divider(width=300), DeltaGenerator)
+
+    # =====================================================================
+    # Invalid st.divider usages - should NOT type check
+    # =====================================================================
+
+    # Invalid width value (not "stretch" or int)
+    divider(width="content")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    divider(width="auto")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    divider(width="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    divider(width=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Passing width as positional argument (should be keyword-only)
+    divider("stretch")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
+
+    # st.divider does not take markdown-only keywords
+    divider(help="A rule")  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
+    divider(text_alignment="center")  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
+    divider(wrap=False)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
