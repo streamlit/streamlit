@@ -138,7 +138,7 @@ const dropUnregisteredExtensions = (json: JsonObject): JsonObject => {
         `Ignoring unregistered deck.gl layer extension(s): ${dropped.join(", ")}`
       )
 
-      return { ...layerObj, extensions: kept }
+      return Object.assign({}, layerObj, { extensions: kept })
     }),
   }
 }

@@ -503,11 +503,14 @@ function withTitleStyleDefaults(
       ? (title.textStyle as Record<string, unknown>)
       : {}
     changed = true
-    return {
-      ...title,
-      ...(title.padding === undefined ? { padding } : {}),
-      textStyle: { ...sizeAndWeight, ...userTextStyle },
-    }
+    return Object.assign(
+      {},
+      title,
+      title.padding === undefined ? { padding } : {},
+      {
+        textStyle: Object.assign({}, sizeAndWeight, userTextStyle),
+      }
+    )
   })
   if (!changed) {
     return option
@@ -791,7 +794,7 @@ function withLegendLiftedToTop(
       return legend
     }
     changed = true
-    return { ...legend, top: legendTop }
+    return Object.assign({}, legend, { top: legendTop })
   })
   if (!changed) {
     return option
@@ -1138,12 +1141,11 @@ export function withDefaultSeriesCursor(
         if (!isPlainObject(mediaEntry.option)) {
           return entry
         }
-        return {
-          ...mediaEntry,
+        return Object.assign({}, mediaEntry, {
           option: applyCursorToSeries(
             mediaEntry.option as EChartsOptionObject
           ),
-        }
+        })
       }),
     }
   }

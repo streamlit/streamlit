@@ -381,13 +381,23 @@ export function toSafeArray(data: unknown): unknown[] {
 }
 
 /**
+ * True for primitive strings and boxed `String` objects (including other realms).
+ */
+function isStringValue(value: unknown): boolean {
+  return (
+    typeof value === "string" ||
+    Object.prototype.toString.call(value) === "[object String]"
+  )
+}
+
+/**
  * Checks if the provided data used as array value is supported for editing.
  *
  * @param data - The value to inspect.
  * @returns True if `data` is supported for array-editing.
  */
 export function isEditableArrayValue(data: unknown): boolean {
-  if (typeof data === "string" || data instanceof String) {
+  if (isStringValue(data)) {
     return true
   }
 
@@ -395,10 +405,7 @@ export function isEditableArrayValue(data: unknown): boolean {
     data = Array.from(data)
   }
 
-  return (
-    Array.isArray(data) &&
-    data.every(v => typeof v === "string" || v instanceof String)
-  )
+  return Array.isArray(data) && data.every(isStringValue)
 }
 
 /**

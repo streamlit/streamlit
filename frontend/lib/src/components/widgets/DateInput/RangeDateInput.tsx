@@ -234,7 +234,9 @@ function RangeDateInput({
     if (!maxDate) return presets
     return presets
       .filter(p => p.start.compare(maxDate) <= 0)
-      .map(p => (p.end.compare(maxDate) > 0 ? { ...p, end: maxDate } : p))
+      .map(p =>
+        p.end.compare(maxDate) > 0 ? Object.assign({}, p, { end: maxDate }) : p
+      )
   }, [maxDate])
   const quickSelectRef = useRef<HTMLDivElement>(null)
 

@@ -1451,8 +1451,8 @@ export class WidgetStateManager {
     })
 
     if (value === null) {
-      // Remove the param
-      delete currentParams[paramKey]
+      // skipNull: true below omits this key from the serialized query string
+      currentParams[paramKey] = null
     } else if (Array.isArray(value)) {
       if (value.length === 0) {
         // Empty array: write as empty string to produce ?key= in URL

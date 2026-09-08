@@ -118,10 +118,6 @@ export interface Args {
   enableBypass?: boolean
 }
 
-interface MessageQueue {
-  [index: number]: ForwardMsg
-}
-
 const LOG = getLogger("WebsocketConnection")
 
 /**
@@ -213,10 +209,10 @@ export class WebsocketConnection {
   private nextMessageIndex = 0
 
   /**
-   * This dictionary stores received messages that we haven't sent out yet
-   * (because we're still decoding previous messages)
+   * Incoming messages that we haven't dispatched yet because earlier
+   * messages are still being decoded. Keyed by transmission order.
    */
-  private readonly messageQueue: MessageQueue = {}
+  private readonly messageQueue = new Map<number, ForwardMsg>()
 
   /**
    * The current state of this object's state machine.
@@ -853,20 +849,23 @@ export class WebsocketConnection {
     const encodedMsg = new Uint8Array(data)
     const msg = ForwardMsg.decode(encodedMsg)
 
-    this.messageQueue[messageIndex] = await this.cache.processMessagePayload(
-      msg,
-      encodedMsg
+    this.messageQueue.set(
+      messageIndex,
+      await this.cache.processMessagePayload(msg, encodedMsg)
     )
 
     // Dispatch any pending messages in the queue. This may *not* result
     // in our just-decoded message being dispatched: if there are other
     // messages that were received earlier than this one but are being
     // downloaded, our message won't be sent until they're done.
-    while (this.lastDispatchedMessageIndex + 1 in this.messageQueue) {
+    while (this.messageQueue.has(this.lastDispatchedMessageIndex + 1)) {
       const dispatchMessageIndex = this.lastDispatchedMessageIndex + 1
-      this.args.onMessage(this.messageQueue[dispatchMessageIndex])
-
-      delete this.messageQueue[dispatchMessageIndex]
+      const queuedMessage = this.messageQueue.get(dispatchMessageIndex)
+      if (queuedMessage === undefined) {
+        break
+      }
+      this.args.onMessage(queuedMessage)
+      this.messageQueue.delete(dispatchMessageIndex)
       this.lastDispatchedMessageIndex = dispatchMessageIndex
     }
   }

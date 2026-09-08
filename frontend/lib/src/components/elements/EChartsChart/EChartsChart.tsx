@@ -205,8 +205,7 @@ export function EChartsChart({
           if (prev[op] === undefined) {
             return prev
           }
-          const next = { ...prev }
-          delete next[op]
+          const { [op]: _removed, ...next } = prev
           return next
         }
         if (prev[op] === message) {

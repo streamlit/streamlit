@@ -277,7 +277,7 @@ describe("DataFrame ColumnVisibilityMenu", () => {
   it("calls showColumn on all columns when selecting a unchecked select all", async () => {
     const allHiddenProps = {
       ...defaultProps,
-      columns: MOCK_COLUMNS.map(c => ({ ...c, isHidden: true })),
+      columns: MOCK_COLUMNS.map(c => Object.assign({}, c, { isHidden: true })),
     }
 
     render(
@@ -295,7 +295,9 @@ describe("DataFrame ColumnVisibilityMenu", () => {
   it("calls hideColumn on all columns when clicking a checked select all", async () => {
     const allVisibleProps = {
       ...defaultProps,
-      columns: MOCK_COLUMNS.map(c => ({ ...c, isHidden: false })),
+      columns: MOCK_COLUMNS.map(c =>
+        Object.assign({}, c, { isHidden: false })
+      ),
     }
 
     render(
@@ -313,7 +315,9 @@ describe("DataFrame ColumnVisibilityMenu", () => {
   it("select all reflects columnOrder-hidden columns when none are explicitly hidden", () => {
     const props = {
       ...defaultProps,
-      columns: MOCK_COLUMNS.map(c => ({ ...c, isHidden: false })),
+      columns: MOCK_COLUMNS.map(c =>
+        Object.assign({}, c, { isHidden: false })
+      ),
       columnOrder: ["index-0", "_column-1"], // exclude _column-2 via order
     }
 
