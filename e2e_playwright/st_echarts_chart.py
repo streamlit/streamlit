@@ -36,7 +36,6 @@ np.random.seed(0)
 if "echarts_script_runs" not in st.session_state:
     st.session_state.echarts_script_runs = 0
 st.session_state.echarts_script_runs += 1
-st.write(f"echarts script runs: {st.session_state.echarts_script_runs}")
 
 # ECharts plays entry animations on init, which makes canvas snapshots
 # non-deterministic. Disable animations for the display charts we render.
@@ -429,6 +428,8 @@ with st.form("echarts_form", clear_on_submit=True):
     )
     st.form_submit_button("Submit selection")
 st.write(f"echarts form groups: {len(form_event['selection']['selected'])}")
+# Keep this out of the first block so chart snapshots stay 300px tall.
+st.write(f"echarts script runs: {st.session_state.echarts_script_runs}")
 
 # Stretch height outside a sized parent: the chart must still get the 350px
 # content-height floor so ECharts can initialize.
