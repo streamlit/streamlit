@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
+    Final,
     Literal,
     TypeAlias,
     Union,
@@ -371,21 +372,105 @@ def _prepare_vega_lite_spec(
     return spec
 
 
+_GEOJSON_OR_TOPOJSON_TYPES: Final[frozenset[str]] = frozenset(
+    {"FeatureCollection", "Topology", "Feature"}
+)
+_VEGA_GEO_FORMAT_TYPES: Final[frozenset[str]] = frozenset({"json", "topojson"})
+
+
+def _is_geojson_or_topojson_payload(data: Any) -> bool:
+    """Return True when data is GeoJSON/TopoJSON geometry, not a table."""
+    if isinstance(data, dict):
+        if data.get("type") in _GEOJSON_OR_TOPOJSON_TYPES:
+            return True
+        return "arcs" in data and "objects" in data
+
+    if isinstance(data, list) and data:
+        # Treat a non-empty list as geo if the first row is a Feature; mixed
+        # lists are not a supported Vega-Lite shape.
+        first = data[0]
+        return (
+            isinstance(first, dict)
+            and first.get("type") == "Feature"
+            and "geometry" in first
+        )
+
+    return False
+
+
+def _named_datasets_with_geo_format(spec: VegaLiteSpec) -> set[str]:
+    """Return dataset names whose Vega-Lite format type is json or topojson.
+
+    ``json`` is Vega-Lite's format for both GeoJSON and generic JSON records.
+    Walks nested views and transforms. Skips ``datasets`` payloads and
+    ``data.values`` so large geometries and tables are not traversed.
+    """
+    names: set[str] = set()
+
+    def _walk(node: Any) -> None:
+        if isinstance(node, dict):
+            data_spec = node.get("data")
+            if isinstance(data_spec, dict):
+                format_spec = data_spec.get("format")
+                format_type = (
+                    format_spec.get("type") if isinstance(format_spec, dict) else None
+                )
+                if (
+                    "name" in data_spec
+                    and isinstance(format_type, str)
+                    and format_type.lower() in _VEGA_GEO_FORMAT_TYPES
+                ):
+                    names.add(str(data_spec["name"]))
+            for key, value in node.items():
+                if key not in {"data", "datasets"}:
+                    _walk(value)
+        elif isinstance(node, list):
+            for item in node:
+                _walk(item)
+
+    _walk(spec)
+    return names
+
+
+def _keep_named_dataset_in_spec(
+    name: str, payload: Any, geo_format_names: set[str]
+) -> bool:
+    """Return True when this named dataset must stay in spec JSON.
+
+    Keep geometry payloads, and keep dicts that a json/topojson format points
+    at (for example a raw Geometry). Lists of plain records still go through
+    Arrow.
+    """
+    if _is_geojson_or_topojson_payload(payload):
+        return True
+    # Keep dicts that a json/topojson format points at (e.g. a raw geometry).
+    return name in geo_format_names and isinstance(payload, dict)
+
+
 def _marshall_chart_data(
     proto: VegaLiteChartProto,
     spec: VegaLiteSpec,
     data: Data = None,
 ) -> None:
-    """Adds the data to the proto and removes it from the spec dict.
-    These operations will happen in-place.
+    """Move chart data onto the proto, in place.
+
+    Named tabular datasets are copied to ``proto.datasets`` as Arrow IPC bytes
+    and removed from the spec. Named GeoJSON/TopoJSON datasets stay in
+    ``spec["datasets"]`` so Vega-Lite can compile them on embed. Top-level
+    ``data.values`` / raw ``data`` are moved to ``proto.data``.
     """
 
-    # Pull data out of spec dict when it's in a 'datasets' key:
-    #   datasets: {foo: df1_bytes, bar: df2_bytes}, ...}
     if "datasets" in spec:
+        geo_format_names = _named_datasets_with_geo_format(spec)
+        remaining_datasets: dict[str, Any] = {}
         for dataset_name, dataset_data in spec["datasets"].items():
+            name = str(dataset_name)
+            if _keep_named_dataset_in_spec(name, dataset_data, geo_format_names):
+                remaining_datasets[name] = dataset_data
+                continue
+
             dataset = proto.datasets.add()
-            dataset.name = str(dataset_name)
+            dataset.name = name
             dataset.has_name = True
             # The ID transformer (_to_arrow_dataset function registered before conversion to dict)
             # already serializes the data into Arrow IPC format (bytes) when the Altair object
@@ -400,7 +485,11 @@ def _marshall_chart_data(
                 if isinstance(dataset_data, bytes)
                 else dataframe_util.convert_anything_to_arrow_bytes(dataset_data)
             )
-        del spec["datasets"]
+
+        if remaining_datasets:
+            spec["datasets"] = remaining_datasets
+        else:
+            del spec["datasets"]
 
     # Pull data out of spec dict when it's in a top-level 'data' key:
     # > {data: df}
@@ -2467,16 +2556,20 @@ class VegaChartsMixin:
 
 
 def _to_arrow_dataset(data: Any, datasets: dict[str, Any]) -> dict[str, str]:
-    """Altair data transformer that serializes the data,
-    creates a stable name based on the hash of the data,
-    stores the bytes into the datasets mapping and
-    returns this name to have it be used in Altair.
-    """
-    # Already serialize the data to be able to create a stable
-    # dataset name:
-    data_bytes = dataframe_util.convert_anything_to_arrow_bytes(data)
-    # Use the content hash of the data as the name:
-    name = calc_hash(str(data_bytes))
+    """Altair data transformer that stores chart data under a stable hashed name.
 
-    datasets[name] = data_bytes
+    Tabular data is serialized to Arrow IPC bytes. GeoJSON/TopoJSON dicts are
+    stored as-is so geometry is not flattened. Returns ``{"name": name}`` for
+    Altair to reference the dataset.
+    """
+    if _is_geojson_or_topojson_payload(data):
+        name = calc_hash(json.dumps(data, sort_keys=True, default=str))
+        datasets[name] = data
+    else:
+        # Already serialize the data to be able to create a stable
+        # dataset name:
+        data_bytes = dataframe_util.convert_anything_to_arrow_bytes(data)
+        # Use the content hash of the data as the name:
+        name = calc_hash(str(data_bytes))
+        datasets[name] = data_bytes
     return {"name": name}

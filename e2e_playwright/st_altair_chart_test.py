@@ -26,7 +26,7 @@ from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 BASELINE_CHARTS = 9
 REGRESSION_CHART_INDEX = 9
 ISSUE_14050_CHART_INDEX = 10
-NUM_CHARTS = 12
+NUM_CHARTS = 14
 
 
 def test_altair_chart_displays_correctly(
@@ -252,3 +252,27 @@ def test_altair_chart_binding_widget_styling(
     checkbox.uncheck()
     expect(checkbox).not_to_be_checked()
     expect(themed_app.get_by_test_id("stException")).to_have_count(0)
+
+
+def test_geoshape_lookup_and_inline_featurecollection_render(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Geoshape lookup and inline FeatureCollection charts render filled polygons."""
+    charts = app.get_by_test_id("stVegaLiteChart")
+    expect(charts).to_have_count(NUM_CHARTS)
+
+    lookup_chart = get_element_by_key(app, "altair_geoshape_lookup").get_by_test_id(
+        "stVegaLiteChart"
+    )
+    inline_chart = get_element_by_key(app, "altair_geoshape_inline").get_by_test_id(
+        "stVegaLiteChart"
+    )
+
+    for chart in (lookup_chart, inline_chart):
+        expect(get_vega_graphics_document(chart)).to_be_visible()
+        expect(chart.locator("canvas, svg").first).to_be_visible()
+
+    expect(app.get_by_test_id("stException")).to_have_count(0)
+
+    assert_snapshot(lookup_chart, name="st_altair_chart-geoshape_lookup")
+    assert_snapshot(inline_chart, name="st_altair_chart-geoshape_inline_geojson")

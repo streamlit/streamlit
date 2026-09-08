@@ -16,7 +16,7 @@
 
 import { act, renderHook } from "@testing-library/react"
 import { View as VegaView } from "vega"
-import embed from "vega-embed"
+import embed, { type VisualizationSpec } from "vega-embed"
 import { expressionInterpreter } from "vega-interpreter"
 import { Mock, Mocked } from "vitest"
 
@@ -414,8 +414,13 @@ describe("useVegaEmbed hook", () => {
     // getDataArrays should have been called with the latest datasets
     const lastCallArg = (getDataArrays as Mock).mock.calls.at(-1)?.[0]
     expect(lastCallArg).toBe(updatedDatasets)
-    // Insert should use the dataset name returned by getDataArrays
-    expect(mockVegaView.insert).toHaveBeenCalledWith("new", [{ x: 1 }])
+    // Named rows are merged into the embed spec so Vega-Lite can compile them.
+    expect(embed).toHaveBeenCalledWith(
+      containerRef.current,
+      expect.objectContaining({ datasets: { new: [{ x: 1 }] } }),
+      expect.anything()
+    )
+    expect(mockVegaView.insert).not.toHaveBeenCalledWith("new", [{ x: 1 }])
   })
 
   it("uses single dataset name as default for inline data insert", async () => {
@@ -441,10 +446,60 @@ describe("useVegaEmbed hook", () => {
       await result.current.createView(containerRef, {})
     })
 
-    // First insert should be inline, and it should target the single dataset name
-    const firstInsertCall = (mockVegaView.insert as Mock).mock.calls[0]
-    expect(firstInsertCall[0]).toBe("only")
-    expect(firstInsertCall[1]).toBe(inline)
+    // Named rows go to the embed spec; insert is only the unnamed inline data.
+    expect(embed).toHaveBeenCalledWith(
+      containerRef.current,
+      expect.objectContaining({ datasets: { only: [{ d: "ds" }] } }),
+      expect.anything()
+    )
+    expect(mockVegaView.insert).toHaveBeenCalledTimes(1)
+    expect(mockVegaView.insert).toHaveBeenCalledWith("only", inline)
+  })
+
+  it("merges named arrow datasets into existing spec.datasets before embed", async () => {
+    const element: VegaLiteChartElement = {
+      id: "chartId",
+      data: null,
+      datasets: [],
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    }
+
+    const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
+
+    const featureCollection = {
+      type: "FeatureCollection",
+      features: [],
+    }
+    const spec = { datasets: { geo: featureCollection } }
+    ;(getInlineData as Mock).mockReturnValue(null)
+    ;(getDataArrays as Mock).mockReturnValue({
+      lookup: [{ id: 1, population: 10 }],
+    })
+
+    const containerRef = { current: document.createElement("div") }
+    await act(async () => {
+      await result.current.createView(
+        containerRef,
+        spec as unknown as VisualizationSpec
+      )
+    })
+
+    expect(embed).toHaveBeenCalledWith(
+      containerRef.current,
+      expect.objectContaining({
+        datasets: {
+          geo: featureCollection,
+          lookup: [{ id: 1, population: 10 }],
+        },
+      }),
+      expect.anything()
+    )
+    expect(spec.datasets).toEqual({ geo: featureCollection })
+    expect(mockVegaView.insert).not.toHaveBeenCalled()
   })
 
   it("uses 'source' as default dataset name when no datasets but vgSpec.data present", async () => {

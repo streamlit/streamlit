@@ -60,6 +60,40 @@ if TYPE_CHECKING:
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 df2 = pd.DataFrame([["E", "F", "G", "H"], [11, 12, 13, 14]], index=["a", "b"]).T
 autosize_spec = {"autosize": {"type": "fit", "contains": "padding"}}
+_LOOKUP_POPULATION = pd.DataFrame({"id": [1, 2], "population": [100, 200]})
+_TWO_POLYGON_FEATURE_COLLECTION = {
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "id": 1,
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]],
+            },
+            "properties": {"name": "left"},
+        },
+        {
+            "type": "Feature",
+            "id": 2,
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[[1, 0], [2, 0], [2, 1], [1, 1], [1, 0]]],
+            },
+            "properties": {"name": "right"},
+        },
+    ],
+}
+
+
+def _spec_feature_collections(spec: dict[str, Any]) -> list[dict[str, Any]]:
+    datasets = spec.get("datasets")
+    assert isinstance(datasets, dict)
+    return [
+        payload
+        for payload in datasets.values()
+        if isinstance(payload, dict) and payload.get("type") == "FeatureCollection"
+    ]
 
 
 def test_vega_lite_serde_returns_typed_state() -> None:
@@ -650,6 +684,102 @@ class AltairChartTest(DeltaGeneratorTestCase):
             df,
             check_dtype=False,
         )
+
+    def test_inline_geojson_featurecollection_stays_in_spec_datasets(self) -> None:
+        """Inline FeatureCollection named datasets stay in spec JSON, not Arrow."""
+        chart = (
+            alt.Chart(
+                alt.InlineData(
+                    values=_TWO_POLYGON_FEATURE_COLLECTION,
+                    format=alt.DataFormat(property="features", type="json"),
+                )
+            )
+            .mark_geoshape()
+            .encode(color="properties.name:N")
+        )
+
+        st.altair_chart(chart)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        geo_payloads = _spec_feature_collections(spec)
+        assert len(geo_payloads) == 1
+        assert len(geo_payloads[0]["features"]) == 2
+        assert spec["data"]["format"]["type"] == "json"
+        assert len(proto.datasets) == 0
+
+    def test_lookup_dataframe_still_arrow_serialized_on_proto(self) -> None:
+        """Lookup tables stay on proto.datasets as Arrow, not JSON in the spec."""
+        geo = alt.Data(
+            url="https://example.invalid/map.json",
+            format=alt.DataFormat(property="features", type="json"),
+        )
+        chart = (
+            alt.Chart(geo)
+            .mark_geoshape()
+            .encode(color="population:Q")
+            .transform_lookup(
+                lookup="id",
+                from_=alt.LookupData(
+                    _LOOKUP_POPULATION, "id", list(_LOOKUP_POPULATION.columns)
+                ),
+            )
+        )
+
+        st.altair_chart(chart)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        assert not spec.get("datasets")
+
+        assert len(proto.datasets) == 1
+        lookup_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        pd.testing.assert_frame_equal(
+            lookup_df[["id", "population"]].reset_index(drop=True),
+            _LOOKUP_POPULATION.reset_index(drop=True),
+            check_dtype=False,
+        )
+
+    def test_inline_geojson_plus_lookup_keeps_geo_in_spec_and_table_on_proto(
+        self,
+    ) -> None:
+        """Mixed geoshape charts keep geometry in spec and the lookup table as Arrow."""
+        chart = (
+            alt.Chart(
+                alt.InlineData(
+                    values=_TWO_POLYGON_FEATURE_COLLECTION,
+                    format=alt.DataFormat(property="features", type="json"),
+                )
+            )
+            .mark_geoshape()
+            .encode(color="population:Q")
+            .transform_lookup(
+                lookup="id",
+                from_=alt.LookupData(
+                    _LOOKUP_POPULATION, "id", list(_LOOKUP_POPULATION.columns)
+                ),
+            )
+        )
+
+        st.altair_chart(chart)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        geo_payloads = _spec_feature_collections(spec)
+        assert len(geo_payloads) == 1
+        assert len(geo_payloads[0]["features"]) == 2
+        assert not any(
+            isinstance(payload, list) for payload in spec["datasets"].values()
+        )
+
+        assert len(proto.datasets) == 1
+        lookup_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        pd.testing.assert_frame_equal(
+            lookup_df[["id", "population"]].reset_index(drop=True),
+            _LOOKUP_POPULATION.reset_index(drop=True),
+            check_dtype=False,
+        )
+        assert "features" not in lookup_df.columns
 
 
 class AltairChartWidthTest(DeltaGeneratorTestCase):
@@ -1554,6 +1684,84 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         assert json.loads(proto.spec) == merge_dicts(
             autosize_spec, {"data": {"name": "foo"}, "mark": "rect"}
         )
+
+    @parameterized.expand(
+        [
+            (
+                "feature_collection",
+                {
+                    "type": "FeatureCollection",
+                    "features": [
+                        {
+                            "type": "Feature",
+                            "geometry": {"type": "Point", "coordinates": [0, 0]},
+                            "properties": {"name": "a"},
+                        }
+                    ],
+                },
+                {"type": "json", "property": "features"},
+            ),
+            (
+                "topology",
+                {
+                    "type": "Topology",
+                    "arcs": [],
+                    "objects": {
+                        "layer": {"type": "GeometryCollection", "geometries": []}
+                    },
+                },
+                {"type": "topojson"},
+            ),
+            (
+                "feature_list",
+                [
+                    {
+                        "type": "Feature",
+                        "geometry": {"type": "Point", "coordinates": [0, 0]},
+                        "properties": {},
+                    }
+                ],
+                {"type": "json"},
+            ),
+        ]
+    )
+    def test_geo_named_dataset_stays_in_vega_lite_spec(
+        self,
+        _case: str,
+        payload: dict[str, Any] | list[dict[str, Any]],
+        format_spec: dict[str, str],
+    ) -> None:
+        """GeoJSON/TopoJSON named datasets stay in spec JSON, not Arrow."""
+        st.vega_lite_chart(
+            {
+                "mark": {"type": "geoshape"},
+                "data": {"name": "geo", "format": format_spec},
+                "datasets": {"geo": payload},
+            }
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        assert spec["datasets"]["geo"] == payload
+        assert len(proto.datasets) == 0
+
+    def test_json_format_record_list_still_arrow_serialized(self) -> None:
+        """A JSON-format list of plain records is still Arrow-serialized."""
+        records = [{"x": 1, "y": 2}]
+        st.vega_lite_chart(
+            {
+                "mark": "bar",
+                "data": {"name": "foo", "format": {"type": "json"}},
+                "datasets": {"foo": records},
+            }
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        assert "datasets" not in spec
+        assert len(proto.datasets) == 1
+        records_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        assert set(records_df.columns) >= {"x", "y"}
 
     def test_kwargs_raises_type_error(self):
         """Test that passing unexpected kwargs raises TypeError after kwargs removal."""

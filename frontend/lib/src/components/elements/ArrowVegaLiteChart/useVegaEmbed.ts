@@ -89,14 +89,15 @@ export function useVegaEmbed(
 
   const { data, datasets } = inputElement
 
-  // Keep latest refs in sync and initialize previous refs before first view
-  useEffect(() => {
-    latestDataRef.current = data
-    latestDatasetsRef.current = datasets
+  // Keep latest refs in sync during render so createView (which runs in
+  // useLayoutEffect, before useEffect) can merge named datasets into the
+  // spec before embed.
+  latestDataRef.current = data
+  latestDatasetsRef.current = datasets
 
-    // Initialize the data and datasets refs with the current data and datasets
-    // This is predominantly used to handle the case where we want to reference
-    // these in createView before the first render.
+  useEffect(() => {
+    // Initialize previous refs before the first view exists so subsequent
+    // updates have a baseline to diff against.
     if (vegaViewRef.current === null) {
       prevDataRef.current = data
       prevDatasetsRef.current = datasets
@@ -148,9 +149,26 @@ export function useVegaEmbed(
           actions: false,
         }
 
+        // Named Arrow datasets must be in the spec before embed so Vega-Lite
+        // can compile lookups and filters against them. GeoJSON/TopoJSON named
+        // datasets already live on spec.datasets and are preserved.
+        const dataArrays = getDataArrays(latestDatasetsRef.current) ?? {}
+        const datasetNames = Object.keys(dataArrays)
+
+        // Copy so the preprocessor spec (also used for copy-to-clipboard) is
+        // not mutated when Arrow rows are merged in.
+        const specForEmbed =
+          typeof spec === "string" ? JSON.parse(spec) : { ...spec }
+        if (datasetNames.length > 0) {
+          specForEmbed.datasets = {
+            ...specForEmbed.datasets,
+            ...dataArrays,
+          }
+        }
+
         const { vgSpec, view, finalize } = await embed(
           container,
-          spec,
+          specForEmbed,
           options
         )
 
@@ -162,11 +180,7 @@ export function useVegaEmbed(
           finalize()
         }
 
-        // Load the initial set of data into the chart.
-        const dataArrays = getDataArrays(latestDatasetsRef.current)
-
         // Heuristic to determine the default dataset name.
-        const datasetNames = dataArrays ? Object.keys(dataArrays) : []
         if (datasetNames.length === 1) {
           const [datasetName] = datasetNames
           defaultDataNameRef.current = datasetName
@@ -174,14 +188,12 @@ export function useVegaEmbed(
           defaultDataNameRef.current = DEFAULT_DATA_NAME
         }
 
+        // Unnamed Arrow table data is inserted after embed. Named datasets are
+        // already in spec.datasets, so inserting them again would duplicate
+        // rows.
         const dataObj = getInlineData(latestDataRef.current)
         if (dataObj) {
           vegaViewRef.current.insert(defaultDataNameRef.current, dataObj)
-        }
-        if (dataArrays) {
-          for (const [name, dataArg] of Object.entries(dataArrays)) {
-            vegaViewRef.current.insert(name, dataArg)
-          }
         }
 
         await vegaViewRef.current.runAsync()
