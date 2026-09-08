@@ -438,11 +438,13 @@ class CacheResourceAsyncLifecycleCallbackTest(unittest.TestCase):
 
         assert exc_info.value.error_id == "cache-resource-async-lifecycle-callback"
 
-    def test_sync_validate_and_on_release_fire_on_eviction_and_clear(self) -> None:
-        """Synchronous ``validate`` and ``on_release`` run on LRU eviction and ``clear()``."""
+    def test_sync_validate_on_hit_and_on_release_on_eviction_and_clear(self) -> None:
+        """Synchronous callbacks run on cache hits, LRU eviction, and ``clear()``."""
+        validated: list[int] = []
         released: list[int] = []
 
         def validate(value: int) -> bool:
+            validated.append(value)
             return True
 
         def on_release(value: int) -> None:
@@ -454,6 +456,7 @@ class CacheResourceAsyncLifecycleCallbackTest(unittest.TestCase):
 
         assert f(1) == 1
         assert f(1) == 1
+        assert validated == [1]
         assert f(2) == 2
         assert f(3) == 3
         assert released == [1]
