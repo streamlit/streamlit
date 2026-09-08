@@ -373,20 +373,6 @@ class CacheResourceAsyncLifecycleCallbackTest(unittest.TestCase):
             st.cache_resource(**{param_name: callback})(lambda: 1)
 
     @parameterized.expand([("validate",), ("on_release",)])
-    def test_rejects_partial_of_async_callable_object(self, param_name: str) -> None:
-        """Partials of callable instances with async ``__call__`` fail at decoration."""
-
-        class AsyncCallback:
-            async def __call__(self, ignored: object, value: int) -> bool:
-                return True
-
-        callback = functools.partial(AsyncCallback(), None)
-        with pytest.raises(StreamlitAPIException, match=param_name) as exc_info:
-            st.cache_resource(**{param_name: callback})(lambda: 1)
-
-        assert exc_info.value.error_id == "cache-resource-async-lifecycle-callback"
-
-    @parameterized.expand([("validate",), ("on_release",)])
     def test_rejects_async_generator_function(self, param_name: str) -> None:
         """Async generator functions fail when the decorator is built."""
 
@@ -435,29 +421,6 @@ class CacheResourceAsyncLifecycleCallbackTest(unittest.TestCase):
         else:
             cached.clear()
         assert callback.values == [1]
-
-    @parameterized.expand([("validate",), ("on_release",)])
-    def test_accepts_partial_of_sync_callable_object(self, param_name: str) -> None:
-        """Partials of callable objects with synchronous ``__call__`` are invoked."""
-
-        class Callback:
-            def __init__(self) -> None:
-                self.values: list[tuple[str, int]] = []
-
-            def __call__(self, prefix: str, value: int) -> bool:
-                self.values.append((prefix, value))
-                return True
-
-        callback = Callback()
-        partial_callback = functools.partial(callback, "bound")
-        cached = st.cache_resource(**{param_name: partial_callback})(lambda: 1)
-        assert cached() == 1
-
-        if param_name == "validate":
-            assert cached() == 1
-        else:
-            cached.clear()
-        assert callback.values == [("bound", 1)]
 
     @parameterized.expand([("validate",), ("on_release",)])
     def test_rejects_async_wrapper_of_sync_function(self, param_name: str) -> None:

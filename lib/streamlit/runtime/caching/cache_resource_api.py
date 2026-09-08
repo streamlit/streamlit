@@ -17,7 +17,6 @@
 
 from __future__ import annotations
 
-import functools
 import inspect
 import math
 import threading
@@ -95,8 +94,6 @@ def _no_op_release(ignored: Any) -> None:
 def _is_async_callable(func: Callable[..., Any]) -> bool:
     """Return whether ``func`` is an identifiable coroutine or async-generator callable."""
     target: Any = func
-    while isinstance(target, functools.partial):
-        target = target.func
     if inspect.iscoroutinefunction(target) or inspect.isasyncgenfunction(target):
         return True
     # inspect.iscoroutinefunction only inspects the object itself, so a
