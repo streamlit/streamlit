@@ -33,7 +33,7 @@ from click.testing import CliRunner
 from streamlit.web import cli, skills
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
 
 
 def _skip_if_symlinks_not_supported(tmp_path: Path) -> None:
@@ -71,6 +71,24 @@ def _unreadable(*dirs: Path) -> Iterator[None]:
     finally:
         for target in dirs:
             target.chmod(0o700)
+
+
+def _copytree_failing_at(errors: dict[str, OSError]) -> Callable[..., None]:
+    """A ``shutil.copytree`` side effect keyed on the destination path.
+
+    ``errors`` maps a path fragment (``".claude/skills"``) to the error that
+    destination raises; anything unnamed copies. Keyed on the destination rather
+    than on call order, so a test still asserts what it means to if
+    ``_get_global_target_dirs`` ever reorders its targets.
+    """
+
+    def side_effect(source: Path, destination: Path, *args: Any, **kwargs: Any) -> None:
+        target = str(destination).replace("\\", "/")
+        for fragment, error in errors.items():
+            if fragment in target:
+                raise error
+
+    return side_effect
 
 
 @pytest.fixture
@@ -631,6 +649,24 @@ class TestClaudeCliOnPath:
         ):
             assert skills._claude_cli_on_path() is True
 
+    def test_windows_accepts_cwd_when_dot_is_on_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A user who put "." on PATH gets the cwd hit the checkout does not.
+
+        The cwd filter above targets a claude.exe the repo happens to ship, not a
+        directory the user asked to be searched, so "." on PATH must still count.
+        """
+        (tmp_path / "claude.exe").write_text("", encoding="utf-8")
+        monkeypatch.chdir(tmp_path)
+
+        with (
+            patch.object(skills.env_util, "IS_WINDOWS", True),
+            patch.object(skills.shutil, "which", return_value="claude.exe"),
+            patch.dict(os.environ, {"PATH": "."}),
+        ):
+            assert skills._claude_cli_on_path() is True
+
 
 class TestAreSkillsInstalled:
     """Tests for are_skills_installed."""
@@ -882,6 +918,42 @@ class TestInstallCompleteness:
             ),
         ):
             assert skills._install_completeness() == expected
+
+    def test_complete_project_is_not_masked_by_a_partial_global(
+        self, tmp_path: Path
+    ) -> None:
+        """Either scope being complete is enough, not both.
+
+        The mirror of ``test_complete_global_is_not_masked_by_a_partial_project``,
+        which only covers this through ``are_skills_installed``. Pinned here too,
+        so a change requiring *both* scopes is caught at the function that decides
+        it rather than one layer up.
+        """
+        project_agents = tmp_path / "project" / ".agents" / "skills"
+        project_claude = tmp_path / "project" / ".claude" / "skills"
+        for target in (project_agents, project_claude):
+            (target / skills._GLOBAL_SKILL_NAME).mkdir(parents=True)
+        # Global scope is half-installed, so on its own it would report partial.
+        global_agents = tmp_path / "home" / ".agents" / "skills"
+        (global_agents / skills._GLOBAL_SKILL_NAME).mkdir(parents=True)
+        global_claude = tmp_path / "home" / ".claude" / "skills"
+
+        with (
+            patch.object(
+                skills, "_find_project_root", return_value=tmp_path / "project"
+            ),
+            patch.object(
+                skills,
+                "_get_project_target_dirs",
+                return_value=[project_agents, project_claude],
+            ),
+            patch.object(
+                skills,
+                "_get_global_target_dirs",
+                return_value=[global_agents, global_claude],
+            ),
+        ):
+            assert skills._install_completeness() == "complete"
 
     @_needs_permission_bits
     def test_targets_we_cannot_read_at_all_are_unknown_not_absent(
@@ -2028,10 +2100,12 @@ class TestGlobalInstallationConflicts:
             patch.object(
                 skills.shutil,
                 "copytree",
-                side_effect=[
-                    OSError(errno.EACCES, "Permission denied"),
-                    OSError(errno.ENOSPC, "No space left"),
-                ],
+                side_effect=_copytree_failing_at(
+                    {
+                        ".agents/skills": OSError(errno.EACCES, "Permission denied"),
+                        ".claude/skills": OSError(errno.ENOSPC, "No space left"),
+                    }
+                ),
             ),
             # ~/.claude above says Claude Code is present; pin it so the
             # .claude target does not depend on the machine's PATH.
@@ -2073,11 +2147,13 @@ class TestGlobalInstallationConflicts:
             patch.object(
                 skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
             ),
-            # First target (~/.agents) copies fine; second (~/.claude) fails.
+            # ~/.agents copies fine; ~/.claude (the authoritative target) fails.
             patch.object(
                 skills.shutil,
                 "copytree",
-                side_effect=[None, OSError("Permission denied")],
+                side_effect=_copytree_failing_at(
+                    {".claude/skills": OSError("Permission denied")}
+                ),
             ),
             # ~/.claude above says Claude Code is present; pin it so the
             # .claude target does not depend on the machine's PATH.
@@ -2087,6 +2163,12 @@ class TestGlobalInstallationConflicts:
             skills._install_global_skills(yes=True)
 
         assert exc.value.reason == "write_failed"
+        # The message names only what failed, so this pins ~/.claude as the target
+        # that did - it cannot pass by failing the best-effort dir instead, which
+        # is the mirror case and must not raise at all.
+        message = exc.value.format_message()
+        assert ".claude/skills" in message
+        assert ".agents/skills" not in message
 
     def test_best_effort_target_failure_still_reports_success(
         self, tmp_path: Path, mock_meta_skill_dir: Path
@@ -2219,6 +2301,36 @@ class TestIsStreamlitOwnedSymlinkErrorPaths:
 
         # Should return True based on name check
         assert skills._is_streamlit_owned_symlink(link, {"developing-with-streamlit"})
+
+
+class TestAgentHarnessPresent:
+    """Tests for the predicate the nudge gate and the install handler share."""
+
+    @pytest.mark.parametrize(
+        ("agents", "claude_present", "expected"),
+        [
+            (["claude"], False, True),
+            ([], True, True),
+            (["cursor"], True, True),
+            ([], False, False),
+        ],
+        ids=["home-dir-harness", "path-only-claude", "both", "neither"],
+    )
+    def test_either_detector_is_enough(
+        self, agents: list[str], claude_present: bool, expected: bool
+    ) -> None:
+        """Either detector alone answers yes; only both saying no is a no.
+
+        Covered indirectly by the nudge and handler gates, but pinned here so a
+        change to the ``or`` fails at the function that owns it.
+        """
+        with (
+            patch.object(skills, "detect_installed_agents", return_value=agents),
+            patch.object(
+                skills, "_is_claude_code_present", return_value=claude_present
+            ),
+        ):
+            assert skills.agent_harness_present() is expected
 
 
 def _evaluate_nudge(
@@ -2550,6 +2662,16 @@ def test_should_show_skills_nudge_returns_false_on_error() -> None:
     """A detection failure suppresses the nudge rather than raising."""
     with patch("streamlit.config.get_option", side_effect=RuntimeError("boom")):
         assert skills.should_show_skills_nudge() is False
+
+
+def test_nudge_suppression_reason_is_check_failed_on_error() -> None:
+    """A detection failure reports ``check_failed``, not just a falsy answer.
+
+    The boolean wrapper above cannot tell ``check_failed`` from any other
+    suppression reason, and the reason is what reaches telemetry.
+    """
+    with patch("streamlit.config.get_option", side_effect=RuntimeError("boom")):
+        assert skills.nudge_suppression_reason() == "check_failed"
 
 
 def test_write_nudge_dismissed_marker_creates_file(tmp_path: Path) -> None:
