@@ -60,10 +60,9 @@ _needs_permission_bits = pytest.mark.skipif(
 
 @contextmanager
 def _unreadable(*dirs: Path) -> Iterator[None]:
-    """Make ``dirs`` impossible to stat into, restoring them on the way out.
+    """Set ``dirs`` to mode 0o000 so ``lstat()`` fails, then restore 0o700.
 
-    Restoring matters even when the test fails: pytest cannot clean up a
-    ``tmp_path`` containing a 0o000 directory.
+    Restores even on test failure: pytest cannot clean up a 0o000 ``tmp_path``.
     """
     for target in dirs:
         target.chmod(0o000)
@@ -76,28 +75,21 @@ def _unreadable(*dirs: Path) -> Iterator[None]:
 
 @pytest.fixture
 def claude_code_present() -> bool | None:
-    """What ``_is_claude_code_present`` reports for a test.
+    """Pinned return value for ``_is_claude_code_present``.
 
-    Override with ``None`` to opt out and exercise the real detector; a test that
-    wants the other answer can pin it in place, as several below do.
+    Default ``False`` so tests are hermetic. Override to ``True`` to simulate
+    Claude Code, or ``None`` to exercise the real detector.
     """
     return False
 
 
 @pytest.fixture(autouse=True)
 def _isolate_claude_detection(claude_code_present: bool | None) -> Iterator[None]:
-    """Keep Claude Code detection off the ambient environment, and uncached.
+    """Pin Claude Code detection and clear its process-lifetime cache per test.
 
-    Detection consults ``PATH``, so left real it adds a ``.claude/skills`` target
-    on any contributor machine with the CLI installed while staying absent in CI -
-    a latent flake for every assertion about install targets, which this file is
-    largely made of. Pinning it here makes that hermetic by default rather than
-    leaving the next added assertion to rediscover it.
-
-    The cache is cleared around each test as well: ``_is_claude_code_present`` is
-    memoized for the process, so a test that sets up a temp HOME would otherwise
-    inherit (or hand on) another test's answer and pass or fail depending on
-    collection order.
+    The real detector reads ``PATH``, so a local ``claude`` CLI would add a
+    ``.claude/skills`` target in local runs but not in CI - a latent flake. The
+    cache is cleared so tests do not inherit stale answers.
     """
     skills._is_claude_code_present.cache_clear()
     try:
@@ -525,7 +517,7 @@ class TestIsClaudeCodePresent:
 
     @pytest.fixture
     def claude_code_present(self) -> bool | None:
-        """Opt out of the file-wide pin: these tests are the detector."""
+        """Use the real detector: this class tests it directly."""
         return None
 
     @pytest.mark.parametrize(
@@ -552,11 +544,10 @@ class TestIsClaudeCodePresent:
             assert skills._is_claude_code_present() is expected
 
     def test_detects_cli_on_path_without_home_dir(self, tmp_path: Path) -> None:
-        """The CLI being on PATH counts even before ~/.claude is created.
+        """A CLI on PATH counts even when ~/.claude does not exist yet.
 
-        This is the case that used to strand users: they install the skill on a
-        fresh machine where Claude Code has not yet created ~/.claude, so the
-        installer skipped .claude/skills entirely.
+        Claude Code is present but has not created ~/.claude, so the installer
+        must still write .claude/skills.
         """
         home = tmp_path / "home"
         home.mkdir(parents=True)
@@ -581,9 +572,9 @@ class TestIsClaudeCodePresent:
             assert skills._is_claude_code_present() is True
 
     def test_is_cached_across_calls(self, tmp_path: Path) -> None:
-        """The PATH scan runs once per process, not once per script rerun.
+        """The result is cached: repeated calls do not re-walk PATH.
 
-        This sits on the nudge show-gate, which re-evaluates on every rerun.
+        The nudge display gate calls this on every rerun, so caching matters.
         """
         home = tmp_path / "home"
         home.mkdir(parents=True)
@@ -663,10 +654,10 @@ class TestAreSkillsInstalled:
     ) -> None:
         """A scope with .agents but not .claude is not a complete install.
 
-        This is the wedged state: the user ran `streamlit skills` before Claude
-        Code existed, so only .agents/skills was written. Once ~/.claude appears,
-        Claude Code cannot see the skill - and if this returned True nothing
-        would ever prompt them again, stranding them permanently.
+        The user ran `streamlit skills` before Claude Code existed, so only
+        .agents/skills was written. Once ~/.claude appears, Claude Code cannot see
+        the skill - and returning True here would stop anything from ever
+        prompting them again.
         """
         agents_dir = tmp_path / "home" / ".agents" / "skills"
         (agents_dir / skills._GLOBAL_SKILL_NAME).mkdir(parents=True)
@@ -726,7 +717,7 @@ class TestAreSkillsInstalled:
         Reachable in the wild: a project install predating Claude Code (or a
         teammate's committed .agents/skills entry) alongside a later complete
         global one. Claude Code loads the skill from ~/.claude/skills there, so
-        the user is not wedged and must not be told to install on every run.
+        the skill loads and the user must not be told to install every run.
         """
         project_agents = tmp_path / "project" / ".agents" / "skills"
         project_claude = tmp_path / "project" / ".claude" / "skills"
@@ -862,20 +853,18 @@ class TestInstallCompleteness:
         ],
         ids=["absent", "partial", "partial_claude_only", "complete"],
     )
-    def test_reports_each_state(
+    def test_completeness_from_agents_and_claude_combinations(
         self,
         tmp_path: Path,
         agents_installed: bool,
         claude_installed: bool,
         expected: str,
     ) -> None:
-        """Absent, partial, and complete are distinguished, not collapsed to a bool.
+        """Absent, partial, and complete are distinguished, not collapsed to bool.
 
-        The in-app nudge needs "partial" separated from "absent": only a
-        half-finished install of *ours* should reopen a nudge the user has
-        already acted on. Both halves of a wedge count as partial - the common
-        one is .agents/skills with nothing in .claude/skills, and a hand-copied
-        .claude/skills with an empty .agents/skills is the mirror image.
+        Only ``partial`` (our install missing one of its own targets) should
+        reopen the nudge. Either half missing counts: .agents without .claude is
+        the common case, and the reverse is the mirror image.
         """
         agents_dir = tmp_path / "home" / ".agents" / "skills"
         claude_dir = tmp_path / "home" / ".claude" / "skills"
@@ -2272,15 +2261,14 @@ def _evaluate_nudge_reason(
 ) -> str:
     """Run ``nudge_suppression_reason`` with the given conditions patched in.
 
-    ``agents`` is the harness list ``detect_installed_agents()`` reports;
-    ``claude_on_path`` is the broader Claude signal. The agent gate consults
-    both, so they vary independently here.
+    ``agents`` is the harness list from ``detect_installed_agents()``;
+    ``claude_on_path`` pins ``_is_claude_code_present()``. The agent gate
+    consults both, so they vary independently here.
 
-    ``completeness`` defaults to ``absent`` to match ``installed_skills=()``, so
-    the default world is a machine with nothing installed. Pass it whenever
-    ``installed_skills`` is non-empty: the two together decide this gate, and
-    leaving the default in place describes a marker from a harness we do not
-    write to rather than an install of ours.
+    ``completeness`` defaults to ``absent`` to match ``installed_skills=()``.
+    Pass it whenever ``installed_skills`` is non-empty: the two together decide
+    the gate, and leaving the default describes a foreign-harness marker rather
+    than an install of ours.
     """
     marker = tmp_path / ".skills_nudge_dismissed"
     if marker_exists:
@@ -2325,10 +2313,9 @@ def _evaluate_nudge_reason(
         ({"hide_welcome": True}, "welcome_hidden"),
         ({"marker_exists": True}, "dismissed"),
         ({"agents": (), "claude_on_path": False}, "no_agent"),
-        # The broad Claude signal alone is enough: that user gets a
-        # .claude/skills target and so a "partial" install, which means the
-        # startup recommendation prints for them. Withholding the one-click
-        # repair here is what left them nagged with nothing to click.
+        # Claude on PATH alone is enough: that user gets a .claude/skills
+        # target, so a "partial" install. Withholding the nudge here would leave
+        # them nagged by the startup recommendation with no one-click repair.
         ({"agents": (), "claude_on_path": True, "completeness": "partial"}, ""),
         (
             {
@@ -2405,16 +2392,12 @@ def test_should_show_skills_nudge_hidden_when_no_agent(tmp_path: Path) -> None:
     assert _evaluate_nudge(tmp_path, agents=(), claude_on_path=False) is False
 
 
-def test_nudge_is_shown_when_only_the_broad_claude_signal_fires(
-    tmp_path: Path,
-) -> None:
-    """A `claude` on PATH with no ~/.claude still gets the one-click repair.
+def test_nudge_is_shown_when_claude_is_only_on_path(tmp_path: Path) -> None:
+    """A ``claude`` on PATH with no ~/.claude still gets the one-click repair.
 
-    ``detect_installed_agents()`` keys on ~/.claude, so gating on it alone hid
-    the nudge from exactly the users the broader signal had already decided to
-    give a .claude/skills target - and who therefore see the startup
-    recommendation on every run. Nagged by the surface that cannot fix it,
-    hidden from the one that can.
+    ``detect_installed_agents()`` keys on ~/.claude, so gating on it alone hides
+    the nudge from the exact users who see the startup recommendation (because
+    ``_is_claude_code_present`` adds a .claude/skills target they do not have).
     """
     assert (
         _evaluate_nudge(
@@ -2448,10 +2431,8 @@ def test_should_show_skills_nudge_hidden_when_skills_installed(tmp_path: Path) -
 def test_should_show_skills_nudge_when_install_is_partial(tmp_path: Path) -> None:
     """A marker in .agents with nothing in .claude still shows the nudge.
 
-    This is the wedge the whole change is about, seen from the in-app surface: a
-    detected SKILL.md is not proof the agent can load it, and the nudge's
-    one-click install is the repair. Gating on the marker alone left these users
-    with no in-app way out.
+    A detected SKILL.md is not proof the agent can load it. The nudge's
+    one-click install fills the missing target.
     """
     assert (
         _evaluate_nudge(
@@ -2464,12 +2445,12 @@ def test_should_show_skills_nudge_when_install_is_partial(tmp_path: Path) -> Non
 
 
 def test_nudge_is_not_suppressed_by_a_real_partial_tree(tmp_path: Path) -> None:
-    """End-to-end over the real predicate: an .agents-only tree still nudges.
+    """End-to-end: a real .agents-only tree still triggers the nudge.
 
-    The mocked test above pins the branch; this one pins the wiring, so moving
-    the gate back onto ``detect_installed_skills`` alone fails here. Everything
-    but the target dirs is stubbed, since the gate would otherwise read the
-    developer's own home and project directories.
+    Unlike the mocked test above, this runs the real ``_install_completeness``
+    against real directories, so a change that re-gates on
+    ``detect_installed_skills`` alone would fail here. Only the target dirs are
+    real - the rest is stubbed, or the gate would read the developer's own home.
     """
     agents_dir = tmp_path / "project" / ".agents" / "skills"
     claude_dir = tmp_path / "project" / ".claude" / "skills"
@@ -2504,12 +2485,12 @@ def test_nudge_is_not_suppressed_by_a_real_partial_tree(tmp_path: Path) -> None:
 
 @_needs_permission_bits
 def test_nudge_is_hidden_when_no_install_target_can_be_read(tmp_path: Path) -> None:
-    """End-to-end over the real predicate: an unreadable tree does not nudge.
+    """End-to-end: an unreadable install tree does not trigger the nudge.
 
-    The tree is installed but every target dir raises, so the marker scan sees
-    nothing either. Without the ``unknown`` state both blind checks would agree
-    on "nothing installed" and nudge a correctly-installed user on every rerun -
-    with a one-click install that hits the same permissions error.
+    The skill is installed but every target dir raises, so
+    ``detect_installed_skills`` and ``_install_completeness`` both see nothing.
+    Without the ``unknown`` state they would agree on "not installed" and nudge a
+    correctly-installed user on every rerun.
     """
     agents_dir = tmp_path / "project" / ".agents" / "skills"
     (agents_dir / skills._GLOBAL_SKILL_NAME).mkdir(parents=True)

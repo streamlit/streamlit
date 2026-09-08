@@ -220,9 +220,10 @@ class InstallSkillsHandler(BackendOperationHandler):
         #   - headless mode (deployments / CI / SiS): the nudge is never shown
         #     there, so the request is a replayed/spoofed BackMsg; refuse the
         #     filesystem writes.
-        #   - no agent harness present: nothing would consume the skills. Uses
-        #     the same predicate as the nudge's display gate, so a nudge we show
-        #     can never lead to a button that refuses.
+        #   - no agent harness present: nothing would consume the skills.
+        #     Shares the predicate with the nudge display gate
+        #     (agent_harness_present), so users who see the nudge always get a
+        #     working button.
         #   - the browser is not on a direct-loopback connection: the same
         #     conservative eligibility rule the nudge display uses, so a
         #     shared/deployed-ish topology (Docker/VM/reverse-proxy/SSH-tunnel)

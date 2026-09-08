@@ -364,9 +364,9 @@ def test_install_skills_handler_refuses_without_agent_harness() -> None:
     with (
         patch("streamlit.config.get_option", return_value=False),
         patch.object(skills, "detect_installed_agents", return_value=[]),
-        # Pinned, not inherited: the gate consults the broader Claude signal too,
-        # which reads PATH and so would otherwise answer differently on a
-        # contributor machine with the CLI installed than it does in CI.
+        # Pinned: agent_harness_present also consults PATH, so on a contributor
+        # machine with the CLI installed the gate would let the install through,
+        # failing this test locally while it passes in CI.
         patch.object(skills, "_is_claude_code_present", return_value=False),
         patch("streamlit.web.skills.install_skills") as mock_install,
     ):
@@ -382,13 +382,11 @@ def test_install_skills_handler_refuses_without_agent_harness() -> None:
     assert not response.HasField("install_skills")
 
 
-def test_install_skills_handler_honors_a_broad_claude_signal() -> None:
-    """The action gate accepts whatever the display gate accepts.
+def test_install_skills_handler_accepts_path_only_claude_detection() -> None:
+    """Install proceeds when Claude Code is detected only via PATH (no ~/.claude).
 
-    A `claude` on PATH with no ~/.claude gets a .claude/skills target, is
-    therefore reported as partially installed, and now sees the nudge. If this
-    gate still keyed on detect_installed_agents() alone, that nudge would hand
-    the user a button that refuses - worse than the nag it replaced.
+    The nudge shows for these users (they get a .claude/skills target reported as
+    partially installed), so the handler must not refuse with no_agent.
     """
     install_result = skills._InstallResult(installed=[".claude/skills/foo"])
     with (
@@ -521,11 +519,8 @@ def test_install_skills_handler_runs_real_installer(tmp_path: Path) -> None:
         patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
         patch("pathlib.Path.cwd", return_value=project_dir),
         patch("pathlib.Path.home", return_value=tmp_path / "home"),
-        # Pin Claude Code as absent so .agents/skills is the only target, and the
-        # detail string below stays predictable. Stated explicitly rather than
-        # left to the temp $HOME having no ~/.claude: detection also consults
-        # PATH, so on a contributor's machine with the CLI installed the real
-        # helper would add .claude/skills and this would fail there but not in CI.
+        # Pinned: detection also consults PATH, so a contributor machine with
+        # the CLI would add .claude/skills and break the detail-string assertion.
         patch.object(skills, "_is_claude_code_present", return_value=False),
         patch.object(skills, "clear_installed_skills_cache"),
     ):

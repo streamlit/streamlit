@@ -300,28 +300,24 @@ def _lives_in_a_path_entry(executable: str) -> bool:
     }
 
 
-# Deliberately broader than the "claude" entry in _HARNESSES, which keys on the
-# home directory alone. That table answers "which harnesses exist" for telemetry,
-# where a stable definition matters more than catching a just-installed CLI; here
-# a miss breaks the feature outright. The two only disagree for an install never
-# invoked beyond `claude --version`, which creates nothing - the first command
-# that touches config creates both ~/.claude and ~/.claude.json, before login
-# (checked against Claude Code 2.1.235). Nobody is wedged in that window, since
-# being wedged means having used Claude Code and found the skill missing.
+# Broader than the "claude" row in _HARNESSES, which keys on ~/.claude alone for
+# stable telemetry. Here a miss hides the skill from Claude Code, so we also
+# accept ~/.claude.json and a `claude` on PATH. In practice the two only disagree
+# for a CLI never invoked past `claude --version`: the first command that touches
+# config writes both markers, before login (checked against Claude Code 2.1.235).
 #
-# Cached because this sits on the nudge show-gate, which re-evaluates on every
-# script rerun, and shutil.which() walks the whole PATH. Claude Code installed
-# mid-session is therefore missed until the server restarts; the next session
-# sees a partial install and offers the repair.
+# Cached: the nudge display gate calls this on every script rerun, and
+# shutil.which() walks all of PATH. A Claude Code install mid-session is missed
+# until the server restarts; the next session sees a partial install and offers
+# the repair.
 @lru_cache(maxsize=1)
 def _is_claude_code_present() -> bool:
-    """Whether the installer should also write a ``.claude`` skills target.
+    """Whether Claude Code appears to be installed on this machine.
 
-    Claude Code only reads skills from ``.claude/skills/``, never from
-    ``.agents/skills/``, so a missed detection costs the user the entire skill
-    while a false positive costs a few unused symlinks. Detection is generous to
-    match that asymmetry: ``~/.claude`` is created lazily, so ``~/.claude.json``
-    or a ``claude`` on ``PATH`` counts as present too.
+    Claude Code reads only ``.claude/skills/``, never ``.agents/skills/``, so a
+    missed detection hides the skill while a false positive costs unused
+    symlinks. ``~/.claude`` is created lazily, so ``~/.claude.json`` or a
+    ``claude`` on ``PATH`` also counts.
     """
     try:
         home = Path.home()
@@ -367,22 +363,15 @@ def _get_global_target_dirs() -> list[Path]:
 
 
 def _authoritative_global_target_dir() -> Path:
-    """The one global target dir whose write decides if an install succeeded.
+    """The global target whose write failure fails the whole install.
 
-    Claude Code is the only harness verified to read a directory we write, and it
-    reads ``.claude/skills`` while ignoring ``.agents/skills`` entirely. So when
-    Claude Code is detected, ``~/.claude/skills`` is what an install has to land,
-    and ``~/.agents/skills`` is best-effort - written for harnesses that may or may
-    not read it, and never the reason an install that already reached Claude Code
-    is reported as a failure.
+    - Claude Code detected -> ``~/.claude/skills``. That is what Claude Code
+      reads; ``~/.agents/skills`` is best-effort.
+    - No Claude Code -> ``~/.agents/skills``. No target has a verified reader,
+      but leaving none authoritative would turn every write failure into silent
+      success.
 
-    With no Claude Code detected, none of our targets has a verified reader and
-    ``~/.agents/skills`` is the only one we write, so it carries authority by
-    default. That is a deliberate choice between two wrong answers: leaving no
-    target authoritative would turn every write failure into a silent success.
-
-    Always one of :func:`_get_global_target_dirs`, so exactly one target in that
-    list is load-bearing and the rest are best-effort.
+    Always one of :func:`_get_global_target_dirs`.
     """
     home = Path.home()
     if _is_claude_code_present():
@@ -390,11 +379,9 @@ def _authoritative_global_target_dir() -> Path:
     return home / ".agents" / "skills"
 
 
-# How completely the bundled skill is installed, judged only against the
-# directories `streamlit skills` itself writes. ``partial`` is the state this
-# vocabulary exists for: it is the wedge - the skill sitting in .agents/skills
-# with nothing in .claude/skills, because Claude Code was not detected the last
-# time the installer ran - which leaves the skill invisible to that agent.
+# Completeness against the directories `streamlit skills` writes. The key state
+# is ``partial``: the skill is in .agents/skills but not .claude/skills, so
+# Claude Code cannot see it.
 _InstallCompleteness = Literal[
     "absent",  # No target dir in either scope has the skill.
     "complete",  # Some scope has it in every target dir we could read.
@@ -404,15 +391,14 @@ _InstallCompleteness = Literal[
 
 
 def _install_completeness(app_dir: str | None = None) -> _InstallCompleteness:
-    """How completely the bundled skill is installed, from the installer's view.
+    """How completely the bundled skill is installed across target directories.
 
-    A scope counts as complete when every target dir we could read has the
-    skill, and the whole install counts as complete when *either* scope is - a
-    complete global install means every agent can load the skill, so a
-    half-finished project install must not downgrade it.
+    Either scope (project or global) being complete is enough - a complete global
+    install means every agent can load the skill, so a half-finished project
+    install must not downgrade it.
 
-    Best-effort, so a permissions error never reports a correctly-installed user
-    as partial:
+    Best-effort - a permissions error never reports a working install as
+    partial:
 
     - Target dirs that cannot be resolved are skipped.
     - Target dirs that cannot be read count as unknown, not missing.
@@ -453,9 +439,8 @@ def _install_completeness(app_dir: str | None = None) -> _InstallCompleteness:
 
     partial = False
     read_a_target = False
-    # Project scope first only because a project-local install is the more
-    # specific choice; a complete scope wins wherever it is found, so the order
-    # does not change the answer.
+    # Project scope first, but either scope being complete returns immediately,
+    # so the order does not affect the result.
     scopes = [scope_dirs for scope_dirs in (project_dirs, global_dirs) if scope_dirs]
     for scope_dirs in scopes:
         # Directories we could not read are dropped rather than treated as
@@ -480,30 +465,21 @@ def _install_completeness(app_dir: str | None = None) -> _InstallCompleteness:
     if partial:
         return "partial"
     if scopes and not read_a_target:
-        # We knew where to look and could not look anywhere: reporting "absent"
-        # here would tell both surfaces the skill is missing on the strength of
-        # a permissions error, nagging a correctly-installed user every rerun.
-        # Note this is narrower than resolving no target dirs at all, which
-        # stays "absent": there the install we recommend can still succeed.
+        # Targets existed but none could be read. "Absent" here would blame a
+        # permissions error for a missing install. (No targets at all stays
+        # "absent": an install can still succeed once the lookup recovers.)
         return "unknown"
     return "absent"
 
 
 def are_skills_installed() -> bool:
-    """Whether the startup recommendation should stay quiet about the skills.
+    """Whether the startup recommendation should stay quiet about missing skills.
 
-    ``True`` when the bundled skill is present (as a symlink, copied directory,
-    or regular directory) in *every* target directory of at least one install
-    scope, so it is reachable from every agent ``streamlit skills`` writes for.
-    A partial install counts as not installed, so the startup recommendation in
-    ``bootstrap`` prints again and the re-run fills in the missing agent
-    directory - the case that matters when an agent is installed after
-    ``streamlit skills`` last ran.
-
-    Also ``True`` for an install we could not inspect at all - target dirs
-    resolved, but every one of them raised. "We could not look" is not evidence
-    the skill is missing, the recommendation has no dismissal path, and the
-    install it points at would hit the same error.
+    True for ``complete`` and ``unknown``. A partial install returns False, so
+    the startup recommendation prints again and the re-run fills in the missing
+    target. ``unknown`` (every target unreadable) returns True because the
+    recommendation has no dismissal path and the install it points at would hit
+    the same error.
 
     Best-effort: it does not validate skill contents.
     """
@@ -519,10 +495,9 @@ def _skill_present_in(target_dir: Path) -> bool | None:
     """
     skill_path = target_dir / _GLOBAL_SKILL_NAME
     try:
-        # lstat() rather than exists()/is_symlink(): those swallow OSError and
-        # so report an unreadable path as a missing one, which would collapse
-        # the "could not look" case this return type exists for. lstat() does
-        # not follow symlinks, so a dangling link still counts as present.
+        # lstat() instead of exists()/is_symlink(): those swallow OSError and
+        # collapse "could not look" into "missing". lstat() raises on permission
+        # errors and does not follow symlinks.
         skill_path.lstat()
     except (FileNotFoundError, NotADirectoryError):
         # Nothing there, or a parent component is a file - either way the skill
@@ -963,23 +938,20 @@ def _write_error(
     result: _InstallResult,
     reasons: set[_InstallFailureReason] | None = None,
 ) -> InstallError:
-    """Build a "couldn't write" error for filesystem failures during copy.
+    """Build a write-failure error for the copy install path.
 
-    Distinct from :func:`_conflict_error`, which reports pre-existing files.
+    Distinct from :func:`_conflict_error` (pre-existing files).
 
-    ``reasons`` are the causes that *justify* the error - in practice those from the
-    authoritative target, whose path a detected harness reads. ``None`` means every
-    recorded cause justifies it. A best-effort failure is still named in the
-    message, since the user should see everything that did not land, but it must
-    not decide the reason: a dead-weight target cannot be allowed to mislabel a
-    failure a load-bearing one caused.
+    ``reasons`` restricts which causes set the telemetry reason - in practice,
+    those from the authoritative target. ``None`` uses every recorded cause. A
+    best-effort target's failure still appears in the user-facing message, but it
+    must not pick the telemetry reason: the dir a harness actually reads decides
+    the label.
 
-    The reason follows what the justifying failures agreed on:
-
-    - all agreed on one cause -> that cause
-    - they disagreed, or none was recorded -> the generic ``write_failed``, because
-      claiming "permission denied" for a set that was half permissions and half
-      disk-full would point whoever reads the telemetry at the wrong fix
+    - All causes agree -> that cause.
+    - They disagree, or none was recorded -> ``write_failed``, since labelling a
+      half-permissions, half-disk-full set "permission denied" would point
+      whoever reads the telemetry at the wrong fix.
     """
     joined = ", ".join(_concise_install_paths(result.errored))
     justifying = result.write_reasons if reasons is None else reasons
@@ -1184,10 +1156,9 @@ def _install_global_skills(*, yes: bool = False) -> _InstallResult:
             reason="source_incomplete",
         )
 
-    # Install to each target directory, keeping a per-target result so each
-    # target's outcome can be judged on its own. The aggregate below cannot support
-    # that: ``write_reasons`` is a set, so two targets failing the same way are
-    # indistinguishable from one, and nothing in it records WHICH target failed.
+    # Per-target results let us judge each target's outcome. The merged
+    # _InstallResult cannot: write_reasons is a set, so identical failures on
+    # different targets are indistinguishable.
     result = _InstallResult()
     # For global install, only one skill is installed but we use a set for consistency
     bundled_skill_names = {_GLOBAL_SKILL_NAME}
@@ -1220,19 +1191,16 @@ def _install_global_skills(*, yes: bool = False) -> _InstallResult:
     # Report results
     _print_result(result)
 
-    # A write failure on the AUTHORITATIVE target is a hard failure: a detected
-    # harness reads that path, so the install reached no agent. A failure on a
-    # best-effort target is not, and used to be - telling a developer whose
-    # ~/.claude/skills was written, and whose Claude Code therefore works
-    # perfectly, that the install had failed. Worse once a partial install
-    # reopens the nudge: that developer would be nudged toward a repair that
-    # fails on the same unwritable target every time, with no way out.
+    # Fail only when the authoritative target failed: a detected harness reads
+    # that path, so the install reached no agent. A best-effort miss is not a
+    # failure - it avoids nudging a developer whose Claude Code works into a
+    # repair loop on an unwritable extra dir.
     if authoritative_failed:
         raise _write_error(result, authoritative_reasons)
 
-    # Nothing landed anywhere. Unreachable while the authoritative dir is always
-    # one of ``target_dirs``, but a target added later must not be able to turn a
-    # total failure into a silent success.
+    # Backstop: nothing landed anywhere. Currently unreachable because the
+    # authoritative dir is always in target_dirs, but prevents a future extra
+    # target from turning a total failure into silent success.
     if result.errored and not (result.installed or result.up_to_date):
         raise _write_error(result)
 
@@ -1639,19 +1607,16 @@ _NudgeSuppressionReason = Literal[
 ]
 
 
-# Keep the nudge's display gate and the in-app installer's action gate on this
-# one predicate: gating the display broadly and the action narrowly offers a
-# button that refuses, and the reverse withholds the one repair from users the
-# startup recommendation nags on every run.
+# Shared by the nudge display gate and InstallSkillsHandler's action gate.
+# Different predicates would give either a nudge whose button refuses, or a
+# startup recommendation with no one-click repair to offer.
 def agent_harness_present() -> bool:
-    """Whether an AI agent harness that would consume the skills is installed.
+    """Whether some agent harness would consume the installed skills.
 
-    Either detector counts. :func:`detect_installed_agents` keys on home-dir
-    markers and defines the ``installed_agents`` telemetry vocabulary for all
-    eight harnesses; :func:`_is_claude_code_present` is the broader signal that
-    decides whether ``.claude/skills`` is an install target at all. Anyone the
-    broad one covers has a target the installer writes to, so something would
-    consume the skills - which is the question both gates are really asking.
+    True when :func:`detect_installed_agents` finds a home-dir harness *or*
+    :func:`_is_claude_code_present` reports True (so the installer writes
+    ``.claude/skills``). Both the nudge display gate and the install handler
+    share this predicate.
     """
     return bool(detect_installed_agents()) or _is_claude_code_present()
 
@@ -1669,15 +1634,14 @@ def nudge_suppression_reason(app_dir: str | None = None) -> _NudgeSuppressionRea
     """Return why the in-app "install skills" nudge is being withheld, or ``""``
     when it should be shown.
 
-    The nudge is recommended only for interactive local development where an AI
-    agent harness is present - by either detector, see the gate below - but the
-    bundled Streamlit skills are not yet installed, or are installed in only
-    some of the agent directories the installer targets, and the user has not
-    permanently dismissed it. This mirrors the gating of the CLI recommendation
-    printed on app startup, which uses the same completeness rule via
-    :func:`are_skills_installed`. It is also withheld when a one-click install
-    would conflict at every install target, so the user is never nudged toward
-    an install that can only fail.
+    The nudge is shown only for interactive local development where
+    :func:`agent_harness_present` reports True and the bundled skills are not
+    already usable: either :func:`detect_installed_skills` finds no marker, or
+    :func:`_install_completeness` reports ``partial`` - our install missing one of
+    its own target dirs. Also withheld once the user dismisses it, and when a
+    one-click install would conflict at every target, so nobody is nudged toward
+    an install that can only fail. The startup recommendation gates on the same
+    completeness rule via :func:`are_skills_installed`.
 
     Parameters
     ----------
@@ -1688,11 +1652,13 @@ def nudge_suppression_reason(app_dir: str | None = None) -> _NudgeSuppressionRea
         detection result. Falls back to the current working directory when
         ``None``.
 
+    Notes
+    -----
     Best-effort: the nudge is withheld rather than guessed whenever the check
     cannot answer, so a detection failure never blocks app startup or surfaces a
     spurious nudge - ``"check_failed"`` when the check raised, and
-    ``"check_unreadable"`` when every install target was unreadable. Note these
-    are *reasons*, not falsy values — the nudge stays hidden, as before.
+    ``"check_unreadable"`` when every install target was unreadable. These are
+    *reasons*, not falsy values: the nudge stays hidden either way.
     """
     from streamlit import config
 
@@ -1709,23 +1675,21 @@ def nudge_suppression_reason(app_dir: str | None = None) -> _NudgeSuppressionRea
         # install handler's action gate shares so the two cannot drift.
         if not agent_harness_present():
             return "no_agent"
-        # An agent is present; recommend installing only if our skills aren't. A
-        # marker found somewhere is not enough: it may sit in .agents/skills
-        # while Claude Code, which reads only .claude/skills, has nothing. Only
-        # "partial" - an install of ours that misses one of its own target dirs -
-        # keeps the nudge, since its one-click install is exactly the repair.
-        # "absent" still suppresses: the marker came from a harness we do not
-        # install for (a hand-placed .cursor/skills copy, say), and nudging that
-        # user would be noise.
+        # A found marker is not proof the agent can load the skill: it may sit
+        # in .agents/skills while Claude Code, which reads only .claude/skills,
+        # has nothing. So of the states a found marker can pair with, only
+        # ``partial`` - our install missing one of its own targets - keeps the
+        # nudge, whose one-click install is exactly that repair. A marker from a
+        # harness we do not install for (a hand-placed .cursor/skills copy, say)
+        # suppresses: that user is already set up.
         completeness = _install_completeness(app_dir)
         if detect_installed_skills(app_dir) and completeness != "partial":
             return "installed"
-        # No marker found and nothing readable either: every target dir raised,
-        # so "not installed" is a conclusion we cannot draw, and the one-click
-        # install we would offer hits the same error. Withhold instead of
-        # nudging a user whose setup may be fine. Its own label rather than
-        # "check_failed": this is a permissions population to go and look at, not
-        # a code path of ours that broke.
+        # Every target dir raised, so we cannot tell whether skills are
+        # installed. Withhold: the user's setup may be fine, and the install
+        # we'd offer would hit the same error.
+        # Own label (not check_failed): this is a permissions issue to
+        # investigate, not a code bug.
         if completeness == "unknown":
             return "check_unreadable"
         # No usable install found. Withhold only on a deterministic conflict at
