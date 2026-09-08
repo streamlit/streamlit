@@ -98,7 +98,7 @@ Add `position` as a keyword-only parameter to `@st.dialog`, placed right after
 | `"left"` | Full-height drawer flush to the left edge of the viewport. |
 | `"right"` | Full-height drawer flush to the right edge of the viewport. |
 
-An invalid value raises `StreamlitValueError` (listing `'center'`, `'left'`,
+An invalid value raises `StreamlitValueError` (listing `'left'`, `'center'`,
 `'right'`), matching how `st.navigation(position=...)` and `on_dismiss` validate
 their arguments. Unlike `width`, which silently falls back to `"small"` for
 unrecognized values, `position` follows the stricter, fail-fast pattern.
@@ -127,10 +127,10 @@ centered dialog:
   edge (the one facing the app). `width` sets the starting width; the drag
   overrides it, and double-clicking the handle restores the preset (matching
   `st.sidebar`). A dragged width persists for the currently open drawer,
-  including across fragment reruns triggered by widgets inside it, and resets to
-  the `width` preset when the drawer is dismissed or the preset changes; it is
-  per-dialog (not shared across dialogs) and does not persist across a page
-  reload. Resizing is pointer-based (matching `st.sidebar`) and handled entirely
+  including across fragment reruns triggered by widgets inside it. It resets to
+  the `width` preset when the drawer is dismissed, and does not persist across a
+  page reload. It is per-dialog (not shared across dialogs). Resizing is
+  pointer-based (matching `st.sidebar`) and handled entirely
   in the frontend — it does not rerun the app or change widget state — and does
   not apply to centered dialogs. Because the drawer overlays the page, resizing
   changes only the drawer's own width; the main content is not reflowed (unlike
