@@ -395,6 +395,6 @@ committing to the larger companion-pane design.
 | Works on SiS, Cloud, etc? | ✅ Placement is handled in the frontend; no platform-specific API. |
 | No breaking API changes | ✅ New optional parameter; default `"center"` preserves today's behavior. |
 | No new dependencies | ✅ Reuses the existing Modal component and layout. |
-| Metrics collected | ✅ `@st.dialog` is already tracked via `gather_metrics`, which records that the `position` keyword was passed (argument name, type, and length — not the literal value). Capturing which of `"center"`/`"left"`/`"right"` was used needs an explicit metrics addition in the implementation PR. |
+| Metrics collected | ✅ Covered by the existing `@st.dialog` `gather_metrics` tracking (records that the `position` keyword was passed — argument name, type, and length). We intentionally rely on this and do not add dedicated tracking of the specific `"left"`/`"center"`/`"right"` value. |
 | Any security/legal impact? | ✅ None. As with `dismissible`, a side drawer being modal is not a security guarantee — do not rely on it to block main-app interaction for security-critical checks. |
 | Any docs changes needed? | ✅ Update the `st.dialog` docstring/API reference and the layouts skill reference (both done in the implementation PR). Public docs mention only that side drawers are user-resizable — not the drag mechanics, starting-vs-dragged width, or rerun behavior (users discover drag, as with `st.sidebar`). |
