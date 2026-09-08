@@ -93,24 +93,27 @@ def _no_op_release(ignored: Any) -> None:
 
 
 def _is_async_callable(func: Callable[..., Any]) -> bool:
-    """Return True if ``func`` is a coroutine or async-generator callable.
+    """Return True if calling ``func`` produces a coroutine or async generator.
+
+    Classification uses the callable Streamlit will invoke, not ``__wrapped__``
+    metadata. A synchronous adapter around an async function is therefore
+    accepted, even when it is built with ``functools.wraps``.
 
     ``inspect.iscoroutinefunction`` is False for callable instances whose
     ``__call__`` is async, so those objects are inspected via ``__call__``.
     """
-    unwrapped: Any = func
-    while isinstance(unwrapped, functools.partial):
-        unwrapped = unwrapped.func
-    unwrapped = inspect.unwrap(unwrapped)
-    if inspect.iscoroutinefunction(unwrapped) or inspect.isasyncgenfunction(unwrapped):
+    target: Any = func
+    while isinstance(target, functools.partial):
+        target = target.func
+    if inspect.iscoroutinefunction(target) or inspect.isasyncgenfunction(target):
         return True
     # Inspect the type's ``__call__`` so callable instances with an async
-    # ``__call__`` are detected. ``inspect.iscoroutinefunction(instance)`` is
-    # False on some supported Python versions.
-    call = type(unwrapped).__call__
-    if call is unwrapped:
+    # ``__call__`` are detected. ``inspect.iscoroutinefunction`` only inspects
+    # the object itself, so a callable instance whose ``__call__`` is async
+    # has to be detected through its type.
+    call = type(target).__call__
+    if call is target:
         return False
-    call = inspect.unwrap(call)
     return inspect.iscoroutinefunction(call) or inspect.isasyncgenfunction(call)
 
 

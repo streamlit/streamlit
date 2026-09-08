@@ -389,6 +389,38 @@ class CacheResourceAsyncLifecycleCallbackTest(unittest.TestCase):
         with pytest.raises(StreamlitAPIException, match=param_name):
             st.cache_resource(**{param_name: callback})(lambda: 1)
 
+    @parameterized.expand([("validate",), ("on_release",)])
+    def test_accepts_sync_adapter_wrapping_async_function(
+        self, param_name: str
+    ) -> None:
+        """A synchronous adapter is accepted even if it wraps an async function."""
+
+        async def async_callback(value: int) -> bool:
+            return True
+
+        @functools.wraps(async_callback)
+        def sync_adapter(value: int) -> bool:
+            return True
+
+        cached = st.cache_resource(**{param_name: sync_adapter})(lambda: 1)
+        assert cached() == 1
+
+    @parameterized.expand([("validate",), ("on_release",)])
+    def test_rejects_async_wrapper_of_sync_function(self, param_name: str) -> None:
+        """An ``async def`` wrapper is rejected even if it wraps a sync function."""
+
+        def sync_callback(value: int) -> bool:
+            return True
+
+        @functools.wraps(sync_callback)
+        async def async_wrapper(value: int) -> bool:
+            return True
+
+        with pytest.raises(StreamlitAPIException, match=param_name) as exc_info:
+            st.cache_resource(**{param_name: async_wrapper})(lambda: 1)
+
+        assert exc_info.value.error_id == "cache-resource-async-lifecycle-callback"
+
     def test_sync_validate_and_on_release_still_work(self) -> None:
         """Synchronous validate, eviction, clear, and release behavior is unchanged."""
         released: list[int] = []
