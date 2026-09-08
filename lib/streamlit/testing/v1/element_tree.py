@@ -95,6 +95,7 @@ if TYPE_CHECKING:
     from streamlit.proto.Toast_pb2 import Toast as ToastProto
     from streamlit.runtime.state.safe_session_state import SafeSessionState
     from streamlit.testing.v1.app_test import AppTest
+    from streamlit.typing import ChatInputValue
 
 T = TypeVar("T")
 
@@ -550,9 +551,15 @@ class ChatInput(Widget):
         return ws
 
     @property
-    def value(self) -> str | None:
-        """The value of the widget. (str)"""  # noqa: D400
-        if self._value:
+    def value(self) -> str | ChatInputValue | None:
+        """The pending or last submitted chat input value.
+
+        Before ``.run()``, a pending ``set_value`` is that string (including ``""``).
+        After ``.run()``, this is a plain ``str`` for a text-only chat input, a
+        ``ChatInputValue`` when ``accept_file`` or ``accept_audio`` is enabled, and
+        ``None`` when nothing was submitted.
+        """
+        if self._value is not None:
             return self._value
         state = self.root.session_state
         assert state
