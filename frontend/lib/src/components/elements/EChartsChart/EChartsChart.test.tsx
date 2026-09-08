@@ -219,6 +219,80 @@ describe("EChartsChart", () => {
     expect(mockChart.resize).toHaveBeenCalledTimes(1)
   })
 
+  it("prunes pixel-only brush when a new instance inits at a different size", () => {
+    const createIsolatedMockChart = (): typeof mockChart => {
+      const chart = {
+        setOption: vi.fn((option: Record<string, unknown>) => {
+          applyMockEchartsAria(option)
+        }),
+        setTheme: vi.fn(),
+        resize: vi.fn(),
+        dispose: vi.fn(() => {
+          chart.isDisposed.mockReturnValue(true)
+        }),
+        isDisposed: vi.fn(() => false),
+        getDataURL: vi.fn(() => "data:image/png;base64,AAA"),
+        on: vi.fn(),
+        off: vi.fn(),
+        getZr: vi.fn(() => ({ on: vi.fn(), off: vi.fn() })),
+        dispatchAction: vi.fn(),
+        convertFromPixel: vi.fn(),
+        getOption: vi.fn(() => ({})),
+      }
+      return chart
+    }
+    const firstChart = createIsolatedMockChart()
+    const secondChart = createIsolatedMockChart()
+    mockInit
+      .mockImplementationOnce(() => firstChart)
+      .mockImplementationOnce(() => secondChart)
+
+    const element = createElement({
+      id: "chart-id",
+      selectionActivated: true,
+    })
+    const { rerender } = render(<Wrapper element={element} />)
+    expect(mockInit).toHaveBeenCalledTimes(1)
+    expect(firstChart.resize).not.toHaveBeenCalled()
+
+    widgetMgr.setElementState("chart-id", "brushSelection", [
+      {
+        brushId: "brush-0",
+        brushIndex: 0,
+        areas: [
+          {
+            brushType: "rect",
+            range: [
+              [10, 20],
+              [30, 40],
+            ],
+          },
+        ],
+        selected: [],
+      },
+    ])
+
+    dimensionsHolder.width = 800
+    dimensionsHolder.height = 500
+    rerender(
+      <Wrapper
+        element={createElement({
+          id: "chart-id",
+          selectionActivated: true,
+          renderer: EChartsChartProto.Renderer.SVG,
+        })}
+      />
+    )
+
+    expect(mockInit).toHaveBeenCalledTimes(2)
+    expect(secondChart.resize).not.toHaveBeenCalled()
+    expect(secondChart.dispatchAction).toHaveBeenCalledWith({
+      type: "brush",
+      brushIndex: 0,
+      areas: [],
+    })
+  })
+
   it("resizes on the first positive size after a 0x0 init", () => {
     const { rerender } = render(<Wrapper element={createElement()} />)
     expect(mockInit).toHaveBeenCalledTimes(1)

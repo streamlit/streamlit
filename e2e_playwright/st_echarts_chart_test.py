@@ -196,6 +196,7 @@ def test_point_selection_persists_and_toggles(
     click_button(app, "rerun helper")
     expect(app.get_by_text("echarts selection groups: 1")).to_be_visible()
     expect(app.get_by_text("echarts selection indices: [0]")).to_be_visible()
+    assert_snapshot(chart, name="st_echarts_chart-point_selected")
 
     # Clicking the same point again toggles it off (multi-select behavior).
     chart.click()
@@ -253,8 +254,9 @@ def test_brush_selection_persists_and_clears(app: Page):
 def test_form_selection_is_deferred_until_submit_and_clears(
     app: Page,
 ):
-    """In-form selection does not rerun until submit; Python keeps the submitted value."""
+    """In-form selection does not rerun until submit; a second submit sends the form-clear."""
     expect(app.get_by_text("echarts form groups: 0")).to_be_visible()
+    expect(app.get_by_text("echarts script runs: 1", exact=True)).to_be_visible()
 
     chart = _get_chart(app, "form_selection_chart")
     expect(chart.locator("canvas")).to_be_visible()
@@ -263,6 +265,7 @@ def test_form_selection_is_deferred_until_submit_and_clears(
 
     # Must NOT happen: selecting inside the form does not rerun the app.
     expect(app.get_by_text("echarts form groups: 0")).to_be_visible()
+    expect(app.get_by_text("echarts script runs: 1", exact=True)).to_be_visible()
 
     click_form_button(app, "Submit selection")
     expect(app.get_by_text("echarts form groups: 1")).to_be_visible()
@@ -272,6 +275,10 @@ def test_form_selection_is_deferred_until_submit_and_clears(
     # an unrelated rerun still reports the last submitted selection.
     click_button(app, "rerun helper")
     expect(app.get_by_text("echarts form groups: 1")).to_be_visible()
+
+    # The next submit copies the pending empty value from ``clear_on_submit``.
+    click_form_button(app, "Submit selection")
+    expect(app.get_by_text("echarts form groups: 0")).to_be_visible()
 
 
 def test_tooltip_and_label_xss_payloads_are_escaped(app: Page):

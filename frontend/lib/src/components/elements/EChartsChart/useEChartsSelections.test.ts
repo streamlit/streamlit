@@ -2596,6 +2596,13 @@ describe("useEChartsSelections", () => {
       areas: [area],
       selected: selectedWithMainHits([2]),
     })
+    chart.dispatchAction.mockImplementation(
+      (action: Record<string, unknown>) => {
+        if (action.type === "brush") {
+          chart.trigger("brushSelected", { batch: [brush] })
+        }
+      }
+    )
 
     act(() => {
       result.current.bindSelections(chart)
@@ -2611,12 +2618,24 @@ describe("useEChartsSelections", () => {
       expect(submitValidator()).toBe(true)
     })
 
+    expect(chart.dispatchAction).toHaveBeenCalledWith({
+      type: "brush",
+      areas: brush.areas,
+    })
     expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
     expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
       "chart-id",
       JSON.stringify({
         selection: {
-          selected: [],
+          selected: [
+            {
+              series_index: 0,
+              series_id: null,
+              series_name: null,
+              data_type: "main",
+              data_indices: [2],
+            },
+          ],
           areas: [
             {
               brush_index: 0,
@@ -2633,7 +2652,15 @@ describe("useEChartsSelections", () => {
     widgetMgr.getStringValue.mockReturnValue(
       JSON.stringify({
         selection: {
-          selected: [],
+          selected: [
+            {
+              series_index: 0,
+              series_id: null,
+              series_name: null,
+              data_type: "main",
+              data_indices: [2],
+            },
+          ],
           areas: [
             {
               brush_index: 0,
@@ -2649,20 +2676,49 @@ describe("useEChartsSelections", () => {
       chart.trigger("brushSelected", { batch: [brush] })
     })
 
-    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+  })
+
+  it("overlays finished form brush areas when submit dispatch stays throttled", () => {
+    let submitValidator: () => boolean = () => true
+    widgetMgr.addFormSubmitValidator.mockImplementation(
+      (_formId: string, _widgetId: string, validator: () => boolean) => {
+        submitValidator = validator
+      }
+    )
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement("chart-id", "form-id"), widgetMgr)
+    )
+    const chart = createFakeChart()
+    const area = {
+      brushType: "rect",
+      coordRange: [
+        [0, 1],
+        [2, 3],
+      ],
+    }
+    const brush = createBrushSelection({
+      areas: [area],
+      selected: selectedWithMainHits([2]),
+    })
+
+    act(() => {
+      result.current.bindSelections(chart)
+      chart.trigger("brushEnd", {
+        brushId: brush.brushId,
+        areas: brush.areas,
+      })
+    })
+
+    act(() => {
+      expect(submitValidator()).toBe(true)
+    })
+
     expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
       "chart-id",
       JSON.stringify({
         selection: {
-          selected: [
-            {
-              series_index: 0,
-              series_id: null,
-              series_name: null,
-              data_type: "main",
-              data_indices: [2],
-            },
-          ],
+          selected: [],
           areas: [
             {
               brush_index: 0,

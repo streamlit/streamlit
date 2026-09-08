@@ -469,19 +469,24 @@ export function EChartsChart({
     // resizing during its first render is a no-op that logs a benign "resize
     // during main process" warning. If this instance was created at 0x0, the
     // first positive observation must resize.
-    if (resizedInstanceRef.current !== chartInstance) {
+    const previousSize = lastPositiveSizeRef.current
+    const isNewInstance = resizedInstanceRef.current !== chartInstance
+    const skipCoincidentInitResize =
+      isNewInstance && !needsResizeAfterZeroInitRef.current
+    if (isNewInstance) {
       resizedInstanceRef.current = chartInstance
-      lastPositiveSizeRef.current = { width, height }
-      if (!needsResizeAfterZeroInitRef.current) {
-        return
-      }
       needsResizeAfterZeroInitRef.current = false
     }
+
     try {
-      chartInstance.resize()
-      setOpError("resize", null)
-      const previousSize = lastPositiveSizeRef.current
+      if (!skipCoincidentInitResize) {
+        chartInstance.resize()
+        setOpError("resize", null)
+      }
       lastPositiveSizeRef.current = { width, height }
+      // Capture ``previousSize`` before updating the ref so a renderer
+      // recreate at a different size still drops stale pixel-only overlays,
+      // even when we skip the coincident init ``resize()``.
       if (
         previousSize &&
         (previousSize.width !== width || previousSize.height !== height)

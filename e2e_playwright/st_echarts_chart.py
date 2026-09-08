@@ -33,6 +33,11 @@ import streamlit as st
 # Seed the RNG so any generated data is deterministic across runs.
 np.random.seed(0)
 
+if "echarts_script_runs" not in st.session_state:
+    st.session_state.echarts_script_runs = 0
+st.session_state.echarts_script_runs += 1
+st.write(f"echarts script runs: {st.session_state.echarts_script_runs}")
+
 # ECharts plays entry animations on init, which makes canvas snapshots
 # non-deterministic. Disable animations for the display charts we render.
 _NO_ANIM: dict[str, Any] = {"animation": False}

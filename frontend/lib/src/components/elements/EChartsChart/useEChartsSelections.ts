@@ -708,9 +708,10 @@ export function useEChartsSelections(
   const chartId = element.id
   const formId = element.formId
 
-  // Selection is active only when the backend registered this chart as a
-  // widget (``on_select != "ignore"``). A key also assigns an ID for CSS /
-  // remount identity, so a non-empty ID is not enough.
+  // Bind/emit gate: proto says this is a selection widget *and* the host
+  // is not disabled. Distinct from ``element.selectionActivated``, which
+  // restore, cursor defaults, and the disabled overlay still use so a
+  // disconnected widget keeps its highlight.
   const isSelectionActivated = element.selectionActivated && !disabled
   const parsedOption = useMemo(
     () =>
@@ -736,6 +737,10 @@ export function useEChartsSelections(
   const isRestoringRef = useRef(false)
   // Programmatic ``brush`` dispatches still go through ECharts' throttle.
   // A delayed ``brushSelected`` after prune must update widget state.
+  // If that event never arrives, the flag can go stale until the next
+  // ``bindSelections`` or ``handleBrushEnd``; the next drag then writes
+  // once with ``fromUser: Boolean(formId)`` before End re-commits as a
+  // user gesture.
   const awaitingPrunedBrushRef = useRef(false)
   const latestBrushSelectionRef = useRef<BrushSelection[]>([])
   const committedBrushSelectionRef = useRef<BrushSelection[]>([])
@@ -1051,12 +1056,34 @@ export function useEChartsSelections(
         if (!pendingBrushEnd) {
           return
         }
-        // Form submit copies widget values immediately. Overlay the finished
-        // areas now; keep ``pendingBrushEnd`` so a delayed ``brushSelected``
-        // can still replace this with the full hit indices.
+        const pending = pendingBrushEnd
+        const existing = findBrushSelectionForEnd(
+          latestBrushSelectionRef.current,
+          pending
+        )
+        // Ask ECharts to hit-test the finished areas now so submit can copy
+        // the final indices, not an empty/stale snapshot. When throttle
+        // delay is 0 this is synchronous and ``handleBrushSelected`` commits.
+        try {
+          chart.dispatchAction({
+            type: "brush",
+            ...(typeof existing?.brushIndex === "number"
+              ? { brushIndex: existing.brushIndex }
+              : {}),
+            areas: pending.areas ?? [],
+          })
+        } catch (error) {
+          LOG.warn("Failed to flush pending form brush snapshot", error)
+        }
+        if (!pendingBrushEnd) {
+          return
+        }
+        // Still throttled: overlay the finished areas and keep
+        // ``pendingBrushEnd`` so a delayed ``brushSelected`` can replace
+        // this with the full hit indices on the next pending write.
         latestBrushSelectionRef.current = applyBrushEndToSelection(
           latestBrushSelectionRef.current,
-          pendingBrushEnd
+          pending
         )
         committedBrushSelectionRef.current = latestBrushSelectionRef.current
         if (chartId) {

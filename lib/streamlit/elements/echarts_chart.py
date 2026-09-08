@@ -171,6 +171,29 @@ class EChartsSelectionState(ReadOnlyAttributeDictionary):
         describes in pixel space are omitted, since their geometry can't be
         mapped back to your data.
 
+    Example
+    -------
+    Selecting points and a rect brush returns a grouped, series-local payload:
+
+    >>> {
+    ...     "selected": [
+    ...         {
+    ...             "series_index": 0,
+    ...             "series_id": "sales",
+    ...             "series_name": "Sales",
+    ...             "data_type": "main",
+    ...             "data_indices": [1, 2, 3],
+    ...         },
+    ...     ],
+    ...     "areas": [
+    ...         {
+    ...             "brush_index": 0,
+    ...             "brush_type": "rect",
+    ...             "coord_range": [[0, 2], [10, 20]],
+    ...         },
+    ...     ],
+    ... }
+
     """
 
     selected: list[dict[str, Any]]
@@ -208,6 +231,31 @@ class EChartsState(ReadOnlyAttributeDictionary):
         dictionary-like object that supports both key and attribute notation.
         The attributes are described by the ``EChartsSelectionState`` dictionary
         schema.
+
+    Example
+    -------
+    The event state wraps that selection payload:
+
+    >>> {
+    ...     "selection": {
+    ...         "selected": [
+    ...             {
+    ...                 "series_index": 0,
+    ...                 "series_id": "sales",
+    ...                 "series_name": "Sales",
+    ...                 "data_type": "main",
+    ...                 "data_indices": [1, 2, 3],
+    ...             },
+    ...         ],
+    ...         "areas": [
+    ...             {
+    ...                 "brush_index": 0,
+    ...                 "brush_type": "rect",
+    ...                 "coord_range": [[0, 2], [10, 20]],
+    ...             },
+    ...         ],
+    ...     }
+    ... }
 
     """
 
@@ -912,7 +960,8 @@ class EChartsMixin:
             setting ``selectedMode`` on a series (for example,
             ``{"type": "bar", "selectedMode": "multiple", "data": [...]}``), and
             enable region selection by adding a
-            `brush <https://echarts.apache.org/en/option.html#brush>`_ component.
+            `brush <https://echarts.apache.org/en/option.html#brush>`_ component
+            or ``toolbox.feature.brush``.
             Selected data is grouped by series in ``EChartsState.selection.selected``,
             and brush geometry is returned in ``EChartsState.selection.areas``.
             Selections are re-applied visually after reruns. If your ``spec``
