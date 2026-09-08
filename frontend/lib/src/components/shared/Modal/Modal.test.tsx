@@ -310,7 +310,7 @@ describe("Modal subcomponents", () => {
       expect(panel).toHaveStyle({
         margin: "0",
         height: "100%",
-        maxWidth: "100%",
+        maxWidth: "calc(100% - 1.5rem)",
         borderRadius: "0",
       })
     }
@@ -352,5 +352,50 @@ describe("Modal subcomponents", () => {
     expect(
       screen.queryByRole("button", { name: "Close" })
     ).not.toBeInTheDocument()
+  })
+})
+
+describe("side drawer resize handle", () => {
+  it("does not render a resize handle on a centered dialog", () => {
+    render(<Modal isOpen />)
+
+    expect(
+      screen.queryByTestId("stDialogResizeHandle")
+    ).not.toBeInTheDocument()
+  })
+
+  it.each([
+    { position: "left" as const, edge: "right" },
+    { position: "right" as const, edge: "left" },
+  ])(
+    "places the $position drawer handle on the $edge edge",
+    ({ position, edge }) => {
+      render(
+        <Modal isOpen position={position}>
+          <ModalBody>content</ModalBody>
+        </Modal>
+      )
+
+      expect(screen.getByTestId("stDialogResizeHandle")).toHaveStyle({
+        [edge]: "0",
+        cursor: "col-resize",
+      })
+    }
+  )
+
+  it("does not dismiss when the resize handle is clicked", async () => {
+    const user = userEvent.setup()
+    const handleClose = vi.fn()
+
+    render(
+      <Modal isOpen position="left" onClose={handleClose}>
+        <ModalBody>content</ModalBody>
+      </Modal>
+    )
+
+    await user.click(screen.getByTestId("stDialogResizeHandle"))
+
+    expect(handleClose).not.toHaveBeenCalled()
+    expect(screen.getByRole("dialog")).toBeVisible()
   })
 })

@@ -95,10 +95,11 @@ export const StyledDialogPanel = styled(RAModal, {
   $position = "center",
 }) => {
   const isDrawer = isSideDrawer($position)
-  // Centered dialogs keep a minimum viewport gutter (one lg on each side).
-  // Drawers are flush, so they cap at 100%.
+  // Centered dialogs keep a gutter on both sides. Drawers stay flush to the
+  // attached edge but always leave a twoXL strip of the app visible on the
+  // inner edge.
   const maxWidth = isDrawer
-    ? "100%"
+    ? `calc(100% - ${theme.spacing.twoXL})`
     : `calc(100% - ${theme.spacing.lg} - ${theme.spacing.lg})`
   return {
     outline: "none",
@@ -146,6 +147,27 @@ export const StyledDialogInner = styled(Dialog, {
     minHeight: 0,
     height: "100%",
   }),
+}))
+
+const DIALOG_RESIZE_HANDLE_WIDTH = "8px"
+
+/**
+ * Inner-edge drag handle for left/right drawers. Kept inside the panel so
+ * pointerdown does not count as an overlay dismiss. The handle itself is
+ * invisible; `col-resize` is the only affordance.
+ */
+export const StyledDialogResizeHandle = styled.div<{
+  $position: "left" | "right"
+}>(({ theme, $position }) => ({
+  position: "absolute",
+  top: 0,
+  bottom: 0,
+  width: DIALOG_RESIZE_HANDLE_WIDTH,
+  ...($position === "left" ? { right: 0 } : { left: 0 }),
+  cursor: "col-resize",
+  zIndex: theme.zIndices.priority,
+  touchAction: "none",
+  userSelect: "none",
 }))
 
 /** Absolutely-positioned close (×) button in the top-right of the dialog. */

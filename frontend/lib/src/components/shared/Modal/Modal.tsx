@@ -33,11 +33,13 @@ import {
   StyledDialogInner,
   StyledDialogOverlay,
   StyledDialogPanel,
+  StyledDialogResizeHandle,
   StyledModalBody,
   StyledModalButton,
   StyledModalFooter,
   StyledModalHeader,
 } from "./styled-components"
+import { useDrawerResize } from "./useDrawerResize"
 
 const ModalPositionContext = createContext<ModalPosition>("center")
 ModalPositionContext.displayName = "ModalPositionContext"
@@ -146,12 +148,18 @@ function Modal({
   children,
 }: Readonly<StreamlitModalProps>): ReactElement {
   const { sizes, spacing } = useEmotionTheme()
-  const dialogWidth = calculateModalSize(
-    size,
-    sizes.contentMaxWidth,
-    spacing.lg,
-    sizes.dialogLargeWidth
-  )
+  const presetWidth =
+    width ??
+    calculateModalSize(
+      size,
+      sizes.contentMaxWidth,
+      spacing.lg,
+      sizes.dialogLargeWidth
+    )
+  const { dialogWidth, resizeSide, resizeHandleProps } = useDrawerResize({
+    position,
+    presetWidth,
+  })
 
   const handleOpenChange = (open: boolean): void => {
     if (!open) onClose?.()
@@ -168,10 +176,14 @@ function Modal({
       data-testid="stDialog"
       $position={position}
     >
-      <StyledDialogPanel
-        $dialogWidth={width ?? dialogWidth}
-        $position={position}
-      >
+      <StyledDialogPanel $dialogWidth={dialogWidth} $position={position}>
+        {resizeSide !== null && (
+          <StyledDialogResizeHandle
+            $position={resizeSide}
+            data-testid="stDialogResizeHandle"
+            {...resizeHandleProps}
+          />
+        )}
         <StyledDialogInner $position={position}>
           {({ close }) => (
             <ModalPositionContext.Provider value={position}>

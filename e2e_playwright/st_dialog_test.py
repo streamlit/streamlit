@@ -15,10 +15,10 @@
 import re
 
 import pytest
-from playwright.sync_api import Page, Position, expect
+from playwright.sync_api import Locator, Page, Position, expect
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
 from e2e_playwright.shared.app_utils import (
     COMMAND_KEY,
     check_top_level_class,
@@ -1073,3 +1073,72 @@ def test_tall_left_drawer_scrolls_inside(app: Page):
     dialog_box_after = dialog.bounding_box()
     assert dialog_box_after is not None
     assert dialog_box_after["y"] == pytest.approx(0, abs=1)
+
+
+def _drawer_width(dialog: Locator) -> float:
+    box = dialog.bounding_box()
+    assert box is not None
+    return box["width"]
+
+
+def test_side_drawers_are_resizable(app: Page):
+    """Test that left/right drawers can be resized from the inner edge."""
+    open_left_drawer_dialog(app)
+    dialog = app.get_by_role("dialog")
+    expect(dialog).to_be_visible()
+
+    initial_width = _drawer_width(dialog)
+    resize_handle = app.get_by_test_id("stDialogResizeHandle")
+    expect(resize_handle).to_be_attached()
+
+    handle_box = resize_handle.bounding_box()
+    assert handle_box is not None
+    handle_x = handle_box["x"] + handle_box["width"] / 2
+    handle_y = handle_box["y"] + handle_box["height"] / 2
+
+    drag_distance = 40
+    app.mouse.move(handle_x, handle_y)
+    app.mouse.down()
+    app.mouse.move(handle_x + drag_distance, handle_y)
+    app.mouse.up()
+
+    wait_until(app, lambda: _drawer_width(dialog) > initial_width)
+
+    viewport = app.viewport_size
+    assert viewport is not None
+    handle_box = resize_handle.bounding_box()
+    assert handle_box is not None
+    handle_x = handle_box["x"] + handle_box["width"] / 2
+    handle_y = handle_box["y"] + handle_box["height"] / 2
+    app.mouse.move(handle_x, handle_y)
+    app.mouse.down()
+    app.mouse.move(handle_x + viewport["width"], handle_y)
+    app.mouse.up()
+    wait_until(app, lambda: _drawer_width(dialog) < viewport["width"])
+
+    resize_handle.dblclick()
+    wait_until(app, lambda: abs(_drawer_width(dialog) - initial_width) <= 2)
+
+    # Clicking the handle should not dismiss the drawer.
+    resize_handle.click()
+    expect(dialog).to_be_visible()
+
+    app.keyboard.press("Escape")
+    expect(dialog).not_to_be_attached()
+
+    open_right_drawer_dialog(app)
+    right_dialog = app.get_by_role("dialog")
+    expect(right_dialog).to_be_visible()
+    right_initial = _drawer_width(right_dialog)
+    right_handle = app.get_by_test_id("stDialogResizeHandle")
+    right_box = right_handle.bounding_box()
+    assert right_box is not None
+    right_x = right_box["x"] + right_box["width"] / 2
+    right_y = right_box["y"] + right_box["height"] / 2
+
+    app.mouse.move(right_x, right_y)
+    app.mouse.down()
+    app.mouse.move(right_x - drag_distance, right_y)
+    app.mouse.up()
+
+    wait_until(app, lambda: _drawer_width(right_dialog) > right_initial)

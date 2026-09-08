@@ -166,10 +166,10 @@ def dialog_decorator(
     render inside the modal dialog.
 
     By default, the dialog is a centered modal. Set ``position`` to ``"left"``
-    or ``"right"`` to show the dialog as a full-height side drawer. Side
-    drawers stay modal: the rest of the app is inert, and ``width``,
-    ``dismissible``, ``icon``, and ``on_dismiss`` apply the same way in every
-    position.
+    or ``"right"`` to show the dialog as a user-resizable full-height side
+    drawer. Side drawers stay modal: the rest of the app is inert, and
+    ``width``, ``dismissible``, ``icon``, and ``on_dismiss`` apply the same
+    way in every position.
 
     The dialog function can accept arguments that can be passed when it is
     called. Any values from the dialog that need to be accessed from the wider
@@ -237,10 +237,10 @@ def dialog_decorator(
 
         - ``"center"`` (default): The modal dialog is centered in the
           viewport.
-        - ``"left"``: The dialog is shown as a full-height drawer attached
-          to the left side of the viewport.
-        - ``"right"``: The dialog is shown as a full-height drawer attached
-          to the right side of the viewport.
+        - ``"left"``: The dialog is shown as a user-resizable full-height
+          drawer attached to the left side of the viewport.
+        - ``"right"``: The dialog is shown as a user-resizable full-height
+          drawer attached to the right side of the viewport.
 
     dismissible : bool
         Whether the modal dialog can be dismissed by the user. If this is
