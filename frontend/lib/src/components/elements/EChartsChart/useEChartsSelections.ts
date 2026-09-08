@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useCallback, useMemo, useRef } from "react"
+import { useCallback, useEffect, useMemo, useRef } from "react"
 
 import { debounce, isEqual, isPlainObject } from "lodash-es"
 import { getLogger } from "loglevel"
@@ -195,18 +195,70 @@ function optionHasUsableSeries(
 }
 
 /**
- * Prefer the parsed spec when it has series; otherwise use ``getOption()``.
+ * True when media or timeline variants can replace top-level ``series``.
  *
- * Timeline and media specs keep series on nested variants, so the raw spec
- * has no top-level ``series``. ECharts' resolved option does.
+ * Those overrides live on ``media[*].option``, ``options[]``, or nested
+ * ``baseOption`` copies of the same. ECharts events index the resolved
+ * series, so selection metadata must not use the stale base spec.
+ */
+function optionHasSeriesOverridingVariants(
+  option: Record<string, unknown> | null
+): boolean {
+  if (option === null) {
+    return false
+  }
+  if (Array.isArray(option.media)) {
+    const mediaOverridesSeries = option.media.some(entry => {
+      if (!isPlainObject(entry)) {
+        return false
+      }
+      const mediaOption = (entry as Record<string, unknown>).option
+      return (
+        isPlainObject(mediaOption) &&
+        optionHasUsableSeries(mediaOption as Record<string, unknown>)
+      )
+    })
+    if (mediaOverridesSeries) {
+      return true
+    }
+  }
+  if (Array.isArray(option.options)) {
+    const timelineOverridesSeries = option.options.some(
+      entry =>
+        isPlainObject(entry) &&
+        optionHasUsableSeries(entry as Record<string, unknown>)
+    )
+    if (timelineOverridesSeries) {
+      return true
+    }
+  }
+  return isPlainObject(option.baseOption)
+    ? optionHasSeriesOverridingVariants(
+        option.baseOption as Record<string, unknown>
+      )
+    : false
+}
+
+/**
+ * Prefer the parsed spec when it has series that variants cannot override;
+ * otherwise use ``getOption()``.
+ *
+ * Timeline and media specs often keep series on nested variants, so the raw
+ * spec has no top-level ``series``. When they *do* set top-level series, an
+ * active media/timeline variant can still replace it. ECharts' resolved
+ * option is the one events index.
  */
 function resolveSelectionOption(
   parsedOption: Record<string, unknown> | null,
   chart: EChartsSelectionInstance
 ): Record<string, unknown> | null {
-  return optionHasUsableSeries(parsedOption)
-    ? parsedOption
-    : resolveChartOption(chart)
+  if (
+    optionHasUsableSeries(parsedOption) &&
+    !optionHasSeriesOverridingVariants(parsedOption)
+  ) {
+    return parsedOption
+  }
+  return resolveChartOption(chart) ?? parsedOption
 }
 
 const DATA_TYPE_RANK: Readonly<Record<string, number>> = {
@@ -586,6 +638,32 @@ function brushEndMatchesSelection(
 }
 
 /**
+ * Overlay a ``brushEnd`` onto the latest snapshot so a form submit can flush
+ * before a throttled ``brushSelected`` arrives. Hit indices stay as they were
+ * on the last snapshot (or empty); the delayed event replaces them.
+ */
+function applyBrushEndToSelection(
+  brushSelection: BrushSelection[],
+  params: BrushEndParams
+): BrushSelection[] {
+  const existing = findBrushSelectionForEnd(brushSelection, params)
+  if (existing !== undefined) {
+    return brushSelection.map(item =>
+      item === existing ? { ...item, areas: params.areas ?? [] } : item
+    )
+  }
+  return [
+    ...brushSelection,
+    {
+      brushId: params.brushId,
+      brushIndex: brushSelection.length,
+      areas: params.areas ?? [],
+      selected: [],
+    },
+  ]
+}
+
+/**
  * Dispatch a native ``select``/``unselect`` action for each persisted point
  * entry. Used to re-apply (``select``) or clear (``unselect``) the visible point
  * selection after an option-replacing ``setOption`` or a remount.
@@ -661,6 +739,7 @@ export function useEChartsSelections(
   const awaitingPrunedBrushRef = useRef(false)
   const latestBrushSelectionRef = useRef<BrushSelection[]>([])
   const committedBrushSelectionRef = useRef<BrushSelection[]>([])
+  const flushPendingBrushForSubmitRef = useRef<(() => void) | null>(null)
 
   const widgetInfo: WidgetInfo = useMemo(
     () => ({ id: chartId, formId }),
@@ -899,6 +978,7 @@ export function useEChartsSelections(
       let pendingBrushEnd: BrushEndParams | undefined
       latestBrushSelectionRef.current = []
       committedBrushSelectionRef.current = []
+      awaitingPrunedBrushRef.current = false
 
       // Seed both channels so an interaction after a remount cannot drop the
       // other channel's restored state.
@@ -920,8 +1000,22 @@ export function useEChartsSelections(
         }
       }
 
-      const resolveLiveOption = (): Record<string, unknown> | null =>
-        resolveSelectionOption(parsedOptionRef.current, chart)
+      // One ``getOption()`` per event: native graph reconstruction and the
+      // widget write both need the resolved series, and media/timeline
+      // variants can make that call non-trivial.
+      let resolvedOptionForEvent: Record<string, unknown> | null | undefined
+      const resolveLiveOption = (): Record<string, unknown> | null => {
+        if (resolvedOptionForEvent === undefined) {
+          resolvedOptionForEvent = resolveSelectionOption(
+            parsedOptionRef.current,
+            chart
+          )
+        }
+        return resolvedOptionForEvent
+      }
+      const beginSelectionEvent = (): void => {
+        resolvedOptionForEvent = undefined
+      }
 
       const emitSelectionNow = (): void => {
         writeSelection(
@@ -953,7 +1047,31 @@ export function useEChartsSelections(
         emitSelection()
       }
 
+      const flushPendingBrushForSubmit = (): void => {
+        if (!pendingBrushEnd) {
+          return
+        }
+        // Form submit copies widget values immediately. Overlay the finished
+        // areas now; keep ``pendingBrushEnd`` so a delayed ``brushSelected``
+        // can still replace this with the full hit indices.
+        latestBrushSelectionRef.current = applyBrushEndToSelection(
+          latestBrushSelectionRef.current,
+          pendingBrushEnd
+        )
+        committedBrushSelectionRef.current = latestBrushSelectionRef.current
+        if (chartId) {
+          widgetMgr.setElementState(
+            chartId,
+            BRUSH_SELECTION_STATE_KEY,
+            latestBrushSelectionRef.current
+          )
+        }
+        emitSelection()
+      }
+      flushPendingBrushForSubmitRef.current = flushPendingBrushForSubmit
+
       const handleSelectChanged = (raw: unknown): void => {
+        beginSelectionEvent()
         if (isRestoringRef.current) {
           return
         }
@@ -977,6 +1095,7 @@ export function useEChartsSelections(
       }
 
       const handleBrushSelected = (raw: unknown): void => {
+        beginSelectionEvent()
         const params = raw as BrushSelectedParams
         latestBrushSelectionRef.current = params.batch ?? []
         if (isRestoringRef.current) {
@@ -1026,10 +1145,14 @@ export function useEChartsSelections(
       let deferredClearTimer: ReturnType<typeof setTimeout> | undefined
 
       const handleBrushEnd = (raw: unknown): void => {
+        beginSelectionEvent()
+        awaitingPrunedBrushRef.current = false
         const params = raw as BrushEndParams
         const areas = params.areas ?? []
-        // Completing a lasso is itself a double-click on zrender. Arm a
-        // consume-once flag so the paired ``dblclick`` does not clear it.
+        // Completing a lasso may be a double-click on zrender, but ECharts 6
+        // also finishes a drag-drawn polygon on mouseup with no paired
+        // ``dblclick``. Arm a consume-once flag for same-turn pairing, and
+        // expire it at the end of this turn when no deferred clear is pending.
         // Only a *new* polygon arms this: with the polygon tool still active,
         // double-clicking on top of a finished lasso re-commits the same
         // areas, and re-arming on that would make the lasso impossible to
@@ -1048,6 +1171,15 @@ export function useEChartsSelections(
           areas.some(area => area.brushType === "polygon")
         ) {
           polygonJustCompleted = true
+          // Expire at the end of this turn unless a deferred dblclick is
+          // already waiting to pair with this brushEnd. setTimeout(0) keeps
+          // that pairing FIFO with handleDoubleClick's deferred clear.
+          // eslint-disable-next-line no-restricted-globals -- Coalesce with zr dblclick; not a React render timer.
+          setTimeout(() => {
+            if (deferredClearTimer === undefined) {
+              polygonJustCompleted = false
+            }
+          }, 0)
         }
         if (isRestoringRef.current) {
           return
@@ -1119,6 +1251,11 @@ export function useEChartsSelections(
         if (clearBoundSelectionRef.current === clearBoundSelection) {
           clearBoundSelectionRef.current = null
         }
+        if (
+          flushPendingBrushForSubmitRef.current === flushPendingBrushForSubmit
+        ) {
+          flushPendingBrushForSubmitRef.current = null
+        }
         // The instance is disposed before this cleanup when the whole chart is
         // torn down; unbinding from a disposed instance logs a console warning.
         if (chart.isDisposed()) {
@@ -1141,6 +1278,20 @@ export function useEChartsSelections(
       restoreSelection,
     ]
   )
+
+  useEffect(() => {
+    if (!formId || !chartId || !isSelectionActivated) {
+      return
+    }
+    const validator = (): boolean => {
+      flushPendingBrushForSubmitRef.current?.()
+      return true
+    }
+    widgetMgr.addFormSubmitValidator(formId, chartId, validator)
+    return () => {
+      widgetMgr.removeFormSubmitValidator(formId, chartId)
+    }
+  }, [formId, chartId, isSelectionActivated, widgetMgr])
 
   return {
     isSelectionActivated,

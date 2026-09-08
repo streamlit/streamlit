@@ -153,6 +153,8 @@ describe("useEChartsSelections", () => {
       setStringValue: vi.fn(),
       getElementState: vi.fn(),
       setElementState: vi.fn(),
+      addFormSubmitValidator: vi.fn(),
+      removeFormSubmitValidator: vi.fn(),
     } as unknown as Mocked<WidgetStateManager>
   })
 
@@ -617,6 +619,55 @@ describe("useEChartsSelections", () => {
       )
     }
   )
+
+  it("resolves series metadata from getOption when media overrides top-level series", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(
+        new EChartsChartProto({
+          id: "chart-id",
+          formId: "",
+          spec: JSON.stringify({
+            series: [{ type: "bar", id: "desktop", name: "Desktop" }],
+            media: [
+              {
+                query: { maxWidth: 600 },
+                option: {
+                  series: [{ type: "bar", id: "mobile", name: "Mobile" }],
+                },
+              },
+            ],
+          }),
+          selectionActivated: true,
+        }),
+        widgetMgr
+      )
+    )
+    const chart = createFakeChart()
+    chart.getOption.mockReturnValue({
+      series: [{ id: "mobile", name: "Mobile" }],
+    })
+    act(() => {
+      result.current.bindSelections(chart)
+      chart.trigger("selectchanged", {
+        selected: [{ seriesIndex: 0, dataIndex: [4] }],
+      })
+    })
+    flush()
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expectSelectionWrite(
+      [
+        {
+          series_index: 0,
+          series_id: "mobile",
+          series_name: "Mobile",
+          data_type: "main",
+          data_indices: [4],
+        },
+      ],
+      []
+    )
+  })
 
   it("groups selections deterministically and sorts and deduplicates indices", () => {
     const { result } = renderHook(() =>
@@ -1388,6 +1439,63 @@ describe("useEChartsSelections", () => {
         },
       }),
       { formId: "", fragmentId: undefined, fromUser: false }
+    )
+  })
+
+  it("does not treat the first user brush after rebind as a prune follow-up", () => {
+    const pixelOnly = createBrushSelection({
+      brushId: "brush-0",
+      brushIndex: 0,
+      areas: [
+        {
+          brushType: "rect",
+          range: [
+            [10, 20],
+            [30, 40],
+          ],
+        },
+      ],
+    })
+    widgetMgr.getElementState.mockImplementation((_id: string, key: string) =>
+      key === "brushSelection" ? [pixelOnly] : undefined
+    )
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+    const chart = createFakeChart()
+    let cleanup: () => void = () => {}
+
+    act(() => {
+      cleanup = result.current.bindSelections(chart)
+      result.current.prunePixelOnlyBrushAfterResize(chart)
+    })
+    ;(widgetMgr.setStringValue as Mock).mockClear()
+    widgetMgr.getElementState.mockReturnValue(undefined)
+
+    const area = { brushType: "lineX", coordRange: [0, 2] }
+    const brush = createBrushSelection({ areas: [area] })
+    act(() => {
+      cleanup()
+      result.current.bindSelections(chart)
+      triggerBrushGesture(chart, brush)
+    })
+    flush()
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      "chart-id",
+      JSON.stringify({
+        selection: {
+          selected: [],
+          areas: [
+            {
+              brush_index: 0,
+              brush_type: "lineX",
+              coord_range: area.coordRange,
+            },
+          ],
+        },
+      }),
+      { formId: "", fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -2321,7 +2429,7 @@ describe("useEChartsSelections", () => {
     })
   })
 
-  it("clears a finished lasso when it is double-clicked again", () => {
+  it("clears a drag-completed lasso on a later double-click", () => {
     const { result } = renderHook(() =>
       useEChartsSelections(createElement(), widgetMgr)
     )
@@ -2338,7 +2446,6 @@ describe("useEChartsSelections", () => {
     act(() => {
       result.current.bindSelections(chart)
       triggerBrushGesture(chart, brush)
-      chart.trigger("dblclick", {})
     })
     flush()
     expect(chart.dispatchAction).not.toHaveBeenCalledWith({
@@ -2362,8 +2469,60 @@ describe("useEChartsSelections", () => {
     )
     chart.dispatchAction.mockClear()
 
-    // ECharts re-commits the same polygon when the active polygon tool receives
-    // a second double-click. It must not be treated as a new polygon.
+    // ECharts 6 completes a drag-drawn lasso on mouseup with no paired
+    // dblclick. The consume-once flag must expire so a later double-click
+    // clears the finished lasso.
+    act(() => {
+      chart.trigger("dblclick", {})
+    })
+    flush()
+
+    expect(chart.dispatchAction).toHaveBeenCalledWith({
+      type: "brush",
+      areas: [],
+    })
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expectSelectionWrite([], [])
+  })
+
+  it("clears a finished lasso when the active polygon tool re-commits it", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+    const chart = createFakeChart()
+    const polygon = {
+      brushType: "polygon",
+      coordRange: [
+        [0, 0],
+        [1, 1],
+        [1, 0],
+      ],
+    }
+    const brush = createBrushSelection({ areas: [polygon] })
+    act(() => {
+      result.current.bindSelections(chart)
+      triggerBrushGesture(chart, brush)
+    })
+    flush()
+    ;(widgetMgr.setStringValue as Mock).mockClear()
+    widgetMgr.getStringValue.mockReturnValue(
+      JSON.stringify({
+        selection: {
+          selected: [],
+          areas: [
+            {
+              brush_index: 0,
+              brush_type: "polygon",
+              coord_range: polygon.coordRange,
+            },
+          ],
+        },
+      })
+    )
+    chart.dispatchAction.mockClear()
+
+    // ECharts re-commits the same polygon when the active polygon tool
+    // receives a second double-click. It must not be treated as a new polygon.
     act(() => {
       chart.trigger("brushEnd", {
         brushId: brush.brushId,
@@ -2409,6 +2568,108 @@ describe("useEChartsSelections", () => {
             },
           ],
           areas: [],
+        },
+      }),
+      { formId: "form-id", fragmentId: undefined, fromUser: true }
+    )
+  })
+
+  it("flushes a pending form brush on submit before the delayed snapshot", () => {
+    let submitValidator: () => boolean = () => true
+    widgetMgr.addFormSubmitValidator.mockImplementation(
+      (_formId: string, _widgetId: string, validator: () => boolean) => {
+        submitValidator = validator
+      }
+    )
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement("chart-id", "form-id"), widgetMgr)
+    )
+    const chart = createFakeChart()
+    const area = {
+      brushType: "rect",
+      coordRange: [
+        [0, 1],
+        [2, 3],
+      ],
+    }
+    const brush = createBrushSelection({
+      areas: [area],
+      selected: selectedWithMainHits([2]),
+    })
+
+    act(() => {
+      result.current.bindSelections(chart)
+      chart.trigger("brushEnd", {
+        brushId: brush.brushId,
+        areas: brush.areas,
+      })
+    })
+
+    expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+
+    act(() => {
+      expect(submitValidator()).toBe(true)
+    })
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      "chart-id",
+      JSON.stringify({
+        selection: {
+          selected: [],
+          areas: [
+            {
+              brush_index: 0,
+              brush_type: "rect",
+              coord_range: area.coordRange,
+            },
+          ],
+        },
+      }),
+      { formId: "form-id", fragmentId: undefined, fromUser: true }
+    )
+
+    ;(widgetMgr.setStringValue as Mock).mockClear()
+    widgetMgr.getStringValue.mockReturnValue(
+      JSON.stringify({
+        selection: {
+          selected: [],
+          areas: [
+            {
+              brush_index: 0,
+              brush_type: "rect",
+              coord_range: area.coordRange,
+            },
+          ],
+        },
+      })
+    )
+
+    act(() => {
+      chart.trigger("brushSelected", { batch: [brush] })
+    })
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      "chart-id",
+      JSON.stringify({
+        selection: {
+          selected: [
+            {
+              series_index: 0,
+              series_id: null,
+              series_name: null,
+              data_type: "main",
+              data_indices: [2],
+            },
+          ],
+          areas: [
+            {
+              brush_index: 0,
+              brush_type: "rect",
+              coord_range: area.coordRange,
+            },
+          ],
         },
       }),
       { formId: "form-id", fragmentId: undefined, fromUser: true }

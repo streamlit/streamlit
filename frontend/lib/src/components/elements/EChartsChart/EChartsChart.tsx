@@ -621,7 +621,7 @@ export function EChartsChart({
                   className="stEChartsChart"
                   data-testid="stEChartsChart"
                   aria-busy={!hasRendered && renderError === null}
-                  isDisabled={disabled}
+                  isDisabled={disabled && element.selectionActivated}
                 />
                 {renderError !== null && (
                   <StyledEChartsErrorOverlay

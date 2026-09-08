@@ -214,17 +214,28 @@ def test_brush_selection_persists_and_clears(app: Page):
     expect(canvas).to_be_visible()
     chart.scroll_into_view_if_needed()
 
-    box = canvas.bounding_box()
-    assert box is not None
     # Toolbox icons are zrender paths (no HTML title). Put the rect-brush
     # control on the left-middle so the Streamlit hover toolbar cannot steal
-    # the click.
-    app.mouse.click(box["x"] + 24, box["y"] + box["height"] * 0.5)
-    app.mouse.move(box["x"] + box["width"] * 0.3, box["y"] + box["height"] * 0.25)
-    app.mouse.down()
-    app.mouse.move(box["x"] + box["width"] * 0.9, box["y"] + box["height"] * 0.85)
-    app.mouse.up()
-    wait_for_app_run(app)
+    # the click. Retry the click-plus-drag if the toolbox activation misses.
+    toolbox_left_px = 8
+    toolbox_item_size_px = 32
+
+    def _draw_rect_brush() -> bool:
+        box = canvas.bounding_box()
+        if box is None:
+            return False
+        app.mouse.click(
+            box["x"] + toolbox_left_px + toolbox_item_size_px / 2,
+            box["y"] + box["height"] * 0.5,
+        )
+        app.mouse.move(box["x"] + box["width"] * 0.3, box["y"] + box["height"] * 0.25)
+        app.mouse.down()
+        app.mouse.move(box["x"] + box["width"] * 0.9, box["y"] + box["height"] * 0.85)
+        app.mouse.up()
+        wait_for_app_run(app)
+        return app.get_by_text("echarts brush areas: 1").is_visible()
+
+    wait_until(app, _draw_rect_brush, timeout=15000)
 
     expect(app.get_by_text("echarts brush areas: 1")).to_be_visible()
     expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)

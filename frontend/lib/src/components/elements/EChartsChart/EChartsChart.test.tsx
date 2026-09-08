@@ -266,6 +266,32 @@ describe("EChartsChart", () => {
     expect(mockChart.on).not.toHaveBeenCalled()
   })
 
+  it("disables pointer events on a disabled selection widget", () => {
+    render(
+      <Wrapper
+        element={createElement({ id: "chart-id", selectionActivated: true })}
+        disabled={true}
+      />
+    )
+
+    expect(screen.getByTestId("stEChartsChart")).toHaveStyle({
+      pointerEvents: "none",
+    })
+  })
+
+  it("keeps pointer events on a display-only chart when the host is disabled", () => {
+    render(
+      <Wrapper
+        element={createElement({ id: "styled_chart" })}
+        disabled={true}
+      />
+    )
+
+    expect(screen.getByTestId("stEChartsChart")).not.toHaveStyle({
+      pointerEvents: "none",
+    })
+  })
+
   it("does not bind selection handlers for a keyed display-only chart", () => {
     render(
       <Wrapper
