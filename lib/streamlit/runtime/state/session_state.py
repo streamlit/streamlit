@@ -1054,10 +1054,10 @@ class SessionState:
                     current_replay_trigger_states,
                 )
                 replay_trigger_values = _coalesce_replay_trigger_values(
-                    current_replay_trigger_states,
-                    replay_trigger_values,
-                    current_replay_trigger_values,
-                    coalesced_replay_states,
+                    new_states=current_replay_trigger_states,
+                    old_values=replay_trigger_values,
+                    new_values=current_replay_trigger_values,
+                    coalesced_states=coalesced_replay_states,
                 )
                 replay_trigger_states = coalesced_replay_states
             if replay_trigger_states is not None:
@@ -1069,10 +1069,10 @@ class SessionState:
                     rerun_batch[0],
                     replay_trigger_states=coalesced_replay_states,
                     replay_trigger_values=_coalesce_replay_trigger_values(
-                        replay_trigger_states,
-                        rerun_batch[0].replay_trigger_values,
-                        replay_trigger_values,
-                        coalesced_replay_states,
+                        new_states=replay_trigger_states,
+                        old_values=rerun_batch[0].replay_trigger_values,
+                        new_values=replay_trigger_values,
+                        coalesced_states=coalesced_replay_states,
                     ),
                 )
             ctx.script_requests.request_rerun_batch(rerun_batch)

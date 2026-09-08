@@ -229,6 +229,7 @@ def _coalesce_replay_trigger_states(
 
 
 def _coalesce_replay_trigger_values(
+    *,
     new_states: WidgetStates | None,
     old_values: Mapping[str, Any] | None,
     new_values: Mapping[str, Any] | None,
@@ -337,10 +338,10 @@ class ScriptRequests:
                 new_data,
                 replay_trigger_states=coalesced_replay_states,
                 replay_trigger_values=_coalesce_replay_trigger_values(
-                    new_data.replay_trigger_states,
-                    None,
-                    new_data.replay_trigger_values,
-                    coalesced_replay_states,
+                    new_states=new_data.replay_trigger_states,
+                    old_values=None,
+                    new_values=new_data.replay_trigger_values,
+                    coalesced_states=coalesced_replay_states,
                 ),
             )
             self._rerun_data = new_data
@@ -356,10 +357,10 @@ class ScriptRequests:
                 new_data.replay_trigger_states,
             )
             coalesced_replay_values = _coalesce_replay_trigger_values(
-                new_data.replay_trigger_states,
-                self._rerun_data.replay_trigger_values,
-                new_data.replay_trigger_values,
-                coalesced_replay_states,
+                new_states=new_data.replay_trigger_states,
+                old_values=self._rerun_data.replay_trigger_values,
+                new_values=new_data.replay_trigger_values,
+                coalesced_states=coalesced_replay_states,
             )
 
             # Fold a bare fragment_id into fragment_id_queue so the coalescing
