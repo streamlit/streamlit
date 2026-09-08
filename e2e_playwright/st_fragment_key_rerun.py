@@ -157,6 +157,8 @@ def coalescing_source_fragment() -> None:
         assert ctx is not None
         assert ctx.script_requests is not None
         deadline = monotonic() + 10
+        # Poll private request state to keep callback dispatch blocked until the fresh
+        # browser interaction enqueues a rerun, deterministically creating the race.
         while ctx.script_requests._state is ScriptRequestType.CONTINUE:
             if monotonic() >= deadline:
                 raise RuntimeError("Fresh fragment interaction did not arrive")
