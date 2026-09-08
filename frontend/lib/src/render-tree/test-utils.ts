@@ -134,14 +134,12 @@ export function makeProto<Type, Props>(
 
 declare module "vitest" {
   // Type parameters must match Vitest's Matchers exactly so the interfaces merge.
-  /* eslint-disable @typescript-eslint/no-unused-vars, no-unused-vars -- T is required for merging with Vitest's Matchers */
   interface Matchers<
     R extends void | Promise<void> = void | Promise<void>,
-    T = unknown,
+    T = unknown, // eslint-disable-line no-unused-vars, @typescript-eslint/no-unused-vars
   > {
     toBeTextNode(text: string): R
   }
-  /* eslint-enable @typescript-eslint/no-unused-vars, no-unused-vars */
 }
 
 expect.extend({
