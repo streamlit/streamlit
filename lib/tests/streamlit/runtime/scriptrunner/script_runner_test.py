@@ -940,6 +940,7 @@ class ScriptRunnerTest(unittest.TestCase):
     def test_replay_only_request_prepares_session_state(
         self, patched_on_script_will_rerun: MagicMock
     ) -> None:
+        """A replay-only request prepares session state without fresh widget state."""
         replay = WidgetStates()
         _create_widget("button", replay).trigger_value = True
         scriptrunner = TestScriptRunner(
@@ -965,6 +966,7 @@ class ScriptRunnerTest(unittest.TestCase):
         patched_on_script_will_rerun: MagicMock,
         patched_on_script_finished: MagicMock,
     ) -> None:
+        """Replay-only preemption restarts before the first script execution."""
         replay = WidgetStates()
         _create_widget("button", replay).trigger_value = True
         scriptrunner = TestScriptRunner(

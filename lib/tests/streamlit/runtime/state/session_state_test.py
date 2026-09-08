@@ -1413,6 +1413,7 @@ def test_active_fresh_chat_wins_over_hydrated_replay_with_same_id() -> None:
 
 
 def test_callback_mutation_survives_replay_overlay() -> None:
+    """A replay overlay does not overwrite mutations made by fresh callbacks."""
     ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
     ss = SessionState()
     ss["result"] = "before"
@@ -1494,6 +1495,7 @@ def test_preempting_callback_batch_carries_hydrated_chat_replay() -> None:
 
 
 def test_targeted_callback_batch_replays_current_interaction_trigger() -> None:
+    """A targeted callback rerun carries the current interaction trigger."""
     ss = _state_with_changed_widgets([("target", _raise_targeted_rerun)])
     interaction = WidgetStatesProto()
     interaction.widgets.add(id="submit", trigger_value=True)
@@ -1634,6 +1636,7 @@ def test_app_wide_escalation_preserves_hydrated_chat_through_request_queue() -> 
 
 
 def test_targeted_preemption_combines_incoming_and_current_replay_triggers() -> None:
+    """Targeted preemption combines incoming and current replay triggers."""
     ss = _state_with_changed_widgets([("target", _raise_targeted_rerun)])
     incoming_replay = WidgetStatesProto()
     incoming_replay.widgets.add(id="already-processed", trigger_value=True)

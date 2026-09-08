@@ -191,6 +191,12 @@ _TRIGGER_PROTO_FIELDS = frozenset(
 
 
 def _has_active_trigger_value(state: WidgetState) -> bool:
+    """Return whether ``state`` holds a trigger that still needs delivery.
+
+    Scalar triggers are active when truthy. Message triggers are active when any
+    protobuf field is present, preserving explicit empty ``data`` for chat input
+    with attachments or audio.
+    """
     value_type = state.WhichOneof("value")
     if value_type not in _TRIGGER_PROTO_FIELDS:
         return False

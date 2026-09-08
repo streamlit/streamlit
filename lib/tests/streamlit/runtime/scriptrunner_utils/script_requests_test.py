@@ -270,6 +270,7 @@ class ScriptRequestsTest(unittest.TestCase):
         assert reqs._rerun_data.is_fragment_scoped_rerun is False
 
     def test_replay_state_survives_coalescing_with_stateless_request(self):
+        """A stateless request does not discard queued replay triggers."""
         reqs = ScriptRequests()
         replay = WidgetStates()
         _create_widget("btn_a", replay).trigger_value = True
@@ -297,6 +298,7 @@ class ScriptRequestsTest(unittest.TestCase):
         assert _get_widget("btn_b", result).trigger_value is True
 
     def test_fresh_and_replay_channels_coalesce_independently(self):
+        """Fresh state replacement and replay trigger union remain independent."""
         reqs = ScriptRequests()
         older_fresh_states = WidgetStates()
         _create_widget("scalar", older_fresh_states).int_value = 1
@@ -351,6 +353,7 @@ class ScriptRequestsTest(unittest.TestCase):
         assert _get_widget("scalar", replay) is None
 
     def test_inactive_and_non_trigger_values_are_not_replayed(self):
+        """Only active trigger values enter the replay channel."""
         reqs = ScriptRequests()
         replay = WidgetStates()
         _create_widget("bool", replay).trigger_value = False
@@ -477,6 +480,7 @@ class ScriptRequestsTest(unittest.TestCase):
         assert reqs._rerun_data.replay_trigger_values is None
 
     def test_request_rerun_batch_coalesces_fragment_targets(self):
+        """A rerun batch coalesces every fragment target in order."""
         reqs = ScriptRequests()
         reqs.request_rerun_batch(
             [
@@ -488,6 +492,7 @@ class ScriptRequestsTest(unittest.TestCase):
         assert reqs._rerun_data.fragment_id_queue == ["frag-a", "frag-b"]
 
     def test_request_rerun_batch_acquires_lock_once(self):
+        """A rerun batch holds the request lock across all items."""
         reqs = ScriptRequests()
         lock = MagicMock()
         reqs._lock = lock
