@@ -132,15 +132,15 @@ class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
     _include_audio: bool = field(default=False, repr=False, compare=False)
 
     def to_dict(self) -> dict[str, _ChatInputValueItem]:
+        # Include flags stay the allow-list. Instance attrs drop out after del.
+        stored = vars(self)
         result: dict[str, _ChatInputValueItem] = {}
-        # ``del value["text"]`` removes the attribute; skip it so mapping
-        # methods that use this dict stay consistent.
-        if hasattr(self, "text"):
-            result["text"] = self.text
-        if self._include_files:
-            result["files"] = self.files
-        if self._include_audio:
-            result["audio"] = self.audio
+        if "text" in stored:
+            result["text"] = stored["text"]
+        if self._include_files and "files" in stored:
+            result["files"] = stored["files"]
+        if self._include_audio and "audio" in stored:
+            result["audio"] = stored["audio"]
         return result
 
     def __len__(self) -> int:
@@ -150,7 +150,7 @@ class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
         return iter(self.to_dict())
 
     def __contains__(self, key: object) -> bool:
-        return key in self.to_dict()
+        return isinstance(key, str) and key in self.to_dict()
 
     @overload
     def __getitem__(self, item: Literal["text"]) -> str: ...
@@ -165,10 +165,9 @@ class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
     def __getitem__(self, item: str) -> _ChatInputValueItem: ...
 
     def __getitem__(self, item: str) -> _ChatInputValueItem:
-        try:
-            return self.to_dict()[item]
-        except KeyError:
-            raise KeyError(f"Invalid key: {item}") from None
+        if item not in self:
+            raise KeyError(f"Invalid key: {item}")
+        return self.to_dict()[item]
 
     def __getattribute__(self, name: str) -> Any:
         # Intercept access to files/audio when they're excluded
@@ -185,19 +184,19 @@ class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
         return object.__getattribute__(self, name)
 
     def __setitem__(self, key: str, value: Any) -> None:
-        if key not in self:
+        allowed = {"text"}
+        if self._include_files:
+            allowed.add("files")
+        if self._include_audio:
+            allowed.add("audio")
+        if key not in allowed:
             raise KeyError(f"Invalid key: {key}")
         setattr(self, key, value)
 
     def __delitem__(self, key: str) -> None:
         if key not in self:
             raise KeyError(f"Invalid key: {key}")
-        if key == "files":
-            self._include_files = False
-        elif key == "audio":
-            self._include_audio = False
-        else:
-            delattr(self, key)
+        delattr(self, key)
 
     def __repr__(self) -> str:
         # Build the repr from to_dict() so excluded keys do not raise.

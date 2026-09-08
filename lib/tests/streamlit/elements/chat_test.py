@@ -1210,6 +1210,8 @@ class ChatInputValueExtraTest(DeltaGeneratorTestCase):
         """Test __contains__ returns False when the key is not a string."""
         value = ChatInputValue(text="hi")
         assert (42 in value) is False
+        assert ([] in value) is False
+        assert value.get([]) is None
         # Anti-regression: a valid string key should still report membership.
         assert "text" in value
 
@@ -1251,6 +1253,24 @@ def test_chat_input_value_repr_skips_deleted_keys() -> None:
     assert list(value) == ["text", "audio"]
     assert value.to_dict() == {"text": "hi", "audio": None}
     assert repr(value) == "ChatInputValue(text='hi', audio=None)"
+
+
+def test_chat_input_value_setitem_after_delete() -> None:
+    """An accepted key can be set again after it is deleted."""
+    value = ChatInputValue(
+        text="hi",
+        files=[],
+        audio=None,
+        _include_files=True,
+        _include_audio=True,
+    )
+    del value["text"]
+    del value["files"]
+    value["text"] = "again"
+    value["files"] = []
+    assert value["text"] == "again"
+    assert value["files"] == []
+    assert "audio" in value
 
 
 class AvatarProcessingTest(DeltaGeneratorTestCase):

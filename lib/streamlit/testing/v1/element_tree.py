@@ -524,11 +524,12 @@ class ChatInput(Widget):
 
     @property
     def value(self) -> str | ChatInputValue | None:
-        """The submitted value of the chat input.
+        """The pending or last submitted chat input value.
 
-        A plain ``str`` for a text-only chat input, a ``ChatInputValue`` when
-        ``accept_file`` or ``accept_audio`` is enabled, and ``None`` when nothing
-        was submitted.
+        Before ``.run()``, a pending ``set_value`` is that string (including ``""``).
+        After ``.run()``, this is a plain ``str`` for a text-only chat input, a
+        ``ChatInputValue`` when ``accept_file`` or ``accept_audio`` is enabled, and
+        ``None`` when nothing was submitted.
         """
         if self._value is not None:
             return self._value
