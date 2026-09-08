@@ -736,7 +736,9 @@ ordered roughly by expected value.
    and is what makes `st.dialog` contents interactive.
 3. **Authored descriptions** — a standalone project worth doing on its own accessibility
    merits: static `app_title`/`app_description` on `st.App`, `page_description` on
-   `st.set_page_config`, author-written alternative text for images, charts, and tabular
+   `st.set_page_config` and optionally `st.Page`
+   ([#16878](https://github.com/streamlit/streamlit/issues/16878)), author-written
+   alternative text for images, charts, and tabular
    displays ([#8563](https://github.com/streamlit/streamlit/issues/8563)), and `help` on
    media ([#3133](https://github.com/streamlit/streamlit/issues/3133)). No such parameter
    exists today, and `st.image` currently renders its `alt` attribute from an internal
@@ -766,8 +768,9 @@ ordered roughly by expected value.
    `session_id` already implements. `interact` must never be annotated read-only.
 8. **Static app descriptor.** An authenticated route returning app title, description,
    and protocol capabilities _without_ executing app code, so an agent can choose among
-   available apps. It must never publish widget schemas or user-dependent page lists from
-   a shared warm-up run.
+   available apps. It depends on the authored `st.App` title/description in follow-up #3
+   ([#16878](https://github.com/streamlit/streamlit/issues/16878)). It must never publish
+   widget schemas or user-dependent page lists from a shared warm-up run.
 9. **Remaining interaction coverage.** Uploads, `st.data_editor` edits, dataframe and
    chart selections, lazy-data continuation, deferred downloads, `run_every` scheduling,
    and per-action JSON Schema.
