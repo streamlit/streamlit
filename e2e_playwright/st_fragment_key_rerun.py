@@ -219,12 +219,13 @@ def rerun_chat_result_fragment() -> None:
 
 @st.fragment(key="chat_replay_source")
 def chat_replay_source_fragment() -> None:
-    st.chat_input(
-        "Upload a replay attachment",
-        accept_file=True,
-        key="replay_chat",
-        on_submit=rerun_chat_result_fragment,
-    )
+    with st.container():
+        st.chat_input(
+            "Upload a replay attachment",
+            accept_file=True,
+            key="replay_chat",
+            on_submit=rerun_chat_result_fragment,
+        )
 
 
 @st.fragment(key="chat_replay_result")
