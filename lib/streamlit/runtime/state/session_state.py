@@ -902,6 +902,19 @@ class SessionState:
 
         Dispatch callbacks for fresh browser input, then overlay replay triggers whose
         callbacks already ran so the script body can still observe them.
+
+        Parameters
+        ----------
+        fresh_widget_states : WidgetStatesProto | None
+            Browser-provided widget states for this interaction. Changes in these
+            states are eligible for callback dispatch.
+        replay_trigger_states : WidgetStatesProto | None
+            Active trigger states whose callbacks already ran. These are applied after
+            fresh callbacks without dispatching their callbacks again.
+        replay_trigger_values : Mapping[str, Any] | None
+            Hydrated chat-input values for replay trigger states, keyed by widget ID.
+            They preserve uploaded files and audio because chat deserialization
+            consumes their records and cannot safely be repeated.
         """
         self._reset_triggers()
         self._compact_state()
