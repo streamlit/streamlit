@@ -35,7 +35,7 @@ import * as layers from "@deck.gl/layers"
 import * as meshLayers from "@deck.gl/mesh-layers"
 import { getLogger } from "loglevel"
 
-import { isNullOrUndefined } from "~lib/util/utils"
+import { cloneWithOwnProps, isNullOrUndefined } from "~lib/util/utils"
 
 const LOG = getLogger("DeckGlJsonChart")
 
@@ -138,7 +138,7 @@ const dropUnregisteredExtensions = (json: JsonObject): JsonObject => {
         `Ignoring unregistered deck.gl layer extension(s): ${dropped.join(", ")}`
       )
 
-      return Object.assign({}, layerObj, { extensions: kept })
+      return cloneWithOwnProps(layerObj, { extensions: kept })
     }),
   }
 }

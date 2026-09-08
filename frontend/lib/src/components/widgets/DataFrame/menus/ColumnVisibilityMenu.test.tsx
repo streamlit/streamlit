@@ -25,6 +25,7 @@ import {
 } from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { render } from "~lib/test_util"
+import { cloneWithOwnProps } from "~lib/util/utils"
 
 import ColumnVisibilityMenu, {
   ColumnVisibilityMenuProps,
@@ -277,7 +278,7 @@ describe("DataFrame ColumnVisibilityMenu", () => {
   it("calls showColumn on all columns when selecting a unchecked select all", async () => {
     const allHiddenProps = {
       ...defaultProps,
-      columns: MOCK_COLUMNS.map(c => Object.assign({}, c, { isHidden: true })),
+      columns: MOCK_COLUMNS.map(c => cloneWithOwnProps(c, { isHidden: true })),
     }
 
     render(
@@ -296,7 +297,7 @@ describe("DataFrame ColumnVisibilityMenu", () => {
     const allVisibleProps = {
       ...defaultProps,
       columns: MOCK_COLUMNS.map(c =>
-        Object.assign({}, c, { isHidden: false })
+        cloneWithOwnProps(c, { isHidden: false })
       ),
     }
 
@@ -316,7 +317,7 @@ describe("DataFrame ColumnVisibilityMenu", () => {
     const props = {
       ...defaultProps,
       columns: MOCK_COLUMNS.map(c =>
-        Object.assign({}, c, { isHidden: false })
+        cloneWithOwnProps(c, { isHidden: false })
       ),
       columnOrder: ["index-0", "_column-1"], // exclude _column-2 via order
     }

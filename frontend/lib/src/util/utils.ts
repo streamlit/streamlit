@@ -702,5 +702,20 @@ function decamelizePreservingUppercase(value: string): string {
   )
 }
 
+/**
+ * Shallow-clone `source` and overlay `extra` using object spread.
+ *
+ * Prefer this over `Object.assign` when copying user-provided JSON. Spread
+ * defines source keys as own properties; `Object.assign` invokes inherited
+ * setters, so an enumerable `__proto__` field would change the clone's
+ * prototype.
+ */
+export function cloneWithOwnProps<T extends object, U extends object>(
+  source: T,
+  extra: U
+): T & U {
+  return { ...source, ...extra }
+}
+
 // TODO: Update all imports to use @streamlit/utils and remove this line.
 export { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
