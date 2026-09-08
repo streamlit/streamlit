@@ -118,8 +118,9 @@ config = asyncio.run(load_config())
 ```
 
 Do not cache live async clients or connections bound to the event loop that created
-them — Streamlit may close that loop and the object will raise `Event loop closed`.
-Cache results that stay valid across loops, such as API payloads, dataframes, and config.
+them — that loop may already be closed on a later rerun, and the object will raise
+`Event loop closed`. Cache results that stay valid across loops, such as API payloads,
+dataframes, and config.
 
 ### Prevent unbounded cache growth
 
