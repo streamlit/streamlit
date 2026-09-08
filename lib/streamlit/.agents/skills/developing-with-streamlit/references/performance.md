@@ -73,7 +73,8 @@ def get_metrics():
 Requirements and caveats: a `ttl` is required, and `refresh_mode="background"` can't be
 combined with `persist`. The function can't use session-specific features (e.g.
 `st.session_state`) or render Streamlit elements—pass any needed values as arguments. Works
-with both `st.cache_data` and `st.cache_resource`, but not with `async def` cached
+with both `st.cache_data` and `st.cache_resource`. Combining it with an `async def` cached
+function raises an error at decoration time; use `refresh_mode="foreground"` instead.
 functions.
 
 By default Streamlit hard-expires a background-refresh entry at `2 × ttl`, serving
