@@ -92,9 +92,6 @@ def _no_op_release(ignored: Any) -> None:
     """No-op OnRelease function."""
 
 
-_ASYNC_LIFECYCLE_CALLBACK_ERROR_ID: Final = "cache-resource-async-lifecycle-callback"
-
-
 def _is_async_callable(func: Callable[..., Any]) -> bool:
     """Return True if ``func`` is a coroutine or async-generator callable.
 
@@ -117,41 +114,22 @@ def _is_async_callable(func: Callable[..., Any]) -> bool:
     return inspect.iscoroutinefunction(call) or inspect.isasyncgenfunction(call)
 
 
-def _async_lifecycle_callback_message(param_name: str) -> str:
-    return (
-        f"The `{param_name}` callback of `st.cache_resource` must be a synchronous "
-        "function. Async callbacks are not supported and are never awaited."
-    )
-
-
-def _require_sync_lifecycle_callback(
+def _reject_async_lifecycle_callback(
     callback: Callable[..., Any] | None, *, param_name: str
-) -> Callable[..., Any] | None:
-    """Reject async lifecycle callbacks and discard returned native coroutines."""
-    if callback is None:
-        return None
-    if _is_async_callable(callback):
+) -> None:
+    """Raise if a lifecycle callback is async.
+
+    ``validate`` and ``on_release`` are invoked synchronously, so an async
+    callback never runs: its awaitable is discarded, which reads as a
+    successful validation or a completed release.
+    """
+    if callback is not None and _is_async_callable(callback):
         raise StreamlitAPIException(
-            _async_lifecycle_callback_message(param_name),
-            error_id=_ASYNC_LIFECYCLE_CALLBACK_ERROR_ID,
+            f"The `{param_name}` callback of `st.cache_resource` must be a "
+            "synchronous function. Async callbacks are not supported and are "
+            "never awaited.",
+            error_id="cache-resource-async-lifecycle-callback",
         )
-
-    def _sync_lifecycle_callback(*args: Any, **kwargs: Any) -> Any:
-        result = callback(*args, **kwargs)
-        if inspect.iscoroutine(result):
-            result.close()
-            raise StreamlitAPIException(
-                _async_lifecycle_callback_message(param_name),
-                error_id=_ASYNC_LIFECYCLE_CALLBACK_ERROR_ID,
-            )
-        if inspect.isawaitable(result):
-            raise StreamlitAPIException(
-                _async_lifecycle_callback_message(param_name),
-                error_id=_ASYNC_LIFECYCLE_CALLBACK_ERROR_ID,
-            )
-        return result
-
-    return _sync_lifecycle_callback
 
 
 class ResourceCaches(StatsProvider):
@@ -748,10 +726,8 @@ class CacheResourceAPI:
             time_to_seconds(ttl, coerce_none_to_inf=False),
         )
 
-        validate = _require_sync_lifecycle_callback(validate, param_name="validate")
-        on_release = _require_sync_lifecycle_callback(
-            on_release, param_name="on_release"
-        )
+        _reject_async_lifecycle_callback(validate, param_name="validate")
+        _reject_async_lifecycle_callback(on_release, param_name="on_release")
 
         # Support passing the params via function decorator, e.g.
         # @st.cache_resource(show_spinner=False)

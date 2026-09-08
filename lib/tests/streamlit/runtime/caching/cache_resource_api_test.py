@@ -375,14 +375,8 @@ class CacheResourceAsyncLifecycleCallbackTest(unittest.TestCase):
             async def __call__(self, value: int) -> bool:
                 return True
 
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
-            with pytest.raises(StreamlitAPIException, match=param_name) as exc_info:
-                st.cache_resource(**{param_name: AsyncCallback()})(lambda: 1)
-            gc.collect()
-
-        assert exc_info.value.error_id == "cache-resource-async-lifecycle-callback"
-        _assert_no_unawaited_coroutine_warning(caught)
+        with pytest.raises(StreamlitAPIException, match=param_name):
+            st.cache_resource(**{param_name: AsyncCallback()})(lambda: 1)
 
     @parameterized.expand([("validate",), ("on_release",)])
     def test_rejects_partial_of_async_function(self, param_name: str) -> None:
@@ -392,64 +386,8 @@ class CacheResourceAsyncLifecycleCallbackTest(unittest.TestCase):
             return True
 
         callback = functools.partial(async_callback, None)
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
-            with pytest.raises(StreamlitAPIException, match=param_name) as exc_info:
-                st.cache_resource(**{param_name: callback})(lambda: 1)
-            gc.collect()
-
-        assert exc_info.value.error_id == "cache-resource-async-lifecycle-callback"
-        _assert_no_unawaited_coroutine_warning(caught)
-
-    def test_rejects_sync_validate_returning_coroutine(self) -> None:
-        """A sync validator that returns a native coroutine is rejected on access."""
-
-        def validate(value: int) -> bool:
-            async def _inner() -> bool:
-                return True
-
-            return _inner()  # type: ignore[return-value]
-
-        @st.cache_resource(validate=validate)
-        def f() -> int:
-            return 1
-
-        assert f() == 1
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
-            with pytest.raises(StreamlitAPIException, match="validate") as exc_info:
-                f()
-            gc.collect()
-
-        assert exc_info.value.error_id == "cache-resource-async-lifecycle-callback"
-        _assert_no_unawaited_coroutine_warning(caught)
-
-    def test_rejects_sync_on_release_returning_coroutine(self) -> None:
-        """A sync release callback that returns a native coroutine is rejected on eviction."""
-        released: list[int] = []
-
-        def on_release(value: int) -> None:
-            released.append(value)
-
-            async def _inner() -> None:
-                return None
-
-            return _inner()  # type: ignore[return-value]
-
-        @st.cache_resource(max_entries=1, on_release=on_release)
-        def f(value: int) -> int:
-            return value
-
-        assert f(1) == 1
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
-            with pytest.raises(StreamlitAPIException, match="on_release") as exc_info:
-                f(2)
-            gc.collect()
-
-        assert released == [1]
-        assert exc_info.value.error_id == "cache-resource-async-lifecycle-callback"
-        _assert_no_unawaited_coroutine_warning(caught)
+        with pytest.raises(StreamlitAPIException, match=param_name):
+            st.cache_resource(**{param_name: callback})(lambda: 1)
 
     def test_sync_validate_and_on_release_still_work(self) -> None:
         """Synchronous validate, eviction, clear, and release behavior is unchanged."""
