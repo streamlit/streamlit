@@ -1124,13 +1124,10 @@ class SessionState:
             votes.wants_interaction_default = True
 
     def _build_full_app_rerun(self, ctx: ScriptRunContext) -> RerunData:
-        """Build a full-app rerun that replays already-dispatched triggers.
+        """Build the full-app escalation entry for a mixed main-script rerun batch.
 
-        Called when a normally-returning callback's default vote coexists with
-        a targeted rerun in a main-script interaction. Only trigger widget
-        states are forwarded — non-trigger values already live in session state
-        from callback execution. Replaying the full proto would overwrite any
-        mutations callbacks made via ``st.session_state["key"] = new_value``.
+        This entry carries no widget state. Trigger replay is attached separately to
+        ``rerun_batch[0]`` and folded by ``request_rerun_batch``.
         """
         from streamlit.runtime.scriptrunner import RerunData
 
