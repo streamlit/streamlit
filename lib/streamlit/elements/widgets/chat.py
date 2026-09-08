@@ -130,31 +130,27 @@ class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
     audio: UploadedFile | None = None
     _include_files: bool = field(default=False, repr=False, compare=False)
     _include_audio: bool = field(default=False, repr=False, compare=False)
-    _included_keys: tuple[str, ...] = field(init=False, repr=False, compare=False)
 
-    def __post_init__(self) -> None:
-        """Compute and cache the included keys after initialization."""
-        keys: list[str] = ["text"]
+    def to_dict(self) -> dict[str, _ChatInputValueItem]:
+        result: dict[str, _ChatInputValueItem] = {}
+        # ``del value["text"]`` removes the attribute; skip it so mapping
+        # methods that use this dict stay consistent.
+        if hasattr(self, "text"):
+            result["text"] = self.text
         if self._include_files:
-            keys.append("files")
+            result["files"] = self.files
         if self._include_audio:
-            keys.append("audio")
-        object.__setattr__(self, "_included_keys", tuple(keys))
-
-    def _get_included_keys(self) -> tuple[str, ...]:
-        """Return tuple of keys that should be exposed based on inclusion flags."""
-        return self._included_keys
+            result["audio"] = self.audio
+        return result
 
     def __len__(self) -> int:
-        return len(self._get_included_keys())
+        return len(self.to_dict())
 
     def __iter__(self) -> Iterator[str]:
-        return iter(self._get_included_keys())
+        return iter(self.to_dict())
 
     def __contains__(self, key: object) -> bool:
-        if not isinstance(key, str):
-            return False
-        return key in self._get_included_keys()
+        return key in self.to_dict()
 
     @overload
     def __getitem__(self, item: Literal["text"]) -> str: ...
@@ -169,11 +165,9 @@ class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
     def __getitem__(self, item: str) -> _ChatInputValueItem: ...
 
     def __getitem__(self, item: str) -> _ChatInputValueItem:
-        if item not in self._get_included_keys():
-            raise KeyError(f"Invalid key: {item}")
         try:
-            return getattr(self, item)  # type: ignore[no-any-return]
-        except AttributeError:  # pragma: no cover - defensive
+            return self.to_dict()[item]
+        except KeyError:
             raise KeyError(f"Invalid key: {item}") from None
 
     def __getattribute__(self, name: str) -> Any:
@@ -191,32 +185,22 @@ class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
         return object.__getattribute__(self, name)
 
     def __setitem__(self, key: str, value: Any) -> None:
-        if key not in self._get_included_keys():
+        if key not in self:
             raise KeyError(f"Invalid key: {key}")
         setattr(self, key, value)
 
     def __delitem__(self, key: str) -> None:
-        if key not in self._get_included_keys():
+        if key not in self:
             raise KeyError(f"Invalid key: {key}")
-        try:
+        if key == "files":
+            self._include_files = False
+        elif key == "audio":
+            self._include_audio = False
+        else:
             delattr(self, key)
-        except AttributeError:  # pragma: no cover - defensive
-            raise KeyError(f"Invalid key: {key}") from None
-        object.__setattr__(
-            self,
-            "_included_keys",
-            tuple(k for k in self._included_keys if k != key),
-        )
-
-    def to_dict(self) -> dict[str, _ChatInputValueItem]:
-        """Return the included fields still stored on this value.
-
-        Keys removed with ``del value[key]`` are omitted.
-        """
-        return {key: getattr(self, key) for key in self._get_included_keys()}
 
     def __repr__(self) -> str:
-        # Build the repr from to_dict() so excluded and deleted keys do not raise.
+        # Build the repr from to_dict() so excluded keys do not raise.
         # The generated dataclass repr always reads .files/.audio, which
         # __getattribute__ rejects when those inputs were not accepted.
         args = ", ".join(f"{key}={value!r}" for key, value in self.to_dict().items())
