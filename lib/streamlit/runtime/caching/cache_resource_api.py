@@ -93,7 +93,7 @@ def _no_op_release(ignored: Any) -> None:
 
 
 def _is_async_callable(func: Callable[..., Any]) -> bool:
-    """Return True if calling ``func`` produces a coroutine or async generator."""
+    """Return whether ``func`` is an identifiable coroutine or async-generator callable."""
     target: Any = func
     while isinstance(target, functools.partial):
         target = target.func
