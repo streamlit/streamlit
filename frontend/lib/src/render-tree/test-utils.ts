@@ -136,9 +136,10 @@ declare module "vitest" {
   // Type parameters must match Vitest's Matchers exactly so the interfaces merge.
   interface Matchers<
     R extends void | Promise<void> = void | Promise<void>,
-    T = unknown, // eslint-disable-line no-unused-vars, @typescript-eslint/no-unused-vars
+    T = unknown,
   > {
-    toBeTextNode(text: string): R
+    // `T extends T` keeps T used so this merges with Vitest's Matchers.
+    toBeTextNode(text: T extends T ? string : string): R
   }
 }
 
