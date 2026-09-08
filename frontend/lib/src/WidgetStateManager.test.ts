@@ -2248,6 +2248,49 @@ describe("Trigger JSON payloads (aggregated)", () => {
         expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
       })
 
+      it("clears one bound param without dropping unrelated query keys", () => {
+        const keepWidget = { id: "keep1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "keep1",
+          "other",
+          "string_value",
+          "",
+          false
+        )
+        widgetMgr.setStringValue(keepWidget.id, "1", {
+          formId: keepWidget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        const clearWidget = { id: "number1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "number1",
+          "count",
+          "int_value",
+          0,
+          false
+        )
+        widgetMgr.setIntValue(clearWidget.id, 5, {
+          formId: clearWidget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+        vi.clearAllMocks()
+
+        widgetMgr.setIntValue(clearWidget.id, null, {
+          formId: clearWidget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        expect(window.history.replaceState).toHaveBeenCalled()
+        const url = (window.history.replaceState as Mock).mock.calls[0][2]
+        expect(url).toContain("other=1")
+        expect(url).not.toContain("count=")
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("other=1")
+      })
+
       it("encodes spaces as + in URL, not %20", () => {
         const widget = { id: "widget1", formId: "" }
         widgetMgr.registerQueryParamBinding(

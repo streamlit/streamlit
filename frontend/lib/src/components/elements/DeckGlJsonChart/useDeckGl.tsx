@@ -626,10 +626,8 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
           return diffArg
         }
 
-        return {
-          ...diffArg,
-          [key]: deck.initialViewState[key],
-        }
+        diffArg[key] = deck.initialViewState[key]
+        return diffArg
       }, {})
 
       setViewState(existing => ({ ...existing, ...diff }))

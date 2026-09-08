@@ -1464,8 +1464,8 @@ export class WidgetStateManager {
     })
 
     if (value === null) {
-      // Remove the param
-      delete currentParams[paramKey]
+      // Drop this param from the query string; stringify uses skipNull: true.
+      currentParams[paramKey] = null
     } else if (Array.isArray(value)) {
       if (value.length === 0) {
         // Empty array: write as empty string to produce ?key= in URL

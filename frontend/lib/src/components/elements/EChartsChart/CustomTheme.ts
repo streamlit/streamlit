@@ -503,11 +503,13 @@ function withTitleStyleDefaults(
       ? (title.textStyle as Record<string, unknown>)
       : {}
     changed = true
-    return {
-      ...title,
-      ...(title.padding === undefined ? { padding } : {}),
+    const extra: Record<string, unknown> = {
       textStyle: { ...sizeAndWeight, ...userTextStyle },
     }
+    if (title.padding === undefined) {
+      extra.padding = padding
+    }
+    return { ...title, ...extra }
   })
   if (!changed) {
     return option
