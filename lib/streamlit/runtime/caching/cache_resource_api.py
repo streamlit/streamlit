@@ -119,8 +119,7 @@ def _reject_async_lifecycle_callback(
         raise StreamlitAPIException(
             f"The `{param_name}` callback of `st.cache_resource` must be a "
             "synchronous function. Async callbacks are never awaited; call "
-            "the coroutine from a synchronous wrapper instead (for example "
-            "with `asyncio.run`).",
+            "the coroutine from a synchronous wrapper instead.",
             error_id="cache-resource-async-lifecycle-callback",
         )
 
