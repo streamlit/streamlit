@@ -373,9 +373,19 @@ def _prepare_vega_lite_spec(
 
 
 _GEOJSON_OR_TOPOJSON_TYPES: Final[frozenset[str]] = frozenset(
-    {"FeatureCollection", "Topology", "Feature"}
+    {
+        "FeatureCollection",
+        "Topology",
+        "Feature",
+        "Point",
+        "MultiPoint",
+        "LineString",
+        "MultiLineString",
+        "Polygon",
+        "MultiPolygon",
+        "GeometryCollection",
+    }
 )
-_VEGA_GEO_FORMAT_TYPES: Final[frozenset[str]] = frozenset({"json", "topojson"})
 
 
 def _is_geojson_or_topojson_payload(data: Any) -> bool:
@@ -398,55 +408,6 @@ def _is_geojson_or_topojson_payload(data: Any) -> bool:
     return False
 
 
-def _named_datasets_with_geo_format(spec: VegaLiteSpec) -> set[str]:
-    """Return dataset names whose Vega-Lite format type is json or topojson.
-
-    ``json`` is Vega-Lite's format for both GeoJSON and generic JSON records.
-    Walks nested views and transforms. Skips ``datasets`` payloads and
-    ``data.values`` so large geometries and tables are not traversed.
-    """
-    names: set[str] = set()
-
-    def _walk(node: Any) -> None:
-        if isinstance(node, dict):
-            data_spec = node.get("data")
-            if isinstance(data_spec, dict):
-                format_spec = data_spec.get("format")
-                format_type = (
-                    format_spec.get("type") if isinstance(format_spec, dict) else None
-                )
-                if (
-                    "name" in data_spec
-                    and isinstance(format_type, str)
-                    and format_type.lower() in _VEGA_GEO_FORMAT_TYPES
-                ):
-                    names.add(str(data_spec["name"]))
-            for key, value in node.items():
-                if key not in {"data", "datasets"}:
-                    _walk(value)
-        elif isinstance(node, list):
-            for item in node:
-                _walk(item)
-
-    _walk(spec)
-    return names
-
-
-def _keep_named_dataset_in_spec(
-    name: str, payload: Any, geo_format_names: set[str]
-) -> bool:
-    """Return True when this named dataset must stay in spec JSON.
-
-    Keep geometry payloads, and keep dicts that a json/topojson format points
-    at (for example a raw Geometry). Lists of plain records still go through
-    Arrow.
-    """
-    if _is_geojson_or_topojson_payload(payload):
-        return True
-    # Keep dicts that a json/topojson format points at (e.g. a raw geometry).
-    return name in geo_format_names and isinstance(payload, dict)
-
-
 def _marshall_chart_data(
     proto: VegaLiteChartProto,
     spec: VegaLiteSpec,
@@ -457,15 +418,15 @@ def _marshall_chart_data(
     Named tabular datasets are copied to ``proto.datasets`` as Arrow IPC bytes
     and removed from the spec. Named GeoJSON/TopoJSON datasets stay in
     ``spec["datasets"]`` so Vega-Lite can compile them on embed. Top-level
-    ``data.values`` / raw ``data`` are moved to ``proto.data``.
+    ``data.values`` / raw ``data`` are moved to ``proto.data`` unless the
+    values are GeoJSON/TopoJSON, which stay in the spec with their format.
     """
 
     if "datasets" in spec:
-        geo_format_names = _named_datasets_with_geo_format(spec)
         remaining_datasets: dict[str, Any] = {}
         for dataset_name, dataset_data in spec["datasets"].items():
             name = str(dataset_name)
-            if _keep_named_dataset_in_spec(name, dataset_data, geo_format_names):
+            if _is_geojson_or_topojson_payload(dataset_data):
                 remaining_datasets[name] = dataset_data
                 continue
 
@@ -501,9 +462,11 @@ def _marshall_chart_data(
 
         if isinstance(data_spec, dict):
             if "values" in data_spec:
-                data = data_spec["values"]
-                del spec["data"]
-        else:
+                values = data_spec["values"]
+                if not _is_geojson_or_topojson_payload(values):
+                    data = values
+                    del spec["data"]
+        elif not _is_geojson_or_topojson_payload(data_spec):
             data = data_spec
             del spec["data"]
 
@@ -2563,13 +2526,13 @@ def _to_arrow_dataset(data: Any, datasets: dict[str, Any]) -> dict[str, str]:
     Altair to reference the dataset.
     """
     if _is_geojson_or_topojson_payload(data):
-        name = calc_hash(json.dumps(data, sort_keys=True, default=str))
+        # Match spec transport (json.dumps without default) so non-JSON
+        # values fail here instead of later when the spec is encoded.
+        name = calc_hash(json.dumps(data, sort_keys=True))
         datasets[name] = data
     else:
-        # Already serialize the data to be able to create a stable
-        # dataset name:
+        # Serialize first so the dataset name is a stable content hash.
         data_bytes = dataframe_util.convert_anything_to_arrow_bytes(data)
-        # Use the content hash of the data as the name:
         name = calc_hash(str(data_bytes))
         datasets[name] = data_bytes
     return {"name": name}

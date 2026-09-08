@@ -502,6 +502,102 @@ describe("useVegaEmbed hook", () => {
     expect(mockVegaView.insert).not.toHaveBeenCalled()
   })
 
+  it("passes string specs to embed without parsing them as JSON", async () => {
+    const element: VegaLiteChartElement = {
+      id: "chartId",
+      data: null,
+      datasets: [],
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    }
+
+    const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
+    ;(getInlineData as Mock).mockReturnValue(null)
+    ;(getDataArrays as Mock).mockReturnValue({ lookup: [{ id: 1 }] })
+
+    const containerRef = { current: document.createElement("div") }
+    const specUrl = "https://example.invalid/spec.json"
+    await act(async () => {
+      await result.current.createView(containerRef, specUrl)
+    })
+
+    expect(embed).toHaveBeenCalledWith(
+      containerRef.current,
+      specUrl,
+      expect.anything()
+    )
+  })
+
+  it("replays named datasets that change while embed is pending", async () => {
+    let resolveEmbed!: (value: typeof mockEmbedReturn) => void
+    ;(embed as unknown as Mock).mockImplementation(
+      () =>
+        new Promise(resolve => {
+          resolveEmbed = resolve
+        })
+    )
+
+    const oldDatasets = [
+      {
+        name: "lookup",
+        hasName: true,
+        data: { dimensions: { numDataRows: 1 }, hash: "old" },
+      },
+    ] as WrappedNamedDataset[]
+    const newDatasets = [
+      {
+        name: "lookup",
+        hasName: true,
+        data: { dimensions: { numDataRows: 1 }, hash: "new" },
+      },
+    ] as WrappedNamedDataset[]
+
+    const initialElement: VegaLiteChartElement = {
+      id: "chartId",
+      data: null,
+      datasets: oldDatasets,
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    }
+
+    const { result, rerender } = renderHook(
+      ({ element }) => useVegaEmbed(element, mockWidgetMgr),
+      { initialProps: { element: initialElement } }
+    )
+
+    ;(getInlineData as Mock).mockReturnValue(null)
+    ;(getDataArrays as Mock).mockReturnValue({ lookup: [{ id: 1 }] })
+    ;(getDataArray as Mock).mockReturnValue([{ id: 2 }])
+
+    const containerRef = { current: document.createElement("div") }
+    let createPromise!: Promise<VegaView | null>
+    act(() => {
+      createPromise = result.current.createView(containerRef, {})
+    })
+
+    rerender({
+      element: { ...initialElement, datasets: newDatasets },
+    })
+
+    await act(async () => {
+      const skipped = await result.current.updateView(null, newDatasets)
+      expect(skipped).toBeNull()
+    })
+
+    await act(async () => {
+      resolveEmbed(mockEmbedReturn)
+      await createPromise
+    })
+
+    expect(mockVegaView.data).toHaveBeenCalledWith("lookup", [{ id: 2 }])
+  })
+
   it("uses 'source' as default dataset name when no datasets but vgSpec.data present", async () => {
     const element: VegaLiteChartElement = {
       id: "chartId",

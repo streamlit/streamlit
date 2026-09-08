@@ -320,7 +320,7 @@ GEOJSON_URL = "./app/static/two_polygons.geo.json"
 GEO_FORMAT = alt.DataFormat(property="features", type="json")
 
 with st.container(key="altair_geoshape_lookup"):
-    population = pd.read_json(STATIC_DIR / "two_polygons_population.json")
+    population = pd.DataFrame({"id": [1, 2], "population": [100, 200]})
     lookup_chart = (
         alt.Chart(alt.Data(url=GEOJSON_URL, format=GEO_FORMAT))
         .mark_geoshape()

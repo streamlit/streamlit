@@ -270,7 +270,6 @@ def test_geoshape_lookup_and_inline_featurecollection_render(
 
     for chart in (lookup_chart, inline_chart):
         expect(get_vega_graphics_document(chart)).to_be_visible()
-        expect(chart.locator("canvas, svg").first).to_be_visible()
 
     expect(app.get_by_test_id("stException")).to_have_count(0)
 

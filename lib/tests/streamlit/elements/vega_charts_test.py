@@ -1723,6 +1723,14 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
                 ],
                 {"type": "json"},
             ),
+            (
+                "polygon_geometry",
+                {
+                    "type": "Polygon",
+                    "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]],
+                },
+                {"type": "json"},
+            ),
         ]
     )
     def test_geo_named_dataset_stays_in_vega_lite_spec(
@@ -1762,6 +1770,61 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         assert len(proto.datasets) == 1
         records_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
         assert set(records_df.columns) >= {"x", "y"}
+
+    def test_json_format_columnar_dict_still_arrow_serialized(self) -> None:
+        """A JSON-format columnar dict is still Arrow-serialized, not kept as JSON."""
+        columnar = {"a": [1, 2], "b": [3, 4]}
+        st.vega_lite_chart(
+            {
+                "mark": "bar",
+                "data": {"name": "foo", "format": {"type": "json"}},
+                "datasets": {"foo": columnar},
+            }
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        assert "datasets" not in spec
+        assert len(proto.datasets) == 1
+        columns_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        assert set(columns_df.columns) >= {"a", "b"}
+
+    def test_top_level_geojson_values_stay_in_spec(self) -> None:
+        """Top-level data.values FeatureCollection stays in spec JSON with format."""
+        st.vega_lite_chart(
+            {
+                "data": {
+                    "values": _TWO_POLYGON_FEATURE_COLLECTION,
+                    "format": {"type": "json", "property": "features"},
+                },
+                "mark": {"type": "geoshape"},
+            }
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        assert spec["data"]["values"] == _TWO_POLYGON_FEATURE_COLLECTION
+        assert spec["data"]["format"] == {"type": "json", "property": "features"}
+        assert not proto.HasField("data")
+
+    def test_geojson_hash_rejects_non_json_types(self) -> None:
+        """GeoJSON hashing uses the same JSON serialization as spec transport."""
+        import numpy as np
+
+        from streamlit.elements.vega_charts import _to_arrow_dataset
+
+        payload = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [0, 0]},
+                    "properties": {"n": np.int64(1)},
+                }
+            ],
+        }
+        with pytest.raises(TypeError):
+            _to_arrow_dataset(payload, {})
 
     def test_kwargs_raises_type_error(self):
         """Test that passing unexpected kwargs raises TypeError after kwargs removal."""

@@ -113,6 +113,75 @@ export function useVegaEmbed(
     vegaViewRef.current = null
   }, [])
 
+  const updateData = useCallback(
+    (
+      view: VegaView,
+      name: string,
+      prevData: Quiver | null,
+      dataArg: Quiver | null
+    ): void => {
+      if (!dataArg || dataArg.dimensions.numDataRows === 0) {
+        // The new data is empty, so we remove the dataset from the
+        // chart view if the named dataset exists.
+        try {
+          view.remove(name, truthy)
+        } catch {
+          // The dataset was already removed, so we do nothing
+        }
+        return
+      }
+
+      if (!prevData || prevData.dimensions.numDataRows === 0) {
+        // The previous data was empty, so we just insert the new data.
+        view.insert(name, getDataArray(dataArg))
+        return
+      }
+
+      if (dataArg.hash !== prevData.hash) {
+        // Data has changed, replace the dataset.
+        view.data(name, getDataArray(dataArg))
+        LOG.info(`Replaced the ${name} dataset in Vega view.`)
+      }
+    },
+    []
+  )
+
+  const syncViewData = useCallback(
+    (
+      view: VegaView,
+      inputData: Quiver | null,
+      inputDatasets: WrappedNamedDataset[]
+    ): void => {
+      const prevData = prevDataRef.current
+      const prevDatasets = prevDatasetsRef.current
+
+      if (prevData || inputData) {
+        updateData(view, defaultDataNameRef.current, prevData, inputData)
+      }
+
+      const prevDataSets = getDataSets(prevDatasets) ?? {}
+      const dataSets = getDataSets(inputDatasets) ?? {}
+
+      for (const [name, dataset] of Object.entries(dataSets)) {
+        const datasetName = name || defaultDataNameRef.current
+        const prevDataset = prevDataSets[datasetName]
+
+        updateData(view, datasetName, prevDataset, dataset)
+      }
+
+      // Remove all datasets that are in the previous but not the current datasets.
+      for (const name of Object.keys(prevDataSets)) {
+        if (
+          !Object.hasOwn(dataSets, name) &&
+          name !== defaultDataNameRef.current
+        ) {
+          updateData(view, name, null, null)
+        }
+      }
+    },
+    [updateData]
+  )
+
   const createView = useCallback(
     async (
       containerRef: RefObject<HTMLDivElement>,
@@ -149,21 +218,35 @@ export function useVegaEmbed(
           actions: false,
         }
 
+        // Snapshot the datasets compiled into this view. A rerun can land
+        // during embed; we record this snapshot as prev and replay any
+        // later change after the view exists.
+        const compiledData = latestDataRef.current
+        const compiledDatasets = latestDatasetsRef.current
+
         // Named Arrow datasets must be in the spec before embed so Vega-Lite
         // can compile lookups and filters against them. GeoJSON/TopoJSON named
         // datasets already live on spec.datasets and are preserved.
-        const dataArrays = getDataArrays(latestDatasetsRef.current) ?? {}
+        const dataArrays = getDataArrays(compiledDatasets) ?? {}
         const datasetNames = Object.keys(dataArrays)
 
-        // Copy so the preprocessor spec (also used for copy-to-clipboard) is
-        // not mutated when Arrow rows are merged in.
-        const specForEmbed =
-          typeof spec === "string" ? JSON.parse(spec) : { ...spec }
-        if (datasetNames.length > 0) {
-          specForEmbed.datasets = {
-            ...specForEmbed.datasets,
-            ...dataArrays,
+        // Copy object specs so the preprocessor spec (also used for
+        // copy-to-clipboard) is not mutated when Arrow rows are merged in.
+        // Leave string specs untouched: vega-embed treats a string as a URL.
+        let specForEmbed: VisualizationSpec | string
+        if (typeof spec === "string") {
+          specForEmbed = spec
+        } else {
+          const objectSpec = { ...spec } as VisualizationSpec & {
+            datasets?: Record<string, unknown>
           }
+          if (datasetNames.length > 0) {
+            objectSpec.datasets = {
+              ...objectSpec.datasets,
+              ...dataArrays,
+            }
+          }
+          specForEmbed = objectSpec
         }
 
         const { vgSpec, view, finalize } = await embed(
@@ -191,7 +274,7 @@ export function useVegaEmbed(
         // Unnamed Arrow table data is inserted after embed. Named datasets are
         // already in spec.datasets, so inserting them again would duplicate
         // rows.
-        const dataObj = getInlineData(latestDataRef.current)
+        const dataObj = getInlineData(compiledData)
         if (dataObj) {
           vegaViewRef.current.insert(defaultDataNameRef.current, dataObj)
         }
@@ -202,50 +285,27 @@ export function useVegaEmbed(
         // set to -1 on first load.
         await vegaViewRef.current.resize().runAsync()
 
-        // Record the data used to initialize this view so subsequent updates
-        // have an accurate previous state to diff against.
-        prevDataRef.current = latestDataRef.current
-        prevDatasetsRef.current = latestDatasetsRef.current
+        prevDataRef.current = compiledData
+        prevDatasetsRef.current = compiledDatasets
+
+        const pendingData = latestDataRef.current
+        const pendingDatasets = latestDatasetsRef.current
+        if (
+          pendingData !== compiledData ||
+          pendingDatasets !== compiledDatasets
+        ) {
+          syncViewData(vegaViewRef.current, pendingData, pendingDatasets)
+          await vegaViewRef.current.runAsync()
+          prevDataRef.current = pendingData
+          prevDatasetsRef.current = pendingDatasets
+        }
 
         return vegaViewRef.current
       } finally {
         setIsCreatingView(false)
       }
     },
-    [finalizeView, maybeConfigureSelections]
-  )
-
-  const updateData = useCallback(
-    (
-      view: VegaView,
-      name: string,
-      prevData: Quiver | null,
-      dataArg: Quiver | null
-    ): void => {
-      if (!dataArg || dataArg.dimensions.numDataRows === 0) {
-        // The new data is empty, so we remove the dataset from the
-        // chart view if the named dataset exists.
-        try {
-          view.remove(name, truthy)
-        } catch {
-          // The dataset was already removed, so we do nothing
-        }
-        return
-      }
-
-      if (!prevData || prevData.dimensions.numDataRows === 0) {
-        // The previous data was empty, so we just insert the new data.
-        view.insert(name, getDataArray(dataArg))
-        return
-      }
-
-      if (dataArg.hash !== prevData.hash) {
-        // Data has changed, replace the dataset.
-        view.data(name, getDataArray(dataArg))
-        LOG.info(`Replaced the ${name} dataset in Vega view.`)
-      }
-    },
-    []
+    [finalizeView, maybeConfigureSelections, syncViewData]
   )
 
   const updateView = useCallback(
@@ -257,47 +317,15 @@ export function useVegaEmbed(
         return null
       }
 
-      // At this point the previous data should be updated
-      const prevData = prevDataRef.current
-      const prevDatasets = prevDatasetsRef.current
-
-      if (prevData || inputData) {
-        updateData(
-          vegaViewRef.current,
-          defaultDataNameRef.current,
-          prevData,
-          inputData
-        )
-      }
-
-      const prevDataSets = getDataSets(prevDatasets) ?? {}
-      const dataSets = getDataSets(inputDatasets) ?? {}
-
-      for (const [name, dataset] of Object.entries(dataSets)) {
-        const datasetName = name || defaultDataNameRef.current
-        const prevDataset = prevDataSets[datasetName]
-
-        updateData(vegaViewRef.current, datasetName, prevDataset, dataset)
-      }
-
-      // Remove all datasets that are in the previous but not the current datasets.
-      for (const name of Object.keys(prevDataSets)) {
-        if (
-          !Object.hasOwn(dataSets, name) &&
-          name !== defaultDataNameRef.current
-        ) {
-          updateData(vegaViewRef.current, name, null, null)
-        }
-      }
-
-      await vegaViewRef.current?.resize().runAsync()
+      syncViewData(vegaViewRef.current, inputData, inputDatasets)
+      await vegaViewRef.current.resize().runAsync()
 
       prevDataRef.current = inputData
       prevDatasetsRef.current = inputDatasets
 
       return vegaViewRef.current
     },
-    [updateData, isCreatingView]
+    [syncViewData, isCreatingView]
   )
 
   const resizeView = useCallback(
