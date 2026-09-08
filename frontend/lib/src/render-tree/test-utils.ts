@@ -132,25 +132,17 @@ export function makeProto<Type, Props>(
   return MessageType.decode(bytes)
 }
 
-// Custom Jest matchers for dealing with AppNodes
-declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace vi {
-    interface Matchers<R> {
-      toBeTextNode(text: string): R
-    }
-  }
-}
-
+/** Custom Vitest matchers for dealing with AppNodes. */
 interface CustomMatchers<R = unknown> {
   toBeTextNode(text: string): R
 }
 
 declare module "vitest" {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-empty-object-type -- Must match vitest's Assertion<T> signature which has no default type parameter.
-  interface Assertion<T = any> extends CustomMatchers<T> {}
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  interface AsymmetricMatchersContaining extends CustomMatchers {}
+  // Type parameters must match Vitest's Matchers exactly so the interfaces merge.
+  interface Matchers<
+    R extends void | Promise<void> = void | Promise<void>,
+    T = unknown,
+  > extends CustomMatchers<R> {}
 }
 
 expect.extend({
