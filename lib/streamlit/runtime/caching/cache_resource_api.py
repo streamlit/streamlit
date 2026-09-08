@@ -93,27 +93,16 @@ def _no_op_release(ignored: Any) -> None:
 
 
 def _is_async_callable(func: Callable[..., Any]) -> bool:
-    """Return True if calling ``func`` produces a coroutine or async generator.
-
-    Classification uses the callable Streamlit will invoke, not ``__wrapped__``
-    metadata. A synchronous adapter around an async function is therefore
-    accepted, even when it is built with ``functools.wraps``.
-
-    ``inspect.iscoroutinefunction`` is False for callable instances whose
-    ``__call__`` is async, so those objects are inspected via ``__call__``.
-    """
+    """Return True if calling ``func`` produces a coroutine or async generator."""
     target: Any = func
     while isinstance(target, functools.partial):
         target = target.func
     if inspect.iscoroutinefunction(target) or inspect.isasyncgenfunction(target):
         return True
-    # Inspect the type's ``__call__`` so callable instances with an async
-    # ``__call__`` are detected. ``inspect.iscoroutinefunction`` only inspects
-    # the object itself, so a callable instance whose ``__call__`` is async
-    # has to be detected through its type.
+    # inspect.iscoroutinefunction only inspects the object itself, so a
+    # callable instance whose __call__ is async has to be detected through
+    # its type.
     call = type(target).__call__
-    if call is target:
-        return False
     return inspect.iscoroutinefunction(call) or inspect.isasyncgenfunction(call)
 
 
@@ -129,8 +118,9 @@ def _reject_async_lifecycle_callback(
     if callback is not None and _is_async_callable(callback):
         raise StreamlitAPIException(
             f"The `{param_name}` callback of `st.cache_resource` must be a "
-            "synchronous function. Async callbacks are not supported and are "
-            "never awaited.",
+            "synchronous function. Async callbacks are never awaited; call "
+            "the coroutine from a synchronous wrapper instead (for example "
+            "with `asyncio.run`).",
             error_id="cache-resource-async-lifecycle-callback",
         )
 
@@ -527,11 +517,11 @@ class CacheResourceAPI:
         validate : callable or None
             An optional validation function for cached resources. ``validate`` is called
             each time the cached value is accessed. It receives the cached value as
-            its only parameter and it must return a boolean. ``validate`` must be
-            synchronous; async callbacks are not supported. If ``validate`` returns
+            its only parameter and it must return a boolean. If ``validate`` returns
             False, the current cached value is discarded, and the decorated function
             is called to compute a new value. This is useful e.g. to check the
-            health of database connections.
+            health of database connections. ``validate`` must be a synchronous
+            function; coroutine functions (``async def``) aren't supported.
 
         hash_funcs : dict or None
             Mapping of types or fully qualified names to hash functions.

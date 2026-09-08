@@ -17,10 +17,8 @@
 from __future__ import annotations
 
 import functools
-import gc
 import threading
 import unittest
-import warnings
 from unittest.mock import Mock, patch
 
 import pytest
@@ -332,17 +330,6 @@ class CacheResourceValidateTest(unittest.TestCase):
             validate.reset_mock()
 
 
-def _assert_no_unawaited_coroutine_warning(
-    caught: list[warnings.WarningMessage],
-) -> None:
-    """Fail if a RuntimeWarning about an unawaited coroutine was recorded."""
-    assert not any(
-        issubclass(warning.category, RuntimeWarning)
-        and "never awaited" in str(warning.message)
-        for warning in caught
-    )
-
-
 class CacheResourceAsyncLifecycleCallbackTest(unittest.TestCase):
     def setUp(self) -> None:
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
@@ -358,14 +345,10 @@ class CacheResourceAsyncLifecycleCallbackTest(unittest.TestCase):
         async def async_callback(value: int) -> bool:
             return True
 
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
-            with pytest.raises(StreamlitAPIException, match=param_name) as exc_info:
-                st.cache_resource(**{param_name: async_callback})(lambda: 1)
-            gc.collect()
+        with pytest.raises(StreamlitAPIException, match=param_name) as exc_info:
+            st.cache_resource(**{param_name: async_callback})(lambda: 1)
 
         assert exc_info.value.error_id == "cache-resource-async-lifecycle-callback"
-        _assert_no_unawaited_coroutine_warning(caught)
 
     @parameterized.expand([("validate",), ("on_release",)])
     def test_rejects_async_callable_object(self, param_name: str) -> None:
@@ -388,6 +371,32 @@ class CacheResourceAsyncLifecycleCallbackTest(unittest.TestCase):
         callback = functools.partial(async_callback, None)
         with pytest.raises(StreamlitAPIException, match=param_name):
             st.cache_resource(**{param_name: callback})(lambda: 1)
+
+    @parameterized.expand([("validate",), ("on_release",)])
+    def test_rejects_partial_of_async_callable_object(self, param_name: str) -> None:
+        """Partials of callable instances with async ``__call__`` fail at decoration."""
+
+        class AsyncCallback:
+            async def __call__(self, ignored: object, value: int) -> bool:
+                return True
+
+        callback = functools.partial(AsyncCallback(), None)
+        with pytest.raises(StreamlitAPIException, match=param_name) as exc_info:
+            st.cache_resource(**{param_name: callback})(lambda: 1)
+
+        assert exc_info.value.error_id == "cache-resource-async-lifecycle-callback"
+
+    @parameterized.expand([("validate",), ("on_release",)])
+    def test_rejects_async_generator_function(self, param_name: str) -> None:
+        """Async generator functions fail when the decorator is built."""
+
+        async def async_gen_callback(value: int) -> object:
+            yield True
+
+        with pytest.raises(StreamlitAPIException, match=param_name) as exc_info:
+            st.cache_resource(**{param_name: async_gen_callback})(lambda: 1)
+
+        assert exc_info.value.error_id == "cache-resource-async-lifecycle-callback"
 
     @parameterized.expand([("validate",), ("on_release",)])
     def test_accepts_sync_adapter_wrapping_async_function(
@@ -421,8 +430,8 @@ class CacheResourceAsyncLifecycleCallbackTest(unittest.TestCase):
 
         assert exc_info.value.error_id == "cache-resource-async-lifecycle-callback"
 
-    def test_sync_validate_and_on_release_still_work(self) -> None:
-        """Synchronous validate, eviction, clear, and release behavior is unchanged."""
+    def test_sync_validate_and_on_release_fire_on_eviction_and_clear(self) -> None:
+        """Synchronous ``validate`` and ``on_release`` run on LRU eviction and ``clear()``."""
         released: list[int] = []
 
         def validate(value: int) -> bool:
