@@ -2943,7 +2943,7 @@ class TestOneClickInstallWouldBeRefused:
     returns True only when the mode the installer would actually use is fully
     blocked — every project symlink target by a real file/dir, or, when symlinks
     are unsupported, every global copy target by a real file. It reuses the
-    installer's own resolvers so the show-gate cannot drift from the install."""
+    installer's own resolvers so the display gate cannot drift from the install."""
 
     @staticmethod
     def _run(
@@ -3125,7 +3125,7 @@ class TestOneClickInstallWouldBeRefused:
 class TestNudgeSuppressedWhenInstallWouldConflict:
     """End-to-end: when a non-managed file/dir occupies every install target the
     marker-based detection can't see it (no SKILL.md), but the installer refuses
-    with a conflict error. The show-gate must suppress the nudge so the user is
+    with a conflict error. The display gate must suppress the nudge so the user is
     not stuck in an unbreakable nudge -> install -> conflict loop. Ties the gate's
     suppression to the installer's refusal on identical filesystem state.
     """
@@ -3271,7 +3271,7 @@ class TestNudgeSuppressedWhenInstallWouldConflict:
 
 
 class TestNudgeGateSideEffects:
-    """The show-gate is re-evaluated on every script rerun, so its cost and its
+    """The display gate is re-evaluated on every script rerun, so its cost and its
     side effects on the user's project matter as much as its answer."""
 
     @staticmethod

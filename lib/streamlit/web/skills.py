@@ -559,7 +559,7 @@ def _symlink_blocker(project_root: Path, source_path: Path) -> _FallbackReason |
     and only ``symlinks_no_privilege`` (Developer Mode off) is a cause a user can fix.
     """
     # Cached: the probe WRITES (a temp dir plus a symlink) into project_root, and
-    # the nudge show-gate calls this on every script rerun - uncached, a passive
+    # the nudge display gate calls this on every script rerun - uncached, a passive
     # eligibility check would churn the user's project directory continuously.
     # Symlink support is a property of the OS and filesystem rather than of a
     # moment in time (enabling Windows Developer Mode needs a restart anyway), so
@@ -609,7 +609,7 @@ def _symlink_target_would_conflict(target_path: Path) -> bool:
     blocking a project (symlink) install.
     """
     # Shared by _install_skill_symlink (which skips such a target) and the nudge
-    # show-gate (_one_click_install_would_be_refused) so the two cannot drift.
+    # display gate (_one_click_install_would_be_refused) so the two cannot drift.
     # Symlinks are excluded because the installer replaces any symlink named
     # after a bundled skill; a broken one has exists() == False regardless.
     return target_path.exists() and not target_path.is_symlink()
@@ -622,7 +622,7 @@ def _copy_target_would_conflict(target_path: Path) -> bool:
     # The copy counterpart to _symlink_target_would_conflict, and deliberately
     # narrower: the copy install replaces a real directory (staging to a temp dir
     # first) and unlinks a name-owned symlink, so only a real file blocks it.
-    # Shared by _install_skill_copy and the nudge show-gate, same as above.
+    # Shared by _install_skill_copy and the nudge display gate, same as above.
     return (
         target_path.exists()
         and not target_path.is_symlink()
@@ -728,7 +728,7 @@ def _install_skill_copy(
         old_target_to_remove: Path | None = None
 
         # A real (non-symlink) file is a hard conflict - skip it. Routed through the
-        # shared predicate so the nudge show-gate's preflight cannot drift from what
+        # shared predicate so the nudge display gate's preflight cannot drift from what
         # this actually skips.
         if _copy_target_would_conflict(target_path):
             result.skipped.append(f"{rel_target_path} (existing file)")
@@ -1509,7 +1509,7 @@ def clear_installed_skills_cache() -> None:
 @lru_cache(maxsize=4)
 def _log_nudge_suppressed_by_conflict(blocked_paths: tuple[str, ...]) -> None:
     """Warn that the 'install skills' nudge is being withheld, once per blocker set."""
-    # Cached purely to deduplicate: the show-gate re-evaluates on every script
+    # Cached purely to deduplicate: the display gate re-evaluates on every script
     # rerun, so an unguarded warning would repeat for as long as the blockers do.
     # Suppression is otherwise entirely silent, which leaves a developer no way to
     # find out why the nudge never appears. Absolute paths are fine here - unlike
@@ -1528,7 +1528,7 @@ def _one_click_install_would_be_refused(app_dir: str | None) -> bool:
     Fails open (returns ``False``) on any error, so a probe failure never hides
     the nudge. Deliberately uncached, so removing a blocker re-shows it.
     """
-    # Without this the show-gate and the installer disagree: a stray non-managed
+    # Without this the display gate and the installer disagree: a stray non-managed
     # ``developing-with-streamlit`` path with no SKILL.md is invisible to the
     # marker-based detection yet a hard conflict for the installer, so the nudge
     # shows, the install refuses, and the loop repeats every session. The nudge
