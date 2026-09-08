@@ -181,6 +181,7 @@ function Modal({
           <StyledDialogResizeHandle
             $position={resizeSide}
             data-testid="stDialogResizeHandle"
+            aria-hidden="true"
             {...resizeHandleProps}
           />
         )}

@@ -26,8 +26,10 @@ from streamlit.errors import (
     StreamlitInvalidLayoutContextError,
     StreamlitMissingRequiredParameterError,
 )
+from streamlit.proto.PageProfile_pb2 import Argument
 from streamlit.runtime.fragment import _check_not_parallel_worker, _fragment
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.type_util import get_object_name
 
 if TYPE_CHECKING:
@@ -62,6 +64,32 @@ def _assert_no_nested_dialogs() -> None:
 
 
 F = TypeVar("F", bound=Callable[..., Any])
+
+_TRACKED_DIALOG_POSITIONS = frozenset({"center", "left", "right"})
+
+
+def _record_dialog_position_metric(position: str) -> None:
+    """Record the position literal on the already-tracked ``dialog`` command.
+
+    ``gather_metrics`` only stores string arguments as ``len:N``. Closed enums
+    like ``position`` need an explicit ``val:`` so we can tell center/left/right
+    apart. Invalid values are ignored; they still fail later at dialog open.
+    """
+    if position not in _TRACKED_DIALOG_POSITIONS:
+        return
+    ctx = get_script_run_ctx()
+    if ctx is None or not ctx.gather_usage_stats:
+        return
+    position_meta = f"val:{position}"
+    for command in reversed(ctx.shared.tracked_commands):
+        if command.name != "dialog":
+            continue
+        for arg in command.args:
+            if arg.k == "position":
+                arg.m = position_meta
+                return
+        command.args.append(Argument(k="position", t="str", m=position_meta))
+        return
 
 
 def _dialog_decorator(
@@ -322,6 +350,7 @@ def dialog_decorator(
     """
 
     func_or_title = title
+    _record_dialog_position_metric(position)
     if isinstance(func_or_title, str):
         # Support passing the params via function decorator
         def wrapper(f: F) -> F:

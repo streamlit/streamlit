@@ -2486,6 +2486,51 @@ class DialogTest(DeltaGeneratorTestCase):
 
         assert "Invalid `position` value" in str(exc_info.value)
 
+    @parameterized.expand(
+        [
+            ("right", "right"),
+            ("left", "left"),
+            ("center", "center"),
+        ]
+    )
+    def test_dialog_position_metric_records_literal(
+        self, position: str, expected: str
+    ) -> None:
+        """Telemetry stores the position literal so center/left/right can be distinguished."""
+        self.script_run_ctx.gather_usage_stats = True
+
+        @st.dialog("Details", position=position)  # type: ignore[arg-type]
+        def show_details() -> None:
+            pass
+
+        dialog_cmds = [
+            command
+            for command in self.script_run_ctx.shared.tracked_commands
+            if command.name == "dialog"
+        ]
+        assert dialog_cmds
+        position_args = [arg for arg in dialog_cmds[-1].args if arg.k == "position"]
+        assert position_args
+        assert position_args[0].m == f"val:{expected}"
+
+    def test_dialog_position_metric_records_default_center(self) -> None:
+        """Omitted position is still recorded as center."""
+        self.script_run_ctx.gather_usage_stats = True
+
+        @st.dialog("Details")
+        def show_details() -> None:
+            pass
+
+        dialog_cmds = [
+            command
+            for command in self.script_run_ctx.shared.tracked_commands
+            if command.name == "dialog"
+        ]
+        assert dialog_cmds
+        position_args = [arg for arg in dialog_cmds[-1].args if arg.k == "position"]
+        assert position_args
+        assert position_args[0].m == "val:center"
+
     def test_dialog_on_dismiss_rerun(self):
         """Test that the dialog decorator with on_dismiss='rerun'."""
 

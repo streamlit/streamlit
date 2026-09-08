@@ -376,10 +376,12 @@ describe("side drawer resize handle", () => {
         </Modal>
       )
 
-      expect(screen.getByTestId("stDialogResizeHandle")).toHaveStyle({
+      const handle = screen.getByTestId("stDialogResizeHandle")
+      expect(handle).toHaveStyle({
         [edge]: "0",
         cursor: "col-resize",
       })
+      expect(handle).toHaveAttribute("aria-hidden", "true")
     }
   )
 
