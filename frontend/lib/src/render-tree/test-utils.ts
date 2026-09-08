@@ -132,17 +132,16 @@ export function makeProto<Type, Props>(
   return MessageType.decode(bytes)
 }
 
-/** Custom Vitest matchers for dealing with AppNodes. */
-interface CustomMatchers<R = unknown> {
-  toBeTextNode(text: string): R
-}
-
 declare module "vitest" {
   // Type parameters must match Vitest's Matchers exactly so the interfaces merge.
+  /* eslint-disable @typescript-eslint/no-unused-vars, no-unused-vars -- T is required for merging with Vitest's Matchers */
   interface Matchers<
     R extends void | Promise<void> = void | Promise<void>,
     T = unknown,
-  > extends CustomMatchers<R> {}
+  > {
+    toBeTextNode(text: string): R
+  }
+  /* eslint-enable @typescript-eslint/no-unused-vars, no-unused-vars */
 }
 
 expect.extend({
