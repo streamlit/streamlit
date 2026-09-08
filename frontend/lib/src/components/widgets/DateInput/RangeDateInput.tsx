@@ -57,7 +57,6 @@ import {
 } from "~lib/hooks/useFloatingOverlay"
 import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 import { convertRemToPx } from "~lib/theme/utils"
-import { cloneWithOwnProps } from "~lib/util/utils"
 
 import {
   CalendarPopoverHeader,
@@ -235,9 +234,7 @@ function RangeDateInput({
     if (!maxDate) return presets
     return presets
       .filter(p => p.start.compare(maxDate) <= 0)
-      .map(p =>
-        p.end.compare(maxDate) > 0 ? cloneWithOwnProps(p, { end: maxDate }) : p
-      )
+      .map(p => (p.end.compare(maxDate) > 0 ? { ...p, end: maxDate } : p))
   }, [maxDate])
   const quickSelectRef = useRef<HTMLDivElement>(null)
 

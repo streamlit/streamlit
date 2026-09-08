@@ -33,7 +33,6 @@ import {
 import {
   AcceptFileValue,
   chatInputAcceptFileProtoValueToEnum,
-  cloneWithOwnProps,
   debounce,
   EMBED_QUERY_PARAM_KEY,
   EMBED_QUERY_PARAM_VALUES,
@@ -1538,19 +1537,5 @@ describe("getLocaleLanguage", () => {
   it("returns navigator.language", () => {
     languageSpy.mockReturnValue("fr-CA")
     expect(getLocaleLanguage()).toBe("fr-CA")
-  })
-})
-
-describe("cloneWithOwnProps", () => {
-  it("keeps an enumerable __proto__ key as an own property", () => {
-    const source = JSON.parse(
-      '{"@@type":"PathLayer","__proto__":{"polluted":true}}'
-    ) as Record<string, unknown>
-    const cloned = cloneWithOwnProps(source, { extensions: [] })
-
-    expect(Object.getPrototypeOf(cloned)).toBe(Object.prototype)
-    expect(Object.hasOwn(cloned, "__proto__")).toBe(true)
-    expect(cloned["@@type"]).toBe("PathLayer")
-    expect(cloned.extensions).toEqual([])
   })
 })

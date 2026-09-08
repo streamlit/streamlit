@@ -24,7 +24,6 @@ import {
 } from "~lib/theme/getColors"
 import type { EmotionTheme } from "~lib/theme/types"
 import { convertRemToPx } from "~lib/theme/utils"
-import { cloneWithOwnProps } from "~lib/util/utils"
 
 /** The ECharts theme string that activates Streamlit theming. */
 export const STREAMLIT_THEME = "streamlit"
@@ -505,12 +504,12 @@ function withTitleStyleDefaults(
       : {}
     changed = true
     const extra: Record<string, unknown> = {
-      textStyle: cloneWithOwnProps(sizeAndWeight, userTextStyle),
+      textStyle: { ...sizeAndWeight, ...userTextStyle },
     }
     if (title.padding === undefined) {
       extra.padding = padding
     }
-    return cloneWithOwnProps(title, extra)
+    return { ...title, ...extra }
   })
   if (!changed) {
     return option
@@ -794,7 +793,7 @@ function withLegendLiftedToTop(
       return legend
     }
     changed = true
-    return cloneWithOwnProps(legend, { top: legendTop })
+    return { ...legend, top: legendTop }
   })
   if (!changed) {
     return option
@@ -1141,11 +1140,12 @@ export function withDefaultSeriesCursor(
         if (!isPlainObject(mediaEntry.option)) {
           return entry
         }
-        return cloneWithOwnProps(mediaEntry, {
+        return {
+          ...mediaEntry,
           option: applyCursorToSeries(
             mediaEntry.option as EChartsOptionObject
           ),
-        })
+        }
       }),
     }
   }
