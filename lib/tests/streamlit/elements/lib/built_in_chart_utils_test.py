@@ -23,6 +23,7 @@ import altair as alt
 import pandas as pd
 import pytest
 
+from streamlit import dataframe_util
 from streamlit.elements.lib import built_in_chart_utils as chart_utils
 from streamlit.errors import (
     StreamlitAPIException,
@@ -339,6 +340,45 @@ def test_melt_data_raises_on_too_many_mixed_types() -> None:
     )
     with pytest.raises(StreamlitAPIException, match="too many values"):
         chart_utils._melt_data(df, ["x"], ["ints", "strs"], "value", "color")
+
+
+def test_melt_data_leaves_trial_conversion_to_the_serialization() -> None:
+    """Melting skips the trial Arrow conversion, which runs on every chart render.
+
+    A column of lists with inconsistent nesting levels is only detectable by a
+    trial conversion, so melting leaves it untouched and the Arrow serialization
+    stringifies it on its retry instead.
+    """
+    df = pd.DataFrame(
+        {
+            # An id column, so the mixed-type guard on the melted values
+            # does not apply to it:
+            "x": [[1, 2], [[1, 2], [3, 4]]],
+            "a": [1.0, 2.0],
+            "b": [3.0, 4.0],
+        }
+    )
+
+    melted_df = chart_utils._melt_data(df, ["x"], ["a", "b"], "value", "color")
+
+    # The column is left as-is, so no trial conversion was paid for:
+    assert melted_df["x"].tolist() == [
+        [1, 2],
+        [[1, 2], [3, 4]],
+        [1, 2],
+        [[1, 2], [3, 4]],
+    ]
+
+    # Serializing the melted dataframe still recovers and stringifies it:
+    reconstructed_df = dataframe_util.convert_arrow_bytes_to_pandas_df(
+        dataframe_util.convert_anything_to_arrow_bytes(melted_df)
+    )
+    assert reconstructed_df["x"].tolist() == [
+        "[1, 2]",
+        "[[1, 2], [3, 4]]",
+        "[1, 2]",
+        "[[1, 2], [3, 4]]",
+    ]
 
 
 def test_convert_col_names_to_str_in_place_stringifies_columns() -> None:
