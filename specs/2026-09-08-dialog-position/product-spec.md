@@ -10,8 +10,8 @@ created: 2026-09-08
 Add a keyword-only `position` parameter to `@st.dialog` that accepts
 `"center"` (default), `"left"`, or `"right"`. `"left"` and `"right"` render the
 dialog as a full-height, dismissible modal side drawer attached to the edge of
-the viewport instead of a centered modal. Placement is the only thing that
-changes: the drawer stays modal, and `width`, `dismissible`, `icon`, and
+the viewport instead of a centered modal. Apart from placement and pointer-drag
+resizing, the drawer stays modal, and `width`, `dismissible`, `icon`, and
 `on_dismiss` behave identically in every position.
 
 This extends the existing dialog surface rather than adding a separate
@@ -24,8 +24,10 @@ Streamlit has centered modal dialogs (`@st.dialog`), transient popovers
 (`st.popover`), and one persistent left `st.sidebar`. It has no drawer — a
 panel that slides in from the side, temporarily overlaps the main area without
 replacing it, and is dismissed on demand. Drawers are a common surface for
-right-hand detail/inspector panels, on-demand chat/assistant panels, and
-side-anchored settings or filter forms.
+right-hand detail/inspector panels and side-anchored settings or filter forms.
+On-demand chat or assistant panels that stay open while the main page remains
+interactive are a non-modal companion pane and are out of scope (see
+[Non-modal companion panes need a dedicated command](#non-modal-companion-panes-need-a-dedicated-command)).
 
 ### User requests
 
@@ -96,8 +98,10 @@ Add `position` as a keyword-only parameter to `@st.dialog`, placed right after
 | `"left"` | Full-height drawer flush to the left edge of the viewport. |
 | `"right"` | Full-height drawer flush to the right edge of the viewport. |
 
-An invalid value raises `StreamlitValueError` at call time (listing
-`'left'`, `'center'`, `'right'`), consistent with how `width` validates.
+An invalid value raises `StreamlitValueError` (listing `'center'`, `'left'`,
+`'right'`), matching how `st.navigation(position=...)` and `on_dismiss` validate
+their arguments. Unlike `width`, which silently falls back to `"small"` for
+unrecognized values, `position` follows the stricter, fail-fast pattern.
 
 ### Behavior
 
@@ -115,28 +119,31 @@ centered dialog:
   When `dismissible=False`, the "**X**" is hidden and the drawer must be closed
   programmatically with `st.rerun()`. `on_dismiss` (`"ignore"` / `"rerun"` /
   callback) applies the same way.
-- **`width` sets the initial thickness.** The existing width caps apply along
-  the short axis: `"small"` ≈ 500px (default), `"medium"` ≈ 750px,
+- **`width` sets the initial thickness.** The existing width caps apply to the
+  drawer's horizontal width: `"small"` ≈ 500px (default), `"medium"` ≈ 750px,
   `"large"` ≈ 1280px. This is the drawer's starting width. The drawer always
   spans the full viewport height.
 - **Resizable.** Left and right drawers can be resized by dragging their inner
   edge (the one facing the app). `width` sets the starting width; the drag
-  overrides it.   Resizing is pointer-based, matching `st.sidebar`; keyboard users
-  keep the preset width. A keyboard-accessible handle is intentionally out of
-  scope: resizing is a convenience — the drawer is fully usable at the preset —
-  and a usable keyboard affordance would need a visible focus style, an
-  assistive-tech name, and an extra tab stop inside the dialog's focus trap for
-  little benefit, so it is not worth the cost here. Because the drawer overlays
-  the page, resizing changes
-  only the drawer's own width — the main content is not reflowed (unlike
-  `st.sidebar`, where dragging resizes both the sidebar and the main area).
-  Resizing is handled entirely in the frontend — it does not rerun the app or
-  change widget state — and does not apply to centered dialogs. The handle stays
-  available at every viewport size; the width is clamped so a strip of the app
-  always remains visible, and users can still drag narrower on small screens.
-  Double-clicking the handle restores the `width` preset, matching the sidebar.
+  overrides it, and double-clicking the handle restores the preset (matching
+  `st.sidebar`). A dragged width persists for the currently open drawer,
+  including across fragment reruns triggered by widgets inside it, and resets to
+  the `width` preset when the drawer is dismissed or the preset changes; it is
+  per-dialog (not shared across dialogs) and does not persist across a page
+  reload. Resizing is pointer-based (matching `st.sidebar`) and handled entirely
+  in the frontend — it does not rerun the app or change widget state — and does
+  not apply to centered dialogs. Because the drawer overlays the page, resizing
+  changes only the drawer's own width; the main content is not reflowed (unlike
+  `st.sidebar`, where dragging resizes both the sidebar and the main area). The
+  handle stays available at every viewport size; the width is clamped so a strip
+  of the app always remains visible, and users can still drag narrower on small
+  screens. The pointer-only tradeoff is covered under **Accessibility** below.
 - **Geometry.** The panel is flush to its edge (no outer margin) and has square
-  inner corners, so it reads as attached to the viewport rather than floating.
+  inner corners, so it reads as attached to the viewport rather than floating. A
+  left drawer overlays the `st.sidebar` and the app header; a right drawer
+  overlays the header. Neither docks beside app chrome or reflows it, and the
+  covered chrome (including the sidebar collapse control) is inert with the rest
+  of the app while the drawer is open.
 - **Scrolling.** Tall content scrolls inside the drawer panel; the panel itself
   stays pinned full-height and does not move as content scrolls.
 - **Never full-screen.** The drawer always leaves a small strip of the app
@@ -147,7 +154,15 @@ centered dialog:
 - **Accessibility.** Side drawers keep dialog modal semantics: focus moves into
   the drawer and is trapped, the rest of the app is inert, and focus returns to
   the opener on close. Nested widget overlays (selectboxes, date pickers,
-  dataframe menus) render above the drawer.
+  dataframe menus) render above the drawer. Resize is pointer-only, matching
+  `st.sidebar`; this trades off WCAG 2.2 SC 2.5.7 (Dragging Movements), which is
+  acceptable because the drawer is fully usable at the `width` preset, so
+  resizing is a convenience rather than required functionality. The resize
+  handle is intentionally not a tab stop (`aria-hidden` and not focusable): a
+  focusable-but-unlabeled control inside the dialog's focus trap would be worse
+  than no keyboard handle, and a fully accessible one would need a visible focus
+  style, an assistive-tech name, and an extra tab stop for little benefit. A
+  keyboard-operable resize handle is out of scope for v1.
 - **`icon`, Markdown title, one-dialog-at-a-time, fragment rerun semantics, and
   the "no `st.sidebar` inside a dialog" rule** are all unchanged.
 
@@ -233,9 +248,9 @@ if st.button("Edit filters"):
   reuses everything and follows "extend before inventing." Users adopt it with a
   one-word change and no new API to learn. `position` is a semantic name that is
   already established vocabulary in the API — `st.navigation(position=...)`
-  places the navigation menu (`"sidebar"` / `"top"` / `"hidden"`) and buttons
-  take `icon_position` — so reusing it follows the standardized-vocabulary
-  principle, and a `Literal` leaves room to grow (see below).
+  places the navigation menu (`"sidebar"` / `"top"` / `"hidden"`) — so reusing it
+  follows the standardized-vocabulary principle, and a `Literal` leaves room to
+  grow (see below).
 - **Cons:** `@st.dialog` now has two shape/placement parameters (`width` and
   `position`); the naming "dialog" is slightly less obvious for a drawer than a
   dedicated command would be.
@@ -243,7 +258,7 @@ if st.button("Edit filters"):
 ### Option B: New `st.drawer` command (the literal #8186 request)
 
 ```python
-@st.drawer("Details"):
+@st.drawer("Details")
 ```
 
 - **Pros:** Most discoverable name for the drawer use case; could later diverge
@@ -295,7 +310,7 @@ The two forms differ in far more than appearance:
 | Full main-app rerun | Closes unless the function is called again | Stays open; re-emits stable content |
 | Desktop layout | Overlay with backdrop | Docks and reflows the page; optional overlay |
 | Resizing | Drags the drawer's own width only | Sidebar-like: reflows the main content as it resizes |
-| Compact (mobile) layout | Modal sheet | Modal sheet |
+| Compact (mobile) layout | Clamped side overlay (never full-width) | Modal sheet |
 | Implementation | Reuses shipped dialog/event infrastructure | New root container and app-shell layout |
 | Directly covers | #8186 (temporary side content) | #8186 (persistent) and #1980 |
 
@@ -380,6 +395,6 @@ committing to the larger companion-pane design.
 | Works on SiS, Cloud, etc? | ✅ Placement is handled in the frontend; no platform-specific API. |
 | No breaking API changes | ✅ New optional parameter; default `"center"` preserves today's behavior. |
 | No new dependencies | ✅ Reuses the existing Modal component and layout. |
-| Metrics collected | ✅ `@st.dialog` is already tracked via `gather_metrics`; `position` value is captured with the call. |
+| Metrics collected | ✅ `@st.dialog` is already tracked via `gather_metrics`, which records that the `position` keyword was passed (argument name, type, and length — not the literal value). Capturing which of `"center"`/`"left"`/`"right"` was used needs an explicit metrics addition in the implementation PR. |
 | Any security/legal impact? | ✅ None. As with `dismissible`, a side drawer being modal is not a security guarantee — do not rely on it to block main-app interaction for security-critical checks. |
 | Any docs changes needed? | ✅ Update the `st.dialog` docstring/API reference and the layouts skill reference (both done in the implementation PR). Public docs mention only that side drawers are user-resizable — not the drag mechanics, starting-vs-dragged width, or rerun behavior (users discover drag, as with `st.sidebar`). |
