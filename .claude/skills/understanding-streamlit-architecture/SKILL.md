@@ -81,6 +81,7 @@ Streamlit's execution model differs from traditional web frameworks:
 - Scripts execute **top-to-bottom** on every rerun
 - **Callbacks first**: `on_change`/`on_click` handlers run *before* the main script body
 - **Fragments typically isolate reruns**: Widget interactions inside `@st.fragment` usually rerun only that fragment
+- **Keyed fragment reruns**: `st.rerun("<key>")` from a widget callback reruns only the named `@st.fragment(key=...)` fragment(s)
 - **Control flow exceptions**: `st.stop()`, `st.rerun()`, `st.switch_page()` raise exceptions to halt/redirect execution
 
 **Session isolation**:
@@ -153,7 +154,7 @@ Streamlit's execution model differs from traditional web frameworks:
   - Deep dive: `references/frontend.md#element-tree-frontendlibsrcrender-tree`
 - **Element identity semantics**: Delta paths decide where a node lives; element IDs decide whether stateful elements can reconnect to prior state after remounts.
   - Deep dive: `references/element-identity.md`
-- **Fragments (`@st.fragment`)**: Fragment interactions usually trigger fragment-scoped reruns and update only affected regions.
+- **Fragments (`@st.fragment`)**: Fragment interactions usually trigger fragment-scoped reruns and update only affected regions. A widget callback can also target named fragments with `st.rerun("<key>")` when the fragment was declared with `@st.fragment(key=...)`.
   - Deep dive: [references/backend.md](references/backend.md#fragment-system-stfragment)
 
 ## Element identity

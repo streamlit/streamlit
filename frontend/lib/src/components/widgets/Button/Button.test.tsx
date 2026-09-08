@@ -137,7 +137,6 @@ describe("Button widget", () => {
 
   it("renders with help properly", async () => {
     const user = userEvent.setup()
-    // Hover to see tooltip content
     render(<Button {...getProps({ help: "mockHelpText" })} />)
 
     // Ensure both the button and the tooltip target have the correct width.
@@ -148,7 +147,6 @@ describe("Button widget", () => {
     const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
     expect(tooltipTarget).toHaveStyle("width: 100%")
 
-    // Ensure the tooltip content is visible and has the correct text
     await user.hover(tooltipTarget)
 
     const tooltipContent = await screen.findByTestId("stTooltipContent")

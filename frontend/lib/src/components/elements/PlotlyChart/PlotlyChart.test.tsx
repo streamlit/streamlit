@@ -24,7 +24,12 @@ import type { PlotParams } from "~lib/util/reactPlotlyCompat"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { PlotlyChart } from "./PlotlyChart"
-import { applyTheming, handleSelection, sendEmptySelection } from "./utils"
+import {
+  applyTheming,
+  handleClickEvent,
+  handleSelection,
+  sendEmptySelection,
+} from "./utils"
 
 // Mock Plotly component to capture props
 const MockPlot = vi.fn((_props: unknown) => (
@@ -50,15 +55,27 @@ vi.mock("~lib/hooks/useEmotionTheme", () => ({
 vi.mock("./utils", () => ({
   applyTheming: vi.fn(spec => spec),
   handleSelection: vi.fn(),
+  handleClickEvent: vi.fn(),
   sendEmptySelection: vi.fn(),
 }))
 
+const formClearHelperMocks = vi.hoisted(() => ({
+  manageFormClearListener: vi.fn(),
+  disconnect: vi.fn(),
+}))
+
+// PlotlyChart constructs a new FormClearHelper inside an effect, so the
+// shared formClearHelperMocks spies let tests inspect calls across instances.
 vi.mock("~lib/components/widgets/Form/FormClearHelper", () => {
   return {
-    FormClearHelper: vi.fn().mockImplementation(() => ({
-      manageFormClearListener: vi.fn(),
-      disconnect: vi.fn(),
-    })),
+    FormClearHelper: class FormClearHelper {
+      public manageFormClearListener(...args: unknown[]): void {
+        formClearHelperMocks.manageFormClearListener(...args)
+      }
+      public disconnect(): void {
+        formClearHelperMocks.disconnect()
+      }
+    },
   }
 })
 
@@ -365,6 +382,61 @@ describe("PlotlyChart Component", () => {
     expect(fullscreenButton).toBeDefined()
   })
 
+  it("hides the Plotly Cloud share button by default", () => {
+    renderComponent()
+
+    const lastCallProps = getLastPlotProps()
+    const config = lastCallProps.config
+
+    expect(config?.showSendToCloud).toBe(false)
+    expect(config?.displaylogo).toBe(false)
+    expect(config?.modeBarButtonsToRemove).toEqual(
+      expect.arrayContaining(["sendChartToCloud", "lasso2d", "select2d"])
+    )
+  })
+
+  it("respects an explicit showSendToCloud config", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      config: JSON.stringify({ showSendToCloud: true }),
+    })
+    renderComponent({ element })
+
+    const lastCallProps = getLastPlotProps()
+    expect(lastCallProps.config?.showSendToCloud).toBe(true)
+    expect(lastCallProps.config?.modeBarButtonsToRemove).not.toContain(
+      "sendChartToCloud"
+    )
+  })
+
+  it("keeps Streamlit toolbar defaults when the user customizes modeBarButtonsToRemove", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      config: JSON.stringify({ modeBarButtonsToRemove: ["zoom"] }),
+    })
+    renderComponent({ element })
+
+    const lastCallProps = getLastPlotProps()
+    expect(lastCallProps.config?.displaylogo).toBe(false)
+    expect(lastCallProps.config?.modeBarButtonsToRemove).toEqual([
+      "zoom",
+      "lasso2d",
+      "select2d",
+      "sendChartToCloud",
+    ])
+    expect(lastCallProps.config?.showSendToCloud).toBe(false)
+  })
+
+  it("preserves an explicit displaylogo config", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      config: JSON.stringify({ displaylogo: true }),
+    })
+    renderComponent({ element })
+
+    expect(getLastPlotProps().config?.displaylogo).toBe(true)
+  })
+
   it("handles fullscreen button click", () => {
     const expandMock = vi.fn()
     renderComponent({}, { expanded: false, expand: expandMock })
@@ -387,5 +459,183 @@ describe("PlotlyChart Component", () => {
     })
 
     expect(expandMock).toHaveBeenCalled()
+  })
+
+  it("migrates plotly.js v3 mapbox figures so they render on v4", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      spec: JSON.stringify({
+        data: [{ type: "scattermapbox", lon: [0], lat: [51.5] }],
+        layout: {
+          mapbox: {
+            style: "mapbox://styles/mapbox/light-v10",
+            accesstoken: "secret",
+          },
+        },
+      }),
+      config: JSON.stringify({ mapboxAccessToken: "secret" }),
+    })
+
+    renderComponent({ element })
+
+    const lastCallProps = getLastPlotProps()
+    expect(lastCallProps.data).toEqual([
+      { type: "scattermap", lon: [0], lat: [51.5] },
+    ])
+    expect(lastCallProps.layout).toEqual(
+      expect.objectContaining({
+        map: { style: "light" },
+      })
+    )
+    expect(
+      (lastCallProps.layout as { mapbox?: unknown }).mapbox
+    ).toBeUndefined()
+    expect(
+      (lastCallProps.config as { mapboxAccessToken?: string } | undefined)
+        ?.mapboxAccessToken
+    ).toBeUndefined()
+  })
+
+  it("hides sharing when the element has no config", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      config: "",
+    })
+    renderComponent({ element })
+
+    const lastCallProps = getLastPlotProps()
+    expect(lastCallProps.config?.showSendToCloud).toBe(false)
+    expect(lastCallProps.config?.modeBarButtonsToRemove).toEqual(
+      expect.arrayContaining(["sendChartToCloud"])
+    )
+  })
+
+  it("collapses fullscreen from the plotly toolbar", () => {
+    const collapseMock = vi.fn()
+    renderComponent({}, { expanded: true, collapse: collapseMock })
+
+    const lastCallProps = getLastPlotProps()
+    const config = lastCallProps.config
+    const fullscreenButton = config?.modeBarButtonsToAdd?.find(
+      b => typeof b === "object" && b.name === "Close fullscreen"
+    )
+
+    act(() => {
+      if (typeof fullscreenButton === "object") {
+        fullscreenButton.click(
+          document.createElement("div") as unknown as Parameters<
+            typeof fullscreenButton.click
+          >[0],
+          new MouseEvent("click")
+        )
+      }
+    })
+
+    expect(collapseMock).toHaveBeenCalled()
+    expect(screen.getByTestId("stPlotlyChartMock")).toBeVisible()
+  })
+
+  it("forwards clicks when point selection is enabled", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      selectionMode: [PlotlyChartProto.SelectionMode.POINTS],
+    })
+    renderComponent({ element })
+
+    const lastCallProps = getLastPlotProps()
+    const mockEvent = {} as Readonly<Plotly.PlotMouseEvent>
+
+    act(() => {
+      lastCallProps.onClick?.(mockEvent)
+    })
+
+    expect(handleClickEvent).toHaveBeenCalledWith(
+      mockEvent,
+      widgetMgr,
+      expect.objectContaining({ id: DEFAULT_ELEMENT.id }),
+      undefined
+    )
+  })
+
+  it("does not attach a click handler when point selection is not enabled", () => {
+    renderComponent()
+
+    expect(getLastPlotProps().onClick).toBeUndefined()
+    expect(handleClickEvent).not.toHaveBeenCalled()
+  })
+
+  it("clears selected points after the reset selection timeout", () => {
+    vi.useFakeTimers()
+    try {
+      const element = new PlotlyChartProto({
+        ...DEFAULT_ELEMENT,
+        selectionMode: [PlotlyChartProto.SelectionMode.POINTS],
+      })
+      renderComponent({ element })
+
+      act(() => {
+        getLastPlotProps().onDoubleClick?.()
+      })
+
+      act(() => {
+        vi.advanceTimersByTime(50)
+      })
+
+      const figureData = getLastPlotProps().data
+      expect(figureData[0]).toEqual(
+        expect.objectContaining({ selectedpoints: null })
+      )
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("registers a form-clear listener that resets selections", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      formId: "plotly-form",
+      selectionMode: [PlotlyChartProto.SelectionMode.POINTS],
+    })
+    const { unmount } = renderComponent({ element })
+
+    expect(formClearHelperMocks.manageFormClearListener).toHaveBeenCalledWith(
+      widgetMgr,
+      "plotly-form",
+      expect.any(Function)
+    )
+
+    const onFormClear = formClearHelperMocks.manageFormClearListener.mock
+      .calls[0][2] as () => void
+    act(() => {
+      onFormClear()
+    })
+
+    expect(sendEmptySelection).toHaveBeenCalledWith(
+      widgetMgr,
+      expect.objectContaining({ id: DEFAULT_ELEMENT.id }),
+      undefined
+    )
+
+    unmount()
+    expect(formClearHelperMocks.disconnect).toHaveBeenCalled()
+  })
+
+  it("saves figure to widget state on initialize", () => {
+    renderComponent()
+
+    const figure = {
+      data: [],
+      layout: { title: { text: "Initial" } },
+      frames: null,
+    }
+    act(() => {
+      getLastPlotProps().onInitialized?.(figure, document.createElement("div"))
+    })
+
+    expect(widgetMgr.setElementState).toHaveBeenCalledWith(
+      DEFAULT_ELEMENT.id,
+      "figure",
+      figure
+    )
   })
 })

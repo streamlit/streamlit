@@ -931,6 +931,39 @@ def test_write_graphviz_chart_routes_to_graphviz_chart() -> None:
             p.assert_called_once()
 
 
+def test_write_sympy_expression_routes_to_latex() -> None:
+    """Route SymPy expressions to ``DeltaGenerator.latex``."""
+    with (
+        patch("streamlit.type_util.is_sympy_expression", return_value=True),
+        patch("streamlit.delta_generator.DeltaGenerator.latex") as p,
+    ):
+        st.write(object())
+        p.assert_called_once()
+
+
+def test_write_keras_model_routes_to_graphviz_chart() -> None:
+    """Route Keras models to a Graphviz chart of the model diagram."""
+    fake_vis_utils = MagicMock()
+    fake_vis_utils.model_to_dot.return_value.to_string.return_value = "digraph G {}"
+    utils_mod = MagicMock()
+    utils_mod.vis_utils = fake_vis_utils
+    with (
+        patch("streamlit.type_util.is_keras_model", return_value=True),
+        patch.dict(
+            "sys.modules",
+            {
+                "tensorflow": MagicMock(),
+                "tensorflow.python": MagicMock(),
+                "tensorflow.python.keras": MagicMock(),
+                "tensorflow.python.keras.utils": utils_mod,
+            },
+        ),
+        patch("streamlit.delta_generator.DeltaGenerator.graphviz_chart") as p,
+    ):
+        st.write(object())
+        p.assert_called_once_with("digraph G {}")
+
+
 def test_write_mixin_dg_property_returns_self() -> None:
     """``WriteMixin.dg`` returns the host ``DeltaGenerator`` instance."""
     dg = st.container()

@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-import { waitFor } from "@testing-library/dom"
+import { waitFor } from "@testing-library/react"
 import { enableMapSet, enablePatches } from "immer"
 import { getLogger } from "loglevel"
+import { type Long, util } from "protobufjs/minimal"
 import { Mock } from "vitest"
 
 import {
@@ -24,7 +25,10 @@ import {
   Button as ButtonProto,
   FileUploaderState as FileUploaderStateProto,
   UploadedFileInfo as UploadedFileInfoProto,
+  WidgetState,
 } from "@streamlit/protobuf"
+
+import { makeTriggerAggregatorId } from "~lib/components/widgets/BidiComponent/utils/idBuilder"
 
 import {
   createFormsData,
@@ -113,7 +117,6 @@ describe("Widget State Manager", () => {
       expect(sendBackMsg).not.toHaveBeenCalled()
     } else {
       await waitFor(() => {
-        expect(sendBackMsg).toHaveBeenCalledTimes(1)
         expect(sendBackMsg).toHaveBeenCalledWith(
           expect.anything(),
           undefined, // fragmentId
@@ -121,6 +124,7 @@ describe("Widget State Manager", () => {
           undefined
         )
       })
+      expect(sendBackMsg).toHaveBeenCalledTimes(1)
     }
   }
 
@@ -319,6 +323,56 @@ describe("Widget State Manager", () => {
     expect(widgetMgr.getIntValue(MOCK_WIDGET)).toBe(Number.MIN_SAFE_INTEGER)
   })
 
+  describe("handles protobuf sint64 Long values safely", () => {
+    // Cover the Long branch of requireNumberInt directly. Widget int fields are
+    // sint64 (`number | Long`), but the frontend never decodes a WidgetState
+    // (values only go client -> server), so that branch is otherwise unreachable.
+
+    // `false` selects a signed Long, matching sint64 widget int fields.
+    const asLong = (value: number): Long =>
+      util.LongBits.from(value).toLong(false)
+
+    const update = {
+      formId: MOCK_WIDGET.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    }
+
+    const setRawIntValue = (raw: number | Long): void => {
+      widgetMgr.setIntValue(MOCK_WIDGET.id, 0, update)
+      // @ts-expect-error -- widgetStates is private; reach in to simulate a decoded proto
+      widgetMgr.widgetStates.getState(MOCK_WIDGET.id).intValue = raw
+    }
+
+    it.each([0, 42, -42, Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER])(
+      "converts a Long holding %i",
+      value => {
+        setRawIntValue(asLong(value))
+        expect(widgetMgr.getIntValue(MOCK_WIDGET)).toBe(value)
+      }
+    )
+
+    it("converts Longs inside an int array", () => {
+      widgetMgr.setIntArrayValue(MOCK_WIDGET.id, [0, 0], update)
+      const data = [asLong(42), asLong(Number.MIN_SAFE_INTEGER)]
+      // @ts-expect-error -- widgetStates is private; reach in to simulate a decoded proto
+      widgetMgr.widgetStates.getState(MOCK_WIDGET.id).intArrayValue.data = data
+
+      expect(widgetMgr.getIntArrayValue(MOCK_WIDGET)).toEqual([
+        42,
+        Number.MIN_SAFE_INTEGER,
+      ])
+    })
+
+    it("throws when a Long exceeds the safe integer range", () => {
+      // 2^53 is the first positive integer outside JavaScript's safe integer range.
+      setRawIntValue(asLong(2 ** 53))
+      expect(() => widgetMgr.getIntValue(MOCK_WIDGET)).toThrow(
+        /cannot be converted to number without a loss of precision/
+      )
+    })
+  })
+
   it("setIntArrayValue can handle MIN_ and MAX_SAFE_INTEGER", () => {
     const values = [Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER]
     widgetMgr.setIntArrayValue(MOCK_WIDGET.id, values, {
@@ -328,6 +382,38 @@ describe("Widget State Manager", () => {
     })
 
     expect(widgetMgr.getIntArrayValue(MOCK_WIDGET)).toStrictEqual(values)
+  })
+
+  it("returns undefined from typed getters when the widget has no stored value", () => {
+    expect(widgetMgr.getIntArrayValue(MOCK_WIDGET)).toBeUndefined()
+    expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBeUndefined()
+    expect(widgetMgr.getArrowValue(MOCK_WIDGET)).toBeUndefined()
+    expect(widgetMgr.getBytesValue(MOCK_WIDGET)).toBeUndefined()
+  })
+
+  it("flushes a string trigger value to the backend", async () => {
+    widgetMgr.setStringTriggerValue(MOCK_WIDGET.id, "menu-item", {
+      formId: MOCK_WIDGET.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+
+    await waitFor(() => {
+      expect(sendBackMsg).toHaveBeenCalledTimes(1)
+    })
+    expect(sendBackMsg).toHaveBeenCalledWith(
+      {
+        widgets: [
+          {
+            id: MOCK_WIDGET.id,
+            stringTriggerValue: { data: "menu-item" },
+          },
+        ],
+      },
+      undefined,
+      undefined,
+      undefined
+    )
   })
 
   describe("triggerRerun (on_change=ignore delivery override)", () => {
@@ -1198,6 +1284,115 @@ describe("Widget State Manager", () => {
       "elementState2"
     )
   })
+
+  it("keeps in-flight trigger values on removeInactive until they are flushed", async () => {
+    // Custom Components v2 aggregators use a synthetic id that is never an
+    // active element id. removeInactive must keep that state in flight until
+    // the batched flush, or the flush sends a rerun carrying no trigger.
+    const aggregatorId = makeTriggerAggregatorId("myComponent")
+    const update = { formId: "", fragmentId: undefined, fromUser: true }
+
+    void widgetMgr.setTriggerValue(aggregatorId, update, {
+      event: "foo",
+      value: true,
+    })
+    void widgetMgr.setTriggerValue(aggregatorId, update, {
+      event: "bar",
+      value: true,
+    })
+
+    // A genuinely stale widget: retention must apply only to in-flight
+    // triggers, not to every widget. `fromUser: false` avoids an extra flush.
+    widgetMgr.setStringValue("staleWidget", "gone", {
+      formId: "",
+      fragmentId: undefined,
+      fromUser: false,
+    })
+
+    widgetMgr.removeInactive(new Set(["myComponent"]))
+
+    await waitFor(() => expect(sendBackMsg).toHaveBeenCalledTimes(1))
+
+    const { widgets } = sendBackMsg.mock.calls[0][0]
+    expect(widgets).toHaveLength(1)
+    expect(widgets[0].id).toEqual(aggregatorId)
+    // Both payloads batched in the same macrotask must survive.
+    expect(JSON.parse(widgets[0].jsonTriggerValue)).toEqual([
+      { event: "foo", value: true },
+      { event: "bar", value: true },
+    ])
+    expect(widgetMgr.getStringValue({ id: "staleWidget" })).toBeUndefined()
+  })
+
+  it("keeps in-flight trigger values for widgets inside a form", () => {
+    const triggerId = "formTriggerWidget"
+    const { formId } = MOCK_FORM_WIDGET
+
+    widgetMgr.setStringTriggerValue(triggerId, "typed", {
+      formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+    // A stale non-trigger widget in the same form: retention must not spare the
+    // whole form dict.
+    widgetMgr.setStringValue(MOCK_FORM_WIDGET.id, "stale", {
+      formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+
+    // Defense in depth for form-scoped trigger writers. CCv2 no-ops triggers
+    // inside forms, so this is not a reachable CCv2 path.
+    widgetMgr.removeInactive(new Set())
+    widgetMgr.submitForm(formId, undefined)
+
+    // The pending flush has not run yet, so the submit is the only message.
+    expect(sendBackMsg).toHaveBeenCalledTimes(1)
+    const { widgets } = sendBackMsg.mock.calls[0][0]
+    expect(
+      widgets.find((widget: WidgetState) => widget.id === triggerId)
+        ?.stringTriggerValue?.data
+    ).toEqual("typed")
+    expect(widgets.map((widget: WidgetState) => widget.id)).not.toContain(
+      MOCK_FORM_WIDGET.id
+    )
+  })
+
+  it("drops widget state for a trigger id after its flush has run", async () => {
+    const aggregatorId = makeTriggerAggregatorId("myComponent")
+
+    await widgetMgr.setTriggerValue(
+      aggregatorId,
+      { formId: "", fragmentId: undefined, fromUser: true },
+      { event: "foo", value: true }
+    )
+
+    // Give the spent id fresh state. If the flush failed to clear it from
+    // `pendingTriggerIds`, removeInactive would wrongly retain this.
+    widgetMgr.setStringValue(aggregatorId, "stale", {
+      formId: "",
+      fragmentId: undefined,
+      fromUser: false,
+    })
+
+    widgetMgr.removeInactive(new Set(["myComponent"]))
+
+    expect(widgetMgr.getStringValue({ id: aggregatorId })).toBeUndefined()
+  })
+
+  it("cleans up inactive form widget states on removeInactive", () => {
+    widgetMgr.setStringValue(MOCK_FORM_WIDGET.id, "pending", {
+      formId: MOCK_FORM_WIDGET.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+
+    expect(widgetMgr.getStringValue(MOCK_FORM_WIDGET)).toEqual("pending")
+
+    widgetMgr.removeInactive(new Set())
+
+    expect(widgetMgr.getStringValue(MOCK_FORM_WIDGET)).toBeUndefined()
+  })
 })
 
 describe("WidgetStateDict", () => {
@@ -1711,6 +1906,28 @@ describe("Trigger JSON payloads (aggregated)", () => {
         )
 
         expect(widgetMgr.hasQueryParamBinding("widget1")).toBe(true)
+      })
+
+      it("normalizes a scalar date default so matching values hide the URL param", () => {
+        const widget = { id: "date_slider_scalar", formId: "" }
+        const defaultMicros = Date.UTC(2024, 5, 15) * 1000
+        widgetMgr.registerQueryParamBinding(
+          "date_slider_scalar",
+          "date",
+          "double_array_value",
+          defaultMicros,
+          false,
+          "repeated",
+          "date"
+        )
+
+        widgetMgr.setDoubleArrayValue(widget.id, [defaultMicros], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
       })
 
       it("registers binding with urlDefault for select_slider", () => {
@@ -2314,6 +2531,66 @@ describe("Trigger JSON payloads (aggregated)", () => {
         expect(mockOnQueryParamsChange).toHaveBeenCalledWith("selected=")
       })
 
+      it("syncs a non-empty int array to repeated URL params", () => {
+        const widget = { id: "pills2", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "pills2",
+          "selected",
+          "int_array_value",
+          [0],
+          true
+        )
+
+        widgetMgr.setIntArrayValue(widget.id, [1, 2], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith(
+          "selected=1&selected=2"
+        )
+      })
+
+      it("hides the URL param when a single-element int array matches a scalar default", () => {
+        const widget = { id: "slider_scalar_default", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "slider_scalar_default",
+          "n",
+          "int_array_value",
+          5,
+          false
+        )
+
+        widgetMgr.setIntArrayValue(widget.id, [5], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
+      })
+
+      it("hides the URL param when a date default matches the selected value", () => {
+        const widget = { id: "date_default", formId: "" }
+        const defaultDate = new Date(2024, 0, 15)
+        widgetMgr.registerQueryParamBinding(
+          "date_default",
+          "d",
+          "string_value",
+          defaultDate,
+          false
+        )
+
+        widgetMgr.setStringValue(widget.id, "2024-01-15", {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
+      })
+
       it("preserves empty value in URL when clearable=true and empty differs from default (selectbox)", () => {
         const widget = { id: "selectbox1", formId: "" }
         widgetMgr.registerQueryParamBinding(
@@ -2592,6 +2869,27 @@ describe("Trigger JSON payloads (aggregated)", () => {
         // Now filter - should preserve the bound param
         const result = widgetMgr.filterParamsForPageChange("")
         expect(result).toBe("my_key=my_value")
+      })
+
+      it("preserves repeated bound params from the current URL", () => {
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "tags",
+          "string_array_value",
+          [],
+          true
+        )
+
+        const widget = { id: "widget1", formId: "" }
+        widgetMgr.setStringArrayValue(widget.id, ["alpha", "beta"], {
+          formId: widget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        const result = widgetMgr.filterParamsForPageChange("")
+        expect(result).toContain("tags=alpha")
+        expect(result).toContain("tags=beta")
       })
 
       describe("date/time slider ISO URL formatting", () => {

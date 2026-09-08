@@ -25,7 +25,9 @@ from __future__ import annotations
 class AppTestError(Exception):
     """Raised when an AppTest query or interaction is invalid.
 
-    AppTest can run apps that contain unimplemented or browser-only elements.
-    This error is reserved for an explicit test action that a browser user
-    could not perform, such as updating a disabled widget.
+    AppTest can run apps that contain unimplemented, partially modeled, or
+    browser-only elements. This error is reserved for an explicit test action
+    that AppTest cannot perform, such as updating a disabled widget or calling
+    ``set_value`` / ``click`` on an element that AppTest can inspect but not
+    interact with.
     """

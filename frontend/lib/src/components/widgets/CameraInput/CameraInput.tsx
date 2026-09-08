@@ -34,7 +34,6 @@ import {
   CameraInput as CameraInputProto,
   FileUploaderState as FileUploaderStateProto,
   FileURLs as FileURLsProto,
-  IFileURLs,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
@@ -339,7 +338,7 @@ const CameraInput = ({
    * Called when an upload has completed. Updates the file's status.
    */
   const onUploadComplete = useCallback(
-    (localFileId: number, fileUrls: IFileURLs): void => {
+    (localFileId: number, fileUrls: FileURLsProto.$Properties): void => {
       setShutter(false)
 
       const curFile = getFile(localFileId)
@@ -395,7 +394,7 @@ const CameraInput = ({
    * Upload a file to the backend.
    */
   const uploadFile = useCallback(
-    (fileURLs: IFileURLs, file: File): void => {
+    (fileURLs: FileURLsProto.$Properties, file: File): void => {
       // Create an UploadFileInfo for this file and add it to our state.
       const abortController = new AbortController()
       const uploadingFileInfo = new UploadFileInfo(

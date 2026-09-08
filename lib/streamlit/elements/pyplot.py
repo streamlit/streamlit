@@ -236,8 +236,8 @@ def marshall(
         import matplotlib.pyplot as plt
 
         plt.ioff()
-    except ImportError:  # pragma: no cover - optional dep
-        raise ImportError("pyplot() command requires matplotlib")
+    except ImportError as e:  # pragma: no cover - optional dep
+        raise ImportError("pyplot() command requires matplotlib") from e
 
     # Apply Streamlit defaults, then let deprecated kwargs override them.
     savefig_kwargs = {**_DEFAULT_SAVEFIG_OPTIONS, **kwargs}

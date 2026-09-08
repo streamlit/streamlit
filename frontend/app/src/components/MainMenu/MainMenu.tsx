@@ -126,7 +126,7 @@ export interface Props {
 
   sendMessageToHost: (message: IGuestToHostMessage) => void
 
-  menuItems?: PageConfig.IMenuItems | null
+  menuItems?: PageConfig.MenuItems.$Properties | null
 
   developmentMode: boolean
 
@@ -201,7 +201,7 @@ interface BuildMenuDataOptions {
   isServerConnected: boolean
   developmentMode: boolean
   screenCastState: Steps
-  menuItems: PageConfig.IMenuItems | null | undefined
+  menuItems: PageConfig.MenuItems.$Properties | null | undefined
   hostMenuItems: IMenuItem[]
   quickRerunCallback: () => void
   clearCacheCallback: () => void
@@ -420,7 +420,7 @@ function buildStandardItems(
  *   developer-configured items
  */
 function buildCommonItems(
-  menuItems: PageConfig.IMenuItems | null | undefined,
+  menuItems: PageConfig.MenuItems.$Properties | null | undefined,
   hostMenuItems: IMenuItem[],
   sendMessageToHost: (message: IGuestToHostMessage) => void
 ): MenuSection {
@@ -481,7 +481,7 @@ function buildCommonItems(
  * Merged into the standard items section (normal mode) or common items (minimal mode).
  */
 function buildAboutItem(
-  menuItems: PageConfig.IMenuItems | null | undefined,
+  menuItems: PageConfig.MenuItems.$Properties | null | undefined,
   aboutCallback: () => void
 ): MenuSection {
   if (menuItems?.aboutSectionMd) {

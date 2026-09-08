@@ -106,6 +106,7 @@ describe("TransientNode", () => {
       const t2 = text("t2")
       const node = new TransientNode("run-xyz", anchor, [t1, t2], 5)
 
+      // eslint-disable-next-line testing-library/no-debugging-utils -- TransientNode.debug() is a tree printer, not Testing Library's screen.debug().
       const debug = node.debug()
 
       expect(debug.split("\n")[0]).toBe(

@@ -53,7 +53,7 @@ from streamlit.elements.widgets.data_editor import (
     _compute_data_editor_signature,
     _parse_value,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitDataframeConversionError
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
@@ -1422,6 +1422,98 @@ class DataEditorTest(DeltaGeneratorTestCase):
         assert columns_config["c"]["disabled"]
         assert columns_config["d"]["disabled"]
 
+    def test_disables_columns_with_inconsistently_nested_lists(self) -> None:
+        """Test that columns of lists PyArrow cannot serialize are disabled.
+
+        Regression test for https://github.com/streamlit/streamlit/issues/9380
+        """
+        data_df = pd.DataFrame(
+            {
+                "a": pd.Series([[1, 2], [3, 4]]),
+                # PyArrow cannot mix list nesting levels within one column:
+                "b": pd.Series([[1, 2], [[1, 2], [3, 4]]]),
+            }
+        )
+        st.data_editor(data_df)
+
+        proto = self.get_delta_from_queue().new_element.dataframe
+        columns_config = json.loads(proto.columns)
+
+        assert "a" not in columns_config
+        assert columns_config["b"]["disabled"]
+
+    @parameterized.expand(
+        [
+            (
+                "polygon_and_multipolygon",
+                [
+                    [[[0, 0], [1, 0], [1, 1], [0, 0]]],
+                    [[[[0, 0], [1, 0], [1, 1], [0, 0]]]],
+                ],
+            ),
+            # PyArrow raises OverflowError instead of one of its own errors here:
+            ("int_too_large_for_int64", [[2**70], [1]]),
+        ]
+    )
+    def test_disables_and_stringifies_columns_detected_by_arrow_retry(
+        self, _name: str, values: list[Any]
+    ) -> None:
+        """Test that columns fixed after a failed Arrow conversion are stringified
+        and disabled.
+
+        These columns are only detected once the Arrow serialization fails, so the
+        column config has to be updated from that retry as well.
+        """
+        data_df = pd.DataFrame({"col1": pd.Series(values)})
+        expected_values = [str(value) for value in values]
+
+        return_df = st.data_editor(data_df)
+
+        proto = self.get_delta_from_queue().new_element.dataframe
+        columns_config = json.loads(proto.columns)
+
+        assert columns_config["col1"]["disabled"]
+        reconstructed_df = convert_arrow_bytes_to_pandas_df(proto.arrow_data.data)
+        assert reconstructed_df["col1"].tolist() == expected_values
+        assert return_df["col1"].tolist() == expected_values
+
+    def test_disables_incompatible_columns_under_flattened_multiindex_name(
+        self,
+    ) -> None:
+        """Test that the disabled config uses the flattened MultiIndex column name.
+
+        Hierarchical column headers are flattened for editing, so a config keyed by
+        the original tuple would not match any column on the frontend.
+        """
+        data_df = pd.DataFrame(
+            {
+                ("a", "b"): pd.Series([1, "foo"]),  # Incompatible
+                ("c", "d"): pd.Series([1, 2]),
+            }
+        )
+        assert isinstance(data_df.columns, pd.MultiIndex)
+
+        st.data_editor(data_df)
+
+        proto = self.get_delta_from_queue().new_element.dataframe
+        columns_config = json.loads(proto.columns)
+
+        assert columns_config["a_b"]["disabled"]
+        assert "c_d" not in columns_config
+
+    def test_raises_when_arrow_retry_cannot_fix_the_dataframe(self) -> None:
+        """Test that a dataframe that stays Arrow incompatible raises.
+
+        The retry only stringifies columns, so a mixed-type index still fails the
+        second Arrow conversion.
+        """
+        data_df = pd.DataFrame({"a": [1, 2]}, index=pd.Index([1, "x"]))
+
+        with pytest.raises(
+            StreamlitDataframeConversionError, match="Unable to convert dataframe"
+        ):
+            st.data_editor(data_df)
+
     @parameterized.expand(
         [
             (pd.PeriodIndex(["2020-01-01", "2020-01-02", "2020-01-03"], freq="D"),),
@@ -1689,3 +1781,39 @@ class DataEditorTest(DeltaGeneratorTestCase):
             == HeightConfigFields.USE_CONTENT.value
         )
         assert el.height_config.use_content is True
+
+
+def test_apply_row_additions_is_noop_for_empty_added_rows() -> None:
+    """An empty additions list leaves the dataframe unchanged."""
+    df = pd.DataFrame({"a": [1, 2]})
+    original = df.copy()
+    schema = determine_dataframe_schema(df, pa.Table.from_pandas(df).schema)
+    _apply_row_additions(df, [], schema)
+    pd.testing.assert_frame_equal(df, original)
+
+
+def test_check_type_compatibilities_skips_type_config_without_type() -> None:
+    """A type_config mapping with no ``type`` is ignored rather than raising."""
+    df = pd.DataFrame({"col1": [1, 2, 3]})
+    schema = {
+        INDEX_IDENTIFIER: ColumnDataKind.INTEGER,
+        "col1": ColumnDataKind.INTEGER,
+    }
+    _check_type_compatibilities(df, {"col1": {"type_config": {}}}, schema)
+
+
+def test_data_editor_signature_falls_back_when_index_hash_raises() -> None:
+    """Unhashable index values fall back to a string encoding of the index."""
+    df_a = pd.DataFrame({"a": [1, 2]})
+    df_a.index = pd.Index([[1], [2]], dtype=object)
+    df_b = pd.DataFrame({"a": [1, 2]})
+    df_b.index = pd.Index([[9], [8]], dtype=object)
+    with patch(
+        "pandas.util.hash_pandas_object",
+        side_effect=TypeError("unhashable"),
+    ):
+        sig_a = _get_data_editor_signature(df_a)
+        sig_a_again = _get_data_editor_signature(df_a)
+        sig_b = _get_data_editor_signature(df_b)
+    assert sig_a == sig_a_again
+    assert sig_a != sig_b

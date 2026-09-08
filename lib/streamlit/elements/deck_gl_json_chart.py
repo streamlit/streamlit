@@ -29,7 +29,6 @@ from typing import (
     overload,
 )
 
-from streamlit import config
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
@@ -400,7 +399,15 @@ class PydeckMixin:
         Parameters
         ----------
         pydeck_obj : pydeck.Deck or None
-            Object specifying the PyDeck chart to draw.
+            Object specifying the PyDeck chart to draw. Built-in deck.gl
+            layers, views (``MapView``, ``OrbitView``, ``OrthographicView``,
+            ``FirstPersonView``, and ``GlobeView``), JSON ``parameters``, and
+            layer extensions are supported. Use ``map_provider=None`` to omit
+            the basemap (pydeck 0.9+). Pass extensions as ``@@type`` dicts,
+            for example
+            ``extensions=[{"@@type": "DataFilterExtension", "filterSize": 1}]``.
+            Custom JS libraries, widgets, and multi-view layouts are not
+            supported.
         width : "stretch" or int
             The width of the chart element. This can be one of the following:
 
@@ -578,13 +585,7 @@ class PydeckMixin:
         if tooltip:
             pydeck_proto.tooltip = json.dumps(tooltip)
 
-        # Get the Mapbox key from the PyDeck object first, and then fallback to the
-        # old mapbox.token config option.
-
         mapbox_token = getattr(pydeck_obj, "mapbox_key", None)
-        if mapbox_token is None or mapbox_token == "":
-            mapbox_token = config.get_option("mapbox.token")
-
         if mapbox_token:
             pydeck_proto.mapbox_token = mapbox_token
 

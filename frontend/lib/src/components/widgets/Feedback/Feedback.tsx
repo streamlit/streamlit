@@ -52,7 +52,7 @@ export interface Props {
   element: FeedbackProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
-  widthConfig: streamlit.IWidthConfig | undefined | null
+  widthConfig: streamlit.WidthConfig.$Properties | undefined | null
 }
 
 interface FeedbackOption {
@@ -201,7 +201,7 @@ function Feedback(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr, widthConfig } = props
   const { type } = element
 
-  const [hookValue, setValueWithSource] = useBasicWidgetState<
+  const [value, setValueWithSource] = useBasicWidgetState<
     FeedbackValue,
     FeedbackProto
   >({
@@ -214,10 +214,6 @@ function Feedback(props: Readonly<Props>): ReactElement {
     fragmentId,
     formClearBehavior: "resetValueOnly",
   })
-
-  // Use element.value (from session_state) as the source of truth when set.
-  // The hook's value may lag behind due to effect timing, so prefer element.value.
-  const value = element.value ?? hookValue
 
   const containerWidth = shouldWidthStretch(widthConfig)
 

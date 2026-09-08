@@ -259,7 +259,7 @@ describe("useVegaEmbed hook", () => {
 
     await expect(
       result.current.createView({ current: null }, {})
-    ).rejects.toThrowError("Element missing.")
+    ).rejects.toThrow("Element missing.")
 
     expect(embed).not.toHaveBeenCalled()
   })

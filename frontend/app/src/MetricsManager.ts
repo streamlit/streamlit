@@ -24,7 +24,7 @@ import {
   SessionInfo,
   setCookie,
 } from "@streamlit/lib"
-import { IMetricsEvent, MetricsEvent } from "@streamlit/protobuf"
+import { MetricsEvent } from "@streamlit/protobuf"
 import {
   generateUuid,
   getCookie,
@@ -36,7 +36,7 @@ export const DEFAULT_METRICS_CONFIG = "https://data.streamlit.io/metrics.json"
 const LOG = getLogger("MetricsManager")
 
 type EventName = "viewReport" | "updateReport" | "pageProfile" | "menuClick"
-type Event = [EventName, Partial<IMetricsEvent>]
+type Event = [EventName, Partial<MetricsEvent.$Properties>]
 
 export class MetricsManager {
   /** The app's SessionInfo instance. */
@@ -117,7 +117,7 @@ export class MetricsManager {
 
   public enqueue(
     evName: EventName,
-    evData: Partial<IMetricsEvent> = {}
+    evData: Partial<MetricsEvent.$Properties> = {}
   ): void {
     if (!this.initialized || !this.sessionInfo.isSet) {
       this.pendingEvents.push([evName, evData])
@@ -186,7 +186,10 @@ export class MetricsManager {
   // The schema of metrics events (including key names and value types) should
   // only be changed when requested by the data team. This is why `reportHash`
   // retains its old name.
-  private send(evName: EventName, evData: Partial<IMetricsEvent> = {}): void {
+  private send(
+    evName: EventName,
+    evData: Partial<MetricsEvent.$Properties> = {}
+  ): void {
     const data = this.buildEventProto(evName, evData)
 
     // Don't actually track events when in dev mode, just print them instead.
@@ -232,7 +235,7 @@ export class MetricsManager {
   // Helper to build the event proto
   private buildEventProto(
     evName: EventName,
-    data: Partial<IMetricsEvent>
+    data: Partial<MetricsEvent.$Properties>
   ): MetricsEvent {
     const eventProto = new MetricsEvent({
       event: evName,
@@ -269,7 +272,7 @@ export class MetricsManager {
   }
 
   // Get the installation IDs from the session
-  private getInstallationData(): Partial<IMetricsEvent> {
+  private getInstallationData(): Partial<MetricsEvent.$Properties> {
     return {
       machineIdV3: this.sessionInfo.current.installationIdV3,
       machineIdV4: this.sessionInfo.current.installationIdV4,
@@ -292,7 +295,7 @@ export class MetricsManager {
   }
 
   // Get context data for events
-  private getContextData(): Partial<IMetricsEvent> {
+  private getContextData(): Partial<MetricsEvent.$Properties> {
     return {
       contextPageUrl: window.location.href,
       contextPageTitle: document.title,

@@ -40,7 +40,7 @@ import {
   Utf8,
 } from "apache-arrow"
 
-import { IArrowData } from "@streamlit/protobuf"
+import { type ArrowData } from "@streamlit/protobuf"
 
 import { ArrowType, DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { getStyledCell, StyledCell } from "~lib/dataframes/pandasStylerUtils"
@@ -394,7 +394,7 @@ describe("initEmptyIndexColumn", () => {
 
 describe("initIndexFromArrow", () => {
   it("returns a valid index", () => {
-    const element: IArrowData = {
+    const element: ArrowData.$Properties = {
       data: UNICODE,
     }
     const data = new Quiver(element)
@@ -441,7 +441,7 @@ describe("initIndexFromArrow", () => {
   })
 
   it("works with multi-index", () => {
-    const element: IArrowData = {
+    const element: ArrowData.$Properties = {
       data: MULTI,
     }
     const data = new Quiver(element)
@@ -500,7 +500,7 @@ describe("initIndexFromArrow", () => {
 
 describe("initColumnFromArrow", () => {
   it("returns a valid column", () => {
-    const element: IArrowData = {
+    const element: ArrowData.$Properties = {
       data: UNICODE,
     }
     const data = new Quiver(element)
@@ -538,7 +538,7 @@ describe("initColumnFromArrow", () => {
   })
 
   it("works with multi-index headers", () => {
-    const element: IArrowData = {
+    const element: ArrowData.$Properties = {
       data: MULTI,
     }
     const data = new Quiver(element)
@@ -571,7 +571,7 @@ describe("initColumnFromArrow", () => {
   })
 
   it("adds categorical options to type metadata", () => {
-    const element: IArrowData = {
+    const element: ArrowData.$Properties = {
       data: CATEGORICAL_COLUMN,
     }
     const data = new Quiver(element)
@@ -607,7 +607,7 @@ describe("initColumnFromArrow", () => {
 })
 describe("initAllColumnsFromArrow", () => {
   it("extracts all columns", () => {
-    const element: IArrowData = {
+    const element: ArrowData.$Properties = {
       data: UNICODE,
     }
     const data = new Quiver(element)
@@ -688,7 +688,7 @@ describe("initAllColumnsFromArrow", () => {
   })
 
   it("handles empty dataframes correctly", () => {
-    const element: IArrowData = {
+    const element: ArrowData.$Properties = {
       data: EMPTY,
     }
     const data = new Quiver(element)
@@ -723,7 +723,7 @@ describe("initAllColumnsFromArrow", () => {
 
 describe("getCellFromArrow", () => {
   it("creates a valid glide-compatible cell", () => {
-    const element: IArrowData = {
+    const element: ArrowData.$Properties = {
       data: UNICODE,
     }
     const data = new Quiver(element)
@@ -770,7 +770,7 @@ describe("getCellFromArrow", () => {
       },
     })
 
-    const element: IArrowData = {
+    const element: ArrowData.$Properties = {
       data: DECIMAL, // should be interpreted as object
     }
     const data = new Quiver(element)

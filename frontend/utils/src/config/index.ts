@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ICustomThemeConfig } from "@streamlit/protobuf"
+import { type CustomThemeConfig } from "@streamlit/protobuf"
 
 /**
  * The lib config contains various configurations that the host platform can
@@ -151,8 +151,8 @@ interface StreamlitWindowConfig {
   // Service Worker clientId for custom components in embedded contexts.
   CUSTOM_COMPONENT_CLIENT_ID?: string
   // Theme related settings.
-  LIGHT_THEME?: ICustomThemeConfig
-  DARK_THEME?: ICustomThemeConfig
+  LIGHT_THEME?: CustomThemeConfig.$Properties
+  DARK_THEME?: CustomThemeConfig.$Properties
   // Other options.
   ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION?: boolean
   // Host configuration (including enabling bypass mode for fast-path websocket connection).
@@ -274,10 +274,10 @@ export const StreamlitConfig = {
   get CUSTOM_COMPONENT_CLIENT_ID(): string | undefined {
     return capturedConfig?.CUSTOM_COMPONENT_CLIENT_ID
   },
-  get LIGHT_THEME(): ICustomThemeConfig | undefined {
+  get LIGHT_THEME(): CustomThemeConfig.$Properties | undefined {
     return capturedConfig?.LIGHT_THEME
   },
-  get DARK_THEME(): ICustomThemeConfig | undefined {
+  get DARK_THEME(): CustomThemeConfig.$Properties | undefined {
     return capturedConfig?.DARK_THEME
   },
   get ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION():

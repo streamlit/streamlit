@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/connection",
-  "version": "1.62.0",
+  "version": "1.63.0",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",
@@ -32,14 +32,14 @@
   "dependencies": {
     "@streamlit/protobuf": "workspace:^",
     "@streamlit/utils": "workspace:^",
-    "axios": "^1.19.0",
+    "axios": "^1.20.0",
     "loglevel": "^1.9.2"
   },
   "devDependencies": {
     "axios-mock-adapter": "^2.1.0",
     "typesync": "^0.14.3",
     "vite": "^8.2.2",
-    "vite-plugin-dts": "^5.0.3",
+    "vite-plugin-dts": "^5.1.0",
     "vitest": "^4.1.11",
     "vitest-websocket-mock": "^0.7.0"
   },

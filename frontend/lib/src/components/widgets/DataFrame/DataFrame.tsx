@@ -127,8 +127,8 @@ export interface DataFrameProps {
   fragmentId?: string
   // Custom toolbar actions (as React nodes) to display in the grid toolbar.
   customToolbarActions?: React.ReactNode[]
-  widthConfig?: streamlit.IWidthConfig | null
-  heightConfig?: streamlit.IHeightConfig | null
+  widthConfig?: streamlit.WidthConfig.$Properties | null
+  heightConfig?: streamlit.HeightConfig.$Properties | null
 }
 
 /**

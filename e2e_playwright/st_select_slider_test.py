@@ -35,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-NUM_SELECT_SLIDERS = 20
+NUM_SELECT_SLIDERS = 21
 
 
 def test_select_slider_rendering(
@@ -429,3 +429,53 @@ def test_select_slider_query_param_empty_value_rejected(page: Page, app_base_url
     # Should use default ("green")
     expect_prefixed_markdown(page, "Bound color:", "green")
     expect(page).not_to_have_url(re.compile(r"[?&]bound_color="))
+
+
+def test_select_slider_on_change_ignore(app: Page) -> None:
+    """Test that on_change='ignore' suppresses rerun and sends value on next rerun."""
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore select slider value:", "red")
+    # Default is omitted from the URL.
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_select_slider="))
+
+    slider = get_element_by_key(app, "ignore_select_slider")
+    slider_role = slider.get_by_role("slider")
+
+    # Commit with ArrowRight - should NOT trigger a rerun, but should update the URL
+    slider_role.press("ArrowRight")
+
+    # Wait for any potential rerun to complete. If on_change="ignore" is working
+    # correctly, no rerun will occur, but this ensures that if a bug causes
+    # a rerun, we wait for it before checking.
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect_prefixed_markdown(app, "Ignore select slider value:", "red")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_select_slider=orange"))
+
+    # Extra ArrowRight commits accumulate without a rerun.
+    for _ in range(4):
+        slider_role.press("ArrowRight")
+
+    expect(slider).to_contain_text("indigo")
+    expect_prefixed_markdown(app, "Ignore select slider value:", "red")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_select_slider=indigo"))
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+
+    # Click button to trigger a rerun - accumulated value should be sent
+    app.get_by_role("button", name="Apply ignore select slider", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(
+        app.get_by_text("Ignore select slider value: indigo", exact=True)
+    ).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore select slider value: indigo", exact=True)
+    ).to_be_visible()
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(get_element_by_key(app, "ignore_select_slider")).to_contain_text("indigo")
+    expect_prefixed_markdown(app, "Ignore select slider value:", "indigo")

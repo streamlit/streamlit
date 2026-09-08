@@ -16,16 +16,15 @@
 
 import { Draft, produce } from "immer"
 import { getLogger } from "loglevel"
-import { Long, util } from "protobufjs"
+import { type Long, util } from "protobufjs/minimal"
 import queryString from "query-string"
 import { Signal, SignalConnection } from "typed-signals"
 
 import {
+  type ArrowTable,
   ChatInputValue,
   DoubleArray,
-  IArrowTable,
-  IChatInputValue,
-  IFileUploaderState,
+  type FileUploaderState,
   SInt64Array,
   StringArray,
   StringTriggerValue,
@@ -496,7 +495,7 @@ export class WidgetStateManager {
    */
   public setChatInputValue(
     elementId: string,
-    value: IChatInputValue,
+    value: ChatInputValue.$Properties,
     update: WidgetUpdate
   ): void {
     // 1. Store the value in a temporary WidgetState proto.
@@ -819,7 +818,7 @@ export class WidgetStateManager {
 
   public setArrowValue(
     elementId: string,
-    value: IArrowTable,
+    value: ArrowTable.$Properties,
     update: WidgetUpdate
   ): void {
     const widget = { id: elementId, formId: update.formId }
@@ -827,7 +826,9 @@ export class WidgetStateManager {
     this.onWidgetValueChanged(update)
   }
 
-  public getArrowValue(widget: WidgetInfo): IArrowTable | undefined {
+  public getArrowValue(
+    widget: WidgetInfo
+  ): ArrowTable.$Properties | undefined {
     const state = this.getWidgetState(widget)
     if (
       notNullOrUndefined(state) &&
@@ -861,7 +862,7 @@ export class WidgetStateManager {
 
   public setFileUploaderStateValue(
     elementId: string,
-    value: IFileUploaderState,
+    value: FileUploaderState.$Properties,
     update: WidgetUpdate
   ): void {
     const widget = { id: elementId, formId: update.formId }
@@ -871,13 +872,13 @@ export class WidgetStateManager {
 
   public getFileUploaderStateValue(
     widget: WidgetInfo
-  ): IFileUploaderState | undefined {
+  ): FileUploaderState.$Properties | undefined {
     const state = this.getWidgetState(widget)
     if (
       notNullOrUndefined(state) &&
       state.value === "fileUploaderStateValue"
     ) {
-      return state.fileUploaderStateValue as IFileUploaderState
+      return state.fileUploaderStateValue as FileUploaderState.$Properties
     }
 
     return undefined
@@ -942,13 +943,26 @@ export class WidgetStateManager {
   }
 
   /**
-   * Remove the state of widgets that are not contained in `activeIds`.
-   * This is called when a script finishes running, so that we don't retain
-   * data for widgets that have been removed from the app.
+   * Remove widget and element state that is no longer in `activeIds`, except
+   * in-flight trigger ids in `pendingTriggerIds`.
+   *
+   * Called when a script finishes running so we do not keep data for widgets
+   * that have been removed from the app. The excepted trigger ids are waiting
+   * on the batched flush, and some (such as the Custom Components v2 trigger
+   * aggregator) are synthetic ids that never appear in `activeIds` at all;
+   * dropping one leaves that flush to send a rerun with no trigger, silently
+   * losing the interaction (GitHub issue #16732). Element state is never part
+   * of the rerun message, so it follows `activeIds` only.
    */
   public removeInactive(activeIds: Set<string>): void {
-    this.widgetStates.removeInactive(activeIds)
-    this.forms.forEach(form => form.widgetStates.removeInactive(activeIds))
+    // Nothing in flight is the common case, so avoid copying the set for it.
+    const retainedIds =
+      this.pendingTriggerIds.size === 0
+        ? activeIds
+        : new Set([...activeIds, ...this.pendingTriggerIds])
+
+    this.widgetStates.removeInactive(retainedIds)
+    this.forms.forEach(form => form.widgetStates.removeInactive(retainedIds))
     this.elementStates.forEach((_, elementId) => {
       if (!activeIds.has(elementId)) {
         this.deleteElementState(elementId)

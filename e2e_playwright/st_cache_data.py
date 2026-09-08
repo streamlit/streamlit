@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
+import os
+import time
+import uuid
+from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
@@ -65,6 +70,41 @@ if st.button("Cached function with element replay"):
     st.write("Cache return", replay_element())
 
 
+def _wait_for_release_file(release_file: Path) -> None:
+    while not release_file.exists():
+        time.sleep(0.05)
+
+
+@st.cache_data(show_spinner="Computing async cache_data value...")
+async def async_cache_data_value(
+    session_key: str,  # noqa: ARG001 - Parameter is the per-session cache key.
+) -> dict[str, int]:
+    st.session_state.async_cache_data_executions = (
+        st.session_state.get("async_cache_data_executions", 0) + 1
+    )
+    st.markdown(
+        f"Inside async cache_data: {st.session_state.async_cache_data_executions}"
+    )
+    release_file = Path(os.environ["STREAMLIT_ASYNC_CACHE_DATA_RELEASE_FILE"])
+    await asyncio.to_thread(_wait_for_release_file, release_file)
+    return {"execution": st.session_state.async_cache_data_executions}
+
+
+async def render_async_cache_data_value() -> None:
+    value = await async_cache_data_value(st.session_state.async_cache_data_key)
+    st.markdown(f"Async cache_data result: {value['execution']}")
+
+
+if "async_cache_data_key" not in st.session_state:
+    st.session_state.async_cache_data_key = uuid.uuid4().hex
+
+if st.button("Run async cache_data E2E scenario"):
+    st.session_state.run_async_cache_data_e2e_scenario = True
+
+if st.session_state.get("run_async_cache_data_e2e_scenario", False):
+    asyncio.run(render_async_cache_data_value())
+
+
 @st.cache_data
 def audio():
     url = "https://www.w3schools.com/html/horse.ogg"
@@ -105,9 +145,14 @@ if st.checkbox("Show image", True):
 # interfere with the other cache_data tests in this app.
 _BACKGROUND_REFRESH_TTL_SECONDS = 8
 
+if "cache_data_background_refresh_key" not in st.session_state:
+    st.session_state.cache_data_background_refresh_key = uuid.uuid4().hex
+
 
 @st.cache_resource(show_spinner=False)
-def background_refresh_execution_counter() -> dict[str, int]:
+def background_refresh_execution_counter(
+    session_key: str,  # noqa: ARG001 - Parameter is the per-session cache key.
+) -> dict[str, int]:
     return {"count": 0}
 
 
@@ -116,8 +161,8 @@ def background_refresh_execution_counter() -> dict[str, int]:
     refresh_mode="background",
     show_spinner=False,
 )
-def background_refresh_value() -> int:
-    counter = background_refresh_execution_counter()
+def background_refresh_value(session_key: str) -> int:
+    counter = background_refresh_execution_counter(session_key)
     counter["count"] += 1
     return counter["count"]
 
@@ -127,7 +172,7 @@ def background_refresh_value() -> int:
     refresh_mode="background",
     show_spinner=False,
 )
-def background_refresh_with_display() -> None:
+def background_refresh_with_display(session_key: str) -> None:  # noqa: ARG001
     st.markdown("Inside background cache_data function")
 
 
@@ -135,5 +180,8 @@ if st.button("Run cache_data background refresh test"):
     st.session_state.run_cache_data_background_refresh_test = True
 
 if st.session_state.get("run_cache_data_background_refresh_test", False):
-    st.markdown(f"Background refresh value: {background_refresh_value()}")
-    background_refresh_with_display()
+    background_refresh_key = st.session_state.cache_data_background_refresh_key
+    st.markdown(
+        f"Background refresh value: {background_refresh_value(background_refresh_key)}"
+    )
+    background_refresh_with_display(background_refresh_key)

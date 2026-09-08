@@ -30,25 +30,6 @@ Custom components can break when Streamlit updates, so prefer core features when
 
 ## Popular custom components
 
-### streamlit-keyup
-
-Text input that fires on every keystroke instead of waiting for enter/blur. Useful for live search.
-
-- **Repo:** https://github.com/blackary/streamlit-keyup
-- **Docs:** https://pypi.org/project/streamlit-keyup/
-
-```bash
-uv add streamlit-keyup
-```
-
-```python
-from st_keyup import st_keyup
-
-query = st_keyup("Search", debounce=300)  # 300ms debounce
-filtered = df[df["name"].str.contains(query, case=False)]
-st.dataframe(filtered)
-```
-
 ### streamlit-bokeh
 
 Official replacement for `st.bokeh_chart` (removed from Streamlit API). Maintained by Streamlit.

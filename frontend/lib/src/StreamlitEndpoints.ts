@@ -16,7 +16,7 @@
 
 import type { AxiosProgressEvent } from "axios"
 
-import { IAppPage } from "@streamlit/protobuf"
+import { type AppPage } from "@streamlit/protobuf"
 
 type FileUploadClientConfig = {
   prefix: string
@@ -105,7 +105,10 @@ export interface StreamlitEndpoints {
    * @param page the page's AppPage protobuf properties
    * @param pageIndex the page's zero-based index
    */
-  buildAppPageURL(pageLinkBaseURL: string | undefined, page: IAppPage): string
+  buildAppPageURL(
+    pageLinkBaseURL: string | undefined,
+    page: AppPage.$Properties
+  ): string
 
   /**
    * Upload a file to the FileUploader endpoint.

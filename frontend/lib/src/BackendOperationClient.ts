@@ -18,10 +18,9 @@ import { getLogger } from "loglevel"
 
 import {
   BackendOperationRequest,
-  IBackendOperationRequest,
-  IBackendOperationResponse,
-  IDataframeChunkRequestPayload,
-  IDataframeChunkResponsePayload,
+  type BackendOperationResponse,
+  type DataframeChunkRequestPayload,
+  type DataframeChunkResponsePayload,
 } from "@streamlit/protobuf"
 import { generateUuid } from "@streamlit/utils"
 
@@ -143,13 +142,13 @@ export class BackendOperationClient {
    */
   public request<TResponse>(
     payloadField: keyof Pick<
-      IBackendOperationRequest,
+      BackendOperationRequest.$Properties,
       | "deferredFile"
       | "dataframeChunk"
       | "installSkills"
       | "dismissSkillsNudge"
     >,
-    payload: IBackendOperationRequest[typeof payloadField],
+    payload: BackendOperationRequest.$Properties[typeof payloadField],
     timeoutMs?: number
   ): Promise<TResponse> {
     const requestId = generateUuid()
@@ -220,10 +219,10 @@ export class BackendOperationClient {
    * @returns A promise that resolves with the chunk response payload
    */
   public requestDataframeChunk(
-    payload: IDataframeChunkRequestPayload,
+    payload: DataframeChunkRequestPayload.$Properties,
     timeoutMs?: number
-  ): Promise<IDataframeChunkResponsePayload> {
-    return this.request<IDataframeChunkResponsePayload>(
+  ): Promise<DataframeChunkResponsePayload.$Properties> {
+    return this.request<DataframeChunkResponsePayload.$Properties>(
       "dataframeChunk",
       payload,
       timeoutMs ?? DATAFRAME_CHUNK_REQUEST_TIMEOUT_MS
@@ -262,7 +261,7 @@ export class BackendOperationClient {
    * Handle a response from the server. Called by App.tsx when a
    * BackendOperationResponse ForwardMsg is received.
    */
-  public onResponse(response: IBackendOperationResponse): void {
+  public onResponse(response: BackendOperationResponse.$Properties): void {
     const requestId = response.requestId as string
     const pending = this.pendingRequests.get(requestId)
 
@@ -326,7 +325,7 @@ export class BackendOperationClient {
   }
 
   private extractResponsePayload(
-    response: IBackendOperationResponse
+    response: BackendOperationResponse.$Properties
   ): unknown {
     // Return the first recognized non-null payload field
     if (response.deferredFile) return response.deferredFile

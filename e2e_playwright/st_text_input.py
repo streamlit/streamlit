@@ -268,3 +268,64 @@ st.write("Ignore text value:", ignore_text)
 
 if st.button("Apply ignore text", key="apply_ignore_text"):
     st.write("Applied ignore text value:", ignore_text)
+
+# --- live update mode ---
+st.markdown("Live update text inputs:")
+
+live_default = st.text_input("Live default input", live=True)
+st.write("Live default value:", live_default)
+
+live_slow = st.text_input("Live 1s input", live="1s")
+st.write("Live 1s value:", live_slow)
+
+live_immediate = st.text_input("Live 0ms input", live="0ms")
+st.write("Live 0ms value:", live_immediate)
+
+with st.form("live_form"):
+    live_form_value = st.text_input("Live form input", live=True)
+    live_form_submitted = st.form_submit_button("Submit live form")
+st.write("Live form submitted:", live_form_submitted)
+st.write("Live form value:", live_form_value)
+
+live_ignore = st.text_input(
+    "Live ignore input",
+    live=True,
+    on_change="ignore",
+)
+st.write("Live ignore value:", live_ignore)
+if st.button("Reveal live ignore", key="reveal_live_ignore"):
+    st.write("Revealed live ignore value:", live_ignore)
+
+live_validate = st.text_input(
+    "Live validate input",
+    live=True,
+    validate=r"^[a-z]+$",
+)
+st.write("Live validate value:", live_validate)
+
+live_search = st.text_input("Live search input", type="search", live=True)
+st.write("Live search value:", live_search)
+
+if "outside_fragment_counter" not in st.session_state:
+    st.session_state.outside_fragment_counter = 0
+st.session_state.outside_fragment_counter += 1
+st.write("Outside fragment counter:", st.session_state.outside_fragment_counter)
+
+
+@st.fragment
+def _live_fragment_search() -> None:
+    fragment_query = st.text_input("Live fragment input", live=True)
+    st.write("Live fragment value:", fragment_query)
+
+
+_live_fragment_search()
+
+
+@st.dialog("Live dialog")
+def _live_dialog() -> None:
+    dialog_query = st.text_input("Live dialog input", live=True)
+    st.write("Live dialog value:", dialog_query)
+
+
+if st.button("Open live dialog"):
+    _live_dialog()

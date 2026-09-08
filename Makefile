@@ -524,7 +524,7 @@ update-material-icons:
 	uv run python ./scripts/update_material_icon_font_and_names.py
 
 .PHONY: update-emojis
-# Update emojis based on latest emoji version.
+# Update emojis from Unicode's latest emoji-test.txt.
 update-emojis:
 	uv run python ./scripts/update_emojis.py
 

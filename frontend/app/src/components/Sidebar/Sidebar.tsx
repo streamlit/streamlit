@@ -276,7 +276,12 @@ const Sidebar: React.FC<SidebarProps> = ({
         },
       }}
       handleComponent={{
-        right: <StyledResizeHandle onDoubleClick={resetSidebarWidth} />,
+        right: (
+          <StyledResizeHandle
+            data-testid="stSidebarResizeHandle"
+            onDoubleClick={resetSidebarWidth}
+          />
+        ),
       }}
       size={{
         width: sidebarWidth,

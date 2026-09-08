@@ -51,6 +51,7 @@ from streamlit.errors import (
 )
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.type_util import is_altair_version_less_than
+from streamlit.util import ReadOnlyAttributeDictionary
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 if TYPE_CHECKING:
@@ -91,6 +92,30 @@ def test_vega_lite_state_is_read_only() -> None:
     # Read access still works, and deepcopy preserves the concrete type.
     assert result.selection.brush == {}
     assert isinstance(copy.deepcopy(result), VegaLiteState)
+
+
+def test_vega_lite_serde_deserializes_selection_json() -> None:
+    """Non-empty selection JSON is parsed and wrapped for stable bracket access."""
+    payload = json.dumps({"selection": {"brush": {"x": [1, 2]}}})
+    result = VegaLiteStateSerde(["brush"]).deserialize(payload)
+    assert result.selection.brush == {"x": [1, 2]}
+    assert result["selection"] is result.selection
+
+
+def test_vega_lite_serde_returns_empty_state_when_selection_key_missing() -> None:
+    """JSON without a ``selection`` key yields the empty typed selection state."""
+    result = VegaLiteStateSerde(["brush"]).deserialize(json.dumps({"other": 1}))
+    assert result.selection.brush == {}
+
+
+def test_vega_lite_state_wraps_plain_selection_dict_and_other_keys() -> None:
+    """A plain dict ``selection`` is wrapped; unrelated keys use the base getter."""
+    state = VegaLiteState({"selection": {"brush": {"x": 1}}, "other": 2})
+    selection = state["selection"]
+    assert isinstance(selection, ReadOnlyAttributeDictionary)
+    assert selection["brush"] == {"x": 1}
+    assert state["selection"] is selection
+    assert state["other"] == 2
 
 
 def merge_dicts(x, y):

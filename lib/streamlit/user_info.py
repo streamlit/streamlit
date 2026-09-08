@@ -294,7 +294,7 @@ def login(provider: str | None = None) -> None:
         if st.user.is_logged_in:
             if st.button("Log out"):
                 st.logout()
-            st.write(f"Hello, {st.user.name}!)
+            st.write(f"Hello, {st.user.name}!")
 
     """
     if provider is None:

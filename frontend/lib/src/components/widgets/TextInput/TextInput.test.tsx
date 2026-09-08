@@ -14,9 +14,18 @@
  * limitations under the License.
  */
 
-import { act, screen, waitFor, within } from "@testing-library/react"
+import { Profiler } from "react"
+
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { getLogger } from "loglevel"
+import { MockInstance } from "vitest"
 
 import {
   LabelVisibility as LabelVisibilityProto,
@@ -24,7 +33,7 @@ import {
 } from "@streamlit/protobuf"
 
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import TextInput, { Props } from "./TextInput"
@@ -443,6 +452,26 @@ describe("TextInput widget", () => {
       "testing",
       { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
+  })
+
+  it("applies a focused setValue after Enter when live is off", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: "" })
+    const { rerender } = render(<TextInput {...props} />)
+    const textInput = screen.getByRole("textbox")
+
+    await user.click(textInput)
+    await user.keyboard(" bob {Enter}")
+    expect(textInput).toHaveValue(" bob ")
+
+    const formattedElement = TextInputProto.create({
+      ...props.element,
+      setValue: true,
+      value: "Bob",
+    })
+    rerender(<TextInput {...props} element={formattedElement} />)
+
+    expect(textInput).toHaveValue("Bob")
   })
 
   it("does not sync widget value when value did not change", async () => {
@@ -1288,5 +1317,776 @@ describe("on_change='ignore' mode", () => {
       triggerRerun: false,
     })
     expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+})
+
+describe("TextInput live updates", () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [190],
+    })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const renderLive = (
+    elementProps: Partial<TextInputProto> = {},
+    widgetProps: Partial<Props> = {}
+  ): ReturnType<typeof renderWithContexts> & {
+    user: ReturnType<typeof userEvent.setup>
+    props: Props
+    setStringValueSpy: MockInstance
+  } => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const props = getProps(
+      { liveDebounceMs: 250, ...elementProps },
+      widgetProps
+    )
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    const view = renderWithContexts(<TextInput {...props} />)
+    setStringValueSpy.mockClear()
+    return { user, props, setStringValueSpy, ...view }
+  }
+
+  const fromUserCommit = (
+    props: Props,
+    extra: Record<string, unknown> = {}
+  ): Record<string, unknown> => ({
+    formId: props.element.formId,
+    fragmentId: undefined,
+    fromUser: true,
+    ...extra,
+  })
+
+  const advanceMs = (ms: number): void => {
+    act(() => {
+      vi.advanceTimersByTime(ms)
+    })
+  }
+
+  it("does not commit until the debounce delay elapses", async () => {
+    const { user, props, setStringValueSpy } = renderLive()
+
+    await user.type(screen.getByRole("textbox"), "abc")
+    advanceMs(249)
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+
+    advanceMs(1)
+    expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "abc",
+      fromUserCommit(props)
+    )
+    expect(screen.getByRole("textbox")).toHaveValue("abc")
+  })
+
+  it("does not flash the previous value when a live commit echoes into widget state", async () => {
+    const seen: string[] = []
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const props = getProps({ liveDebounceMs: 0, default: "prev" })
+    render(
+      <Profiler
+        id="live-text-input"
+        onRender={() => {
+          const el = document.querySelector('[data-testid="stTextInputField"]')
+          if (el instanceof HTMLInputElement) {
+            seen.push(el.value)
+          }
+        }}
+      >
+        <TextInput {...props} />
+      </Profiler>
+    )
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "x")
+    expect(input).toHaveValue("prevx")
+    const afterTyped = seen.indexOf("prevx")
+    expect(afterTyped).toBeGreaterThan(-1)
+    expect(seen.slice(afterTyped + 1)).not.toContain("prev")
+  })
+
+  it("resets the debounce timer on each accepted change", async () => {
+    const { user, props, setStringValueSpy } = renderLive()
+
+    await user.type(screen.getByRole("textbox"), "ab")
+    advanceMs(200)
+    await user.type(screen.getByRole("textbox"), "c")
+    advanceMs(249)
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+
+    advanceMs(1)
+    expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "abc",
+      fromUserCommit(props)
+    )
+  })
+
+  it("commits each accepted change immediately when liveDebounceMs is 0", async () => {
+    const { user, props, setStringValueSpy } = renderLive({
+      liveDebounceMs: 0,
+    })
+
+    await user.type(screen.getByRole("textbox"), "ab")
+    expect(setStringValueSpy).toHaveBeenCalledTimes(2)
+    expect(setStringValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      "ab",
+      fromUserCommit(props)
+    )
+  })
+
+  it.each([
+    [
+      "blur",
+      async (user: ReturnType<typeof userEvent.setup>) => {
+        await user.type(screen.getByRole("textbox"), "abc")
+        await user.tab()
+      },
+    ],
+    [
+      "Enter",
+      async (user: ReturnType<typeof userEvent.setup>) => {
+        await user.type(screen.getByRole("textbox"), "abc{Enter}")
+      },
+    ],
+  ])(
+    "commits on %s without a second timer commit",
+    async (_action, commit) => {
+      const { user, props, setStringValueSpy } = renderLive()
+
+      await commit(user)
+      expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+      expect(setStringValueSpy).toHaveBeenCalledWith(
+        props.element.id,
+        "abc",
+        fromUserCommit(props)
+      )
+
+      advanceMs(300)
+      expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+    }
+  )
+
+  it("cancels the timer and commits empty on search-clear", async () => {
+    const { user, props, setStringValueSpy } = renderLive({
+      type: TextInputProto.Type.SEARCH,
+    })
+
+    await user.type(screen.getByRole("searchbox"), "ab")
+    await user.click(screen.getByTestId("stTextInputClearButton"))
+    expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "",
+      fromUserCommit(props)
+    )
+
+    advanceMs(300)
+    expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not live-commit inside a form", async () => {
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const { user, setStringValueSpy } = renderLive(
+      { formId: "form" },
+      { widgetMgr }
+    )
+    sendRerunBackMsg.mockClear()
+
+    await user.type(screen.getByRole("textbox"), "ab")
+    const callsAfterTyping = setStringValueSpy.mock.calls.length
+    expect(callsAfterTyping).toBeGreaterThan(0)
+    advanceMs(300)
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(setStringValueSpy).toHaveBeenCalledTimes(callsAfterTyping)
+  })
+
+  it("stages with triggerRerun false when ignoreRerun is set", async () => {
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const { user, props, setStringValueSpy } = renderLive(
+      { ignoreRerun: true },
+      { widgetMgr }
+    )
+    sendRerunBackMsg.mockClear()
+
+    await user.type(screen.getByRole("textbox"), "abc")
+    advanceMs(300)
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "abc",
+      fromUserCommit(props, { triggerRerun: false })
+    )
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("does not commit an invalid live value", async () => {
+    const { user, setStringValueSpy } = renderLive({
+      validateRegex: "^[a-z]+$",
+    })
+
+    await user.type(screen.getByRole("textbox"), "123")
+    advanceMs(300)
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+    expect(screen.getByTestId("stTextInputErrorIcon")).toBeVisible()
+  })
+
+  it("commits a valid live value after invalid input", async () => {
+    const { user, props, setStringValueSpy } = renderLive({
+      validateRegex: "^[a-z]+$",
+    })
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "123")
+    advanceMs(300)
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+
+    await user.clear(input)
+    await user.type(input, "abc")
+    advanceMs(300)
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "abc",
+      fromUserCommit(props)
+    )
+  })
+
+  it("commits empty values that bypass validation", async () => {
+    const { user, props, setStringValueSpy } = renderLive({
+      validateRegex: "^[a-z]+$",
+      default: "hello",
+    })
+
+    await user.clear(screen.getByRole("textbox"))
+    advanceMs(300)
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "",
+      fromUserCommit(props)
+    )
+  })
+
+  it("does not schedule a live commit for over-limit keystrokes", async () => {
+    const { user, props, setStringValueSpy } = renderLive({ maxChars: 1 })
+
+    await user.type(screen.getByRole("textbox"), "ab")
+    advanceMs(300)
+    expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "a",
+      fromUserCommit(props)
+    )
+  })
+
+  it("does not commit during IME composition", () => {
+    const { props, setStringValueSpy } = renderLive()
+
+    const input = screen.getByRole("textbox")
+    // userEvent cannot synthesize IME compositionstart/end; fireEvent is required.
+    /* eslint-disable testing-library/prefer-user-event */
+    fireEvent.compositionStart(input)
+    fireEvent.change(input, { target: { value: "あ" } })
+    /* eslint-enable testing-library/prefer-user-event */
+    advanceMs(300)
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+    expect(input).toHaveValue("あ")
+
+    fireEvent.compositionEnd(input)
+    advanceMs(300)
+    expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "あ",
+      fromUserCommit(props)
+    )
+  })
+
+  it("does not commit an over-limit IME confirmation", () => {
+    const { setStringValueSpy } = renderLive({
+      liveDebounceMs: 0,
+      maxChars: 1,
+    })
+
+    const input = screen.getByRole("textbox")
+    /* eslint-disable testing-library/prefer-user-event */
+    fireEvent.compositionStart(input)
+    fireEvent.change(input, { target: { value: "a" } })
+    fireEvent.compositionEnd(input, { target: { value: "ab" } })
+    /* eslint-enable testing-library/prefer-user-event */
+
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+    expect(input).toHaveValue("a")
+  })
+
+  it("syncs uiValue on IME confirmation before a 0ms live commit", () => {
+    const { props, setStringValueSpy } = renderLive({ liveDebounceMs: 0 })
+
+    const input = screen.getByRole("textbox")
+    /* eslint-disable testing-library/prefer-user-event */
+    fireEvent.compositionStart(input)
+    fireEvent.change(input, { target: { value: "a" } })
+    expect(input).toHaveValue("a")
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+    fireEvent.compositionEnd(input, { target: { value: "あ" } })
+    // Browsers emit a trailing input event after compositionend; the same
+    // value must not schedule a second live commit.
+    fireEvent.change(input, { target: { value: "あ" } })
+    /* eslint-enable testing-library/prefer-user-event */
+
+    expect(input).toHaveValue("あ")
+    expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "あ",
+      fromUserCommit(props)
+    )
+  })
+
+  it("hides Press Enter to apply while still showing the character count", async () => {
+    const { user } = renderLive({ maxChars: 5 })
+
+    await user.type(screen.getByRole("textbox"), "ab")
+    expect(screen.queryByText("Press Enter to apply")).not.toBeInTheDocument()
+    expect(screen.getByText("2/5")).toBeVisible()
+  })
+
+  it("does not overwrite a newer live value with an older echo", async () => {
+    const { user, props, rerender } = renderLive({
+      liveDebounceMs: 0,
+      default: "",
+    })
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "abc")
+    expect(input).toHaveValue("abc")
+
+    const staleElement = TextInputProto.create({
+      ...props.element,
+      setValue: true,
+      value: "a",
+    })
+    rerender(<TextInput {...props} element={staleElement} />)
+    expect(input).toHaveValue("abc")
+  })
+
+  it("does not apply a stale setValue after blur", async () => {
+    const { user, props, rerender } = renderLive({
+      liveDebounceMs: 0,
+      default: "",
+    })
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "abc")
+    expect(input).toHaveValue("abc")
+    await user.tab()
+
+    const staleElement = TextInputProto.create({
+      ...props.element,
+      setValue: true,
+      value: "a",
+    })
+    rerender(<TextInput {...props} element={staleElement} />)
+    expect(input).toHaveValue("abc")
+  })
+
+  it("applies a focused session_state setValue that is not a live echo", async () => {
+    const { user, props, rerender } = renderLive({
+      liveDebounceMs: 0,
+      default: "",
+    })
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "abc")
+    expect(input).toHaveValue("abc")
+
+    const formattedElement = TextInputProto.create({
+      ...props.element,
+      setValue: true,
+      value: "ABC",
+    })
+    rerender(<TextInput {...props} element={formattedElement} />)
+    expect(input).toHaveValue("ABC")
+  })
+
+  it("does not apply a stale echo after an authoritative setValue", async () => {
+    const { user, props, rerender } = renderLive({
+      liveDebounceMs: 0,
+      default: "",
+    })
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "abc")
+    expect(input).toHaveValue("abc")
+
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "ABC",
+        })}
+      />
+    )
+    expect(input).toHaveValue("ABC")
+
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "ab",
+        })}
+      />
+    )
+    expect(input).toHaveValue("ABC")
+  })
+
+  it("does not rewrite widget state when a latest-commit echo is acked", async () => {
+    const { user, props, setStringValueSpy, rerender } = renderLive({
+      liveDebounceMs: 0,
+      default: "",
+    })
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "abc")
+    expect(input).toHaveValue("abc")
+    setStringValueSpy.mockClear()
+
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "abc",
+        })}
+      />
+    )
+    expect(input).toHaveValue("abc")
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+  })
+
+  it("applies a session_state reset to empty after ordinary live reruns", async () => {
+    const { user, props, rerenderWithContexts } = renderLive({
+      liveDebounceMs: 0,
+      default: "",
+    })
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "a")
+    rerenderWithContexts(<TextInput {...props} />, {
+      scriptRunContext: { scriptRunFinishedSequence: 1 },
+    })
+    await user.clear(input)
+    expect(input).toHaveValue("")
+    rerenderWithContexts(<TextInput {...props} />, {
+      scriptRunContext: { scriptRunFinishedSequence: 2 },
+    })
+    await user.type(input, "banana")
+    expect(input).toHaveValue("banana")
+    rerenderWithContexts(<TextInput {...props} />, {
+      scriptRunContext: { scriptRunFinishedSequence: 3 },
+    })
+    rerenderWithContexts(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "",
+        })}
+      />,
+      { scriptRunContext: { scriptRunFinishedSequence: 3 } }
+    )
+    expect(input).toHaveValue("")
+  })
+
+  it("does not restore an earlier committed string before the live rerun finishes", async () => {
+    const { user, props, rerender } = renderLive({
+      liveDebounceMs: 0,
+      default: "",
+    })
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "abc")
+    await user.type(input, "d")
+    expect(input).toHaveValue("abcd")
+
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "abc",
+        })}
+      />
+    )
+    expect(input).toHaveValue("abcd")
+  })
+
+  it("applies a session_state restore of an earlier committed string after a live rerun finishes", async () => {
+    const { user, props, rerenderWithContexts } = renderLive({
+      liveDebounceMs: 0,
+      default: "",
+    })
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "abc")
+    rerenderWithContexts(<TextInput {...props} />, {
+      scriptRunContext: { scriptRunFinishedSequence: 1 },
+    })
+    await user.type(input, "d")
+    expect(input).toHaveValue("abcd")
+    rerenderWithContexts(<TextInput {...props} />, {
+      scriptRunContext: { scriptRunFinishedSequence: 2 },
+    })
+    rerenderWithContexts(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "abc",
+        })}
+      />,
+      { scriptRunContext: { scriptRunFinishedSequence: 2 } }
+    )
+    expect(input).toHaveValue("abc")
+  })
+
+  it("does not apply a stale echo after an unrelated fragment finish", async () => {
+    const { user, props, rerenderWithContexts } = renderLive(
+      { liveDebounceMs: 0, default: "" },
+      { fragmentId: "search-fragment" }
+    )
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "abc")
+    await user.type(input, "d")
+    expect(input).toHaveValue("abcd")
+
+    rerenderWithContexts(
+      <TextInput
+        {...props}
+        fragmentId="search-fragment"
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "abc",
+        })}
+      />,
+      {
+        scriptRunContext: {
+          scriptRunFinishedSequence: 1,
+          scriptRunFinishedFragmentIds: ["other-fragment"],
+        },
+      }
+    )
+    expect(input).toHaveValue("abcd")
+  })
+
+  it("applies a session_state reset after this fragment finishes", async () => {
+    const { user, props, rerenderWithContexts } = renderLive(
+      { liveDebounceMs: 0, default: "" },
+      { fragmentId: "search-fragment" }
+    )
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "banana")
+    rerenderWithContexts(
+      <TextInput {...props} fragmentId="search-fragment" />,
+      {
+        scriptRunContext: {
+          scriptRunFinishedSequence: 1,
+          scriptRunFinishedFragmentIds: ["search-fragment"],
+        },
+      }
+    )
+    rerenderWithContexts(
+      <TextInput
+        {...props}
+        fragmentId="search-fragment"
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "",
+        })}
+      />,
+      {
+        scriptRunContext: {
+          scriptRunFinishedSequence: 1,
+          scriptRunFinishedFragmentIds: ["search-fragment"],
+        },
+      }
+    )
+    expect(input).toHaveValue("")
+  })
+
+  it("recommits the same string after a dirty setValue was dropped", async () => {
+    const { user, props, setStringValueSpy, rerender } = renderLive({
+      default: "",
+    })
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "abc")
+    advanceMs(300)
+    setStringValueSpy.mockClear()
+
+    await user.type(input, "x")
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "XYZ",
+        })}
+      />
+    )
+    expect(input).toHaveValue("abcx")
+
+    await user.type(input, "{Backspace}")
+    expect(input).toHaveValue("abc")
+    advanceMs(300)
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "abc",
+      fromUserCommit(props)
+    )
+  })
+
+  it("does not apply a stale B echo after A then B then A", () => {
+    const { props, rerender } = renderLive({
+      liveDebounceMs: 0,
+      default: "",
+    })
+
+    const input = screen.getByRole("textbox")
+    /* eslint-disable testing-library/prefer-user-event -- sequential live commits without extra clear-to-empty */
+    fireEvent.change(input, { target: { value: "A" } })
+    fireEvent.change(input, { target: { value: "B" } })
+    fireEvent.change(input, { target: { value: "A" } })
+    /* eslint-enable testing-library/prefer-user-event */
+    expect(input).toHaveValue("A")
+
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "A",
+        })}
+      />
+    )
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "B",
+        })}
+      />
+    )
+    expect(input).toHaveValue("A")
+  })
+
+  it("applies a session_state restore of a string staged with ignoreRerun", async () => {
+    const { user, props, rerender } = renderLive({
+      liveDebounceMs: 0,
+      ignoreRerun: true,
+      default: "",
+    })
+
+    const input = screen.getByRole("textbox")
+    await user.type(input, "ab")
+    expect(input).toHaveValue("ab")
+
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "a",
+        })}
+      />
+    )
+    expect(input).toHaveValue("a")
+  })
+
+  it("cancels a pending debounce when live is turned off", async () => {
+    const { user, props, setStringValueSpy, rerender } = renderLive()
+
+    await user.type(screen.getByRole("textbox"), "abc")
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          liveDebounceMs: null,
+        })}
+      />
+    )
+    advanceMs(300)
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+  })
+
+  it("reschedules a pending debounce when the delay changes", async () => {
+    const { user, props, setStringValueSpy, rerender } = renderLive()
+
+    await user.type(screen.getByRole("textbox"), "abc")
+    advanceMs(200)
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          liveDebounceMs: 500,
+        })}
+      />
+    )
+    advanceMs(100)
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+    advanceMs(500)
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "abc",
+      fromUserCommit(props)
+    )
+  })
+
+  it("commits live values for password inputs", async () => {
+    const { user, props, setStringValueSpy } = renderLive({
+      type: TextInputProto.Type.PASSWORD,
+    })
+
+    await user.type(screen.getByPlaceholderText("Placeholder"), "secret")
+    advanceMs(300)
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "secret",
+      fromUserCommit(props)
+    )
   })
 })

@@ -298,10 +298,12 @@ describe("Running Icon", () => {
     })
 
     await waitFor(() => {
-      const icon = screen.getByTestId("stStatusWidgetNewYearsIcon")
-      expect(icon).toBeVisible()
-      expect(icon).toHaveAttribute("src", "/src/assets/img/fireworks.gif")
+      expect(screen.getByTestId("stStatusWidgetNewYearsIcon")).toBeVisible()
     })
+    expect(screen.getByTestId("stStatusWidgetNewYearsIcon")).toHaveAttribute(
+      "src",
+      "/src/assets/img/fireworks.gif"
+    )
   })
 
   it("renders firework gif on Jan 6th", async () => {
@@ -319,10 +321,12 @@ describe("Running Icon", () => {
     })
 
     await waitFor(() => {
-      const icon = screen.getByTestId("stStatusWidgetNewYearsIcon")
-      expect(icon).toBeVisible()
-      expect(icon).toHaveAttribute("src", "/src/assets/img/fireworks.gif")
+      expect(screen.getByTestId("stStatusWidgetNewYearsIcon")).toBeVisible()
     })
+    expect(screen.getByTestId("stStatusWidgetNewYearsIcon")).toHaveAttribute(
+      "src",
+      "/src/assets/img/fireworks.gif"
+    )
   })
 
   it("renders regular running gif after New Years", async () => {

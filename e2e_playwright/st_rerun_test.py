@@ -17,9 +17,13 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     click_button,
+    click_toggle,
     expect_markdown,
     expect_prefixed_markdown,
+    get_radio,
     get_text_input,
+    get_toggle,
+    select_radio_option,
     select_selectbox_option,
 )
 
@@ -32,6 +36,13 @@ def _expect_initial_reruns_finished(app: Page):
 
 def _expect_initial_reruns_count_text(app: Page):
     expect_prefixed_markdown(app, "app run count:", "4")
+
+
+def _expect_body_level_rerun_widget_writes(app: Page):
+    expect_prefixed_markdown(app, "Select1 write:", "Spam", exact_match=True)
+    expect_prefixed_markdown(app, "Select2 write:", "Bacon", exact_match=True)
+    expect_prefixed_markdown(app, "Select3 write:", "Sausage", exact_match=True)
+    expect_prefixed_markdown(app, "toggle after write:", "True", exact_match=True)
 
 
 def test_st_rerun_restarts_the_session_when_invoked(app: Page):
@@ -130,3 +141,39 @@ def test_st_rerun_in_widget_callback_preserves_widget_values(app: Page):
     expect_prefixed_markdown(app, "callback count:", "2", exact_match=True)
     expect_prefixed_markdown(app, "button in body:", "False", exact_match=True)
     expect_prefixed_markdown(app, "callback text:", "hello", exact_match=True)
+
+
+def test_body_level_st_rerun_preserves_widget_values(app: Page):
+    """Widgets after a body-level st.rerun() keep their values and the UI matches.
+
+    Covers GitHub issue #3533: Python return values after the rerun used to reset
+    to defaults while the radio/toggle UI still showed the previous selection.
+    """
+    _expect_initial_reruns_finished(app)
+    _expect_initial_reruns_count_text(app)
+
+    select_radio_option(app, "Spam", label="Select1")
+    select_radio_option(app, "Bacon", label="Select2")
+    select_radio_option(app, "Sausage", label="Select3")
+    click_toggle(app, "Toggle after rerun")
+    _expect_body_level_rerun_widget_writes(app)
+
+    click_button(app, "body-level rerun")
+    _expect_body_level_rerun_widget_writes(app)
+
+    # Visible radio/toggle state must match the writes (no UI desync).
+    select2 = get_radio(app, "Select2")
+    expect(select2.get_by_role("radio", name="Bacon")).to_be_checked()
+    expect(select2.get_by_role("radio", name="Egg")).not_to_be_checked()
+    expect(
+        get_radio(app, "Select3").get_by_role("radio", name="Sausage")
+    ).to_be_checked()
+    expect(get_toggle(app, "Toggle after rerun").locator("input")).to_be_checked()
+
+    # 4 initial + 3 radios + 1 toggle + 2 for click-and-rerun. Use an
+    # auto-waiting count so we do not snapshot the interrupted run.
+    expect_prefixed_markdown(app, "app run count:", "10", exact_match=True)
+
+    click_button(app, "body-level rerun")
+    expect_prefixed_markdown(app, "app run count:", "12", exact_match=True)
+    _expect_body_level_rerun_widget_writes(app)

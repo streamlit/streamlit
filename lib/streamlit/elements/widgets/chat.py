@@ -98,7 +98,7 @@ _ACCEPTED_AUDIO_MIME_TYPES: frozenset[str] = frozenset(
 _ChatInputValueItem: TypeAlias = str | list[UploadedFile] | UploadedFile | None
 
 
-@dataclass
+@dataclass(repr=False)
 class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
     """Represents the value returned by `st.chat_input` after user interaction.
 
@@ -130,31 +130,27 @@ class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
     audio: UploadedFile | None = None
     _include_files: bool = field(default=False, repr=False, compare=False)
     _include_audio: bool = field(default=False, repr=False, compare=False)
-    _included_keys: tuple[str, ...] = field(init=False, repr=False, compare=False)
 
-    def __post_init__(self) -> None:
-        """Compute and cache the included keys after initialization."""
-        keys: list[str] = ["text"]
-        if self._include_files:
-            keys.append("files")
-        if self._include_audio:
-            keys.append("audio")
-        object.__setattr__(self, "_included_keys", tuple(keys))
-
-    def _get_included_keys(self) -> tuple[str, ...]:
-        """Return tuple of keys that should be exposed based on inclusion flags."""
-        return self._included_keys
+    def to_dict(self) -> dict[str, _ChatInputValueItem]:
+        # Include flags stay the allow-list. Instance attrs drop out after del.
+        stored = vars(self)
+        result: dict[str, _ChatInputValueItem] = {}
+        if "text" in stored:
+            result["text"] = stored["text"]
+        if self._include_files and "files" in stored:
+            result["files"] = stored["files"]
+        if self._include_audio and "audio" in stored:
+            result["audio"] = stored["audio"]
+        return result
 
     def __len__(self) -> int:
-        return len(self._get_included_keys())
+        return len(self.to_dict())
 
     def __iter__(self) -> Iterator[str]:
-        return iter(self._get_included_keys())
+        return iter(self.to_dict())
 
     def __contains__(self, key: object) -> bool:
-        if not isinstance(key, str):
-            return False
-        return key in self._get_included_keys()
+        return isinstance(key, str) and key in self.to_dict()
 
     @overload
     def __getitem__(self, item: Literal["text"]) -> str: ...
@@ -169,12 +165,9 @@ class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
     def __getitem__(self, item: str) -> _ChatInputValueItem: ...
 
     def __getitem__(self, item: str) -> _ChatInputValueItem:
-        if item not in self._get_included_keys():
+        if item not in self:
             raise KeyError(f"Invalid key: {item}")
-        try:
-            return getattr(self, item)  # type: ignore[no-any-return]
-        except AttributeError:  # pragma: no cover - defensive
-            raise KeyError(f"Invalid key: {item}") from None
+        return self.to_dict()[item]
 
     def __getattribute__(self, name: str) -> Any:
         # Intercept access to files/audio when they're excluded
@@ -191,25 +184,26 @@ class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
         return object.__getattribute__(self, name)
 
     def __setitem__(self, key: str, value: Any) -> None:
-        if key not in self._get_included_keys():
+        allowed = {"text"}
+        if self._include_files:
+            allowed.add("files")
+        if self._include_audio:
+            allowed.add("audio")
+        if key not in allowed:
             raise KeyError(f"Invalid key: {key}")
         setattr(self, key, value)
 
     def __delitem__(self, key: str) -> None:
-        if key not in self._get_included_keys():
+        if key not in self:
             raise KeyError(f"Invalid key: {key}")
-        try:
-            delattr(self, key)
-        except AttributeError:  # pragma: no cover - defensive
-            raise KeyError(f"Invalid key: {key}") from None
+        delattr(self, key)
 
-    def to_dict(self) -> dict[str, _ChatInputValueItem]:
-        result: dict[str, _ChatInputValueItem] = {"text": self.text}
-        if self._include_files:
-            result["files"] = self.files
-        if self._include_audio:
-            result["audio"] = self.audio
-        return result
+    def __repr__(self) -> str:
+        # Build the repr from to_dict() so excluded keys do not raise.
+        # The generated dataclass repr always reads .files/.audio, which
+        # __getattribute__ rejects when those inputs were not accepted.
+        args = ", ".join(f"{key}={value!r}" for key, value in self.to_dict().items())
+        return f"{type(self).__name__}({args})"
 
 
 class PresetNames(str, Enum):

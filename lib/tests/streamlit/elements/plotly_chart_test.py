@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import copy
+import json
 from unittest.mock import MagicMock, patch
 
 import plotly.express as px
@@ -755,3 +756,34 @@ def test_plotly_state_is_read_only() -> None:
     copied = copy.deepcopy(result)
     assert isinstance(copied, PlotlyState)
     assert isinstance(copied.selection, PlotlySelectionState)
+
+
+def test_plotly_serde_deserializes_selection_json() -> None:
+    """Non-empty selection JSON is parsed into typed Plotly selection state."""
+    payload = json.dumps(
+        {
+            "selection": {
+                "points": [{"x": 1}],
+                "point_indices": [0],
+                "box": [],
+                "lasso": [],
+            }
+        }
+    )
+    result = PlotlyChartSelectionSerde().deserialize(payload)
+    assert result.selection.points == [{"x": 1}]
+    assert result["selection"] is result.selection
+
+
+def test_plotly_state_wraps_plain_selection_dict_and_other_keys() -> None:
+    """A plain dict ``selection`` is wrapped; unrelated keys use the base getter."""
+    state = PlotlyState(
+        {
+            "selection": {"points": [], "point_indices": [], "box": [], "lasso": []},
+            "other": 3,
+        }
+    )
+    selection = state["selection"]
+    assert isinstance(selection, PlotlySelectionState)
+    assert state["selection"] is selection
+    assert state["other"] == 3

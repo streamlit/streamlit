@@ -693,5 +693,24 @@ describe("Feedback widget", () => {
       // Thumbs down (value 0) should be selected
       expect(activeButtons).toHaveLength(1)
     })
+
+    it("updates from a click when proto still has a leftover value", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        type: FeedbackProto.FeedbackType.THUMBS,
+        value: 0,
+      })
+      render(<Feedback {...props} />)
+
+      const buttons = getFeedbackButtons()
+      await user.click(buttons[0])
+
+      const feedbackWidget = screen.getByTestId("stFeedback")
+      const activeButtons = within(feedbackWidget).getAllByTestId(
+        "stFeedbackButtonActive"
+      )
+      expect(activeButtons).toHaveLength(1)
+      expect(buttons[0]).toHaveAttribute("aria-checked", "true")
+    })
   })
 })

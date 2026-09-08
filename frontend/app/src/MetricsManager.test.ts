@@ -181,7 +181,7 @@ describe("initialize", () => {
     await mm.initialize({ gatherUsageStats: true })
 
     // Checks for cached config first
-    expect(getItemSpy).toBeCalledWith("stMetricsConfig")
+    expect(getItemSpy).toHaveBeenCalledWith("stMetricsConfig")
     // Fetches if no cached config
     expect(fetch.mock.calls.length).toBe(1)
     expect(fetch.mock.calls[0][0]).toEqual(DEFAULT_METRICS_CONFIG)
@@ -338,7 +338,7 @@ describe("metrics helpers", () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })
 
-    expect(getItemSpy).toBeCalledWith("ajs_anonymous_id")
+    expect(getItemSpy).toHaveBeenCalledWith("ajs_anonymous_id")
     expect(getCookieSpy).toHaveBeenCalled()
     expect(setCookieSpy).toHaveBeenCalled()
     expect(setItemSpy).toHaveBeenCalled()

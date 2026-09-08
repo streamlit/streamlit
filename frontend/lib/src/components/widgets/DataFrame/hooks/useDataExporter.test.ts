@@ -161,12 +161,14 @@ describe("useDataExporter hook", () => {
       expect(getCellContentMock).toHaveBeenCalled()
     })
     // Number of writes: 1 for BOM + 1 for header + num rows
-    expect(mockWrite).toBeCalledTimes(NUM_ROWS + 2)
-    expect(mockWrite).toBeCalledWith(textEncoder.encode("\ufeff"))
+    expect(mockWrite).toHaveBeenCalledTimes(NUM_ROWS + 2)
+    expect(mockWrite).toHaveBeenCalledWith(textEncoder.encode("\ufeff"))
     // Write the header row:
-    expect(mockWrite).toBeCalledWith(textEncoder.encode("column_1,column_2\n"))
-    expect(mockWrite).toBeCalledWith(textEncoder.encode("123,foo\n"))
-    expect(mockClose).toBeCalledTimes(1)
+    expect(mockWrite).toHaveBeenCalledWith(
+      textEncoder.encode("column_1,column_2\n")
+    )
+    expect(mockWrite).toHaveBeenCalledWith(textEncoder.encode("123,foo\n"))
+    expect(mockClose).toHaveBeenCalledTimes(1)
   })
 
   it("correctly creates a file picker", async () => {
@@ -182,9 +184,9 @@ describe("useDataExporter hook", () => {
     result.current.exportToCsv()
 
     await waitFor(() => {
-      expect(showSaveFilePicker).toBeCalledTimes(1)
+      expect(showSaveFilePicker).toHaveBeenCalledTimes(1)
     })
-    expect(showSaveFilePicker).toBeCalledWith({
+    expect(showSaveFilePicker).toHaveBeenCalledWith({
       excludeAcceptAllOption: false,
       suggestedName: `${timestamp}_export.csv`,
       types: [{ accept: { "text/csv": [".csv"] } }],
@@ -282,8 +284,8 @@ describe("useDataExporter hook", () => {
     })
 
     // Number of writes: 1 for BOM + 1 for header + 0 rows
-    expect(mockWrite).toBeCalledTimes(2)
-    expect(mockClose).toBeCalledTimes(1)
+    expect(mockWrite).toHaveBeenCalledTimes(2)
+    expect(mockClose).toHaveBeenCalledTimes(1)
   })
 
   it("excludes button columns from the CSV export while keeping column alignment", async () => {
@@ -349,10 +351,12 @@ describe("useDataExporter hook", () => {
     })
 
     // Header skips the button column:
-    expect(mockWrite).toBeCalledWith(textEncoder.encode("column_1,column_2\n"))
+    expect(mockWrite).toHaveBeenCalledWith(
+      textEncoder.encode("column_1,column_2\n")
+    )
     // Row skips the button column but keeps the data columns read from their
     // original indices (number at 0, text at 2):
-    expect(mockWrite).toBeCalledWith(textEncoder.encode("123,foo\n"))
+    expect(mockWrite).toHaveBeenCalledWith(textEncoder.encode("123,foo\n"))
     // The button column index (1) must never be read for export:
     expect(getCellContentWithButtonMock).not.toHaveBeenCalledWith([1, 0])
   })
@@ -382,6 +386,6 @@ describe("useDataExporter hook", () => {
     })
 
     // Should handle null values gracefully (empty string in CSV)
-    expect(mockWrite).toBeCalledWith(textEncoder.encode(",foo\n"))
+    expect(mockWrite).toHaveBeenCalledWith(textEncoder.encode(",foo\n"))
   })
 })

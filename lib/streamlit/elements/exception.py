@@ -322,8 +322,9 @@ def _is_in_package(file: str, package_path: str) -> bool:
     """True if the given file is part of package_path."""
     try:
         common_prefix = os.path.commonprefix([os.path.realpath(file), package_path])  # noqa: RUF071
-    except ValueError:
-        # Raised if paths are on different drives.
+    except ValueError:  # pragma: no cover - defensive
+        # ``commonprefix`` does not raise for cross-drive paths (that is
+        # ``commonpath``); keep a safe fallback if a future stdlib change does.
         return False
 
     return common_prefix == package_path

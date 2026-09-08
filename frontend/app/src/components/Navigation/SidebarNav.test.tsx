@@ -23,7 +23,7 @@ import {
   renderWithContexts,
   RenderWithContextsOptions,
 } from "@streamlit/lib/testing"
-import { IAppPage, PageConfig } from "@streamlit/protobuf"
+import { type AppPage, PageConfig } from "@streamlit/protobuf"
 
 import SidebarNav, { Props } from "./SidebarNav"
 
@@ -36,7 +36,7 @@ vi.mock("~lib/util/Hooks", async () => ({
 /**
  * Generates the main/default page for testing purposes
  */
-const generateMainPage = (sectionHeaders?: string[]): IAppPage => ({
+const generateMainPage = (sectionHeaders?: string[]): AppPage.$Properties => ({
   pageScriptHash: "main_page_hash",
   pageName: "streamlit app",
   urlPathname: "streamlit_app",
@@ -72,7 +72,7 @@ const generateAdditionalPage = (
     sectionHeaders?: string[]
     icons?: boolean
   }
-): IAppPage => {
+): AppPage.$Properties => {
   const { sectionHeaders, icons } = options
   const suffix = generatePageSuffix(pageIndex, totalPages)
 
@@ -101,9 +101,9 @@ const generateAppPages = (
     sectionHeaders?: string[]
     icons?: boolean
   } = {}
-): IAppPage[] => {
+): AppPage.$Properties[] => {
   const { sectionHeaders } = options
-  const pages: IAppPage[] = [generateMainPage(sectionHeaders)]
+  const pages: AppPage.$Properties[] = [generateMainPage(sectionHeaders)]
 
   // Generate additional pages (totalPages - 1)
   for (let i = 0; i < totalPages - 1; i++) {
@@ -118,8 +118,8 @@ const generateAppPages = (
  */
 const createAppPagesForSections = (sectionPageCounts: {
   [key: string]: number
-}): IAppPage[] => {
-  const pages: IAppPage[] = []
+}): AppPage.$Properties[] => {
+  const pages: AppPage.$Properties[] = []
   let pageIndex = 0
   Object.entries(sectionPageCounts).forEach(([sectionHeader, count]) => {
     for (let i = 0; i < count; i++) {
@@ -233,9 +233,11 @@ describe("SidebarNav", () => {
     it("are added to each link", () => {
       const buildAppPageURL = vi
         .fn()
-        .mockImplementation((_pageLinkBaseURL: string, page: IAppPage) => {
-          return `http://mock/app/page/${page.urlPathname}`
-        })
+        .mockImplementation(
+          (_pageLinkBaseURL: string, page: AppPage.$Properties) => {
+            return `http://mock/app/page/${page.urlPathname}`
+          }
+        )
       renderSidebarNav({ endpoints: mockEndpoints({ buildAppPageURL }) })
 
       const links = screen.getAllByRole("link")
@@ -695,7 +697,7 @@ describe("SidebarNav", () => {
 
   describe("hidden pages", () => {
     it("does not render hidden pages in the navigation", () => {
-      const appPages: IAppPage[] = [
+      const appPages: AppPage.$Properties[] = [
         {
           pageScriptHash: "visible_hash_1",
           pageName: "visible page 1",
@@ -735,13 +737,16 @@ describe("SidebarNav", () => {
 
     it("navigation count reflects only visible pages", () => {
       // Create 13 total pages, but only 12 are visible (below collapse threshold)
-      const appPages: IAppPage[] = Array.from({ length: 12 }, (_, i) => ({
-        pageScriptHash: `visible_hash_${i}`,
-        pageName: `visible page ${i}`,
-        urlPathname: `visible_page_${i}`,
-        isDefault: i === 0,
-        isHidden: false,
-      }))
+      const appPages: AppPage.$Properties[] = Array.from(
+        { length: 12 },
+        (_, i) => ({
+          pageScriptHash: `visible_hash_${i}`,
+          pageName: `visible page ${i}`,
+          urlPathname: `visible_page_${i}`,
+          isDefault: i === 0,
+          isHidden: false,
+        })
+      )
       // Add a hidden page
       appPages.push({
         pageScriptHash: "hidden_hash",
@@ -768,13 +773,16 @@ describe("SidebarNav", () => {
 
     it("shows View more button based on visible page count", () => {
       // Create 14 visible pages (above collapse threshold)
-      const appPages: IAppPage[] = Array.from({ length: 14 }, (_, i) => ({
-        pageScriptHash: `visible_hash_${i}`,
-        pageName: `visible page ${i}`,
-        urlPathname: `visible_page_${i}`,
-        isDefault: i === 0,
-        isHidden: false,
-      }))
+      const appPages: AppPage.$Properties[] = Array.from(
+        { length: 14 },
+        (_, i) => ({
+          pageScriptHash: `visible_hash_${i}`,
+          pageName: `visible page ${i}`,
+          urlPathname: `visible_page_${i}`,
+          isDefault: i === 0,
+          isHidden: false,
+        })
+      )
       // Add hidden pages that should not affect the count
       appPages.push(
         {
@@ -807,7 +815,7 @@ describe("SidebarNav", () => {
     })
 
     it("highlights current page even when it is hidden", () => {
-      const appPages: IAppPage[] = [
+      const appPages: AppPage.$Properties[] = [
         {
           pageScriptHash: "visible_hash",
           pageName: "visible page",
@@ -850,7 +858,7 @@ describe("SidebarNav", () => {
     })
 
     it("does not render hidden pages in sections", () => {
-      const appPages: IAppPage[] = [
+      const appPages: AppPage.$Properties[] = [
         {
           pageScriptHash: "visible_hash_1",
           pageName: "visible page 1",
@@ -895,7 +903,7 @@ describe("SidebarNav", () => {
     })
 
     it("does not render section when all pages in section are hidden", () => {
-      const appPages: IAppPage[] = [
+      const appPages: AppPage.$Properties[] = [
         {
           pageScriptHash: "visible_hash_1",
           pageName: "visible page 1",
@@ -954,7 +962,7 @@ describe("SidebarNav", () => {
 
   describe("section header markdown", () => {
     it("renders markdown in section headers with links disabled", () => {
-      const appPages: IAppPage[] = [
+      const appPages: AppPage.$Properties[] = [
         {
           pageScriptHash: "hash_1",
           pageName: "page 1",
@@ -997,7 +1005,7 @@ describe("SidebarNav", () => {
     it("does not call onPageChange when clicking an external link", async () => {
       const onPageChange = vi.fn()
       const user = userEvent.setup()
-      const appPages: IAppPage[] = [
+      const appPages: AppPage.$Properties[] = [
         {
           pageScriptHash: "internal_hash",
           pageName: "internal page",
@@ -1038,7 +1046,7 @@ describe("SidebarNav", () => {
       vi.spyOn(LibModule, "isMobile").mockReturnValue(true)
 
       const collapseSidebar = vi.fn()
-      const appPages: IAppPage[] = [
+      const appPages: AppPage.$Properties[] = [
         {
           pageScriptHash: "internal_hash",
           pageName: "internal page",
@@ -1073,7 +1081,7 @@ describe("SidebarNav", () => {
     })
 
     it("does not render hidden external pages in the navigation", () => {
-      const appPages: IAppPage[] = [
+      const appPages: AppPage.$Properties[] = [
         {
           pageScriptHash: "visible_internal_hash",
           pageName: "visible internal",

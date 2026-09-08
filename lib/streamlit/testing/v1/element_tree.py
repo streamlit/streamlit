@@ -28,6 +28,7 @@ from typing import (
     Any,
     ClassVar,
     Generic,
+    NoReturn,
     TypeAlias,
     TypeVar,
     cast,
@@ -94,6 +95,7 @@ if TYPE_CHECKING:
     from streamlit.proto.Toast_pb2 import Toast as ToastProto
     from streamlit.runtime.state.safe_session_state import SafeSessionState
     from streamlit.testing.v1.app_test import AppTest
+    from streamlit.typing import ChatInputValue
 
 T = TypeVar("T")
 
@@ -179,8 +181,35 @@ class Element(ABC):
         ...
 
     def __getattr__(self, name: str) -> Any:
-        """Fallback attempt to get an attribute from the proto."""
+        """Look up missing names on the element's proto, except AppTest interactions.
+
+        ``set_value`` and ``click`` are unsupported AppTest interactions even when a
+        proto defines those names as fields (pagination's ``set_value`` is a bool).
+        Other missing names still fall through to the proto.
+        """
+        if name in {"set_value", "click"}:
+
+            def unsupported_interaction(*_args: Any, **_kwargs: Any) -> None:
+                self._raise_unsupported_interaction(name)
+
+            return unsupported_interaction
         return getattr(self.proto, name)
+
+    def _raise_unsupported_interaction(self, method: str) -> NoReturn:
+        """Raise AppTestError: typed widgets already have interaction methods; other nodes do not."""
+        key_part = f" (key={self.key!r})" if self.key else ""
+        if isinstance(self, Widget):
+            raise AppTestError(
+                f"{method}() is not supported for {self.type}{key_part}. "
+                "Use set_value() or one of this widget's typed interaction "
+                "methods."
+            )
+        raise AppTestError(
+            f"{method}() is not supported for {self.type}{key_part}. "
+            "AppTest can inspect this element but does not implement "
+            "interactions for it. Set its value through at.session_state if it "
+            "has a key, or use a Playwright e2e test."
+        )
 
     def run(self, *, timeout: float | None = None) -> AppTest:
         """Run the ``AppTest`` script which contains the element.
@@ -522,9 +551,15 @@ class ChatInput(Widget):
         return ws
 
     @property
-    def value(self) -> str | None:
-        """The value of the widget. (str)"""  # noqa: D400
-        if self._value:
+    def value(self) -> str | ChatInputValue | None:
+        """The pending or last submitted chat input value.
+
+        Before ``.run()``, a pending ``set_value`` is that string (including ``""``).
+        After ``.run()``, this is a plain ``str`` for a text-only chat input, a
+        ``ChatInputValue`` when ``accept_file`` or ``accept_audio`` is enabled, and
+        ``None`` when nothing was submitted.
+        """
+        if self._value is not None:
             return self._value
         state = self.root.session_state
         assert state
@@ -2693,9 +2728,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 elif alert_format == AlertProto.Format.WARNING:
                     new_node = Warning(elt.alert, root=root)
                 else:
-                    raise ValueError(
-                        f"Unknown alert type with format {elt.alert.format}"
-                    )
+                    new_node = UnknownElement(elt, root=root)
             elif ty == "dataframe":
                 new_node = Dataframe(elt.dataframe, root=root)
             elif ty == "table":
@@ -2736,7 +2769,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 elif elt.heading.tag == HeadingProtoTag.SUBHEADER_TAG.value:
                     new_node = Subheader(elt.heading, root=root)
                 else:
-                    raise ValueError(f"Unknown heading type with tag {elt.heading.tag}")
+                    new_node = UnknownElement(elt, root=root)
             elif ty == "imgs":
                 new_node = Image(elt.imgs, root=root)
             elif ty == "json":
@@ -2751,9 +2784,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 elif elt.markdown.element_type == MarkdownProto.Type.DIVIDER:
                     new_node = Divider(elt.markdown, root=root)
                 else:
-                    raise ValueError(
-                        f"Unknown markdown type {elt.markdown.element_type}"
-                    )
+                    new_node = UnknownElement(elt, root=root)
             elif ty == "menu_button":
                 new_node = MenuButton(elt.menu_button, root=root)
             elif ty == "metric":
@@ -2772,7 +2803,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 elif elt.slider.type == SliderProto.Type.SELECT_SLIDER:
                     new_node = SelectSlider(elt.slider, root=root)
                 else:
-                    raise ValueError(f"Slider with unknown type {elt.slider}")
+                    new_node = UnknownElement(elt, root=root)
             elif ty == "text":
                 new_node = Text(elt.text, root=root)
             elif ty == "text_area":

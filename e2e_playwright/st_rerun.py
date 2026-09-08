@@ -107,3 +107,17 @@ st.write(f"untouched text: {untouched_text}")
 st.write(f"callback count: {st.session_state.callback_count}")
 st.write(f"button in body: {button_value_in_body}")
 st.write(f"resumed after rerun: {'resumed_after_rerun' in st.session_state}")
+
+# Widgets after a body-level st.rerun() must keep their values (GitHub issue #3533).
+select1 = st.radio("Select1", ["Egg", "Spam", "Bacon", "Sausage"], key="select1_after")
+st.write(f"Select1 write: {select1}")
+
+if st.button("body-level rerun"):
+    st.rerun()
+
+select2 = st.radio("Select2", ["Egg", "Spam", "Bacon", "Sausage"], key="select2_after")
+st.write(f"Select2 write: {select2}")
+select3 = st.radio("Select3", ["Egg", "Spam", "Bacon", "Sausage"], key="select3_after")
+st.write(f"Select3 write: {select3}")
+toggle_after = st.toggle("Toggle after rerun", key="toggle_after")
+st.write(f"toggle after write: {toggle_after}")

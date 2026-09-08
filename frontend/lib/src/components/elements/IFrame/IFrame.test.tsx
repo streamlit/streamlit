@@ -33,8 +33,8 @@ const getProps = ({
   heightConfig,
 }: {
   elementProps?: Partial<IFrameProto>
-  widthConfig?: streamlit.IWidthConfig | null
-  heightConfig?: streamlit.IHeightConfig | null
+  widthConfig?: streamlit.WidthConfig.$Properties | null
+  heightConfig?: streamlit.HeightConfig.$Properties | null
 } = {}): IFrameProps => ({
   element: IFrameProto.create({
     ...elementProps,

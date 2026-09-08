@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+import { compile } from "vega-lite"
+import type { TopLevelSpec } from "vega-lite"
+
 import { renderHook } from "~lib/components/shared/ElementFullscreen/testUtils"
 import { lightTheme } from "~lib/theme/themeConfigs"
 
@@ -920,14 +923,20 @@ describe("useVegaElementPreprocessor", () => {
       name: string
       select?:
         | string
-        | { type?: string; encodings?: string[]; [key: string]: unknown }
+        | {
+            type?: string
+            encodings?: string[]
+            fields?: string[]
+            [key: string]: unknown
+          }
+      bind?: unknown
       value?: unknown
     }
 
-    const renderWithParams = (
+    const renderSpecWithParams = (
       params: SelectParam[],
       selectionMode: string[] = ["point"]
-    ): SelectParam[] => {
+    ): VegaLiteSpec => {
       const { result } = renderHook(
         (element: VegaLiteChartElement) =>
           useVegaElementPreprocessor(
@@ -948,9 +957,14 @@ describe("useVegaElementPreprocessor", () => {
           }),
         }
       )
-      return (result.current.spec as unknown as { params: SelectParam[] })
-        .params
+      return result.current.spec as unknown as VegaLiteSpec
     }
+
+    const renderWithParams = (
+      params: SelectParam[],
+      selectionMode: string[] = ["point"]
+    ): SelectParam[] =>
+      renderSpecWithParams(params, selectionMode).params as SelectParam[]
 
     it("adds all chart encodings to shorthand point selections", () => {
       const [param] = renderWithParams([{ name: "pt", select: "point" }])
@@ -992,6 +1006,59 @@ describe("useVegaElementPreprocessor", () => {
       // With an empty selection mode, prepareSpecForSelections is skipped, so the
       // shorthand string is left as-is.
       expect(param.select).toBe("point")
+    })
+
+    it("does not add encodings to point selections that already specify fields", () => {
+      const [param] = renderWithParams([
+        { name: "pt", select: { type: "point", fields: ["Origin"] } },
+      ])
+      expect(param.select).toEqual({ type: "point", fields: ["Origin"] })
+      expect(param.select).not.toHaveProperty("encodings")
+    })
+
+    it("does not add encodings to point selections with fields and a radio bind", () => {
+      // Issue #8765: Altair radio binds set fields, not encodings.
+      const bind = {
+        input: "radio",
+        options: ["USA", "Europe", "Japan"],
+        name: "Region: ",
+      }
+      const spec = renderSpecWithParams([
+        {
+          name: "og_select",
+          select: { type: "point", fields: ["Origin"], toggle: false },
+          bind,
+          value: "USA",
+        },
+      ])
+      const [param] = spec.params as SelectParam[]
+      expect(param.select).toEqual({
+        type: "point",
+        fields: ["Origin"],
+        toggle: false,
+      })
+      expect(param.select).not.toHaveProperty("encodings")
+      expect(param.bind).toEqual(bind)
+
+      const { spec: compiledSpec } = compile(spec as unknown as TopLevelSpec)
+      const radioBinds = (compiledSpec.signals ?? []).filter(signal => {
+        if (!("bind" in signal)) {
+          return false
+        }
+        const signalBind = signal.bind as { input?: string } | undefined
+        return signalBind?.input === "radio"
+      })
+      expect(radioBinds).toHaveLength(1)
+    })
+
+    it("does not add encodings when fields and a scalar value are set", () => {
+      // Issue #10308: fields plus a scalar value must stay fields-only.
+      const [param] = renderWithParams([
+        { name: "pt", select: { type: "point", fields: ["index"] }, value: 3 },
+      ])
+      expect(param.select).toEqual({ type: "point", fields: ["index"] })
+      expect(param.select).not.toHaveProperty("encodings")
+      expect(param.value).toBe(3)
     })
   })
 

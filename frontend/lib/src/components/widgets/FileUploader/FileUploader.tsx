@@ -23,7 +23,6 @@ import {
   FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
   FileURLs as FileURLsProto,
-  IFileURLs,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
@@ -343,7 +342,7 @@ const FileUploader = ({
    * Update the file status when the upload has finished.
    */
   const onUploadComplete = useCallback(
-    (localFileId: number, fileUrls: IFileURLs): void => {
+    (localFileId: number, fileUrls: FileURLsProto.$Properties): void => {
       const curFile = getFile(localFileId)
       if (isNullOrUndefined(curFile) || curFile.status.type !== "uploading") {
         return
@@ -365,7 +364,7 @@ const FileUploader = ({
    * Upload a file to the backend.
    */
   const uploadFile = useCallback(
-    (fileURLs: IFileURLs, file: File): void => {
+    (fileURLs: FileURLsProto.$Properties, file: File): void => {
       const abortController = new AbortController()
       const fileName = file.webkitRelativePath || file.name
 
@@ -478,7 +477,7 @@ const FileUploader = ({
 
       uploadClient
         .fetchFileURLs(acceptedFiles)
-        .then((fileURLsArray: IFileURLs[]) => {
+        .then((fileURLsArray: FileURLsProto.$Properties[]) => {
           if (!multipleFiles && acceptedFiles.length > 0) {
             const existingFile = filesRef.current.find(
               f => f.status.type !== "error"

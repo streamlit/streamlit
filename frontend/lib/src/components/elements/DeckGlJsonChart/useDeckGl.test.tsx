@@ -16,7 +16,12 @@
 
 import { FC } from "react"
 
-import { PickingInfo, ViewStateChangeParameters } from "@deck.gl/core"
+import {
+  MapView,
+  OrbitView,
+  PickingInfo,
+  ViewStateChangeParameters,
+} from "@deck.gl/core"
 import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import JSON5 from "json5"
@@ -36,6 +41,7 @@ import { mockTheme } from "~lib/mocks/mockTheme"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { useDeckGl, UseDeckGlProps } from "./useDeckGl"
+import { PYDECK_UNSET_MAP_STYLE } from "./utils/mapShell"
 
 /** Test component that wires useDeckGl to the ElementFullscreenContext expand button. */
 const DeckGlFullscreenTestComponent: FC<UseDeckGlProps> = props => {
@@ -62,9 +68,10 @@ const mockInitialViewState = {
 
 const getUseDeckGlProps = (
   elementProps: Partial<DeckGlJsonChartProto> = {},
-  initialViewStateProps: Record<string, unknown> = {}
+  initialViewStateProps: Record<string, unknown> = {},
+  jsonOverrides: Record<string, unknown> = {}
 ): UseDeckGlProps => {
-  const json = {
+  const json: Record<string, unknown> = {
     initialViewState: mockInitialViewState,
     layers: [
       {
@@ -82,10 +89,11 @@ const getUseDeckGlProps = (
     ],
     mapStyle: "mapbox://styles/mapbox/light-v9",
     views: [{ "@@type": "MapView", controller: true }],
+    ...jsonOverrides,
   }
 
   json.initialViewState = {
-    ...json.initialViewState,
+    ...(json.initialViewState as Record<string, unknown>),
     ...initialViewStateProps,
   }
 
@@ -885,6 +893,87 @@ describe("useDeckGl", () => {
       })
 
       expect(result.current.width).not.toBe("100%")
+    })
+  })
+
+  describe("views and map style", () => {
+    const firstView = (views: unknown): { id?: string } | undefined =>
+      (Array.isArray(views) ? views[0] : views) as { id?: string } | undefined
+
+    const CARTO_DARK =
+      "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+
+    it("keeps MapView, default-view id, Carto tiles, and JSON parameters", () => {
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps(
+          {},
+          {},
+          { mapStyle: undefined, parameters: { cull: true } }
+        ),
+      })
+
+      const view = firstView(result.current.deck.views)
+      expect(view).toBeInstanceOf(MapView)
+      expect(view?.id).toBe("default-view")
+      expect(result.current.deck.mapStyle).toBe(CARTO_DARK)
+      expect(result.current.deck.parameters).toEqual({ cull: true })
+    })
+
+    it("keeps OrbitView cameras and skips Carto / @@= parameters", () => {
+      const orbitViewState = {
+        target: [0, 1, 2],
+        zoom: 5,
+        rotationX: 15,
+        rotationOrbit: 30,
+      }
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps(
+          {},
+          {},
+          {
+            initialViewState: orbitViewState,
+            views: [{ "@@type": "OrbitView", controller: true }],
+            mapStyle: undefined,
+            parameters: "@@=1",
+          }
+        ),
+      })
+
+      expect(firstView(result.current.deck.views)).toBeInstanceOf(OrbitView)
+      expect(result.current.deck.mapStyle).toBeUndefined()
+      expect(result.current.deck.parameters).toBeUndefined()
+      expect(result.current.viewState).toEqual(
+        expect.objectContaining(orbitViewState)
+      )
+      expect(result.current.viewState).not.toHaveProperty("latitude")
+    })
+
+    it("skips Carto for the pydeck unset sentinel", () => {
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps(
+          {},
+          {},
+          { mapStyle: PYDECK_UNSET_MAP_STYLE }
+        ),
+      })
+
+      expect(result.current.deck.mapStyle).toBeUndefined()
+    })
+
+    it.each([
+      { views: undefined },
+      { views: [{ "@@type": "NotARealView", controller: true }] },
+    ])("applies Carto when views fall back to MapView ($views)", extra => {
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps(
+          {},
+          {},
+          { ...extra, mapStyle: undefined }
+        ),
+      })
+
+      expect(result.current.deck.views).toBeUndefined()
+      expect(result.current.deck.mapStyle).toBe(CARTO_DARK)
     })
   })
 })

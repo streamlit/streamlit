@@ -412,17 +412,32 @@ class CacheResourceAPI:
         To learn more about caching, see `Caching overview
         <https://docs.streamlit.io/develop/concepts/architecture/caching>`_.
 
-        .. warning::
-            Async objects are not officially supported in Streamlit. Caching
-            async objects or objects that reference async objects may have
-            unintended consequences. For example, Streamlit may close event
-            loops in its normal operation and make the cached object raise an
-            ``Event loop closed`` error.
+        Cached functions can be synchronous or asynchronous. To cache an asynchronous
+        function, define it with ``async def``. Calling a cached asynchronous function
+        returns an awaitable, which you must await (for example, with ``asyncio.run``).
+        On a cache miss, Streamlit runs the function and caches its awaited return
+        value. On a cache hit, Streamlit returns the cached value without rerunning
+        the function. The caller is responsible for driving the awaitable.
 
-            To upvote official ``asyncio`` support, see GitHub issue `#8488
-            <https://github.com/streamlit/streamlit/issues/8488>`_. To upvote
-            support for caching async functions, see GitHub issue `#8308
-            <https://github.com/streamlit/streamlit/issues/8308>`_.
+        .. note::
+            Calls to a decorated coroutine function remain awaitable, but
+            ``inspect.iscoroutinefunction`` does not identify the decorated callable
+            as a coroutine function. Callback frameworks that rely on this check
+            should receive a separate ``async def`` adapter that awaits the cached
+            function. ``inspect.unwrap`` bypasses caching. For details, see GitHub
+            issue `#16803
+            <https://github.com/streamlit/streamlit/issues/16803>`_.
+
+        .. warning::
+            Caching a live, event-loop-bound async object (such as an async
+            client) is not supported. Streamlit may close event loops in its
+            normal operation and make such a cached object raise an
+            ``Event loop closed`` error. Cache resources that remain valid
+            independently of the event loop that created them.
+
+            To upvote support for caching event-loop-bound async resources, see
+            GitHub issue `#16801
+            <https://github.com/streamlit/streamlit/issues/16801>`_.
 
         Parameters
         ----------
@@ -523,6 +538,9 @@ class CacheResourceAPI:
               the ``runner.cacheBackgroundRefreshTTLMultiplier`` configuration option.
               This mode requires a ``ttl``. If you set ``on_release``,
               Streamlit calls it for the old resource after a successful update.
+              It is not supported for coroutine functions. To upvote support for
+              this combination, see GitHub issue `#16800
+              <https://github.com/streamlit/streamlit/issues/16800>`_.
 
             .. note::
                 A function that refreshes in the background can't use session-specific
@@ -635,6 +653,24 @@ class CacheResourceAPI:
         >>> @st.cache_resource(hash_funcs={"__main__.Person": str})
         ... def get_person_name(person: Person):
         ...     return person.name
+
+        **Example 6: Async function**
+
+        Await an async cached function from an async entry point:
+
+        >>> import asyncio
+        >>> import streamlit as st
+        >>>
+        >>> @st.cache_resource
+        ... async def load_config():
+        ...     await asyncio.sleep(1)
+        ...     return {"env": "prod"}
+        >>>
+        >>> async def main():
+        ...     config = await load_config()
+        ...     st.write(config)
+        >>>
+        >>> asyncio.run(main())
 
         """
 
@@ -784,6 +820,27 @@ class ResourceCache(Cache[R]):
             self._mem_cache[value_key] = CachedResult(
                 value, messages, main_id, sidebar_id, stored_at=stored_at
             )
+
+    @gather_metrics("_cache_resource_object")
+    def write_result_if_current(
+        self,
+        value_key: str,
+        value: R,
+        messages: list[MsgData],
+        *,
+        invalidation_token: cache_utils.CacheInvalidationToken,
+    ) -> bool:
+        """Write an async foreground result if no relevant clear invalidated it."""
+        main_id = st._main._id
+        sidebar_id = st.sidebar._id
+        with self._mem_cache_lock:
+            if not self._invalidation_token_is_current(value_key, invalidation_token):
+                # The owner still returns this value, so it must remain live.
+                return False
+            self._mem_cache[value_key] = CachedResult(
+                value, messages, main_id, sidebar_id
+            )
+            return True
 
     def write_background_refresh_result(
         self,

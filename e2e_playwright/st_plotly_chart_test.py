@@ -103,6 +103,7 @@ def test_allows_custom_toolbar_modifications(
 ):
     chart_element = app.get_by_test_id("stPlotlyChart").nth(1)
     chart_element.hover()
+    expect(chart_element.locator("[data-title='Share chart...']")).to_have_count(0)
     assert_snapshot(
         chart_element,
         name="st_plotly_chart-toolbar_customization",
