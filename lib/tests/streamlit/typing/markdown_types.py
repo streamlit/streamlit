@@ -106,12 +106,82 @@ if TYPE_CHECKING:
     markdown("Text", wrap="yes")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # =====================================================================
-    # st.caption wrap
+    # st.caption return type tests
     # =====================================================================
 
+    # Basic usage - returns DeltaGenerator
+    assert_type(caption("This explains something above."), DeltaGenerator)
+    assert_type(caption("A caption with _italics_"), DeltaGenerator)
+
+    # body is SupportsStr, so non-str values should work
+    assert_type(caption(42), DeltaGenerator)
+
+    # unsafe_allow_html parameter (positional-or-keyword)
+    assert_type(caption("<p>HTML content</p>", unsafe_allow_html=True), DeltaGenerator)
+    assert_type(caption("Safe text", unsafe_allow_html=False), DeltaGenerator)
+    assert_type(caption("<p>HTML</p>", True), DeltaGenerator)
+
+    # help parameter (keyword-only)
+    assert_type(caption("Note", help="This is help text"), DeltaGenerator)
+    assert_type(caption("Note", help=None), DeltaGenerator)
+
+    # width parameter (keyword-only)
+    assert_type(caption("Note", width="stretch"), DeltaGenerator)
+    assert_type(caption("Note", width="content"), DeltaGenerator)
+    assert_type(caption("Note", width=300), DeltaGenerator)
+
+    # text_alignment parameter (keyword-only)
+    assert_type(caption("Note", text_alignment="left"), DeltaGenerator)
+    assert_type(caption("Note", text_alignment="center"), DeltaGenerator)
+    assert_type(caption("Note", text_alignment="right"), DeltaGenerator)
+    assert_type(caption("Note", text_alignment="justify"), DeltaGenerator)
+
+    # wrap parameter (keyword-only)
     assert_type(caption("Note", wrap=True), DeltaGenerator)
     assert_type(caption("Note", wrap=False), DeltaGenerator)
+
+    # All parameters combined
+    assert_type(
+        caption(
+            "A footnote",
+            unsafe_allow_html=False,
+            help="Additional information",
+            width="stretch",
+            text_alignment="center",
+            wrap=False,
+        ),
+        DeltaGenerator,
+    )
+
+    # =====================================================================
+    # Invalid st.caption usages - should NOT type check
+    # =====================================================================
+
+    # Invalid width value (not "stretch", "content", or int)
+    caption("Note", width="auto")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    caption("Note", width="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    caption("Note", width=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Invalid text_alignment value (not "left", "center", "right", or "justify")
+    caption("Note", text_alignment="start")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Invalid wrap value (must be bool)
     caption("Note", wrap="yes")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Invalid unsafe_allow_html type (must be bool)
+    caption("Note", unsafe_allow_html="yes")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Invalid help type
+    caption("Note", help=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Passing keyword-only parameters as positional
+    caption("Note", False, "help text")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
+
+    # Missing required body argument
+    caption()  # type: ignore[call-arg]  # ty: ignore[missing-argument]
+
+    # st.caption does not take markdown-only keywords
+    caption("Note", anchors=False)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
 
     # =====================================================================
     # st.latex return type tests

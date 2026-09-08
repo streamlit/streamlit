@@ -33,6 +33,8 @@ export function getClassnamePrefix(direction: Direction): string {
     : "stVerticalBlock"
 }
 
+// Only RUNNING: during a pending stop, placeholder updates should still be
+// allowed to render.
 export function shouldComponentBeEnabled(
   elementType: string,
   scriptRunState: ScriptRunState
@@ -52,7 +54,13 @@ export function isElementStale(
     return true
   }
 
-  if (scriptRunState === ScriptRunState.RUNNING) {
+  // STOP_REQUESTED means the user asked to stop but the script is still
+  // executing, so elements from earlier runs must stay stale until the run
+  // actually finishes.
+  if (
+    scriptRunState === ScriptRunState.RUNNING ||
+    scriptRunState === ScriptRunState.STOP_REQUESTED
+  ) {
     if (fragmentIdsThisRun?.length) {
       // if the fragmentId is set, we only want to mark elements as stale
       // that belong to the same fragmentId and have a different scriptRunId.
