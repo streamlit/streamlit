@@ -415,6 +415,51 @@ class CacheResourceAsyncLifecycleCallbackTest(unittest.TestCase):
         assert cached() == 1
 
     @parameterized.expand([("validate",), ("on_release",)])
+    def test_accepts_sync_callable_object(self, param_name: str) -> None:
+        """Callable objects with synchronous ``__call__`` are accepted and invoked."""
+
+        class Callback:
+            def __init__(self) -> None:
+                self.values: list[int] = []
+
+            def __call__(self, value: int) -> bool:
+                self.values.append(value)
+                return True
+
+        callback = Callback()
+        cached = st.cache_resource(**{param_name: callback})(lambda: 1)
+        assert cached() == 1
+
+        if param_name == "validate":
+            assert cached() == 1
+        else:
+            cached.clear()
+        assert callback.values == [1]
+
+    @parameterized.expand([("validate",), ("on_release",)])
+    def test_accepts_partial_of_sync_callable_object(self, param_name: str) -> None:
+        """Partials of callable objects with synchronous ``__call__`` are invoked."""
+
+        class Callback:
+            def __init__(self) -> None:
+                self.values: list[tuple[str, int]] = []
+
+            def __call__(self, prefix: str, value: int) -> bool:
+                self.values.append((prefix, value))
+                return True
+
+        callback = Callback()
+        partial_callback = functools.partial(callback, "bound")
+        cached = st.cache_resource(**{param_name: partial_callback})(lambda: 1)
+        assert cached() == 1
+
+        if param_name == "validate":
+            assert cached() == 1
+        else:
+            cached.clear()
+        assert callback.values == [("bound", 1)]
+
+    @parameterized.expand([("validate",), ("on_release",)])
     def test_rejects_async_wrapper_of_sync_function(self, param_name: str) -> None:
         """An ``async def`` wrapper is rejected even if it wraps a sync function."""
 
