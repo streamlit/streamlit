@@ -24,7 +24,7 @@ import {
   TextCell,
 } from "@glideapps/glide-data-grid"
 import { Vector } from "apache-arrow"
-import { merge, toString } from "lodash-es"
+import { isString, merge, toString } from "lodash-es"
 import moment from "moment"
 import "moment-duration-format"
 import "moment-timezone"
@@ -381,23 +381,13 @@ export function toSafeArray(data: unknown): unknown[] {
 }
 
 /**
- * True for primitive strings and boxed `String` objects (including other realms).
- */
-function isStringValue(value: unknown): boolean {
-  return (
-    typeof value === "string" ||
-    Object.prototype.toString.call(value) === "[object String]"
-  )
-}
-
-/**
  * Checks if the provided data used as array value is supported for editing.
  *
  * @param data - The value to inspect.
  * @returns True if `data` is supported for array-editing.
  */
 export function isEditableArrayValue(data: unknown): boolean {
-  if (isStringValue(data)) {
+  if (isString(data)) {
     return true
   }
 
@@ -405,7 +395,7 @@ export function isEditableArrayValue(data: unknown): boolean {
     data = Array.from(data)
   }
 
-  return Array.isArray(data) && data.every(isStringValue)
+  return Array.isArray(data) && data.every(isString)
 }
 
 /**

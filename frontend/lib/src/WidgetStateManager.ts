@@ -1451,7 +1451,7 @@ export class WidgetStateManager {
     })
 
     if (value === null) {
-      // skipNull: true below omits this key from the serialized query string
+      // Drop this param from the query string; stringify uses skipNull: true.
       currentParams[paramKey] = null
     } else if (Array.isArray(value)) {
       if (value.length === 0) {

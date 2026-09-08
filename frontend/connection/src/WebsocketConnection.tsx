@@ -858,15 +858,15 @@ export class WebsocketConnection {
     // in our just-decoded message being dispatched: if there are other
     // messages that were received earlier than this one but are being
     // downloaded, our message won't be sent until they're done.
-    while (this.messageQueue.has(this.lastDispatchedMessageIndex + 1)) {
+    let queuedMessage = this.messageQueue.get(
+      this.lastDispatchedMessageIndex + 1
+    )
+    while (queuedMessage !== undefined) {
       const dispatchMessageIndex = this.lastDispatchedMessageIndex + 1
-      const queuedMessage = this.messageQueue.get(dispatchMessageIndex)
-      if (queuedMessage === undefined) {
-        break
-      }
       this.args.onMessage(queuedMessage)
       this.messageQueue.delete(dispatchMessageIndex)
       this.lastDispatchedMessageIndex = dispatchMessageIndex
+      queuedMessage = this.messageQueue.get(dispatchMessageIndex + 1)
     }
   }
 }
