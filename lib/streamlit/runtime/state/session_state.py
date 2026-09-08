@@ -1036,6 +1036,10 @@ class SessionState:
         if ctx and ctx.script_requests and rerun_batch:
             replay_trigger_states = incoming_replay_trigger_states
             replay_trigger_values = incoming_replay_trigger_values
+            # Include current-interaction triggers only for targeted reruns: they
+            # preempt this body, whose follow-up reset would lose dispatched triggers.
+            # Attach replay only to the first batch item; _request_rerun_locked unions
+            # it while folding the batch.
             if votes.requested_targeted:
                 current_replay_trigger_states = (
                     self._filter_active_trigger_widget_states(

@@ -26,6 +26,10 @@ def app_server_extra_args() -> list[str]:
 
 
 def test_fresh_input_coalesces_with_main_script_callback_replay(app: Page) -> None:
+    """A fresh mid-callback interaction coalesces with the targeted rerun.
+
+    Each callback runs once, and the body still observes the replayed submit trigger.
+    """
     body_runs_text = (
         get_element_by_key(app, "coalescing_results")
         .get_by_text("Body runs:", exact=False)

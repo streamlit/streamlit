@@ -108,6 +108,11 @@ def test_unknown_key_raises_visible_exception(app: Page) -> None:
 def test_fresh_fragment_interaction_preserves_pending_callback_replay(
     app: Page,
 ) -> None:
+    """A fresh mid-callback fragment interaction coalesces with the targeted rerun.
+
+    Each callback runs once, the source stays stable, and the result sees the
+    replayed submit trigger.
+    """
     source_uuid = _text(app, "coalescing_source_uuid")
     fresh_uuid = _text(app, "coalescing_fresh_uuid")
     result_uuid = _text(app, "coalescing_result_uuid")

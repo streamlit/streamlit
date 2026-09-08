@@ -149,6 +149,7 @@ def coalescing_source_fragment() -> None:
     callback_marker = st.empty()
 
     def wait_for_fresh_fragment_request() -> None:
+        """Hold callback dispatch until the test queues a fresh interaction."""
         st.session_state.source_callbacks += 1
         st.session_state.normalized_value = st.session_state.source_value.strip()
         callback_marker.write("Source callback waiting for fresh fragment input")

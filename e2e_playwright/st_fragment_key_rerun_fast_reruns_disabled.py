@@ -28,6 +28,7 @@ st.session_state.body_runs += 1
 
 
 def wait_for_fresh_request() -> None:
+    """Hold callback dispatch until the test queues a fresh interaction."""
     st.session_state.form_callbacks += 1
     st.session_state.normalized_name = st.session_state.submitted_name.strip()
     st.write("Form callback waiting for fresh input")
