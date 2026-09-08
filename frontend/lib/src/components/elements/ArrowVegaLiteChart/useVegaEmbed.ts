@@ -288,14 +288,16 @@ export function useVegaEmbed(
         prevDataRef.current = compiledData
         prevDatasetsRef.current = compiledDatasets
 
-        const pendingData = latestDataRef.current
-        const pendingDatasets = latestDatasetsRef.current
-        if (
-          pendingData !== compiledData ||
-          pendingDatasets !== compiledDatasets
+        // Replay data that arrived during embed or during this replay's
+        // runAsync. updateView is a no-op while isCreatingView is true.
+        while (
+          latestDataRef.current !== prevDataRef.current ||
+          latestDatasetsRef.current !== prevDatasetsRef.current
         ) {
+          const pendingData = latestDataRef.current
+          const pendingDatasets = latestDatasetsRef.current
           syncViewData(vegaViewRef.current, pendingData, pendingDatasets)
-          await vegaViewRef.current.runAsync()
+          await vegaViewRef.current.resize().runAsync()
           prevDataRef.current = pendingData
           prevDatasetsRef.current = pendingDatasets
         }

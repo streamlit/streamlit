@@ -372,18 +372,14 @@ def _prepare_vega_lite_spec(
     return spec
 
 
-_GEOJSON_OR_TOPOJSON_TYPES: Final[frozenset[str]] = frozenset(
+_GEOJSON_GEOMETRY_TYPES: Final[frozenset[str]] = frozenset(
     {
-        "FeatureCollection",
-        "Topology",
-        "Feature",
         "Point",
         "MultiPoint",
         "LineString",
         "MultiLineString",
         "Polygon",
         "MultiPolygon",
-        "GeometryCollection",
     }
 )
 
@@ -391,13 +387,21 @@ _GEOJSON_OR_TOPOJSON_TYPES: Final[frozenset[str]] = frozenset(
 def _is_geojson_or_topojson_payload(data: Any) -> bool:
     """Return True when data is GeoJSON/TopoJSON geometry, not a table."""
     if isinstance(data, dict):
-        if data.get("type") in _GEOJSON_OR_TOPOJSON_TYPES:
+        geo_type = data.get("type")
+        if geo_type == "FeatureCollection" and "features" in data:
             return True
+        if geo_type == "Feature" and "geometry" in data:
+            return True
+        if geo_type == "GeometryCollection" and "geometries" in data:
+            return True
+        if geo_type in _GEOJSON_GEOMETRY_TYPES and "coordinates" in data:
+            return True
+        # TopoJSON may omit type: Topology and is recognized by the arcs + objects pair.
         return "arcs" in data and "objects" in data
 
     if isinstance(data, list) and data:
-        # Treat a non-empty list as geo if the first row is a Feature; mixed
-        # lists are not a supported Vega-Lite shape.
+        # Only inspect the first element: Vega-Lite requires a homogeneous
+        # array, so a leading Feature means the whole array is GeoJSON.
         first = data[0]
         return (
             isinstance(first, dict)
@@ -2525,6 +2529,8 @@ def _to_arrow_dataset(data: Any, datasets: dict[str, Any]) -> dict[str, str]:
     stored as-is so geometry is not flattened. Returns ``{"name": name}`` for
     Altair to reference the dataset.
     """
+    # GeoPandas / ``__geo_interface__`` objects are not dict/list, so they
+    # still go through Arrow flattening (#1002).
     if _is_geojson_or_topojson_payload(data):
         # Match spec transport (json.dumps without default) so non-JSON
         # values fail here instead of later when the spec is encoded.

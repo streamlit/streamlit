@@ -1713,6 +1713,16 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
                 {"type": "topojson"},
             ),
             (
+                "topology_without_type",
+                {
+                    "arcs": [],
+                    "objects": {
+                        "layer": {"type": "GeometryCollection", "geometries": []}
+                    },
+                },
+                {"type": "topojson"},
+            ),
+            (
                 "feature_list",
                 [
                     {
@@ -1788,6 +1798,24 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         assert len(proto.datasets) == 1
         columns_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
         assert set(columns_df.columns) >= {"a", "b"}
+
+    def test_geo_type_lookalike_dict_still_arrow_serialized(self) -> None:
+        """A dict with a GeoJSON type name but no geometry members is still Arrow."""
+        lookalike = {"type": "Point", "value": [1, 2]}
+        st.vega_lite_chart(
+            {
+                "mark": "bar",
+                "data": {"name": "foo", "format": {"type": "json"}},
+                "datasets": {"foo": lookalike},
+            }
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        assert "datasets" not in spec
+        assert len(proto.datasets) == 1
+        lookalike_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        assert set(lookalike_df.columns) >= {"type", "value"}
 
     def test_top_level_geojson_values_stay_in_spec(self) -> None:
         """Top-level data.values FeatureCollection stays in spec JSON with format."""
