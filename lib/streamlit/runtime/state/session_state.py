@@ -1006,6 +1006,8 @@ class SessionState:
         if (
             votes.requested_targeted
             and votes.wants_interaction_default
+            and ctx
+            and ctx.script_requests
             and _interaction_default_is_app_wide(ctx)
             and not _navigation_is_pending(votes.pending_reruns, ctx)
         ):
@@ -1016,7 +1018,7 @@ class SessionState:
             #
             # A pending navigation already reruns the whole app, so this request would
             # add nothing but its own page — the one being navigated away from.
-            rerun_batch.append(self._build_full_app_rerun())
+            rerun_batch.append(self._build_full_app_rerun(ctx))
 
         if ctx and ctx.script_requests and rerun_batch:
             replay_trigger_states = incoming_replay_trigger_states
@@ -1104,7 +1106,7 @@ class SessionState:
         else:
             votes.wants_interaction_default = True
 
-    def _build_full_app_rerun(self) -> RerunData:
+    def _build_full_app_rerun(self, ctx: ScriptRunContext) -> RerunData:
         """Build a full-app rerun that replays already-dispatched triggers.
 
         Called when a normally-returning callback's default vote coexists with
@@ -1115,9 +1117,6 @@ class SessionState:
         """
         from streamlit.runtime.scriptrunner import RerunData
 
-        ctx = get_script_run_ctx()
-        if ctx is None:  # pragma: no cover - called only while dispatching callbacks
-            raise RuntimeError("Cannot build a rerun without a ScriptRunContext.")
         return RerunData(
             query_string=ctx.query_string,
             page_script_hash=ctx.page_script_hash,

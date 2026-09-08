@@ -1059,6 +1059,23 @@ def _raise_fragment_origin_targeted_rerun() -> None:
     )
 
 
+def test_contextless_callback_dispatch_does_not_raise() -> None:
+    """A contextless callback dispatch cannot queue full-app escalation."""
+    normal_callback = MagicMock()
+    ss = _state_with_changed_widgets(
+        [("target", _raise_targeted_rerun), ("normal", normal_callback)]
+    )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=None,
+    ):
+        ss._call_callbacks()
+
+    normal_callback.assert_called_once_with()
+
+
 def test_changed_widget_without_callback_does_not_escalate() -> None:
     """A callback-less widget change does not override a targeted rerun.
 
