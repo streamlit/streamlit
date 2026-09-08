@@ -530,7 +530,8 @@ class CacheResourceAPI:
         on_release : callable or None
             A function to call when an entry is removed from the cache.
             The removed item will be provided to the function as an argument.
-            ``on_release`` must be synchronous; async callbacks are not supported.
+            ``on_release`` must be a synchronous function; coroutine functions
+            (``async def``) aren't supported.
 
             This is only useful for caches that remove entries normally.
             Most commonly, this is used session-scoped caches to release
