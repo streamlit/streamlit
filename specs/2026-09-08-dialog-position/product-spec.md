@@ -163,9 +163,11 @@ same as `width`.
 ```python
 import streamlit as st
 
+
 @st.dialog("Details", position="right")
 def show_details(item):
     st.write(f"Details for {item}")
+
 
 if st.button("Open details"):
     show_details("Order #1234")
@@ -177,10 +179,12 @@ if st.button("Open details"):
 import pandas as pd
 import streamlit as st
 
+
 @st.dialog("Row details", position="right", width="medium")
 def row_details(row):
     st.header(row["name"])
     st.json(row)
+
 
 df = pd.DataFrame({"name": ["Alice", "Bob"], "role": ["Admin", "User"]})
 df["view"] = ":material/visibility: View"
@@ -202,12 +206,14 @@ if click := st.session_state.get("view_click"):
 ```python
 import streamlit as st
 
+
 @st.dialog("Filters", position="left")
 def filters():
     category = st.selectbox("Category", ["All", "Books", "Toys"])
     if st.button("Apply"):
         st.session_state.category = category
         st.rerun()  # Closes the drawer.
+
 
 if st.button("Edit filters"):
     filters()
@@ -330,6 +336,7 @@ is different from a decorator:
 def open_order(order_id: str) -> None:
     st.session_state.selected_order = order_id
     st.drawer.update(open=True)
+
 
 st.button("Open details", on_click=open_order, args=(order_id,))
 
