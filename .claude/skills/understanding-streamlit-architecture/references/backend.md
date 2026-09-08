@@ -162,11 +162,13 @@ register_widget(
 - Pickle-based caching for data (DataFrames, lists)
 - In-memory + optional disk persistence
 - TTL support, max entries limit
+- Caches awaited results of `async def` functions (not a `def` that returns a coroutine); background refresh is not supported on coroutines
 
 **@st.cache_resource** (`cache_resource_api.py`):
 - Stores singleton resources (DB connections, ML models)
 - No serialization (stores objects directly)
 - Cleanup hooks on cache clear
+- Same `async def` support as `st.cache_data`; do not cache live event-loop-bound clients
 
 ## Web server (`lib/streamlit/web/server/`)
 
