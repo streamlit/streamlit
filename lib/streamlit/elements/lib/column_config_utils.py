@@ -565,6 +565,7 @@ def register_button_column_widgets(
         register_widget(
             widget_id,
             on_change_handler=button_col.on_click,
+            on_change_param="on_click",
             args=button_col.args,
             kwargs=button_col.kwargs,
             deserializer=button_serde.deserialize,

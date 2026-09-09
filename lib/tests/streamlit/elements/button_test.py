@@ -269,6 +269,15 @@ class ButtonTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.button("invalid", shortcut="A+B")
 
+    @parameterized.expand([("ignore",), ("rerun",)])
+    def test_on_click_mode_not_supported(self, mode: str) -> None:
+        """st.button only accepts a callback, and the error names on_click."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=f'`on_click="{mode}"` is not supported on this widget',
+        ):
+            st.button("the label", on_click=mode)  # type: ignore[arg-type]
+
     def test_stable_id_button_with_key(self):
         """Test that the button ID is stable when a stable key is provided."""
         with patch(

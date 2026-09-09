@@ -678,6 +678,20 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
                 value_type="bool_value",
             )
 
+    @parameterized.expand([("ignore",), ("not-a-mode",)])
+    def test_on_change_errors_name_the_widget_parameter(self, value: str) -> None:
+        """Errors name the parameter the widget exposes, e.g. on_click."""
+        with pytest.raises(errors.StreamlitAPIException, match="on_click"):
+            register_widget(
+                "el_id",
+                deserializer=lambda x: x,
+                serializer=lambda x: x,
+                ctx=None,
+                on_change_handler=value,  # type: ignore[arg-type]
+                on_change_param="on_click",
+                value_type="bool_value",
+            )
+
     def test_bind_query_params_requires_key(self):
         """Test that bind='query-params' raises if widget has no key."""
         # Element ID format for widgets without user key is "$$ID-<hash>-None"

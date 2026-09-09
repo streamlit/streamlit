@@ -418,6 +418,7 @@ class MenuButtonMixin:
         widget_state = register_widget(
             menu_button_proto.id,
             on_change_handler=on_click,
+            on_change_param="on_click",
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
