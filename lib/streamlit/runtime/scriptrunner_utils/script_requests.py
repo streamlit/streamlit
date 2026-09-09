@@ -290,6 +290,8 @@ class ScriptRequests:
         """
         with self._lock:
             self._state = ScriptRequestType.STOP
+            # Release hydrated chat values so stopped work cannot retain
+            # UploadedFile or audio buffers.
             if self._rerun_data.replay_trigger_values is not None:
                 self._rerun_data = replace(self._rerun_data, replay_trigger_values=None)
 
@@ -450,6 +452,8 @@ class ScriptRequests:
 
                 self._state = ScriptRequestType.CONTINUE
                 rerun_data = self._rerun_data
+                # The preempting snapshot retains execution's hydrated values;
+                # release the queue's obsolete reference.
                 if rerun_data.replay_trigger_values is not None:
                     self._rerun_data = replace(rerun_data, replay_trigger_values=None)
                 return ScriptRequest(ScriptRequestType.RERUN, rerun_data)
@@ -471,6 +475,8 @@ class ScriptRequests:
         to STOP.
         """
         with self._lock:
+            # A consumed snapshot retains the hydrated values execution needs.
+            # Whether consumed or abandoned below, the queue releases its copy.
             if self._state == ScriptRequestType.RERUN:
                 self._state = ScriptRequestType.CONTINUE
                 rerun_data = self._rerun_data
