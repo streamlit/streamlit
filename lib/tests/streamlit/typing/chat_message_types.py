@@ -48,12 +48,11 @@ if TYPE_CHECKING:
     message = chat_message("assistant")
     assert_type(message.write("Hello"), None)
 
-    # avatar: preset literals, emoji, material icon, spinner, None
+    # avatar: preset literals, emoji, material icon, None
     assert_type(chat_message("user", avatar="user"), DeltaGenerator)
     assert_type(chat_message("assistant", avatar="assistant"), DeltaGenerator)
     assert_type(chat_message("user", avatar="🧑‍💻"), DeltaGenerator)
     assert_type(chat_message("user", avatar=":material/thumb_up:"), DeltaGenerator)
-    assert_type(chat_message("user", avatar="spinner"), DeltaGenerator)
     assert_type(chat_message("user", avatar=None), DeltaGenerator)
 
     # avatar: image types supported by st.image (except list)
