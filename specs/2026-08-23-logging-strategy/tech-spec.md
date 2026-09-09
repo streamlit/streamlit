@@ -195,10 +195,13 @@ detection only replaces `UNCONFIGURED`, while `App.run()` may promote an unstart
 
 ### Bootstrapping before config parsing
 
-Module initialization installs one Streamlit-owned namespace handler using `INFO`,
-`DEFAULT_LOG_MESSAGE`, and stderr. This replaces the dozens of handlers created during a
+Under the module policy lock, module initialization atomically installs one Streamlit-owned
+namespace handler using `INFO`, `DEFAULT_LOG_MESSAGE`, and stderr, adds the permanent
+`NullHandler`, and sets namespace propagation to false. Isolation must be active before any
+record can reach the new handler. This replaces the dozens of handlers created during a
 normal import while preserving import-time and config-parser diagnostics before
-`logger.level`, `logger.messageFormat`, and `logger.handlerMode` are known.
+`logger.level`, `logger.messageFormat`, and `logger.handlerMode` are known. It also prevents
+a root handler configured before `import streamlit` from receiving a second copy.
 
 After config parsing, `apply_logging_config` updates or removes only the owned handler:
 
@@ -218,15 +221,24 @@ removes it.
 A usable host path exists when either:
 
 1. the `streamlit` namespace has a non-owned, non-`NullHandler` handler; or
-2. propagation reaches an ancestor with a non-`NullHandler` handler.
+2. an ancestor has a non-`NullHandler` handler that would be reachable after transferring
+   namespace ownership to the host.
 
 Detection walks the hierarchy explicitly rather than calling `Logger.hasHandlers`, because
-the permanent namespace `NullHandler` would otherwise count as a handler. It stops at the
-first logger with `propagate=False`, matching Python logging semantics.
+the permanent namespace `NullHandler` would otherwise count as a handler. When considering
+ancestors, the walk ignores `propagate=False` on the namespace only while that value is the
+bootstrap isolation value last written by Streamlit: selecting the host path will restore
+it to true. The walk still stops at `propagate=False` on any user-owned intermediate
+logger. Only after finding a usable path does Streamlit remove its handler and restore
+namespace propagation, so detection never creates a duplicate-output window.
 
-If the namespace logger is disabled, treat that as an explicit host decision and do not
-install a fallback. Streamlit must not silently re-enable a logger disabled through
-`dictConfig`.
+`Logger.disabled` is neither a usable host path nor an input to cooperative detection: it
+does not describe handler reachability for descendants, and `dictConfig` can set it based
+on logger creation order. Streamlit never changes the flag. Therefore a host that disables
+an individual logger may suppress records emitted directly by that logger, but does not
+establish a namespace-wide output policy. Streamlit leaves that standard, creation-order-
+dependent behavior unchanged. Host `dictConfig` examples use
+`disable_existing_loggers=False`.
 
 If no usable path exists, cooperative mode retains the Streamlit handler. This is important
 for external Uvicorn: Uvicorn's default logging configuration typically configures
@@ -265,6 +277,13 @@ never changes `Logger.disabled`; that state always belongs to the host.
 
 `set_log_level` and `update_formatter` remain temporary internal compatibility shims, but
 operate only on the namespace logger and owned handler. They no longer iterate `_loggers`.
+`setup_formatter(logger)` also remains during the migration as a redirecting shim: it
+updates the owned namespace handler if one is active and never adds a handler to the passed
+child logger. The namespace logger's private `streamlit_console_handler` attribute points
+to the owned handler while it is attached and becomes `None` when ownership is transferred,
+making the handler discoverable to existing integrations. Child loggers no longer expose
+their own `streamlit_console_handler`; that private per-child topology is the behavior this
+proposal replaces.
 
 ### Launch-mode wiring
 
@@ -296,9 +315,10 @@ cooperative output before serving the first HTTP/WebSocket request.
 
 #### Mounted ASGI with explicit lifespan
 
-`App.lifespan()` sets `_external_lifespan=True` and, unless the CLI already selected a
-managed context, activates `EXTERNAL` before calling `_create_runtime`. This reverses the
-current ordering, where runtime creation happens before the app is marked external.
+Unless the CLI already selected a managed context, `App.lifespan()` activates the
+`EXTERNAL` logging context before calling `_create_runtime`. The existing
+`_external_lifespan=True` assignment stays after runtime creation; only logging-context
+activation moves earlier, so mounted-app lifecycle behavior does not change.
 `_combined_lifespan` reconciles cooperative output when the returned lifespan context is
 entered.
 
@@ -307,6 +327,12 @@ entered.
 Unless a managed context is already active, the first HTTP/WebSocket call activates
 `EXTERNAL` before `_build_starlette_app`, reconciles cooperative output, and retains that
 context when `_auto_start_runtime` later assigns `asgi-mounted`.
+
+Lazy reconciliation uses a double-checked, process-wide reconciled flag. The request path
+first performs a cheap flag read and acquires the policy lock only when reconciliation is
+pending; it checks the flag again inside the lock before applying policy. Steady-state
+requests therefore do not acquire the logging lock. Activation and config reload update or
+invalidate this flag as part of the same locked transition.
 
 #### Bare `st.*` execution
 
@@ -318,12 +344,13 @@ formatted warning and missing-`ScriptRunContext` diagnostics while an ordinary
 
 Remove `init_uvicorn_logs` from the global config callback.
 
-For Streamlit-owned `UvicornRunner`, pass the configured level directly to Uvicorn:
+In the shared `_get_uvicorn_config_kwargs()` used by the traditional `UvicornServer` and
+the `st.App` `UvicornRunner`, pass the configured level directly to Uvicorn:
 
 ```python
 {
-    # existing kwargs...
     "log_level": config.get_option("logger.level"),
+    # Existing kwargs, including access_log=False, remain unchanged.
     "access_log": False,
 }
 ```
@@ -332,10 +359,9 @@ This lets Uvicorn apply its own handler configuration and level through its supp
 On Streamlit config reload, a callback registered by the managed runner updates levels on
 the existing Uvicorn logger family without adding handlers or changing propagation.
 
-The managed runner may continue setting the `websockets` logger level for compatibility,
-but it does not install a handler or disable propagation. Modern Uvicorn protocol logs use
-the `uvicorn.*` hierarchy; independently emitted `websockets` records follow normal host
-logging rules.
+The managed runner leaves the `websockets` logger entirely alone. Modern Uvicorn protocol
+logs use the `uvicorn.*` hierarchy; independently emitted `websockets` records follow
+normal Python logging rules.
 
 For external ASGI servers, Streamlit does not configure `uvicorn.*`, `websockets`, Gunicorn,
 or Hypercorn loggers. Their levels, handlers, access logs, and formatting belong to the host.
@@ -387,12 +413,17 @@ Intentional observable changes are limited to:
 - an explicit child level can override the inherited namespace level using standard Python
   semantics;
 - private inspection of child `.handlers` sees no Streamlit handler; and
-- external server libraries are no longer mutated by Streamlit.
+- external server libraries are no longer mutated by Streamlit; and
+- Streamlit no longer configures the third-party `websockets` logger, even in managed
+  launches. Without a host/root handler, its independent records may use Python's
+  `lastResort` behavior instead of Streamlit's level and format.
 
-The first two changes are the requested interoperability behavior. The latter two affect
-private topology rather than a supported Streamlit API. Keep `get_logger`, `set_log_level`,
-`update_formatter`, `DEFAULT_LOG_MESSAGE`, and the `"root"` alias during the migration to
-reduce risk for internal and third-party code that imports these private symbols.
+The first two changes are the requested interoperability behavior. The latter changes
+affect private topology or third-party diagnostics rather than Streamlit application
+records. Keep `get_logger`, `set_log_level`, `setup_formatter`, `update_formatter`,
+`DEFAULT_LOG_MESSAGE`, the namespace `streamlit_console_handler` attribute, and the
+`"root"` alias during the migration to reduce risk for internal and third-party code that
+imports these private symbols.
 
 Do not change the default to `auto` in the same release. A later proposal can evaluate that
 change using external-mode integration coverage and user feedback. Rolling back the new
@@ -420,9 +451,13 @@ run in isolated subprocesses rather than rely only on in-process fixture cleanup
 - Host mode removes only the owned handler and propagates records.
 - Cooperative mode chooses an existing namespace handler, a global root handler, or the
   Streamlit fallback as appropriate.
-- Cooperative detection ignores `NullHandler` and respects `propagate=False` boundaries.
+- Cooperative detection ignores `NullHandler`, looks through Streamlit-owned namespace
+  isolation, and respects user-owned `propagate=False` boundaries.
+- `Logger.disabled` does not count as a host handler and is never changed by Streamlit.
 - Invalid `logger.handlerMode` values fail with an actionable config error.
 - Transitions between all handler modes preserve user changes made after activation.
+- `setup_formatter` and the namespace `streamlit_console_handler` compatibility shims do
+  not restore Streamlit-owned output in host mode.
 
 ### Subprocess integration tests
 
@@ -436,14 +471,21 @@ run in isolated subprocesses rather than rely only on in-process fixture cleanup
   after constructing the `st.App` object.
 - Mounted FastAPI plus `handlerMode="host"` captures Streamlit records in the FastAPI/root
   handler without a second Streamlit-formatted copy.
+- A root handler configured before `import streamlit` receives no duplicate bootstrap
+  record in default/`streamlit` mode.
+- `dictConfig(disable_existing_loggers=True)` after import remains authoritative: Streamlit
+  does not re-enable any disabled logger or treat the flag as a cooperative host path.
 - Bare `st.write` retains the direct-execution and missing-context warnings.
 - A live config reload changes level/format or ownership without duplicating handlers.
+- With Rich enabled, uncaught exceptions retain their direct Rich console presentation;
+  with Rich disabled, exactly one standard record follows the selected handler policy.
 
-The repository's external-test risk categories are not triggered: the planned lifecycle
-edits select logging context but do not change routes, WebSocket/session transport,
+No browser-facing `@pytest.mark.external_test` coverage is expected for the logging-only
+implementation steps because they do not change routes, WebSocket/session transport,
 embedding boundaries, cross-origin behavior, assets, browser storage, or security headers.
-Browser-facing `@pytest.mark.external_test` coverage is therefore not required. The
-externally hosted scenarios need Python subprocess integration coverage instead.
+The externally hosted scenarios need Python subprocess integration coverage instead. This
+assessment must be repeated for each implementation PR, especially any change that touches
+`App.lifespan()`, `App.__call__`, or lazy-mount request ordering.
 
 ## Alternatives Considered
 
