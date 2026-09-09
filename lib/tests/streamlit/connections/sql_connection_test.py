@@ -35,7 +35,11 @@ from streamlit.errors import (
 )
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.secrets import AttrDict
-from tests.testutil import create_mock_script_run_ctx
+from tests.testutil import (
+    create_mock_script_run_ctx,
+    retry_without_sleep,
+    script_run_ctx_and_cleared_cache,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -49,14 +53,6 @@ DB_SECRETS = {
     "port": "5432",
     "database": "postgres",
 }
-
-
-_REAL_RETRY = sql_retry_util.retry
-
-
-def _retry_without_sleep(**kwargs: object) -> object:
-    kwargs["sleep"] = lambda _seconds: None
-    return _REAL_RETRY(**kwargs)
 
 
 @contextmanager
@@ -116,10 +112,9 @@ class TestSQLConnectionUnit:
 
     @pytest.fixture(autouse=True)
     def _script_run_ctx_and_cache(self) -> Iterator[None]:
-        """Attach a script-run context and clear cache_data around each test."""
-        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
-        yield
-        st.cache_data.clear()
+        """Attach a script context and clear ``cache_data`` after each test."""
+        with script_run_ctx_and_cleared_cache():
+            yield
 
     def test_error_if_no_config(self) -> None:
         """Missing secrets and kwargs raise a configuration error."""
@@ -208,7 +203,7 @@ class TestSQLConnectionUnit:
         """Retryable SQLAlchemy errors reset the connection and are retried."""
         with (
             _patched_sqlalchemy() as sa,
-            patch.object(sql_retry_util, "retry", _retry_without_sleep),
+            patch.object(sql_retry_util, "retry", retry_without_sleep),
         ):
             patched_read_sql.side_effect = sa.exc.DatabaseError("kaboom")
             conn = SQLConnection("my_sql_connection")

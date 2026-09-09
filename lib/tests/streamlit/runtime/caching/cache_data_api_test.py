@@ -39,6 +39,7 @@ from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.runtime.caching.cache_data_api import (
+    DataCache,
     _data_caches,
     get_data_cache_stats_provider,
 )
@@ -81,6 +82,13 @@ from tests.testutil import create_mock_script_run_ctx, patch_config_options
 
 def as_cached_result(value: Any) -> CachedResult:
     return _as_cached_result(value)
+
+
+class _Unpicklable:
+    """Value whose pickle serialization always fails with PicklingError."""
+
+    def __getstate__(self) -> object:
+        raise pickle.PicklingError("intentionally unpicklable")
 
 
 def as_replay_test_data() -> CachedResult:
@@ -904,6 +912,31 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
     def tearDown(self) -> None:
         st.cache_data.clear()
 
+    def _cache(self, key: str, **kwargs: Any) -> DataCache[Any]:
+        params: dict[str, Any] = {
+            "key": key,
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": key,
+        }
+        params.update(kwargs)
+        return _data_caches.get_cache(**params)
+
+    def _background_cache(self, key: str) -> DataCache[Any]:
+        """Return a background-mode cache that already has ``vk`` stored."""
+        cache = self._cache(key, ttl=100, refresh_mode="background")
+        cache.write_result("vk", 123, [])
+        return cache
+
+    def _write_background(self, cache: DataCache[Any], value: object = 456) -> None:
+        cache.write_background_refresh_result(
+            "vk",
+            value,
+            expected_generation=cache.generation,
+            expected_key_generation=cache.key_generation("vk"),
+        )
+
     def test_background_without_ttl_raises(self) -> None:
         """refresh_mode="background" without a ttl requires a positive ttl."""
         with pytest.raises(
@@ -1069,30 +1102,6 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         # The replaced cache is detached so an in-flight refresh would be discarded.
         assert cache_fg.is_active is False
 
-    def _cache(self, key: str, **kwargs: Any) -> Any:
-        params: dict[str, Any] = {
-            "key": key,
-            "persist": None,
-            "max_entries": None,
-            "ttl": None,
-            "display_name": key,
-        }
-        params.update(kwargs)
-        return _data_caches.get_cache(**params)
-
-    def _background_cache(self, key: str) -> Any:
-        cache = self._cache(key, ttl=100, refresh_mode="background")
-        cache.write_result("vk", 123, [])
-        return cache
-
-    def _write_background(self, cache: Any, value: object = 456) -> None:
-        cache.write_background_refresh_result(
-            "vk",
-            value,
-            expected_generation=cache.generation,
-            expected_key_generation=cache.key_generation("vk"),
-        )
-
     def test_write_result_if_current_reraises_pickle_error_when_still_current(
         self,
     ) -> None:
@@ -1126,7 +1135,7 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         """Unpicklable background refresh results surface as CacheError."""
         cache = self._background_cache("bg_unpicklable")
         with pytest.raises(CacheError, match="Failed to pickle"):
-            self._write_background(cache, lambda: None)
+            self._write_background(cache, _Unpicklable())
 
     @parameterized.expand(
         [

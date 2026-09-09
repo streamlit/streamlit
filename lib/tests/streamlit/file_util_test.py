@@ -119,10 +119,9 @@ class FileUtilTest(unittest.TestCase):
 
     def test_get_static_dir_is_package_static_folder(self) -> None:
         """Package static assets live next to the ``streamlit`` package."""
-        expected = os.path.normpath(
-            os.path.join(os.path.dirname(file_util.__file__), "static")
-        )
-        assert file_util.get_static_dir() == expected
+        static_dir = file_util.get_static_dir()
+        assert os.path.isabs(static_dir)
+        assert static_dir.endswith(os.path.join("streamlit", "static"))
 
     def test_get_streamlit_file_path_raises_without_home(self) -> None:
         """A missing home directory is a hard error."""

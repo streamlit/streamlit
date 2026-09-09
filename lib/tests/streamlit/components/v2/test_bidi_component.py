@@ -629,7 +629,7 @@ class BidiComponentTest(DeltaGeneratorTestCase):
             st._bidi_component("bad_data_component", data=object())
 
     def test_non_callback_kwargs_are_ignored(self) -> None:
-        """Non-callable kwargs and callables that do not match on_*_change are not registered as events."""
+        """Only callable ``on_*_change`` kwargs register component events."""
         self.mock_component_manager.register(
             BidiComponentDefinition(
                 name="ignore_kwargs_component",
@@ -643,7 +643,8 @@ class BidiComponentTest(DeltaGeneratorTestCase):
             on_hover_change=MagicMock(),
         )
         assert "hover" in result
-        assert "click" not in result
+        assert "extra_cb" not in result
+        assert "unused" not in result
 
     def test_component_with_callbacks(self):
         """Test component with callback handlers."""

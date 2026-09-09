@@ -32,7 +32,11 @@ from streamlit.connections.snowflake_connection import SNOWPARK_USER_TOKEN_HEADE
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.secrets import AttrDict
-from tests.testutil import create_mock_script_run_ctx
+from tests.testutil import (
+    create_mock_script_run_ctx,
+    retry_without_sleep,
+    script_run_ctx_and_cleared_cache,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -43,14 +47,6 @@ class SomeError(Exception):
     def __init__(self, message, **kwargs):
         self.__dict__.update(kwargs)
         super().__init__(self, message)
-
-
-_REAL_RETRY = snowflake_retry_util.retry
-
-
-def _retry_without_sleep(**kwargs: object) -> object:
-    kwargs["sleep"] = lambda _seconds: None
-    return _REAL_RETRY(**kwargs)
 
 
 def _snowflake_connector_modules() -> dict[str, types.ModuleType]:
@@ -85,6 +81,10 @@ def _patched_sis(active_session: object) -> Iterator[types.ModuleType]:
 def _patched_snowpark(
     *, in_sis: bool
 ) -> Iterator[tuple[types.ModuleType, types.ModuleType]]:
+    """Install fake Snowpark modules and control ``running_in_sis``.
+
+    Used by ``session()`` tests that should not import the Snowflake extra.
+    """
     context_mod = types.ModuleType("snowflake.snowpark.context")
     session_mod = types.ModuleType("snowflake.snowpark.session")
     snowpark_mod = types.ModuleType("snowflake.snowpark")
@@ -584,13 +584,14 @@ class TestSnowflakeConnectionMethods:
     @pytest.fixture(autouse=True)
     def _script_run_ctx_and_connect(self) -> Iterator[None]:
         """Mock ``_connect``, attach a script-run context, and clear cache_data."""
-        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
-        with patch(
-            "streamlit.connections.snowflake_connection.SnowflakeConnection._connect",
-            MagicMock(),
+        with (
+            script_run_ctx_and_cleared_cache(),
+            patch(
+                "streamlit.connections.snowflake_connection.SnowflakeConnection._connect",
+                MagicMock(),
+            ),
         ):
             yield
-        st.cache_data.clear()
 
     def test_query_returns_dataframe(self) -> None:
         """``.query()`` executes SQL on a cursor and returns ``fetch_pandas_all``."""
@@ -608,7 +609,7 @@ class TestSnowflakeConnectionMethods:
         mock_cursor.fetch_pandas_all = MagicMock(
             side_effect=SomeError("oh no", sqlstate="08001")
         )
-        with patch.object(snowflake_retry_util, "retry", _retry_without_sleep):
+        with patch.object(snowflake_retry_util, "retry", retry_without_sleep):
             conn = SnowflakeConnection("my_snowflake_connection")
             conn._instance.cursor.return_value = mock_cursor
             with (
@@ -672,7 +673,7 @@ class TestSnowflakeConnectionMethods:
 
 
 class TestSnowflakeConnectInSis:
-    """``_connect`` SiS branches mocked without the Snowflake extra."""
+    """Test ``_connect`` for Streamlit in Snowflake without the optional dependency."""
 
     def test_uses_session_connection_attr(self) -> None:
         """SiS prefers ``session.connection`` when the attribute exists."""
