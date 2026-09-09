@@ -1219,7 +1219,8 @@ class ButtonMixin:
         icon : str or None
             An optional emoji or icon to display next to the link label. If
             ``icon`` is ``None`` (default), the icon is inferred from the
-            ``Page`` object or no icon is displayed. If ``icon`` is a
+            ``Page`` object or no icon is displayed. Pass ``icon=""`` to show
+            no icon even when the page has one. If ``icon`` is a non-empty
             string, the following options are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``

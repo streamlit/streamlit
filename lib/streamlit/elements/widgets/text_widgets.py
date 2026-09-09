@@ -809,10 +809,6 @@ class TextWidgetsMixin:
         # Precedence per property: explicit user value -> type default -> off.
         if icon is None:
             icon = type_defaults.icon
-        elif icon == "":
-            # `icon=""` opts out of the icon. Map it to None so it isn't passed
-            # to `validate_icon_or_emoji`, which raises on an empty string.
-            icon = None
 
         if placeholder is None:
             placeholder = type_defaults.placeholder
