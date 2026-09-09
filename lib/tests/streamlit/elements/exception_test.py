@@ -20,7 +20,7 @@ import traceback
 import unittest
 from pathlib import Path
 from typing import cast
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from parameterized import parameterized
@@ -479,6 +479,35 @@ def test_get_stack_trace_streamlit_api_warning_without_tacked_stack() -> None:
     warning.tacked_on_stack = None
     result = _get_stack_trace_str_list(warning)
     assert result == []
+
+
+@patch("streamlit.elements.exception._LOGGER")
+@patch(
+    "streamlit.elements.exception.traceback.TracebackException.from_exception",
+    side_effect=RecursionError("chain too deep"),
+)
+def test_get_stack_trace_swallows_formatting_errors(
+    _mock_from_exception: MagicMock, mock_logger: MagicMock
+) -> None:
+    """Traceback formatting must not raise; the original error should still display."""
+    result = _get_stack_trace_str_list(RuntimeError("original"))
+    assert result == []
+    mock_logger.exception.assert_called_once()
+
+
+@patch(
+    "streamlit.elements.exception.traceback.TracebackException.from_exception",
+    side_effect=RecursionError("chain too deep"),
+)
+def test_marshall_survives_traceback_formatting_error(
+    _mock_from_exception: MagicMock,
+) -> None:
+    """A traceback formatter crash still marshalls type and message."""
+    proto = ExceptionProto()
+    exception.marshall(proto, RuntimeError("original boom"))
+    assert proto.message == "original boom"
+    assert proto.type == "RuntimeError"
+    assert list(proto.stack_trace) == []
 
 
 def test_stack_trace_includes_cause() -> None:

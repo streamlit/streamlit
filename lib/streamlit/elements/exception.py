@@ -321,19 +321,26 @@ def _get_stack_trace_str_list(
       The frontend header only shows the outermost type and message, so each
       cause's type (and message, when ``include_exception_message``) is appended
       to its frames.
-    """
-    if isinstance(exception, StreamlitAPIWarning):
-        stack = exception.tacked_on_stack
-        if not stack:
-            return []
-        frames = _filter_frames_with_fallback(stack)
-        return [item.strip() for item in traceback.format_list(frames)]
 
-    return _format_traceback_rows(
-        _user_facing_traceback_exception(exception),
-        include_exception_line=False,
-        include_exception_message=include_exception_message,
-    )
+    Formatting failures are swallowed so displaying an error cannot hide the
+    original exception; an empty row list is returned instead.
+    """
+    try:
+        if isinstance(exception, StreamlitAPIWarning):
+            stack = exception.tacked_on_stack
+            if not stack:
+                return []
+            frames = _filter_frames_with_fallback(stack)
+            return [item.strip() for item in traceback.format_list(frames)]
+
+        return _format_traceback_rows(
+            _user_facing_traceback_exception(exception),
+            include_exception_line=False,
+            include_exception_message=include_exception_message,
+        )
+    except Exception:
+        _LOGGER.exception("Failed to format traceback for %s", type(exception).__name__)
+        return []
 
 
 def _is_under_dir(filename: str, directory: Path) -> bool:
