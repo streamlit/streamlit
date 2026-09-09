@@ -222,7 +222,7 @@ def register_widget(
     return register_widget_from_metadata(metadata, ctx)
 
 
-def _validate_on_change_handler(on_change_handler: WidgetCallback | None) -> None:
+def _validate_on_change_handler(on_change_handler: object) -> None:
     """Reject values that are not a callback or ``None``.
 
     Widgets that support ``on_change="ignore"`` / ``"rerun"`` convert those
