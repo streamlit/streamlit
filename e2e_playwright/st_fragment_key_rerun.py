@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""E2E app for @st.fragment(key=...) and st.rerun(scope=<key>) scenarios."""
+"""E2E app for @st.fragment(key=...) and st.rerun(scope=<key>) use cases."""
 
 from time import monotonic, sleep
 from uuid import uuid4
@@ -22,9 +22,9 @@ from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequestType
 
 # ------------------------------------------------------------------ #
-# Scenario 1: Widget outside a keyed fragment triggers a fragment-only rerun.
+# A widget outside a keyed fragment triggers a fragment-only rerun.
 # ------------------------------------------------------------------ #
-st.header("Scenario 1: single-key rerun")
+st.header("Single-key fragment rerun")
 
 if "outside_counter" not in st.session_state:
     st.session_state.outside_counter = 0
@@ -49,9 +49,9 @@ st.button(
 )
 
 # ------------------------------------------------------------------ #
-# Scenario 2: Targeting a list of two fragment keys from one callback.
+# A callback targets a list of two fragment keys.
 # ------------------------------------------------------------------ #
-st.header("Scenario 2: multi-key rerun")
+st.header("Multi-key fragment rerun")
 
 
 @st.fragment(key="frag_alpha")
@@ -79,10 +79,10 @@ st.button(
 )
 
 # ------------------------------------------------------------------ #
-# Scenario 3: Fragment-to-fragment — widget inside fragment A targets B.
+# A widget inside one fragment targets another fragment.
 # Only the target fragment should rerun; source and outside stay stable.
 # ------------------------------------------------------------------ #
-st.header("Scenario 3: fragment-to-fragment targeting")
+st.header("Fragment-to-fragment targeting")
 
 
 @st.fragment(key="source_frag")
@@ -109,9 +109,9 @@ with st.container(key="compose_stable_text"):
     st.write(f"Compose stable text: {st.session_state.outside_counter}")
 
 # ------------------------------------------------------------------ #
-# Scenario 4: Unknown key raises a visible exception.
+# An unknown fragment key raises a visible exception.
 # ------------------------------------------------------------------ #
-st.header("Scenario 4: unknown key raises")
+st.header("Unknown fragment key raises")
 
 st.button(
     "Rerun unknown fragment",
@@ -120,9 +120,9 @@ st.button(
 )
 
 # ------------------------------------------------------------------ #
-# Scenario 5: Fragment interaction coalesces with a callback-generated replay.
+# A fragment interaction coalesces with a callback-generated replay.
 # ------------------------------------------------------------------ #
-st.header("Scenario 5: fragment callback replay coalescing")
+st.header("Fragment callback replay coalescing")
 
 for key in (
     "source_callbacks",

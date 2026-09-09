@@ -859,8 +859,7 @@ class ScriptRunner:
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = run_without_errors
 
             if rerun_exception_data:
-                # The handling for when a full script run or a fragment is stopped early
-                # is the same, so we only have one ScriptRunnerEvent for this scenario.
+                # A rerun request stops full scripts and fragments with the same event.
                 finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
             elif rerun_data.fragment_id_queue:
                 finished_event = ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS
