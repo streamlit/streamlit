@@ -31,7 +31,7 @@ from hypothesis import strategies as hst
 import streamlit as st
 import tests.streamlit.runtime.state.strategies as stst
 from streamlit.components.v2.bidi_component.main import _make_trigger_id
-from streamlit.elements.widgets.chat import ChatInputValue
+from streamlit.elements.widgets.chat import ChatInputSerde, ChatInputValue
 from streamlit.errors import (
     StreamlitWidgetAlreadyInstantiatedError,
     UnserializableSessionStateError,
@@ -1585,6 +1585,94 @@ def test_targeted_chat_replay_preserves_hydrated_uploaded_files() -> None:
     assert replayed_value.files[0].getvalue() == b"contents"
     assert replayed_value.audio is uploaded_audio
     assert replayed_value.audio.getvalue() == b"audio"
+
+
+class TargetedChatAttachmentReplayIntegrationTest(DeltaGeneratorTestCase):
+    def test_targeted_chat_attachment_replay_survives_deserialization_and_request_queue(
+        self,
+    ) -> None:
+        """An attachment-only chat value survives targeted replay as a real object."""
+        ctx = self.script_run_ctx
+        session_state = ctx.session_state._state
+        script_requests = ctx.script_requests
+        assert script_requests is not None
+
+        widget_id = "chat-widget"
+        user_key = "replay_chat"
+        file_id = "replay-file"
+        file_bytes = b"replayed contents"
+        ctx.uploaded_file_mgr.add_file(
+            session_id=ctx.session_id,
+            file=UploadedFileRec(
+                file_id,
+                "replay.txt",
+                "text/plain",
+                file_bytes,
+            ),
+        )
+        ctx.fragment_storage.register(
+            "result-fragment-id",
+            lambda: None,
+            target_key="chat-result",
+        )
+        ctx.fragment_ids_this_run = ["source-fragment-id"]
+
+        callback_count = 0
+
+        def rerun_result_fragment() -> None:
+            nonlocal callback_count
+            callback_count += 1
+            st.rerun("chat-result")
+
+        serde = ChatInputSerde(accept_files=True, accept_audio=False)
+        session_state.register_widget(
+            WidgetMetadata(
+                id=widget_id,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                value_type="chat_input_value",
+                callback=rerun_result_fragment,
+                fragment_id="source-fragment-id",
+            ),
+            user_key=user_key,
+        )
+
+        fresh_states = WidgetStatesProto()
+        fresh_chat = fresh_states.widgets.add(id=widget_id).chat_input_value
+        fresh_chat.data = ""
+        file_info = fresh_chat.file_uploader_state.uploaded_file_info.add()
+        file_info.file_id = file_id
+        file_info.file_urls.file_id = file_id
+        file_info.file_urls.upload_url = "upload"
+        file_info.file_urls.delete_url = "delete"
+        assert fresh_chat.HasField("data")
+
+        session_state.on_script_will_rerun(fresh_states)
+
+        assert callback_count == 1
+        assert ctx.uploaded_file_mgr.get_files(ctx.session_id, [file_id]) == []
+
+        request = script_requests.on_scriptrunner_yield()
+        assert request is not None
+        assert request.type is ScriptRequestType.RERUN
+        assert request.rerun_data.replay_trigger_states is not None
+        hydrated_value = request.rerun_data.replay_trigger_values[widget_id]
+        assert isinstance(hydrated_value, ChatInputValue)
+
+        session_state.on_script_will_rerun(
+            request.rerun_data.widget_states,
+            replay_trigger_states=request.rerun_data.replay_trigger_states,
+            replay_trigger_values=request.rerun_data.replay_trigger_values,
+        )
+
+        assert callback_count == 1
+        replayed_value = session_state[user_key]
+        assert replayed_value is hydrated_value
+        assert replayed_value.text == ""
+        assert len(replayed_value.files) == 1
+        assert replayed_value.files[0].name == "replay.txt"
+        assert replayed_value.files[0].type == "text/plain"
+        assert replayed_value.files[0].getvalue() == file_bytes
 
 
 def test_app_wide_escalation_preserves_hydrated_chat_through_request_queue() -> None:
