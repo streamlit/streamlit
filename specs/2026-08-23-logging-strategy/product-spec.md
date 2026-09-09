@@ -123,8 +123,10 @@ handlerMode = "streamlit"
 | `"host"` | Do not install a Streamlit output handler. Propagate `streamlit.*` records to host logging. |
 
 `"host"` is an explicit ownership transfer. If the host has no usable handler, records may
-be discarded. `logger.level` and `logger.messageFormat` configure only Streamlit's default
-output path; the host owns levels, filters, formatting, and destinations in host mode.
+be discarded below `WARNING`; `WARNING` and higher may use Python's minimally formatted
+`lastResort` output. Streamlit does not install that handler. `logger.level` and
+`logger.messageFormat` configure only Streamlit's default output path; the host owns levels,
+filters, formatting, and destinations in host mode.
 
 Prefer an enum over `enableDefaultHandler = true/false` because it distinguishes an
 explicit host-owned policy from the cooperative fallback needed by external ASGI servers
@@ -134,11 +136,11 @@ that have not configured Python's root logger.
 
 | Launch mode | `handlerMode="streamlit"` | `handlerMode="auto"` | `handlerMode="host"` |
 |---|---|---|---|
-| `streamlit run app.py` | Streamlit handler | Streamlit handler | Host handler |
-| `streamlit run` with `st.App`/ASGI discovery | Streamlit handler | Streamlit handler | Host handler |
-| `App.run()` | Streamlit handler | Streamlit handler | Host handler |
-| External `uvicorn module:app` | Streamlit handler | Host handler if present; otherwise Streamlit fallback | Host handler |
-| `st.App` mounted in FastAPI/Starlette | Streamlit handler | Host handler if present; otherwise Streamlit fallback | Host handler |
+| `streamlit run app.py` | Streamlit handler | Streamlit handler | No Streamlit handler; propagate to host |
+| `streamlit run` with `st.App`/ASGI discovery | Streamlit handler | Streamlit handler | No Streamlit handler; propagate to host |
+| `App.run()` | Streamlit handler | Streamlit handler | No Streamlit handler; propagate to host |
+| External `uvicorn module:app` | Streamlit handler | Host handler if present; otherwise Streamlit fallback | No Streamlit handler; propagate to host |
+| `st.App` mounted in FastAPI/Starlette | Streamlit handler | Host handler if present; otherwise Streamlit fallback | No Streamlit handler; propagate to host |
 
 The initial default remains `"streamlit"` so upgrades do not change console output for
 existing self-hosted or embedded deployments. Making `"auto"` the default can be evaluated
@@ -153,6 +155,11 @@ handler. Applications that always want external ownership should use `"host"`.
 This spec proposes shipping all three values in the first release. `"auto"` is included for
 hybrid launchers, while its compatibility fallback and the deterministic `"host"` option
 keep the initial default and embedded behavior explicit.
+
+A concrete hybrid is a packaged app that developers start locally with `App.run()` and no
+Python logging setup, while production mounts the same app in FastAPI with a root JSON
+handler. `"host"` would lose the automatic local diagnostics, while `"streamlit"` would add
+a second production destination. `"auto"` serves both from one deployment configuration.
 
 ### Examples
 
@@ -176,6 +183,23 @@ handler should be the only output path. The config option can be supplied throug
 configuration API is introduced. As with other Streamlit config, removing the owned handler
 directly in Python is not durable across a config reload.
 
+Making output ownership a deployment setting is intentional. Python launchers can select
+exclusive host output before importing Streamlit:
+
+```python
+import os
+
+os.environ["STREAMLIT_LOGGER_HANDLER_MODE"] = "host"
+
+import streamlit as st
+```
+
+`App.run(config={"logger.handlerMode": "host"})` provides the corresponding existing
+programmatic config channel. Import-time diagnostics still use the isolated bootstrap
+handler until Streamlit validates and applies config. Isolation prevents delivery to a
+root-only host during that window; a handler attached directly to the namespace receives
+the records alongside the bootstrap handler.
+
 Use the host application's JSON logging exclusively for an embedded app:
 
 ```toml
@@ -184,7 +208,21 @@ handlerMode = "host"
 ```
 
 ```python
+import json
+import logging
 import logging.config
+
+
+class JsonFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        return json.dumps(
+            {
+                "level": record.levelname,
+                "logger": record.name,
+                "message": record.getMessage(),
+            }
+        )
+
 
 logging.config.dictConfig(
     {
@@ -197,9 +235,7 @@ logging.config.dictConfig(
             }
         },
         "formatters": {
-            "json": {
-                "format": '{"level":"%(levelname)s","logger":"%(name)s","message":"%(message)s"}'
-            }
+            "json": {"()": JsonFormatter},
         },
         "root": {"level": "INFO", "handlers": ["json"]},
     }
@@ -294,6 +330,14 @@ selected handler policy.
 - Pros: Preserves app defaults, supports external and embedded hosts, provides a fallback,
   and can evolve without another boolean option.
 - Cons: Adds one config option and requires launch-mode-aware initialization.
+
+**Option D: Suppress Streamlit output whenever a custom namespace handler exists**
+
+- Pros: A handler added in Python could become the only destination without selecting a
+  handler policy.
+- Cons: Merely attaching an observability or test handler would silently remove the console
+  output that existing apps expect. Handler attachment is commonly additive, so ownership
+  remains an explicit deployment setting.
 
 ## Out of Scope (Future Work)
 
