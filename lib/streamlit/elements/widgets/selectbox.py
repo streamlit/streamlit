@@ -677,15 +677,9 @@ class SelectboxMixin:
         ctx: ScriptRunContext | None = None,
     ) -> T | str | None:
         key = to_key(key)
-        on_change = validate_on_change_mode(
+        on_change_callback = validate_on_change_mode(
             on_change,
-            supported_modes=(),
-        )
-
-        validate_on_change_mode(on_change)
-
-        on_change_callback: WidgetCallback | None = (
-            on_change if callable(on_change) else None
+            supported_modes=("rerun", "ignore"),
         )
 
         check_widget_policies(
