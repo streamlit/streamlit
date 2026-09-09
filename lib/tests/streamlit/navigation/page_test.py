@@ -260,14 +260,29 @@ class StPagesTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitMissingRequiredParameterError):
             st.Page(page_9, url_path="")
 
-    def test_non_default_pages_cannot_have_nested_url_path(self):
-        """Tests that an error is raised if the url path contains a nested path"""
+    @parameterized.expand(
+        [
+            ("simple", "foo/bar"),
+            ("leading_slash", "/foo/bar"),
+            ("trailing_slash", "foo/bar/"),
+            ("deeply_nested", "foo/bar/baz"),
+        ]
+    )
+    def test_non_default_pages_cannot_have_nested_url_path(
+        self, _name: str, url_path: str
+    ) -> None:
+        """Tests that an error is raised if the url path contains a nested path."""
 
         def page_9():
             pass
 
-        with pytest.raises(StreamlitAPIException):
-            st.Page(page_9, url_path="foo/bar")
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.Page(page_9, url_path=url_path)
+
+        assert exc_info.value.error_id == "page-nested-url-path"
+        message = str(exc_info.value)
+        assert "nested path" in message
+        assert "https://github.com/streamlit/streamlit/issues/8971" in message
 
     def test_page_with_no_title_raises_api_exception(self):
         """Tests that an error is raised if the title is empty or inferred to be empty"""
@@ -467,12 +482,25 @@ class TestExternalUrlSupport(DeltaGeneratorTestCase):
         ):
             st.Page("https://example.com", **kwargs)
 
-    def test_external_url_cannot_have_nested_url_path(self):
+    @parameterized.expand(
+        [
+            ("simple", "foo/bar"),
+            ("leading_slash", "/foo/bar"),
+            ("trailing_slash", "foo/bar/"),
+            ("deeply_nested", "foo/bar/baz"),
+        ]
+    )
+    def test_external_url_cannot_have_nested_url_path(
+        self, _name: str, url_path: str
+    ) -> None:
         """Test that external URL pages cannot have nested url_path."""
         with pytest.raises(StreamlitAPIException) as exc_info:
-            st.Page("https://example.com", title="Test", url_path="foo/bar")
+            st.Page("https://example.com", title="Test", url_path=url_path)
 
-        assert "nested path" in str(exc_info.value)
+        assert exc_info.value.error_id == "page-nested-url-path"
+        message = str(exc_info.value)
+        assert "nested path" in message
+        assert "https://github.com/streamlit/streamlit/issues/8971" in message
 
     @parameterized.expand(
         [

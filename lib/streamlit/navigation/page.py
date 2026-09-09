@@ -53,6 +53,21 @@ def _sanitize_url_path(title: str) -> str:
     return path
 
 
+def _raise_if_nested_url_path(url_path: str) -> None:
+    """Reject nested URL pathnames until they are supported.
+
+    Nested pathnames break static-asset resolution relative to the page URL.
+    """
+    if "/" not in url_path:
+        return
+    raise StreamlitAPIException(
+        f"The `url_path` `{url_path}` cannot contain a nested path (e.g. `foo/bar`). "
+        "Nested URL pathnames are not supported yet. To upvote enabling them, "
+        "see GitHub issue [#8971](https://github.com/streamlit/streamlit/issues/8971).",
+        error_id="page-nested-url-path",
+    )
+
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -144,8 +159,9 @@ class Page:
 
         The default page will have a pathname of ``""``, indicating the root
         URL of the app. If you set ``default=True``, ``url_path`` is ignored.
-        ``url_path`` can't include forward slashes; paths can't include
-        subdirectories.
+        ``url_path`` can't include forward slashes; nested URL pathnames are
+        not supported yet. To upvote enabling them, see GitHub issue
+        `#8971 <https://github.com/streamlit/streamlit/issues/8971>`_.
 
     default : bool
         Whether this page is the default page to be shown when the app is
@@ -301,11 +317,7 @@ class Page:
                         "`title` that can be converted to a valid URL path."
                     ),
                 )
-            if "/" in self._url_path:
-                raise StreamlitAPIException(
-                    "The URL path cannot contain a nested path (e.g. foo/bar).",
-                    error_id="page-nested-url-path",
-                )
+            _raise_if_nested_url_path(self._url_path)
 
             self._can_be_called: bool = False
             return
@@ -379,11 +391,7 @@ class Page:
                 )
 
             self._url_path = stripped_url_path
-            if "/" in self._url_path:
-                raise StreamlitAPIException(
-                    "The URL path cannot contain a nested path (e.g. foo/bar).",
-                    error_id="page-nested-url-path",
-                )
+            _raise_if_nested_url_path(self._url_path)
 
         if self._icon:
             validate_icon_or_emoji(self._icon)
