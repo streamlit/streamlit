@@ -548,13 +548,25 @@ replace a working install just to match CI.
 
   The `PATH` export is session-scoped; a later `make protobuf` in a new shell
   will pick Homebrew's unversioned `protoc` again unless that `PATH` is
-  persisted. If Homebrew has no matching formula, take the version number from
-  `PROTOC_VERSION` in
+  persisted. If Homebrew has no matching formula, copy `PROTOC_VERSION` from
   [`.github/actions/make_init/action.yml`](./.github/actions/make_init/action.yml)
-  and download the GitHub release asset for your OS and architecture (for
-  example `osx-aarch_64`) from the
-  [protobuf releases page](https://github.com/protocolbuffers/protobuf/releases).
-  Put that `protoc` first on your `PATH`.
+  and install that GitHub release zip (it is an archive, not a `protoc`
+  binary). Use the asset for your OS and architecture (`osx-aarch_64`,
+  `osx-x86_64`, `linux-x86_64`, or `linux-aarch_64`), extract `bin/protoc`,
+  and put it first on `PATH`:
+
+  ```bash
+  PROTOC_VERSION=26.1  # copy from action.yml
+  PROTOC_ZIP="protoc-${PROTOC_VERSION}-osx-aarch_64.zip"
+  curl -fOL "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}"
+  sudo unzip -o "$PROTOC_ZIP" -d /usr/local bin/protoc
+  sudo unzip -o "$PROTOC_ZIP" -d /usr/local 'include/*'
+  rm "$PROTOC_ZIP"
+  which protoc   # should be /usr/local/bin/protoc
+  make protobuf
+  ```
+
+  `/usr/local/bin` must precede Homebrew's `protoc` on `PATH`.
 - `ImportError: cannot import name 'runtime_version'` from `google.protobuf`
   means the Python environment is out of sync (the locked `protobuf` package
   already includes `runtime_version`). Reinstall with `make python-init`.
