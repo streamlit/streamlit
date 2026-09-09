@@ -28,6 +28,7 @@ from typing import (
     Any,
     ClassVar,
     Generic,
+    NoReturn,
     TypeAlias,
     TypeVar,
     cast,
@@ -55,6 +56,7 @@ from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.common import TESTING_KEY, user_key_from_element_id
+from streamlit.testing.v1.errors import AppTestError
 
 if TYPE_CHECKING:
     from pandas import DataFrame as PandasDataframe
@@ -93,8 +95,23 @@ if TYPE_CHECKING:
     from streamlit.proto.Toast_pb2 import Toast as ToastProto
     from streamlit.runtime.state.safe_session_state import SafeSessionState
     from streamlit.testing.v1.app_test import AppTest
+    from streamlit.typing import ChatInputValue
 
 T = TypeVar("T")
+
+
+def _unknown_element_content(proto: Any) -> Any:
+    """Best-effort payload for an unimplemented element's proto.
+
+    Many display protos store content in ``body``, ``text``, or ``label``
+    rather than ``value`` (for example ``st.html``).
+    """
+    fields = getattr(getattr(proto, "DESCRIPTOR", None), "fields_by_name", None)
+    if fields:
+        for name in ("value", "body", "text", "label"):
+            if name in fields:
+                return getattr(proto, name)
+    return getattr(proto, "value", None)
 
 
 def _format_value_for_widget(format_func: Callable[[Any], str], value: Any) -> str:
@@ -164,8 +181,35 @@ class Element(ABC):
         ...
 
     def __getattr__(self, name: str) -> Any:
-        """Fallback attempt to get an attribute from the proto."""
+        """Look up missing names on the element's proto, except AppTest interactions.
+
+        ``set_value`` and ``click`` are unsupported AppTest interactions even when a
+        proto defines those names as fields (pagination's ``set_value`` is a bool).
+        Other missing names still fall through to the proto.
+        """
+        if name in {"set_value", "click"}:
+
+            def unsupported_interaction(*_args: Any, **_kwargs: Any) -> None:
+                self._raise_unsupported_interaction(name)
+
+            return unsupported_interaction
         return getattr(self.proto, name)
+
+    def _raise_unsupported_interaction(self, method: str) -> NoReturn:
+        """Raise AppTestError: typed widgets already have interaction methods; other nodes do not."""
+        key_part = f" (key={self.key!r})" if self.key else ""
+        if isinstance(self, Widget):
+            raise AppTestError(
+                f"{method}() is not supported for {self.type}{key_part}. "
+                "Use set_value() or one of this widget's typed interaction "
+                "methods."
+            )
+        raise AppTestError(
+            f"{method}() is not supported for {self.type}{key_part}. "
+            "AppTest can inspect this element but does not implement "
+            "interactions for it. Set its value through at.session_state if it "
+            "has a key, or use a Playwright e2e test."
+        )
 
     def run(self, *, timeout: float | None = None) -> AppTest:
         """Run the ``AppTest`` script which contains the element.
@@ -190,17 +234,22 @@ class UnknownElement(Element):
         self.proto = getattr(proto, ty)
         self.root = root
         self.type = ty
-        self.key = None
+        proto_id = getattr(self.proto, "id", "") or ""
+        self.key = user_key_from_element_id(proto_id) if proto_id else None
 
     @property
     def value(self) -> Any:
-        try:
-            state = self.root.session_state
-            assert state is not None
-            return state[self.proto.id]
-        except ValueError:
-            # No id field, not a widget
-            return self.proto.value
+        proto_id = getattr(self.proto, "id", None)
+        if proto_id:
+            try:
+                state = self.root.session_state
+                if state is not None:
+                    return state[proto_id]
+            except (KeyError, ValueError):
+                # Missing widget state or a non-widget id is expected for
+                # unimplemented elements; fall back to a proto field.
+                pass
+        return _unknown_element_content(self.proto)
 
 
 @dataclass(repr=False)
@@ -218,8 +267,18 @@ class Widget(Element, ABC):
         self.key = user_key_from_element_id(self.id)
         self._value = None
 
+    def _assert_can_interact(self) -> None:
+        """Reject interactions that a browser user cannot perform."""
+        if getattr(self.proto, "disabled", False):
+            key_part = f" (key={self.key!r})" if self.key else ""
+            raise AppTestError(
+                f"Cannot update a disabled {self.type} widget{key_part}. "
+                "A browser user cannot interact with a disabled widget."
+            )
+
     def set_value(self, v: Any) -> Self:
         """Set the value of the widget."""
+        self._assert_can_interact()
         self._value = v
         return self
 
@@ -267,6 +326,18 @@ class ElementList(Generic[El_co]):
     def __hash__(self) -> int:
         return hash(tuple(self._list))
 
+    def __call__(self, key: str) -> El_co:
+        """Return the first element in this collection with the given user key.
+
+        The same key can appear on different element types, so this returns the
+        first match in this collection. Use ``get_by_key`` when an ambiguous
+        key should raise.
+        """
+        for e in self._list:
+            if getattr(e, "key", None) == key:
+                return e
+        raise KeyError(key)
+
     @property
     def values(self) -> Sequence[Any]:
         return [e.value for e in self]
@@ -276,11 +347,57 @@ W_co = TypeVar("W_co", bound=Widget, covariant=True)
 
 
 class WidgetList(ElementList[W_co], Generic[W_co]):
-    def __call__(self, key: str) -> W_co:
+    """ElementList narrowed to widgets for typing."""
+
+
+class BlockList:
+    """Sequence of layout blocks with optional lookup by user key."""
+
+    def __init__(self, els: Sequence[Block]) -> None:
+        self._list = list(els)
+
+    def __len__(self) -> int:
+        return len(self._list)
+
+    @property
+    def len(self) -> int:
+        return len(self)
+
+    @overload
+    def __getitem__(self, idx: int) -> Block: ...
+
+    @overload
+    def __getitem__(self, idx: slice) -> BlockList: ...
+
+    def __getitem__(self, idx: int | slice) -> Block | BlockList:
+        if isinstance(idx, slice):
+            return BlockList(self._list[idx])
+        return self._list[idx]
+
+    def __iter__(self) -> Iterator[Block]:
+        return iter(self._list)
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
+
+    def __eq__(self, other: BlockList | object) -> bool:
+        if isinstance(other, BlockList):
+            return self._list == other._list
+        return self._list == other
+
+    def __hash__(self) -> int:
+        return hash(tuple(self._list))
+
+    def __call__(self, key: str) -> Block:
+        """Return the first block in this collection with the given user key.
+
+        The same key can appear on different block types, so this returns the
+        first match in this collection. Use ``get_by_key`` when an ambiguous
+        key should raise.
+        """
         for e in self._list:
             if e.key == key:
                 return e
-
         raise KeyError(key)
 
 
@@ -361,8 +478,7 @@ class Button(Widget):
 
     def set_value(self, v: bool) -> Button:
         """Set the value of the button."""
-        self._value = v
-        return self
+        return super().set_value(v)
 
     def click(self) -> Button:
         """Set the value of the button to True."""
@@ -403,8 +519,7 @@ class DownloadButton(Widget):
 
     def set_value(self, v: bool) -> DownloadButton:
         """Set the value of the download button."""
-        self._value = v
-        return self
+        return super().set_value(v)
 
     def click(self) -> DownloadButton:
         """Set the value of the download button to True."""
@@ -425,8 +540,7 @@ class ChatInput(Widget):
 
     def set_value(self, v: str | None) -> ChatInput:
         """Set the value of the widget."""
-        self._value = v
-        return self
+        return super().set_value(v)
 
     @property
     def _widget_state(self) -> WidgetState:
@@ -437,9 +551,15 @@ class ChatInput(Widget):
         return ws
 
     @property
-    def value(self) -> str | None:
-        """The value of the widget. (str)"""  # noqa: D400
-        if self._value:
+    def value(self) -> str | ChatInputValue | None:
+        """The pending or last submitted chat input value.
+
+        Before ``.run()``, a pending ``set_value`` is that string (including ``""``).
+        After ``.run()``, this is a plain ``str`` for a text-only chat input, a
+        ``ChatInputValue`` when ``accept_file`` or ``accept_audio`` is enabled, and
+        ``None`` when nothing was submitted.
+        """
+        if self._value is not None:
             return self._value
         state = self.root.session_state
         assert state
@@ -479,8 +599,7 @@ class Checkbox(Widget):
 
     def set_value(self, v: bool) -> Checkbox:
         """Set the value of the widget."""
-        self._value = v
-        return self
+        return super().set_value(v)
 
     def check(self) -> Checkbox:
         """Set the value of the widget to True."""
@@ -550,8 +669,7 @@ class ColorPicker(Widget):
 
     def set_value(self, v: str) -> ColorPicker:
         """Set the value of the widget as a hex string."""
-        self._value = v
-        return self
+        return super().set_value(v)
 
     def pick(self, v: str) -> ColorPicker:
         """Set the value of the widget as a hex string. May omit the "#" prefix."""
@@ -609,8 +727,7 @@ class DateInput(Widget):
 
     def set_value(self, v: DateValue) -> DateInput:
         """Set the value of the widget."""
-        self._value = v
-        return self
+        return super().set_value(v)
 
     @property
     def _widget_state(self) -> WidgetState:
@@ -671,6 +788,11 @@ class HeadingBase(Element, ABC):
     @property
     def value(self) -> str:
         return self.proto.body
+
+    @property
+    def icon(self) -> str:
+        """The heading icon, or empty string when none is set."""
+        return self.proto.icon
 
 
 @dataclass(repr=False)
@@ -886,8 +1008,7 @@ class ButtonGroup(Widget, Generic[T]):
         For single-select mode, pass a single value or None to clear the selection.
         For multi-select mode, pass a list of values (use empty list to clear).
         """
-        self._value = v
-        return self
+        return super().set_value(v)
 
     def select(self, v: T) -> ButtonGroup[T]:
         """Add a selection to the widget.
@@ -973,8 +1094,7 @@ class Feedback(Widget):
 
     def set_value(self, v: int | None) -> Feedback:
         """Set the value of the feedback widget. (int or None)"""  # noqa: D400
-        self._value = v
-        return self
+        return super().set_value(v)
 
 
 @dataclass(repr=False)
@@ -1047,6 +1167,7 @@ class FileUploader(Widget):
         """
         from uuid import uuid4
 
+        self._assert_can_interact()
         if files is None:
             self._files = None
         elif isinstance(files, tuple) and len(files) == 3 and isinstance(files[0], str):
@@ -1089,6 +1210,7 @@ class FileUploader(Widget):
         """
         from uuid import uuid4
 
+        self._assert_can_interact()
         if self._files is None or isinstance(self._files, InitialValue):
             self._files = []
         self._files.append((str(uuid4()), filename, content, mime_type))
@@ -1102,6 +1224,7 @@ class FileUploader(Widget):
         FileUploader
             The FileUploader instance for method chaining.
         """
+        self._assert_can_interact()
         self._files = None
         return self
 
@@ -1240,8 +1363,7 @@ class MenuButton(Widget, Generic[T]):
 
     def set_value(self, v: T | None) -> MenuButton[T]:
         """Set the selected option value."""
-        self._value = v
-        return self
+        return super().set_value(v)
 
     def click(self, v: T) -> MenuButton[T]:
         """Click an option by value, simulating user selection."""
@@ -1313,9 +1435,7 @@ class Multiselect(Widget, Generic[T]):
 
     def set_value(self, v: list[T]) -> Multiselect[T]:
         """Set the value of the multiselect widget. (list)"""  # noqa: D400
-
-        self._value = v
-        return self
+        return super().set_value(v)
 
     def select(self, v: T) -> Multiselect[T]:
         """
@@ -1372,8 +1492,7 @@ class NumberInput(Widget):
 
     def set_value(self, v: Number | None) -> NumberInput:
         """Set the value of the ``st.number_input`` widget."""
-        self._value = v
-        return self
+        return super().set_value(v)
 
     @property
     def _widget_state(self) -> WidgetState:
@@ -1455,8 +1574,7 @@ class Radio(Widget, Generic[T]):
 
     def set_value(self, v: T | None) -> Radio[T]:
         """Set the selection by value."""
-        self._value = v
-        return self
+        return super().set_value(v)
 
     @property
     def _widget_state(self) -> WidgetState:
@@ -1517,8 +1635,7 @@ class Selectbox(Widget, Generic[T]):
 
     def set_value(self, v: T | None) -> Selectbox[T]:
         """Set the selection by value."""
-        self._value = v
-        return self
+        return super().set_value(v)
 
     def select(self, v: T | None) -> Selectbox[T]:
         """Set the selection by value."""
@@ -1563,8 +1680,7 @@ class SelectSlider(Widget, Generic[T]):
 
     def set_value(self, v: T | Sequence[T]) -> SelectSlider[T]:
         """Set the (single) selection by value."""
-        self._value = v
-        return self
+        return super().set_value(v)
 
     @property
     def _widget_state(self) -> WidgetState:
@@ -1644,8 +1760,7 @@ class Slider(Widget, Generic[SliderValueT]):
         self, v: SliderValueT | Sequence[SliderValueT]
     ) -> Slider[SliderValueT]:
         """Set the (single) value of the slider."""
-        self._value = v
-        return self
+        return cast("Slider[SliderValueT]", super().set_value(v))
 
     @property
     def _widget_state(self) -> WidgetState:
@@ -1729,8 +1844,7 @@ class TextArea(Widget):
 
     def set_value(self, v: str | None) -> TextArea:
         """Set the value of the widget."""
-        self._value = v
-        return self
+        return super().set_value(v)
 
     @property
     def _widget_state(self) -> WidgetState:
@@ -1781,8 +1895,7 @@ class TextInput(Widget):
 
     def set_value(self, v: str | None) -> TextInput:
         """Set the value of the widget."""
-        self._value = v
-        return self
+        return super().set_value(v)
 
     @property
     def _widget_state(self) -> WidgetState:
@@ -1835,8 +1948,7 @@ class TimeInput(Widget):
 
     def set_value(self, v: TimeValue | None) -> TimeInput:
         """Set the value of the widget."""
-        self._value = v
-        return self
+        return super().set_value(v)
 
     @property
     def _widget_state(self) -> WidgetState:
@@ -1895,8 +2007,7 @@ class DateTimeInput(Widget):
 
     def set_value(self, v: DateTimeWidgetValue | None) -> DateTimeInput:
         """Set the value of the widget."""
-        self._value = v
-        return self
+        return super().set_value(v)
 
     @property
     def _widget_state(self) -> WidgetState:
@@ -1981,8 +2092,7 @@ class Toggle(Widget):
 
     def set_value(self, v: bool) -> Toggle:
         """Set the value of the widget."""
-        self._value = v
-        return self
+        return super().set_value(v)
 
 
 @dataclass(repr=False)
@@ -2001,6 +2111,7 @@ class Block:
     children: dict[int, Node]
     proto: Any = field(repr=False)
     root: ElementTree = field(repr=False)
+    _block_id: str = field(repr=False, default="", init=False)
 
     def __init__(
         self,
@@ -2019,6 +2130,7 @@ class Block:
         else:
             self.type = "unknown"
         self.root = root
+        self._block_id = getattr(proto, "id", "") or "" if proto is not None else ""
 
     def __len__(self) -> int:
         return len(self.children)
@@ -2033,7 +2145,33 @@ class Block:
 
     @property
     def key(self) -> str | None:
+        """User key for this block, if the corresponding command set one."""
+        proto = self.proto
+        block_id = self._block_id or (
+            getattr(proto, "id", None) if proto is not None else None
+        )
+        if block_id:
+            return user_key_from_element_id(block_id)
+        if self.type == "form" and proto is not None:
+            return cast("str", proto.form.form_id)
         return None
+
+    def get_by_key(self, key: str) -> Node:
+        """Return the unique current node with this user key.
+
+        Works for widgets, keyed display elements, and keyed containers.
+        Raises ``KeyError`` if no node matches and ``AppTestError`` if
+        more than one node matches.
+        """
+        matches = [e for e in self if e is not self and getattr(e, "key", None) == key]
+        if len(matches) == 1:
+            return matches[0]
+        if not matches:
+            raise KeyError(key)
+        raise AppTestError(
+            f"Multiple elements have key {key!r}. "
+            "Scope the query to a container or use a typed collection."
+        )
 
     # We could implement these using __getattr__ but that would have
     # much worse type information.
@@ -2094,6 +2232,25 @@ class Block:
     @property
     def columns(self) -> Sequence[Column]:
         return self.get("column")  # type: ignore
+
+    @property
+    def container(self) -> BlockList:
+        """``st.container`` blocks, including horizontal/flex containers.
+
+        The implicit row wrapper created by ``st.columns`` is excluded.
+        """
+        return BlockList(
+            [
+                e
+                for e in self
+                if isinstance(e, Block)
+                and e is not self
+                and e.type in {"container", "flex_container"}
+                # st.columns currently emits a flex-container whose direct
+                # children are Column blocks; that wrapper is not st.container.
+                and not any(isinstance(child, Column) for child in e.children.values())
+            ]
+        )
 
     @property
     def dataframe(self) -> ElementList[Dataframe]:
@@ -2327,6 +2484,7 @@ class SpecialBlock(Block):
         else:
             self.type = "unknown"
         self.root = root
+        self._block_id = getattr(proto, "id", "") or "" if proto is not None else ""
 
 
 @dataclass(repr=False)
@@ -2420,13 +2578,14 @@ class Status(Block):
 
     @property
     def state(self) -> str:
-        if self.icon == "spinner":
-            return "running"
-        if self.icon == ":material/check:":
-            return "complete"
-        if self.icon == ":material/error:":
-            return "error"
-        raise ValueError("Unknown Status state")
+        # Blocks are classified as a status by the presence of an icon, so an
+        # st.expander with a custom icon lands here without a state.
+        if self.proto.state == self.proto.State.STATE_UNDEFINED:
+            raise ValueError(
+                "This block has no status state. Only st.status sets a state; "
+                "an st.expander with an icon is also exposed via at.status."
+            )
+        return self.proto.State.Name(self.proto.state).lower()
 
 
 @dataclass(repr=False)
@@ -2489,6 +2648,7 @@ class ElementTree(Block):
         self.children = {}
         self.root = self
         self.type = "root"
+        self._block_id = ""
 
     @property
     def main(self) -> Block:
@@ -2568,9 +2728,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 elif alert_format == AlertProto.Format.WARNING:
                     new_node = Warning(elt.alert, root=root)
                 else:
-                    raise ValueError(
-                        f"Unknown alert type with format {elt.alert.format}"
-                    )
+                    new_node = UnknownElement(elt, root=root)
             elif ty == "dataframe":
                 new_node = Dataframe(elt.dataframe, root=root)
             elif ty == "table":
@@ -2611,7 +2769,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 elif elt.heading.tag == HeadingProtoTag.SUBHEADER_TAG.value:
                     new_node = Subheader(elt.heading, root=root)
                 else:
-                    raise ValueError(f"Unknown heading type with tag {elt.heading.tag}")
+                    new_node = UnknownElement(elt, root=root)
             elif ty == "imgs":
                 new_node = Image(elt.imgs, root=root)
             elif ty == "json":
@@ -2626,9 +2784,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 elif elt.markdown.element_type == MarkdownProto.Type.DIVIDER:
                     new_node = Divider(elt.markdown, root=root)
                 else:
-                    raise ValueError(
-                        f"Unknown markdown type {elt.markdown.element_type}"
-                    )
+                    new_node = UnknownElement(elt, root=root)
             elif ty == "menu_button":
                 new_node = MenuButton(elt.menu_button, root=root)
             elif ty == "metric":
@@ -2647,7 +2803,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 elif elt.slider.type == SliderProto.Type.SELECT_SLIDER:
                     new_node = SelectSlider(elt.slider, root=root)
                 else:
-                    raise ValueError(f"Slider with unknown type {elt.slider}")
+                    new_node = UnknownElement(elt, root=root)
             elif ty == "text":
                 new_node = Text(elt.text, root=root)
             elif ty == "text_area":
@@ -2676,6 +2832,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Tab(block.tab, root=root)
             else:
                 new_node = Block(proto=block, root=root)
+            new_node._block_id = block.id or ""
         elif delta.WhichOneof("type") == "new_transient":
             # new_transient (e.g. spinner) - skip these in the element tree
             continue

@@ -368,14 +368,23 @@ def _test_number_cell_editing(
     cell_overlay.press("ControlOrMeta+A")
 
     # Get the (number) input element and check the value
-    expect(cell_overlay.locator(".gdg-input")).to_have_attribute("value", "1231231.41")
+    input_field = cell_overlay.locator(".gdg-input")
+    expect(input_field).to_have_attribute("value", "1231231.41")
     if not skip_snapshot:
         assert_snapshot(cell_overlay, name="st_data_editor-number_col_editor")
 
     # Change the value
-    cell_overlay.locator(".gdg-input").fill("9876.54")
-    # Press Enter to apply the change
-    themed_app.keyboard.press("Enter")
+    input_field.fill("9876.54")
+    expect(input_field).to_have_value("9876.54")
+    # `fill()` updates the input's DOM value and fires a single input event, but
+    # the overlay editor commits on Enter via a deferred (setTimeout) callback
+    # that closes over the React state value. If Enter arrives before that state
+    # update has re-rendered, the commit uses the previous value. Yield one
+    # event-loop task so the re-render flushes before we press Enter. (Atomic
+    # fill+Enter is a test-harness timing artifact; real typing never hits this
+    # sub-frame window.)
+    themed_app.evaluate("() => new Promise(resolve => setTimeout(resolve, 0))")
+    input_field.press("Enter")
     wait_for_app_run(themed_app)
 
     # Check if that the value was submitted

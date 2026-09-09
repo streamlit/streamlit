@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import type { JSX } from "react"
+
 import { act, render, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 

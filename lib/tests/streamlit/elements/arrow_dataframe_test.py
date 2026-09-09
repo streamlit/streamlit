@@ -45,7 +45,11 @@ from streamlit.elements.lib.column_config_utils import (
     ButtonClickSerde,
     ButtonColumnClickState,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitValueError,
+)
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.proto.Dataframe_pb2 import LazyDataframe as LazyDataframeProto
 from streamlit.testing.v1 import AppTest
@@ -390,19 +394,25 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (["invalid", "single-row"],),
-            (["single-row", "multi-row"],),
-            (["single-row-required", "single-row"],),
-            (["single-row-required", "multi-row"],),
-            (["single-column", "multi-column"],),
-            (["single-cell", "multi-cell"],),
+            (["invalid", "single-row"], StreamlitValueError),
+            (["single-row", "multi-row"], StreamlitIncompatibleParametersError),
+            (
+                ["single-row-required", "single-row"],
+                StreamlitIncompatibleParametersError,
+            ),
+            (
+                ["single-row-required", "multi-row"],
+                StreamlitIncompatibleParametersError,
+            ),
+            (["single-column", "multi-column"], StreamlitIncompatibleParametersError),
+            (["single-cell", "multi-cell"], StreamlitIncompatibleParametersError),
         ]
     )
-    def test_selection_mode_parsing_invalid(self, invalid_modes):
+    def test_selection_mode_parsing_invalid(self, invalid_modes, expected_error):
         """Test that an exception is thrown if the selection_mode parameter is invalid."""
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(expected_error):
             st.dataframe(df, on_select="rerun", selection_mode=invalid_modes)
 
     def test_selection_mode_deactivated(self):
@@ -469,7 +479,10 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         """Test that selection_default requires on_select to be activated."""
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(
+            StreamlitIncompatibleParametersError,
+            match=r"Set `on_select` to `'rerun'` or a callback",
+        ):
             st.dataframe(df, selection_default={"selection": {"rows": [0]}})
 
     def test_row_selection_auto_hides_range_index(self):

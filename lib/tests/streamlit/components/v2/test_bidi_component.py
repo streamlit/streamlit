@@ -80,6 +80,17 @@ def test_make_trigger_id_validates_event_delimiter() -> None:
         _make_trigger_id("normal_base", "click__event")
 
 
+def test_bidi_component_without_script_run_ctx_returns_empty_result() -> None:
+    """Without a ScriptRunContext, bidi components return empty state and triggers."""
+    mixin = BidiComponentMixin()
+    with patch(
+        "streamlit.components.v2.bidi_component.main.get_script_run_ctx",
+        return_value=None,
+    ):
+        result = mixin._bidi_component("my_component")
+    assert dict(result) == {}
+
+
 def test_make_trigger_id_creates_internal_key() -> None:
     """Test that _make_trigger_id creates widget IDs with internal prefix.
     Trigger widgets should be marked as internal so they don't appear
@@ -476,11 +487,12 @@ class BidiComponentTest(DeltaGeneratorTestCase):
         assert bidi_component_proto.js_content == ""
         assert bidi_component_proto.html_content == ""
 
-    def test_unregistered_component_raises_value_error(self):
-        """Test that calling an unregistered component raises ValueError."""
+    def test_unregistered_component_raises_api_exception(self):
+        """Calling an unregistered component raises StreamlitAPIException."""
         # Call a component that doesn't exist
         with pytest.raises(
-            ValueError, match="Component 'nonexistent_component' is not registered"
+            StreamlitAPIException,
+            match="Component 'nonexistent_component' is not registered",
         ):
             st._bidi_component("nonexistent_component")
 

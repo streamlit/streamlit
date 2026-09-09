@@ -147,10 +147,9 @@ describe("Pagination widget", () => {
       await user.click(getNextButton())
 
       expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         2,
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -164,10 +163,9 @@ describe("Pagination widget", () => {
       await user.click(getPrevButton())
 
       expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         4,
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -182,10 +180,9 @@ describe("Pagination widget", () => {
       await user.click(page3Button)
 
       expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         3,
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
   })
@@ -492,10 +489,13 @@ describe("Pagination widget", () => {
       render(<Pagination {...props} />)
 
       expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         5,
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
     })
 
@@ -512,10 +512,13 @@ describe("Pagination widget", () => {
       await user.click(getNextButton())
 
       expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         2,
-        { fromUi: true },
-        "test-fragment"
+        {
+          formId: props.element.formId,
+          fragmentId: "test-fragment",
+          fromUser: true,
+        }
       )
     })
   })

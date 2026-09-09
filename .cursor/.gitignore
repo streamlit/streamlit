@@ -18,6 +18,7 @@ rules/*
 !rules/typescript_tests.mdc
 !rules/python.mdc
 !rules/python_lib.mdc
+!rules/embedded_skills.mdc
 !rules/python_tests.mdc
 !rules/protobuf.mdc
 !rules/e2e_playwright.mdc

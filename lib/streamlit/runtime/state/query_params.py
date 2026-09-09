@@ -364,7 +364,8 @@ class QueryParams(MutableMapping[str, str]):
         if self.is_bound(key):
             raise StreamlitAPIException(
                 f"Cannot directly set query parameter '{key}' - "
-                f"it is bound to a widget. Modify the widget value instead."
+                f"it is bound to a widget. Modify the widget value instead.",
+                error_id="query-param-bound-cannot-set",
             )
         self._set_item_internal(key, value)
         self._send_query_param_msg()
@@ -379,7 +380,8 @@ class QueryParams(MutableMapping[str, str]):
         if self.is_bound(key):
             raise StreamlitAPIException(
                 f"Cannot directly delete query parameter '{key}' - "
-                f"it is bound to a widget. Modify the widget value instead."
+                f"it is bound to a widget. Modify the widget value instead.",
+                error_id="query-param-bound-cannot-delete",
             )
         try:
             del self._query_params[key]
@@ -418,7 +420,8 @@ class QueryParams(MutableMapping[str, str]):
             if self.is_bound(key):
                 raise StreamlitAPIException(
                     f"Cannot directly set query parameter '{key}' - "
-                    f"it is bound to a widget. Modify the widget value instead."
+                    f"it is bound to a widget. Modify the widget value instead.",
+                    error_id="query-param-bound-cannot-set",
                 )
 
         # Now apply the updates
@@ -465,7 +468,8 @@ class QueryParams(MutableMapping[str, str]):
             raise StreamlitAPIException(
                 f"Cannot clear query parameters - the following are bound to widgets: "
                 f"{', '.join(repr(k) for k in bound_params)}. "
-                f"Modify the widget values instead, or remove the bind parameter."
+                f"Modify the widget values instead, or remove the bind parameter.",
+                error_id="query-param-bound-cannot-clear",
             )
         self.clear_with_no_forward_msg(preserve_embed=True)
         self._send_query_param_msg()
@@ -535,7 +539,8 @@ class QueryParams(MutableMapping[str, str]):
             raise StreamlitAPIException(
                 f"Cannot bind to reserved query parameter '{param_key}'. "
                 f"'{EMBED_QUERY_PARAM}' and '{EMBED_OPTIONS_QUERY_PARAM}' are "
-                f"used internally for Streamlit's embed functionality."
+                f"used internally for Streamlit's embed functionality.",
+                error_id="query-param-reserved-cannot-bind",
             )
 
         # Clean up old binding if a different widget was bound to this param
@@ -883,7 +888,8 @@ def _set_item_in_dict(
 
     if key.lower() in EMBED_QUERY_PARAMS_KEYS:
         raise StreamlitAPIException(
-            "Query param embed and embed_options (case-insensitive) cannot be set programmatically."
+            "Query param embed and embed_options (case-insensitive) cannot be set programmatically.",
+            error_id="query-param-embed-cannot-set",
         )
     # Type checking users should handle the string serialization themselves
     # We will accept any type for the list and serialize to str just in case

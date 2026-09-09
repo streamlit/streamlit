@@ -54,9 +54,17 @@ class RerunData:
     fragment_id: str | None = None
     # The queue of fragment_ids waiting to be run.
     fragment_id_queue: list[str] = field(default_factory=list)
+    # True when the user explicitly scoped the rerun to fragment(s) — via
+    # scope="fragment" (self-targeting) or a key / list of keys (targeting
+    # other fragments by name). False for default widget-interaction reruns
+    # inside a fragment, even though those also populate fragment_id_queue.
     is_fragment_scoped_rerun: bool = False
     # set to true when a script is rerun by the fragment auto-rerun mechanism
     is_auto_rerun: bool = False
+    # When True, apply widget_states but skip callback dispatch.
+    # Set by _request_full_app_rerun when a normally returning callback
+    # requests the interaction default after callbacks have already run.
+    suppress_callbacks: bool = False
     # Hashes of messages that are cached in the client browser:
     cached_message_hashes: frozenset[str] = field(default_factory=frozenset)
     # context_info is used to store information from the user browser (e.g. timezone)
@@ -83,6 +91,15 @@ class ScriptRequest:
         return util.repr_(self)
 
 
+def _is_full_app_rerun(rerun_data: RerunData) -> bool:
+    """Whether ``rerun_data`` reruns the whole app rather than specific fragments."""
+    return (
+        not rerun_data.fragment_id
+        and not rerun_data.fragment_id_queue
+        and not rerun_data.is_fragment_scoped_rerun
+    )
+
+
 def _fragment_run_should_not_preempt_script(
     fragment_id_queue: list[str],
     is_fragment_scoped_rerun: bool,
@@ -98,16 +115,17 @@ def _fragment_run_should_not_preempt_script(
 
 
 def _coalesce_widget_states(
-    old_states: WidgetStates | None, new_states: WidgetStates | None
+    old_states: WidgetStates | None,
+    new_states: WidgetStates | None,
+    *,
+    old_suppress_callbacks: bool = False,
 ) -> WidgetStates | None:
-    """Coalesce an older WidgetStates into a newer one, and return a new
-    WidgetStates containing the result.
+    """Merge an older WidgetStates into a newer one, returning the result.
 
-    For most widget values, we just take the latest version.
-
-    However, any trigger_values (which are set by buttons) that are True in
-    `old_states` will be set to True in the coalesced result, so that button
-    presses don't go missing.
+    For most widgets the newer value wins.  Button and chat-input triggers are
+    special: an active trigger in ``old_states`` carries forward so rapid clicks
+    aren't lost — unless ``old_suppress_callbacks`` is True, meaning those
+    triggers' callbacks already ran and re-preserving them would fire duplicates.
     """
     if not old_states and not new_states:
         return None
@@ -120,33 +138,37 @@ def _coalesce_widget_states(
         wstate.id: wstate for wstate in new_states.widgets
     }
 
-    trigger_value_types = [
-        ("trigger_value", False),
-        ("chat_input_value", ChatInputValueProto(data=None)),
-    ]
-    for old_state in old_states.widgets:
-        for trigger_value_type, unset_value in trigger_value_types:
-            if (
-                old_state.WhichOneof("value") == trigger_value_type
-                and getattr(old_state, trigger_value_type) != unset_value
-            ):
-                new_trigger_val = states_by_id.get(old_state.id)
-                # It should nearly always be the case that new_trigger_val is None
-                # here as trigger values are deleted from the client's WidgetStateManager
-                # as soon as a rerun_script BackMsg is sent to the server. Since it's
-                # impossible to test that the client sends us state in the expected
-                # format in a unit test, we test for this behavior in
-                # e2e_playwright/test_fragment_queue_test.py
-                if not new_trigger_val or (
-                    # Ensure the corresponding new_state is also a trigger;
-                    # otherwise, a widget that was previously a button/chat_input but no
-                    # longer is could get a bad value.
-                    new_trigger_val.WhichOneof("value") == trigger_value_type
-                    # We only want to take the value of old_state if new_trigger_val is
-                    # unset as the old value may be stale if a newer one was entered.
-                    and getattr(new_trigger_val, trigger_value_type) == unset_value
+    if not old_suppress_callbacks:
+        trigger_value_types = [
+            ("trigger_value", False),
+            ("chat_input_value", ChatInputValueProto(data=None)),
+        ]
+        for old_state in old_states.widgets:
+            for trigger_value_type, unset_value in trigger_value_types:
+                if (
+                    old_state.WhichOneof("value") == trigger_value_type
+                    and getattr(old_state, trigger_value_type) != unset_value
                 ):
-                    states_by_id[old_state.id] = old_state
+                    new_trigger_val = states_by_id.get(old_state.id)
+                    # It should nearly always be the case that new_trigger_val
+                    # is None here as trigger values are deleted from the
+                    # client's WidgetStateManager as soon as a rerun_script
+                    # BackMsg is sent to the server. Since it's impossible to
+                    # test that the client sends us state in the expected
+                    # format in a unit test, we test for this behavior in
+                    # e2e_playwright/test_fragment_queue_test.py
+                    if not new_trigger_val or (
+                        # Ensure the corresponding new_state is also a trigger;
+                        # otherwise, a widget that was previously a
+                        # button/chat_input but no longer is could get a bad
+                        # value.
+                        new_trigger_val.WhichOneof("value") == trigger_value_type
+                        # We only want to take the value of old_state if
+                        # new_trigger_val is unset as the old value may be
+                        # stale if a newer one was entered.
+                        and getattr(new_trigger_val, trigger_value_type) == unset_value
+                    ):
+                        states_by_id[old_state.id] = old_state
 
     coalesced = WidgetStates()
     coalesced.widgets.extend(states_by_id.values())
@@ -210,25 +232,42 @@ class ScriptRequests:
                 # rerun request into the existing one.
 
                 coalesced_states = _coalesce_widget_states(
-                    self._rerun_data.widget_states, new_data.widget_states
+                    self._rerun_data.widget_states,
+                    new_data.widget_states,
+                    old_suppress_callbacks=self._rerun_data.suppress_callbacks,
                 )
 
+                # Fold a bare fragment_id into fragment_id_queue so the coalescing
+                # below only has to read one field.
                 if new_data.fragment_id:
-                    # This RERUN request corresponds to a new fragment run. We append
-                    # the new fragment ID to the end of the current fragment_id_queue if
-                    # it isn't already contained in it.
-                    fragment_id_queue = [*self._rerun_data.fragment_id_queue]
+                    new_data = replace(
+                        new_data,
+                        fragment_id=None,
+                        fragment_id_queue=[
+                            new_data.fragment_id,
+                            *new_data.fragment_id_queue,
+                        ],
+                    )
 
-                    if new_data.fragment_id not in fragment_id_queue:
-                        fragment_id_queue.append(new_data.fragment_id)
-                elif new_data.fragment_id_queue:
-                    # new_data contains a new fragment_id_queue, so we just use it.
-                    fragment_id_queue = new_data.fragment_id_queue
+                if _is_full_app_rerun(self._rerun_data) or _is_full_app_rerun(new_data):
+                    # A full-app rerun anywhere in the interaction trumps every
+                    # fragment-targeted one, since it reruns those fragments too.
+                    # Collapse to a single full-app rerun, whichever arrived first.
+                    fragment_id_queue: list[str] = []
+                    is_fragment_scoped_rerun = False
                 else:
-                    # Otherwise, this is a request to rerun the full script, so we want
-                    # to clear out any fragments we have queued to run since they'll all
-                    # be run with the full script anyway.
-                    fragment_id_queue = []
+                    # Both requests still need their fragments to run, so take the
+                    # union (deduped, order-preserving). Stay fragment-scoped if either
+                    # request was, since that is what lets the coalesced rerun preempt
+                    # the run in progress.
+                    fragment_id_queue = [*self._rerun_data.fragment_id_queue]
+                    for fragment_id in new_data.fragment_id_queue:
+                        if fragment_id not in fragment_id_queue:
+                            fragment_id_queue.append(fragment_id)
+                    is_fragment_scoped_rerun = (
+                        self._rerun_data.is_fragment_scoped_rerun
+                        or new_data.is_fragment_scoped_rerun
+                    )
 
                 self._rerun_data = RerunData(
                     query_string=new_data.query_string,
@@ -237,8 +276,9 @@ class ScriptRequests:
                     page_name=new_data.page_name,
                     fragment_id_queue=fragment_id_queue,
                     cached_message_hashes=new_data.cached_message_hashes,
-                    is_fragment_scoped_rerun=new_data.is_fragment_scoped_rerun,
+                    is_fragment_scoped_rerun=is_fragment_scoped_rerun,
                     is_auto_rerun=new_data.is_auto_rerun,
+                    suppress_callbacks=new_data.suppress_callbacks,
                     context_info=new_data.context_info,
                 )
 

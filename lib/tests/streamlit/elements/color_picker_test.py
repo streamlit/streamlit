@@ -21,7 +21,11 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.widgets.color_picker import ColorPickerSerde
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -58,7 +62,7 @@ class ColorPickerTest(DeltaGeneratorTestCase):
 
     def test_invalid_value_type_error(self):
         """Tests that when the value type is invalid, an exception is generated"""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.color_picker("the label", 1234567)
 
     def test_invalid_string(self):
@@ -264,7 +268,9 @@ class ColorPickerTest(DeltaGeneratorTestCase):
 
     def test_empty_key_raises_exception(self) -> None:
         """Test that an empty key raises an exception."""
-        with pytest.raises(StreamlitAPIException, match=r"`key`.*non-empty"):
+        with pytest.raises(
+            StreamlitValueError, match=r"Invalid `key` value.*a non-empty string"
+        ):
             st.color_picker("the label", key="")
 
 

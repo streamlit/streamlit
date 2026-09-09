@@ -25,7 +25,7 @@ import {
 import { cloneDeep, isObject, merge, mergeWith, once } from "lodash-es"
 import { getLogger } from "loglevel"
 
-import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
+import { CustomThemeConfig } from "@streamlit/protobuf"
 import { localStorageAvailable, StreamlitConfig } from "@streamlit/utils"
 
 import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
@@ -36,7 +36,6 @@ import {
   notNullOrUndefined,
 } from "~lib/util/utils"
 
-import { createBaseUiTheme } from "./createBaseUiTheme"
 import { computeDerivedColors, createEmotionColors } from "./getColors"
 import { createShadows } from "./getShadows"
 import { fonts } from "./primitives/typography"
@@ -106,7 +105,7 @@ export function sortThemeInputKeys(obj: unknown): unknown {
 
 function mergeTheme(
   theme: ThemeConfig,
-  injectedTheme: ICustomThemeConfig | undefined
+  injectedTheme: CustomThemeConfig.$Properties | undefined
 ): ThemeConfig {
   // We confirm the injectedTheme is a valid object before merging it
   // since the type makes assumption about the implementation of the
@@ -695,7 +694,7 @@ const validateChartColors = (
 }
 
 export const createEmotionTheme = (
-  themeInput: Partial<ICustomThemeConfig>,
+  themeInput: Partial<CustomThemeConfig.$Properties>,
   baseThemeConfig = baseTheme
 ): EmotionTheme => {
   const { colors, genericFonts, inSidebar } = baseThemeConfig.emotion
@@ -1167,18 +1166,10 @@ export const createTheme = (
 
   const emotion = createEmotionTheme(completedThemeInput, startingTheme)
 
-  // We need to deep clone the theme object to prevent a bug in BaseWeb that causes
-  // primitives to be modified globally. This cloning decouples our BaseWeb theme
-  // object from the shared primitive objects and prevents unintended side effects.
-  const basewebTheme = cloneDeep(
-    createBaseUiTheme(emotion, startingTheme.primitives)
-  )
-
   return {
     ...startingTheme,
     name: themeName,
     emotion,
-    basewebTheme,
     themeInput,
   }
 }
@@ -1472,7 +1463,7 @@ export const handleSectionInheritance = (
  * @returns true if the section has any actual values set
  */
 export const hasThemeSectionConfigs = (
-  section: ICustomThemeConfig | null | undefined
+  section: CustomThemeConfig.$Properties | null | undefined
 ): boolean => {
   if (!section) {
     return false

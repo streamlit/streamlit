@@ -270,18 +270,18 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Built-in charts do not accept None for width (only Width, not Width | None).
-    line_chart(data, width=None)  # type: ignore[arg-type]
+    line_chart(data, width=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid width / height values (only int or "stretch" / "content").
-    bar_chart(data, width="invalid")  # type: ignore[arg-type]
-    scatter_chart(data, height=None)  # type: ignore[arg-type]
+    bar_chart(data, width="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    scatter_chart(data, height=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid stack value for area_chart.
-    area_chart(data, stack="invalid")  # type: ignore[arg-type]
+    area_chart(data, stack="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid theme value for altair_chart (only "streamlit" or None).
-    altair_chart(chart, theme="dark")  # type: ignore[call-overload]
+    altair_chart(chart, theme="dark")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
 
     # Invalid on_select literal (only "ignore" / "rerun" or a callable).
-    altair_chart(chart, on_select="invalid")  # type: ignore[call-overload]
-    vega_lite_chart(data, spec, on_select="invalid")  # type: ignore[call-overload]
+    altair_chart(chart, on_select="invalid")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
+    vega_lite_chart(data, spec, on_select="invalid")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]

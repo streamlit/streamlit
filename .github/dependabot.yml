@@ -22,10 +22,6 @@ updates:
       - "never-stale"
 
     ignore:
-      - dependency-name: "baseui"
-        # 12->13: Needs to restyle date picker
-        # 13->14: Requires rewrites of lots of overrides
-        versions: [">=12.3.0"]
       - dependency-name: "iframe-resizer"
         # The license was changed to GPL-3 with the 4.4.0 update.
         # We pin the version to the last version under MIT licenses.
@@ -36,9 +32,6 @@ updates:
       - dependency-name: "react-map-gl"
         # The license was changed with the mapbox-gl update.
         versions: [">=5.4.0"]
-      - dependency-name: "ua-parser-js"
-        # The license was changed to AGPLv3 with the 2.0 major version update.
-        versions: [">=2.0.0"]
       - dependency-name: "react"
         # Updating react will need some extra work.
         versions: [">=19.0.0"]
@@ -48,9 +41,6 @@ updates:
       - dependency-name: "jsdom"
         # Breaks some of our RTL unit tests
         versions: [">=25.0.0"]
-      - dependency-name: "react-window"
-        # This requires us to update baseui, since that has a dependency on react-window v1.
-        versions: [">=2.0.0"]
       - dependency-name: "@types/node"
         # Our types should match the version of node we're using as defined in `.nvmrc`
         versions: [">=25.0.0"]
@@ -58,12 +48,16 @@ updates:
         # Our Yarn patch only applies to color2k 2.0.3.
         versions: [">=2.0.4"]
       - dependency-name: "katex"
-        # KaTeX 0.18 prefixed its internal CSS class names, which no longer
-        # match the markup produced by rehype-katex (it bundles katex 0.16.x).
-        # We only use the direct katex dependency for its stylesheet, so it must
-        # stay compatible with rehype-katex. Keep it below 0.18 until
-        # rehype-katex ships a katex 0.18-compatible release.
-        versions: [">=0.18.0"]
+        # We depend on katex only for its stylesheet; rehype-katex and mermaid
+        # bring the JS that renders math, and both resolve 0.16.x. Matching that
+        # version keeps a single copy of katex in the bundle. It also keeps the CSS
+        # in step with the markup the renderer emits, which matters across some
+        # minors: KaTeX 0.18 prefixed its internal class names.
+        # Raise this only together with rehype-katex and mermaid -- and note this
+        # only stops a lone katex bump. If a mermaid or rehype-katex release (see
+        # the markdown-processing group below) widens its own katex range, two
+        # copies come back; check `yarn why katex` when reviewing those.
+        versions: [">=0.17.0"]
 
     groups:
       deck-gl:

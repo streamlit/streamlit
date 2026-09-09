@@ -46,6 +46,9 @@ import {
   StyledSubMenuPanel,
 } from "./styled-components"
 
+/** Marks the portal panel so ColumnMenu's outside-click detection can ignore it. */
+export const STATISTICS_MENU_CLASS = "stDataFrameStatisticsMenu"
+
 export interface StatisticsMenuProps {
   /** The column to show statistics for. */
   column: BaseColumn
@@ -296,6 +299,7 @@ function StatisticsMenu({
               Allows keyboard users to navigate the parent column menu while
               viewing statistics. */}
           <StyledSubMenuPanel
+            className={STATISTICS_MENU_CLASS}
             ref={setFloatingRef}
             style={floatingStyles}
             data-testid="stDataFrameStatisticsMenu"

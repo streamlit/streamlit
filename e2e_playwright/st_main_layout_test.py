@@ -25,6 +25,7 @@ from e2e_playwright.conftest import (
     start_app_server,
     wait_for_app_loaded,
     wait_for_app_run,
+    wait_until,
 )
 from e2e_playwright.shared.app_utils import reset_hovering
 
@@ -120,6 +121,55 @@ def verify_expand_button_visible(app: Page) -> None:
     expect(expand_button).to_be_visible()
 
 
+def wait_for_sidebar_animation(app: Page, *, expanded: bool) -> None:
+    """Wait for the sidebar CSS transform transition (300ms) to finish.
+
+    aria-expanded flips immediately on click, but the sidebar still slides via
+    transform. Snapshotting mid-transition causes pixel flakiness (especially
+    on webkit), so wait until the transform reaches its final state and stops
+    changing before screenshots.
+
+    Collapsing animates translateX from 0 toward a negative offset, so the
+    intermediate frames already report a negative translateX. Checking the
+    direction alone would therefore return mid-slide, so we additionally require
+    the transform to be unchanged across two consecutive animation frames.
+    """
+    sidebar = app.get_by_test_id("stSidebar")
+
+    def _transform_settled() -> bool:
+        return bool(
+            sidebar.evaluate(
+                """(el, isExpanded) => new Promise((resolve) => {
+                    const readTransform = () => getComputedStyle(el).transform;
+                    const inFinalState = (t) => {
+                        if (isExpanded) {
+                            // Expanded settles to transform: none (identity).
+                            return (
+                                t === 'none' || t === 'matrix(1, 0, 0, 1, 0, 0)'
+                            );
+                        }
+                        // Collapsed is translated off-screen (negative translateX).
+                        if (!t.startsWith('matrix')) return false;
+                        const tx = parseFloat(t.split(',')[4]);
+                        return Number.isFinite(tx) && tx < 0;
+                    };
+                    // Sample across two frames so an in-progress transition
+                    // (whose transform keeps changing) is not treated as settled.
+                    const first = readTransform();
+                    requestAnimationFrame(() =>
+                        requestAnimationFrame(() => {
+                            const second = readTransform();
+                            resolve(inFinalState(second) && second === first);
+                        })
+                    );
+                })""",
+                expanded,
+            )
+        )
+
+    wait_until(app, _transform_settled)
+
+
 # Consolidated test for basic sidebar states across different modes and viewports
 @pytest.mark.parametrize(
     ("sidebar_mode", "viewport", "expected_expanded", "test_name"),
@@ -178,6 +228,7 @@ def test_sidebar_auto_mobile_expand_interaction(
     # Verify expanded state
     verify_sidebar_state(app, True)
     verify_sidebar_content_visibility(app, True)
+    wait_for_sidebar_animation(app, expanded=True)
 
     # Take snapshot of expanded state
     assert_snapshot(app, name="st_main_layout-auto_mobile_expanded")
@@ -205,6 +256,7 @@ def test_sidebar_auto_desktop_collapse_interaction(
     # Verify collapsed state
     verify_sidebar_state(app, False)
     verify_expand_button_visible(app)
+    wait_for_sidebar_animation(app, expanded=False)
 
     # Take snapshot of collapsed desktop state
     assert_snapshot(app, name="st_main_layout-auto_desktop_collapsed")

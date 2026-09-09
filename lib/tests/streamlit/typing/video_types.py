@@ -114,7 +114,7 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Invalid width value (not "stretch" or int - "content" is not valid for video)
-    video("video.mp4", width="content")  # type: ignore[arg-type]
+    video("video.mp4", width="content")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Passing subtitles as positional argument (should be keyword-only)
-    video("video.mp4", "video/mp4", 0, "subtitles.vtt")  # type: ignore[call-arg]
+    video("video.mp4", "video/mp4", 0, "subtitles.vtt")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]

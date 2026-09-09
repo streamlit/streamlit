@@ -82,6 +82,8 @@ if TYPE_CHECKING:
             args=None,
             kwargs=None,
             disabled=False,
+            bind="query-params",
+            persist_state="session",
         ),
         int,
     )

@@ -22,7 +22,10 @@ from streamlit.delta_generator_singletons import (
     get_dg_singleton_instance,
     get_last_dg_added_to_context_stack,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitInvalidLayoutContextError,
+    StreamlitMissingRequiredParameterError,
+)
 from streamlit.runtime.fragment import _check_not_parallel_worker, _fragment
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.type_util import get_object_name
@@ -46,14 +49,16 @@ def _assert_no_nested_dialogs() -> None:
 
     Raises
     ------
-    StreamlitAPIException
+    StreamlitInvalidLayoutContextError
         Raised if the user tries to nest dialogs inside of each other.
     """
     last_dg_in_current_context = get_last_dg_added_to_context_stack()
     if last_dg_in_current_context and "dialog" in set(
         last_dg_in_current_context._ancestor_block_types
     ):
-        raise StreamlitAPIException("Dialogs may not be nested inside other dialogs.")
+        raise StreamlitInvalidLayoutContextError(
+            "Dialogs may not be nested inside other dialogs."
+        )
 
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -69,9 +74,9 @@ def _dialog_decorator(
     on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
 ) -> F:
     if title is None or title == "":
-        raise StreamlitAPIException(
-            "A non-empty `title` argument has to be provided for dialogs, for example "
-            '`@st.dialog("Example Title")`.'
+        raise StreamlitMissingRequiredParameterError(
+            "title",
+            detail='For example: `@st.dialog("Example Title")`.',
         )
 
     @wraps(non_optional_func)

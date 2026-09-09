@@ -52,7 +52,7 @@ export interface Props {
   element: FeedbackProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
-  widthConfig: streamlit.IWidthConfig | undefined | null
+  widthConfig: streamlit.WidthConfig.$Properties | undefined | null
 }
 
 interface FeedbackOption {
@@ -190,19 +190,18 @@ function updateWidgetMgrState(
 ): void {
   const stringValue =
     valueWithSource.value === null ? "" : String(valueWithSource.value)
-  widgetMgr.setStringValue(
-    element,
-    stringValue,
-    { fromUi: valueWithSource.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, stringValue, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: valueWithSource.fromUser,
+  })
 }
 
 function Feedback(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr, widthConfig } = props
   const { type } = element
 
-  const [hookValue, setValueWithSource] = useBasicWidgetState<
+  const [value, setValueWithSource] = useBasicWidgetState<
     FeedbackValue,
     FeedbackProto
   >({
@@ -216,10 +215,6 @@ function Feedback(props: Readonly<Props>): ReactElement {
     formClearBehavior: "resetValueOnly",
   })
 
-  // Use element.value (from session_state) as the source of truth when set.
-  // The hook's value may lag behind due to effect timing, so prefer element.value.
-  const value = element.value ?? hookValue
-
   const containerWidth = shouldWidthStretch(widthConfig)
 
   const options = useMemo(() => getFeedbackOptions(type), [type])
@@ -229,7 +224,7 @@ function Feedback(props: Readonly<Props>): ReactElement {
     (optionValue: number): void => {
       // Toggle selection: if clicking on already selected option, deselect
       const newValue = value === optionValue ? null : optionValue
-      setValueWithSource({ value: newValue, fromUi: true })
+      setValueWithSource({ value: newValue, fromUser: true })
     },
     [value, setValueWithSource]
   )

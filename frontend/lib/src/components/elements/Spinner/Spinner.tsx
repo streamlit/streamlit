@@ -16,8 +16,6 @@
 
 import { memo, ReactElement, useEffect, useRef, useState } from "react"
 
-import classNames from "classnames"
-
 import { Spinner as SpinnerProto } from "@streamlit/protobuf"
 
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
@@ -65,14 +63,27 @@ function Spinner({ element }: Readonly<SpinnerProps>): ReactElement {
 
   return (
     <StyledSpinner
-      className={classNames({ stSpinner: true, stCacheSpinner: cache })}
+      className={cache ? "stSpinner stCacheSpinner" : "stSpinner"}
       data-testid="stSpinner"
       cache={cache}
     >
       <StyledSpinnerContainer>
+        {/* `DynamicIcon` marks the spinner icon aria-hidden; the label below
+            carries the accessible name. */}
         <DynamicIcon size="lg" iconValue="spinner" />
         <StyledSpinnerText>
-          <StreamlitMarkdown source={element.text} allowHTML={false} />
+          {/* Scope the live region to the label. `role="status"` implies
+              `aria-atomic="true"`, and the elapsed time is rewritten every
+              100ms, so a region spanning both would re-read the label on every
+              tick. Outside the region, the time is still reachable on demand.
+
+              This region mounts already populated, which many screen readers
+              do not announce — the same trade-off as `SkillsInstallCallout`.
+              Accepted here: the label is in the accessibility tree, where
+              previously nothing was exposed. */}
+          <div role="status">
+            <StreamlitMarkdown source={element.text} allowHTML={false} />
+          </div>
           {showTime && (
             <StyledSpinnerTimeText>
               {formatTime(elapsedTime)}

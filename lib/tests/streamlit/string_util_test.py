@@ -46,6 +46,18 @@ class StringUtilTest(unittest.TestCase):
         """Test streamlit.string_util.is_emoji."""
         assert string_util.is_emoji(text) == expected
 
+    def test_to_str(self):
+        """``to_str`` leaves strings unchanged and stringifies other values."""
+        assert string_util.to_str("already") == "already"
+        assert string_util.to_str(123) == "123"
+        assert string_util.to_str(None) == "None"
+
+    def test_to_help_str(self):
+        """``to_help_str`` stringifies and dedents help text."""
+        assert string_util.to_help_str("already") == "already"
+        assert string_util.to_help_str(123) == "123"
+        assert string_util.to_help_str("    indented") == "indented"
+
     @parameterized.expand(
         [
             ("", ("", "")),
@@ -270,6 +282,30 @@ class StringUtilTest(unittest.TestCase):
     def test_is_binary_string(self, inp: bytes, expected: bool):
         """Test that is_binary_string correctly identifies binary vs text data."""
         assert string_util.is_binary_string(inp) == expected
+
+    @parameterized.expand(
+        [
+            ("<foo blarg at 0x15ee6f9a0>", True),  # glibc: lowercase hex
+            ("<__main__.Foo object at 0x0000027B0C1B1550>", True),  # MSVC instance
+            ("<property object at 0x000002500A1F3240>", True),  # MSVC property
+            # The "at" and "0x" literals stay case-sensitive: CPython normalizes
+            # the prefix to a lowercase "0x" no matter how the C runtime cased
+            # the digits.
+            ("<foo blarg AT 0X15EE6F9A0>", False),
+            ("<module 'os' from '/usr/lib/os.py'>", False),  # Repr with no address
+            ("<foo blarg at 0xdeadbeefg>", False),  # Non-hex character
+            ("<foo blarg at 15ee6f9a0>", False),  # Missing the 0x prefix
+            ("", False),
+        ]
+    )
+    def test_is_mem_address_str(self, string: str, expected: bool) -> None:
+        """``is_mem_address_str`` matches default object reprs in either hex casing."""
+        assert string_util.is_mem_address_str(string) == expected
+
+    def test_is_mem_address_str_matches_this_host(self) -> None:
+        """This host's default object repr matches, whatever hex casing its C
+        runtime emits."""
+        assert string_util.is_mem_address_str(repr(object()))
 
     def test_from_number_with_invalid_item_method(self):
         """Test from_number with object that has item() but returns non-numeric."""

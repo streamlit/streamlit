@@ -33,7 +33,7 @@ from typing_extensions import ParamSpec
 
 import streamlit as st
 from streamlit import runtime
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import StreamlitIncompatibleParametersError, StreamlitValueError
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundError
@@ -195,15 +195,7 @@ class DataCaches(StatsProvider):
             context.
         """
 
-        # The user-facing freshness ttl. In background mode the underlying storage uses
-        # a hard-eviction ttl of 2*ttl and tracks freshness separately via stored_at.
         fresh_ttl_seconds = time_to_seconds(ttl, coerce_none_to_inf=False)
-        if refresh_mode == "background" and fresh_ttl_seconds is not None:
-            hard_ttl_seconds: float | None = (
-                fresh_ttl_seconds * cache_utils.BACKGROUND_REFRESH_TTL_MULTIPLIER
-            )
-        else:
-            hard_ttl_seconds = fresh_ttl_seconds
 
         # Fetch the session ID. Note that this will throw an exception if there is no
         # session associated with the current thread.
@@ -253,6 +245,11 @@ class DataCaches(StatsProvider):
                 persist,
                 max_entries,
                 ttl,
+            )
+
+            # Resolved after the reuse check so the hot path never reads config.
+            hard_ttl_seconds = cache_utils.get_hard_ttl_seconds(
+                refresh_mode, fresh_ttl_seconds
             )
 
             cache_context = self.create_cache_storage_context(
@@ -525,10 +522,21 @@ class CacheDataAPI:
         `Caching overview
         <https://docs.streamlit.io/develop/concepts/architecture/caching>`_.
 
+        Cached functions can be synchronous or asynchronous. To cache an asynchronous
+        function, define it with ``async def``. Calling a cached asynchronous function
+        returns an awaitable, which you must await (for example, with ``asyncio.run``).
+        On a cache miss, Streamlit runs the function and caches its awaited return
+        value. On a cache hit, Streamlit returns the cached value without rerunning
+        the function. The caller is responsible for driving the awaitable.
+
         .. note::
-            Caching async functions is not supported. To upvote this feature,
-            see GitHub issue `#8308
-            <https://github.com/streamlit/streamlit/issues/8308>`_.
+            Calls to a decorated coroutine function remain awaitable, but
+            ``inspect.iscoroutinefunction`` does not identify the decorated callable
+            as a coroutine function. Callback frameworks that rely on this check
+            should receive a separate ``async def`` adapter that awaits the cached
+            function. ``inspect.unwrap`` bypasses caching. For details, see GitHub
+            issue `#16803
+            <https://github.com/streamlit/streamlit/issues/16803>`_.
 
         Parameters
         ----------
@@ -597,9 +605,14 @@ class CacheDataAPI:
               runs the cached function synchronously. The app rerun waits until the new
               value is ready.
             - ``"background"``: Return the expired value immediately and update it in
-              the background. Streamlit can keep returning the expired value for up to
-              one additional ``ttl``. After that, the next call waits for a new value.
+              the background. By default, Streamlit can keep returning the expired
+              value for one extra ``ttl``; after that, the next call waits for a new
+              value. To change how long expired values can be returned, use the
+              ``runner.cacheBackgroundRefreshTTLMultiplier`` configuration option.
               This mode requires a ``ttl`` and can't be used with ``persist``.
+              It is not supported for coroutine functions. To upvote support for
+              this combination, see GitHub issue `#16800
+              <https://github.com/streamlit/streamlit/issues/16800>`_.
 
             .. note::
                 A function that refreshes in the background can't use session-specific
@@ -627,6 +640,23 @@ class CacheDataAPI:
         >>>
         >>> d3 = fetch_and_clean_data(DATA_URL_2)
         >>> # This is a different URL, so the function executes.
+
+        To cache an async function, await the decorated function from an async entry
+        point:
+
+        >>> import asyncio
+        >>> import streamlit as st
+        >>>
+        >>> @st.cache_data
+        ... async def load_config():
+        ...     await asyncio.sleep(1)
+        ...     return {"env": "prod"}
+        >>>
+        >>> async def main():
+        ...     config = await load_config()
+        ...     st.write(config)
+        >>>
+        >>> asyncio.run(main())
 
         To set the ``persist`` parameter, use this command as follows:
 
@@ -714,16 +744,19 @@ class CacheDataAPI:
             raise StreamlitValueError("scope", ["'global'", "'session'"])
 
         validate_refresh_mode(
-            refresh_mode, time_to_seconds(ttl, coerce_none_to_inf=False)
+            refresh_mode,
+            time_to_seconds(ttl, coerce_none_to_inf=False),
         )
 
         if refresh_mode == "background" and persist_string is not None:
-            raise StreamlitAPIException(
-                "The 'refresh_mode=\"background\"' option is not compatible with "
-                "'persist' caching. Persisted (disk) caches do not support TTL-based "
-                "expiration, which background refresh requires. Use persist=None (the "
-                'default) with refresh_mode="background", or use '
-                'refresh_mode="foreground".'
+            raise StreamlitIncompatibleParametersError(
+                "refresh_mode='background'",
+                f"persist={persist!r}",
+                explanation=(
+                    "Persisted (disk) caches do not support TTL-based expiration, "
+                    "which background refresh requires. Use `persist=None` with "
+                    '`refresh_mode="background"`, or use `refresh_mode="foreground"`.'
+                ),
             )
 
         def wrapper(f: Callable[P, R]) -> CachedFunc[P, R]:
@@ -782,8 +815,8 @@ class DataCache(Cache[R]):
         self.key = key
         self.display_name = display_name
         self.storage = storage
-        # In background mode this is the hard-eviction bound (2*ttl); freshness within
-        # the fresh window is tracked separately via CachedResult.stored_at.
+        # In background mode this is the configured hard-expiration bound; freshness
+        # within the fresh window is tracked separately via CachedResult.stored_at.
         self.ttl_seconds = ttl_seconds
         self.max_entries = max_entries
         self.persist = persist
@@ -831,7 +864,11 @@ class DataCache(Cache[R]):
             raise CacheError(f"Failed to unpickle {value_key}") from exc
 
     def _is_stale(self, result: CachedResult[R]) -> bool:
-        """Whether a present entry is in the stale grace window ``[ttl, 2*ttl)``."""
+        """Whether a present entry is past its freshness TTL.
+
+        Hard-expired keys never reach this method: the storage layer treats them as
+        missing.
+        """
         if (
             self.refresh_mode != "background"
             or result.stored_at is None
@@ -847,6 +884,13 @@ class DataCache(Cache[R]):
         """Write a value and associated messages to the cache.
         The value must be pickleable.
         """
+        pickled_entry = self._pickle_result(value_key, value, messages)
+        self.storage.set(value_key, pickled_entry)
+
+    def _pickle_result(
+        self, value_key: str, value: R, messages: list[MsgData]
+    ) -> bytes:
+        """Serialize a value and its replay messages for storage."""
         try:
             main_id = st._main._id
             sidebar_id = st.sidebar._id
@@ -864,7 +908,36 @@ class DataCache(Cache[R]):
             pickled_entry = pickle.dumps(entry)
         except (pickle.PicklingError, TypeError) as exc:
             raise CacheError(f"Failed to pickle {value_key}") from exc
-        self.storage.set(value_key, pickled_entry)
+        return pickled_entry
+
+    @gather_metrics("_cache_data_object")
+    def write_result_if_current(
+        self,
+        value_key: str,
+        value: R,
+        messages: list[MsgData],
+        *,
+        invalidation_token: cache_utils.CacheInvalidationToken,
+    ) -> bool:
+        """Write an async foreground result if no relevant clear invalidated it."""
+        if not self._invalidation_token_is_current(value_key, invalidation_token):
+            return False
+
+        # Serialize outside the lock. If clear wins during serialization, the check
+        # under the lock discards the result without touching storage.
+        try:
+            pickled_entry = self._pickle_result(value_key, value, messages)
+        except CacheError:
+            # An invalidated result is returned without being cached, so its
+            # serializability is no longer relevant.
+            if not self._invalidation_token_is_current(value_key, invalidation_token):
+                return False
+            raise
+        with self._write_lock:
+            if not self._invalidation_token_is_current(value_key, invalidation_token):
+                return False
+            self.storage.set(value_key, pickled_entry)
+            return True
 
     def write_background_refresh_result(
         self,

@@ -20,6 +20,11 @@ import re
 from pathlib import Path
 
 from streamlit import runtime
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.runtime import caching
 from streamlit.util import calc_hash
 
@@ -91,11 +96,16 @@ def _srt_to_vtt(srt_data: str | bytes) -> bytes:
         try:
             srt_data = srt_data.decode("utf-8")
         except UnicodeDecodeError as e:
-            raise ValueError("Could not decode the input stream as UTF-8.") from e
+            raise StreamlitAPIException(
+                "Could not decode the input stream as UTF-8.",
+                error_id="subtitle-invalid-utf8",
+            ) from e
     if not isinstance(srt_data, str):
         # If it's not a string by this point, something is wrong.
-        raise TypeError(
-            f"Input must be a string or a bytes stream, not {type(srt_data)}."
+        raise StreamlitInvalidParameterTypeError(
+            "subtitles",
+            type(srt_data).__name__,
+            ["str", "bytes"],
         )
 
     # Replace SubRip timing with WebVTT timing
@@ -114,15 +124,19 @@ def _handle_string_or_path_data(data_or_path: str | Path) -> bytes:
         file_extension = path.suffix.lower()
 
         if file_extension not in SUBTITLE_ALLOWED_FORMATS:
-            raise ValueError(
-                f"Incorrect subtitle format {file_extension}. Subtitles must be in "
-                f"one of the following formats: {', '.join(SUBTITLE_ALLOWED_FORMATS)}"
+            raise StreamlitValueError(
+                "subtitles",
+                list(SUBTITLE_ALLOWED_FORMATS),
+                detail=f"Got {file_extension}.",
             )
         with open(data_or_path, "rb") as file:
             content = file.read()
         return _srt_to_vtt(content) if file_extension == ".srt" else content
     if isinstance(data_or_path, Path):
-        raise ValueError(f"File {data_or_path} does not exist.")  # noqa: TRY004
+        raise StreamlitAPIException(
+            f"File {data_or_path} does not exist.",
+            error_id="subtitle-file-not-found",
+        )
 
     content_string = data_or_path.strip()
 
@@ -130,7 +144,10 @@ def _handle_string_or_path_data(data_or_path: str | Path) -> bytes:
         return content_string.encode("utf-8")
     if _is_srt(content_string):
         return _srt_to_vtt(content_string)
-    raise ValueError("The provided string neither matches valid VTT nor SRT format.")
+    raise StreamlitValueError(
+        "subtitles",
+        ["VTT-formatted text", "SRT-formatted text"],
+    )
 
 
 def _handle_stream_data(stream: io.BytesIO) -> bytes:
@@ -158,7 +175,11 @@ def process_subtitle_data(
     elif isinstance(data, bytes):
         subtitle_data = _handle_bytes_data(data)
     else:
-        raise TypeError(f"Invalid binary data format for subtitle: {type(data)}.")
+        raise StreamlitInvalidParameterTypeError(
+            "subtitles",
+            type(data).__name__,
+            ["str", "bytes", "Path", "BytesIO"],
+        )
 
     if runtime.exists():
         filename = calc_hash(label.encode())

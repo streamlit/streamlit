@@ -139,6 +139,11 @@ class ForwardMsgQueue:
                     "parent_message",
                     "page_info_changed",
                 }
+                # Toasts are one-shot notifications that must survive the queue
+                # clear happening when a run is interrupted (e.g. st.toast()
+                # immediately followed by st.rerun()); otherwise the toast delta
+                # is dropped before it reaches the browser (issue #7740).
+                or _is_toast_delta(msg)
                 or (
                     # preserve all messages if this is a fragment rerun and...
                     fragment_ids_this_run is not None
@@ -171,6 +176,20 @@ class ForwardMsgQueue:
 
     def __len__(self) -> int:
         return len(self._queue)
+
+
+def _is_toast_delta(msg: ForwardMsg) -> bool:
+    """True if the ForwardMsg is a toast element delta.
+
+    Lifecycle-retaining clears keep unflushed toast deltas so that an
+    ``st.toast()`` issued right before ``st.rerun()`` still reaches the browser
+    (issue #7740); see ``ForwardMsgQueue.clear`` for the rationale.
+    """
+    return (
+        msg.HasField("delta")
+        and msg.delta.WhichOneof("type") == "new_element"
+        and msg.delta.new_element.WhichOneof("type") == "toast"
+    )
 
 
 def _is_composable_message(msg: ForwardMsg) -> bool:

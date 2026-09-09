@@ -269,7 +269,9 @@ def is_pyarrow_version_less_than(v: str) -> bool:
     """
     import pyarrow as pa
 
-    return is_version_less_than(pa.__version__, v)
+    # ty infers pyarrow's ``__version__`` as possibly ``None``, but it is always
+    # a version string at runtime, so it is safe to pass through as-is.
+    return is_version_less_than(pa.__version__, v)  # ty: ignore[invalid-argument-type]
 
 
 # Minimum PyArrow version that supports consuming PyCapsule Interface via from_stream.
@@ -798,12 +800,12 @@ def convert_anything_to_pandas_df(
     # compatible with the pandas.DataFrame constructor.
     try:
         return _fix_column_naming(pd.DataFrame(data))
-    except ValueError as ex:
+    except (ValueError, TypeError) as ex:
         if isinstance(data, dict):
-            with contextlib.suppress(ValueError):
+            with contextlib.suppress(ValueError, TypeError):
                 # Try to use index orient as back-up to support key-value dicts
                 return _dict_to_pandas_df(data)
-        raise errors.StreamlitAPIException(
+        raise errors.StreamlitDataframeConversionError(
             f"""
 Unable to convert object of type `{type(data)}` to `pandas.DataFrame`.
 Offending object:
@@ -907,6 +909,22 @@ def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
     return cast("bytes", sink.getvalue().to_pybytes())
 
 
+def get_arrow_conversion_errors() -> tuple[type[BaseException], ...]:
+    """Return the errors raised when PyArrow cannot convert a pandas object.
+
+    Includes ``OverflowError`` because PyArrow raises it for out-of-range values
+    (e.g. ints larger than int64) instead of an Arrow error.
+    """
+    import pyarrow as pa
+
+    return (
+        pa.ArrowTypeError,
+        pa.ArrowInvalid,
+        pa.ArrowNotImplementedError,
+        OverflowError,
+    )
+
+
 def convert_pandas_df_to_arrow_table(
     df: DataFrame,
     *,
@@ -936,9 +954,10 @@ def convert_pandas_df_to_arrow_table(
     """
     import pyarrow as pa
 
+    arrow_conversion_errors = get_arrow_conversion_errors()
     try:
         return pa.Table.from_pandas(df, preserve_index=preserve_index)
-    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError) as ex:
+    except arrow_conversion_errors as ex:
         _LOGGER.info(
             "Serialization of dataframe to Arrow table was unsuccessful. "
             "Applying automatic fixes for column types to make the dataframe "
@@ -946,7 +965,12 @@ def convert_pandas_df_to_arrow_table(
             exc_info=ex,
         )
         fixed_df = fix_arrow_incompatible_column_types(df)
-        return pa.Table.from_pandas(fixed_df, preserve_index=preserve_index)
+        try:
+            return pa.Table.from_pandas(fixed_df, preserve_index=preserve_index)
+        except arrow_conversion_errors as retry_ex:
+            raise errors.StreamlitDataframeConversionError(
+                f"Unable to convert dataframe to Arrow table.\n{retry_ex}"
+            ) from retry_ex
 
 
 def convert_pandas_df_to_arrow_bytes(
@@ -1158,6 +1182,8 @@ def convert_anything_to_list(obj: OptionSequence[V_co]) -> list[V_co]:
 
 def determine_arrow_column_fix(
     column: Series[Any] | Index[Any],
+    *,
+    trial_conversion: bool = True,
 ) -> Literal["string", "list"] | None:
     """Determine the fix needed for Arrow compatibility.
 
@@ -1165,6 +1191,19 @@ def determine_arrow_column_fix(
     - "string": convert column values to strings
     - "list": convert iterable values (e.g., frozensets, ExtensionArrays) to lists
     - None: column is already Arrow-compatible
+
+    Parameters
+    ----------
+    column : pandas.Series or pandas.Index
+        The column to inspect.
+
+    trial_conversion : bool
+        Whether to also detect incompatible values that only a PyArrow conversion
+        can rule out, such as lists with inconsistent nesting levels. Detecting
+        those requires materializing the column as an Arrow array, which costs
+        about as much as the real serialization. Callers that serialize the column
+        right after and can recover from a failed serialization should pass
+        ``False`` and rely on that failure instead.
     """
     from pandas.api.extensions import ExtensionArray
     from pandas.api.types import infer_dtype, is_dict_like, is_list_like
@@ -1211,7 +1250,10 @@ def determine_arrow_column_fix(
             # Get the first non-null value to check if it is a supported list-like type.
             # Using dropna() handles cases where early values are NaN (e.g., from reindexing).
             non_null = column.dropna()
-            if len(non_null) == 0:
+            if len(non_null) == 0:  # pragma: no cover - defensive
+                # ``infer_dtype(..., skipna=True)`` reports all-null object
+                # columns as ``"empty"``, not ``"mixed"``, so this branch is
+                # not reachable with current pandas.
                 return "string"
             first_value = cast("DataFrameGenericAlias[Any]", non_null).iloc[0]  # type: ignore[index] # ty: ignore[not-subscriptable]
 
@@ -1225,13 +1267,31 @@ def determine_arrow_column_fix(
             # are list-like but not directly serializable by PyArrow - convert to lists.
             if isinstance(first_value, (frozenset, ExtensionArray)):
                 return "list"
+
+            if trial_conversion:
+                import pyarrow as pa
+
+                # A list-like first value does not prove the column is
+                # Arrow-serializable. PyArrow rejects columns that mix list
+                # nesting levels (e.g. ``[1, 2]`` next to ``[[1, 2], [3, 4]]``)
+                # and columns whose values have no common type.
+                try:
+                    pa.array(column, from_pandas=True)
+                except Exception:
+                    # Return "string" for any failure of this one call, including
+                    # non-Arrow errors such as ``OverflowError``. Callers expect a
+                    # verdict, not an exception.
+                    return "string"
             return None
     # We did not detect an incompatible type, so we assume it is compatible:
     return None
 
 
 def fix_arrow_incompatible_column_types(
-    df: DataFrame, selected_columns: list[str] | None = None
+    df: DataFrame,
+    selected_columns: list[str] | None = None,
+    *,
+    trial_conversion: bool = True,
 ) -> DataFrame:
     """Fix column types that are not supported by Arrow table.
 
@@ -1246,8 +1306,13 @@ def fix_arrow_incompatible_column_types(
     df : pandas.DataFrame
         A dataframe to fix.
 
-    selected_columns: List[str] or None
+    selected_columns : List[str] or None
         A list of columns to fix. If None, all columns are evaluated.
+
+    trial_conversion : bool
+        Passed through to ``determine_arrow_column_fix``. Callers that serialize
+        the dataframe via ``convert_pandas_df_to_arrow_table`` can pass ``False``,
+        since its retry applies the remaining fixes.
 
     Returns
     -------
@@ -1258,7 +1323,9 @@ def fix_arrow_incompatible_column_types(
     # Make a copy, but only initialize if necessary to preserve memory.
     df_copy: DataFrame | None = None
     for col in selected_columns or df.columns:
-        fix_type = determine_arrow_column_fix(df[col])
+        fix_type = determine_arrow_column_fix(
+            df[col], trial_conversion=trial_conversion
+        )
         if fix_type is not None:
             if df_copy is None:
                 df_copy = df.copy()
@@ -1279,12 +1346,15 @@ def fix_arrow_incompatible_column_types(
     # causing Arrow issues during conversion.
     # Skipping multi-indices since they won't return
     # the correct value from infer_dtype
+    # ``trial_conversion`` has no effect here: an index has no ``iloc``, so a mixed
+    # one is reported as incompatible before the trial conversion is reached.
     if not selected_columns and (
         not isinstance(
             df.index,
             pd.MultiIndex,
         )
-        and determine_arrow_column_fix(df.index) is not None
+        and determine_arrow_column_fix(df.index, trial_conversion=trial_conversion)
+        is not None
     ):
         if df_copy is None:
             df_copy = df.copy()
@@ -1435,12 +1505,12 @@ def _pandas_df_to_series(df: DataFrame) -> Series[Any]:
 
     Raises
     ------
-    ValueError
+    StreamlitDataframeConversionError
         If the DataFrame has more than one column.
     """
     # Select first column in dataframe and create a new series based on the values
     if len(df.columns) != 1:
-        raise ValueError(
+        raise errors.StreamlitDataframeConversionError(
             f"DataFrame is expected to have a single column but has {len(df.columns)}."
         )
     return df.iloc[:, 0]
@@ -1551,7 +1621,7 @@ def convert_pandas_df_to_data_format(
             #  Get the first column and convert to list
             return_list = df.iloc[:, 0].tolist()
         elif len(df.columns) >= 1:
-            raise ValueError(
+            raise errors.StreamlitDataframeConversionError(
                 "DataFrame is expected to have a single column but "
                 f"has {len(df.columns)}."
             )
@@ -1566,4 +1636,6 @@ def convert_pandas_df_to_data_format(
         # as a dict with index as key.
         return {} if df.empty else df.iloc[:, 0].to_dict()
 
-    raise ValueError(f"Unsupported input data format: {data_format}")
+    raise errors.StreamlitDataframeConversionError(
+        f"Unsupported input data format: {data_format}"
+    )

@@ -27,6 +27,9 @@ import {
   StyledSubMenuPanel,
 } from "./styled-components"
 
+/** Marks the portal panel so ColumnMenu's outside-click detection can ignore it. */
+export const FORMATTING_MENU_CLASS = "stDataFrameColumnFormattingMenu"
+
 /**
  * A list of formats available for number columns (number & progress).
  * Each format has a label, icon, and format ID.
@@ -83,6 +86,7 @@ const NUMBER_FORMATS: { format: string; label: string; icon: string }[] = [
     icon: ":material/finance_chip:",
   },
 ]
+
 /**
  * A mapping of column kinds to their available formats.
  * Each column kind has an array of objects, each representing a format
@@ -204,6 +208,7 @@ function FormattingMenu({
       {isOpen && (
         <DataFrameOverlayPortal>
           <StyledSubMenuPanel
+            className={FORMATTING_MENU_CLASS}
             ref={setFloatingRef}
             style={floatingStyles}
             data-testid="stDataFrameColumnFormattingMenu"

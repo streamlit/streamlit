@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 
 from typing_extensions import Never
@@ -42,7 +41,10 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueOutOfRangeError,
+)
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -55,9 +57,8 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.type_util import (
-    check_python_comparable,
-)
+from streamlit.string_util import to_help_str
+from streamlit.type_util import check_python_comparable
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -312,8 +313,13 @@ class RadioMixin:
             The default is false (vertical buttons).
 
         captions : iterable of str or None
-            A list of captions to show below each radio button. If None (default),
-            no captions are shown.
+            A list of captions to show below each radio button. If this is
+            ``None`` (default), no captions are shown.
+
+            Captions are matched to ``options`` by position. To caption only
+            some options, use ``None`` or an empty string for the others. If
+            this list is shorter than ``options``, the remaining options have no
+            caption. Any captions after the last option are ignored.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -466,7 +472,7 @@ class RadioMixin:
             on_change,
             default_value=None if index == 0 else index,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
 
@@ -491,23 +497,25 @@ class RadioMixin:
             width=width,
         )
 
-        if not isinstance(index, int) and index is not None:
-            raise StreamlitAPIException(
-                f"Radio Value has invalid type: {type(index).__name__}"
+        if index is not None and not isinstance(index, int):
+            raise StreamlitInvalidParameterTypeError(
+                "index",
+                type(index).__name__,
+                ["int", "None"],
             )
 
         if index is not None and len(opt) > 0 and not 0 <= index < len(opt):
-            raise StreamlitAPIException(
-                "Radio index must be between 0 and length of options"
-            )
+            raise StreamlitValueOutOfRangeError("index", index, 0, len(opt) - 1)
 
         def handle_captions(caption: str | None) -> str:
             if caption is None:
                 return ""
             if isinstance(caption, str):
                 return caption
-            raise StreamlitAPIException(
-                f"Radio captions must be strings. Passed type: {type(caption).__name__}"
+            raise StreamlitInvalidParameterTypeError(
+                "captions",
+                type(caption).__name__,
+                ["str", "None"],
             )
 
         session_state = get_session_state().filtered_state
@@ -531,7 +539,7 @@ class RadioMixin:
             radio_proto.captions[:] = map(handle_captions, captions)
 
         if help is not None:
-            radio_proto.help = dedent(help)
+            radio_proto.help = to_help_str(help)
 
         # Set query param key if bound
         if bind == "query-params" and key is not None:

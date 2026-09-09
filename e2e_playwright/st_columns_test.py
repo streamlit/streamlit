@@ -16,11 +16,12 @@ import re
 
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_until
 from e2e_playwright.shared.app_utils import (
     click_button,
     expect_markdown,
     expect_no_exception,
+    get_element_by_key,
     get_expander,
 )
 
@@ -226,6 +227,27 @@ def test_column_vertical_alignment_bottom(
     )
 
 
+def test_column_vertical_alignment_applies_to_toggles(app: Page):
+    """Protect the toggle side of the column-alignment CSS.
+
+    `test_column_vertical_alignment_top` and `test_column_vertical_alignment_bottom`
+    assert only on checkboxes, so neither would catch toggles losing the margin.
+    """
+    top_row = get_element_by_key(app, "vertical_alignment_toggle_top")
+    top_toggles = top_row.get_by_test_id("stCheckbox")
+    expect(top_toggles).to_have_count(2)
+    expect(top_toggles.first).to_have_css("margin-top", "8px")
+    # The top rule must not also apply a bottom margin.
+    expect(top_toggles.last).to_have_css("margin-bottom", "0px")
+
+    bottom_row = get_element_by_key(app, "vertical_alignment_toggle_bottom")
+    bottom_toggles = bottom_row.get_by_test_id("stCheckbox")
+    expect(bottom_toggles).to_have_count(2)
+    expect(bottom_toggles.last).to_have_css("margin-bottom", "8px")
+    # The bottom rule must not also apply a top margin.
+    expect(bottom_toggles.first).to_have_css("margin-top", "0px")
+
+
 def test_nesting_columns_is_allowed(app: Page):
     """Checks that nesting columns is allowed."""
 
@@ -263,3 +285,101 @@ def test_width_is_correctly_applied(app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(
         column_stretch_width_container, name="st_columns-width_configuration_stretch"
     )
+
+
+def test_columns_wrap_false_keeps_single_row_and_scrolls(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """wrap=False keeps columns in one row and scrolls locally at narrow widths."""
+    app.set_viewport_size({"width": 640, "height": 800})
+
+    container = get_element_by_key(app, "columns_wrap_false")
+    column_group = container.get_by_test_id("stHorizontalBlock")
+    expect(column_group).to_be_visible()
+    expect(column_group).to_have_attribute("data-test-wrap", "false")
+
+    columns = column_group.get_by_test_id("stColumn")
+    expect(columns).to_have_count(6)
+
+    # All columns stay on one row (aligned tops) instead of stacking.
+    # wait_until guards against layout races right after viewport resize.
+    def _columns_share_row() -> bool:
+        first_box = columns.nth(0).bounding_box()
+        last_box = columns.nth(5).bounding_box()
+        if first_box is None or last_box is None:
+            return False
+        return abs(first_box["y"] - last_box["y"]) < 2
+
+    wait_until(app, _columns_share_row)
+
+    # Overflow is contained by the column group, not the page.
+    def _has_horizontal_overflow() -> bool:
+        return bool(column_group.evaluate("el => el.scrollWidth > el.clientWidth + 1"))
+
+    wait_until(app, _has_horizontal_overflow)
+
+    # Overflow stays on the column group; the page itself should not scroll.
+    def _page_fits_without_scroll() -> bool:
+        return bool(
+            app.evaluate(
+                "() => document.documentElement.scrollWidth <= "
+                "document.documentElement.clientWidth + 1"
+            )
+        )
+
+    wait_until(app, _page_fits_without_scroll)
+
+    column_group.scroll_into_view_if_needed()
+    assert_snapshot(column_group, name="st_columns-wrap_false_narrow")
+
+
+def test_columns_wrap_false_relative_widths_at_desktop(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """wrap=False preserves relative widths above the stacking breakpoint."""
+    app.set_viewport_size({"width": 1000, "height": 800})
+
+    container = get_element_by_key(app, "columns_wrap_false_relative")
+    column_group = container.get_by_test_id("stHorizontalBlock")
+    columns = column_group.get_by_test_id("stColumn")
+    expect(columns).to_have_count(3)
+    expect(column_group.get_by_test_id("stMarkdownContainer").last).to_be_visible()
+
+    # Relative [3, 1, 2] weights: wide > medium > narrow.
+    def _relative_widths_preserved() -> bool:
+        wide_box = columns.nth(0).bounding_box()
+        narrow_box = columns.nth(1).bounding_box()
+        medium_box = columns.nth(2).bounding_box()
+        if wide_box is None or narrow_box is None or medium_box is None:
+            return False
+        return wide_box["width"] > medium_box["width"] > narrow_box["width"]
+
+    wait_until(app, _relative_widths_preserved)
+
+    # At desktop width, wrap=False should not introduce unnecessary overflow.
+    def _no_horizontal_overflow() -> bool:
+        return bool(column_group.evaluate("el => el.scrollWidth <= el.clientWidth + 1"))
+
+    wait_until(app, _no_horizontal_overflow)
+
+    assert_snapshot(column_group, name="st_columns-wrap_false_relative_widths")
+
+
+def test_columns_wrap_true_still_stacks_at_narrow_viewport(app: Page):
+    """Explicit wrap=True keeps today's stacking behavior at 640px."""
+    app.set_viewport_size({"width": 640, "height": 800})
+
+    container = get_element_by_key(app, "columns_wrap_true")
+    column_group = container.get_by_test_id("stHorizontalBlock")
+    columns = column_group.get_by_test_id("stColumn")
+    expect(columns).to_have_count(3)
+
+    # wait_until guards against layout races right after viewport resize.
+    def _columns_are_stacked() -> bool:
+        first_box = columns.nth(0).bounding_box()
+        second_box = columns.nth(1).bounding_box()
+        if first_box is None or second_box is None:
+            return False
+        return second_box["y"] > first_box["y"] + first_box["height"] / 2
+
+    wait_until(app, _columns_are_stacked)

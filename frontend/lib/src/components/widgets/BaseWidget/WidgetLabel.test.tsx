@@ -32,10 +32,7 @@ const getProps = (props?: Partial<LabelProps>): LabelProps => ({
 describe("Widget Label", () => {
   it("does not hide help icons from assistive tech", () => {
     render(
-      <ThemeProvider
-        theme={mockTheme.emotion}
-        baseuiTheme={mockTheme.basewebTheme}
-      >
+      <ThemeProvider theme={mockTheme.emotion}>
         <WidgetLabel label="My widget">
           <WidgetLabelHelpIconInline
             content="help text"
@@ -56,10 +53,7 @@ describe("Widget Label", () => {
 
   it("does not render nested <label> elements when using inline help wrapper", () => {
     render(
-      <ThemeProvider
-        theme={mockTheme.emotion}
-        baseuiTheme={mockTheme.basewebTheme}
-      >
+      <ThemeProvider theme={mockTheme.emotion}>
         <WidgetLabel label="My widget">
           <WidgetLabelHelpIconInline
             content="help text"

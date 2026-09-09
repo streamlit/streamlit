@@ -43,6 +43,7 @@ from streamlit.elements.lib.options_selector_utils import (
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
+    validate_label_visibility,
 )
 from streamlit.elements.lib.utils import (
     Key,
@@ -52,7 +53,11 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitValueError,
+)
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -62,7 +67,7 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.string_util import extract_leading_icon
+from streamlit.string_util import extract_leading_icon, to_help_str
 
 if TYPE_CHECKING:
     from streamlit.dataframe_util import OptionSequence
@@ -285,6 +290,7 @@ def _build_proto(
     label_visibility: LabelVisibility = "visible",
     help: str | None = None,
     required: bool = False,
+    wrap: bool | None = None,
 ) -> ButtonGroupProto:
     proto = ButtonGroupProto()
 
@@ -303,7 +309,13 @@ def _build_proto(
             label_visibility
         )
         if help is not None:
-            proto.help = help
+            proto.help = to_help_str(help)
+
+    # wrap is layout-only and intentionally excluded from the element id
+    # (it is not passed to compute_and_register_element_id), so toggling it
+    # never resets the widget's value.
+    if wrap is not None:
+        proto.wrap = wrap
 
     for formatted_option in formatted_options:
         proto.options.append(formatted_option)
@@ -337,6 +349,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> V: ...
@@ -359,10 +372,11 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
-    # 3. Single-select (default, required=False) -> V | None
+    # 3. Single-select with required=False or a non-literal bool -> V | None
     @overload
     def pills(
         self,
@@ -371,28 +385,6 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["single"] = "single",
         default: V | None = None,
-        required: Literal[False] = ...,
-        format_func: Callable[[Any], str] | None = None,
-        key: Key | None = None,
-        help: str | None = None,
-        on_change: WidgetCallback | None = None,
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-        disabled: bool = False,
-        label_visibility: LabelVisibility = "visible",
-        width: Width = "content",
-        bind: BindOption = None,
-        persist_state: PersistStateOption = None,
-    ) -> V | None: ...
-    # 4. Multi-select -> list[V]
-    @overload
-    def pills(
-        self,
-        label: str,
-        options: OptionSequence[V],
-        *,
-        selection_mode: Literal["multi"],
-        default: Sequence[V] | V | None = None,
         required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
@@ -403,6 +395,62 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> V | None: ...
+    # 4. Multi-select with a sequence default -> list[V]
+    # Split from overload 5 so checkers solve V from options, not from default:
+    # a combined `default: Sequence[V] | V | None` makes `default=[1]` solve V
+    # as `int | Sequence[int]` and yields `list[V | Sequence[V]]`.
+    # Include None so a `list[V] | None` default matches this overload without
+    # relying on checker union expansion.
+    # Reject required=True in multi-select mode statically: it raises
+    # StreamlitAPIException at runtime. Keep Literal[False] rather than bool --
+    # bool cannot exclude True, so a `required: bool` variable then matches no
+    # overload here, even when its value is False.
+    @overload
+    def pills(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["multi"],
+        default: Sequence[V] | None,
+        required: Literal[False] = False,
+        format_func: Callable[[Any], str] | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        wrap: bool | None = None,
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> list[V]: ...
+    # 5. Multi-select with a scalar default or None -> list[V]
+    @overload
+    def pills(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["multi"],
+        default: V | None = None,
+        required: Literal[False] = False,
+        format_func: Callable[[Any], str] | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[V]: ...
@@ -424,6 +472,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[V] | V | None:
@@ -553,6 +602,21 @@ class ButtonGroupMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        wrap : bool or None
+            Whether the options can wrap onto multiple rows. This can be one
+            of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the options stay on a single row and scroll
+              horizontally if needed; in other layouts, the options wrap onto
+              additional rows.
+            - ``True``: If the options are too wide for the available space,
+              they wrap onto additional rows.
+            - ``False``: The options stay on a single row. If they are too
+              wide for the available space, the option group scrolls
+              horizontally.
+
         bind : "query-params" or None
             Binding mode for syncing the widget's value with a URL query
             parameter. If this is ``None`` (default), the widget's value
@@ -658,6 +722,7 @@ class ButtonGroupMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            wrap=wrap,
             bind=bind,
             persist_state=persist_state,
         )
@@ -682,6 +747,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> V: ...
@@ -704,10 +770,11 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> V | None: ...
-    # 3. Single-select (default, required=False) -> V | None
+    # 3. Single-select with required=False or a non-literal bool -> V | None
     @overload
     def segmented_control(
         self,
@@ -716,28 +783,6 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["single"] = "single",
         default: V | None = None,
-        required: Literal[False] = ...,
-        format_func: Callable[[Any], str] | None = None,
-        key: str | int | None = None,
-        help: str | None = None,
-        on_change: WidgetCallback | None = None,
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-        disabled: bool = False,
-        label_visibility: LabelVisibility = "visible",
-        width: Width = "content",
-        bind: BindOption = None,
-        persist_state: PersistStateOption = None,
-    ) -> V | None: ...
-    # 4. Multi-select -> list[V]
-    @overload
-    def segmented_control(
-        self,
-        label: str,
-        options: OptionSequence[V],
-        *,
-        selection_mode: Literal["multi"],
-        default: Sequence[V] | V | None = None,
         required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
@@ -748,6 +793,62 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> V | None: ...
+    # 4. Multi-select with a sequence default -> list[V]
+    # Split from overload 5 so checkers solve V from options, not from default:
+    # a combined `default: Sequence[V] | V | None` makes `default=[1]` solve V
+    # as `int | Sequence[int]` and yields `list[V | Sequence[V]]`.
+    # Include None so a `list[V] | None` default matches this overload without
+    # relying on checker union expansion.
+    # Reject required=True in multi-select mode statically: it raises
+    # StreamlitAPIException at runtime. Keep Literal[False] rather than bool --
+    # bool cannot exclude True, so a `required: bool` variable then matches no
+    # overload here, even when its value is False.
+    @overload
+    def segmented_control(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["multi"],
+        default: Sequence[V] | None,
+        required: Literal[False] = False,
+        format_func: Callable[[Any], str] | None = None,
+        key: str | int | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        wrap: bool | None = None,
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> list[V]: ...
+    # 5. Multi-select with a scalar default or None -> list[V]
+    @overload
+    def segmented_control(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["multi"],
+        default: V | None = None,
+        required: Literal[False] = False,
+        format_func: Callable[[Any], str] | None = None,
+        key: str | int | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[V]: ...
@@ -770,6 +871,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[V] | V | None:
@@ -899,6 +1001,21 @@ class ButtonGroupMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        wrap : bool or None
+            Whether the options can wrap onto multiple rows. This can be one
+            of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the options stay on a single row and scroll
+              horizontally if needed; in other layouts, the options wrap onto
+              additional rows.
+            - ``True``: If the options are too wide for the available space,
+              they wrap onto additional rows.
+            - ``False``: The options stay on a single row. If they are too
+              wide for the available space, the option group scrolls
+              horizontally.
+
         bind : "query-params" or None
             Binding mode for syncing the widget's value with a URL query
             parameter. If this is ``None`` (default), the widget's value
@@ -1007,6 +1124,7 @@ class ButtonGroupMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            wrap=wrap,
             bind=bind,
             persist_state=persist_state,
         )
@@ -1030,16 +1148,24 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[V] | V | None:
-        maybe_raise_label_warnings(label, label_visibility)
+        # Keep omitted labels as None so _build_proto can leave proto.label
+        # unset; the frontend treats that as collapsed. Coercing None to ""
+        # would write an empty visible label and change the element id.
+        if label is not None:
+            label = maybe_raise_label_warnings(label, label_visibility)
+        else:
+            validate_label_visibility(label_visibility)
 
         # Validate required with multi-select
         if required and selection_mode == "multi":
-            raise StreamlitAPIException(
-                "The `required` argument cannot be used with `selection_mode='multi'`. "
-                "The `required` parameter is only supported for single-select mode."
+            raise StreamlitIncompatibleParametersError(
+                "required=True",
+                "selection_mode='multi'",
+                explanation="`required` is only supported for single-select mode.",
             )
 
         # Use str as default format_func
@@ -1158,6 +1284,7 @@ class ButtonGroupMixin:
             label=label,
             label_visibility=label_visibility,
             width=width,
+            wrap=wrap,
             options_format_func=actual_format_func,
             bind=bind,
             persist_state=persist_state,
@@ -1196,6 +1323,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
         width: Width = "content",
+        wrap: bool | None = None,
         options_format_func: Callable[[Any], str] | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
@@ -1217,10 +1345,10 @@ class ButtonGroupMixin:
             and isinstance(default, Sequence)
             and len(default) > 1
         ):
-            # add more commands to the error message
             raise StreamlitAPIException(
-                "The default argument to `st.pills` must be a single value when "
-                "`selection_mode='single'`."
+                f"The default argument to `st.{style}` must be a single value when "
+                "`selection_mode='single'`.",
+                error_id="button-group-single-select-multiple-defaults",
             )
 
         if style not in {"pills", "segmented_control"}:
@@ -1273,6 +1401,7 @@ class ButtonGroupMixin:
             label_visibility=label_visibility,
             help=help,
             required=required,
+            wrap=wrap,
         )
 
         if bind == "query-params" and key is not None:

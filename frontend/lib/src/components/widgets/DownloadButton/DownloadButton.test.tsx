@@ -135,9 +135,8 @@ describe("DownloadButton widget", () => {
       await user.click(downloadButton)
 
       expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
-        props.element,
-        { fromUi: true },
-        undefined
+        props.element.id,
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
 
       expect(props.endpoints.buildDownloadUrl).toHaveBeenCalledWith(
@@ -171,9 +170,12 @@ describe("DownloadButton widget", () => {
       await user.click(downloadButton)
 
       expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
-        props.element,
-        { fromUi: true },
-        "myFragmentId"
+        props.element.id,
+        {
+          formId: props.element.formId,
+          fragmentId: "myFragmentId",
+          fromUser: true,
+        }
       )
     })
 
@@ -195,9 +197,8 @@ describe("DownloadButton widget", () => {
       onActivate()
 
       expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
-        props.element,
-        { fromUi: true },
-        undefined
+        props.element.id,
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
   })

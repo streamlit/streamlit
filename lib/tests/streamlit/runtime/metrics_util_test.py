@@ -33,10 +33,21 @@ import streamlit.components.v1 as components
 from streamlit import config
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.connections import SQLConnection
-from streamlit.errors import StreamlitValueError
+from streamlit.errors import (
+    LocalizableStreamlitException,
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitInvalidLayoutContextError,
+    StreamlitInvalidMinMaxError,
+    StreamlitInvalidParameterTypeError,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+    StreamlitValueOutOfRangeError,
+)
 from streamlit.navigation.page import _create_page
 from streamlit.runtime import metrics_util
 from streamlit.runtime.caching import cache_data_api, cache_resource_api
+from streamlit.runtime.media_file_storage import MediaFileStorageError
 from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
@@ -843,15 +854,182 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
             "TypeError:use_container_width",
         ),
         (
+            TypeError("button() missing 1 required positional argument: 'label'"),
+            "TypeError:missing:label",
+        ),
+        (
+            TypeError("button() takes 2 positional arguments but 3 were given"),
+            "TypeError",
+        ),
+        (
+            TypeError("bad argument type for built-in operation"),
+            "TypeError",
+        ),
+        (
+            TypeError("a bytes-like object is required, not 'Figure'"),
+            "TypeError",
+        ),
+        (
             StreamlitValueError("width", ["stretch", "content"]),
             "StreamlitValueError:width",
+        ),
+        (
+            StreamlitValueError(
+                "scope",
+                ["'global'", "'session'"],
+                detail="Connection class Foo has an invalid scope.",
+            ),
+            "StreamlitValueError:scope",
+        ),
+        (
+            StreamlitMissingRequiredParameterError("label"),
+            "StreamlitMissingRequiredParameterError:label",
+        ),
+        (
+            StreamlitInvalidParameterTypeError("spec", "str", ["int", "list"]),
+            "StreamlitInvalidParameterTypeError:spec",
+        ),
+        (
+            StreamlitInvalidMinMaxError(10, 5),
+            "StreamlitInvalidMinMaxError",
+        ),
+        (
+            StreamlitValueOutOfRangeError("index", 5, 0, 2),
+            "StreamlitValueOutOfRangeError:index",
+        ),
+        (
+            StreamlitIncompatibleParametersError(
+                "wrap=False", "unsafe_allow_html=True"
+            ),
+            "StreamlitIncompatibleParametersError",
+        ),
+        (
+            StreamlitInvalidLayoutContextError(
+                "Forms cannot be nested in other forms."
+            ),
+            "StreamlitInvalidLayoutContextError",
+        ),
+        (
+            StreamlitAPIException("Failed to load secrets"),
+            "StreamlitAPIException",
+        ),
+        (
+            StreamlitAPIException(
+                "Failed to load secrets",
+                error_id="failed-loading-secrets-file",
+            ),
+            "StreamlitAPIException:failed-loading-secrets-file",
+        ),
+        (
+            StreamlitInvalidLayoutContextError(
+                "Forms cannot be nested in other forms.",
+                error_id="nested-forms-not-allowed",
+            ),
+            "StreamlitInvalidLayoutContextError:nested-forms-not-allowed",
+        ),
+        (
+            LocalizableStreamlitException(
+                "Error parsing secrets file at {path}",
+                path="secrets.toml",
+                error_id="failed-parsing-secrets-file",
+            ),
+            "LocalizableStreamlitException:failed-parsing-secrets-file",
+        ),
+        (
+            LocalizableStreamlitException(
+                "Invalid {parameter}",
+                parameter="width",
+                error_id="should-not-appear",
+            ),
+            "LocalizableStreamlitException:width",
+        ),
+        (
+            ModuleNotFoundError("No module named 'pyarrow'"),
+            "ModuleNotFoundError:pyarrow",
+        ),
+        (
+            ImportError("cannot import name 'Table' from 'pyarrow'"),
+            "ImportError:pyarrow",
+        ),
+        (
+            ModuleNotFoundError("No module named 'custom_pkg'"),
+            "ModuleNotFoundError",
+        ),
+        (
+            ModuleNotFoundError(
+                "No module named 'streamlit.runtime.missing'",
+                name="streamlit.runtime.missing",
+            ),
+            "ModuleNotFoundError:streamlit.runtime.missing",
+        ),
+        (
+            ImportError(
+                "cannot import name 'Engine' from 'sqlalchemy.engine'",
+                name="sqlalchemy.engine",
+            ),
+            "ImportError:sqlalchemy.engine",
+        ),
+        (
+            ImportError(
+                "cannot import name 'Widget' from 'custom_pkg'", name="custom_pkg"
+            ),
+            "ImportError",
+        ),
+        (
+            AttributeError(
+                "module 'streamlit' has no attribute 'foo'", name="foo", obj=st
+            ),
+            "AttributeError:foo",
+        ),
+        (
+            AttributeError("module 'streamlit' has no attribute 'bar'"),
+            "AttributeError:bar",
+        ),
+        (
+            AttributeError("Widget has no attribute 'foo'", name="foo", obj=object()),
+            "AttributeError",
+        ),
+        (
+            MediaFileStorageError("Error opening 'foo.png'"),
+            "MediaFileStorageError",
+        ),
+        (
+            MediaFileStorageError("Callable execution failed"),
+            "MediaFileStorageError",
         ),
         (ValueError("boom"), "ValueError"),
         (TypeError("other"), "TypeError"),
     ],
     ids=[
         "unexpected-kwarg",
+        "missing-positional",
+        "unsupported-too-many-positional",
+        "unsupported-proto-type",
+        "unsupported-byteslike",
         "streamlit-value-error",
+        "streamlit-value-error-detail",
+        "streamlit-missing-required-parameter",
+        "invalid-parameter-type",
+        "invalid-min-max",
+        "value-out-of-range",
+        "incompatible-parameters",
+        "invalid-context-no-command-suffix",
+        "streamlit-api-exception-plain",
+        "streamlit-api-exception-error-id",
+        "streamlit-api-exception-subclass-error-id",
+        "localizable-error-id-without-parameter",
+        "localizable-parameter-takes-precedence-over-error-id",
+        "modulenotfound-message-fallback",
+        "import-error-message-fallback",
+        "modulenotfound-private-module",
+        "modulenotfound-streamlit-module",
+        "import-error-feature-dependency",
+        "import-error-private-module",
+        "streamlit-attribute-structured",
+        "streamlit-attribute-message-fallback",
+        "non-streamlit-attribute",
+        "media-file-storage",
+        "media-file-other",
         "plain-value-error",
         "other-type-error",
     ],

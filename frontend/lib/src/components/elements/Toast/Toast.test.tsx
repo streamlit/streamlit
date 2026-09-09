@@ -41,7 +41,10 @@ const createContainer = (): ReactElement => (
   </ToastRegion>
 )
 
-const getProps = (elementProps: Partial<ToastProto> = {}): ToastProps => ({
+const getProps = (
+  elementProps: Partial<ToastProto> = {},
+  toastId = "toast-0"
+): ToastProps => ({
   element: ToastProto.create({
     body: "This is a toast message",
     icon: "🐶",
@@ -49,6 +52,7 @@ const getProps = (elementProps: Partial<ToastProto> = {}): ToastProps => ({
     duration: 0,
     ...elementProps,
   }),
+  toastId,
 })
 
 const renderComponent = (props: ToastProps): RenderResult =>
@@ -220,10 +224,7 @@ describe("Toast Component", () => {
   it("throws an error when called via st.sidebar.toast", () => {
     const props = getProps({})
     render(
-      <ThemeProvider
-        theme={{ ...mockTheme.emotion, inSidebar: true }}
-        baseuiTheme={mockTheme.basewebTheme}
-      >
+      <ThemeProvider theme={{ ...mockTheme.emotion, inSidebar: true }}>
         {createContainer()}
         <Toast {...props} />
       </ThemeProvider>
@@ -246,5 +247,51 @@ describe("Toast Component", () => {
     expect(
       within(toast).queryByRole("button", { name: "view more" })
     ).not.toBeInTheDocument()
+  })
+
+  it("keeps the toast visible after the Toast component unmounts", () => {
+    // The ToastRegion stays mounted (like AppView) while only the Toast element
+    // unmounts, mirroring the stale-node cleanup that happens when st.rerun()
+    // follows st.toast() (issue #7740). The toast must NOT be closed on unmount.
+    const Wrapper = ({ showToast }: { showToast: boolean }): ReactElement => (
+      <>
+        {createContainer()}
+        {showToast && <Toast {...getProps()} />}
+      </>
+    )
+
+    const { rerender } = render(<Wrapper showToast={true} />)
+    expect(screen.getByRole("alertdialog")).toBeVisible()
+
+    rerender(<Wrapper showToast={false} />)
+    expect(screen.getByRole("alertdialog")).toBeVisible()
+  })
+
+  it("de-dupes a second toast added with the same toastId", () => {
+    // A rerun re-emits the same toast at the same delta path (the component is
+    // keyed by scriptRunId, so it remounts). It must not stack a duplicate.
+    render(
+      <>
+        {createContainer()}
+        <Toast {...getProps({}, "event-0")} />
+        <Toast {...getProps({}, "event-0")} />
+      </>
+    )
+
+    expect(screen.getAllByRole("alertdialog")).toHaveLength(1)
+  })
+
+  it("shows separate toasts for distinct toastIds", () => {
+    // Guards against over-eager de-duplication: two identical st.toast("Hip!")
+    // calls live at distinct delta paths and must both be shown.
+    render(
+      <>
+        {createContainer()}
+        <Toast {...getProps({ body: "Hip!" }, "event-0")} />
+        <Toast {...getProps({ body: "Hip!" }, "event-1")} />
+      </>
+    )
+
+    expect(screen.getAllByRole("alertdialog")).toHaveLength(2)
   })
 })

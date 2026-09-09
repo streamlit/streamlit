@@ -56,9 +56,8 @@ function DownloadButton(props: Props): ReactElement {
   const { help, label, icon, ignoreRerun, type, url, deferredFileId } = element
   const shortcut = element.shortcut ? element.shortcut : undefined
 
-  // wrap defaults to auto (no wrap in horizontal layouts, wrap otherwise). When
-  // wrap resolves to no-wrap, reveal the full label on hover via a native title,
-  // skipped when help is set since help provides the tooltip.
+  // When wrap resolves to no-wrap, reveal the full label on hover via a native
+  // title, skipped when help is set since help provides the tooltip.
   const wrap = useResolvedWrap(element.wrap)
   const addTitleTooltip = !wrap && !help
 
@@ -139,7 +138,11 @@ function DownloadButton(props: Props): ReactElement {
 
     if (!ignoreRerun) {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-      widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
+      widgetMgr.setTriggerValue(element.id, {
+        formId: element.formId,
+        fragmentId,
+        fromUser: true,
+      })
     }
 
     const isDeferred = Boolean(deferredFileId?.length)

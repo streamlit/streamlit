@@ -12,7 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+import re
+
 from playwright.sync_api import Page, expect
+
+from e2e_playwright.shared.app_utils import expect_exception
 
 
 def test_error_handling_messages(app: Page) -> None:
@@ -22,9 +27,12 @@ def test_error_handling_messages(app: Page) -> None:
         )
     ).to_be_visible()
 
-    expect(
-        app.get_by_text(
-            "streamlit.errors.StreamlitAPIException: css parameter must be a string or None. "
-            "Pass a string path or glob."
-        )
-    ).to_be_visible()
+    # Markdown-rendered messages drop literal backticks (`css` becomes <code>).
+    # The provided-type clause is omitted because it is PosixPath vs WindowsPath.
+    expect_exception(
+        app,
+        re.compile(
+            r"Invalid css type\. Expected one of: str, None\..*"
+            r"Pass a string path or glob\."
+        ),
+    )

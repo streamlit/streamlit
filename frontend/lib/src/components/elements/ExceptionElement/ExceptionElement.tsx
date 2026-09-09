@@ -14,12 +14,23 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useContext } from "react"
+import {
+  memo,
+  ReactElement,
+  useCallback,
+  useContext,
+  useRef,
+  useState,
+} from "react"
 
 import { Config, Exception as ExceptionProto } from "@streamlit/protobuf"
 import { isLocalhost } from "@streamlit/utils"
 
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
+import {
+  SkillsInstallContext,
+  useSkillsCalloutSlot,
+} from "~lib/components/core/SkillsInstallContext"
 import { StyledCode } from "~lib/components/elements/CodeBlock/styled-components"
 import AlertContainer, {
   Kind,
@@ -29,10 +40,12 @@ import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/Streamli
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { notNullOrUndefined } from "~lib/util/utils"
 
+import SkillsInstallCallout from "./SkillsInstallCallout"
 import {
-  StyledExceptionCopyButton,
+  StyledExceptionLinkButton,
   StyledExceptionLinks,
   StyledExceptionMessage,
+  StyledExceptionWithCallout,
   StyledExceptionWrapper,
   StyledMessageType,
   StyledStackTraceContent,
@@ -126,6 +139,39 @@ function ExceptionElement({
     (showErrorLinks === Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO &&
       isLocalhost())
 
+  // Offer a one-click "install Streamlit skills" CTA in local development, in its
+  // own box directly below this error. Reuses `shouldShowLinks` — the same
+  // localhost gate as the AI help links above — and scopes tightly so the nudge
+  // only appears where the skills would actually help:
+  //   - Streamlit-raised exceptions only (`element.isStreamlitException`) —
+  //     API misuse the skills can fix, not arbitrary user errors like a
+  //     ZeroDivisionError. The broad startup toast (#15473) still covers those.
+  //   - Real errors, not warnings (`!element.isWarning`).
+  // At most one callout shows app-wide, enforced by claiming a single shared
+  // slot. The slot is sticky once claimed, so the callout isn't yanked when a
+  // successful install flips the recommendation off — it dismisses itself after
+  // confirming.
+  const skillsInstall = useContext(SkillsInstallContext)
+  const skillsCalloutEligible =
+    shouldShowLinks &&
+    !element.isWarning &&
+    element.isStreamlitException &&
+    skillsInstall.enabled
+  // The slot is only claimed if this box is actually on screen — a collapsed
+  // expander or an inactive tab keeps its errors mounted, and one of those must
+  // not take the single slot from a visible error.
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const ownsSkillsCalloutSlot = useSkillsCalloutSlot(
+    skillsCalloutEligible,
+    wrapperRef
+  )
+  const [skillsCalloutDismissed, setSkillsCalloutDismissed] = useState(false)
+  const handleSkillsCalloutDismiss = useCallback(
+    () => setSkillsCalloutDismissed(true),
+    []
+  )
+  const showSkillsCallout = ownsSkillsCalloutSlot && !skillsCalloutDismissed
+
   const formattedExceptionShort = `${element.type}: ${element.message}`
   const formattedExceptionFull = `${formattedExceptionShort}\n\n${element.stackTrace?.join(
     "\n"
@@ -145,35 +191,47 @@ function ExceptionElement({
   }, [copyToClipboard, formattedExceptionFull])
 
   return (
-    <div className="stException" data-testid="stException">
-      <AlertContainer kind={element.isWarning ? Kind.WARNING : Kind.ERROR}>
-        <StyledExceptionWrapper>
-          <StyledExceptionMessage data-testid="stExceptionMessage">
-            <ExceptionMessage
-              type={element.type}
-              message={element.message}
-              messageIsMarkdown={element.messageIsMarkdown}
-            />
-          </StyledExceptionMessage>
-          {element.stackTrace && element.stackTrace.length > 0 ? (
-            <StackTrace stackTrace={element.stackTrace} />
-          ) : null}
-          {shouldShowLinks && (
-            <StyledExceptionLinks>
-              <StyledExceptionCopyButton onClick={handleCopy}>
-                Copy
-              </StyledExceptionCopyButton>
-              <a href={searchUrl} target="_blank" rel="noopener noreferrer">
-                Ask Google
-              </a>
-              <a href={chatGptUrl} target="_blank" rel="noopener noreferrer">
-                Ask ChatGPT
-              </a>
-            </StyledExceptionLinks>
-          )}
-        </StyledExceptionWrapper>
-      </AlertContainer>
-    </div>
+    <StyledExceptionWithCallout ref={wrapperRef}>
+      <div className="stException" data-testid="stException">
+        <AlertContainer kind={element.isWarning ? Kind.WARNING : Kind.ERROR}>
+          <StyledExceptionWrapper>
+            <StyledExceptionMessage data-testid="stExceptionMessage">
+              <ExceptionMessage
+                type={element.type}
+                message={element.message}
+                messageIsMarkdown={element.messageIsMarkdown}
+              />
+            </StyledExceptionMessage>
+            {element.stackTrace && element.stackTrace.length > 0 ? (
+              <StackTrace stackTrace={element.stackTrace} />
+            ) : null}
+            {shouldShowLinks && (
+              <StyledExceptionLinks>
+                <StyledExceptionLinkButton onClick={handleCopy}>
+                  Copy
+                </StyledExceptionLinkButton>
+                <a href={searchUrl} target="_blank" rel="noopener noreferrer">
+                  Ask Google
+                </a>
+                <a href={chatGptUrl} target="_blank" rel="noopener noreferrer">
+                  Ask ChatGPT
+                </a>
+              </StyledExceptionLinks>
+            )}
+          </StyledExceptionWrapper>
+        </AlertContainer>
+      </div>
+      {/* Its own box below the error, not a row inside it (per the design), so
+          `stException` keeps meaning "the error box" for anyone targeting it. */}
+      {showSkillsCallout && (
+        <SkillsInstallCallout
+          enabled={skillsCalloutEligible}
+          onInstall={skillsInstall.onInstall}
+          onShown={skillsInstall.onShown}
+          onDismiss={handleSkillsCalloutDismiss}
+        />
+      )}
+    </StyledExceptionWithCallout>
   )
 }
 

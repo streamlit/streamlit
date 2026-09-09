@@ -24,7 +24,11 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.widgets.feedback import FeedbackSerde
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitValueError,
+    StreamlitValueOutOfRangeError,
+)
 from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
 from streamlit.runtime.state.session_state import get_script_run_ctx
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -156,23 +160,23 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
         val = st.feedback("thumbs")
         assert val is None
 
-    def test_invalid_default_for_thumbs(self):
-        """Test that invalid default for thumbs raises exception."""
-        with pytest.raises(StreamlitAPIException) as e:
-            st.feedback("thumbs", default=2)
-        assert "must be a number between 0 and 1" in str(e.value)
-
-    def test_invalid_default_for_faces(self):
-        """Test that invalid default for faces raises exception."""
-        with pytest.raises(StreamlitAPIException) as e:
-            st.feedback("faces", default=5)
-        assert "must be a number between 0 and 4" in str(e.value)
-
-    def test_invalid_default_for_stars(self):
-        """Test that invalid default for stars raises exception."""
-        with pytest.raises(StreamlitAPIException) as e:
-            st.feedback("stars", default=-1)
-        assert "must be a number between 0 and 4" in str(e.value)
+    @parameterized.expand(
+        [
+            ("thumbs", 2, "[0, 1]"),
+            ("faces", 5, "[0, 4]"),
+            ("stars", -1, "[0, 4]"),
+        ]
+    )
+    def test_invalid_default(
+        self,
+        options: Literal["thumbs", "faces", "stars"],
+        default: int,
+        expected_range: str,
+    ):
+        """Out-of-range default raises StreamlitValueOutOfRangeError."""
+        with pytest.raises(StreamlitValueOutOfRangeError) as e:
+            st.feedback(options, default=default)
+        assert f"required range {expected_range}" in str(e.value)
 
     def test_disabled_state(self):
         """Test that disabled state is set correctly."""

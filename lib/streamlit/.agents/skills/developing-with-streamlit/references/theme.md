@@ -3,6 +3,8 @@
 
 Build professional, brand-aligned themes using `.streamlit/config.toml`. This skill covers design principles and complete configuration for polished, cohesive themes.
 
+Use `streamlit config show` to look up the full, current set of available theme configuration options and their descriptions before configuring a theme. The theme settings are grouped under `[theme]`, `[theme.sidebar]`, and the light and dark variants.
+
 ## Theme file setup
 
 Theme options go in Streamlit's `config.toml` under the `[theme]` section:
@@ -66,7 +68,7 @@ greenTextColor = "#116329"         # Darkened for readability
 
 ### Chart colors
 
-Define colors for Plotly, Altair, and Vega-Lite charts. These can be set in
+Define colors for Plotly, Altair, Vega-Lite, and ECharts charts. These can be set in
 `[theme]`, `[theme.light]`, `[theme.dark]`, and the corresponding sidebar
 sections. Unset sections inherit from `[theme]`.
 

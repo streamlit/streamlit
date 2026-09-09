@@ -29,11 +29,9 @@ import { createJiti } from "jiti"
 // This is to support our custom rules, which are written in TypeScript,
 // but need to be imported as JS to work in ESLint.
 const jiti = createJiti(import.meta.url)
-const __dirname = path.dirname(__filename)
-const streamlitCustom = await jiti.import(
-  path.resolve(__dirname, "./eslint-plugin-streamlit-custom/src/index.ts"),
-  { default: true }
-)
+const streamlitCustom = await jiti.import("eslint-plugin-streamlit-custom", {
+  default: true,
+})
 
 export default [
   {

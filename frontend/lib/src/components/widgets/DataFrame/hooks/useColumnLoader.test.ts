@@ -19,8 +19,8 @@ import { Field, Int64, Utf8 } from "apache-arrow"
 import { getLogger } from "loglevel"
 
 import {
+  type ArrowData,
   Dataframe as DataframeProto,
-  IArrowData,
   streamlit,
 } from "@streamlit/protobuf"
 
@@ -464,7 +464,7 @@ describe("getColumnType", () => {
 
 describe("useColumnLoader hook", () => {
   it("creates columns from the Arrow data", () => {
-    const arrowData: IArrowData = { data: UNICODE }
+    const arrowData: ArrowData.$Properties = { data: UNICODE }
     const element = DataframeProto.create({ arrowData })
     const data = new Quiver(arrowData)
 
@@ -487,7 +487,7 @@ describe("useColumnLoader hook", () => {
   })
 
   it("reorders columns when specified via column order", () => {
-    const arrowData: IArrowData = { data: UNICODE }
+    const arrowData: ArrowData.$Properties = { data: UNICODE }
     const element = DataframeProto.create({
       arrowData,
       columnOrder: ["c2", "c1"],
@@ -513,7 +513,7 @@ describe("useColumnLoader hook", () => {
   })
 
   it("hides columns not specified in column order", () => {
-    const arrowData: IArrowData = { data: UNICODE }
+    const arrowData: ArrowData.$Properties = { data: UNICODE }
     const element = DataframeProto.create({
       arrowData,
       columnOrder: ["c2"],
@@ -536,7 +536,7 @@ describe("useColumnLoader hook", () => {
   })
 
   it("activates column stretch if configured via widthConfig", () => {
-    const arrowData: IArrowData = { data: UNICODE }
+    const arrowData: ArrowData.$Properties = { data: UNICODE }
     const element = DataframeProto.create({ arrowData })
 
     const widthConfig = new streamlit.WidthConfig({ useStretch: true })
@@ -558,7 +558,7 @@ describe("useColumnLoader hook", () => {
   })
 
   it("configures the editable icon for editable columns", () => {
-    const arrowData: IArrowData = { data: UNICODE }
+    const arrowData: ArrowData.$Properties = { data: UNICODE }
     const element = DataframeProto.create({
       arrowData,
       editingMode: DataframeProto.EditingMode.FIXED,
@@ -583,7 +583,7 @@ describe("useColumnLoader hook", () => {
   })
 
   it("disallows hidden for editable columns that are required for dynamic editing", () => {
-    const arrowData: IArrowData = { data: UNICODE }
+    const arrowData: ArrowData.$Properties = { data: UNICODE }
     const element = DataframeProto.create({
       arrowData,
       editingMode: DataframeProto.EditingMode.DYNAMIC,
@@ -606,7 +606,7 @@ describe("useColumnLoader hook", () => {
   })
 
   it("respects hiding required columns for fixed editing", () => {
-    const arrowData: IArrowData = { data: UNICODE }
+    const arrowData: ArrowData.$Properties = { data: UNICODE }
     const element = DataframeProto.create({
       arrowData,
       editingMode: DataframeProto.EditingMode.FIXED,
@@ -630,7 +630,7 @@ describe("useColumnLoader hook", () => {
   })
 
   it("doesn't configure any icon for non-editable columns", () => {
-    const arrowData: IArrowData = { data: UNICODE }
+    const arrowData: ArrowData.$Properties = { data: UNICODE }
     const element = DataframeProto.create({
       arrowData,
       editingMode: DataframeProto.EditingMode.READ_ONLY,
@@ -655,7 +655,7 @@ describe("useColumnLoader hook", () => {
   })
 
   it("uses column order to order pinned columns", () => {
-    const arrowData: IArrowData = { data: UNICODE }
+    const arrowData: ArrowData.$Properties = { data: UNICODE }
     const element = DataframeProto.create({
       arrowData,
       columnOrder: ["c2", "c1"],
@@ -687,7 +687,7 @@ describe("useColumnLoader hook", () => {
   })
 
   it("activates column stretch with widthConfig.useStretch", () => {
-    const arrowData: IArrowData = { data: UNICODE }
+    const arrowData: ArrowData.$Properties = { data: UNICODE }
     const element = DataframeProto.create({ arrowData })
 
     const widthConfig = new streamlit.WidthConfig({ useStretch: true })
@@ -709,7 +709,7 @@ describe("useColumnLoader hook", () => {
   })
 
   it("does not activate column stretch with widthConfig.useContent", () => {
-    const arrowData: IArrowData = { data: UNICODE }
+    const arrowData: ArrowData.$Properties = { data: UNICODE }
     const element = DataframeProto.create({ arrowData })
 
     const widthConfig = new streamlit.WidthConfig({ useContent: true })
@@ -731,7 +731,7 @@ describe("useColumnLoader hook", () => {
   })
 
   it("activates column stretch with widthConfig.pixelWidth", () => {
-    const arrowData: IArrowData = { data: UNICODE }
+    const arrowData: ArrowData.$Properties = { data: UNICODE }
     const element = DataframeProto.create({ arrowData })
 
     const widthConfig = new streamlit.WidthConfig({ pixelWidth: 400 })
@@ -753,7 +753,7 @@ describe("useColumnLoader hook", () => {
   })
 
   it("does not activate column stretch when widthConfig is null", () => {
-    const arrowData: IArrowData = { data: UNICODE }
+    const arrowData: ArrowData.$Properties = { data: UNICODE }
     const element = DataframeProto.create({ arrowData })
 
     const data = new Quiver(arrowData)

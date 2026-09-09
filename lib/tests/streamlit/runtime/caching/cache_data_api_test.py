@@ -30,7 +30,11 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import file_util
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitIncompatibleParametersError,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching import cached_message_replay
@@ -71,7 +75,7 @@ from tests.streamlit.element_mocks import (
 from tests.streamlit.runtime.caching.common_cache_test import (
     as_cached_result as _as_cached_result,
 )
-from tests.testutil import create_mock_script_run_ctx
+from tests.testutil import create_mock_script_run_ctx, patch_config_options
 
 
 def as_cached_result(value: Any) -> CachedResult:
@@ -885,44 +889,43 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         st.cache_data.clear()
 
     def test_background_without_ttl_raises(self) -> None:
-        """refresh_mode="background" without a ttl raises a StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        """refresh_mode="background" without a ttl requires a positive ttl."""
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match=r'Set a positive `ttl` \(for example `ttl="1h"`\)',
+        ):
 
             @st.cache_data(refresh_mode="background")
             def foo() -> int:
                 return 1
 
-        assert "requires a 'ttl' value" in str(exc.value)
-
     def test_background_with_zero_ttl_raises(self) -> None:
-        """A non-positive ttl is treated as no ttl for background refresh."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        """A non-positive ttl is an invalid value for background refresh."""
+        with pytest.raises(
+            StreamlitValueError,
+            match=r"Background refresh requires a positive `ttl`",
+        ):
 
             @st.cache_data(ttl=0, refresh_mode="background")
             def foo() -> int:
                 return 1
 
-        assert "requires a 'ttl' value" in str(exc.value)
+    @parameterized.expand(
+        [
+            ("disk",),
+            (True,),
+        ]
+    )
+    def test_background_with_persist_raises(self, persist: str | bool) -> None:
+        """refresh_mode="background" with persist raises an incompatibility error."""
+        with pytest.raises(
+            StreamlitIncompatibleParametersError,
+            match=rf"persist={persist!r}",
+        ):
 
-    def test_background_with_persist_disk_raises(self) -> None:
-        """refresh_mode="background" with persist="disk" raises a StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as exc:
-
-            @st.cache_data(ttl="1h", persist="disk", refresh_mode="background")
+            @st.cache_data(ttl="1h", persist=persist, refresh_mode="background")
             def foo() -> int:
                 return 1
-
-        assert "not compatible with 'persist'" in str(exc.value)
-
-    def test_background_with_persist_true_raises(self) -> None:
-        """refresh_mode="background" with persist=True raises a StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as exc:
-
-            @st.cache_data(ttl="1h", persist=True, refresh_mode="background")
-            def foo() -> int:
-                return 1
-
-        assert "not compatible with 'persist'" in str(exc.value)
 
     def test_invalid_refresh_mode_raises(self) -> None:
         """An unknown refresh_mode value raises a StreamlitValueError."""
@@ -938,7 +941,7 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         )
 
     def test_hard_ttl_is_double_fresh_ttl(self) -> None:
-        """In background mode the underlying storage ttl is 2x the user-facing ttl."""
+        """The default hard TTL is twice the user-facing freshness TTL."""
         cache = _data_caches.get_cache(
             key="bg_key",
             persist=None,
@@ -949,6 +952,32 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         )
         assert cache.fresh_ttl_seconds == 100
         assert cache.ttl_seconds == 200
+
+    @parameterized.expand(
+        [
+            ("custom", 3.5, 350),
+            ("overflow_fallback", 1e308, 200),
+        ]
+    )
+    # Each case needs a distinct key so it builds a fresh cache rather than reusing one.
+    def test_configured_multiplier_sets_background_hard_ttl(
+        self, case: str, multiplier: float, expected_hard_ttl: float
+    ) -> None:
+        """The configured multiplier sets background hard TTL; overflow falls back."""
+        with patch_config_options(
+            {"runner.cacheBackgroundRefreshTTLMultiplier": multiplier}
+        ):
+            cache = _data_caches.get_cache(
+                key=f"multiplier_{case}",
+                persist=None,
+                max_entries=None,
+                ttl=100,
+                display_name=f"multiplier_{case}",
+                refresh_mode="background",
+            )
+
+        assert cache.fresh_ttl_seconds == 100
+        assert cache.ttl_seconds == expected_hard_ttl
 
     def test_stored_at_set_only_in_background_mode(self) -> None:
         """stored_at is set (and survives pickling) in background mode, and None otherwise."""

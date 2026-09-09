@@ -19,7 +19,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal, TypeAlias
 
 from streamlit import config
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.navigation.page import Page
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
@@ -56,9 +61,10 @@ def convert_to_streamlit_page(
         # Convert function to Page
         return Page(page_input)
 
-    raise StreamlitAPIException(
-        f"Invalid page type: {type(page_input)}. Must be either a string path, "
-        "a pathlib.Path, a callable function, or a st.Page object."
+    raise StreamlitInvalidParameterTypeError(
+        "pages",
+        type(page_input).__name__,
+        ["str", "Path", "callable", "st.Page"],
     )
 
 
@@ -343,8 +349,8 @@ def _navigation(
     page_list = pages_from_nav_sections(nav_sections)
 
     if not page_list:
-        raise StreamlitAPIException(
-            "`st.navigation` must be called with at least one `st.Page`."
+        raise StreamlitMissingRequiredParameterError(
+            "pages", detail="Provide at least one `st.Page`."
         )
 
     default_page = None
@@ -357,7 +363,8 @@ def _navigation(
                 if default_page is not None:
                     raise StreamlitAPIException(
                         "Multiple Pages specified with `default=True`. "
-                        "At most one Page can be set to default."
+                        "At most one Page can be set to default.",
+                        error_id="navigation-multiple-default-pages",
                     )
                 default_page = page
 
@@ -366,7 +373,8 @@ def _navigation(
         if not non_external_pages:
             raise StreamlitAPIException(
                 "At least one non-external page is required. "
-                "External URL pages cannot be the default page."
+                "External URL pages cannot be the default page.",
+                error_id="navigation-external-only-pages",
             )
         default_page = non_external_pages[0]
         default_page._default = True
@@ -390,7 +398,8 @@ def _navigation(
                 raise StreamlitAPIException(
                     f"Multiple Pages specified with URL pathname {page.url_path}. "
                     "URL pathnames must be unique. The url pathname may be "
-                    "inferred from the filename, callable name, or title."
+                    "inferred from the filename, callable name, or title.",
+                    error_id="navigation-duplicate-url-pathname",
                 )
 
             pagehash_to_pageinfo[script_hash] = {
@@ -425,9 +434,10 @@ def _navigation(
             # Don't set visible_items - leave it unset to use default
     elif isinstance(expanded, int):
         if expanded < 0:
-            raise StreamlitAPIException(
-                f"Invalid value for expanded: {expanded!r}. "
-                "When using an int, expanded must be a non-negative integer."
+            raise StreamlitValueError(
+                "expanded",
+                ["True", "False", "a non-negative integer"],
+                detail=f"Provided value: {expanded!r}.",
             )
         if expanded == 0:
             # Documented default behavior: collapsed, default visible_items
@@ -438,9 +448,10 @@ def _navigation(
             msg.navigation.expanded = False
             msg.navigation.visible_items = expanded
     else:
-        raise StreamlitAPIException(
-            f"Invalid type for expanded: {type(expanded).__name__!s}. "
-            "expanded must be a bool or a non-negative integer."
+        raise StreamlitInvalidParameterTypeError(
+            "expanded",
+            type(expanded).__name__,
+            ["bool", "int"],
         )
 
     msg.navigation.sections[:] = nav_sections.keys()

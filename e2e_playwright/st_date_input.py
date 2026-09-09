@@ -156,6 +156,19 @@ bound_minmax = st.date_input(
 )
 st.write("Bound minmax:", bound_minmax)
 
+st.date_input(
+    "Narrow single",
+    date(2019, 7, 6),
+    width=85,
+    key="narrow_single",
+)
+st.date_input(
+    "Narrow range",
+    [date(2019, 7, 6), date(2019, 7, 20)],
+    width=150,
+    key="narrow_range",
+)
+
 if st.toggle("Update date input props"):
     dval = st.date_input(
         "Updated dynamic date input",
@@ -192,3 +205,19 @@ else:
         format="YYYY/MM/DD",
     )
     st.write("Initial date input value:", dval)
+
+# --- Year-crossing bounds (see GitHub issue #16686) ---
+# `max_value`'s month/day precedes `min_value`'s, so the calendar header's year
+# dropdown must still offer the later year.
+st.date_input(
+    "Year-crossing single",
+    value=date(2025, 2, 1),
+    min_value=date(2024, 8, 3),
+    max_value=date(2025, 2, 3),
+)
+st.date_input(
+    "Year-crossing range",
+    value=[date(2025, 2, 1), date(2025, 2, 2)],
+    min_value=date(2024, 8, 3),
+    max_value=date(2025, 2, 3),
+)

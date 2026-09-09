@@ -21,7 +21,11 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.lib.policies import _LOGGER
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitDuplicateElementId,
+    StreamlitValueError,
+)
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.runtime.state.widgets import register_widget_from_metadata
@@ -48,6 +52,20 @@ class CheckboxTest(DeltaGeneratorTestCase):
             c.label_visibility.value == LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
         assert c.type == CheckboxProto.StyleType.DEFAULT
+
+    def test_non_str_label_is_coerced(self):
+        """Non-string labels are coerced so protobuf assignment does not TypeError."""
+        st.checkbox(123)
+
+        c = self.get_delta_from_queue().new_element.checkbox
+        assert c.label == "123"
+
+    def test_non_str_help_is_coerced(self):
+        """Non-string help is coerced so protobuf assignment does not TypeError."""
+        st.checkbox("the label", help=123)
+
+        c = self.get_delta_from_queue().new_element.checkbox
+        assert c.help == "123"
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -455,3 +473,52 @@ hello
             widget_func("the label", persist_state="session")
 
         assert "must have a unique 'key' parameter" in str(exc.value)
+
+    @parameterized.expand(
+        [
+            ("checkbox_default", st.checkbox, {}),
+            ("checkbox_explicit_none", st.checkbox, {"wrap": None}),
+            ("toggle_default", st.toggle, {}),
+            ("toggle_explicit_none", st.toggle, {"wrap": None}),
+        ]
+    )
+    def test_wrap_default(
+        self, _name: str, widget_func: object, kwargs: dict[str, object]
+    ) -> None:
+        """Omitting wrap or passing wrap=None leaves the proto field unset (auto),
+        so the frontend resolves wrapping from the layout."""
+        widget_func("the label", **kwargs)
+
+        c = self.get_delta_from_queue().new_element.checkbox
+        assert not c.HasField("wrap")
+
+    @parameterized.expand(
+        [
+            ("checkbox_true", st.checkbox, True),
+            ("checkbox_false", st.checkbox, False),
+            ("toggle_true", st.toggle, True),
+            ("toggle_false", st.toggle, False),
+        ]
+    )
+    def test_wrap(self, _name: str, widget_func: object, wrap_value: bool) -> None:
+        """The wrap parameter is forwarded to the checkbox proto."""
+        widget_func("the label", wrap=wrap_value)
+
+        c = self.get_delta_from_queue().new_element.checkbox
+        assert c.wrap is wrap_value
+
+    @parameterized.expand(
+        [
+            ("checkbox", st.checkbox),
+            ("toggle", st.toggle),
+        ]
+    )
+    def test_wrap_excluded_from_id(self, _name: str, widget_func: object) -> None:
+        """wrap is layout-only and must not affect the element id (state-preserving).
+
+        Two otherwise-identical widgets that differ only in wrap collide on the
+        same auto-generated id, proving wrap is excluded from id computation.
+        """
+        widget_func("same label")
+        with pytest.raises(StreamlitDuplicateElementId):
+            widget_func("same label", wrap=False)

@@ -29,6 +29,7 @@ import { type Key } from "react-aria-components"
 
 import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
 
+import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { Box } from "~lib/components/shared/Base/styled-components"
 import BaseButton, {
   BaseButtonKind,
@@ -131,9 +132,8 @@ function MenuButton(props: Props): ReactElement {
 
   const hideChevron = isMenuStyleIconLabel(element.icon, element.label)
 
-  // wrap defaults to auto (no wrap in horizontal layouts, wrap otherwise). When
-  // wrap resolves to no-wrap, reveal the full label on hover via a native title,
-  // skipped when help is set since help provides the tooltip.
+  // When wrap resolves to no-wrap, reveal the full label on hover via a native
+  // title, skipped when help is set since help provides the tooltip.
   const wrap = useResolvedWrap(element.wrap)
   const addTitleTooltip = !wrap && !element.help
 
@@ -144,12 +144,12 @@ function MenuButton(props: Props): ReactElement {
       }
       // Strip the instance prefix added for DOM id uniqueness
       const value = String(key).slice(instanceId.length)
-      widgetMgr.setStringTriggerValue(
-        element,
-        value,
-        { fromUi: true },
-        fragmentId
-      )
+      widgetMgr.setStringTriggerValue(element.id, value, {
+        // Menu buttons cannot be placed inside a form.
+        formId: undefined,
+        fragmentId,
+        fromUser: true,
+      })
       setIsOpen(false)
     },
     [buttonDisabled, element, widgetMgr, fragmentId, instanceId]
@@ -198,7 +198,7 @@ function MenuButton(props: Props): ReactElement {
         </BaseButton>
       </BaseButtonTooltip>
       {isOpen && (
-        <FloatingPortal>
+        <FloatingPortal id={FLOATING_OVERLAY_PORTAL_ID}>
           <StyledMenuPopover
             ref={setFloatingRef}
             data-testid="stMenuButtonBody"

@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import functools
 import threading
 import unittest
 from unittest.mock import Mock, patch
@@ -24,7 +25,11 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.runtime.caching import (
     cache_background_refresh,
     cache_resource_api,
@@ -325,6 +330,141 @@ class CacheResourceValidateTest(unittest.TestCase):
             validate.reset_mock()
 
 
+class CacheResourceAsyncLifecycleCallbackTest(unittest.TestCase):
+    def setUp(self) -> None:
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+
+    def tearDown(self) -> None:
+        st.cache_resource.clear()
+        cache_resource_api.CACHE_RESOURCE_MESSAGE_REPLAY_CTX._cached_func_stack = []
+
+    @parameterized.expand([("validate",), ("on_release",)])
+    def test_rejects_async_function(self, param_name: str) -> None:
+        """Ordinary ``async def`` lifecycle callbacks fail when the decorator is built."""
+
+        async def async_callback(value: int) -> bool:
+            return True
+
+        with pytest.raises(StreamlitAPIException, match=param_name) as exc_info:
+            st.cache_resource(**{param_name: async_callback})(lambda: 1)
+
+        assert exc_info.value.error_id == "cache-resource-async-lifecycle-callback"
+
+    @parameterized.expand([("validate",), ("on_release",)])
+    def test_rejects_async_callable_object(self, param_name: str) -> None:
+        """Callable objects with async ``__call__`` fail when the decorator is built."""
+
+        class AsyncCallback:
+            async def __call__(self, value: int) -> bool:
+                return True
+
+        with pytest.raises(StreamlitAPIException, match=param_name):
+            st.cache_resource(**{param_name: AsyncCallback()})(lambda: 1)
+
+    @parameterized.expand([("validate",), ("on_release",)])
+    def test_rejects_partial_of_async_function(self, param_name: str) -> None:
+        """Partials of coroutine functions fail when the decorator is built."""
+
+        async def async_callback(ignored: object, value: int) -> bool:
+            return True
+
+        callback = functools.partial(async_callback, None)
+        with pytest.raises(StreamlitAPIException, match=param_name):
+            st.cache_resource(**{param_name: callback})(lambda: 1)
+
+    @parameterized.expand([("validate",), ("on_release",)])
+    def test_rejects_async_generator_function(self, param_name: str) -> None:
+        """Async generator functions fail when the decorator is built."""
+
+        async def async_gen_callback(value: int) -> object:
+            yield True
+
+        with pytest.raises(StreamlitAPIException, match=param_name) as exc_info:
+            st.cache_resource(**{param_name: async_gen_callback})(lambda: 1)
+
+        assert exc_info.value.error_id == "cache-resource-async-lifecycle-callback"
+
+    @parameterized.expand([("validate",), ("on_release",)])
+    def test_accepts_sync_adapter_wrapping_async_function(
+        self, param_name: str
+    ) -> None:
+        """A synchronous adapter is accepted even if it wraps an async function."""
+
+        async def async_callback(value: int) -> bool:
+            return True
+
+        @functools.wraps(async_callback)
+        def sync_adapter(value: int) -> bool:
+            return True
+
+        cached = st.cache_resource(**{param_name: sync_adapter})(lambda: 1)
+        assert cached() == 1
+
+    @parameterized.expand([("validate",), ("on_release",)])
+    def test_accepts_sync_callable_object(self, param_name: str) -> None:
+        """Callable objects with synchronous ``__call__`` are accepted and invoked."""
+
+        class Callback:
+            def __init__(self) -> None:
+                self.values: list[int] = []
+
+            def __call__(self, value: int) -> bool:
+                self.values.append(value)
+                return True
+
+        callback = Callback()
+        cached = st.cache_resource(**{param_name: callback})(lambda: 1)
+        assert cached() == 1
+
+        if param_name == "validate":
+            assert cached() == 1
+        else:
+            cached.clear()
+        assert callback.values == [1]
+
+    @parameterized.expand([("validate",), ("on_release",)])
+    def test_rejects_async_wrapper_of_sync_function(self, param_name: str) -> None:
+        """An ``async def`` wrapper is rejected even if it wraps a sync function."""
+
+        def sync_callback(value: int) -> bool:
+            return True
+
+        @functools.wraps(sync_callback)
+        async def async_wrapper(value: int) -> bool:
+            return True
+
+        with pytest.raises(StreamlitAPIException, match=param_name) as exc_info:
+            st.cache_resource(**{param_name: async_wrapper})(lambda: 1)
+
+        assert exc_info.value.error_id == "cache-resource-async-lifecycle-callback"
+
+    def test_sync_validate_on_hit_and_on_release_on_eviction_and_clear(self) -> None:
+        """Synchronous callbacks run on cache hits, LRU eviction, and ``clear()``."""
+        validated: list[int] = []
+        released: list[int] = []
+
+        def validate(value: int) -> bool:
+            validated.append(value)
+            return True
+
+        def on_release(value: int) -> None:
+            released.append(value)
+
+        @st.cache_resource(max_entries=2, validate=validate, on_release=on_release)
+        def f(value: int) -> int:
+            return value
+
+        assert f(1) == 1
+        assert f(1) == 1
+        assert validated == [1]
+        assert f(2) == 2
+        assert f(3) == 3
+        assert released == [1]
+
+        f.clear()
+        assert released == [1, 2, 3]
+
+
 class CacheResourceStatsProviderTest(unittest.TestCase):
     def setUp(self):
         # Guard against external tests not properly cache-clearing
@@ -596,14 +736,15 @@ class CacheResourceBackgroundRefreshTest(unittest.TestCase):
         )
 
     def test_background_without_ttl_raises(self) -> None:
-        """refresh_mode="background" without a ttl raises a StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        """refresh_mode="background" without a ttl requires a positive ttl."""
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match=r'Set a positive `ttl` \(for example `ttl="1h"`\)',
+        ):
 
             @st.cache_resource(refresh_mode="background")
             def foo() -> int:
                 return 1
-
-        assert "requires a 'ttl' value" in str(exc.value)
 
     def test_invalid_refresh_mode_raises(self) -> None:
         """An unknown refresh_mode value raises a StreamlitValueError."""
@@ -619,7 +760,7 @@ class CacheResourceBackgroundRefreshTest(unittest.TestCase):
         )
 
     def test_hard_ttl_is_double_fresh_ttl(self) -> None:
-        """In background mode the underlying cache ttl is 2x the user-facing ttl."""
+        """The default hard TTL is twice the user-facing freshness TTL."""
         cache = _resource_caches.get_cache(
             key="bg_key",
             display_name="bg",
@@ -631,6 +772,33 @@ class CacheResourceBackgroundRefreshTest(unittest.TestCase):
         )
         assert cache.fresh_ttl_seconds == _BG_TTL
         assert cache.ttl_seconds == _BG_TTL * 2
+
+    @parameterized.expand(
+        [
+            ("custom", 3.5, _BG_TTL * 3.5),
+            ("overflow_fallback", 1e308, _BG_TTL * 2),
+        ]
+    )
+    # Each case needs a distinct key so it builds a fresh cache rather than reusing one.
+    def test_configured_multiplier_sets_background_hard_ttl(
+        self, case: str, multiplier: float, expected_hard_ttl: float
+    ) -> None:
+        """The configured multiplier sets background hard TTL; overflow falls back."""
+        with patch_config_options(
+            {"runner.cacheBackgroundRefreshTTLMultiplier": multiplier}
+        ):
+            cache = _resource_caches.get_cache(
+                key=f"multiplier_{case}",
+                display_name=f"multiplier_{case}",
+                max_entries=None,
+                ttl=_BG_TTL,
+                validate=None,
+                on_release=lambda _v: None,
+                refresh_mode="background",
+            )
+
+        assert cache.fresh_ttl_seconds == _BG_TTL
+        assert cache.ttl_seconds == expected_hard_ttl
 
     def test_cache_recreated_on_mode_change(self) -> None:
         """Changing refresh_mode across reruns rebuilds the cache."""

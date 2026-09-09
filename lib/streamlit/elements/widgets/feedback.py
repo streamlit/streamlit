@@ -34,7 +34,7 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import StreamlitValueError, StreamlitValueOutOfRangeError
 from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -265,11 +265,8 @@ class FeedbackMixin:
 
         num_options = _get_num_options(options)
 
-        if default is not None and (default < 0 or default >= num_options):
-            raise StreamlitAPIException(
-                f"The default value in '{options}' must be a number between 0 and {num_options - 1}."
-                f" The passed default value is {default}"
-            )
+        if default is not None and not (0 <= default < num_options):
+            raise StreamlitValueOutOfRangeError("default", default, 0, num_options - 1)
 
         key = to_key(key)
         layout_config = create_layout_config(width=width, allow_content_width=True)

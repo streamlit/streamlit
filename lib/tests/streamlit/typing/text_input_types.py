@@ -135,6 +135,16 @@ if TYPE_CHECKING:
     assert_type(text_input("Label", value=None, validate=("^x$", "msg")), str | None)
 
     # =====================================================================
+    # Test live parameter (keyword-only)
+    # =====================================================================
+
+    assert_type(text_input("Label", live=True), str)
+    assert_type(text_input("Label", live=False), str)
+    assert_type(text_input("Label", live="300ms"), str)
+    assert_type(text_input("Label", value=None, live=True), str | None)
+    assert_type(text_input("Label", value=None, live="300ms"), str | None)
+
+    # =====================================================================
     # Test width parameter (keyword-only)
     # =====================================================================
 
@@ -171,6 +181,9 @@ if TYPE_CHECKING:
         str,
     )
     assert_type(text_input("Enter text", on_change=None), str)
+    assert_type(text_input("Enter text", on_change="rerun"), str)
+    assert_type(text_input("Enter text", on_change="ignore"), str)
+    assert_type(text_input("Enter text", value=None, on_change="ignore"), str | None)
     assert_type(text_input("Enter text", value=None, on_change=my_callback), str | None)
     assert_type(
         text_input(

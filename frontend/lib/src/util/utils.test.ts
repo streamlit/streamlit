@@ -85,7 +85,7 @@ describe("setCookie", () => {
     */
     document.cookie.split(";").forEach(cookie => {
       const eqPos = cookie.indexOf("=")
-      const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie
+      const name = eqPos > -1 ? cookie.slice(0, eqPos) : cookie
       document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT`
     })
   })
@@ -493,6 +493,17 @@ describe("keysToSnakeCase", () => {
       alice_name: "alice",
       bob_name: "bob",
     })
+  })
+
+  it("should preserve consecutive uppercase letters", () => {
+    expect(keysToSnakeCase({ testGUILabel: 1, XMLHttpRequest: 2 })).toEqual({
+      test_GUI_label: 1,
+      XML_http_request: 2,
+    })
+  })
+
+  it("should decamelize Unicode letters", () => {
+    expect(keysToSnakeCase({ déjàVu: true })).toEqual({ déjà_vu: true })
   })
 
   it("should return an empty dictionary when passed an empty dictionary", () => {

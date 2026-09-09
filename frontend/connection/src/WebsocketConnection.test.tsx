@@ -28,7 +28,7 @@ vi.mock("@streamlit/utils", async () => {
 import { MockInstance } from "vitest"
 import { default as WS } from "vitest-websocket-mock"
 
-import { BackMsg } from "@streamlit/protobuf"
+import { BackMsg, ForwardMsg } from "@streamlit/protobuf"
 
 import { ConnectionState } from "./ConnectionState"
 import {
@@ -1486,6 +1486,56 @@ describe("WebsocketConnection", () => {
     )
 
     expect(sendSpy).toHaveBeenCalledWith(encodedMessage)
+  })
+
+  it("dispatches queued messages in arrival order if a later payload resolves first", async () => {
+    // @ts-expect-error - private args for test
+    const onMessage = client.args.onMessage as ReturnType<typeof vi.fn>
+    onMessage.mockClear()
+
+    const firstPayload = Promise.withResolvers<ForwardMsg>()
+    const secondPayload = Promise.withResolvers<ForwardMsg>()
+    const payloads = [firstPayload, secondPayload]
+    let callIndex = 0
+
+    // @ts-expect-error - private cache for test
+    vi.spyOn(client.cache, "processMessagePayload").mockImplementation(
+      async () => {
+        const deferred = payloads[callIndex]
+        callIndex += 1
+        return deferred.promise
+      }
+    )
+
+    const firstMsg = ForwardMsg.fromObject({ hash: "msg-0" })
+    const secondMsg = ForwardMsg.fromObject({ hash: "msg-1" })
+    const encode = (msg: ForwardMsg): ArrayBuffer => {
+      const bytes = ForwardMsg.encode(msg).finish()
+      const copy = new Uint8Array(bytes.byteLength)
+      copy.set(bytes)
+      return copy.buffer
+    }
+
+    // @ts-expect-error - private handleMessage for test
+    const firstHandle = client.handleMessage(encode(firstMsg))
+    // @ts-expect-error - private handleMessage for test
+    const secondHandle = client.handleMessage(encode(secondMsg))
+
+    secondPayload.resolve(secondMsg)
+    await secondHandle
+    expect(onMessage).not.toHaveBeenCalled()
+    // @ts-expect-error - private messageQueue for test
+    expect(client.messageQueue.size).toBe(1)
+
+    firstPayload.resolve(firstMsg)
+    await firstHandle
+
+    expect(onMessage.mock.calls.map(call => call[0].hash)).toEqual([
+      "msg-0",
+      "msg-1",
+    ])
+    // @ts-expect-error - private messageQueue for test
+    expect(client.messageQueue.size).toBe(0)
   })
 
   describe("getBaseUriParts", () => {

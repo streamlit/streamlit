@@ -64,6 +64,29 @@ countries = st.multiselect(
 )
 ```
 
+## Keep options on one row with `wrap`
+
+`st.pills`, `st.segmented_control`, and `st.multiselect` accept `wrap`. The
+default `None` stays on one row (and scrolls if needed) inside a horizontal
+container or when the widget is placed directly in a column, and wraps onto
+additional rows otherwise. Nested layout containers such as a form, expander,
+or vertical `st.container` reset this. Pass `wrap=False` to always keep a
+single row, or `wrap=True` to always wrap.
+
+```python
+# Directly in a column: stays one row by default
+col1, col2 = st.columns(2)
+with col1:
+    tags = st.pills("Tags", ["Python", "SQL", "dbt"], selection_mode="multi")
+
+# Nested in a form: wrap unless you opt out
+with st.form("filters"):
+    tags = st.pills(
+        "Tags", ["Python", "SQL", "dbt"], selection_mode="multi", wrap=False
+    )
+    st.form_submit_button("Apply")
+```
+
 ## Toggle vs checkbox
 
 Use `st.toggle` for settings that trigger changes in the app. Reserve `st.checkbox` for forms.

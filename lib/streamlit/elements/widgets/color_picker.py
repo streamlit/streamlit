@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from textwrap import dedent
 from typing import TYPE_CHECKING, cast
 
 from streamlit.elements.lib.form_utils import current_form_id
@@ -35,7 +34,7 @@ from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -47,10 +46,10 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.string_util import to_help_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-
 
 # Compiled regex for validating hex colors (#RGB or #RRGGBB format)
 _HEX_COLOR_RE = re.compile(r"^#(?:[0-9a-fA-F]{3}){1,2}$")
@@ -276,7 +275,7 @@ class ColorPickerMixin:
             on_change,
             default_value=value,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         # Enforce minimum width of 40px to match the color block's intrinsic size.
         # The color block is always 40x40px, so the widget should never be smaller.
@@ -303,17 +302,21 @@ class ColorPickerMixin:
 
         # make sure the value is a string
         if not isinstance(value, str):
-            raise StreamlitAPIException(f"""
-Color Picker Value has invalid type: {type(value).__name__}. Expects a hex string
-like '#00FFAA' or '#000'.
-""")
+            raise StreamlitInvalidParameterTypeError(
+                "value",
+                type(value).__name__,
+                ["str"],
+                detail="Pass a hex string like `'#00FFAA'` or `'#000'`.",
+            )
 
-        # validate the value and expects a hex string
         if not _HEX_COLOR_RE.match(value):
-            raise StreamlitAPIException(f"""
-'{value}' is not a valid hex code for colors. Valid ones are like
-'#00FFAA' or '#000'.
-""")
+            # Not StreamlitInvalidColorError: its message documents RGB
+            # sequences, which st.color_picker does not accept.
+            raise StreamlitAPIException(
+                f"'{value}' is not a valid hex code for colors. Valid ones are like "
+                "'#00FFAA' or '#000'.",
+                error_id="color-picker-invalid-hex",
+            )
 
         color_picker_proto = ColorPickerProto()
         color_picker_proto.id = element_id
@@ -326,7 +329,7 @@ like '#00FFAA' or '#000'.
         )
 
         if help is not None:
-            color_picker_proto.help = dedent(help)
+            color_picker_proto.help = to_help_str(help)
 
         # Set query param key if bound
         if bind == "query-params" and key is not None:

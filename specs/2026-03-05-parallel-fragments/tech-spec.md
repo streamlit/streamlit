@@ -568,7 +568,7 @@ fragment worker threads:
 st.text("hello")                               (on script thread or worker thread)
   → ctx.enqueue(msg)                           script_run_context.py
     → ScriptRunner._enqueue_forward_msg(msg)   script_runner.py — yield point check
-      → on_event.send(ENQUEUE_FORWARD_MSG)     blinker signal, fires synchronously
+      → on_event.send(ENQUEUE_FORWARD_MSG)     `streamlit.signal_util.Signal`, fires synchronously
         → AppSession._on_scriptrunner_event    still on the calling thread
           → call_soon_threadsafe(callback)     schedules onto event loop, returns immediately
                                                 ──→ event loop thread picks up callback

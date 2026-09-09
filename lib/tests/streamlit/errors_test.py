@@ -16,9 +16,101 @@
 
 from __future__ import annotations
 
+import ast
+import re
+from functools import cache
+from pathlib import Path
+
 import pytest
 
 from streamlit import errors
+
+_KEBAB_CASE_ERROR_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+
+def _constructor_name(func: ast.expr) -> str | None:
+    if isinstance(func, ast.Name):
+        return func.id
+    if isinstance(func, ast.Attribute):
+        return func.attr
+    return None
+
+
+def _is_streamlit_api_exception_call(func: ast.expr) -> bool:
+    return _constructor_name(func) == "StreamlitAPIException"
+
+
+def _is_streamlit_exception_constructor(func: ast.expr) -> bool:
+    """Match Streamlit API exception constructors that may take ``error_id``."""
+    name = _constructor_name(func)
+    if name in {"StreamlitAPIException", "LocalizableStreamlitException"}:
+        return True
+    return bool(name) and name.startswith("Streamlit") and name.endswith("Error")
+
+
+@cache
+def _parsed_streamlit_modules() -> tuple[tuple[str, ast.Module], ...]:
+    """Parse ``lib/streamlit`` once for the inventory tests."""
+    lib_root = Path(errors.__file__).parent
+    parsed: list[tuple[str, ast.Module]] = []
+    for path in lib_root.rglob("*.py"):
+        parsed.append(
+            (
+                path.relative_to(lib_root).as_posix(),
+                ast.parse(path.read_text(encoding="utf-8"), filename=str(path)),
+            )
+        )
+    return tuple(parsed)
+
+
+def _iter_streamlit_api_exception_calls() -> list[tuple[str, ast.Call]]:
+    """Return production ``StreamlitAPIException(...)`` calls as (relative path, node)."""
+    calls: list[tuple[str, ast.Call]] = []
+    for rel, tree in _parsed_streamlit_modules():
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call) and _is_streamlit_api_exception_call(
+                node.func
+            ):
+                calls.append((rel, node))
+    return calls
+
+
+def _iter_error_id_kwargs() -> list[tuple[str, ast.Call, ast.expr]]:
+    """Return ``error_id=`` kwargs on Streamlit exception constructors."""
+    kwargs: list[tuple[str, ast.Call, ast.expr]] = []
+    for rel, tree in _parsed_streamlit_modules():
+        for node in ast.walk(tree):
+            if not isinstance(
+                node, ast.Call
+            ) or not _is_streamlit_exception_constructor(node.func):
+                continue
+            error_id_kw = next(
+                (kw for kw in node.keywords if kw.arg == "error_id"), None
+            )
+            if error_id_kw is not None:
+                kwargs.append((rel, node, error_id_kw.value))
+    return kwargs
+
+
+# StreamlitAPIException tests
+
+
+def test_api_exception_error_id_defaults_to_none() -> None:
+    """Bare constructions keep ``error_id`` unset so existing callers stay valid."""
+    exc = errors.StreamlitAPIException("oh no")
+    assert str(exc) == "oh no"
+    assert exc.error_id is None
+
+
+def test_api_exception_stores_error_id() -> None:
+    """``error_id`` is stored on the exception and does not change the message."""
+    exc = errors.StreamlitAPIException(
+        "Failed to load secrets",
+        error_id="failed-loading-secrets-file",
+    )
+    assert str(exc) == "Failed to load secrets"
+    assert exc.error_id == "failed-loading-secrets-file"
+
 
 # LocalizableStreamlitException tests
 
@@ -47,6 +139,50 @@ def test_localizable_exception_exec_kwargs_empty() -> None:
     """Test exec_kwargs is empty when no kwargs provided."""
     exc = errors.LocalizableStreamlitException("Simple message")
     assert exc.exec_kwargs == {}
+
+
+def test_localizable_exception_error_id_is_reserved() -> None:
+    """``error_id`` is stored on the exception and omitted from ``exec_kwargs``."""
+    exc = errors.LocalizableStreamlitException(
+        "Error parsing secrets file at {path}",
+        path="secrets.toml",
+        error_id="failed-parsing-secrets-file",
+    )
+    assert str(exc) == "Error parsing secrets file at secrets.toml"
+    assert exc.error_id == "failed-parsing-secrets-file"
+    assert exc.exec_kwargs == {"path": "secrets.toml"}
+
+
+def test_streamlit_api_exception_error_ids_are_kebab_case() -> None:
+    """Literal ``error_id`` values must be kebab-case slugs.
+
+    Interpolated or call-built values are not allowed so widget keys, paths,
+    and free text cannot reach telemetry labels. ``error_id=error_id``
+    pass-throughs on constructors are ignored.
+    """
+    invalid: list[str] = []
+    for rel, node, value in _iter_error_id_kwargs():
+        if isinstance(value, ast.Name) and value.id == "error_id":
+            # Constructor pass-through such as ``error_id=error_id``.
+            continue
+        if isinstance(value, ast.Constant) and isinstance(value.value, str):
+            if not _KEBAB_CASE_ERROR_ID.fullmatch(value.value):
+                invalid.append(f"{rel}:{node.lineno}:{value.value}")
+            continue
+        invalid.append(f"{rel}:{node.lineno}:{type(value).__name__}")
+    assert invalid == [], "error_id values must be kebab-case:\n" + "\n".join(invalid)
+
+
+def test_streamlit_api_exceptions_have_error_id() -> None:
+    """Every production ``StreamlitAPIException(...)`` call must pass ``error_id``."""
+    untagged = [
+        f"{rel}:{node.lineno}"
+        for rel, node in _iter_streamlit_api_exception_calls()
+        if not any(kw.arg == "error_id" for kw in node.keywords)
+    ]
+    assert untagged == [], (
+        "Every StreamlitAPIException must pass error_id=...:\n" + "\n".join(untagged)
+    )
 
 
 # StreamlitAPIWarning tests
@@ -144,6 +280,75 @@ def test_page_not_found_without_pages_directory() -> None:
     assert "st.navigation" in msg
 
 
+def test_page_not_found_during_construction() -> None:
+    """st.Page file-not-found uses a construction-specific message."""
+    exc = errors.StreamlitPageNotFoundError("nonexistent.py")
+    assert (
+        str(exc)
+        == "Unable to create Page. The file `nonexistent.py` could not be found."
+    )
+
+
+def test_invalid_parameter_type_error_message() -> None:
+    """The parameter, expected types, and provided type form one stable message."""
+    exc = errors.StreamlitInvalidParameterTypeError("index", "str", ["int", "None"])
+    assert (
+        str(exc)
+        == "Invalid `index` type. Expected one of: int, None. Provided type: str."
+    )
+    assert exc.exec_kwargs == {
+        "parameter": "index",
+        "expected_types": "int, None",
+        "provided_type": "str",
+        "detail": None,
+    }
+
+
+def test_invalid_parameter_type_error_with_detail() -> None:
+    """Optional detail is appended and is not used as the telemetry parameter."""
+    exc = errors.StreamlitInvalidParameterTypeError(
+        "tabs",
+        "bool",
+        ["str"],
+        detail="Each tab label must be a string.",
+    )
+    assert str(exc) == (
+        "Invalid `tabs` type. Expected one of: str. Provided type: bool. "
+        "Each tab label must be a string."
+    )
+    assert exc.exec_kwargs["parameter"] == "tabs"
+    assert exc.exec_kwargs["detail"] == "Each tab label must be a string."
+
+
+def test_value_error_with_detail() -> None:
+    """Optional detail is appended and is not used as the telemetry parameter."""
+    exc = errors.StreamlitValueError(
+        "scope",
+        ["'global'", "'session'"],
+        detail="Connection class Foo has an invalid scope.",
+    )
+    assert str(exc) == (
+        "Invalid `scope` value. Supported values: 'global', 'session'. "
+        "Connection class Foo has an invalid scope."
+    )
+    assert exc.exec_kwargs["parameter"] == "scope"
+    assert exc.exec_kwargs["detail"] == "Connection class Foo has an invalid scope."
+
+
+def test_widget_already_instantiated_error_message() -> None:
+    """Session-state assignment after widget creation names the key."""
+    exc = errors.StreamlitWidgetAlreadyInstantiatedError("my_key")
+    assert "`st.session_state.my_key`" in str(exc)
+    assert "instantiated" in str(exc)
+
+
+def test_default_not_in_options_error_message() -> None:
+    """Default-not-in-options names the missing value."""
+    exc = errors.StreamlitDefaultNotInOptionsError("c")
+    assert "The default value 'c' is not part of the options." in str(exc)
+    assert "every default value also exists in the options." in str(exc)
+
+
 # StreamlitSelectionCountExceedsMaxError tests
 
 
@@ -169,39 +374,188 @@ def test_selection_count_exceeds_max_pluralization(
     assert f"{max_sel} {expected_options_noun}" in msg
 
 
-# StreamlitInvalidMaxError tests
+# StreamlitInvalidMinMaxError tests
 
 
-def test_invalid_max_error_without_corrective_action() -> None:
-    """Test message without corrective action."""
-    exc = errors.StreamlitInvalidMaxError(
-        widget_name="st.multiselect",
-        parameter_name="max_selections",
-        value=-1,
+def test_invalid_min_max_error_message() -> None:
+    """Min/max errors name both bounds."""
+    exc = errors.StreamlitInvalidMinMaxError(10, 5)
+    assert str(exc) == (
+        "The `min_value`, set to 10, cannot be greater than the `max_value`, set to 5."
     )
-    msg = str(exc)
-    assert "st.multiselect" in msg
-    assert "max_selections" in msg
-    assert "-1" in msg
 
 
-def test_invalid_max_error_with_corrective_action() -> None:
-    """Test message includes corrective action when provided."""
-    exc = errors.StreamlitInvalidMaxError(
-        widget_name="st.text_input",
-        parameter_name="max_chars",
-        value=0,
-        corrective_action="Set it to None to allow unlimited characters.",
+def test_invalid_min_max_error_equal_bounds_message() -> None:
+    """Equal bounds use a dedicated sentence instead of 'cannot be greater than'."""
+    exc = errors.StreamlitInvalidMinMaxError(10, 10)
+    assert str(exc) == (
+        "The `min_value` and `max_value` parameters are both set to 10. "
+        "They must not be equal."
     )
-    msg = str(exc)
-    assert "Set it to None" in msg
 
 
-# StreamlitModuleNotFoundError tests
+# StreamlitValueOutOfRangeError tests
 
 
-def test_module_not_found_error_message() -> None:
-    """Test that message includes the missing module name."""
-    exc = errors.StreamlitModuleNotFoundError("pandas")
-    assert "pandas" in str(exc)
-    assert "requires module" in str(exc)
+def test_value_out_of_range_error_message() -> None:
+    """Out-of-range errors name the parameter, value, and closed interval."""
+    exc = errors.StreamlitValueOutOfRangeError("index", 5, 0, 2)
+    assert str(exc) == (
+        "The `index` parameter, set to 5, is outside the required range [0, 2]."
+    )
+
+
+def test_value_out_of_range_error_with_detail() -> None:
+    """Optional detail is appended and is not used as the telemetry parameter."""
+    exc = errors.StreamlitValueOutOfRangeError(
+        "index",
+        5,
+        0,
+        2,
+        detail="Choose an index that exists in options.",
+    )
+    assert str(exc) == (
+        "The `index` parameter, set to 5, is outside the required range [0, 2]. "
+        "Choose an index that exists in options."
+    )
+    assert exc.exec_kwargs["parameter"] == "index"
+    assert exc.exec_kwargs["detail"] == "Choose an index that exists in options."
+
+
+# StreamlitInvalidURLError tests
+
+
+def test_invalid_url_error_default_protocols() -> None:
+    """One-argument constructor still mentions http, https, and mailto."""
+    exc = errors.StreamlitInvalidURLError("www.example.com")
+    assert '"http://", "https://", or "mailto:"' in str(exc)
+
+
+# BidiComponentError tests
+
+
+def test_bidi_component_error_hierarchy() -> None:
+    """Specialized bidi errors share a ``BidiComponentError`` base."""
+    exc = errors.BidiComponentInvalidIdError("base", "__")
+    assert isinstance(exc, errors.BidiComponentError)
+
+
+# StreamlitMissingRequiredParameterError tests
+
+
+def test_missing_required_parameter_error_message() -> None:
+    """Default message includes the parameter."""
+    exc = errors.StreamlitMissingRequiredParameterError("label")
+    assert str(exc) == "The `label` parameter is required."
+    assert exc.exec_kwargs["parameter"] == "label"
+
+
+def test_missing_required_parameter_error_with_detail() -> None:
+    """Optional detail is appended to the default message."""
+    exc = errors.StreamlitMissingRequiredParameterError(
+        "body",
+        detail="It cannot be blank.",
+    )
+    assert str(exc) == ("The `body` parameter is required. It cannot be blank.")
+
+
+def test_missing_required_parameter_error_detail_with_braces() -> None:
+    """Detail text with braces does not break message formatting."""
+    exc = errors.StreamlitMissingRequiredParameterError(
+        "title",
+        detail="Example: use {value}.",
+    )
+    assert str(exc) == ("The `title` parameter is required. Example: use {value}.")
+
+
+def test_incompatible_parameters_error_formats_uses() -> None:
+    """Uses are joined into the user-facing message."""
+    exc = errors.StreamlitIncompatibleParametersError(
+        "wrap=False", "unsafe_allow_html=True"
+    )
+    assert str(exc) == (
+        "`wrap=False` and `unsafe_allow_html=True` cannot be used together."
+    )
+    assert exc.exec_kwargs["uses"] == ["wrap=False", "unsafe_allow_html=True"]
+    assert "parameter" not in exc.exec_kwargs
+
+
+def test_incompatible_parameters_error_formats_three_uses() -> None:
+    """Three uses are joined with an Oxford comma."""
+    exc = errors.StreamlitIncompatibleParametersError(
+        "refresh_mode='background'", "ttl", "persist='disk'"
+    )
+    assert str(exc) == (
+        "`refresh_mode='background'`, `ttl`, and `persist='disk'` "
+        "cannot be used together."
+    )
+
+
+def test_incompatible_parameters_error_requires_two_uses() -> None:
+    """Fewer than two uses is a constructor contract violation."""
+    with pytest.raises(TypeError, match="first_use"):
+        errors.StreamlitIncompatibleParametersError()  # type: ignore[call-arg]
+    with pytest.raises(TypeError, match="second_use"):
+        errors.StreamlitIncompatibleParametersError("ttl")  # type: ignore[call-arg]
+
+
+def test_incompatible_parameters_error_with_explanation() -> None:
+    """Optional explanation is appended to the generic message."""
+    exc = errors.StreamlitIncompatibleParametersError(
+        "bind='query-params'",
+        "type='password'",
+        explanation="Password values must not appear in URLs.",
+    )
+    assert str(exc) == (
+        "`bind='query-params'` and `type='password'` cannot be used together. "
+        "Password values must not appear in URLs."
+    )
+
+
+def test_incompatible_parameters_error_explanation_with_braces() -> None:
+    """Explanation text with braces does not break message formatting."""
+    exc = errors.StreamlitIncompatibleParametersError(
+        "refresh_mode='background'",
+        "ttl=None",
+        explanation="Example: use {value}.",
+    )
+    assert str(exc) == (
+        "`refresh_mode='background'` and `ttl=None` cannot be used together. "
+        "Example: use {value}."
+    )
+
+
+# StreamlitInvalidColorError tests
+
+
+def test_invalid_color_error_bullets_start_their_own_lines() -> None:
+    """Bullets each start a line, so the Markdown-rendered message shows a list
+    rather than literal asterisks mid-sentence."""
+    exc = errors.StreamlitInvalidColorError("red")
+    assert str(exc) == (
+        "This does not look like a valid color: 'red'.\n\n"
+        "Colors must be in one of the following formats:\n\n"
+        "* Hex string with 3, 4, 6, or 8 digits. Example: `'#00ff00'`\n"
+        "* List or tuple with 3 or 4 components. Example: `[1.0, 0.5, 0, 0.2]`"
+    )
+
+
+def test_invalid_color_error_reprs_non_string_color() -> None:
+    """A sequence color is shown as its repr rather than as a bare string."""
+    exc = errors.StreamlitInvalidColorError([1.0, 0.5, 0, 0.2, 9])
+    assert str(exc).startswith(
+        "This does not look like a valid color: [1.0, 0.5, 0, 0.2, 9]."
+    )
+
+
+# StreamlitBadTimeStringError tests
+
+
+def test_bad_time_string_error_message_reads_as_one_sentence() -> None:
+    """The message keeps a space between "as" and the example, so it reads as
+    one sentence."""
+    exc = errors.StreamlitBadTimeStringError("nonsense")
+    assert str(exc) == (
+        "Time string doesn't look right. It should be formatted as "
+        "`'1d2h34m'` or `2 days`, for example. Got: nonsense"
+    )

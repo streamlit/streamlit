@@ -22,7 +22,11 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -38,9 +42,10 @@ class ToastTest(DeltaGeneratorTestCase):
 
     def test_no_text(self):
         """Test that an error is raised if no text is provided."""
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError, match=r"Please provide a message"
+        ):
             st.toast("")
-        assert str(e.value) == "Toast body cannot be blank - please provide a message."
 
     def test_valid_icon(self):
         """Test that it can be called passing a valid emoji as icon."""

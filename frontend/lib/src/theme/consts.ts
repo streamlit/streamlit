@@ -22,3 +22,19 @@ export const STALE_STYLES = {
   opacity: opacities.stale,
   transition: `opacity ${STALE_TRANSITION_PARAMS}`,
 }
+
+/**
+ * Removes an element from the visual layout while keeping it in the
+ * accessibility tree, for text that only screen readers should reach.
+ */
+export const VISUALLY_HIDDEN_STYLES = {
+  position: "absolute" as const,
+  width: "1px",
+  height: "1px",
+  padding: 0,
+  margin: "-1px",
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap" as const,
+  border: 0,
+}

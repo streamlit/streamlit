@@ -49,5 +49,12 @@ message NumberInput {
   // If set, widget value is bound to this query parameter key
   optional string query_param_key = 25;
 
+  // Set by on_change="ignore": do not schedule a rerun; buffer the value until
+  // the next rerun. Bound widgets still update the URL when the value is
+  // committed. Inside a form, this flag has no effect because the form batches
+  // values until submit.
+  bool ignore_rerun = 26;
+  // Next: 27
+
   reserved 4, 5, 6, 7, 9, 10;
 }

@@ -19,7 +19,10 @@ import pytest
 
 import streamlit as st
 from streamlit.elements.html import _is_file
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -72,10 +75,8 @@ class StHtmlAPITest(DeltaGeneratorTestCase):
 
     def test_st_html_empty_body_throws_error(self):
         """Test st.html with empty body throws error."""
-        with pytest.raises(StreamlitAPIException) as ctx:
+        with pytest.raises(StreamlitMissingRequiredParameterError):
             st.html("")
-
-        assert "`st.html` body cannot be empty" in str(ctx.value)
 
     def test_st_html_with_style_tag_only(self):
         """Test st.html with only a style tag."""

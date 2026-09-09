@@ -45,6 +45,7 @@ import {
 import { notNullOrUndefined } from "@streamlit/utils"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
@@ -57,6 +58,7 @@ import {
   SHIFT_VIEWPORT_PADDING,
   useFloatingOverlay,
 } from "~lib/hooks/useFloatingOverlay"
+import { useHorizontalScrollOverflow } from "~lib/hooks/useHorizontalScrollOverflow"
 import {
   CREATABLE_ID,
   type MultiselectOption,
@@ -124,12 +126,11 @@ const updateWidgetMgrState = (
   valueWithSource: ValueWithSource<MultiselectValue>,
   fragmentId: string | undefined
 ): void => {
-  widgetMgr.setStringArrayValue(
-    element,
-    valueWithSource.value,
-    { fromUi: valueWithSource.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringArrayValue(element.id, valueWithSource.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: valueWithSource.fromUser,
+  })
 }
 
 /**
@@ -175,21 +176,6 @@ const TagRemoveIcon: FC = () => (
   </svg>
 )
 
-/** Render a single option. Cast required: styled(ListBox) erases the generic item type. */
-const renderOption = (item: unknown): ReactElement => {
-  const option = item as MultiselectOption
-  return (
-    <StyledListBoxItem
-      id={option.id}
-      textValue={option.label}
-      $isCreatable={option.isCreatable}
-      $isBulkAction={option.isBulkAction}
-    >
-      <StyledItemHighlight data-item-hl="">{option.label}</StyledItemHighlight>
-    </StyledListBoxItem>
-  )
-}
-
 /**
  * Pass-through filter for RAC's <ComboBox defaultFilter>. Our own
  * `filterSelectOptions` runs upstream in useMultiselectFiltering, so RAC
@@ -211,6 +197,7 @@ const Multiselect: FC<Props> = props => {
   const tagsContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const scrollTopRef = useRef(0)
+  const scrollLeftRef = useRef(0)
   const scrollLockRef = useRef(false)
   const focusedTagIndexRef = useRef(0)
 
@@ -254,6 +241,7 @@ const Multiselect: FC<Props> = props => {
     ((focusStrategy?: "first" | "last" | null) => void) | null
   >(null)
   const focusedKeyRef = useRef<Key | null>(null)
+  const hoveredKeyRef = useRef<Key | null>(null)
 
   // In the sidebar, flip/shift are bounded by the viewport so the dropdown can
   // flip up when near the bottom, rather than overflowing (see #16181).
@@ -281,10 +269,18 @@ const Multiselect: FC<Props> = props => {
     filterMode: element.filterMode,
     acceptNewOptions: element.acceptNewOptions ?? false,
     maxSelections: element.maxSelections,
+    selectAll: element.selectAll,
   })
 
   const displayOptionsRef = useRef(displayOptions)
   displayOptionsRef.current = displayOptions
+  // onHoverEnd does not fire when filtering unmounts the hovered row.
+  if (
+    notNullOrUndefined(hoveredKeyRef.current) &&
+    !displayOptions.some(o => o.id === hoveredKeyRef.current)
+  ) {
+    hoveredKeyRef.current = null
+  }
   const valueRef = useRef(value)
   valueRef.current = value
 
@@ -304,11 +300,28 @@ const Multiselect: FC<Props> = props => {
 
   const disabled = props.disabled || placeholderDisable
 
-  // Max height: cut through 5th tag row
+  // Resolve the tri-state wrap proto field: true = chips wrap onto multiple
+  // rows (grows vertically), false = chips stay in a single, horizontally
+  // scrollable row.
+  const wrap = useResolvedWrap(element.wrap)
+  const { canScrollLeft, canScrollRight } = useHorizontalScrollOverflow({
+    elementRef: tagsContainerRef,
+    enabled: !wrap,
+    layoutKey: value,
+  })
+
+  // Max height. When wrapping, cut through the 5th tag row so the control can
+  // grow and scroll vertically. When not wrapping, pin the control to a single
+  // row height so it stays aligned regardless of the selection count.
   const maxHeight = useMemo(() => {
+    if (!wrap) {
+      return theme.sizes.minElementHeight
+    }
     const rowHeight = `calc(${theme.sizes.elementHighlightHeight} + ${theme.sizes.tagMarginInsideBorder})`
     return `calc(4.5 * ${rowHeight} + ${theme.sizes.tagMarginInsideBorder} + 2 * ${theme.sizes.borderWidth})`
   }, [
+    wrap,
+    theme.sizes.minElementHeight,
     theme.sizes.elementHighlightHeight,
     theme.sizes.tagMarginInsideBorder,
     theme.sizes.borderWidth,
@@ -331,23 +344,49 @@ const Multiselect: FC<Props> = props => {
     return "No results"
   }, [element.maxSelections, value.length])
 
-  // Preserve scroll position when tags are removed via UI interaction.
+  // Tracks the previous selection count to distinguish additions from removals.
+  const prevValueLengthRef = useRef(value.length)
+
+  // Preserve scroll position when tags are removed via UI interaction, and
+  // reveal the newest chip + input when a tag is added in single-row mode.
   useLayoutEffect(() => {
-    if (!scrollLockRef.current) return
-    const savedScroll = scrollTopRef.current
-    scrollLockRef.current = false
+    const prevLength = prevValueLengthRef.current
+    prevValueLengthRef.current = value.length
     const container = tagsContainerRef.current
     if (!container) return
-    requestAnimationFrame(() => {
-      container.scrollTop = savedScroll
-      scrollTopRef.current = savedScroll
-    })
-  }, [value])
+
+    if (scrollLockRef.current) {
+      const savedTop = scrollTopRef.current
+      const savedLeft = scrollLeftRef.current
+      scrollLockRef.current = false
+      requestAnimationFrame(() => {
+        container.scrollTop = savedTop
+        container.scrollLeft = savedLeft
+        scrollTopRef.current = savedTop
+        scrollLeftRef.current = savedLeft
+      })
+      return
+    }
+
+    // A selection was added while chips are in a single row: scroll to the end
+    // so the newest chip and the input stay visible.
+    if (!wrap && value.length > prevLength) {
+      requestAnimationFrame(() => {
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+        container.scrollLeft = container.scrollWidth
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+        scrollLeftRef.current = container.scrollLeft
+      })
+    }
+  }, [value, wrap])
 
   const handleTagsScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     if (scrollLockRef.current) return
+    const target = e.currentTarget
     // eslint-disable-next-line streamlit-custom/no-force-reflow-access
-    scrollTopRef.current = e.currentTarget.scrollTop
+    scrollTopRef.current = target.scrollTop
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+    scrollLeftRef.current = target.scrollLeft
   }, [])
 
   const handleChange = useCallback(
@@ -376,7 +415,7 @@ const Multiselect: FC<Props> = props => {
           newValue = [...value, ...optionsToAdd]
         }
 
-        setValueWithSource({ value: newValue, fromUi: true })
+        setValueWithSource({ value: newValue, fromUser: true })
         setInputValue("")
         return
       }
@@ -394,7 +433,7 @@ const Multiselect: FC<Props> = props => {
           return
         }
         const newValue = [...value, inputValueRef.current]
-        setValueWithSource({ value: newValue, fromUi: true })
+        setValueWithSource({ value: newValue, fromUser: true })
         setInputValue("")
         return
       }
@@ -425,7 +464,7 @@ const Multiselect: FC<Props> = props => {
         return
       }
 
-      setValueWithSource({ value: finalValue, fromUi: true })
+      setValueWithSource({ value: finalValue, fromUser: true })
       setInputValue("")
     },
     [element.maxSelections, setValueWithSource, value]
@@ -449,20 +488,49 @@ const Multiselect: FC<Props> = props => {
     isOpenRef.current = open
     if (!open) {
       setInputValue("")
+      hoveredKeyRef.current = null
     }
+  }, [])
+
+  /** Render a single option. Cast required: styled(ListBox) erases the generic item type. */
+  const renderOption = useCallback((item: unknown): ReactElement => {
+    const option = item as MultiselectOption
+    return (
+      <StyledListBoxItem
+        id={option.id}
+        textValue={option.label}
+        $isCreatable={option.isCreatable}
+        $isBulkAction={option.isBulkAction}
+        onHoverStart={() => {
+          hoveredKeyRef.current = option.id
+        }}
+        onHoverEnd={() => {
+          if (hoveredKeyRef.current === option.id) {
+            hoveredKeyRef.current = null
+          }
+        }}
+      >
+        <StyledItemHighlight data-item-hl="">
+          {option.label}
+        </StyledItemHighlight>
+      </StyledListBoxItem>
+    )
   }, [])
 
   const handleTagGroupRemove = useCallback(
     (keys: Set<Key>): void => {
       scrollLockRef.current = true
-      if (tagsContainerRef.current) {
+      const container = tagsContainerRef.current
+      if (container) {
         // eslint-disable-next-line streamlit-custom/no-force-reflow-access
-        scrollTopRef.current = tagsContainerRef.current.scrollTop
+        scrollTopRef.current = container.scrollTop
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+        scrollLeftRef.current = container.scrollLeft
       }
       const keysToRemove = new Set([...keys].map(String))
       const newValue = valueRef.current.filter(v => !keysToRemove.has(v))
       valueRef.current = newValue
-      setValueWithSource({ value: newValue, fromUi: true })
+      setValueWithSource({ value: newValue, fromUser: true })
     },
     [setValueWithSource]
   )
@@ -560,7 +628,7 @@ const Multiselect: FC<Props> = props => {
   )
 
   const handleClearAll = useCallback((): void => {
-    setValueWithSource({ value: [], fromUi: true })
+    setValueWithSource({ value: [], fromUser: true })
   }, [setValueWithSource])
 
   const handleContainerClick = useCallback(
@@ -583,6 +651,20 @@ const Multiselect: FC<Props> = props => {
   const handleInputKeyDownCapture = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>): void => {
       if (disabled) return
+
+      // RAC binds Mod+A to "select all options" while the menu is open and
+      // calls preventDefault(), which would keep the user from selecting the
+      // typed filter text. stopPropagation (without preventDefault) keeps the
+      // input's native select-all.
+      if (
+        e.key.toLowerCase() === "a" &&
+        (e.ctrlKey || e.metaKey) &&
+        !e.altKey &&
+        !e.shiftKey
+      ) {
+        e.stopPropagation()
+        return
+      }
 
       // Block character input for FILTER_MODE_NONE, but allow Backspace
       // through when input is empty so the tag-removal handler can process it.
@@ -616,42 +698,33 @@ const Multiselect: FC<Props> = props => {
         }
       }
 
-      // Creatable Enter: commit typed text as a new option.
-      // Only create when no item is focused or CREATABLE_ID is focused.
-      // If focus is on a real option or bulk action, let RAC handle it.
-      if (
-        e.key === "Enter" &&
-        !e.nativeEvent.isComposing &&
-        (element.acceptNewOptions ?? false)
-      ) {
-        const currentInput = inputValueRef.current
-        if (currentInput) {
-          const focused = focusedKeyRef.current
-          const shouldCreate =
-            !notNullOrUndefined(focused) || String(focused) === CREATABLE_ID
-
-          if (shouldCreate) {
-            const alreadyExists =
-              element.options.some(o => o === currentInput) ||
-              value.includes(currentInput)
-            if (!alreadyExists) {
-              if (
-                element.maxSelections > 0 &&
-                value.length >= element.maxSelections
-              ) {
-                e.preventDefault()
-                e.stopPropagation()
-                return
-              }
-              e.preventDefault()
-              e.stopPropagation()
-              const newValue = [...value, currentInput]
-              setValueWithSource({ value: newValue, fromUi: true })
-              setInputValue("")
-              return
-            }
-          }
+      // Enter with no RAC focusedKey: commit the hovered row if any,
+      // otherwise the first visible row so users do not need ArrowDown first.
+      // Hover paints data-hovered without setting focusedKey, so we track
+      // it separately. The first row is "Select all" / "Select X matches"
+      // when that bulk action is shown, otherwise the first matching option.
+      // "Add: …" is last, so it is first only when the query matches no
+      // existing option.
+      // TODO: Set RAC focusedKey / aria-activedescendant to the Enter target
+      // (ComboBox focus-management follow-up; see StyledListBox).
+      if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+        if (notNullOrUndefined(focusedKeyRef.current)) {
+          return
         }
+        if (!isOpenRef.current) return
+        const display = displayOptionsRef.current
+        const hovered = hoveredKeyRef.current
+        const hoveredStillShown =
+          notNullOrUndefined(hovered) && display.some(o => o.id === hovered)
+        // Swallow Enter when the menu is open with no rows (for example
+        // max_selections reached) so RAC does not try to commit typed text.
+        e.preventDefault()
+        e.stopPropagation()
+        const targetId = hoveredStillShown ? hovered : display[0]?.id
+        if (notNullOrUndefined(targetId)) {
+          handleChange([targetId])
+        }
+        return
       }
 
       // Backspace on empty input removes last tag
@@ -662,24 +735,19 @@ const Multiselect: FC<Props> = props => {
       ) {
         e.preventDefault()
         scrollLockRef.current = true
-        if (tagsContainerRef.current) {
+        const container = tagsContainerRef.current
+        if (container) {
           // eslint-disable-next-line streamlit-custom/no-force-reflow-access
-          scrollTopRef.current = tagsContainerRef.current.scrollTop
+          scrollTopRef.current = container.scrollTop
+          // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+          scrollLeftRef.current = container.scrollLeft
         }
         const newValue = valueRef.current.slice(0, -1)
         valueRef.current = newValue
-        setValueWithSource({ value: newValue, fromUi: true })
+        setValueWithSource({ value: newValue, fromUser: true })
       }
     },
-    [
-      disabled,
-      element.acceptNewOptions,
-      element.maxSelections,
-      element.options,
-      isFilterNone,
-      setValueWithSource,
-      value,
-    ]
+    [disabled, handleChange, isFilterNone, setValueWithSource, value]
   )
 
   // Map selected values to option IDs for the ComboBox selection prop
@@ -756,6 +824,9 @@ const Multiselect: FC<Props> = props => {
               ref={tagsContainerRef}
               onScroll={handleTagsScroll}
               data-testid="stMultiSelectTagsContainer"
+              $wrap={wrap}
+              data-can-scroll-start={canScrollLeft ? "" : undefined}
+              data-can-scroll-end={canScrollRight ? "" : undefined}
             >
               {value.length > 0 && (
                 <StyledTagGroup role="group" aria-label="Selected values">
@@ -765,6 +836,7 @@ const Multiselect: FC<Props> = props => {
                       tabIndex={!disabled && idx === clampedTagIndex ? 0 : -1}
                       aria-label={v}
                       $disabled={disabled}
+                      $wrap={wrap}
                       data-tag=""
                       data-tag-index={idx}
                       onKeyDown={disabled ? undefined : handleTagKeyDown}

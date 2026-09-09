@@ -32,12 +32,15 @@ if TYPE_CHECKING:
         WALLACE = 2
         GREENE = 3
 
-    assert_type(selectbox("foo", []), None)
-    assert_type(selectbox("foo", [], accept_new_options=True), str)
+    # ty infers `Unknown` for empty options.
+    assert_type(selectbox("foo", []), None)  # ty: ignore[type-assertion-failure]
+    # ty infers `Unknown | str` when options are empty and accept_new_options=True.
+    assert_type(selectbox("foo", [], accept_new_options=True), str)  # ty: ignore[type-assertion-failure]
 
     assert_type(selectbox("foo", [1, 2, 3]), int)
     assert_type(selectbox("foo", [1, 2, 3], index=None), int | None)
-    assert_type(selectbox("foo", [1.0, 2.0, 3.0]), float)
+    # ty infers `float*` (not equivalent to `float`).
+    assert_type(selectbox("foo", [1.0, 2.0, 3.0]), float)  # ty: ignore[type-assertion-failure]
     assert_type(selectbox("foo", [1.0, 2.0, 3.0], index=None), float | None)
     assert_type(selectbox("foo", [1.0, 2, 3.0]), float)
     assert_type(selectbox("foo", [1.0, 2, 3.0], index=None), float | None)
@@ -46,7 +49,23 @@ if TYPE_CHECKING:
     assert_type(selectbox("foo", Alfred), Alfred)
     assert_type(selectbox("foo", [Alfred.HITCHCOCK, Alfred.GREENE]), Alfred)
     assert_type(selectbox("foo", Alfred, index=None), Alfred | None)
-    assert_type(selectbox("foo", [1, Alfred.HITCHCOCK, "five"], index=None), object)
+    # ty infers `int | Alfred | str | None` rather than `object`.
+    assert_type(selectbox("foo", [1, Alfred.HITCHCOCK, "five"], index=None), object)  # ty: ignore[type-assertion-failure]
+
+    # Non-literal index: int | None. mypy expands the union, so these
+    # assertions pass even without the dedicated overload in selectbox.py;
+    # that overload exists for checkers that do not expand (e.g. pyrefly).
+    # CI (mypy) cannot catch a regression if that overload is deleted.
+    dynamic_index: int | None = None
+    assert_type(selectbox("foo", [1, 2, 3], index=dynamic_index), int | None)
+    assert_type(
+        selectbox("foo", [1, 2, 3], index=dynamic_index, accept_new_options=False),
+        int | None,
+    )
+    assert_type(
+        selectbox("foo", [1, 2, 3], index=dynamic_index, accept_new_options=True),
+        int | str | None,
+    )
     assert_type(
         selectbox("foo", [1, 2, 3], index=0, accept_new_options=True), int | str
     )
@@ -88,4 +107,25 @@ if TYPE_CHECKING:
     assert_type(selectbox("foo", ["a", "b"], persist_state=None), str)
     assert_type(
         selectbox("foo", ["a", "b"], index=None, persist_state="session"), str | None
+    )
+
+    def on_selectbox_change(prefix: str) -> None: ...
+
+    # Common parameters combined
+    assert_type(
+        selectbox(
+            "foo",
+            [1, 2, 3],
+            format_func=lambda value: f"Option {value}",
+            key="choice",
+            help="Choose one",
+            on_change=on_selectbox_change,
+            args=("choice",),
+            kwargs={},
+            placeholder="Select a number",
+            disabled=False,
+            label_visibility="visible",
+            width=320,
+        ),
+        int,
     )

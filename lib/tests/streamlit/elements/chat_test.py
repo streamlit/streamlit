@@ -30,7 +30,9 @@ from streamlit.elements.widgets.chat import (
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidHeightError,
+    StreamlitInvalidLayoutContextError,
     StreamlitInvalidWidthError,
+    StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -167,13 +169,11 @@ class ChatTest(DeltaGeneratorTestCase):
 
     def test_chat_not_allowed_in_form(self):
         """Test that it disallows being called in a form."""
-        with pytest.raises(StreamlitAPIException) as exception_message:
+        with pytest.raises(
+            StreamlitInvalidLayoutContextError,
+            match=r"`st.chat_input\(\)` can't be used in a `st.form\(\)`",
+        ):
             st.form("Form Key").chat_input()
-
-        assert (
-            str(exception_message.value)
-            == "`st.chat_input()` can't be used in a `st.form()`."
-        )
 
     @parameterized.expand(
         [
@@ -257,7 +257,7 @@ class ChatTest(DeltaGeneratorTestCase):
 
         assert (
             str(ex.value)
-            == "Invalid `accept_file` value. Supported values: True, False, 'multiple', 'directory'."
+            == "Invalid `accept_file` value. Supported values: True, False, 'multiple', 'directory'. Got 'invalid'."
         )
 
     def test_file_type(self):
@@ -628,15 +628,14 @@ class ChatTest(DeltaGeneratorTestCase):
             ("negative", -1),
             ("float", 1.5),
             ("string", "10"),
+            ("true", True),
         ]
     )
     def test_max_upload_size_invalid(self, _: str, max_upload_size: object) -> None:
         """Test that invalid max_upload_size values raise an exception for chat_input."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.chat_input("the label", max_upload_size=max_upload_size)
-        assert "The `max_upload_size` parameter must be a positive integer" in str(
-            exc.value
-        )
+        assert "a positive integer" in str(exc.value)
 
     def test_accept_file_single(self):
         """Test st.chat_input with accept_file=True."""
@@ -1211,8 +1210,67 @@ class ChatInputValueExtraTest(DeltaGeneratorTestCase):
         """Test __contains__ returns False when the key is not a string."""
         value = ChatInputValue(text="hi")
         assert (42 in value) is False
+        assert ([] in value) is False
+        assert value.get([]) is None
         # Anti-regression: a valid string key should still report membership.
         assert "text" in value
+
+
+@pytest.mark.parametrize(
+    ("include_files", "include_audio", "expected"),
+    [
+        (False, False, "ChatInputValue(text='hi')"),
+        (True, False, "ChatInputValue(text='hi', files=[])"),
+        (False, True, "ChatInputValue(text='hi', audio=None)"),
+        (True, True, "ChatInputValue(text='hi', files=[], audio=None)"),
+    ],
+)
+def test_chat_input_value_repr_includes_only_enabled_keys(
+    include_files: bool, include_audio: bool, expected: str
+) -> None:
+    """repr omits files/audio unless those inputs were accepted."""
+    value = ChatInputValue(
+        text="hi",
+        files=[],
+        audio=None,
+        _include_files=include_files,
+        _include_audio=include_audio,
+    )
+    assert repr(value) == expected
+
+
+def test_chat_input_value_repr_skips_deleted_keys() -> None:
+    """repr does not raise after an included key is deleted."""
+    value = ChatInputValue(
+        text="hi",
+        files=[],
+        audio=None,
+        _include_files=True,
+        _include_audio=True,
+    )
+    del value["files"]
+    assert "files" not in value
+    assert list(value) == ["text", "audio"]
+    assert value.to_dict() == {"text": "hi", "audio": None}
+    assert repr(value) == "ChatInputValue(text='hi', audio=None)"
+
+
+def test_chat_input_value_setitem_after_delete() -> None:
+    """An accepted key can be set again after it is deleted."""
+    value = ChatInputValue(
+        text="hi",
+        files=[],
+        audio=None,
+        _include_files=True,
+        _include_audio=True,
+    )
+    del value["text"]
+    del value["files"]
+    value["text"] = "again"
+    value["files"] = []
+    assert value["text"] == "again"
+    assert value["files"] == []
+    assert "audio" in value
 
 
 class AvatarProcessingTest(DeltaGeneratorTestCase):
@@ -1245,7 +1303,10 @@ class AvatarProcessingTest(DeltaGeneratorTestCase):
 
     def test_chat_message_raises_when_name_is_none(self) -> None:
         """Test chat_message raises when name is explicitly None."""
-        with pytest.raises(StreamlitAPIException, match="author name is required"):
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match=r"`name` parameter is required",
+        ):
             st.chat_message(None)  # type: ignore[arg-type]
 
 

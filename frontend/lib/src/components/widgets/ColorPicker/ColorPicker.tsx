@@ -68,12 +68,11 @@ const updateWidgetMgrState = (
   valueWithSource: ValueWithSource<ColorPickerValue>,
   fragmentId: string | undefined
 ): void => {
-  widgetMgr.setStringValue(
-    element,
-    valueWithSource.value,
-    { fromUi: valueWithSource.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, valueWithSource.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: valueWithSource.fromUser,
+  })
 }
 
 const ColorPicker: FC<Props> = ({
@@ -108,7 +107,7 @@ const ColorPicker: FC<Props> = ({
 
   const handleColorClose = useCallback(
     (color: string): void => {
-      setValueWithSource({ value: color, fromUi: true })
+      setValueWithSource({ value: color, fromUser: true })
     },
     [setValueWithSource]
   )

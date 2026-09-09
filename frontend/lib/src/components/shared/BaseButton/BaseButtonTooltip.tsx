@@ -21,10 +21,19 @@ import TooltipIcon from "~lib/components/shared/TooltipIcon/TooltipIcon"
 
 import { StyledTooltipMobile, StyledTooltipNormal } from "./styled-components"
 
+/**
+ * Hover delay for help attached to a whole element (button, popover, badge)
+ * so a pass toward a click does not cover nearby widgets. The Tooltip
+ * default (200ms) is too fast here.
+ */
+export const HELP_TOOLTIP_HOVER_DELAY_MS = 500
+
 interface Props {
   children: ReactElement
   // TODO(lawilby): Probably remove this once width is implemented on Popover.
   containerWidth: boolean
+  /** Cap the trigger so a flex-item child (e.g. a long badge) can ellipsize. */
+  constrainWidth?: boolean
   help?: string
   placement?: Placement
 }
@@ -34,6 +43,7 @@ export function BaseButtonTooltip({
   help,
   placement,
   containerWidth,
+  constrainWidth,
 }: Props): ReactElement {
   if (!help) {
     return children
@@ -45,6 +55,8 @@ export function BaseButtonTooltip({
           content={help}
           placement={placement || Placement.TOP}
           containerWidth={containerWidth}
+          constrainWidth={constrainWidth}
+          onMouseEnterDelay={HELP_TOOLTIP_HOVER_DELAY_MS}
         >
           {children}
         </TooltipIcon>

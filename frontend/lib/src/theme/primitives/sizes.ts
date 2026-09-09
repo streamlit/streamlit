@@ -87,5 +87,9 @@ export const sizes = {
   metricStrokeWidth: 2,
   // Default for box-shadow focus ring width
   focusRingWidth: "0.2rem",
+  // CSS outline width for focus-visible on selected/active elements
+  focusOutlineWidth: "0.125rem",
   fileChipNameMinWidth: "4.875rem",
+  // Date input calendar sizing so changing months doesn't impact display width
+  dateInputMinWidth: "14rem",
 }

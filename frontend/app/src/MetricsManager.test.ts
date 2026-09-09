@@ -17,8 +17,6 @@
 // Disable Typescript checking, since mm.track has private scope
 // @ts-nocheck
 
-import UAParser from "ua-parser-js"
-
 import {
   MetricsEvent,
   mockSessionInfo,
@@ -183,7 +181,7 @@ describe("initialize", () => {
     await mm.initialize({ gatherUsageStats: true })
 
     // Checks for cached config first
-    expect(getItemSpy).toBeCalledWith("stMetricsConfig")
+    expect(getItemSpy).toHaveBeenCalledWith("stMetricsConfig")
     // Fetches if no cached config
     expect(fetch.mock.calls.length).toBe(1)
     expect(fetch.mock.calls[0][0]).toEqual(DEFAULT_METRICS_CONFIG)
@@ -191,8 +189,6 @@ describe("initialize", () => {
 })
 
 describe("metrics helpers", () => {
-  const RESULT = new UAParser().getResult()
-
   const PAGE_PROFILE_DATA = {
     commands: [],
     execTime: 50,
@@ -203,7 +199,7 @@ describe("metrics helpers", () => {
     timezone: "('UTC', 'UTC')",
     headless: false,
     isFragmentRun: false,
-    os: RESULT.os.name || "Unknown",
+    os: "Test OS",
     appId: "mockAppId",
     numPages: 1,
     sessionId: "mockSessionId",
@@ -211,9 +207,9 @@ describe("metrics helpers", () => {
     pageScriptHash: "mockPageScriptHash",
     activeTheme: "Use system setting",
     totalLoadTime: 100,
-    browserName: RESULT.browser.name || "Unknown",
-    browserVersion: RESULT.browser.version || "Unknown",
-    deviceType: RESULT.device.type || "Unknown",
+    browserName: "Test Browser",
+    browserVersion: "1.2.3",
+    deviceType: "desktop",
     serverMode: "starlette-managed",
     installedSkills: [
       "home:claude:developing-with-streamlit",
@@ -306,6 +302,20 @@ describe("metrics helpers", () => {
     checkDefaultEventData(menuClickProto)
     // Additional Menu Click Event Fields
     expect(menuClickProto.label).toEqual("mockLabel")
+    // surface is left empty when not provided.
+    expect(menuClickProto.surface).toEqual("")
+  })
+
+  it("buildEventProto sets the surface dimension when provided - menuClick", async () => {
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+    mm.setAppHash("mockAppHash")
+    const menuClickProto = mm.buildEventProto("menuClick", {
+      label: "skillsNudgeInstall",
+      surface: "errorCallout",
+    })
+    expect(menuClickProto.label).toEqual("skillsNudgeInstall")
+    expect(menuClickProto.surface).toEqual("errorCallout")
   })
 
   it("getAnonymousId is called on initialization, saves uuid to this.anonymousId", async () => {
@@ -328,7 +338,7 @@ describe("metrics helpers", () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })
 
-    expect(getItemSpy).toBeCalledWith("ajs_anonymous_id")
+    expect(getItemSpy).toHaveBeenCalledWith("ajs_anonymous_id")
     expect(getCookieSpy).toHaveBeenCalled()
     expect(setCookieSpy).toHaveBeenCalled()
     expect(setItemSpy).toHaveBeenCalled()

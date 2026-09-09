@@ -22,7 +22,12 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+    StreamlitPageNotFoundError,
+    StreamlitValueError,
+)
 from streamlit.navigation.page import Page, StreamlitPage, _create_page
 from tests.conftest import enable_mpa_v2_mode
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -252,7 +257,7 @@ class StPagesTest(DeltaGeneratorTestCase):
         def page_9():
             pass
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitMissingRequiredParameterError):
             st.Page(page_9, url_path="")
 
     def test_non_default_pages_cannot_have_nested_url_path(self):
@@ -305,19 +310,17 @@ class StPagesTest(DeltaGeneratorTestCase):
 # @patch mocking the return value of `is_file` takes precedence over the method level
 # patch.
 @patch("pathlib.Path.is_file", MagicMock(return_value=False))
-def test_st_Page_throws_error_if_path_is_invalid():
-    with pytest.raises(StreamlitAPIException) as e:
-        st.Page("nonexistent.py")
-    assert (
-        str(e.value)
-        == "Unable to create Page. The file `nonexistent.py` could not be found."
-    )
-
-    with pytest.raises(StreamlitAPIException) as e:
-        st.Page(Path("nonexistent2.py"))
-    assert (
-        str(e.value)
-        == "Unable to create Page. The file `nonexistent2.py` could not be found."
+@pytest.mark.parametrize(
+    "page",
+    ["nonexistent.py", Path("nonexistent2.py")],
+    ids=["str-path", "path-object"],
+)
+def test_st_Page_throws_error_if_path_is_invalid(page: str | Path) -> None:
+    """Missing page files raise StreamlitPageNotFoundError."""
+    with pytest.raises(StreamlitPageNotFoundError) as e:
+        st.Page(page)
+    assert str(e.value) == (
+        f"Unable to create Page. The file `{Path(page).name}` could not be found."
     )
 
 
@@ -352,7 +355,7 @@ class TestExternalUrlSupport(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc_info:
             st.Page("https://docs.streamlit.io")
 
-        assert "External URL pages require a `title` parameter" in str(exc_info.value)
+        assert "External URL pages require a non-empty title" in str(exc_info.value)
 
     def test_external_url_with_title(self):
         """Test that external URL pages can be created with a title."""
@@ -458,7 +461,10 @@ class TestExternalUrlSupport(DeltaGeneratorTestCase):
         kwargs: dict = {"title": title}
         if url_path is not None:
             kwargs["url_path"] = url_path
-        with pytest.raises(StreamlitAPIException, match="URL path cannot be empty"):
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match="The `url_path` parameter is required",
+        ):
             st.Page("https://example.com", **kwargs)
 
     def test_external_url_cannot_have_nested_url_path(self):

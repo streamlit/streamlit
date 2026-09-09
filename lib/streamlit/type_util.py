@@ -452,7 +452,8 @@ def check_python_comparable(seq: Sequence[Any]) -> None:
             "Invalid option type provided. Options must be comparable, returning a "
             f"boolean when used with *==*. \n\nGot **{type(seq[0]).__name__}**, "
             "which cannot be compared. Refactor your code to use elements of "
-            "comparable types as options, e.g. use indices instead."
+            "comparable types as options, e.g. use indices instead.",
+            error_id="incomparable-select-options",
         )
 
 

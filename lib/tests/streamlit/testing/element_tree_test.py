@@ -25,8 +25,18 @@ import pytest
 from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
 from streamlit.dataframe import lazy_df_source as dataframe_source
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
+from streamlit.proto.Alert_pb2 import Alert as AlertProto
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
+from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.testing.v1.app_test import AppTest
-from streamlit.testing.v1.element_tree import _format_value_for_widget
+from streamlit.testing.v1.element_tree import (
+    AppTestError,
+    UnknownElement,
+    _format_value_for_widget,
+    parse_tree_from_messages,
+)
+from streamlit.typing import ChatInputValue
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -464,6 +474,24 @@ def test_subheader():
     assert sr.subheader[2].hide_anchor
 
     repr(sr.subheader[0])
+
+
+def test_heading_icon() -> None:
+    """AppTest exposes heading icon values, including when no icon is set."""
+    script = AppTest.from_string(
+        """
+        import streamlit as st
+
+        st.title("T", icon=":material/star:")
+        st.header("H", icon="🚀")
+        st.subheader("S")
+        """,
+    )
+    sr = script.run()
+
+    assert sr.title[0].icon == ":material/star:"
+    assert sr.header[0].icon == "🚀"
+    assert sr.subheader[0].icon == ""
 
 
 def test_heading_elements_by_type():
@@ -1078,6 +1106,24 @@ def test_status():
     assert at.status[2].state == "error"
 
 
+def test_status_state_requires_a_status_container():
+    """An expander with an icon is exposed via at.status but has no state.
+
+    The state comes from the proto rather than being reverse-mapped from the
+    icon, so an icon that happens to match a status icon no longer implies one.
+    """
+
+    def script():
+        import streamlit as st
+
+        st.expander("expander with a status-like icon", icon=":material/check:")
+
+    at = AppTest.from_function(script).run()
+    assert len(at.status) == 1
+    with pytest.raises(ValueError, match="no status state"):
+        _ = at.status[0].state
+
+
 def test_table():
     def script():
         import numpy as np
@@ -1300,6 +1346,103 @@ def test_unknown_element():
     at = AppTest.from_function(script).run()
     # markdown elements are recognized, not unknown
     assert at.markdown[0].value == "Hello"
+
+
+def test_parse_tree_unknown_proto_subtypes_become_unknown_element() -> None:
+    """Unknown markdown, heading, alert, and slider subtypes parse as UnknownElement."""
+
+    def element_msg(index: int) -> ForwardMsg:
+        msg = ForwardMsg()
+        msg.metadata.delta_path.extend([0, index])
+        return msg
+
+    code_msg = element_msg(0)
+    code_msg.delta.new_element.markdown.body = "print('hi')"
+    code_msg.delta.new_element.markdown.element_type = MarkdownProto.Type.CODE
+
+    heading_msg = element_msg(1)
+    heading_msg.delta.new_element.heading.body = "Section"
+    heading_msg.delta.new_element.heading.tag = "h4"
+
+    alert_msg = element_msg(2)
+    alert_msg.delta.new_element.alert.body = "unused format"
+    alert_msg.delta.new_element.alert.format = AlertProto.Format.UNUSED
+
+    slider_msg = element_msg(3)
+    slider_msg.delta.new_element.slider.label = "pager"
+    slider_msg.delta.new_element.slider.type = SliderProto.Type.UNSPECIFIED
+
+    tree = parse_tree_from_messages([code_msg, heading_msg, alert_msg, slider_msg])
+    nodes = [tree.main[i] for i in range(4)]
+
+    assert all(isinstance(node, UnknownElement) for node in nodes)
+    assert [node.type for node in nodes] == ["markdown", "heading", "alert", "slider"]
+    assert nodes[0].value == "print('hi')"
+    assert nodes[1].value == "Section"
+    assert nodes[2].value == "unused format"
+
+
+def test_inspectable_elements_reject_unsupported_interactions() -> None:
+    """Inspectable-only nodes reject set_value/click with AppTestError.
+
+    ``st.pagination`` is inspectable (key and current page) but has no typed
+    wrapper. Its proto field ``set_value: bool`` must not leak through
+    ``Element.__getattr__`` as a callable. Typed ``Markdown`` is covered too.
+    """
+
+    def script():
+        import streamlit as st
+
+        st.pagination(5, key="pager")
+        st.markdown("hi")
+
+    at = AppTest.from_function(script).run()
+    node = at.get("pagination")[0]
+    assert isinstance(node, UnknownElement)
+    assert node.key == "pager"
+    assert node.value == 1
+    assert node.proto.set_value is False
+
+    inspectable_guidance = (
+        "AppTest can inspect this element but does not implement "
+        "interactions for it. Set its value through at.session_state if it "
+        "has a key, or use a Playwright e2e test."
+    )
+    with pytest.raises(AppTestError) as set_value_info:
+        node.set_value(2)
+    assert str(set_value_info.value) == (
+        "set_value() is not supported for pagination (key='pager'). "
+        f"{inspectable_guidance}"
+    )
+    with pytest.raises(AppTestError) as click_info:
+        node.click()
+    assert str(click_info.value) == (
+        f"click() is not supported for pagination (key='pager'). {inspectable_guidance}"
+    )
+    with pytest.raises(AppTestError) as markdown_info:
+        at.markdown[0].set_value("nope")
+    assert str(markdown_info.value) == (
+        f"set_value() is not supported for markdown. {inspectable_guidance}"
+    )
+
+
+def test_typed_widget_without_click_raises_app_test_error() -> None:
+    """Typed widgets without click() point testers at set_value()."""
+
+    def script():
+        import streamlit as st
+
+        st.checkbox("ok")
+
+    at = AppTest.from_function(script).run()
+    with pytest.raises(
+        AppTestError,
+        match=(
+            r"click\(\) is not supported for checkbox\. "
+            r"Use set_value\(\) or one of this widget's typed interaction methods\."
+        ),
+    ):
+        at.checkbox[0].click()
 
 
 def test_element_list_equality():
@@ -1735,6 +1878,27 @@ def test_element_list_slice_repr_and_equality():
     assert at.markdown != ["not", "matching"]
 
 
+def test_block_list_slice_repr_and_len() -> None:
+    """BlockList matches ElementList for slice, repr, len, and equality."""
+
+    def script():
+        import streamlit as st
+
+        with st.container(key="one"):
+            st.text("a")
+        with st.container(key="two"):
+            st.text("b")
+
+    at = AppTest.from_function(script).run()
+    subset = at.container[0:1]
+    assert isinstance(subset, type(at.container))
+    assert subset.len == 1
+    assert subset[0].key == "one"
+    assert repr(at.container)
+    assert at.container == list(at.container)
+    assert at.container != ["not", "matching"]
+
+
 def test_button_value_reflects_set_value_before_run():
     """Button.value returns the locally set value before a rerun commits it."""
 
@@ -1773,6 +1937,38 @@ def test_chat_input_value_reflects_set_value_before_run():
     at = AppTest.from_function(script).run()
     at.chat_input[0].set_value("hello")
     assert at.chat_input[0].value == "hello"
+
+
+def test_chat_input_preserves_empty_string_value() -> None:
+    """Empty chat submit is visible before and after run, then resets."""
+
+    def script():
+        import streamlit as st
+
+        st.chat_input("say something")
+
+    at = AppTest.from_function(script).run()
+    at.chat_input[0].set_value("")
+    assert at.chat_input[0].value == ""
+    at.run()
+    assert at.chat_input[0].value == ""
+    at.run()
+    assert at.chat_input[0].value is None
+
+
+def test_chat_input_value_repr_when_accept_file() -> None:
+    """ChatInputValue from accept_file is printable without an audio field."""
+
+    def script():
+        import streamlit as st
+
+        st.chat_input("say something", accept_file=True)
+
+    at = AppTest.from_function(script).run()
+    at.chat_input[0].set_value("hello").run()
+    value = at.chat_input[0].value
+    assert isinstance(value, ChatInputValue)
+    assert repr(value) == "ChatInputValue(text='hello', files=[])"
 
 
 def test_color_picker_pick_adds_hash_prefix():
@@ -1953,3 +2149,156 @@ def test_spinner_transient_delta_is_skipped():
     at = AppTest.from_function(script).run()
     assert not at.exception
     assert at.text[0].value == "done"
+
+
+def test_container_key_and_get_by_key() -> None:
+    """Keyed containers expose .key and can be looked up semantically.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/13163
+    """
+
+    def script():
+        import streamlit as st
+
+        with st.container(key="filters"):
+            st.text_input("Query", key="query")
+        st.button("Outside", key="outside")
+
+    at = AppTest.from_function(script).run()
+    assert at.container("filters").key == "filters"
+    assert at.get_by_key("filters").key == "filters"
+    assert at.container("filters").text_input[0].key == "query"
+    assert at.get_by_key("query").key == "query"
+    assert at.get_by_key("outside").label == "Outside"
+    with pytest.raises(KeyError):
+        at.container("missing")
+
+
+def test_form_key_and_get_by_key() -> None:
+    """Forms expose their form ID as a user key."""
+
+    def script():
+        import streamlit as st
+
+        with st.form("form-key"):
+            st.text_input("Name")
+            st.form_submit_button("Submit")
+
+    at = AppTest.from_function(script).run()
+    form = at.get_by_key("form-key")
+    assert form.type == "form"
+    assert form.key == "form-key"
+
+
+def test_get_by_key_rejects_ambiguous_key() -> None:
+    """A form ID can match a widget key, so get_by_key must reject the clash."""
+
+    def script():
+        import streamlit as st
+
+        with st.form("shared"):
+            st.text_input("Query", key="shared")
+            st.form_submit_button("Submit")
+
+    at = AppTest.from_function(script).run()
+    assert at.get("form")[0].key == "shared"
+    assert at.text_input("shared").key == "shared"
+    with pytest.raises(AppTestError, match="Multiple elements"):
+        at.get_by_key("shared")
+
+
+def test_container_excludes_columns_row() -> None:
+    """st.columns emits a flex_container row that must not appear in at.container."""
+
+    def script():
+        import streamlit as st
+
+        with st.container(key="filters"):
+            st.text("inside")
+        left, right = st.columns(2)
+        left.text("left")
+        right.text("right")
+
+    at = AppTest.from_function(script).run()
+    assert len(at.container) == 1
+    assert at.container[0].key == "filters"
+    assert len(at.columns) == 2
+
+
+def test_expander_key_and_get_by_key() -> None:
+    """Keyed expanders expose .key even though the tree stores the sub-proto."""
+
+    def script():
+        import streamlit as st
+
+        with st.expander("Details", key="details"):
+            st.text("hidden")
+
+    at = AppTest.from_function(script).run()
+    assert at.expander[0].key == "details"
+    assert at.get_by_key("details").label == "Details"
+
+
+def test_app_test_error_is_public_builtin_exception() -> None:
+    """AppTestError lives outside element_tree so it is a real builtin Exception."""
+    from streamlit.testing.v1 import AppTestError as PublicError
+    from streamlit.testing.v1.errors import AppTestError as ErrorsError
+
+    assert PublicError is AppTestError
+    assert PublicError is ErrorsError
+    assert issubclass(PublicError, Exception)
+
+
+def test_disabled_widget_rejects_update() -> None:
+    """Disabled widgets reject forged interactions.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/12844
+    """
+
+    def script():
+        import streamlit as st
+
+        st.text_input("Text", value="initial", disabled=True, key="k_text")
+        st.button("Go", disabled=True, key="k_btn")
+
+    at = AppTest.from_function(script).run()
+    with pytest.raises(AppTestError, match="disabled"):
+        at.text_input("k_text").set_value("new value")
+    with pytest.raises(AppTestError, match="disabled"):
+        at.button("k_btn").click()
+    at = at.run()
+    assert at.text_input("k_text").value == "initial"
+
+
+@pytest.mark.parametrize(
+    ("widget_type", "method_name", "args"),
+    [
+        ("file_uploader", "set_value", (("test.txt", b"data", "text/plain"),)),
+        (
+            "file_uploader",
+            "set_value",
+            ([("a.txt", b"a", "text/plain"), ("b.txt", b"b", "text/plain")],),
+        ),
+        ("file_uploader", "upload", ("test.txt", b"data")),
+        ("file_uploader", "clear", ()),
+        ("slider", "set_value", (7,)),
+        ("color_picker", "pick", ("#00ff00",)),
+        ("button_group", "select", ("A",)),
+    ],
+)
+def test_disabled_widget_specialized_interactions_reject_updates(
+    widget_type: str,
+    method_name: str,
+    args: tuple[object, ...],
+) -> None:
+    """Specialized widget methods enforce the disabled interaction guard."""
+    at = AppTest.from_string(
+        "import streamlit as st\n"
+        "st.file_uploader('File', disabled=True, key='file')\n"
+        "st.slider('Number', 0, 10, disabled=True, key='slider')\n"
+        "st.color_picker('Color', '#ff0000', disabled=True, key='color')\n"
+        "st.pills('Group', ['A', 'B'], disabled=True, key='group')\n"
+    ).run()
+    widget = getattr(at, widget_type)[0]
+    with pytest.raises(AppTestError, match="disabled"):
+        getattr(widget, method_name)(*args)

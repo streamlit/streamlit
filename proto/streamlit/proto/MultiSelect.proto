@@ -40,8 +40,19 @@ message MultiSelect {
   // If set, widget value is bound to this query parameter key
   optional string query_param_key = 15;
   streamlit.SelectWidgetFilterMode filter_mode = 16;
+  // If false, the selected chips stay in one row and the chip area scrolls
+  // horizontally instead of wrapping onto additional rows.
+  // Absent means the frontend decides the optimal wrapping behavior based on
+  // the layout.
+  optional bool wrap = 17;
+  // Controls visibility of the "Select all" / "Select X matches" bulk action.
+  // Unset (legacy messages): frontend uses a default threshold of 1000.
+  // 0: never show.
+  // >0: show when the selectable option count is 2+ and <= this value.
+  // -1: always show (Python select_all=True), still subject to the 2+ minimum.
+  optional int32 select_all = 18;
 
-  // Next: 17
+  // Next: 19
 
   reserved 7;
 }

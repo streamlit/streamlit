@@ -253,7 +253,20 @@ jobs:
       WHEEL_ARTIFACT_NAME: whl_file # Name of the wheel artifact
 
     steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Find latest develop wheel
+        id: get-latest-run
+        uses: ./.github/actions/find_latest_workflow_artifact
+        with:
+          workflow: pr-preview.yml
+          artifact_name: ${{ env.WHEEL_ARTIFACT_NAME }}
+
       - name: Compare wheel sizes
+        if: steps.get-latest-run.outputs.run_id != ''
         id: compare-sizes
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
@@ -282,36 +295,12 @@ jobs:
               const currentSize = currentWhlArtifact.size_in_bytes;
               console.log(`Current wheel size: ${currentSize} bytes (${(currentSize / 1024).toFixed(2)} KB)`);
 
-              // Get the latest successful workflow run on develop branch
-              const { data: runs } = await github.rest.actions.listWorkflowRuns({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                workflow_id: 'pr-preview.yml',
-                branch: 'develop',
-                status: 'success',
-                per_page: 1
-              });
-
-              if (runs.workflow_runs.length === 0) {
-                throw new Error('No successful workflow runs found on develop branch');
+              const developRunId = process.env.DEVELOP_RUN_ID;
+              const developSize = Number.parseInt(process.env.DEVELOP_ARTIFACT_SIZE, 10);
+              if (!Number.isFinite(developSize)) {
+                throw new Error(`Invalid develop wheel size: ${process.env.DEVELOP_ARTIFACT_SIZE}`);
               }
-
-              const latestRun = runs.workflow_runs[0];
-              console.log(`Latest successful run on develop: ${latestRun.id}`);
-
-              // Get artifacts for the develop run
-              const { data: developArtifacts } = await github.rest.actions.listWorkflowRunArtifacts({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                run_id: latestRun.id
-              });
-
-              const developWhlArtifact = developArtifacts.artifacts.find(artifact => artifact.name === wheelArtifactName);
-              if (!developWhlArtifact) {
-                throw new Error(`No ${wheelArtifactName} artifact found in the develop workflow run`);
-              }
-
-              const developSize = developWhlArtifact.size_in_bytes;
+              console.log(`Latest successful run on develop: ${developRunId}`);
               console.log(`Develop wheel size: ${developSize} bytes (${(developSize / 1024).toFixed(2)} KB)`);
 
               // Calculate percentage difference
@@ -341,11 +330,13 @@ jobs:
               throw error;
             }
         env:
+          DEVELOP_ARTIFACT_SIZE: ${{ steps.get-latest-run.outputs.artifact_size_in_bytes }}
+          DEVELOP_RUN_ID: ${{ steps.get-latest-run.outputs.run_id }}
           SIZE_CHANGE_THRESHOLD: ${{ env.SIZE_CHANGE_THRESHOLD }}
           WHEEL_ARTIFACT_NAME: ${{ env.WHEEL_ARTIFACT_NAME }}
 
       - name: Add PR comment for significant size change
-        if: success() && fromJSON(steps.compare-sizes.outputs.result).is_significant
+        if: steps.compare-sizes.outputs.result != '' && fromJSON(steps.compare-sizes.outputs.result).is_significant
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
@@ -424,34 +415,26 @@ jobs:
       BUNDLE_SIZE_CHANGE_PERCENTAGE_THRESHOLD: 0.5
 
     steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
       - name: Download current bundle analysis
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: bundle_analysis_json
           path: current_bundle
 
-      - name: Get latest develop run ID
+      - name: Find latest develop bundle analysis
         id: get-latest-run
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        uses: ./.github/actions/find_latest_workflow_artifact
         with:
-          script: |
-            const { data: runs } = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'pr-preview.yml',
-              branch: 'develop',
-              status: 'success',
-              per_page: 1
-            });
-
-            if (runs.workflow_runs.length === 0) {
-              core.warning('No successful workflow runs found on develop branch');
-              return;
-            }
-
-            core.setOutput('run_id', runs.workflow_runs[0].id);
+          workflow: pr-preview.yml
+          artifact_name: bundle_analysis_json
 
       - name: Download develop bundle analysis
+        if: steps.get-latest-run.outputs.run_id != ''
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         continue-on-error: true
         with:
@@ -462,6 +445,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Compare bundle sizes and comment
+        if: steps.get-latest-run.outputs.run_id != ''
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |

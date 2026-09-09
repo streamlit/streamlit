@@ -61,7 +61,7 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitDataframeConversionError
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -86,15 +86,16 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = _logger.get_logger(__name__)
 
-# All formats that support direct editing, meaning that these
-# formats will be returned with the same type when used with data_editor.
+T = TypeVar("T")
+
+# Dataframe-like inputs return the same type. List, dict, and set inputs use
+# dedicated overloads that preserve inner type parameters but return the plain
+# builtin, matching the runtime conversion (a dict subclass in returns a plain
+# dict out). The bound's tuple[Any] matches only 1-tuples, so longer tuples hit
+# the data: Any overload and return pd.DataFrame.
 EditableData = TypeVar(
     "EditableData",
-    bound=dataframe_util.DataFrameGenericAlias[Any]
-    | tuple[Any]
-    | list[Any]
-    | set[Any]
-    | dict[str, Any],
+    bound=dataframe_util.DataFrameGenericAlias[Any] | tuple[Any],
 )
 
 
@@ -115,6 +116,8 @@ DataTypes: TypeAlias = Union[
 
 class DataEditorState(ReadOnlyAttributeDictionary):
     """The schema for the data editor state.
+
+    To use this type in an annotation, import it from ``streamlit.typing``.
 
     The state is stored in a read-only dictionary-like object that
     supports both key and attribute notation. Top-level assignment and
@@ -640,6 +643,37 @@ def _fix_column_headers(data_df: pd.DataFrame) -> None:
         )
 
 
+def _stringify_arrow_incompatible_columns(
+    data_df: pd.DataFrame,
+    column_config_mapping: ColumnConfigMapping,
+    *,
+    trial_conversion: bool,
+) -> None:
+    """Stringify Arrow-incompatible columns in place and disable editing for them.
+
+    A converted column has to be read-only because the frontend sends edits back
+    in the column's original type, which the stringified data no longer matches.
+
+    With ``trial_conversion=False``, only the checks that don't require converting
+    the column are applied.
+    """
+    for column_name, column_data in data_df.items():
+        if (
+            dataframe_util.determine_arrow_column_fix(
+                column_data, trial_conversion=trial_conversion
+            )
+            is not None
+        ):
+            update_column_config(
+                column_config_mapping, str(column_name), {"disabled": True}
+            )
+            # Every fix becomes a string here, including the ones
+            # ``fix_arrow_incompatible_column_types`` would turn into lists: the
+            # editor cannot round-trip converted values, so the column is disabled
+            # either way and a string is the more readable representation.
+            data_df[cast("Any", column_name)] = column_data.astype("string")
+
+
 def _check_column_names(data_df: pd.DataFrame) -> None:
     """Check if the column names in the provided dataframe are valid.
 
@@ -658,7 +692,8 @@ def _check_column_names(data_df: pd.DataFrame) -> None:
         raise StreamlitAPIException(
             f"All column names are required to be unique for usage with data editor. "
             f"The following column names are duplicated: {list(duplicated_columns)}. "
-            f"Please rename the duplicated columns in the provided data."
+            f"Please rename the duplicated columns in the provided data.",
+            error_id="data-editor-duplicate-column-names",
         )
 
     # Check if the column names are not named "_index" and raise an exception if so.
@@ -666,7 +701,8 @@ def _check_column_names(data_df: pd.DataFrame) -> None:
         raise StreamlitAPIException(
             f"The column name '{INDEX_IDENTIFIER}' is reserved for the index column "
             f"and can't be used for data columns. Please rename the column in the "
-            f"provided data."
+            f"provided data.",
+            error_id="data-editor-reserved-index-column-name",
         )
 
 
@@ -729,11 +765,80 @@ def _check_type_compatibilities(
                     f"`{column_name}` is not compatible for editing the underlying "
                     f"data type `{column_data_kind}`.\n\nYou have following options to "
                     f"fix this: 1) choose a compatible type 2) disable the column "
-                    f"3) convert the column into a compatible data type."
+                    f"3) convert the column into a compatible data type.",
+                    error_id="data-editor-incompatible-column-type",
                 )
 
 
 class DataEditorMixin:
+    # Inner types are echoed. Runtime may convert row/column tuples to lists
+    # (e.g. [(1, 2)] becomes list[list[int]]); that mismatch is pre-existing.
+    @overload
+    def data_editor(
+        self,
+        data: list[T],
+        *,
+        width: Width = "stretch",
+        height: Height | Literal["auto"] = "auto",
+        use_container_width: bool | None = None,
+        hide_index: bool | None = None,
+        column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
+        num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
+        disabled: bool | Iterable[str | int] = False,
+        key: Key | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        row_height: int | None = None,
+        placeholder: str | None = None,
+    ) -> list[T]:
+        pass
+
+    @overload
+    def data_editor(
+        self,
+        data: dict[str, T],
+        *,
+        width: Width = "stretch",
+        height: Height | Literal["auto"] = "auto",
+        use_container_width: bool | None = None,
+        hide_index: bool | None = None,
+        column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
+        num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
+        disabled: bool | Iterable[str | int] = False,
+        key: Key | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        row_height: int | None = None,
+        placeholder: str | None = None,
+    ) -> dict[str, T]:
+        pass
+
+    @overload
+    def data_editor(
+        self,
+        data: set[T],
+        *,
+        width: Width = "stretch",
+        height: Height | Literal["auto"] = "auto",
+        use_container_width: bool | None = None,
+        hide_index: bool | None = None,
+        column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
+        num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
+        disabled: bool | Iterable[str | int] = False,
+        key: Key | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        row_height: int | None = None,
+        placeholder: str | None = None,
+    ) -> set[T]:
+        pass
+
     @overload
     def data_editor(
         self,
@@ -957,6 +1062,10 @@ class DataEditorMixin:
             `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
+            The value in Session State is a ``DataEditorState`` object that
+            describes the pending edits. To use this type in an annotation,
+            import it from ``streamlit.typing``.
+
             Additionally, if ``key`` is provided, it will be used as a
             CSS class name prefixed with ``st-key-``.
 
@@ -1132,7 +1241,7 @@ class DataEditorMixin:
 
         data_format = dataframe_util.determine_data_format(data)
         if data_format == dataframe_util.DataFormat.UNKNOWN:
-            raise StreamlitAPIException(
+            raise StreamlitDataframeConversionError(
                 f"The data type ({type(data).__name__}) or format is not supported by "
                 "the data editor. Please convert your data into a Pandas Dataframe or "
                 "another supported data format."
@@ -1146,7 +1255,8 @@ class DataEditorMixin:
         if not _is_supported_index(data_df.index):
             raise StreamlitAPIException(
                 f"The type of the dataframe index - {type(data_df.index).__name__} - is not "
-                "yet supported by the data editor."
+                "yet supported by the data editor.",
+                error_id="data-editor-unsupported-index-type",
             )
 
         # Check if the column names are valid and unique.
@@ -1159,19 +1269,20 @@ class DataEditorMixin:
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(processed_column_config)
 
-        # Deactivate editing for columns that are not compatible with arrow
-        for column_name, column_data in data_df.items():
-            if dataframe_util.determine_arrow_column_fix(column_data) is not None:
-                update_column_config(
-                    column_config_mapping, str(column_name), {"disabled": True}
-                )
-                # Convert incompatible type to string
-                data_df[cast("Any", column_name)] = column_data.astype("string")
-
         apply_data_specific_configs(column_config_mapping, data_format)
 
         # Fix the column headers to work correctly for data editing:
         _fix_column_headers(data_df)
+
+        # Deactivate editing for columns that are not compatible with Arrow.
+        # This has to run after the column headers are fixed, so that the column
+        # config is keyed by the same names the frontend receives.
+        # Columns that only a trial conversion can detect are left to the Arrow
+        # serialization below: it fails on them anyway, and this way a dataframe
+        # that serializes fine never pays for a trial conversion.
+        _stringify_arrow_incompatible_columns(
+            data_df, column_config_mapping, trial_conversion=False
+        )
 
         has_range_index = isinstance(data_df.index, pd.RangeIndex)
 
@@ -1213,7 +1324,26 @@ class DataEditorMixin:
         # Convert the dataframe to an arrow table which is used as the main
         # serialization format for sending the data to the frontend.
         # We also utilize the arrow schema to determine the data kinds of every column.
-        arrow_table = pa.Table.from_pandas(data_df)
+        arrow_conversion_errors = dataframe_util.get_arrow_conversion_errors()
+        try:
+            arrow_table = pa.Table.from_pandas(data_df)
+        except arrow_conversion_errors as ex:
+            _LOGGER.info(
+                "Serialization of dataframe to Arrow table was unsuccessful. "
+                "Converting the incompatible columns to strings and retrying.",
+                exc_info=ex,
+            )
+            _stringify_arrow_incompatible_columns(
+                data_df, column_config_mapping, trial_conversion=True
+            )
+            try:
+                arrow_table = pa.Table.from_pandas(data_df)
+            except arrow_conversion_errors as retry_ex:
+                # The retry only stringifies columns, never the index: the data
+                # editor identifies rows by their index values.
+                raise StreamlitDataframeConversionError(
+                    f"Unable to convert dataframe to Arrow table.\n{retry_ex}"
+                ) from retry_ex
 
         # Determine the dataframe schema which is required for parsing edited values
         # and for checking type compatibilities.

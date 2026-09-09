@@ -20,7 +20,7 @@ import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 import { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 import { sprintf } from "~lib/vendor/sprintf.js/sprintfjs.js"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { WidgetStateManager, WidgetUpdate } from "~lib/WidgetStateManager"
 
 const LOG = getLogger("NumberInput")
 
@@ -226,22 +226,22 @@ export function updateWidgetMgrState(
   vws: ValueWithSource<number | null>,
   fragmentId: string | undefined
 ): void {
+  const update: WidgetUpdate = {
+    formId: element.formId,
+    fragmentId,
+    fromUser: vws.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
+  }
+
   switch (element.dataType) {
     case NumberInputProto.DataType.INT:
-      widgetMgr.setIntValue(
-        element,
-        vws.value,
-        { fromUi: vws.fromUi },
-        fragmentId
-      )
+      widgetMgr.setIntValue(element.id, vws.value, update)
       break
     case NumberInputProto.DataType.FLOAT:
-      widgetMgr.setDoubleValue(
-        element,
-        vws.value,
-        { fromUi: vws.fromUi },
-        fragmentId
-      )
+      widgetMgr.setDoubleValue(element.id, vws.value, update)
       break
     default:
       throw new Error("Invalid data type")

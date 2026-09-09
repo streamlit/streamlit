@@ -16,7 +16,7 @@
 
 import { createContext } from "react"
 
-import { IAppPage } from "@streamlit/protobuf"
+import { type AppPage } from "@streamlit/protobuf"
 
 export interface NavigationContextProps {
   /**
@@ -67,7 +67,7 @@ export interface NavigationContextProps {
    * @see TopNav
    * @see shouldShowNavigation
    */
-  appPages: IAppPage[]
+  appPages: AppPage.$Properties[]
 }
 
 /**

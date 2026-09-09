@@ -19,7 +19,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+)
 from streamlit.proto.ButtonLikeIconPosition_pb2 import (
     ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
 )
@@ -52,8 +55,8 @@ class PageLinkTest(DeltaGeneratorTestCase):
         assert not c.disabled
 
     def test_external_no_label(self):
-        """Test that page_link throws an StreamlitAPIException on external link, no label."""
-        with pytest.raises(StreamlitAPIException):
+        """Test that page_link throws on external link with no label."""
+        with pytest.raises(StreamlitMissingRequiredParameterError):
             st.page_link(page="http://example.com")
 
     def test_icon(self):
