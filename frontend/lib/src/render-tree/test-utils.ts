@@ -132,25 +132,18 @@ export function makeProto<Type, Props>(
   return MessageType.decode(bytes)
 }
 
-// Custom Jest matchers for dealing with AppNodes
-declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace vi {
-    interface Matchers<R> {
-      toBeTextNode(text: string): R
-    }
-  }
-}
-
-interface CustomMatchers<R = unknown> {
-  toBeTextNode(text: string): R
-}
-
 declare module "vitest" {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-empty-object-type -- Must match vitest's Assertion<T> signature which has no default type parameter.
-  interface Assertion<T = any> extends CustomMatchers<T> {}
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  interface AsymmetricMatchersContaining extends CustomMatchers {}
+  // Type parameters must match Vitest's Matchers exactly so the interfaces merge.
+  interface Matchers<
+    R extends void | Promise<void> = void | Promise<void>,
+    T = unknown,
+  > {
+    // `T` is declared only to match Vitest's `Matchers` parameter list, so it is
+    // unused here. `T extends T` always resolves to `string` (except `never`);
+    // it exists to satisfy unused-vars. Renaming `T` cannot fix that because
+    // merging requires the exact parameter names.
+    toBeTextNode(text: T extends T ? string : string): R
+  }
 }
 
 expect.extend({

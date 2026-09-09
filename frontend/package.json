@@ -68,7 +68,7 @@
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@types/node": ">=24 <25",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/coverage-v8": "^5.0.0",
     "@vitest/eslint-plugin": "^1.6.27",
     "eslint": "^10.9.1",
     "eslint-import-resolver-typescript": "^4.4.5",
@@ -88,7 +88,7 @@
     "react-dom": "^18.2.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.69.0",
-    "vitest": "^4.1.11",
+    "vitest": "^5.0.0",
     "vitest-canvas-mock": "^1.1.5"
   }
 }
