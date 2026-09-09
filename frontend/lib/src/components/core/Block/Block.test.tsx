@@ -858,6 +858,9 @@ describe("BlockNodeRenderer container types", () => {
           title: "My dialog",
           isOpen: true,
           dismissible: true,
+          // id activates on_dismiss; the spy below would fire if this hide
+          // went through Dialog.handleClose instead of unmounting.
+          id: "test-dialog-id",
           width: BlockProto.Dialog.DialogWidth.LARGE,
         },
       }),

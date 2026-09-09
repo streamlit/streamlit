@@ -95,11 +95,19 @@ export function isComponentStale(
  *
  * Stale nodes are only pruned after the script finishes successfully, so a
  * dialog closed via `st.rerun()` would otherwise stay on screen for the whole
- * next run (issue #9405). Fragment reruns and `RERUN_REQUESTED` must not hide
- * it: those are how widgets inside the dialog update.
+ * next run (issue #9405).
+ *
+ * Any fragment rerun keeps the dialog: unlike {@link isElementStale}, this
+ * does not check whether the node's `fragmentId` is in `fragmentIdsThisRun`.
+ * Fragment `newSession` still assigns a new `scriptRunId`, so hiding on
+ * mismatch would also close the dialog when an unrelated fragment refreshes.
+ *
+ * `RERUN_REQUESTED` also keeps it. That state is set before we know whether
+ * the next run is a fragment or full-app rerun; hiding here would unmount
+ * the dialog on every widget interaction inside it.
  *
  * Not the same as {@link isElementStale}: that function marks every element
- * stale on `RERUN_REQUESTED`, which would unmount the dialog on each keystroke.
+ * stale on `RERUN_REQUESTED`.
  */
 export function shouldHideStaleDialog(
   node: AppNode,

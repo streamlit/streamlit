@@ -873,8 +873,11 @@ def test_dialog_closes_before_blocking_follow_up_work(app: Page):
     expect(app.get_by_text("Blocking operation done")).not_to_be_attached()
 
     # Let the blocking run finish so later tests in this module are not left
-    # with a still-running script.
+    # with a still-running script. The hide is only applied while the script
+    # is running; after a successful finish the leftover node is pruned, so
+    # the dialog must stay gone.
     expect(app.get_by_text("Blocking operation done")).to_be_visible(timeout=10000)
+    expect(dialog).not_to_be_attached()
 
 
 def test_dialog_on_dismiss_rerun(app: Page):
