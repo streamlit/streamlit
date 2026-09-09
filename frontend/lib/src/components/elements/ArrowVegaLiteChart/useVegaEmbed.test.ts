@@ -529,6 +529,7 @@ describe("useVegaEmbed hook", () => {
       specUrl,
       expect.anything()
     )
+    expect(mockVegaView.insert).toHaveBeenCalledWith("lookup", [{ id: 1 }])
   })
 
   it("replays named datasets that change while embed is pending", async () => {
@@ -706,6 +707,113 @@ describe("useVegaEmbed hook", () => {
 
     expect(mockVegaView.data).toHaveBeenCalledWith("lookup", [{ id: "b" }])
     expect(mockVegaView.data).toHaveBeenCalledWith("lookup", [{ id: "c" }])
+  })
+
+  it("discards a superseded createView when the older embed resolves last", async () => {
+    const embedResolvers: ((value: typeof mockEmbedReturn) => void)[] = []
+    ;(embed as unknown as Mock).mockImplementation(
+      () =>
+        new Promise(resolve => {
+          embedResolvers.push(resolve)
+        })
+    )
+
+    const makeView = (): Mocked<VegaView> =>
+      ({
+        insert: vi.fn().mockReturnThis(),
+        resize: vi.fn().mockReturnThis(),
+        runAsync: vi.fn().mockResolvedValue(null),
+        data: vi.fn().mockReturnThis(),
+        remove: vi.fn().mockReturnThis(),
+        width: vi.fn().mockReturnThis(),
+        height: vi.fn().mockReturnThis(),
+      }) as unknown as Mocked<VegaView>
+
+    const firstView = makeView()
+    const secondView = makeView()
+    const firstFinalize = vi.fn()
+    const secondFinalize = vi.fn()
+
+    const datasetsA = [
+      {
+        name: "lookup",
+        hasName: true,
+        data: { dimensions: { numDataRows: 1 }, hash: "a" },
+      },
+    ] as WrappedNamedDataset[]
+    const datasetsB = [
+      {
+        name: "lookup",
+        hasName: true,
+        data: { dimensions: { numDataRows: 1 }, hash: "b" },
+      },
+    ] as WrappedNamedDataset[]
+
+    const initialElement: VegaLiteChartElement = {
+      id: "chartId",
+      data: null,
+      datasets: datasetsA,
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    }
+
+    const { result, rerender } = renderHook(
+      ({ element }) => useVegaEmbed(element, mockWidgetMgr),
+      { initialProps: { element: initialElement } }
+    )
+
+    ;(getInlineData as Mock).mockReturnValue(null)
+    ;(getDataArrays as Mock).mockReturnValue({ lookup: [{ id: 1 }] })
+    ;(getDataArray as Mock).mockImplementation((quiver: { hash?: string }) => [
+      { id: quiver.hash },
+    ])
+
+    const containerRef = { current: document.createElement("div") }
+    let firstPromise!: Promise<VegaView | null>
+    act(() => {
+      firstPromise = result.current.createView(containerRef, {})
+    })
+
+    rerender({
+      element: { ...initialElement, datasets: datasetsB },
+    })
+
+    let secondPromise!: Promise<VegaView | null>
+    act(() => {
+      secondPromise = result.current.createView(containerRef, {})
+    })
+
+    await act(async () => {
+      embedResolvers[1]({
+        vgSpec: { data: [{}] },
+        view: secondView,
+        finalize: secondFinalize,
+      })
+      await secondPromise
+    })
+
+    await act(async () => {
+      embedResolvers[0]({
+        vgSpec: { data: [{}] },
+        view: firstView,
+        finalize: firstFinalize,
+      })
+      expect(await firstPromise).toBeNull()
+    })
+
+    expect(firstFinalize).toHaveBeenCalled()
+    expect(firstView.data).not.toHaveBeenCalled()
+    expect(firstView.insert).not.toHaveBeenCalled()
+    expect(secondView.data).not.toHaveBeenCalled()
+    expect(secondView.runAsync).toHaveBeenCalled()
+
+    await act(async () => {
+      const updated = await result.current.updateView(null, datasetsB)
+      expect(updated).toBe(secondView)
+    })
   })
 
   it("uses 'source' as default dataset name when no datasets but vgSpec.data present", async () => {

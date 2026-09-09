@@ -1817,6 +1817,24 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         lookalike_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
         assert set(lookalike_df.columns) >= {"type", "value"}
 
+    def test_topojson_lookalike_columnar_dict_still_arrow_serialized(self) -> None:
+        """A columnar dict with arcs/objects columns is still Arrow, not TopoJSON."""
+        lookalike = {"arcs": [1, 2], "objects": ["a", "b"]}
+        st.vega_lite_chart(
+            {
+                "mark": "bar",
+                "data": {"name": "foo", "format": {"type": "json"}},
+                "datasets": {"foo": lookalike},
+            }
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        assert "datasets" not in spec
+        assert len(proto.datasets) == 1
+        lookalike_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        assert set(lookalike_df.columns) >= {"arcs", "objects"}
+
     def test_top_level_geojson_values_stay_in_spec(self) -> None:
         """Top-level data.values FeatureCollection stays in spec JSON with format."""
         st.vega_lite_chart(
@@ -4048,6 +4066,82 @@ class VegaUtilitiesTest(unittest.TestCase):
         """Test that _stabilize_vega_json_spec correctly fixes the auto-generated names."""
         result = _stabilize_vega_json_spec(input_spec)
         assert result == expected
+
+    def test_stabilize_preserves_geojson_property_tokens(self) -> None:
+        """GeoJSON property keys/values matching param_/view_ tokens are not rewritten."""
+        geo = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [0, 0]},
+                    "properties": {"param_9": "view_9", "name": "a"},
+                }
+            ],
+        }
+        spec = {
+            "mark": {"type": "geoshape"},
+            "data": {"name": "geo"},
+            "datasets": {"geo": geo},
+            "params": [{"name": "param_17", "select": {"type": "point"}}],
+            "layer": [{"mark": {"type": "geoshape"}, "name": "view_33"}],
+        }
+
+        result = json.loads(_stabilize_vega_json_spec(json.dumps(spec)))
+        assert result["datasets"]["geo"] == geo
+        assert result["params"][0]["name"] == "param_1"
+        assert result["layer"][0]["name"] == "view_1"
+
+    def test_stabilize_preserves_topojson_layer_object(self) -> None:
+        """A TopoJSON objects.layer name does not trigger view_ rewrites in the payload."""
+        topo = {
+            "type": "Topology",
+            "arcs": [],
+            "objects": {
+                "layer": {
+                    "type": "GeometryCollection",
+                    "geometries": [
+                        {
+                            "type": "Polygon",
+                            "arcs": [[0]],
+                            "properties": {"view_5": 1},
+                        }
+                    ],
+                }
+            },
+        }
+        spec = {
+            "mark": {"type": "geoshape"},
+            "datasets": {"geo": topo},
+        }
+
+        result = json.loads(_stabilize_vega_json_spec(json.dumps(spec)))
+        assert result["datasets"]["geo"] == topo
+
+    def test_stabilize_preserves_top_level_geo_values(self) -> None:
+        """Top-level GeoJSON data.values tokens are not rewritten."""
+        geo = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [0, 0]},
+                    "properties": {"param_3": 1},
+                }
+            ],
+        }
+        spec = {
+            "mark": {"type": "geoshape"},
+            "data": {
+                "values": geo,
+                "format": {"type": "json", "property": "features"},
+            },
+            "params": [{"name": "param_10", "select": {"type": "point"}}],
+        }
+
+        result = json.loads(_stabilize_vega_json_spec(json.dumps(spec)))
+        assert result["data"]["values"] == geo
+        assert result["params"][0]["name"] == "param_1"
 
 
 class NestedCompositionTest(unittest.TestCase):

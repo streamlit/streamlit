@@ -271,6 +271,11 @@ def test_geoshape_lookup_and_inline_featurecollection_render(
     for chart in (lookup_chart, inline_chart):
         expect(get_vega_graphics_document(chart)).to_be_visible()
 
+    # URL GeoJSON is fetched asynchronously; wait for lookup output before
+    # snapshotting so an empty first paint cannot pass as a rendered map.
+    expect(lookup_chart.get_by_text("population")).to_be_visible()
+    wait_for_react_stability(app)
+
     expect(app.get_by_test_id("stException")).to_have_count(0)
 
     assert_snapshot(lookup_chart, name="st_altair_chart-geoshape_lookup")

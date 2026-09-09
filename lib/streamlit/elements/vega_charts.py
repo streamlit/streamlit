@@ -396,8 +396,14 @@ def _is_geojson_or_topojson_payload(data: Any) -> bool:
             return True
         if geo_type in _GEOJSON_GEOMETRY_TYPES and "coordinates" in data:
             return True
-        # TopoJSON may omit type: Topology and is recognized by the arcs + objects pair.
-        return "arcs" in data and "objects" in data
+        # TopoJSON may omit type: Topology. Require a Topology-compatible
+        # shape so a columnar table with arcs/objects columns is not treated
+        # as geometry. Every other dict falls through as tabular.
+        if geo_type is None or geo_type == "Topology":
+            return isinstance(data.get("arcs"), list) and isinstance(
+                data.get("objects"), dict
+            )
+        return False
 
     if isinstance(data, list) and data:
         # Only inspect the first element: Vega-Lite requires a homogeneous
@@ -675,6 +681,9 @@ def _reset_counter_pattern(prefix: str, vega_spec: str) -> str:
     return vega_spec
 
 
+_STABILIZE_UNSET: Final[Any] = object()
+
+
 def _stabilize_vega_json_spec(vega_spec: str) -> str:
     """Makes the chart spec stay stable across reruns and sessions.
 
@@ -705,6 +714,30 @@ def _stabilize_vega_json_spec(vega_spec: str) -> str:
        between sessions
     """
 
+    # Geometry in datasets / data.values must not participate in param_/view_
+    # rewrites: a property named param_1 can break lookup joins, and a TopoJSON
+    # objects layer named "layer" would otherwise trip the composite-chart scan.
+    extracted_datasets: Any = _STABILIZE_UNSET
+    extracted_geo_values: Any = _STABILIZE_UNSET
+    try:
+        parsed_spec = json.loads(vega_spec)
+    except json.JSONDecodeError:
+        parsed_spec = None
+
+    if isinstance(parsed_spec, dict):
+        if "datasets" in parsed_spec:
+            extracted_datasets = parsed_spec.pop("datasets")
+        data_spec = parsed_spec.get("data")
+        if isinstance(data_spec, dict) and "values" in data_spec:
+            values = data_spec["values"]
+            if _is_geojson_or_topojson_payload(values):
+                extracted_geo_values = data_spec.pop("values")
+        if (
+            extracted_datasets is not _STABILIZE_UNSET
+            or extracted_geo_values is not _STABILIZE_UNSET
+        ):
+            vega_spec = json.dumps(parsed_spec)
+
     # We only want to apply these replacements if it is really necessary
     # since there is a risk that we replace names that where chosen by the user
     # and thereby introduce unwanted side effects.
@@ -722,6 +755,20 @@ def _stabilize_vega_json_spec(vega_spec: str) -> str:
     # so its better to not replace this pattern.
     if re.search(r'"(vconcat|hconcat|facet|layer|concat|repeat)"', vega_spec):
         vega_spec = _reset_counter_pattern("view_", vega_spec)
+
+    if (
+        extracted_datasets is not _STABILIZE_UNSET
+        or extracted_geo_values is not _STABILIZE_UNSET
+    ):
+        restored_spec = json.loads(vega_spec)
+        if extracted_datasets is not _STABILIZE_UNSET:
+            restored_spec["datasets"] = extracted_datasets
+        if extracted_geo_values is not _STABILIZE_UNSET:
+            restored_data = restored_spec.setdefault("data", {})
+            if isinstance(restored_data, dict):
+                restored_data["values"] = extracted_geo_values
+        vega_spec = json.dumps(restored_spec)
+
     return vega_spec
 
 

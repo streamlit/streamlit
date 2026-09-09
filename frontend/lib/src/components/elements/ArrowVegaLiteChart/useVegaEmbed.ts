@@ -75,6 +75,9 @@ export function useVegaEmbed(
   // Always-up-to-date props for safe access inside stable callbacks to avoid stale closure issues
   const latestDataRef = useRef<Quiver | null>(null)
   const latestDatasetsRef = useRef<WrappedNamedDataset[]>([])
+  // Bumped by finalizeView / each createView so overlapping embeds can detect
+  // they were superseded and must not assign or replay into another view.
+  const createGenerationRef = useRef(0)
   // This is used to prevent the view from being updated while it is being created
   const [isCreatingView, setIsCreatingView] = useState(false)
 
@@ -105,6 +108,10 @@ export function useVegaEmbed(
   }, [data, datasets])
 
   const finalizeView = useCallback(() => {
+    // Invalidate in-flight createView work so a superseded embed cannot
+    // assign or replay into a finalized or replacement view.
+    createGenerationRef.current += 1
+
     if (vegaFinalizerRef.current) {
       vegaFinalizerRef.current()
     }
@@ -146,6 +153,11 @@ export function useVegaEmbed(
     []
   )
 
+  /**
+   * Applies `inputData`/`inputDatasets` to an existing Vega view by diffing them
+   * against `prevDataRef`/`prevDatasetsRef`. Callers must advance those refs
+   * after the resulting `runAsync()` resolves.
+   */
   const syncViewData = useCallback(
     (
       view: VegaView,
@@ -191,11 +203,12 @@ export function useVegaEmbed(
         throw new Error("Element missing.")
       }
       const container = containerRef.current
+      // Finalize the previous view so it can be garbage collected. This also
+      // bumps the generation so any overlapping createView bails out.
+      finalizeView()
+      const generation = createGenerationRef.current
       setIsCreatingView(true)
       try {
-        // Finalize the previous view so it can be garbage collected.
-        finalizeView()
-
         const options = {
           // Adds interpreter support for Vega expressions that is compliant with CSP
           ast: true,
@@ -255,7 +268,13 @@ export function useVegaEmbed(
           options
         )
 
-        vegaViewRef.current = maybeConfigureSelections(view)
+        if (generation !== createGenerationRef.current) {
+          finalize()
+          return null
+        }
+
+        const createdView = maybeConfigureSelections(view)
+        vegaViewRef.current = createdView
 
         const unbindRangeProgress = bindVegaRangeProgress(container)
         vegaFinalizerRef.current = () => {
@@ -263,7 +282,12 @@ export function useVegaEmbed(
           finalize()
         }
 
-        // Heuristic to determine the default dataset name.
+        const isSuperseded = (): boolean =>
+          generation !== createGenerationRef.current ||
+          vegaViewRef.current !== createdView
+
+        // Heuristic to determine the default dataset name, from the named
+        // datasets collected above.
         if (datasetNames.length === 1) {
           const [datasetName] = datasetNames
           defaultDataNameRef.current = datasetName
@@ -271,19 +295,31 @@ export function useVegaEmbed(
           defaultDataNameRef.current = DEFAULT_DATA_NAME
         }
 
-        // Unnamed Arrow table data is inserted after embed. Named datasets are
-        // already in spec.datasets, so inserting them again would duplicate
-        // rows.
+        // Unnamed Arrow table data is inserted after embed. Named datasets on
+        // object specs are already in spec.datasets, so inserting them again
+        // would duplicate rows. String specs are URLs, so named Arrow rows
+        // must be inserted here.
         const dataObj = getInlineData(compiledData)
         if (dataObj) {
-          vegaViewRef.current.insert(defaultDataNameRef.current, dataObj)
+          createdView.insert(defaultDataNameRef.current, dataObj)
+        }
+        if (typeof spec === "string") {
+          for (const [name, rows] of Object.entries(dataArrays)) {
+            createdView.insert(name || defaultDataNameRef.current, rows)
+          }
         }
 
-        await vegaViewRef.current.runAsync()
+        await createdView.runAsync()
+        if (isSuperseded()) {
+          return vegaViewRef.current
+        }
 
         // Fix bug where the "..." menu button overlaps with charts where width is
         // set to -1 on first load.
-        await vegaViewRef.current.resize().runAsync()
+        await createdView.resize().runAsync()
+        if (isSuperseded()) {
+          return vegaViewRef.current
+        }
 
         prevDataRef.current = compiledData
         prevDatasetsRef.current = compiledDatasets
@@ -294,17 +330,25 @@ export function useVegaEmbed(
           latestDataRef.current !== prevDataRef.current ||
           latestDatasetsRef.current !== prevDatasetsRef.current
         ) {
+          if (isSuperseded()) {
+            return vegaViewRef.current
+          }
           const pendingData = latestDataRef.current
           const pendingDatasets = latestDatasetsRef.current
-          syncViewData(vegaViewRef.current, pendingData, pendingDatasets)
-          await vegaViewRef.current.resize().runAsync()
+          syncViewData(createdView, pendingData, pendingDatasets)
+          await createdView.resize().runAsync()
+          if (isSuperseded()) {
+            return vegaViewRef.current
+          }
           prevDataRef.current = pendingData
           prevDatasetsRef.current = pendingDatasets
         }
 
-        return vegaViewRef.current
+        return createdView
       } finally {
-        setIsCreatingView(false)
+        if (generation === createGenerationRef.current) {
+          setIsCreatingView(false)
+        }
       }
     },
     [finalizeView, maybeConfigureSelections, syncViewData]
