@@ -12,12 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+from pathlib import Path
+
 import altair as alt
 import numpy as np
 import pandas as pd
 from vega_datasets import data
 
 import streamlit as st
+
+STATIC_DIR = Path(__file__).parent / "static"
 
 np.random.seed(0)
 
@@ -308,3 +313,38 @@ bindings_chart = (
 )
 with st.container(key="altair_chart_bindings"):
     st.altair_chart(bindings_chart, theme="streamlit", width="content")
+
+# Local GeoJSON assets only — URL data must not fetch a CDN.
+GEOJSON_PATH = STATIC_DIR / "two_polygons.geo.json"
+GEOJSON_URL = "./app/static/two_polygons.geo.json"
+GEO_FORMAT = alt.DataFormat(property="features", type="json")
+
+with st.container(key="altair_geoshape_lookup"):
+    population = pd.DataFrame({"id": [1, 2], "population": [100, 200]})
+    lookup_chart = (
+        alt.Chart(alt.Data(url=GEOJSON_URL, format=GEO_FORMAT))
+        .mark_geoshape()
+        .encode(color="population:Q")
+        .transform_lookup(
+            lookup="id",
+            from_=alt.LookupData(population, "id", list(population.columns)),
+        )
+        .project(type="identity", reflectY=True)
+        .properties(width=400, height=200)
+    )
+    st.altair_chart(lookup_chart, width="content")
+
+with st.container(key="altair_geoshape_inline"):
+    inline_chart = (
+        alt.Chart(
+            alt.InlineData(
+                values=json.loads(GEOJSON_PATH.read_text()),
+                format=GEO_FORMAT,
+            )
+        )
+        .mark_geoshape()
+        .encode(color="properties.name:N")
+        .project(type="identity", reflectY=True)
+        .properties(width=400, height=200)
+    )
+    st.altair_chart(inline_chart, width="content")
