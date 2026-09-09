@@ -848,6 +848,121 @@ describe("BlockNodeRenderer container types", () => {
     expect(screen.getByText("dialog body")).toBeVisible()
   })
 
+  it("hides a leftover dialog from a previous full-app run", () => {
+    const dialogBlock = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [text("dialog body")],
+      new BlockProto({
+        allowEmpty: true,
+        dialog: {
+          title: "My dialog",
+          isOpen: true,
+          dismissible: true,
+          width: BlockProto.Dialog.DialogWidth.LARGE,
+        },
+      }),
+      "previous-run"
+    )
+    const setTriggerValue = vi.spyOn(widgetMgr, "setTriggerValue")
+
+    renderWithContexts(makeBlockNodeComponent(dialogBlock), {
+      scriptRunContext: {
+        scriptRunState: ScriptRunState.RUNNING,
+        scriptRunId: "current-run",
+        fragmentIdsThisRun: [],
+      },
+    })
+
+    expect(screen.queryByTestId("stDialog")).not.toBeInTheDocument()
+    expect(screen.queryByText("dialog body")).not.toBeInTheDocument()
+    expect(setTriggerValue).not.toHaveBeenCalled()
+  })
+
+  it("keeps a dialog from the current full-app run visible while running", () => {
+    const dialogBlock = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [text("dialog body")],
+      new BlockProto({
+        allowEmpty: true,
+        dialog: {
+          title: "My dialog",
+          isOpen: true,
+          dismissible: true,
+          width: BlockProto.Dialog.DialogWidth.LARGE,
+        },
+      }),
+      "current-run"
+    )
+
+    renderWithContexts(makeBlockNodeComponent(dialogBlock), {
+      scriptRunContext: {
+        scriptRunState: ScriptRunState.RUNNING,
+        scriptRunId: "current-run",
+        fragmentIdsThisRun: [],
+      },
+    })
+
+    expect(screen.getByTestId("stDialog")).toBeVisible()
+    expect(screen.getByText("dialog body")).toBeVisible()
+  })
+
+  it("keeps a leftover dialog visible while a rerun is only requested", () => {
+    const dialogBlock = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [text("dialog body")],
+      new BlockProto({
+        allowEmpty: true,
+        dialog: {
+          title: "My dialog",
+          isOpen: true,
+          dismissible: true,
+          width: BlockProto.Dialog.DialogWidth.LARGE,
+        },
+      }),
+      "previous-run"
+    )
+
+    renderWithContexts(makeBlockNodeComponent(dialogBlock), {
+      scriptRunContext: {
+        scriptRunState: ScriptRunState.RERUN_REQUESTED,
+        scriptRunId: "current-run",
+        fragmentIdsThisRun: [],
+      },
+    })
+
+    expect(screen.getByTestId("stDialog")).toBeVisible()
+    expect(screen.getByText("dialog body")).toBeVisible()
+  })
+
+  it("keeps a leftover dialog visible during a fragment run", () => {
+    const dialogBlock = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [text("dialog body")],
+      new BlockProto({
+        allowEmpty: true,
+        dialog: {
+          title: "My dialog",
+          isOpen: true,
+          dismissible: true,
+          width: BlockProto.Dialog.DialogWidth.LARGE,
+        },
+      }),
+      "previous-run",
+      "dialog-fragment"
+    )
+
+    renderWithContexts(makeBlockNodeComponent(dialogBlock), {
+      scriptRunContext: {
+        scriptRunState: ScriptRunState.RUNNING,
+        scriptRunId: "current-run",
+        fragmentIdsThisRun: ["dialog-fragment"],
+      },
+    })
+
+    expect(screen.getByTestId("stDialog")).toBeVisible()
+    expect(screen.getByText("dialog body")).toBeVisible()
+  })
+
   it("renders a tab container", () => {
     const tab = makeVerticalBlock([text("tab body")], {
       tab: { label: "Tab 0" },
