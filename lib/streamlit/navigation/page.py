@@ -112,10 +112,11 @@ class Page:
     icon : str or None
         An optional emoji or icon to display next to the page title and label.
         If ``icon`` is ``None`` (default), Streamlit uses a leading emoji in
-        the filename, if present; otherwise no icon is displayed next to the
-        page label in the navigation menu, and a Streamlit icon is displayed
-        next to the title (in the browser tab). Pass ``icon=""`` to show no
-        icon next to the page label, even when the filename contains an emoji.
+        the page's filename, if present. Otherwise, no icon is displayed next
+        to the page label in the navigation menu, and the default Streamlit
+        icon is displayed next to the title (in the browser tab). Pass
+        ``icon=""`` to show no icon next to the page label and keep the
+        default browser-tab icon, even when the filename contains an emoji.
         If ``icon`` is a non-empty string, the following options are valid:
 
         - A single-character emoji. For example, you can set ``icon="🚨"``

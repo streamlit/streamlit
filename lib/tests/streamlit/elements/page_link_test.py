@@ -17,6 +17,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import (
@@ -239,12 +240,14 @@ class PageLinkTest(DeltaGeneratorTestCase):
         assert c.page == "https://docs.streamlit.io"
         assert c.external
 
-    def test_empty_or_whitespace_icon_for_external_page_means_no_icon(self) -> None:
+    @parameterized.expand([("",), ("   ",)])
+    def test_empty_or_whitespace_icon_for_external_page_means_no_icon(
+        self, icon: str
+    ) -> None:
         """st.page_link treats empty or whitespace-only icon as no icon."""
-        for icon in ("", "   "):
-            st.page_link(page="https://example.com", label="Test", icon=icon)
-            c = self.get_delta_from_queue().new_element.page_link
-            assert c.icon == ""
+        st.page_link(page="https://example.com", label="Test", icon=icon)
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.icon == ""
 
     @patch("pathlib.Path.is_file", MagicMock(return_value=True))
     def test_empty_icon_suppresses_page_icon(self) -> None:

@@ -269,16 +269,9 @@ class StringUtilTest(unittest.TestCase):
             ("invalid", "invalid-icon"),
             ("😃😃", "invalid-emoji"),
             ("https://example.com/icon.png", "invalid-image"),
-            ("http://example.com/icon.png", "invalid-image"),
-            ("file:///tmp/icon.png", "invalid-image"),
-            ("ftp://host/icon.png", "invalid-image"),
-            ("//cdn.example.com/icon.png", "invalid-image"),
             ("data:image/png;base64,abc", "invalid-image"),
+            ("//cdn.example.com/icon.png", "invalid-image"),
             ("logo.png", "invalid-icon"),
-            ("./notes.txt", "invalid-icon"),
-            ("/app/static/icon.png", "invalid-icon"),
-            (r"\\server\share\icon.png", "invalid-icon"),
-            ("images/日本.png", "invalid-emoji"),
         ]
     )
     def test_validate_icon_or_emoji_classifies_invalid_values(

@@ -81,7 +81,7 @@ def is_material_icon(maybe_icon: str) -> bool:
 
 def _raise_invalid_image(icon: object) -> NoReturn:
     raise StreamlitAPIException(
-        f'The value "{icon}" looks like an image. Images are not supported '
+        f'The value "{icon}" looks like a URL. Images are not supported '
         f"for `icon`. {_ICON_FORMAT_HINT} To follow support for image icons, "
         "see https://github.com/streamlit/streamlit/issues/9770.",
         error_id="invalid-image",
