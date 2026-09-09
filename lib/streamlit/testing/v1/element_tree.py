@@ -2665,7 +2665,9 @@ class ElementTree(Block):
     @property
     def session_state(self) -> SafeSessionState:
         assert self._runner is not None
-        return self._runner.session_state
+        # Widget internals need SafeSessionState; AppTest.session_state is the
+        # dict-like wrapper testers use.
+        return self._runner._session_state
 
     def get_widget_states(self) -> WidgetStates:
         ws = WidgetStates()
