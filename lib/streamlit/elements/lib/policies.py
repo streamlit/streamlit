@@ -43,10 +43,10 @@ def check_callback_rules(dg: DeltaGenerator, on_change: object) -> None:
     """Ensures that widgets other than `st.form_submit_button` within a form don't have
     an on_change callback set.
 
-    Leftover ``"ignore"`` / ``"rerun"`` strings are not callbacks. Widgets that
-    support those modes convert them to ``None`` before this check; if a mode
-    string still arrives here, ``register_widget`` reports that the widget
-    does not support it.
+    ``on_change`` may also be a mode string (``"ignore"`` / ``"rerun"``), which
+    is not a callback and so does not violate this rule. Widgets that support
+    those modes pass ``None`` here. On a widget that doesn't, the string reaches
+    ``register_widget``, which reports that the widget does not support it.
 
     Raises
     ------
