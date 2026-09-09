@@ -267,7 +267,7 @@ region.text("North America · EMEA · APAC", wrap=False, width="stretch")
 
 Prefer native Streamlit elements and theming over custom HTML. Do not use `unsafe_allow_html` on `st.markdown`, `st.caption`, or `st.write` to recreate UI or inject CSS. Use Streamlit Markdown coloring (`:red[...]`, `:color[...]{foreground="..."}`) and `.streamlit/config.toml` instead.
 
-If you need HTML or CSS without Markdown, use `st.html`. JavaScript is ignored by default unless `unsafe_allow_javascript=True`.
+If you need HTML or CSS without Markdown, use `st.html`.
 
 ```python
 # BAD: HTML in Markdown to restyle text
