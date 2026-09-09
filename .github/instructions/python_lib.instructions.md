@@ -238,8 +238,8 @@ actually wrong or data is incomplete — see Logging.
     `value` vs user-configured `min_value` / `max_value`)
   - `StreamlitInvalidMinMaxError` (`min_value` cannot be greater than
     `max_value`; `st.slider` swaps reversed bounds and raises this only
-    for equal bounds, while `st.date_input` / `st.datetime_input` reject
-    reversed bounds and allow a single-day / single-instant range)
+    for equal bounds; `st.date_input` / `st.datetime_input` /
+    `st.number_input` reject reversed bounds and allow equal bounds)
   - `StreamlitInvalidURLError(url, protocols)` (`st.logo(link=)`, page-config
     menu items). Pass the allowed schemes, for example `["http", "https"]`.
     `protocols` defaults to `("http", "https", "mailto")`.
