@@ -396,6 +396,8 @@ jobs:
             core.setOutput('pr_url', pr.html_url);
 
             const labels = ['change:docs', 'impact:internal'];
+            // Only PRs targeting develop are marked as bot PRs; this workflow
+            // can also target a source PR's base branch.
             if (baseBranch === 'develop') {
               labels.push('bot-pr');
             }
