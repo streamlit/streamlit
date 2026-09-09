@@ -1457,6 +1457,7 @@ class ButtonMixin:
         button_state = register_widget(
             download_button_proto.id,
             on_change_handler=on_click_callback,
+            on_change_param="on_click",
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
@@ -1562,6 +1563,7 @@ class ButtonMixin:
             button_state = register_widget(
                 link_button_proto.id,
                 on_change_handler=on_click_callback,
+                on_change_param="on_click",
                 args=args,
                 kwargs=kwargs,
                 deserializer=serde.deserialize,

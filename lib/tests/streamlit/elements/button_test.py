@@ -895,3 +895,13 @@ class ButtonTest(DeltaGeneratorTestCase):
         st.download_button("test", data="data", on_click=callback)
         c = self.get_delta_from_queue().new_element.download_button
         assert c.ignore_rerun is False
+
+    def test_download_button_on_click_invalid_value_names_on_click(self) -> None:
+        """Invalid on_click values report on_click, not on_change."""
+        with pytest.raises(StreamlitValueError, match="Invalid `on_click` value"):
+            st.download_button("test", data="data", on_click=123)  # type: ignore[arg-type]
+
+    def test_link_button_on_click_invalid_value_names_on_click(self) -> None:
+        """Invalid on_click values report on_click, not on_change."""
+        with pytest.raises(StreamlitValueError, match="Invalid `on_click` value"):
+            st.link_button("test", url="https://example.com", on_click=123)  # type: ignore[arg-type]
