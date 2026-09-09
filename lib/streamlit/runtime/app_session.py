@@ -1074,9 +1074,13 @@ class AppSession:
         # The apply_show_error_details flag applies the client.showErrorDetails
         # redaction. Without this flag, the session sends the internal message,
         # type, and stack trace of the error to the browser.
-        exception_utils.marshall(
-            msg.delta.new_element.exception, e, apply_show_error_details=True
-        )
+        try:
+            exception_utils.marshall(
+                msg.delta.new_element.exception, e, apply_show_error_details=True
+            )
+        except Exception:
+            # Marshalling the error must not replace the original failure.
+            _LOGGER.exception("Failed to marshall exception for the frontend")
         return msg
 
     def _handle_git_information_request(self) -> None:
