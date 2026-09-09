@@ -20,6 +20,7 @@ from pathlib import Path
 import pytest
 
 from streamlit.runtime.pages_manager import PagesManager
+from streamlit.runtime.state.common import TESTING_KEY
 from streamlit.testing.v1 import AppTest, local_script_runner
 from streamlit.util import calc_hash
 
@@ -830,3 +831,40 @@ def test_keyed_fragment_rerun_button_before_fragment() -> None:
     at.button[0].click().run()
     assert not at.exception, at.exception
     assert at.text[0].value == "fragment ran 2 time(s)"
+
+
+def test_session_state_get_returns_script_value() -> None:
+    """``AppTest.session_state.get`` returns a key the script set."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.session_state["x"] = 7
+
+    at = AppTest.from_function(script).run()
+    assert at.session_state.get("x") == 7
+    assert at.session_state.get("missing") is None
+    assert at.session_state.get("missing", "fallback") == "fallback"
+
+
+def test_session_state_dict_api_matches_filtered_state() -> None:
+    """``keys`` / ``items`` / ``values`` / ``to_dict`` / ``len`` / iteration use filtered state."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.session_state["count"] = 1
+        st.radio("radio", options=["a", "b"], key="r")
+
+    at = AppTest.from_function(script).run()
+    assert at.session_state["count"] == 1
+    assert at.session_state.count == 1
+    assert "count" in at.session_state
+    assert "r" in at.session_state
+    assert TESTING_KEY not in at.session_state
+    assert set(at.session_state.keys()) == {"count", "r"}
+    assert dict(at.session_state.items()) == {"count": 1, "r": "a"}
+    assert set(at.session_state.values()) == {1, "a"}
+    assert at.session_state.to_dict() == {"count": 1, "r": "a"}
+    assert len(at.session_state) == 2
+    assert set(at.session_state) == {"count", "r"}

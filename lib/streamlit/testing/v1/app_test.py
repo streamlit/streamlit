@@ -99,12 +99,89 @@ from streamlit.testing.v1.util import patch_config_options
 from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator, Sequence
+    from collections.abc import (
+        Callable,
+        ItemsView,
+        Iterator,
+        KeysView,
+        Sequence,
+        ValuesView,
+    )
 
     from streamlit.proto.WidgetStates_pb2 import WidgetStates
     from streamlit.source_util import PageHash, PageInfo
 
 TMP_DIR = tempfile.TemporaryDirectory()
+
+
+class _AppTestSessionState:
+    """Dict-like Session State for AppTest.
+
+    ``st.session_state`` is a ``MutableMapping``. AppTest previously exposed
+    the inner ``SafeSessionState``, whose ``__getattr__`` treats missing names
+    as session keys, so ``.get`` / ``.keys`` raised ``AttributeError``.
+    """
+
+    _state: SafeSessionState
+
+    def __init__(self, state: SafeSessionState) -> None:
+        object.__setattr__(self, "_state", state)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """Return the value for ``key``, or ``default`` if it is unset."""
+        try:
+            return self._state[key]
+        except KeyError:
+            return default
+
+    def keys(self) -> KeysView[str]:
+        return self._state.filtered_state.keys()
+
+    def items(self) -> ItemsView[str, Any]:
+        return self._state.filtered_state.items()
+
+    def values(self) -> ValuesView[Any]:
+        return self._state.filtered_state.values()
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return user state and keyed widget values."""
+        return self._state.filtered_state
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._state.filtered_state)
+
+    def __len__(self) -> int:
+        return len(self._state.filtered_state)
+
+    def __getitem__(self, key: str) -> Any:
+        return self._state[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self._state[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self._state[key]
+
+    def __contains__(self, key: object) -> bool:
+        return key in self._state.filtered_state
+
+    def __getattr__(self, key: str) -> Any:
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(f"{key} not found in session_state.")
+
+    def __setattr__(self, key: str, value: Any) -> None:
+        self[key] = value
+
+    def __delattr__(self, key: str) -> None:
+        try:
+            del self[key]
+        except KeyError:
+            raise AttributeError(f"{key} not found in session_state.")
+
+    def __repr__(self) -> str:
+        return repr(self._state)
 
 
 class AppTest:
@@ -159,9 +236,11 @@ class AppTest:
         Dictionary of secrets to be used by the simulated app. Use dict-like
         syntax to set secret values for the simulated app.
 
-    session_state: SafeSessionState
-        Session State for the simulated app. SafeSessionState object supports
-        read and write operations as usual for Streamlit apps.
+    session_state
+        Session State for the simulated app. Supports item and attribute
+        access plus the dict methods of ``st.session_state`` (``get``,
+        ``keys``, ``items``, ``values``, ``to_dict``, ``len``, and
+        iteration).
 
     query_params: dict[str, Any]
         Dictionary of query parameters to be used by the simulated app. Use
@@ -180,7 +259,8 @@ class AppTest:
         self.default_timeout = default_timeout
         session_state = SessionState()
         session_state[TESTING_KEY] = {}
-        self.session_state = SafeSessionState(session_state, lambda: None)
+        self._session_state = SafeSessionState(session_state, lambda: None)
+        self.session_state = _AppTestSessionState(self._session_state)
         self.query_params: dict[str, Any] = {}
         self.secrets: dict[str, Any] = {}
         self.args = args
@@ -405,7 +485,7 @@ class AppTest:
 
         script_runner = LocalScriptRunner(
             self._script_path,
-            self.session_state,
+            self._session_state,
             pages_manager,
             args=self.args,
             kwargs=self.kwargs,
