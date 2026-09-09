@@ -277,6 +277,12 @@ class StringUtilTest(unittest.TestCase):
             ("data:image/png;base64,abc", "invalid-image"),
             ("/app/static/icon.png", "invalid-image"),
             (r"\\server\share\icon.png", "invalid-image"),
+            ("logo.png", "invalid-image"),
+            ("./notes.txt", "invalid-image"),
+            ("images/日本.png", "invalid-image"),
+            ("~nonexistent_user_12345/logo.png", "invalid-image"),
+            (r"Z:\icons\logo.png", "invalid-image"),
+            ("foo\x00.png", "invalid-image"),
         ]
     )
     def test_validate_icon_or_emoji_classifies_invalid_values(
@@ -301,7 +307,9 @@ class StringUtilTest(unittest.TestCase):
         assert "single emoji" in str(e.value)
         assert "single character" not in str(e.value)
 
-    def test_validate_icon_or_emoji_skips_icon_catalogs_for_plain_values(self) -> None:
+    def test_validate_icon_or_emoji_does_not_load_catalogs_for_non_emoji_values(
+        self,
+    ) -> None:
         """Non-emoji values must not import the emoji or Material icon catalogs."""
         catalog_modules = ("streamlit.emojis", "streamlit.material_icon_names")
         with _without_modules(*catalog_modules):
@@ -406,70 +414,16 @@ def test_validate_icon_or_emoji_path_object_is_invalid_image() -> None:
     assert "9770" in str(e.value)
 
 
-def test_validate_icon_or_emoji_existing_image_path_is_invalid_image(
-    tmp_path: Path,
+def test_validate_icon_or_emoji_skips_url_and_fs_helpers(
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """An existing local file path is classified as an unsupported image."""
-    image = tmp_path / "logo.png"
-    image.write_bytes(b"png")
-    with pytest.raises(StreamlitAPIException) as e:
-        string_util.validate_icon_or_emoji(str(image))
-    assert e.value.error_id == "invalid-image"
-
-
-def test_validate_icon_or_emoji_existing_relative_image_path_is_invalid_image(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """An existing image filename in the working directory is an unsupported image."""
-    monkeypatch.chdir(tmp_path)
-    Path("logo.png").write_bytes(b"png")
-    with pytest.raises(StreamlitAPIException) as e:
-        string_util.validate_icon_or_emoji("logo.png")
-    assert e.value.error_id == "invalid-image"
-
-
-def test_validate_icon_or_emoji_missing_image_filename_is_invalid_icon(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """A missing image-like filename is a generic invalid icon, not an image."""
-    monkeypatch.chdir(tmp_path)
-    with pytest.raises(StreamlitAPIException) as e:
-        string_util.validate_icon_or_emoji("logo.png")
-    assert e.value.error_id == "invalid-icon"
-
-
-@pytest.mark.parametrize("exc_type", [OSError, ValueError])
-def test_validate_icon_or_emoji_fs_probe_errors_are_invalid_icon(
-    monkeypatch: pytest.MonkeyPatch, exc_type: type[Exception]
-) -> None:
-    """Filesystem probe failures must not leak native exceptions."""
-
-    def raise_error(self: Path) -> bool:
-        raise exc_type("probe failed")
-
-    monkeypatch.setattr(Path, "is_file", raise_error)
-    with pytest.raises(StreamlitAPIException) as e:
-        string_util.validate_icon_or_emoji("./logo.png")
-    assert e.value.error_id == "invalid-icon"
-
-
-def test_validate_icon_or_emoji_null_byte_path_is_invalid_icon() -> None:
-    """Embedded null bytes must not leak a native exception."""
-    with pytest.raises(StreamlitAPIException) as e:
-        string_util.validate_icon_or_emoji("foo\x00.png")
-    assert e.value.error_id == "invalid-icon"
-
-
-def test_validate_icon_or_emoji_unresolvable_home_is_invalid_icon() -> None:
-    """An unresolvable ``~user`` prefix must not leak a native RuntimeError."""
-    with pytest.raises(StreamlitAPIException) as e:
-        string_util.validate_icon_or_emoji("~nonexistent_user_12345/logo.png")
-    assert e.value.error_id == "invalid-icon"
-
-
-def test_validate_icon_or_emoji_skips_url_and_fs_work_for_plain_values() -> None:
-    """Emoji, Material icons, spinner, labels, and shortcodes must not import URL or path helpers."""
+    """Validation must not import URL/path helpers or call Path.is_file."""
     modules = ("streamlit.url_util", "streamlit.path_security")
+
+    def fail_is_file(self: Path) -> bool:
+        raise AssertionError("Path.is_file should not be called")
+
+    monkeypatch.setattr(Path, "is_file", fail_is_file)
     with _without_modules(*modules):
         assert string_util.validate_icon_or_emoji("spinner") == "spinner"
         assert string_util.validate_icon_or_emoji("😃") == "😃"
@@ -483,42 +437,20 @@ def test_validate_icon_or_emoji_skips_url_and_fs_work_for_plain_values() -> None
         with pytest.raises(StreamlitAPIException) as e:
             string_util.validate_icon_or_emoji(":rocket:")
         assert e.value.error_id == "invalid-emoji-shortcode"
+        with pytest.raises(StreamlitAPIException) as e:
+            string_util.validate_icon_or_emoji("https://example.com/icon.png")
+        assert e.value.error_id == "invalid-image"
+        with pytest.raises(StreamlitAPIException) as e:
+            string_util.validate_icon_or_emoji("logo.png")
+        assert e.value.error_id == "invalid-image"
+        with pytest.raises(StreamlitAPIException) as e:
+            string_util.validate_icon_or_emoji("./notes.txt")
+        assert e.value.error_id == "invalid-image"
+        with pytest.raises(StreamlitAPIException) as e:
+            string_util.validate_icon_or_emoji(r"\\server\share\icon.png")
+        assert e.value.error_id == "invalid-image"
+        with pytest.raises(StreamlitAPIException) as e:
+            string_util.validate_icon_or_emoji("~nonexistent_user_12345/logo.png")
+        assert e.value.error_id == "invalid-image"
         for name in modules:
             assert name not in sys.modules
-
-
-def test_validate_icon_or_emoji_does_not_stat_plain_or_url_values(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Material icons, emoji, labels, URLs, and UNC paths must not call Path.is_file."""
-
-    def fail_is_file(self: Path) -> bool:
-        raise AssertionError("Path.is_file should not be called")
-
-    monkeypatch.setattr(Path, "is_file", fail_is_file)
-    assert string_util.validate_icon_or_emoji("😃") == "😃"
-    assert (
-        string_util.validate_icon_or_emoji(":material/thumb_up:")
-        == ":material/thumb_up:"
-    )
-    with pytest.raises(StreamlitAPIException) as e:
-        string_util.validate_icon_or_emoji("home")
-    assert e.value.error_id == "invalid-icon"
-    with pytest.raises(StreamlitAPIException) as e:
-        string_util.validate_icon_or_emoji("https://example.com/icon.png")
-    assert e.value.error_id == "invalid-image"
-    with pytest.raises(StreamlitAPIException) as e:
-        string_util.validate_icon_or_emoji("file:///tmp/icon.png")
-    assert e.value.error_id == "invalid-image"
-    with pytest.raises(StreamlitAPIException) as e:
-        string_util.validate_icon_or_emoji("//cdn.example.com/icon.png")
-    assert e.value.error_id == "invalid-image"
-    with pytest.raises(StreamlitAPIException) as e:
-        string_util.validate_icon_or_emoji("data:image/png;base64,abc")
-    assert e.value.error_id == "invalid-image"
-    with pytest.raises(StreamlitAPIException) as e:
-        string_util.validate_icon_or_emoji("/app/static/icon.png")
-    assert e.value.error_id == "invalid-image"
-    with pytest.raises(StreamlitAPIException) as e:
-        string_util.validate_icon_or_emoji(r"\\server\share\icon.png")
-    assert e.value.error_id == "invalid-image"

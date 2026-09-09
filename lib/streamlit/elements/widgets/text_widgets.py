@@ -809,9 +809,6 @@ class TextWidgetsMixin:
         # Precedence per property: explicit user value -> type default -> off.
         if icon is None:
             icon = type_defaults.icon
-        elif icon == "":
-            # `icon=""` opts out of the type-default icon.
-            icon = None
 
         if placeholder is None:
             placeholder = type_defaults.placeholder

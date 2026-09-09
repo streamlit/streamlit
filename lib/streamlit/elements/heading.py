@@ -519,7 +519,6 @@ class HeadingMixin:
         proto = HeadingProto()
         proto.tag = tag.value
         proto.body = clean_text(body)
-        # page.icon is "" when unset; treat that as no icon.
         proto.icon = validate_icon_or_emoji(icon)
         proto.wrap = wrap
         if divider:

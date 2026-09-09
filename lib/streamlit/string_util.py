@@ -32,18 +32,17 @@ if TYPE_CHECKING:
     from streamlit.type_util import SupportsStr
 
 # Matches GitHub-style shortcodes (:rocket:, :+1:) so we can reject them.
-_EMOJI_SHORTCODE_RE: Final = re.compile(r"^:[a-zA-Z0-9_+-]+:$")
+# Anchors are omitted; callers use ``fullmatch``.
+_EMOJI_SHORTCODE_RE: Final = re.compile(r":[a-zA-Z0-9_+-]+:")
 # Zero-width space keeps Markdown from rewriting the slash in this example.
 _ICON_FORMAT_HINT: Final = (
     "Please use a single emoji or a Material icon shortcode "
     "like `:material\u200b/thumb_up:`."
 )
-# Used with ``~`` and path separators to decide which strings to ``stat``.
+# Suffixes that identify an image-like value; images are not supported for icon=.
 _IMAGE_FILE_SUFFIXES: Final = frozenset(
     {".avif", ".bmp", ".gif", ".ico", ".jpeg", ".jpg", ".png", ".svg", ".webp"}
 )
-# Keep in sync with ``url_util._STATIC_SERVING_ENDPOINT``.
-_STATIC_ICON_URL_PREFIX: Final = "/app/static/"
 
 
 def clean_text(text: SupportsStr) -> str:
@@ -66,14 +65,15 @@ def to_help_str(help: object) -> str:
 
 def is_emoji(text: str) -> bool:
     """Check if input string is a valid emoji."""
-    # ASCII cannot contain emoji, so skip loading the catalog. Do not strip or
-    # normalize: ZWJ, skin-tone, and regional-indicator code points are part of
-    # valid sequences.
+    # ASCII cannot contain emoji, so skip loading the catalog.
     if not text or text.isascii():
         return False
 
     from streamlit.emojis import ALL_EMOJIS
 
+    # Only the variation selector is normalized; ZWJ, skin-tone, and
+    # regional-indicator code points are part of valid sequences and must
+    # be preserved.
     return text.replace("\U0000fe0f", "") in ALL_EMOJIS
 
 
@@ -99,46 +99,33 @@ def _has_image_file_suffix(icon: str) -> bool:
 
 
 def _looks_like_unsupported_image(icon: str) -> bool:
-    """Return True if ``icon`` is a URL, a UNC path, or an existing local file.
+    """Return True if ``icon`` is URL-shaped or path-like.
 
-    Plain labels and emoji take the fast path: no extra imports, no URL
-    parsing, and no filesystem access.
+    Classification is lexical so the error does not depend on CWD or whether
+    a file exists. URL-shaped values, path separators, ``~`` prefixes, and
+    image file suffixes are unsupported images. Plain labels and emoji take
+    the fast path: no extra imports and no filesystem access.
     """
-    # Same prefix as url_util.is_relative_static_url, without importing it.
-    if icon.startswith(_STATIC_ICON_URL_PREFIX):
-        return True
-
     # Any URL-shaped value is already not a valid icon. Detect ``scheme://``,
     # ``data:`` URLs (which have no ``://``), and scheme-relative ``//host/path``
-    # URLs without importing url_util or probing the filesystem.
+    # URLs without importing url_util.
     if "://" in icon or icon[:5].lower() == "data:" or icon.startswith("//"):
         return True
 
-    has_path_separator = "/" in icon or "\\" in icon
-    looks_like_path = (
-        icon.startswith("~") or has_path_separator or _has_image_file_suffix(icon)
+    return (
+        icon.startswith("~")
+        or "/" in icon
+        or "\\" in icon
+        or _has_image_file_suffix(icon)
     )
-    if not looks_like_path:
-        return False
-
-    # Do not stat UNC paths; that can open an SMB connection on Windows.
-    if has_path_separator:
-        from streamlit import path_security
-
-        if path_security.is_windows_unc_path(icon):
-            return True
-
-    try:
-        return Path(icon).expanduser().is_file()
-    except (OSError, ValueError, RuntimeError):
-        return False
 
 
 def validate_icon_or_emoji(icon: str | None) -> str:
     """Validate an icon or emoji and return it in normalized form if valid.
 
     - ``None`` and whitespace-only strings mean no icon.
-    - ``pathlib.Path`` objects, URLs, and existing local files raise
+    - ``pathlib.Path`` objects, URL-shaped values, and path-like strings
+      (separators, ``~`` prefixes, or image file suffixes) raise
       ``invalid-image``. Images are not loaded.
     """
     if icon is None:
