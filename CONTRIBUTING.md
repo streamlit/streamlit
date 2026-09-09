@@ -516,27 +516,33 @@ def test_streamlit_version(self):
 
 To fix this make sure your Python environment is set up correctly. Try running `make python-init` to reinstall locked development dependencies, or delete the `.venv` directory and run `make all-dev` again to recreate the environment.
 
-#### `protoc` version is incompatible with the Python protobuf package
+#### `protoc` version is too old or incompatible with the Python protobuf package
 
-`make protobuf` requires a compiler that is at least 3.20. The compiler does not
-need to match the Python `protobuf` package exactly: older generated code runs on
-a newer runtime. Homebrew protobuf 33.x and CI's 26.1 both work with the
-`protobuf` version in `uv.lock`.
-
-A compiler *newer* than that runtime fails at import, with
-`ImportError: cannot import name 'runtime_version'` or
-`google.protobuf.runtime_version.VersionError`. That can happen if Homebrew's
-unversioned `protobuf` formula has moved ahead of `uv.lock`. Compare
+`make protobuf` requires a compiler that is at least 3.20 and no newer than the
+Python `protobuf` package in `uv.lock`. The compiler does not need to match that
+package exactly: older generated code runs on a newer package. Compare
 `protoc --version` with
 `uv run python -c "import google.protobuf as p; print(p.__version__)"`.
-Python protobuf `X.Y.*` matches `protoc` `Y.*` (for example 6.33.x ↔ 33.x).
-Keep using your current compiler, or let the lockfile catch up; do not replace a
-working Homebrew install just to match CI.
+Python `protobuf` `X.Y.*` corresponds to `protoc` `Y.*` (for example 6.33.x ↔
+33.x, up to the patch in `uv.lock`). CI's 26.1 is an example of an older
+compiler that still works with the current lockfile.
+
+- Too old (`Error: protoc version X is < 3.20`): install a newer compiler from
+  the [official installation instructions](https://protobuf.dev/installation/),
+  still no newer than `uv.lock`. Homebrew's unversioned `protobuf` formula may
+  be ahead of the lockfile.
+- Too new (`ImportError: cannot import name 'runtime_version'` or
+  `google.protobuf.runtime_version.VersionError`): install a compiler at or
+  below the locked package — Homebrew `protobuf@33` while the lock is 6.33.x
+  (keg-only: put it on `PATH`) or the `PROTOC_VERSION` in
+  [`.github/actions/make_init/action.yml`](./.github/actions/make_init/action.yml)
+  — then re-run `make protobuf`. Do not edit `uv.lock`; you can wait for the
+  weekly `update-python-lock.yml` bump instead.
+- Already working: keep that compiler. Do not replace a working Homebrew
+  install just to match CI.
 
 To reproduce CI or release-generated output, use the compiler version configured in
 [`.github/actions/make_init/action.yml`](./.github/actions/make_init/action.yml).
-If the compiler is older than 3.20, install a newer one from the
-[official installation instructions](https://protobuf.dev/installation/).
 
 ## Introducing dependencies
 
