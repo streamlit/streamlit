@@ -587,6 +587,9 @@ def _melt_data(
 
     # Arrow has problems with object types after melting two different dtypes
     # > pyarrow.lib.ArrowTypeError: "Expected a <TYPE> object, got a object"
+    # This runs on every chart render, so it skips the trial conversion: the
+    # columns it would detect are fixed by the retry in
+    # ``convert_pandas_df_to_arrow_table``, which serializes this dataframe.
     return dataframe_util.fix_arrow_incompatible_column_types(
         melted_df,
         selected_columns=[
@@ -594,6 +597,7 @@ def _melt_data(
             new_color_column_name,
             new_y_column_name,
         ],
+        trial_conversion=False,
     )
 
 

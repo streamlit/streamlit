@@ -111,7 +111,34 @@ class ConfigOptionTest(unittest.TestCase):
         assert my_value == c.value
         assert where_defined == c.where_defined
 
-    def test_deprecated_expired(self):
+    def _assert_deprecation_banner_is_flush_left(self, message: str) -> None:
+        """Logged deprecation banners must be flush left.
+
+        A zero-indent line anywhere in the template (e.g. a stray character on
+        the first line) makes textwrap.dedent() a no-op, so the rest of the
+        banner keeps its source indentation.
+        """
+        non_empty = [line for line in message.splitlines() if line]
+        assert non_empty[0].startswith("═"), (
+            f"banner should start at column 0, got {non_empty[0][:40]!r}"
+        )
+        for line in non_empty:
+            assert not line.startswith(" "), f"line still indented: {line!r}"
+
+    @parameterized.expand(
+        [
+            ("single_line", "dep text"),
+            (
+                "multi_line",
+                """
+                Instead of this, you should use either the MAPBOX_API_KEY environment
+                variable or PyDeck's `api_keys` argument.
+                """,
+            ),
+        ]
+    )
+    def test_deprecated_expired(self, _case: str, deprecation_text: str) -> None:
+        """Expired options log a flush-left error that the option is unsupported."""
         my_value = "myValue"
         where_defined = "im defined here"
 
@@ -120,17 +147,36 @@ class ConfigOptionTest(unittest.TestCase):
         c = ConfigOption(
             key,
             deprecated=True,
-            deprecation_text="dep text",
+            deprecation_text=deprecation_text,
             expiration_date="2000-01-01",
         )
 
-        # Expired options behave like deprecated options
-        # just a slightly different text.
-        c.set_value(my_value, where_defined)
+        with self.assertLogs("streamlit.config_option", level="ERROR") as logs:
+            c.set_value(my_value, where_defined)
 
+        message = logs.records[0].getMessage()
+        self._assert_deprecation_banner_is_flush_left(message)
+        assert "mysection.myName IS NO LONGER SUPPORTED." in message
+        assert "Please update im defined here." in message
+        for snippet in c.deprecation_text.splitlines():
+            if snippet:
+                assert snippet in message
         assert c.is_expired()
 
-    def test_deprecated_unexpired(self):
+    @parameterized.expand(
+        [
+            ("single_line", "dep text"),
+            (
+                "multi_line",
+                """
+                Instead of this, you should use either the MAPBOX_API_KEY environment
+                variable or PyDeck's `api_keys` argument.
+                """,
+            ),
+        ]
+    )
+    def test_deprecated_unexpired(self, _case: str, deprecation_text: str) -> None:
+        """Unexpired options log a flush-left warning that the option is deprecated."""
         my_value = "myValue"
         where_defined = "im defined here"
 
@@ -139,12 +185,21 @@ class ConfigOptionTest(unittest.TestCase):
         c = ConfigOption(
             key,
             deprecated=True,
-            deprecation_text="dep text",
+            deprecation_text=deprecation_text,
             expiration_date="2100-01-01",
         )
 
-        c.set_value(my_value, where_defined)
+        with self.assertLogs("streamlit.config_option", level="WARNING") as logs:
+            c.set_value(my_value, where_defined)
 
+        message = logs.records[0].getMessage()
+        self._assert_deprecation_banner_is_flush_left(message)
+        assert "mysection.myName IS DEPRECATED." in message
+        assert "This option will be removed on or after 2100-01-01." in message
+        assert "Please update im defined here." in message
+        for snippet in c.deprecation_text.splitlines():
+            if snippet:
+                assert snippet in message
         assert not c.is_expired()
 
     def test_replaced_by_unexpired(self):

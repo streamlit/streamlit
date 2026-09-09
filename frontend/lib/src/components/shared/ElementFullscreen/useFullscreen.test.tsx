@@ -42,10 +42,9 @@ function renderUseFullscreen(): {
   return { result, setFullScreen }
 }
 
-/** useFullscreen listens for keyCode 27 rather than event.key. */
+/** Dispatch Escape; the hook listens for event.key === "Escape". */
 function dispatchEscapeKey(): void {
   const event = new KeyboardEvent("keydown", { key: "Escape" })
-  Object.defineProperty(event, "keyCode", { get: () => 27 })
   document.dispatchEvent(event)
 }
 

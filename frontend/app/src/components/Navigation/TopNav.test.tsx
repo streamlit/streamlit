@@ -19,7 +19,7 @@ import { userEvent } from "@testing-library/user-event"
 
 import { mockEndpoints, NavigationContextProps } from "@streamlit/lib"
 import { renderWithContexts } from "@streamlit/lib/testing"
-import { IAppPage } from "@streamlit/protobuf"
+import { type AppPage } from "@streamlit/protobuf"
 
 import TopNav, { Props } from "./TopNav"
 
@@ -79,7 +79,7 @@ function renderTopNav(
 describe("TopNav", () => {
   describe("hidden pages", () => {
     it("does not render hidden pages in the navigation", () => {
-      const appPages: IAppPage[] = [
+      const appPages: AppPage.$Properties[] = [
         {
           pageScriptHash: "visible_hash_1",
           pageName: "visible page 1",
@@ -118,7 +118,7 @@ describe("TopNav", () => {
     })
 
     it("does not render hidden pages in sections", () => {
-      const appPages: IAppPage[] = [
+      const appPages: AppPage.$Properties[] = [
         {
           pageScriptHash: "visible_hash_1",
           pageName: "visible page 1",
@@ -162,7 +162,7 @@ describe("TopNav", () => {
     })
 
     it("does not render section when all pages in section are hidden", () => {
-      const appPages: IAppPage[] = [
+      const appPages: AppPage.$Properties[] = [
         {
           pageScriptHash: "visible_hash_1",
           pageName: "visible page 1",
@@ -215,7 +215,7 @@ describe("TopNav", () => {
     })
 
     it("renders individual pages when not in sections", () => {
-      const appPages: IAppPage[] = [
+      const appPages: AppPage.$Properties[] = [
         {
           pageScriptHash: "visible_hash_1",
           pageName: "page 1",
@@ -255,7 +255,7 @@ describe("TopNav", () => {
 
   describe("section header markdown", () => {
     it("renders markdown in section titles", () => {
-      const appPages: IAppPage[] = [
+      const appPages: AppPage.$Properties[] = [
         {
           pageScriptHash: "hash_1",
           pageName: "page 1",
@@ -297,7 +297,7 @@ describe("TopNav", () => {
     it("does not call onPageChange when clicking an external link", async () => {
       const onPageChange = vi.fn()
       const user = userEvent.setup()
-      const appPages: IAppPage[] = [
+      const appPages: AppPage.$Properties[] = [
         {
           pageScriptHash: "internal_hash",
           pageName: "internal page",
@@ -333,7 +333,7 @@ describe("TopNav", () => {
     })
 
     it("does not render hidden external pages in the navigation", () => {
-      const appPages: IAppPage[] = [
+      const appPages: AppPage.$Properties[] = [
         {
           pageScriptHash: "visible_internal_hash",
           pageName: "visible internal",

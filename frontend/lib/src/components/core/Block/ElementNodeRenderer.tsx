@@ -34,6 +34,7 @@ import {
   DateTimeInput as DateTimeInputProto,
   DeckGlJsonChart as DeckGlJsonChartProto,
   DownloadButton as DownloadButtonProto,
+  EChartsChart as EChartsChartProto,
   Exception as ExceptionProto,
   Feedback as FeedbackProto,
   FileUploader as FileUploaderProto,
@@ -109,6 +110,9 @@ const Balloons = lazy(
 )
 const DeckGlJsonChart = lazy(
   () => import("~lib/components/elements/DeckGlJsonChart/DeckGlJsonChart")
+)
+const EChartsChart = lazy(
+  () => import("~lib/components/elements/EChartsChart/EChartsChart")
 )
 const GraphVizChart = lazy(
   () => import("~lib/components/elements/GraphVizChart/GraphVizChart")
@@ -1090,6 +1094,29 @@ const RawElementNodeRenderer = (
             key={numberInputProto.id}
             element={numberInputProto}
             {...widgetProps}
+          />
+        </ElementContainer>
+      )
+    }
+
+    case "echartsChart": {
+      const echartsProto = node.element.echartsChart as EChartsChartProto
+      return (
+        <ElementContainer
+          node={node}
+          // Use overflow-visible (like other charts) so the hover toolbar, which
+          // floats above the chart, and tooltips aren't clipped by the
+          // overflow:auto that a pixel `height` otherwise applies.
+          config={ElementContainerConfig.LARGE_OVERFLOW_VISIBLE}
+          isStale={isStale}
+        >
+          <EChartsChart
+            // An ECharts chart only has an id when the user gave it a key.
+            // An unkeyed chart has none, so it falls back to positional
+            // identity like other elements.
+            key={echartsProto.id || undefined}
+            element={echartsProto}
+            {...elementProps}
           />
         </ElementContainer>
       )

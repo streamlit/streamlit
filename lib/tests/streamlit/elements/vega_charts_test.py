@@ -51,6 +51,7 @@ from streamlit.errors import (
 )
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.type_util import is_altair_version_less_than
+from streamlit.util import ReadOnlyAttributeDictionary
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 if TYPE_CHECKING:
@@ -59,6 +60,40 @@ if TYPE_CHECKING:
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 df2 = pd.DataFrame([["E", "F", "G", "H"], [11, 12, 13, 14]], index=["a", "b"]).T
 autosize_spec = {"autosize": {"type": "fit", "contains": "padding"}}
+_LOOKUP_POPULATION = pd.DataFrame({"id": [1, 2], "population": [100, 200]})
+_TWO_POLYGON_FEATURE_COLLECTION = {
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "id": 1,
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]],
+            },
+            "properties": {"name": "left"},
+        },
+        {
+            "type": "Feature",
+            "id": 2,
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[[1, 0], [2, 0], [2, 1], [1, 1], [1, 0]]],
+            },
+            "properties": {"name": "right"},
+        },
+    ],
+}
+
+
+def _spec_feature_collections(spec: dict[str, Any]) -> list[dict[str, Any]]:
+    datasets = spec.get("datasets")
+    assert isinstance(datasets, dict)
+    return [
+        payload
+        for payload in datasets.values()
+        if isinstance(payload, dict) and payload.get("type") == "FeatureCollection"
+    ]
 
 
 def test_vega_lite_serde_returns_typed_state() -> None:
@@ -91,6 +126,30 @@ def test_vega_lite_state_is_read_only() -> None:
     # Read access still works, and deepcopy preserves the concrete type.
     assert result.selection.brush == {}
     assert isinstance(copy.deepcopy(result), VegaLiteState)
+
+
+def test_vega_lite_serde_deserializes_selection_json() -> None:
+    """Non-empty selection JSON is parsed and wrapped for stable bracket access."""
+    payload = json.dumps({"selection": {"brush": {"x": [1, 2]}}})
+    result = VegaLiteStateSerde(["brush"]).deserialize(payload)
+    assert result.selection.brush == {"x": [1, 2]}
+    assert result["selection"] is result.selection
+
+
+def test_vega_lite_serde_returns_empty_state_when_selection_key_missing() -> None:
+    """JSON without a ``selection`` key yields the empty typed selection state."""
+    result = VegaLiteStateSerde(["brush"]).deserialize(json.dumps({"other": 1}))
+    assert result.selection.brush == {}
+
+
+def test_vega_lite_state_wraps_plain_selection_dict_and_other_keys() -> None:
+    """A plain dict ``selection`` is wrapped; unrelated keys use the base getter."""
+    state = VegaLiteState({"selection": {"brush": {"x": 1}}, "other": 2})
+    selection = state["selection"]
+    assert isinstance(selection, ReadOnlyAttributeDictionary)
+    assert selection["brush"] == {"x": 1}
+    assert state["selection"] is selection
+    assert state["other"] == 2
 
 
 def merge_dicts(x, y):
@@ -625,6 +684,102 @@ class AltairChartTest(DeltaGeneratorTestCase):
             df,
             check_dtype=False,
         )
+
+    def test_inline_geojson_featurecollection_stays_in_spec_datasets(self) -> None:
+        """Inline FeatureCollection named datasets stay in spec JSON, not Arrow."""
+        chart = (
+            alt.Chart(
+                alt.InlineData(
+                    values=_TWO_POLYGON_FEATURE_COLLECTION,
+                    format=alt.DataFormat(property="features", type="json"),
+                )
+            )
+            .mark_geoshape()
+            .encode(color="properties.name:N")
+        )
+
+        st.altair_chart(chart)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        geo_payloads = _spec_feature_collections(spec)
+        assert len(geo_payloads) == 1
+        assert len(geo_payloads[0]["features"]) == 2
+        assert spec["data"]["format"]["type"] == "json"
+        assert len(proto.datasets) == 0
+
+    def test_lookup_dataframe_still_arrow_serialized_on_proto(self) -> None:
+        """Lookup tables stay on proto.datasets as Arrow, not JSON in the spec."""
+        geo = alt.Data(
+            url="https://example.invalid/map.json",
+            format=alt.DataFormat(property="features", type="json"),
+        )
+        chart = (
+            alt.Chart(geo)
+            .mark_geoshape()
+            .encode(color="population:Q")
+            .transform_lookup(
+                lookup="id",
+                from_=alt.LookupData(
+                    _LOOKUP_POPULATION, "id", list(_LOOKUP_POPULATION.columns)
+                ),
+            )
+        )
+
+        st.altair_chart(chart)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        assert not spec.get("datasets")
+
+        assert len(proto.datasets) == 1
+        lookup_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        pd.testing.assert_frame_equal(
+            lookup_df[["id", "population"]].reset_index(drop=True),
+            _LOOKUP_POPULATION.reset_index(drop=True),
+            check_dtype=False,
+        )
+
+    def test_inline_geojson_plus_lookup_keeps_geo_in_spec_and_table_on_proto(
+        self,
+    ) -> None:
+        """Mixed geoshape charts keep geometry in spec and the lookup table as Arrow."""
+        chart = (
+            alt.Chart(
+                alt.InlineData(
+                    values=_TWO_POLYGON_FEATURE_COLLECTION,
+                    format=alt.DataFormat(property="features", type="json"),
+                )
+            )
+            .mark_geoshape()
+            .encode(color="population:Q")
+            .transform_lookup(
+                lookup="id",
+                from_=alt.LookupData(
+                    _LOOKUP_POPULATION, "id", list(_LOOKUP_POPULATION.columns)
+                ),
+            )
+        )
+
+        st.altair_chart(chart)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        geo_payloads = _spec_feature_collections(spec)
+        assert len(geo_payloads) == 1
+        assert len(geo_payloads[0]["features"]) == 2
+        assert not any(
+            isinstance(payload, list) for payload in spec["datasets"].values()
+        )
+
+        assert len(proto.datasets) == 1
+        lookup_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        pd.testing.assert_frame_equal(
+            lookup_df[["id", "population"]].reset_index(drop=True),
+            _LOOKUP_POPULATION.reset_index(drop=True),
+            check_dtype=False,
+        )
+        assert "features" not in lookup_df.columns
 
 
 class AltairChartWidthTest(DeltaGeneratorTestCase):
@@ -1529,6 +1684,193 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         assert json.loads(proto.spec) == merge_dicts(
             autosize_spec, {"data": {"name": "foo"}, "mark": "rect"}
         )
+
+    @parameterized.expand(
+        [
+            (
+                "feature_collection",
+                {
+                    "type": "FeatureCollection",
+                    "features": [
+                        {
+                            "type": "Feature",
+                            "geometry": {"type": "Point", "coordinates": [0, 0]},
+                            "properties": {"name": "a"},
+                        }
+                    ],
+                },
+                {"type": "json", "property": "features"},
+            ),
+            (
+                "topology",
+                {
+                    "type": "Topology",
+                    "arcs": [],
+                    "objects": {
+                        "layer": {"type": "GeometryCollection", "geometries": []}
+                    },
+                },
+                {"type": "topojson"},
+            ),
+            (
+                "topology_without_type",
+                {
+                    "arcs": [],
+                    "objects": {
+                        "layer": {"type": "GeometryCollection", "geometries": []}
+                    },
+                },
+                {"type": "topojson"},
+            ),
+            (
+                "feature_list",
+                [
+                    {
+                        "type": "Feature",
+                        "geometry": {"type": "Point", "coordinates": [0, 0]},
+                        "properties": {},
+                    }
+                ],
+                {"type": "json"},
+            ),
+            (
+                "polygon_geometry",
+                {
+                    "type": "Polygon",
+                    "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]],
+                },
+                {"type": "json"},
+            ),
+        ]
+    )
+    def test_geo_named_dataset_stays_in_vega_lite_spec(
+        self,
+        _case: str,
+        payload: dict[str, Any] | list[dict[str, Any]],
+        format_spec: dict[str, str],
+    ) -> None:
+        """GeoJSON/TopoJSON named datasets stay in spec JSON, not Arrow."""
+        st.vega_lite_chart(
+            {
+                "mark": {"type": "geoshape"},
+                "data": {"name": "geo", "format": format_spec},
+                "datasets": {"geo": payload},
+            }
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        assert spec["datasets"]["geo"] == payload
+        assert len(proto.datasets) == 0
+
+    def test_json_format_record_list_still_arrow_serialized(self) -> None:
+        """A JSON-format list of plain records is still Arrow-serialized."""
+        records = [{"x": 1, "y": 2}]
+        st.vega_lite_chart(
+            {
+                "mark": "bar",
+                "data": {"name": "foo", "format": {"type": "json"}},
+                "datasets": {"foo": records},
+            }
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        assert "datasets" not in spec
+        assert len(proto.datasets) == 1
+        records_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        assert set(records_df.columns) >= {"x", "y"}
+
+    def test_json_format_columnar_dict_still_arrow_serialized(self) -> None:
+        """A JSON-format columnar dict is still Arrow-serialized, not kept as JSON."""
+        columnar = {"a": [1, 2], "b": [3, 4]}
+        st.vega_lite_chart(
+            {
+                "mark": "bar",
+                "data": {"name": "foo", "format": {"type": "json"}},
+                "datasets": {"foo": columnar},
+            }
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        assert "datasets" not in spec
+        assert len(proto.datasets) == 1
+        columns_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        assert set(columns_df.columns) >= {"a", "b"}
+
+    def test_geo_type_lookalike_dict_still_arrow_serialized(self) -> None:
+        """A dict with a GeoJSON type name but no geometry members is still Arrow."""
+        lookalike = {"type": "Point", "value": [1, 2]}
+        st.vega_lite_chart(
+            {
+                "mark": "bar",
+                "data": {"name": "foo", "format": {"type": "json"}},
+                "datasets": {"foo": lookalike},
+            }
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        assert "datasets" not in spec
+        assert len(proto.datasets) == 1
+        lookalike_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        assert set(lookalike_df.columns) >= {"type", "value"}
+
+    def test_topojson_lookalike_columnar_dict_still_arrow_serialized(self) -> None:
+        """A columnar dict with arcs/objects columns is still Arrow, not TopoJSON."""
+        lookalike = {"arcs": [1, 2], "objects": ["a", "b"]}
+        st.vega_lite_chart(
+            {
+                "mark": "bar",
+                "data": {"name": "foo", "format": {"type": "json"}},
+                "datasets": {"foo": lookalike},
+            }
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        assert "datasets" not in spec
+        assert len(proto.datasets) == 1
+        lookalike_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        assert set(lookalike_df.columns) >= {"arcs", "objects"}
+
+    def test_top_level_geojson_values_stay_in_spec(self) -> None:
+        """Top-level data.values FeatureCollection stays in spec JSON with format."""
+        st.vega_lite_chart(
+            {
+                "data": {
+                    "values": _TWO_POLYGON_FEATURE_COLLECTION,
+                    "format": {"type": "json", "property": "features"},
+                },
+                "mark": {"type": "geoshape"},
+            }
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        assert spec["data"]["values"] == _TWO_POLYGON_FEATURE_COLLECTION
+        assert spec["data"]["format"] == {"type": "json", "property": "features"}
+        assert not proto.HasField("data")
+
+    def test_geojson_hash_rejects_non_json_types(self) -> None:
+        """GeoJSON hashing uses the same JSON serialization as spec transport."""
+        import numpy as np
+
+        from streamlit.elements.vega_charts import _to_arrow_dataset
+
+        payload = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [0, 0]},
+                    "properties": {"n": np.int64(1)},
+                }
+            ],
+        }
+        with pytest.raises(TypeError):
+            _to_arrow_dataset(payload, {})
 
     def test_kwargs_raises_type_error(self):
         """Test that passing unexpected kwargs raises TypeError after kwargs removal."""
@@ -3724,6 +4066,82 @@ class VegaUtilitiesTest(unittest.TestCase):
         """Test that _stabilize_vega_json_spec correctly fixes the auto-generated names."""
         result = _stabilize_vega_json_spec(input_spec)
         assert result == expected
+
+    def test_stabilize_preserves_geojson_property_tokens(self) -> None:
+        """GeoJSON property keys/values matching param_/view_ tokens are not rewritten."""
+        geo = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [0, 0]},
+                    "properties": {"param_9": "view_9", "name": "a"},
+                }
+            ],
+        }
+        spec = {
+            "mark": {"type": "geoshape"},
+            "data": {"name": "geo"},
+            "datasets": {"geo": geo},
+            "params": [{"name": "param_17", "select": {"type": "point"}}],
+            "layer": [{"mark": {"type": "geoshape"}, "name": "view_33"}],
+        }
+
+        result = json.loads(_stabilize_vega_json_spec(json.dumps(spec)))
+        assert result["datasets"]["geo"] == geo
+        assert result["params"][0]["name"] == "param_1"
+        assert result["layer"][0]["name"] == "view_1"
+
+    def test_stabilize_preserves_topojson_layer_object(self) -> None:
+        """A TopoJSON objects.layer name does not trigger view_ rewrites in the payload."""
+        topo = {
+            "type": "Topology",
+            "arcs": [],
+            "objects": {
+                "layer": {
+                    "type": "GeometryCollection",
+                    "geometries": [
+                        {
+                            "type": "Polygon",
+                            "arcs": [[0]],
+                            "properties": {"view_5": 1},
+                        }
+                    ],
+                }
+            },
+        }
+        spec = {
+            "mark": {"type": "geoshape"},
+            "datasets": {"geo": topo},
+        }
+
+        result = json.loads(_stabilize_vega_json_spec(json.dumps(spec)))
+        assert result["datasets"]["geo"] == topo
+
+    def test_stabilize_preserves_top_level_geo_values(self) -> None:
+        """Top-level GeoJSON data.values tokens are not rewritten."""
+        geo = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [0, 0]},
+                    "properties": {"param_3": 1},
+                }
+            ],
+        }
+        spec = {
+            "mark": {"type": "geoshape"},
+            "data": {
+                "values": geo,
+                "format": {"type": "json", "property": "features"},
+            },
+            "params": [{"name": "param_10", "select": {"type": "point"}}],
+        }
+
+        result = json.loads(_stabilize_vega_json_spec(json.dumps(spec)))
+        assert result["data"]["values"] == geo
+        assert result["params"][0]["name"] == "param_1"
 
 
 class NestedCompositionTest(unittest.TestCase):

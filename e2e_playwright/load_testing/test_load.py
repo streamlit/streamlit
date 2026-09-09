@@ -75,6 +75,10 @@ _SCENARIOS: Final[list[ScenarioConfig]] = [
 ]
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason="macOS SO_REUSEADDR allows binding over live client ephemeral ports",
+)
 def test_port_availability_check_rejects_active_client_port() -> None:
     """Ensure active ephemeral client ports aren't selected for a server.
 
@@ -82,11 +86,6 @@ def test_port_availability_check_rejects_active_client_port() -> None:
     cannot bind over a live client ephemeral port. On macOS/BSD, SO_REUSEADDR
     can, matching Streamlit's server socket options — so skip there.
     """
-    if sys.platform == "darwin":
-        pytest.skip(
-            "macOS SO_REUSEADDR allows binding over live client ephemeral ports"
-        )
-
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
         listener.bind(("localhost", 0))
         listener.listen()

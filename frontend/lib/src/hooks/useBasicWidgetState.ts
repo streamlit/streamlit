@@ -118,7 +118,15 @@ export function useBasicWidgetClientState<
       fromUser: false,
     })
 
-  // When someone calls setNextValueWithSource, update internal state and tell
+  // Expose the in-flight event value on this render. The effect below still
+  // persists it into currentValue and WidgetStateManager. If callers returned
+  // currentValue alone, it would lag one frame (the effect), and
+  // useUpdateUiValue would copy that stale string into a just-committed input.
+  const value = isNullOrUndefined(nextValueWithSource)
+    ? currentValue
+    : nextValueWithSource.value
+
+  // When someone calls setNextValueWithSource, persist internal state and tell
   // widget manager to update its state too.
   useEffect(() => {
     if (isNullOrUndefined(nextValueWithSource)) return
@@ -156,7 +164,7 @@ export function useBasicWidgetClientState<
   // Manage our form-clear event handler.
   useFormClearHelper({ widgetMgr, element, onFormCleared: handleFormCleared })
 
-  return [currentValue, setNextValueWithSource]
+  return [value, setNextValueWithSource]
 }
 
 // Interface for a proto that has a setValue, id, and .formId
@@ -225,6 +233,13 @@ interface UseBasicWidgetStateBaseArgs<
    * for URL query parameter synchronization.
    */
   queryParamBinding?: QueryParamBindingConfig
+  /**
+   * Optional gate for proto `setValue` updates (session_state / script-driven).
+   * Return false to keep the current value; `setValue` is still consumed so
+   * the event is not retried. Important: this callback needs a stable
+   * reference (`useCallback` + refs).
+   */
+  shouldApplyIncomingValue?: (incoming: T) => boolean
 }
 
 type UseBasicWidgetStateArgs<
@@ -267,6 +282,7 @@ export function useBasicWidgetState<
     widgetMgr,
     fragmentId,
     queryParamBinding,
+    shouldApplyIncomingValue,
   } = args
 
   // Convert the explicit behavior declaration into the optional callback shape
@@ -352,11 +368,21 @@ export function useBasicWidgetState<
     // eslint-disable-next-line react-hooks/immutability -- consuming setValue event from proto
     element.setValue = false // Clear "event".
 
+    const incoming = getCurrStateFromProto(element)
+    if (shouldApplyIncomingValue && !shouldApplyIncomingValue(incoming)) {
+      return
+    }
+
     setNextValueWithSource({
-      value: getCurrStateFromProto(element),
+      value: incoming,
       fromUser: false,
     })
-  }, [element, getCurrStateFromProto, setNextValueWithSource])
+  }, [
+    element,
+    getCurrStateFromProto,
+    setNextValueWithSource,
+    shouldApplyIncomingValue,
+  ])
 
   return [currentValue, setNextValueWithSource]
 }

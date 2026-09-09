@@ -137,7 +137,7 @@ describe("useOnInputChange", () => {
       })
     })
     await waitFor(() => {
-      expect(additionalAction).toHaveBeenCalled()
+      expect(additionalAction).toHaveBeenCalledWith("someValue")
     })
   })
 
@@ -232,7 +232,7 @@ describe("useOnInputChange", () => {
       expect(setValueWithSource).not.toHaveBeenCalled() // Not in form
     })
     await waitFor(() => {
-      expect(additionalAction).toHaveBeenCalled() // Should still be called
+      expect(additionalAction).toHaveBeenCalledWith("someValue")
     })
   })
 })

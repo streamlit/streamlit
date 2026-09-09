@@ -19,14 +19,14 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class
+from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
 from e2e_playwright.shared.react18_utils import wait_for_react_stability
 from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 
 BASELINE_CHARTS = 9
 REGRESSION_CHART_INDEX = 9
 ISSUE_14050_CHART_INDEX = 10
-NUM_CHARTS = 11
+NUM_CHARTS = 14
 
 
 def test_altair_chart_displays_correctly(
@@ -34,6 +34,9 @@ def test_altair_chart_displays_correctly(
 ):
     charts = themed_app.get_by_test_id("stVegaLiteChart")
     expect(charts).to_have_count(NUM_CHARTS)
+    # Vega always mounts an empty bindings form; hide it so charts without
+    # parameter widgets do not pick up extra padding.
+    expect(charts.nth(0).locator("form.vega-bindings")).to_be_hidden()
 
     # Each chart container carries the Vega "graphics-document" ARIA role once
     # it has rendered. Verify every baseline chart is a visible graphics
@@ -214,3 +217,66 @@ def test_show_chart_data_button(app: Page, assert_snapshot: ImageCompareFunction
     toolbar_buttons.get_by_label("Show Chart").click()
 
     expect(dataframe).not_to_be_attached()
+
+
+def test_altair_chart_binding_widget_styling(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Altair parameter bindings (sliders, selects, radios, etc.) follow the theme."""
+    chart = get_element_by_key(themed_app, "altair_chart_bindings").get_by_test_id(
+        "stVegaLiteChart"
+    )
+    expect(chart).to_be_visible()
+    expect(get_vega_graphics_document(chart)).to_be_visible()
+
+    bindings = chart.locator("form.vega-bindings")
+    expect(bindings).to_be_visible()
+    expect(bindings.locator(".vega-bind")).to_have_count(5)
+    expect(bindings.locator("input[type='range']")).to_be_visible()
+    expect(bindings.locator("select")).to_be_visible()
+    expect(bindings.locator("input[type='radio']")).to_have_count(3)
+    expect(bindings.locator("input[type='checkbox']")).to_be_visible()
+    expect(bindings.locator("input[type='text']")).to_be_visible()
+
+    wait_for_react_stability(themed_app)
+    assert_snapshot(chart, name="st_altair_chart-binding_widgets")
+
+    # Vega's native binding controls stay interactive (they are not Streamlit
+    # widgets). Changing them must not surface an exception.
+    select = bindings.get_by_role("combobox")
+    expect(select).to_have_value("USA")
+    select.select_option("Europe")
+    expect(select).to_have_value("Europe")
+    checkbox = bindings.get_by_role("checkbox")
+    expect(checkbox).to_be_checked()
+    checkbox.uncheck()
+    expect(checkbox).not_to_be_checked()
+    expect(themed_app.get_by_test_id("stException")).to_have_count(0)
+
+
+def test_geoshape_lookup_and_inline_featurecollection_render(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Geoshape lookup and inline FeatureCollection charts render filled polygons."""
+    charts = app.get_by_test_id("stVegaLiteChart")
+    expect(charts).to_have_count(NUM_CHARTS)
+
+    lookup_chart = get_element_by_key(app, "altair_geoshape_lookup").get_by_test_id(
+        "stVegaLiteChart"
+    )
+    inline_chart = get_element_by_key(app, "altair_geoshape_inline").get_by_test_id(
+        "stVegaLiteChart"
+    )
+
+    for chart in (lookup_chart, inline_chart):
+        expect(get_vega_graphics_document(chart)).to_be_visible()
+
+    # URL GeoJSON is fetched asynchronously; wait for lookup output before
+    # snapshotting so an empty first paint cannot pass as a rendered map.
+    expect(lookup_chart.get_by_text("population")).to_be_visible()
+    wait_for_react_stability(app)
+
+    expect(app.get_by_test_id("stException")).to_have_count(0)
+
+    assert_snapshot(lookup_chart, name="st_altair_chart-geoshape_lookup")
+    assert_snapshot(inline_chart, name="st_altair_chart-geoshape_inline_geojson")

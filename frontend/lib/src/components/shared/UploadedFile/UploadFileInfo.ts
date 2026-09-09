@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { IFileURLs } from "@streamlit/protobuf"
+import { type FileURLs } from "@streamlit/protobuf"
 
 export interface UploadingStatus {
   type: "uploading"
@@ -25,7 +25,7 @@ export interface UploadingStatus {
 export interface UploadedStatus {
   type: "uploaded"
   fileId: string
-  fileUrls: IFileURLs
+  fileUrls: FileURLs.$Properties
 }
 
 interface ErrorStatus {

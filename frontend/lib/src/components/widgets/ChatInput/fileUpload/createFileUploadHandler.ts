@@ -16,7 +16,7 @@
 
 import type { AxiosProgressEvent } from "axios"
 
-import { IFileURLs } from "@streamlit/protobuf"
+import { type FileURLs } from "@streamlit/protobuf"
 
 import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { FileUploadClient } from "~lib/FileUploadClient"
@@ -29,7 +29,7 @@ interface CreateUploadFileParams {
   uploadClient: FileUploadClient
   element: WidgetInfo
   onUploadProgress: (e: AxiosProgressEvent, id: number) => void
-  onUploadComplete: (id: number, fileURLs: IFileURLs) => void
+  onUploadComplete: (id: number, fileURLs: FileURLs.$Properties) => void
 }
 
 export const createUploadFileHandler =
@@ -42,7 +42,7 @@ export const createUploadFileHandler =
     onUploadProgress,
     onUploadComplete,
   }: CreateUploadFileParams) =>
-  (fileURLs: IFileURLs, file: File): void => {
+  (fileURLs: FileURLs.$Properties, file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
     // For directory uploads, prefer the webkitRelativePath so we preserve
     // the original directory structure in the displayed file name.

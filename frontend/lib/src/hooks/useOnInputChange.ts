@@ -33,24 +33,23 @@ interface OnInputChangeProps {
   setValueWithSource: Dispatch<
     SetStateAction<ValueWithSource<string | null> | null>
   >
-  /** Optional additional function to run after input change
-   * Use useCallback to prevent unnecessary re-renders.
+  /** Called after an input change that passed the max_chars gate.
+   * Receives the new value. Keep this callback stable with useCallback.
    */
-  additionalAction?: () => void
+  additionalAction?: (newValue: string) => void
 }
 
 /**
- * Will return a memoized function that accepts an HTMLInputElement and will call
- * commitWidgetValue and setDirty with its value, unless the value is longer than
- * maxChars. Will also call the setValueWithSource callback if the input is in a form.
- * Can also run an additional action after the main logic.
+ * Returns a memoized change handler that applies `maxChars`, marks the input
+ * dirty, updates the UI value, and optionally runs `additionalAction`.
+ * If the input is in a form, it also calls setValueWithSource.
  *
  * @param formId if is in a form
  * @param maxChars if the input element's value length is greater than this, nothing will be called. Set to 0 to disable.
  * @param setDirty calls setDirty with true
  * @param setUiValue calls setUiValue with the input element's value
  * @param setValueWithSource calls setValueWithSource with the input element's value
- * @param additionalAction optional function to run after the main input change logic
+ * @param additionalAction optional function called with the new value after the main input change logic
  * @return memoized callback
  */
 export default function useOnInputChange({
@@ -86,7 +85,7 @@ export default function useOnInputChange({
 
       // Run additional action after the main logic
       if (additionalAction) {
-        additionalAction()
+        additionalAction(newValue)
       }
     },
     [

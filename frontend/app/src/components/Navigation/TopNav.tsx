@@ -20,7 +20,7 @@ import Overflow from "rc-overflow"
 
 import { StreamlitEndpoints } from "@streamlit/connection"
 import { NavigationContext } from "@streamlit/lib"
-import { IAppPage } from "@streamlit/protobuf"
+import { type AppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
 import SidebarNavLink from "./SidebarNavLink"
@@ -42,6 +42,9 @@ export interface Props {
   widgetsDisabled: boolean
 }
 
+/** A top-nav overflow item: one page, or a section (array of pages). */
+type OverflowNavItem = AppPage.$Properties | AppPage.$Properties[]
+
 const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
   const { pageLinkBaseUrl, currentPageScriptHash, appPages, onPageChange } =
     useContext(NavigationContext)
@@ -50,19 +53,19 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
   const visiblePages = useMemo(() => filterVisiblePages(appPages), [appPages])
 
   const { data, itemKey } = useMemo((): {
-    data: (IAppPage | IAppPage[])[]
-    itemKey: (item: IAppPage | IAppPage[]) => string
+    data: OverflowNavItem[]
+    itemKey: (item: OverflowNavItem) => string
   } => {
     const navSections = groupPagesBySection(visiblePages)
     const processed = processNavigationStructure(navSections)
 
     // Combine individual pages and sections for the overflow component
-    const combinedData: (IAppPage | IAppPage[])[] = [
+    const combinedData: OverflowNavItem[] = [
       ...processed.individualPages,
       ...Object.values(processed.sections),
     ]
 
-    const keyFn = (item: IAppPage | IAppPage[]): string =>
+    const keyFn = (item: OverflowNavItem): string =>
       Array.isArray(item)
         ? (item[0]?.sectionHeader ?? "")
         : (item.pageScriptHash ?? "")
@@ -71,7 +74,7 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
   }, [visiblePages])
 
   const renderItem = useCallback(
-    (item: IAppPage | IAppPage[], _info: unknown) => {
+    (item: OverflowNavItem, _info: unknown) => {
       if (Array.isArray(item)) {
         return (
           <TopNavSection
@@ -123,7 +126,7 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
   )
 
   const renderRest = useCallback(
-    (items: (IAppPage | IAppPage[])[]) => {
+    (items: OverflowNavItem[]) => {
       if (isNullOrUndefined(items)) {
         return null
       }
@@ -132,7 +135,7 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
       const title = `${totalNumPages} more`
 
       // Convert all items to sections format for the overflow menu
-      const sections: IAppPage[][] = items.map(item =>
+      const sections: AppPage.$Properties[][] = items.map(item =>
         Array.isArray(item) ? item : [item]
       )
 
@@ -159,7 +162,7 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
   )
 
   return (
-    <Overflow<IAppPage | IAppPage[]>
+    <Overflow<OverflowNavItem>
       component={StyledOverflowContainer}
       itemKey={itemKey}
       data={data}

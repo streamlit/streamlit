@@ -50,7 +50,7 @@ class GraphvizMixin:
         width: Width = "content",
         height: Height = "content",
     ) -> DeltaGenerator:
-        """Display a graph using the dagre-d3 library.
+        """Display a graph using the d3-graphviz library and Graphviz WASM.
 
         .. Important::
             You must install ``graphviz>=0.19.0`` to use this command. You can

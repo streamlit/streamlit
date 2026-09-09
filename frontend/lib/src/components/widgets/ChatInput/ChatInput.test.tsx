@@ -19,11 +19,14 @@ import { userEvent } from "@testing-library/user-event"
 
 import {
   ChatInput as ChatInputProto,
+  type ChatInputValue,
   FileURLs as FileURLsProto,
-  IChatInputValue,
 } from "@streamlit/protobuf"
 
-import type { WaveformController } from "~lib/components/audio/core/types"
+import type {
+  WaveformController,
+  WaveformControllerEvents,
+} from "~lib/components/audio/core/types"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import {
@@ -83,7 +86,7 @@ const getProps = (
   ...widgetProps,
 })
 
-const mockChatInputValue = (text: string): IChatInputValue => {
+const mockChatInputValue = (text: string): ChatInputValue.$Properties => {
   return {
     data: text,
     fileUploaderState: {
@@ -134,6 +137,20 @@ const createMockWaveformController = (): WaveformController => ({
   destroy: vi.fn().mockReturnValue(undefined),
   setEventHandlers: vi.fn().mockReturnValue(undefined),
 })
+
+const createRecordingController = (): WaveformController => ({
+  ...createMockWaveformController(),
+  state: "recording",
+})
+
+/** Returns the controller events from the most recent useWaveformController call. */
+const getWaveformEvents = (): WaveformControllerEvents => {
+  const lastCall =
+    useWaveformControllerMock.mock.calls[
+      useWaveformControllerMock.mock.calls.length - 1
+    ]
+  return lastCall[0].events as WaveformControllerEvents
+}
 
 describe("ChatInput widget", () => {
   afterEach(() => {
@@ -789,15 +806,12 @@ describe("ChatInput widget", () => {
 
     // Wait for files to be displayed (order-agnostic check)
     await waitFor(() => {
-      const fileNames = screen.getAllByTestId("stFileChipName")
-      expect(fileNames).toHaveLength(2)
-
-      // Check that both files are present using title attribute (full filename)
-      const fileTitles = Array.from(fileNames).map(el =>
-        el.getAttribute("title")
-      )
-      expect(fileTitles).toContain("folder/file1.txt")
-      expect(fileTitles).toContain("folder/file2.txt")
+      expect(
+        screen
+          .getAllByTestId("stFileChipName")
+          .map(el => el.getAttribute("title"))
+          .sort()
+      ).toEqual(["folder/file1.txt", "folder/file2.txt"])
     })
 
     // Find and delete file1
@@ -1004,11 +1018,7 @@ describe("ChatInput widget", () => {
     // We need to trigger the recording flow and get the approve callback
     // Instead, let's directly test by triggering the onApprove event from the mock
 
-    // Find the calls to useWaveformController and get the onApprove callback
-    const mockCalls = useWaveformControllerMock.mock.calls
-    const lastCallArgs = mockCalls[mockCalls.length - 1]
-    const { events } = lastCallArgs[0]
-    const onApprove = events?.onApprove
+    const onApprove = getWaveformEvents().onApprove
 
     // Create a mock audio blob
     const audioBlob = new Blob(["audio data"], { type: "audio/wav" })
@@ -1733,5 +1743,191 @@ describe("ChatInput widget", () => {
       ).not.toBeInTheDocument()
       expect(screen.getByTestId("stChatInputSubmitButton")).toBeDisabled()
     })
+  })
+
+  it("starts recording when the microphone button is clicked", async () => {
+    const user = userEvent.setup()
+    const mockController = createMockWaveformController()
+    useWaveformControllerMock.mockReturnValue(mockController)
+
+    render(<ChatInput {...getProps({ acceptAudio: true })} />)
+
+    await user.click(screen.getByTestId("stChatInputMicButton"))
+
+    expect(mockController.start).toHaveBeenCalledTimes(1)
+    expect(mockController.cancel).not.toHaveBeenCalled()
+  })
+
+  it("approves an in-progress recording", async () => {
+    const user = userEvent.setup()
+    const mockController = createRecordingController()
+    useWaveformControllerMock.mockReturnValue(mockController)
+
+    render(<ChatInput {...getProps({ acceptAudio: true })} />)
+
+    await user.click(screen.getByTestId("stChatInputApproveButton"))
+
+    expect(mockController.stop).toHaveBeenCalledTimes(1)
+    await waitFor(() => {
+      expect(mockController.approve).toHaveBeenCalled()
+    })
+    expect(mockController.start).not.toHaveBeenCalled()
+  })
+
+  it("cancels an in-progress recording", async () => {
+    const user = userEvent.setup()
+    const mockController = createRecordingController()
+    useWaveformControllerMock.mockReturnValue(mockController)
+
+    render(<ChatInput {...getProps({ acceptAudio: true })} />)
+
+    await user.click(screen.getByTestId("stChatInputCancelButton"))
+
+    expect(mockController.cancel).toHaveBeenCalledTimes(1)
+    expect(mockController.approve).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    {
+      description: "when microphone permission is denied",
+      triggerError: (events: WaveformControllerEvents) => {
+        events.onPermissionDenied()
+      },
+      message: "Microphone access denied",
+    },
+    {
+      description: "when the waveform controller reports an error",
+      triggerError: (events: WaveformControllerEvents) => {
+        events.onError(new Error("device failed"))
+      },
+      message: "Recording failed",
+    },
+  ])(
+    "shows a recording error $description",
+    async ({ triggerError, message }) => {
+      const user = userEvent.setup()
+      render(<ChatInput {...getProps({ acceptAudio: true })} />)
+
+      act(() => {
+        triggerError(getWaveformEvents())
+      })
+
+      await user.hover(screen.getByTestId("stChatInputMicButton"))
+      expect(await screen.findByText(message)).toBeVisible()
+    }
+  )
+
+  it("clears a recording error when the user starts typing", async () => {
+    const user = userEvent.setup()
+    render(<ChatInput {...getProps({ acceptAudio: true })} />)
+
+    act(() => {
+      getWaveformEvents().onError(new Error("device failed"))
+    })
+
+    await user.hover(screen.getByTestId("stChatInputMicButton"))
+    expect(await screen.findByText("Recording failed")).toBeVisible()
+
+    await user.type(screen.getByTestId("stChatInputTextArea"), "hello")
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stTooltipErrorHoverTarget")
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it("shows a recording error when audio upload URL fetch returns nothing", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ acceptAudio: true })
+    props.uploadClient.fetchFileURLs = vi.fn().mockResolvedValue([])
+    render(<ChatInput {...props} />)
+
+    await act(async () => {
+      await getWaveformEvents().onApprove?.(
+        new Blob(["audio data"], { type: "audio/wav" })
+      )
+    })
+
+    await user.hover(screen.getByTestId("stChatInputMicButton"))
+    expect(await screen.findByText("Recording failed")).toBeVisible()
+    expect(props.uploadClient.uploadFile).not.toHaveBeenCalled()
+  })
+
+  it("retries a failed file upload when the chip is clicked", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      acceptFile: ChatInputProto.AcceptFile.SINGLE,
+      maxUploadSizeMb: 50,
+    })
+    props.uploadClient.fetchFileURLs = vi
+      .fn()
+      .mockRejectedValueOnce("upload failed")
+      .mockImplementation((acceptedFiles: File[]) =>
+        Promise.resolve(
+          acceptedFiles.map(
+            file =>
+              new FileURLsProto({
+                fileId: file.name,
+                uploadUrl: file.name,
+                deleteUrl: file.name,
+              })
+          )
+        )
+      )
+
+    render(<ChatInput {...props} />)
+
+    const fileUploadInput = screen
+      .getByTestId("stChatInputFileUploadButton")
+      .querySelector("input") as HTMLInputElement
+    const file = new File(["content"], "retry.txt", { type: "text/plain" })
+    await user.upload(fileUploadInput, file)
+
+    const retryChip = await screen.findByTitle("Click to retry upload")
+    await user.click(retryChip)
+
+    await waitFor(() => {
+      expect(props.uploadClient.fetchFileURLs).toHaveBeenCalledTimes(2)
+    })
+    expect(props.uploadClient.uploadFile).toHaveBeenCalled()
+    await waitFor(() => {
+      expect(
+        screen.queryByTitle("Click to retry upload")
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it("shows a drop overlay while files are dragged over the window", () => {
+    render(
+      <ChatInput
+        {...getProps({
+          acceptFile: ChatInputProto.AcceptFile.SINGLE,
+          maxUploadSizeMb: 50,
+        })}
+      />
+    )
+
+    act(() => {
+      const dragOver = new Event("dragover", {
+        bubbles: true,
+        cancelable: true,
+      })
+      Object.defineProperty(dragOver, "dataTransfer", {
+        value: { types: ["Files"] },
+      })
+      window.dispatchEvent(dragOver)
+    })
+
+    expect(screen.getByText("Drag and drop a file here")).toBeVisible()
+
+    act(() => {
+      window.dispatchEvent(
+        new Event("drop", { bubbles: true, cancelable: true })
+      )
+    })
+
+    expect(
+      screen.queryByText("Drag and drop a file here")
+    ).not.toBeInTheDocument()
   })
 })

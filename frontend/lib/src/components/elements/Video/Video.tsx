@@ -18,7 +18,7 @@ import { memo, ReactElement, useEffect, useMemo, useRef } from "react"
 
 import { getLogger } from "loglevel"
 
-import { ISubtitleTrack, Video as VideoProto } from "@streamlit/protobuf"
+import { type SubtitleTrack, Video as VideoProto } from "@streamlit/protobuf"
 
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
@@ -256,7 +256,7 @@ function Video({
       crossOrigin={crossOrigin}
       onError={handleVideoError}
     >
-      {subtitles?.map((subtitle: ISubtitleTrack, idx: number) => (
+      {subtitles?.map((subtitle: SubtitleTrack.$Properties, idx: number) => (
         <track
           // TODO: Update to match React best practices
           // eslint-disable-next-line @eslint-react/no-array-index-key

@@ -89,7 +89,7 @@ def text_input(
 | `live` | `str \| bool` | `False` | Whether the widget commits while the user types, after a pause. |
 
 - `False` (default): current behavior — commit on blur, Enter, or clearing a search input.
-- `True`: live updates after a 300ms pause.
+- `True`: live updates after a 250ms pause.
 - Duration string (same format as `ttl` in `st.cache_data`, e.g. `"300ms"`, `"0.5s"`): live
   updates after that pause. Any zero-length duration (`"0ms"`, `"0s"`, `"0"`) commits on every
   accepted user-originated value change.
@@ -99,18 +99,30 @@ def text_input(
 The pause is a debounce (wait for quiet), not a throttle. Exact parsing, protobuf encoding, and
 timer details are deferred to the tech spec.
 
+**Default delay rationale:** The 250ms default balances perceived responsiveness against rerun
+frequency. A large-scale typing study measured a mean inter-key interval of 238.7ms across 168,960
+participants, with fast typists averaging about 120ms and slow typists exceeding 480ms
+([Dhakal et al., CHI 2018](https://userinterfaces.aalto.fi/136Mkeystrokes/resources/chi-18-analysis.pdf)).
+A delay below 200ms is therefore more likely to expire during ordinary typing, while 300ms adds a
+noticeable pause before Streamlit even begins the WebSocket round trip, Python rerun, and rendering.
+Search latency experiments have found behavioral effects from as little as 100ms of added delay
+([Teevan et al., HCIR 2013](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/04/hcir13.pdf)).
+The default is a general-purpose compromise rather than a universal optimum: cheap fragment-scoped
+filtering can use `live="200ms"`, while expensive or remote work should generally use 300–500ms.
+
 ### Behavior
 
 | `live` value | Behavior |
 | ------------ | -------- |
 | `False` (default) | Commit on blur, Enter, or clearing a `type="search"` input (current behavior) |
-| `True` | Commit after 300ms of inactivity following an accepted user-originated value change |
+| `True` | Commit after 250ms of inactivity following an accepted user-originated value change |
 | `str` (e.g. `"300ms"`, `"0.5s"`, `"1s"`) | Same, with the given pause (same format as `ttl`) |
 | zero-length duration (`"0ms"`, `"0s"`, `"0"`) | Commit on every accepted user-originated value change (no pause). **Warning:** Use sparingly — can cause excessive reruns with expensive app logic. |
 | bare `int` / `float` (e.g. `300`, `0.3`) | Raises `StreamlitAPIException` — unlike `ttl` / `run_every`, bare numbers are not accepted (those APIs treat numbers as seconds; `streamlit-keyup` users would read `300` as milliseconds). Use `True`, a duration string like `"300ms"`, or `"0ms"`. |
 | `timedelta` | Raises `StreamlitAPIException` in v1 (deferred; see Alternatives). |
 | negative duration string (e.g. `"-1s"`) | Raises `StreamlitAPIException` — `time_to_seconds` / `pd.Timedelta` parse negatives successfully, so the implementation must reject them explicitly rather than relying on `ttl` validation. |
 | invalid string (e.g. `"soon"`) | Raises `StreamlitAPIException` (`StreamlitBadTimeStringError`) — same unparseable-string path as `ttl` |
+| duration above 1 minute (e.g. `"2m"`, `"61s"`) | Raises `StreamlitAPIException` (`StreamlitValueOutOfRangeError`) — live debounce is capped at 1 minute so a typo like `"60m"` or `"2h"` cannot schedule a multi-day pause. |
 
 **What starts the timer:** Accepted user-originated value changes (typing, paste, cut, drop,
 autofill, voice/assistive input). Programmatic updates (script-driven `value` / session-state
@@ -130,7 +142,7 @@ search UI in a fragment is the recommended way to keep typing from rerunning the
 ("one rerun per interaction") — a single typing session can trigger multiple reruns. This exception
 is acceptable because it is the explicit purpose of the feature and, for `True` and positive
 durations, the rerun rate is *bounded* by the delay. Zero-length and very short durations remove
-or nearly remove that bound. Even the 300ms default can fire mid-word for slower or assistive
+or nearly remove that bound. Even the 250ms default can fire mid-word for slower or assistive
 typing (head-pointer, switch access, on-screen keyboard). The performance warning therefore applies
 to live mode in general, with stronger wording for zero and short custom delays. The default
 (`False`) fully preserves one-rerun-per-interaction behavior.
@@ -157,8 +169,8 @@ submit form" is unchanged.
   `type="search"` with `live=True` for search fields. `type="search"` does **not** turn live
   updates on by itself (opt-in, Principle 26); it is orthogonal to [#10744](https://github.com/streamlit/streamlit/issues/10744),
   which shipped the search *chrome* (icon, clear control). This spec is the live *commit timing*.
-- `live="0.5s"` (or `"300ms"`) when you need specific timing control — duration strings make the
-  unit explicit
+- `live="200ms"` for cheap fragment-scoped filtering, or 300–500ms for expensive or remote work.
+  Duration strings make the unit explicit.
 - Any live value other than `False` increases rerun frequency. Zero-length and very short delays
   can overload the server for apps with expensive computations (ML inference, large data loads).
   Prefer a fragment around the live UI.
@@ -176,7 +188,7 @@ import streamlit as st
 
 st.title("Product Search")
 
-# live=True uses a sensible default pause (300ms).
+# live=True uses a sensible default pause (250ms).
 # type="search" is optional chrome; it does not enable live updates by itself.
 query = st.text_input("Search products", type="search", live=True)
 
@@ -290,11 +302,10 @@ if email:
     history entry per pause — so the Back button doesn't step through every partial query the
     user typed. A shared/reloaded URL therefore reflects the value as of the last live commit.
 
-11. **Widget identity**: An optional `False` default is not enough for compatibility. Unkeyed
-    `text_input` IDs hash kwargs passed to `compute_and_register_element_id`. `live` must be
-    identity-neutral when omitted or `False` (same pattern as unset `validate`), otherwise
-    upgrading Streamlit resets every existing text input's state. A non-default `live` value may
-    be part of identity so that toggling live mode can reset the widget.
+11. **Widget identity:** `live` omitted and `False` share an ID. A non-default delay is part of
+    unkeyed identity so toggling live mode remounts the widget. Keyed widgets keep their ID when
+    `live` changes (`live` is not in `key_as_main_identity`). Always pass identity kwargs,
+    including `None` when off; matching hashes from a previous Streamlit version is not required.
 
 ## Alternatives Considered
 
@@ -343,7 +354,7 @@ and is in good company with existing terse behavioral flags (`parallel`, `lazy`)
 **Excluded names:** `keyup` (DOM jargon; also wrong for paste / voice / IME), `auto_submit` (collides
 with the terminal "submit" meaning in `st.form` and `st.chat_input`'s `submit_mode`), `on_input`
 (`on_*` means a callback in Streamlit), `update_on` (good as a finite enum, poor at also carrying a
-duration), and `realtime` (over-promises — a 300ms-debounced server rerun isn't real-time).
+duration), and `realtime` (over-promises — a 250ms-debounced server rerun isn't real-time).
 
 **Value shape:** `run_every`, `ttl`, and `toast(duration=...)` all treat a bare number as *seconds*,
 so `live=300` meaning *milliseconds* would be inconsistent (Principles 7 and 10), and `"300ms"` is
@@ -417,7 +428,7 @@ contradiction.
 | Item                         | ✅ or comment |
 | ---------------------------- | ------------- |
 | Works on SiS, Cloud, etc?    | ✅ coordinated Python + protobuf + frontend; live commits use the widget's existing rerun scope |
-| No breaking API changes      | ✅ new optional parameter; `live` omitted or `False` must be identity-neutral so existing unkeyed text inputs keep their state |
+| No breaking API changes      | ✅ new optional parameter; omitted and `False` share an ID; keyed widgets stay stable when `live` changes |
 | No new dependencies          | ✅ |
 | Metrics collected            | ✅ existing text_input metrics apply |
 | Any security/legal impact?   | ✅ None |

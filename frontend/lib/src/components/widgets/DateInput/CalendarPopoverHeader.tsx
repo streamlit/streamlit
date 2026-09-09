@@ -127,11 +127,22 @@ function HeaderPickerSelect({
     []
   )
 
+  const handleChange = useCallback(
+    (key: Key | Key[] | null): void => {
+      // React Aria Components' Select.onChange can pass Key[] for multi-select;
+      // this picker is single-select.
+      if (!Array.isArray(key)) {
+        onChange(key)
+      }
+    },
+    [onChange]
+  )
+
   return (
     <StyledCalendarHeaderSelect
       aria-label={ariaLabel}
-      selectedKey={value}
-      onSelectionChange={onChange}
+      value={value}
+      onChange={handleChange}
       isOpen={isOpen}
       onOpenChange={setIsOpen}
     >

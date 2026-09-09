@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { CalendarDateTime } from "@internationalized/date"
+import { CalendarDate, CalendarDateTime, Time } from "@internationalized/date"
 
 import { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
 
@@ -215,11 +215,15 @@ export interface SegmentState {
   isFullyCleared: boolean
 }
 
-/** Query spinbutton segments in a container to determine their placeholder state. */
+/** Editable segments. Matched on `data-type` rather than `role`, which React Aria
+ * replaces with `textbox` on iOS. Literals are the separators between segments. */
+export const SEGMENT_SELECTOR = '[data-type]:not([data-type="literal"])'
+
+/** Query the editable segments in a container to determine their placeholder state. */
 export function getSegmentState(container: HTMLElement): SegmentState {
-  const segments = container.querySelectorAll('[role="spinbutton"]')
+  const segments = container.querySelectorAll(SEGMENT_SELECTOR)
   const placeholders = container.querySelectorAll(
-    '[role="spinbutton"][data-placeholder="true"]'
+    `${SEGMENT_SELECTOR}[data-placeholder="true"]`
   )
   const totalSegments = segments.length
   const placeholderCount = placeholders.length
@@ -229,6 +233,92 @@ export function getSegmentState(container: HTMLElement): SegmentState {
     isPartiallyTyped: placeholderCount > 0 && placeholderCount < totalSegments,
     isFullyCleared: totalSegments > 0 && placeholderCount === totalSegments,
   }
+}
+
+const SEGMENT_MAX = {
+  hour: 23,
+  minute: 59,
+  year: 9999,
+  month: 12,
+  day: 31,
+} as const
+
+/**
+ * Recover one segment's value from the DOM, for the window before the field has
+ * emitted an `onChange`. Null when the segment is absent, still a placeholder, or
+ * outside its range.
+ *
+ * Matches on `data-type` rather than `role`, so iOS is included: React Aria
+ * renders segments there as textboxes, not spinbuttons, and drops
+ * `aria-valuenow`, hence the `textContent` fallback. Safe to parse — both fields
+ * are pinned to en-US so the digits are ASCII, and `shouldForceLeadingZeros` only
+ * ever prefixes a zero. The `data-placeholder` filter also guards that fallback,
+ * where a placeholder's dashes would otherwise parse.
+ *
+ * Range-guarded so a value the caller cannot represent degrades to "not given"
+ * rather than reaching a `Time` or `CalendarDate` constructor: `Time` stores
+ * whatever it is handed, and `CalendarDate` silently clamps.
+ */
+function readSegment(
+  container: HTMLElement | null,
+  type: keyof typeof SEGMENT_MAX
+): number | null {
+  const max = SEGMENT_MAX[type]
+  const segment = container?.querySelector(
+    `[data-type="${type}"]:not([data-placeholder="true"])`
+  )
+  if (!segment) return null
+  const raw = segment.getAttribute("aria-valuenow") ?? segment.textContent
+  if (!raw) return null
+  const parsed = Number(raw)
+  return Number.isInteger(parsed) && parsed >= 0 && parsed <= max
+    ? parsed
+    : null
+}
+
+/**
+ * Read hour and minute from a container's rendered segments, for the window
+ * before the field has emitted an `onChange`. Returns null when neither is
+ * filled.
+ *
+ * `DateField` and `TimeField` both withhold `onChange` until every one of their
+ * segments is filled, so a time entered while its partner segments are still
+ * placeholders reaches no handler — the rendered segments are its only record.
+ * An unfilled half of the pair counts as 0, so a lone hour or minute survives.
+ *
+ * Assumes a 24-hour cycle and no seconds segment: with `hourCycle={12}` the hour
+ * reports 1–12 and needs the `dayPeriod` segment to disambiguate, and a `second`
+ * segment would be ignored.
+ */
+export function getTypedTimeFromDom(
+  container: HTMLElement | null
+): Time | null {
+  const hour = readSegment(container, "hour")
+  const minute = readSegment(container, "minute")
+  if (hour === null && minute === null) return null
+  return new Time(hour ?? 0, minute ?? 0)
+}
+
+/**
+ * Read year, month and day from a container's rendered segments, before the
+ * field has emitted an `onChange`. Returns null unless all three are filled and
+ * form a real date.
+ *
+ * Unlike a time, a date has nothing to default: a missing part means no date.
+ * The day segment's maximum is the longest month rather than the current one, so
+ * `2025/02/30` is typeable — the `CalendarDate` constructor clamps it to Feb 28,
+ * so reading the day back out rejects it. Same check `isoToCalendarDateTime` uses.
+ */
+export function getTypedDateFromDom(
+  container: HTMLElement | null
+): CalendarDate | null {
+  const year = readSegment(container, "year")
+  const month = readSegment(container, "month")
+  const day = readSegment(container, "day")
+  if (year === null || month === null || day === null) return null
+  if (year < 1 || month < 1 || day < 1) return null
+  const result = new CalendarDate(year, month, day)
+  return result.day === day ? result : null
 }
 
 // --- useBasicWidgetState integration ---

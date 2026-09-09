@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { createRef, PureComponent, ReactNode } from "react"
+import { createRef, type JSX, PureComponent, ReactNode } from "react"
 
 import { enableMapSet, enablePatches } from "immer"
 import { getLogger } from "loglevel"
@@ -125,6 +125,7 @@ import {
   WidgetStateManager,
 } from "@streamlit/lib"
 import {
+  type AppPage,
   AuthRedirect,
   AutoRerun,
   BackendOperationResponse,
@@ -136,9 +137,6 @@ import {
   ForwardMsg,
   ForwardMsgMetadata,
   GitInfo,
-  IAppPage,
-  ICustomThemeConfig,
-  IGitInfo,
   Initialize,
   Logo,
   Navigation,
@@ -197,21 +195,21 @@ interface State {
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
   initialSidebarWidth?: number
-  menuItems?: PageConfig.IMenuItems | null
+  menuItems?: PageConfig.MenuItems.$Properties | null
   allowRunOnSave: boolean
   scriptFinishedHandlers: (() => void)[]
   toolbarMode: Config.ToolbarMode
   showErrorLinks: Config.ShowErrorLinks
   disableDataExport: boolean
   themeHash: string
-  gitInfo: IGitInfo | null
+  gitInfo: GitInfo.$Properties | null
   formsData: FormsData
   hideTopBar: boolean
   hideSidebarNav: boolean
   expandSidebarNav: boolean
   sidebarNavVisibleItems?: number
   navigationPosition: Navigation.Position
-  appPages: IAppPage[]
+  appPages: AppPage.$Properties[]
   navSections: string[]
   // The hash of the current page executing
   currentPageScriptHash: string
@@ -951,7 +949,7 @@ export class App extends PureComponent<Props, State> {
    */
   handleThemeMessage = (
     themeName?: PresetThemeName,
-    theme?: ICustomThemeConfig
+    theme?: CustomThemeConfig.$Properties
   ): void => {
     const [, lightTheme, darkTheme] = createPresetThemes()
     const isUsingPresetTheme = isPresetTheme(this.props.theme.activeTheme)
@@ -1051,7 +1049,7 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  handleGitInfoChanged = (gitInfo: IGitInfo): void => {
+  handleGitInfoChanged = (gitInfo: GitInfo.$Properties): void => {
     this.setState({
       gitInfo,
     })
@@ -1256,7 +1254,15 @@ export class App extends PureComponent<Props, State> {
     const { queryString } = pageInfo
     const targetUrl =
       document.location.pathname + (queryString ? `?${queryString}` : "")
-    window.history.pushState({}, "", targetUrl)
+    const currentSearch = document.location.search.replace(/^\?/, "")
+
+    // `pushState` always adds a history entry, even when the resulting URL is
+    // identical, so reruns that re-assign the same query params would otherwise
+    // fill the back stack with no-op entries. React state and the host message
+    // below are still updated so embeds stay in sync.
+    if (queryString !== currentSearch) {
+      window.history.pushState({}, "", targetUrl)
+    }
 
     this.setState({ queryParams: queryString })
 

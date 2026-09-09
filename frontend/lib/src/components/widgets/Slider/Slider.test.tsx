@@ -794,4 +794,41 @@ describe("on_change='ignore' mode", () => {
       }
     )
   })
+
+  it("passes triggerRerun: false for select_slider with setStringArrayValue", async () => {
+    const props = getProps({
+      ignoreRerun: true,
+      default: [1],
+      min: 0,
+      max: 6,
+      format: "%s",
+      type: SliderProto.Type.SELECT_SLIDER,
+      options: [
+        "red",
+        "orange",
+        "yellow",
+        "green",
+        "blue",
+        "indigo",
+        "violet",
+      ],
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<Slider {...props} />)
+
+    const slider = screen.getByRole("slider")
+    await triggerChangeEvent(slider, "ArrowRight")
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      ["yellow"],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+  })
 })

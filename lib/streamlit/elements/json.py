@@ -17,10 +17,11 @@ from __future__ import annotations
 import json
 import types
 from collections import ChainMap, UserDict
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.errors import StreamlitInvalidParameterTypeError
+from streamlit.logger import get_logger
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.type_util import (
@@ -36,6 +37,8 @@ from streamlit.user_info import UserInfoProxy
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
+
+_LOGGER: Final = get_logger(__name__)
 
 
 def _ensure_serialization(o: object) -> str | list[Any]:
@@ -138,10 +141,15 @@ class JsonMixin:
                 # Serialize body to string and try to interpret sets as lists
                 body = json.dumps(body, default=_ensure_serialization)
             except TypeError as err:
-                self.dg.warning(
-                    "Warning: this data structure was not fully serializable as "
+                # Incomplete JSON still gets an in-app warning; also log it
+                # with a stack trace so CLI and agent users can find the call
+                # site.
+                warning_message = (
+                    "this data structure was not fully serializable as "
                     f"JSON due to one or more unexpected keys.  (Error was: {err})"
                 )
+                _LOGGER.warning("%s", warning_message, stack_info=True)
+                self.dg.warning(f"Warning: {warning_message}")
                 body = json.dumps(body, skipkeys=True, default=_ensure_serialization)
 
         json_proto = JsonProto()
