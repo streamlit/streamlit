@@ -539,7 +539,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
         ]
     )
     def test_min_max_exception(self, min_value, max_value, value):
-        """min_value after max_value raises StreamlitInvalidMinMaxError."""
+        """Inverted bounds raise StreamlitInvalidMinMaxError."""
         with pytest.raises(StreamlitInvalidMinMaxError, match="cannot be greater than"):
             st.number_input(
                 "the label", min_value=min_value, max_value=max_value, value=value
@@ -560,6 +560,10 @@ class NumberInputTest(DeltaGeneratorTestCase):
         st.number_input(
             "the label", min_value=min_value, max_value=max_value, value=value
         )
+
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.min == min_value
+        assert c.max == max_value
 
     def test_session_state_value_out_of_range_resets_to_default(self):
         """Test that out of range session_state values reset to default.
