@@ -268,6 +268,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      actions: write
 
     defaults:
       run:
@@ -343,6 +344,7 @@ jobs:
           CHANGES_SUMMARY: ${{ steps.apply-patch.outputs.changes_summary }}
           SOURCE_PR_NUMBER: ${{ env.PR_NUMBER }}
           BASE_BRANCH: ${{ needs.ai-update-docs.outputs.base_branch || 'develop' }}
+          DISPATCH_REF: ${{ github.ref_name }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -399,7 +401,17 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: pr.number,
-              labels: ['change:docs', 'impact:internal'],
+              labels: ['change:docs', 'impact:internal', 'ai-final-review'],
+            });
+
+            // GITHUB_TOKEN cannot trigger other workflows via `labeled`, so
+            // dispatch the final AI review after applying the trigger label.
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ai-pr-review.yml',
+              ref: process.env.DISPATCH_REF,
+              inputs: { pr_number: String(pr.number) },
             });
 
       - name: Write step summary

@@ -28,6 +28,10 @@ jobs:
   parse-models:
     if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'ai-review' || github.event.label.name == 'ai-final-review'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
     outputs:
       models_json: ${{ steps.parse.outputs.models_json }}
       model_count: ${{ steps.parse.outputs.model_count }}
@@ -52,10 +56,25 @@ jobs:
         id: parse
         env:
           EVENT_LABEL: ${{ github.event.label.name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
         run: |
           REVIEW_LABEL=""
           if [ "$EVENT_LABEL" = "ai-review" ] || [ "$EVENT_LABEL" = "ai-final-review" ]; then
             REVIEW_LABEL="$EVENT_LABEL"
+          fi
+
+          # workflow_dispatch has no labeled event. Honor review labels already on
+          # the PR so automated AI workflows can request a final review: adding a
+          # label with GITHUB_TOKEN does not start other `labeled` workflows.
+          if [ -z "$REVIEW_LABEL" ] && [ -n "$PR_NUMBER_ENV" ]; then
+            PR_LABELS=$(gh api "repos/$REPOSITORY/issues/$PR_NUMBER_ENV/labels" --jq '.[].name')
+            if echo "$PR_LABELS" | grep -Fxq "ai-final-review"; then
+              REVIEW_LABEL="ai-final-review"
+            elif echo "$PR_LABELS" | grep -Fxq "ai-review"; then
+              REVIEW_LABEL="ai-review"
+            fi
           fi
 
           if [ "$REVIEW_LABEL" = "ai-final-review" ]; then
@@ -423,18 +442,23 @@ jobs:
 
     steps:
       - name: Remove AI review request label
-        if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
           REPOSITORY: ${{ github.repository }}
           EVENT_LABEL: ${{ github.event.label.name }}
+          TRIGGER_LABEL: ${{ needs.parse-models.outputs.trigger_label }}
         run: |
-          # Derive the label to remove from the triggering event rather than the
-          # parse-models output, so the label is still cleaned up even if the parse
-          # step failed. The equality checks keep removal limited to known labels.
+          # Prefer the triggering labeled event so the label is still cleaned up
+          # if parse-models failed. Fall back to parse-models for workflow_dispatch.
+          LABEL_TO_REMOVE=""
           if [ "$EVENT_LABEL" = "ai-review" ] || [ "$EVENT_LABEL" = "ai-final-review" ]; then
-            gh pr edit "$PR_NUMBER_ENV" --remove-label "$EVENT_LABEL" --repo "$REPOSITORY" || true
+            LABEL_TO_REMOVE="$EVENT_LABEL"
+          elif [ "$TRIGGER_LABEL" = "ai-review" ] || [ "$TRIGGER_LABEL" = "ai-final-review" ]; then
+            LABEL_TO_REMOVE="$TRIGGER_LABEL"
+          fi
+          if [ -n "$LABEL_TO_REMOVE" ]; then
+            gh pr edit "$PR_NUMBER_ENV" --remove-label "$LABEL_TO_REMOVE" --repo "$REPOSITORY" || true
           fi
 
       - name: Download consolidated review
