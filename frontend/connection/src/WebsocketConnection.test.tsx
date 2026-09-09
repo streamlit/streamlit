@@ -1066,7 +1066,7 @@ If you are trying to access a Streamlit app running on another server, this coul
       .mockResolvedValueOnce(createSuccessResponse({}))
       .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
-    let cancelPing: (() => void) | undefined
+    let cancelPing: (() => void) | undefined = undefined
     const retryCallback: OnRetry = vi.fn(() => {
       cancelPing?.()
     })
