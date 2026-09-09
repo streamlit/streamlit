@@ -77,6 +77,16 @@ class SelectboxTest(DeltaGeneratorTestCase):
         ):
             st.selectbox("the label", ("m", "f"), on_change=mode)  # type: ignore[arg-type]
 
+    @parameterized.expand([("ignore",), ("rerun",)])
+    def test_on_change_mode_not_supported_inside_form(self, mode: str) -> None:
+        """Mode strings inside a form still get the unsupported-mode error."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=f'`on_change="{mode}"` is not supported on this widget',
+        ):
+            with st.form("form"):
+                st.selectbox("the label", ("m", "f"), on_change=mode)  # type: ignore[arg-type]
+
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
         st.selectbox("the label", ("m", "f"), disabled=True)

@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, get_args
 
 from streamlit import config, errors, logger, runtime
 from streamlit.elements.lib.form_utils import is_in_form
@@ -27,7 +27,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     in_cached_function,
 )
 from streamlit.runtime.state import WidgetCallback, get_session_state
-from streamlit.runtime.state.common import require_valid_user_key
+from streamlit.runtime.state.common import OnChangeMode, require_valid_user_key
 from streamlit.string_util import to_str
 
 if TYPE_CHECKING:
@@ -39,9 +39,14 @@ if TYPE_CHECKING:
 _LOGGER: Final = logger.get_logger(__name__)
 
 
-def check_callback_rules(dg: DeltaGenerator, on_change: WidgetCallback | None) -> None:
+def check_callback_rules(dg: DeltaGenerator, on_change: object) -> None:
     """Ensures that widgets other than `st.form_submit_button` within a form don't have
     an on_change callback set.
+
+    Leftover ``"ignore"`` / ``"rerun"`` strings are not callbacks. Widgets that
+    support those modes convert them to ``None`` before this check; if a mode
+    string still arrives here, ``register_widget`` reports that the widget
+    does not support it.
 
     Raises
     ------
@@ -49,8 +54,13 @@ def check_callback_rules(dg: DeltaGenerator, on_change: WidgetCallback | None) -
         Raised when the described rule is violated.
     """
 
-    if runtime.exists() and is_in_form(dg) and on_change is not None:
-        raise StreamlitInvalidFormCallbackError()
+    if not runtime.exists() or not is_in_form(dg) or on_change is None:
+        return
+
+    if isinstance(on_change, str) and on_change in get_args(OnChangeMode):
+        return
+
+    raise StreamlitInvalidFormCallbackError()
 
 
 _shown_default_value_warning: bool = False

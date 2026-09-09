@@ -300,7 +300,11 @@ def require_valid_user_key(key: str) -> None:
         )
 
 
-def validate_on_change_mode(on_change: WidgetCallback | OnChangeMode | None) -> None:
+def validate_on_change_mode(
+    on_change: WidgetCallback | OnChangeMode | None,
+    *,
+    param_name: str = "on_change",
+) -> None:
     """Reject `on_change` values that are neither a callback nor a supported mode.
 
     `None` is accepted as a legacy alias for `"rerun"`.
@@ -318,6 +322,6 @@ def validate_on_change_mode(on_change: WidgetCallback | OnChangeMode | None) -> 
     supported_modes = get_args(OnChangeMode)
     if not isinstance(on_change, str) or on_change not in supported_modes:
         raise StreamlitValueError(
-            "on_change",
+            param_name,
             [repr(mode) for mode in supported_modes] + ["a callback function"],
         )

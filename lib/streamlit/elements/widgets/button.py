@@ -67,6 +67,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.runtime.state.query_params import process_query_params
 from streamlit.string_util import to_help_str, to_str, validate_icon_or_emoji
@@ -1386,6 +1387,8 @@ class ButtonMixin:
         key = to_key(key)
         label = "" if label is None else to_str(label)
 
+        validate_on_change_mode(on_click, param_name="on_click")
+
         on_click_callback: WidgetCallback | None = (
             None
             if on_click is None or on_click in {"ignore", "rerun"}
@@ -1497,6 +1500,7 @@ class ButtonMixin:
     ) -> bool | DeltaGenerator:
         key = to_key(key)
         label = "" if label is None else to_str(label)
+        validate_on_change_mode(on_click, param_name="on_click")
         ignore_rerun = on_click == "ignore"
         is_rerun_mode = not ignore_rerun
         on_click_callback: WidgetCallback | None = (

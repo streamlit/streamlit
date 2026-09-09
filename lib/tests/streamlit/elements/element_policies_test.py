@@ -61,6 +61,21 @@ class CheckCallbackRulesTest(ElementPoliciesTest):
 
         assert "is not allowed." in str(e.value)
 
+    @patch("streamlit.elements.lib.policies.is_in_form", MagicMock(return_value=True))
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_check_callback_rules_allows_leftover_mode_strings(self):
+        """Mode strings are not callbacks; register_widget reports they are unsupported."""
+        check_callback_rules(MagicMock(), "ignore")
+        check_callback_rules(MagicMock(), "rerun")
+
+    @patch("streamlit.elements.lib.policies.is_in_form", MagicMock(return_value=True))
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_check_callback_rules_error_for_non_mode_string(self):
+        with pytest.raises(StreamlitAPIException) as e:
+            check_callback_rules(MagicMock(), "not-a-mode")
+
+        assert "is not allowed." in str(e.value)
+
 
 class CheckSessionStateRules(ElementPoliciesTest):
     @patch("streamlit.elements.lib.policies._LOGGER")

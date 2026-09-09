@@ -231,8 +231,11 @@ def _validate_on_change_handler(on_change_handler: object, param_name: str) -> N
     """Reject values that are not a callback or ``None``.
 
     Widgets that support ``on_change="ignore"`` / ``"rerun"`` convert those
-    modes to ``None`` before calling ``register_widget``. Passing a mode
-    string through is an unsupported widget, not a malformed callback.
+    modes to ``None`` before calling ``register_widget``. If a mode string
+    still reaches this function, the calling widget does not support callback
+    modes. The argument is typed as ``object`` so that branch stays reachable
+    under mypy; ``register_widget`` still annotates it as
+    ``WidgetCallback | None``.
     """
     if on_change_handler is None or callable(on_change_handler):
         return
