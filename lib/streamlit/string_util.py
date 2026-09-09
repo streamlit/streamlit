@@ -79,9 +79,10 @@ def is_material_icon(maybe_icon: str) -> bool:
     return maybe_icon in ALL_MATERIAL_ICONS
 
 
-def _raise_invalid_image(icon: object) -> NoReturn:
+def _raise_invalid_image(icon: str) -> NoReturn:
+    shown = icon if len(icon) <= 60 else f"{icon[:60]}…"
     raise StreamlitAPIException(
-        f'The value "{icon}" looks like a URL. Images are not supported '
+        f'The value "{shown}" looks like a URL. Images are not supported '
         f"for `icon`. {_ICON_FORMAT_HINT} To follow support for image icons, "
         "see https://github.com/streamlit/streamlit/issues/9770.",
         error_id="invalid-image",
@@ -97,7 +98,8 @@ def validate_icon_or_emoji(icon: str | None) -> str:
     """Validate an icon or emoji and return it in normalized form if valid.
 
     ``None`` and whitespace-only strings mean no icon. URL-shaped values
-    raise ``invalid-image``; images are not loaded.
+    raise ``StreamlitAPIException`` with ``error_id="invalid-image"``
+    without fetching.
     """
     if icon is None:
         return ""
@@ -116,8 +118,7 @@ def validate_icon_or_emoji(icon: str | None) -> str:
     if icon == "spinner":
         return "spinner"
 
-    # Material and ``:rocket:``-style shortcodes both start with ``:``.
-    # Skip those parsers for emoji and plain labels.
+    # Only values starting with ":" can be Material or emoji shortcodes.
     if icon.startswith(":"):
         # Prefer Material so unknown names raise invalid-material-icon, not
         # invalid-emoji.

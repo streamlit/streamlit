@@ -282,6 +282,17 @@ class StringUtilTest(unittest.TestCase):
             string_util.validate_icon_or_emoji(icon)
         assert e.value.error_id == error_id
 
+    def test_validate_icon_or_emoji_truncates_long_invalid_image_values(self) -> None:
+        """Long URL-shaped values must not dump their full contents into the exception."""
+        icon = "data:image/png;base64," + "A" * 200
+        with pytest.raises(StreamlitAPIException) as e:
+            string_util.validate_icon_or_emoji(icon)
+        assert e.value.error_id == "invalid-image"
+        message = str(e.value)
+        assert icon not in message
+        assert "A" * 200 not in message
+        assert "…" in message
+
     def test_validate_icon_or_emoji_rejects_non_string(self) -> None:
         """Non-string values raise StreamlitInvalidParameterTypeError, not AttributeError."""
         with pytest.raises(StreamlitInvalidParameterTypeError) as e:

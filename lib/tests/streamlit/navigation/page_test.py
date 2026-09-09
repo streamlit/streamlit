@@ -122,6 +122,10 @@ class StPagesTest(DeltaGeneratorTestCase):
         page = st.Page("1_👋_hello.py", icon="")
         assert page.icon == ""
 
+    def test_filename_emoji_is_inferred_when_icon_is_omitted(self) -> None:
+        """A leading emoji in the filename becomes the page icon when icon is None."""
+        assert st.Page("1_👋_hello.py").icon == "👋"
+
     def test_user_provided_icon_is_normalized(self) -> None:
         """User-provided icons are stored in normalized form."""
         page = st.Page("page.py", icon=" :material/thumb_up: ")
