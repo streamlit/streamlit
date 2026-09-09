@@ -68,7 +68,7 @@ greenTextColor = "#116329"         # Darkened for readability
 
 ### Chart colors
 
-Define colors for Plotly, Altair, and Vega-Lite charts. These can be set in
+Define colors for Plotly, Altair, Vega-Lite, and ECharts charts. These can be set in
 `[theme]`, `[theme.light]`, `[theme.dark]`, and the corresponding sidebar
 sections. Unset sections inherit from `[theme]`.
 

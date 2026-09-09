@@ -293,6 +293,18 @@ with st.form("invite", border=False):
 
 **When NOT to use forms:** If inputs depend on each other (e.g., selecting a country should update available cities), forms won't work since there's no rerun until submit.
 
+## Skip reruns on individual widgets
+
+Some input widgets accept `on_change="ignore"` instead of a callback or `"rerun"`. The widget still updates in the UI, but Streamlit does not rerun the script. Python sees the new value only on the next rerun triggered by something else (a button, another widget, and so on).
+
+```python
+threshold = st.slider("Threshold", 0.0, 1.0, 0.5, on_change="ignore")
+if st.button("Apply"):
+    run_model(threshold)
+```
+
+Use this when a single control should not rerun the app until the user applies it. Use a form when several related inputs should commit together.
+
 ## Conditional rendering
 
 **This is critical and often missed.**
