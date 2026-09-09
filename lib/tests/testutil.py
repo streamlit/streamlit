@@ -22,6 +22,7 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
 from streamlit import config
+from streamlit.connections.retry_util import retry as _REAL_RETRY
 from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.pages_manager import PagesManager
@@ -68,11 +69,14 @@ def create_mock_script_run_ctx() -> ScriptRunContext:
 
 
 def retry_without_sleep(**kwargs: object) -> object:
-    """Call connection retry with a no-op sleep so unit tests stay fast."""
-    from streamlit.connections.retry_util import retry
+    """Call the original connection retry with a no-op sleep so unit tests stay fast.
 
+    The original ``retry`` is bound at import time. Tests patch
+    ``retry_util.retry`` with this helper, so a lazy import would resolve to
+    this function and recurse.
+    """
     kwargs["sleep"] = lambda _seconds: None
-    return retry(**kwargs)
+    return _REAL_RETRY(**kwargs)
 
 
 @contextmanager
