@@ -870,6 +870,48 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
             "TypeError",
         ),
         (
+            TypeError(
+                "Couldn't build proto file into descriptor pool! Invalid proto "
+                'descriptor for file "worker_api.proto": Empty: "Empty" is '
+                'already defined in file "streamlit/proto/Empty.proto".'
+            ),
+            "TypeError:protobuf_collision",
+        ),
+        (
+            TypeError(
+                'Conflict register for file "worker_api.proto": Empty is already '
+                'defined in file "streamlit/proto/Empty.proto".'
+            ),
+            "TypeError:protobuf_collision",
+        ),
+        (
+            TypeError(
+                "Couldn't build proto file into descriptor pool! Invalid proto "
+                'descriptor for file "streamlit/proto/Empty.proto": Empty: '
+                '"Empty" is already defined in file "worker_api.proto".'
+            ),
+            "TypeError:protobuf_collision",
+        ),
+        (
+            TypeError(
+                'Invalid proto descriptor for file "streamlit/proto/Empty.proto": '
+                "streamlit/proto/Empty.proto: A file with this name is already "
+                "in the pool."
+            ),
+            "TypeError:protobuf_collision",
+        ),
+        (
+            TypeError(
+                'Conflict register for file "other.proto": Foo is already '
+                'defined in file "bar.proto".'
+            ),
+            "TypeError",
+        ),
+        (
+            TypeError("failed to load streamlit/proto/Empty.proto"),
+            "TypeError",
+        ),
+        (
             StreamlitValueError("width", ["stretch", "content"]),
             "StreamlitValueError:width",
         ),
@@ -1006,6 +1048,12 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
         "unsupported-too-many-positional",
         "unsupported-proto-type",
         "unsupported-byteslike",
+        "protobuf-collision-cpp-backend",
+        "protobuf-collision-python-backend",
+        "protobuf-collision-streamlit-loaded-second",
+        "protobuf-collision-duplicate-filename",
+        "protobuf-collision-unrelated-libraries",
+        "protobuf-path-without-collision-markers",
         "streamlit-value-error",
         "streamlit-value-error-detail",
         "streamlit-missing-required-parameter",
