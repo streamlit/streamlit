@@ -60,8 +60,6 @@ Run the /checking-changes skill in a subagent with `E2E_CHECK=true make check` t
 
 ### 9. Create or update PR
 
-Do **not** invoke `/creating-pull-requests`. This skill creates or updates the PR itself.
-
 > **Note:** If currently on `develop`, create a new branch first following the naming conventions in `wiki/pull-requests.md`.
 
 Check if a PR exists for the current branch:

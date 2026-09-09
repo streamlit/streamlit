@@ -47,7 +47,7 @@ Instructions for the AI agent...
 
 | Field | Description |
 |-------|-------------|
-| `disable-model-invocation` | Set to `true` so the skill is never auto-invoked. Claude Code and Cursor then run it only when the user types `/skill-name`. Use for workflows with side effects (for example creating a PR). |
+| `disable-model-invocation` | Set to `true` so the skill is never auto-invoked. Claude Code and Cursor then run it only when the user types `/skill-name`. Use for workflows with side effects. |
 
 ## Naming conventions
 

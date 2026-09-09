@@ -99,7 +99,7 @@ To protect maintainer bandwidth and keep the process fair for active contributor
 
 ## AI Agent Skills and Subagents
 
-This repository includes skills and subagents in `.claude/` usable with Claude Code and Cursor to assist AI coding agents with common development tasks. Skills are invoked automatically based on their description, but can also be triggered manually via `/skill-name` (e.g., `/checking-changes`). Skills with `disable-model-invocation: true` in their frontmatter (currently `creating-pull-requests`) are never auto-invoked; run them explicitly with `/skill-name`.
+This repository includes skills and subagents in `.claude/` usable with Claude Code and Cursor to assist AI coding agents with common development tasks. Skills are invoked automatically based on their description, but can also be triggered manually via `/skill-name` (e.g., `/checking-changes`).
 
 ### Skills
 
