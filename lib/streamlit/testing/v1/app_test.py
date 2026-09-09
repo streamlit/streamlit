@@ -115,12 +115,12 @@ TMP_DIR = tempfile.TemporaryDirectory()
 
 
 class _AppTestSessionState:
-    """User-facing Session State for AppTest.
+    """Dict-like session state for AppTest testers.
 
-    Wraps ``SafeSessionState`` so testers get the same item/attribute access
-    and dict methods as ``st.session_state``. Mapping methods use filtered
-    user state. Production ``SafeSessionState`` is unchanged; its
-    ``__getattr__`` would treat ``get`` / ``keys`` as missing session keys.
+    Item and attribute access match ``st.session_state``. Mapping methods
+    (``get``, ``keys``, ``items``, ``values``, ``to_dict``, iteration)
+    expose filtered user state and keyed widgets, not internal Streamlit
+    keys.
     """
 
     _state: SafeSessionState

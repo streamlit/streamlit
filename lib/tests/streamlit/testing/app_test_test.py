@@ -859,25 +859,31 @@ def test_session_state_dict_api_matches_filtered_state() -> None:
         st.session_state["count"] = 1
         st.radio("radio", options=["a", "b"], key="r")
 
-    at = AppTest.from_function(script).run()
+    at = AppTest.from_function(script)
+    at.session_state["seeded"] = True
+    assert "seeded" in at.session_state
+    assert set(at.session_state.keys()) == {"seeded"}
+    assert len(at.session_state) == 1
+    at = at.run()
     assert at.session_state["count"] == 1
     assert at.session_state.count == 1
     assert "count" in at.session_state
     assert "r" in at.session_state
+    assert "seeded" in at.session_state
     assert TESTING_KEY not in at.session_state
-    assert set(at.session_state.keys()) == {"count", "r"}
-    assert dict(at.session_state.items()) == {"count": 1, "r": "a"}
-    assert set(at.session_state.values()) == {1, "a"}
-    assert at.session_state.to_dict() == {"count": 1, "r": "a"}
-    assert len(at.session_state) == 2
-    assert set(at.session_state) == {"count", "r"}
+    assert set(at.session_state.keys()) == {"count", "r", "seeded"}
+    assert dict(at.session_state.items()) == {"count": 1, "r": "a", "seeded": True}
+    assert at.session_state.to_dict() == {"count": 1, "r": "a", "seeded": True}
+    assert len(at.session_state.values()) == 3
+    assert len(at.session_state) == 3
+    assert set(at.session_state) == {"count", "r", "seeded"}
     assert "count" in repr(at.session_state)
     assert TESTING_KEY not in repr(at.session_state)
 
-    at.session_state["count"] = 2
     at.session_state.extra = "yes"
     del at.session_state.extra
+    del at.session_state["count"]
     with pytest.raises(AttributeError, match="missing not found in session_state"):
         _ = at.session_state.missing
-    assert at.session_state["count"] == 2
+    assert "count" not in at.session_state
     assert "extra" not in at.session_state
