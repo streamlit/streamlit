@@ -8,7 +8,7 @@ created: 2026-08-23
 ## Summary
 
 Replace Streamlit's per-module handlers and logger registry behavior with one standard
-`streamlit` namespace handler. Introduce explicit managed, cooperative, and host-owned
+`streamlit` namespace handler. Introduce explicit managed, auto, and host-owned
 logging policies so `streamlit run`, `App.run()`, externally served `st.App`, and embedded
 ASGI apps keep useful logs without duplicate output or mutations to server loggers owned by
 another application.
@@ -83,7 +83,7 @@ state. A later Streamlit config reload can add another handler alongside Uvicorn
 - Make `logging.getLogger("streamlit")` the effective parent for all `streamlit.*` records.
 - Emit each record once per configured destination.
 - Support host-controlled logging for external and embedded ASGI modes.
-- Keep a fallback in cooperative mode when the host has no usable handler.
+- Keep a fallback in auto mode when the host has no usable handler.
 - Configure Uvicorn only when Streamlit owns the server runner, and leave WebSockets
   logging to the library or host in every mode.
 - Make config reload idempotent and preserve user-owned logging state.
@@ -174,13 +174,13 @@ class LoggingContext(Enum):
 
 class OutputPolicy(Enum):
     STREAMLIT = "streamlit"
-    COOPERATIVE = "cooperative"  # handlerMode="auto" in an external launch
+    AUTO = "auto"
     HOST = "host"
 ```
 
-`COOPERATIVE` is a detection step rather than a persistent topology: it immediately
-selects either the host-owned topology or the Streamlit fallback from the handler path
-visible in an external launch.
+`AUTO` is resolved at activation time rather than stored as a topology: Streamlit inspects
+the handler path visible in an external launch and immediately selects either host ownership
+or the Streamlit fallback.
 
 `activate_logging(context)` records the launch context before config is parsed. After
 config is available, `apply_logging_config()` resolves the effective policy:
@@ -190,7 +190,7 @@ config is available, `apply_logging_config()` resolves the effective policy:
 | `streamlit` | Any | `STREAMLIT` |
 | `auto` | `UNCONFIGURED` | `STREAMLIT` fallback |
 | `auto` | Streamlit-managed launch | `STREAMLIT` |
-| `auto` | External/embedded launch | `COOPERATIVE` |
+| `auto` | External/embedded launch | `AUTO`, then `HOST` or `STREAMLIT` fallback |
 | `host` | Any | `HOST` |
 
 The initial config default is `streamlit`, preserving current output. A not-yet-known
@@ -205,14 +205,24 @@ hidden, scriptable `logger.enableRich` option.
 
 Unlike other non-sensitive options, `logger.handlerMode` must also be read directly from
 `STREAMLIT_LOGGER_HANDLER_MODE` by `config.get_config_options`, because external ASGI and
-plain-Python launchers do not pass through Click. Preserve the documented precedence:
-project config overrides global config, this environment variable overrides config files,
-and explicit CLI or `App.run(config=...)` values override the environment.
+plain-Python launchers do not pass through Click. This direct path is specific to
+`handlerMode`; `STREAMLIT_LOGGER_LEVEL` and `STREAMLIT_LOGGER_MESSAGE_FORMAT` retain their
+existing behavior and are not newly read outside Click. Preserve the documented precedence:
+global, project, then script-level config; this environment variable; then an explicit CLI
+or `App.run(config=...)` value.
+
+Environment-sourced `handlerMode` uses `_DEFINED_BY_ENV_VAR` even when Click supplied the
+value. An actual CLI flag, and the existing `App.run(config=...)` override path, use
+`_DEFINED_BY_FLAG`. The Click integration must retain the parameter source or omit its
+environment-derived value from `options_from_flags` so the direct and Click paths do not
+report different provenance for the same environment setting.
 
 An invalid value is rejected during config set/parse. Initial startup emits the actionable
-error through the isolated bootstrap handler and then aborts without guessing a policy. An
-invalid live reload leaves the last successfully applied policy in place and rejects the
-new config rather than falling back.
+error through the isolated bootstrap handler and then aborts without guessing a policy. A
+live reload validates a candidate config before publishing `_config_options` or applying
+callbacks. If validation fails, the prior option value, its `where_defined` provenance, and
+the last successfully applied output policy all remain active; the implementation must not
+leave a rejected value visible through `get_option`.
 
 `STREAMLIT_MANAGED` is authoritative for the process once selected by the CLI or
 `App.run()`. An `st.App` mounted inside an ASGI app discovered by `streamlit run` must not
@@ -235,7 +245,7 @@ After config parsing, `apply_logging_config` updates or removes only the owned h
 
 - `STREAMLIT`: retain the handler at `NOTSET`, set the namespace level and handler formatter
   from config, and set namespace propagation to false.
-- `COOPERATIVE`: if a usable host path exists, remove the owned handler and apply the same
+- `AUTO`: if a usable host path exists, remove the owned handler and apply the same
   last-written-value restoration described under ownership as `HOST`, so host levels and
   formatting are authoritative.
   Otherwise behave exactly like `STREAMLIT`: retain the `NOTSET` fallback handler, apply
@@ -248,7 +258,7 @@ final configured policy is `HOST`. This prevents an invalid logging config from 
 the diagnostic that explains the invalid config. Once valid config is parsed, host mode
 removes it.
 
-### Cooperative handler detection
+### Auto handler detection
 
 A usable host path exists when either:
 
@@ -264,7 +274,7 @@ also stops at `propagate=False` on any user-owned intermediate logger. Only afte
 usable path does Streamlit remove its handler and restore namespace state, so detection
 never creates a duplicate-output window.
 
-`Logger.disabled` is neither a usable host path nor an input to cooperative detection: it
+`Logger.disabled` is neither a usable host path nor an input to auto detection: it
 does not describe handler reachability for descendants, and `dictConfig` can set it based
 on logger creation order. Streamlit never changes the flag. Therefore a host that disables
 an individual logger may suppress records emitted directly by that logger, but does not
@@ -272,7 +282,7 @@ establish a namespace-wide output policy. Streamlit leaves that standard, creati
 dependent behavior unchanged. Host `dictConfig` examples use
 `disable_existing_loggers=False`.
 
-If no usable path exists, cooperative mode retains the Streamlit handler. This is important
+If no usable path exists, auto mode retains the Streamlit handler. This is important
 for external Uvicorn: Uvicorn's default logging configuration typically configures
 `uvicorn.*`, not Python's global root logger.
 
@@ -282,7 +292,7 @@ logging:
 1. Before config parsing or runtime creation, record `EXTERNAL` context and retain the
    compatibility fallback.
 2. At ASGI lifespan entry, or on the first HTTP/WebSocket call for lazy mounts, reconcile
-   cooperative mode after the server has had an opportunity to configure logging.
+   auto mode after the server has had an opportunity to configure logging.
 
 Reconcile again when Streamlit config is reloaded. Streamlit does not monitor arbitrary
 handler changes made after ASGI startup; applications that reconfigure logging later should
@@ -306,9 +316,14 @@ When Streamlit owns the output path:
 - the namespace logger uses `propagate=False`; and
 - the owned handler uses `logger.messageFormat` and the existing millisecond formatting.
 
-The namespace level and propagation values are Streamlit-owned in `STREAMLIT` and
-cooperative-fallback modes. Config application and reload reassert them; applications that
-need host ownership of those values must select `HOST` or host-selected cooperative mode.
+Namespace propagation is Streamlit-owned and reasserted in `STREAMLIT` and auto-fallback
+modes. The namespace level is initially set from `logger.level`. On later config application,
+Streamlit writes it when reacquiring ownership, when the successfully validated
+`logger.level` differs from the last applied config value, or when the current namespace
+level still equals Streamlit's last write. Otherwise, a distinguishable programmatic
+`Logger.setLevel` override survives an unrelated reload. An explicit `logger.level` config
+change wins and becomes the new last-written value. Applications that need ownership of all
+namespace state must select `HOST` or host-selected auto mode.
 
 When ownership is transferred to the host, Streamlit restores the saved pre-ownership level
 and propagation values only if those attributes still contain the last values written by
@@ -322,7 +337,7 @@ always belongs to the host.
 
 `set_log_level` and `update_formatter` remain temporary internal compatibility shims, but
 operate only on the namespace logger and owned handler. They no longer iterate `_loggers`.
-In `HOST` and host-selected cooperative mode, all three compatibility shims are no-ops for
+In `HOST` and host-selected auto mode, all three compatibility shims are no-ops for
 namespace level and propagation; they cannot reclaim or mutate host state.
 `setup_formatter(logger)` also remains during the migration as a redirecting shim: it
 updates the owned namespace handler if one is active and never adds a handler to the passed
@@ -358,7 +373,7 @@ equivalent to `streamlit run`.
 
 When `App.__call__` first builds an app and no Streamlit-managed context has been selected,
 it activates `EXTERNAL` before `_build_starlette_app` creates the runtime. It reconciles
-cooperative output before serving the first HTTP/WebSocket request.
+auto output before serving the first HTTP/WebSocket request.
 
 #### Mounted ASGI with explicit lifespan
 
@@ -366,13 +381,13 @@ Unless the CLI already selected a managed context, `App.lifespan()` activates th
 `EXTERNAL` logging context before calling `_create_runtime`. The existing
 `_external_lifespan=True` assignment stays after runtime creation; only logging-context
 activation moves earlier, so mounted-app lifecycle behavior does not change.
-`_combined_lifespan` reconciles cooperative output when the returned lifespan context is
+`_combined_lifespan` reconciles auto output when the returned lifespan context is
 entered.
 
 #### Mounted ASGI with lazy auto-start
 
 Unless a managed context is already active, the first HTTP/WebSocket call activates
-`EXTERNAL` before `_build_starlette_app`, reconciles cooperative output, and retains that
+`EXTERNAL` before `_build_starlette_app`, reconciles auto output, and retains that
 context when `_auto_start_runtime` later assigns `asgi-mounted`.
 
 Lazy reconciliation uses a double-checked, process-wide reconciled flag. The request path
@@ -415,16 +430,23 @@ longer accurate once `log_level` is supplied. Uvicorn applies the level to its e
 access, and ASGI namespaces, while the separate existing `access_log=False` continues to
 disable access records even at a lower configured level.
 
-Both managed server implementations register the same context-gated Uvicorn level updater
-after constructing their respective `uvicorn.Config`: traditional `UvicornServer` and the
-`st.App` `UvicornRunner`. Each unregisters it during server shutdown/finally cleanup. On a
-managed config reload, the updater changes levels on the existing Uvicorn logger family
-without adding handlers, changing propagation, or re-enabling access logs. It is never
-registered by external ASGI paths.
+Both managed server implementations use the same context-gated Uvicorn level updater:
+traditional `UvicornServer` and the `st.App` `UvicornRunner`. Because each constructs a new
+`uvicorn.Config` inside its bind-retry loop, an updater is registered only after an attempt
+binds successfully and becomes the active server. Registration is idempotent, and the active
+registration is removed during server shutdown/finally cleanup. If implementation mechanics
+require registration before binding, every failed or cancelled attempt must unregister in
+that attempt's `finally` block before retrying. On a managed config reload, the updater
+changes levels on the existing Uvicorn logger family without adding handlers, changing
+propagation, or re-enabling access logs. External ASGI paths never register it.
 
 The managed runner leaves the `websockets` logger entirely alone. Modern Uvicorn protocol
 logs use the `uvicorn.*` hierarchy; independently emitted `websockets` records follow
-normal Python logging rules.
+normal Python logging rules. This is intentionally asymmetric with managed `uvicorn.*`
+configuration: Uvicorn exposes supported configuration for its logger family, but the
+process-global `websockets` logger belongs to a dependency that the host may also use outside
+Streamlit. Changing even only its level could affect those unrelated uses, so Streamlit does
+not mutate it in any launch mode.
 
 For external ASGI servers, Streamlit does not configure `uvicorn.*`, `websockets`, Gunicorn,
 or Hypercorn loggers. Their levels, handlers, access logs, and formatting belong to the host.
@@ -443,7 +465,7 @@ remains idempotent in every mode. The callback must:
 
 - reuse or replace exactly one owned handler;
 - never add a second owned handler;
-- do not remove host handlers;
+- never remove host handlers;
 - transition safely between `streamlit`, `auto`, and `host`; and
 - update managed dependency levels without installing dependency handlers.
 
@@ -471,7 +493,7 @@ through apply prevents a newer reload from being overwritten by a stale lifespan
 3. Replace per-child logger tests with hierarchy and exactly-once tests.
 4. Move managed Uvicorn configuration into the runner and stop configuring WebSockets.
 5. Add launch-context activation before config/runtime initialization.
-6. Add `logger.handlerMode` and cooperative/host transitions.
+6. Add `logger.handlerMode` and auto/host transitions.
 7. Document standard namespace customization and external hosting examples.
 
 Steps 2–4 can merge independently while preserving all default Streamlit output. Steps 5–6
@@ -509,6 +531,13 @@ records. Keep `get_logger`, `set_log_level`, `setup_formatter`, `update_formatte
 `"root"` alias during the migration to reduce risk for internal and third-party code that
 imports these private symbols.
 
+`get_logger` and `DEFAULT_LOG_MESSAGE` remain internal utilities and are not scheduled for
+removal by this project. Keep the topology compatibility shims through the staged rollout
+and for at least one minor release after the final implementation step. A later cleanup PR
+may remove a shim only after all repository call sites have migrated, SiS/SPCS and Community
+Cloud integrations have been rechecked, and the private-symbol cleanup has been announced in
+release notes.
+
 Do not change the default to `auto` in the same release. A later proposal can evaluate that
 change using external-mode integration coverage and user feedback. Rolling back the new
 ownership policy requires only restoring `handlerMode="streamlit"`; it does not require
@@ -537,21 +566,26 @@ run in isolated subprocesses rather than rely only on in-process fixture cleanup
 - A custom namespace handler is never removed or reformatted.
 - Host mode removes only the owned handler and restores the saved namespace level and
   propagation state.
-- Cooperative mode chooses an existing namespace handler, a global root handler, or the
+- Auto mode chooses an existing namespace handler, a global root handler, or the
   Streamlit fallback as appropriate.
-- Cooperative detection ignores `NullHandler` as usable output, evaluates the saved
+- Auto detection ignores `NullHandler` as usable output, evaluates the saved
   namespace propagation state, and respects user-owned `propagate=False` boundaries.
 - `Logger.disabled` does not count as a host handler and is never changed by Streamlit.
 - Invalid `logger.handlerMode` values fail with an actionable config error.
 - Handler mode values are case-insensitive and validation errors list the three canonical
   lowercase choices.
 - The handler-mode environment variable is applied without Click, while explicit CLI and
-  `App.run(config=...)` values retain higher precedence.
-- Invalid startup config aborts after the bootstrap diagnostic; an invalid reload preserves
-  the last applied policy.
-- Streamlit and cooperative-fallback modes reassert the configured namespace level and
-  isolation on reload; transferring ownership preserves pre-existing state and user changes
-  that do not match Streamlit's last written values.
+  `App.run(config=...)` values retain higher precedence; its value has the same
+  `_DEFINED_BY_ENV_VAR` provenance with and without Click, and no other non-sensitive logger
+  environment variable gains this direct path.
+- Invalid startup config aborts after the bootstrap diagnostic. An invalid reload preserves
+  the last applied policy, option value, and `where_defined` provenance as observed through
+  `get_option` and `get_where_defined`.
+- Streamlit and auto-fallback modes reassert namespace isolation on reload. They preserve a
+  distinguishable programmatic namespace-level override across an unrelated config reload,
+  while an explicit `logger.level` change or ownership reacquisition applies the configured
+  level. Transferring ownership preserves pre-existing state and user changes that do not
+  match Streamlit's last written values.
 - `setup_formatter` and the namespace `streamlit_console_handler` compatibility shims do
   not restore Streamlit-owned output in host mode.
 - `set_log_level`, `update_formatter`, and `setup_formatter` do not mutate namespace state
@@ -567,10 +601,17 @@ run in isolated subprocesses rather than rely only on in-process fixture cleanup
 - Streamlit-managed Uvicorn respects `logger.level` after `uvicorn.Config` initialization.
 - Managed Uvicorn accepts every case-insensitive `logger.level` supported by Streamlit and
   rejects unknown values with Streamlit's config error rather than a Uvicorn `KeyError`.
+- A managed Uvicorn port-bind retry leaves no updater from the failed attempt and registers
+  exactly one updater for the successfully bound server; shutdown removes it.
+- In a managed launch with no root handler, an independently emitted `websockets` warning
+  follows `lastResort` once while lower-level records are discarded.
 - External Uvicorn plus `handlerMode="auto"` uses a host JSON handler exactly once.
 - External Uvicorn with no host handler retains the Streamlit fallback.
-- Cooperative mode reconciles again at lifespan entry when host logging was configured
+- Auto mode reconciles again at lifespan entry when host logging was configured
   after constructing the `st.App` object.
+- An external ASGI subprocess preconfigures the `uvicorn.*` and `websockets` levels,
+  handlers, and propagation flags, then verifies Streamlit config parsing leaves every value
+  and handler identity unchanged.
 - Mounted FastAPI plus `handlerMode="host"` captures Streamlit records in the FastAPI/root
   handler without a second Streamlit-formatted copy.
 - A root handler configured before `import streamlit` receives no duplicate bootstrap
@@ -582,14 +623,15 @@ run in isolated subprocesses rather than rely only on in-process fixture cleanup
 - Host mode with no handler anywhere in the restored path leaves Python `lastResort`
   behavior intact for `WARNING` and higher records.
 - `dictConfig(disable_existing_loggers=True)` after import remains authoritative: Streamlit
-  does not re-enable any disabled logger or treat the flag as a cooperative host path.
+  does not re-enable any disabled logger or treat the flag as an auto-selected host path.
 - Bare `st.write` retains the direct-execution and missing-context warnings.
 - A managed-launch live config reload changes level/format or ownership without duplicating
   handlers; external launches do not gain a config-file watcher.
 - A config reload racing ASGI lifespan reconciliation completes without deadlock and leaves
   one policy-consistent output path.
 - Both managed Uvicorn implementations register, apply, and unregister the shared level
-  updater; external ASGI launches never register it.
+  updater without leaking registrations across failed bind attempts; external ASGI launches
+  never register it.
 - With Rich enabled, uncaught exceptions retain their direct Rich console presentation;
   with Rich disabled, exactly one standard record follows the selected handler policy.
 

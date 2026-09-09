@@ -103,11 +103,14 @@ policy; use `handlerMode="host"` for host-owned output. Code that inspects priva
 `.handlers` is not a supported API.
 
 Handlers attached directly to the namespace receive child records under every policy.
-Handlers attached only to Python's root logger, including pytest's `caplog`, require
-`handlerMode="host"` in ordinary tests. Host-selected `"auto"` also reaches root, but only
-after an external/embedded ASGI launch activates that policy. In `"streamlit"` and fallback
-`"auto"`, `logger.level` remains authoritative whenever config is parsed or reloaded;
-programmatic `Logger.setLevel` changes are not durable in those modes.
+
+- Handlers attached only to Python's root logger, including pytest's `caplog`, require
+  `handlerMode="host"` in ordinary tests. Host-selected `"auto"` also reaches root, but only
+  after an external or embedded ASGI launch activates that policy.
+- In `"streamlit"` and fallback `"auto"`, `logger.level` sets the initial namespace level.
+  A later programmatic `Logger.setLevel` override survives unrelated config reloads. An
+  explicit change to `logger.level`, or reacquiring Streamlit ownership, reapplies the
+  configured level.
 
 ### Handler policy configuration
 
@@ -150,8 +153,8 @@ that have not configured Python's root logger.
 
 The initial default remains `"streamlit"` so upgrades do not change console output for
 existing self-hosted or embedded deployments. Making `"auto"` the default can be evaluated
-in a future major release after users have had a deprecation period and the external modes
-have sufficient integration coverage.
+in a future major release once external modes have sufficient integration coverage and the
+change has been announced in release notes.
 
 External Uvicorn's default configuration normally installs handlers only on `uvicorn.*`,
 not on Python's root logger. In that common case, `"auto"` deliberately keeps Streamlit's
@@ -184,11 +187,11 @@ streamlit_logger.addHandler(file_handler)
 
 With the default `handlerMode="streamlit"`, this intentionally produces two destinations:
 Streamlit's existing console output and `streamlit.log`. Select `"host"` when the custom
-handler should replace Streamlit's destination. The `setLevel` call takes effect
-immediately, but `logger.level` is reapplied on Streamlit config parse/reload; configure
-that option or select host ownership for a durable level. If both a namespace handler and a
-root handler exist, the host must set `streamlit_logger.propagate=False` to avoid emitting
-to both. Streamlit never removes or rewrites either host handler.
+handler should replace Streamlit's destination. The `setLevel` call survives unrelated
+config reloads. An explicit change to `logger.level`, or a transition that reacquires
+Streamlit ownership, reapplies the configured level. If both a namespace handler and a root
+handler exist, the host must set `streamlit_logger.propagate=False` to avoid emitting to
+both. Streamlit never removes or rewrites either host handler.
 
 The config option can be supplied through `config.toml`,
 `STREAMLIT_LOGGER_HANDLER_MODE`, or `--logger.handlerMode`; no new Python configuration API
@@ -308,8 +311,9 @@ sole exception destination.
 
 ### Behavior guarantees
 
-- Streamlit warnings and errors emitted by enabled loggers reach at least one handler in
-  `"streamlit"` and `"auto"` modes. A host can still suppress a specific logger with
+- In `"streamlit"` and fallback `"auto"`, Streamlit warnings and errors emitted by enabled
+  loggers reach Streamlit's handler. In host-selected `"auto"`, records reach the host path,
+  where the host owns levels and filters. A host can suppress a specific logger with
   `Logger.disabled`.
 - Streamlit never removes, reformats, or replaces handlers it does not own.
 - Repeated config parsing does not increase handler counts.
