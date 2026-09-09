@@ -159,10 +159,10 @@ grows.
 Real, recently-triaged issues and the priority the team assigned. Use these to
 calibrate; the "why" shows the deciding criterion.
 
-- **P0** — [#15959](https://github.com/streamlit/streamlit/issues/15959):
-  `st.multiselect` options render below `st.popover`. A regression that visibly
-  breaks a common widget-in-container combination (and the broader class of
-  BaseWeb overlays inside popovers) with no reliable workaround.
+- **P0** — [#6092](https://github.com/streamlit/streamlit/issues/6092):
+  Streamlit 1.18.0 apps failed to load in Safari 16.3 because of an unsupported
+  regular expression. This regression broke every Streamlit app for all users
+  of that browser.
 - **P1** — [#15859](https://github.com/streamlit/streamlit/issues/15859):
   `st.date_input` calendar renders behind `st.dialog` (regression in 1.59.0). A
   high-profile widget is visibly broken in a common scenario; regression, limited
