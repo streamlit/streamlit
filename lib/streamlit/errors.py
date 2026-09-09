@@ -24,6 +24,7 @@ from streamlit import util
 if TYPE_CHECKING:
     from collections.abc import Collection
     from datetime import date, time
+    from traceback import StackSummary
 
 
 class Error(Exception):  # pragma: no cover - trivial base class
@@ -165,6 +166,8 @@ class StreamlitAPIWarning(StreamlitAPIException, Warning):
     Note that this should not be "raised", but passed to st.exception
     instead.
     """
+
+    tacked_on_stack: StackSummary | None
 
     def __init__(self, *args: Any) -> None:
         super().__init__(*args)

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import traceback
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, cast
+from typing import TYPE_CHECKING, Final, NamedTuple, cast
 
 from streamlit import config
 from streamlit.elements.lib.layout_utils import validate_width
@@ -35,10 +35,10 @@ if TYPE_CHECKING:
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
 
 # Installed Streamlit package root. UI traces hide frames under this directory,
-# including bundled demos such as ``streamlit hello`` (``hello/*.py``). A
-# Streamlit-only hello error falls back to the unfiltered stack; a third-party
-# failure from hello keeps those library frames but drops the demo call site.
-# Exempting ``hello/`` or the running script would special-case demos.
+# including the bundled ``streamlit hello`` demos: a demo failure through a
+# third-party library keeps those library frames but drops the demo call site,
+# and a Streamlit-only one falls back to the unfiltered stack. Exempting
+# ``hello/`` or the running script would special-case demos.
 _STREAMLIT_PACKAGE_DIR: Final = Path(__file__).resolve().parent.parent
 
 # Match CPython's ExceptionGroup formatting bounds (traceback.py).
@@ -54,6 +54,12 @@ _GENERIC_UNCAUGHT_EXCEPTION_TEXT: Final = (
     "to prevent data leaks. Full error details have been recorded in the logs "
     "(if you're on Streamlit Cloud, click on 'Manage app' in the lower right of your app)."
 )
+
+
+class _ErrorDetailVisibility(NamedTuple):
+    show_message: bool
+    show_trace: bool
+    show_type: bool
 
 
 class ExceptionMixin:
@@ -149,9 +155,7 @@ def marshall(
 
     is_markdown_exception = isinstance(exception, MarkdownFormattedException)
 
-    show_message, show_trace, show_type = _error_detail_visibility(
-        apply_show_error_details
-    )
+    visibility = _error_detail_visibility(apply_show_error_details)
 
     # Some exceptions (like UserHashError) have an alternate_name attribute so
     # we can pretend to the user that the exception is called something else.
@@ -160,13 +164,18 @@ def marshall(
     else:
         exception_proto.type = type(exception).__name__
 
-    if show_trace:
+    # Clear first so a reused proto cannot keep leftover rows when the trace
+    # is hidden (``type`` / ``none``) or when ``extend`` would otherwise append.
+    exception_proto.ClearField("stack_trace")
+    if visibility.show_trace:
         # Cause/context rows include type+message; honor show_message so
         # stacktrace mode cannot leak an inner exception message through
         # stack_trace. Skip construction entirely when the trace is hidden
         # (``type`` / ``none``) so redacted deployments do not pay for it.
         exception_proto.stack_trace.extend(
-            _get_stack_trace_str_list(exception, include_exception_message=show_message)
+            _get_stack_trace_str_list(
+                exception, include_exception_message=visibility.show_message
+            )
         )
     exception_proto.is_warning = isinstance(exception, Warning)
 
@@ -222,9 +231,9 @@ Traceback:
         )
 
     if apply_show_error_details:
-        if not show_message:
+        if not visibility.show_message:
             exception_proto.message = _GENERIC_UNCAUGHT_EXCEPTION_TEXT
-        if not show_type:
+        if not visibility.show_type:
             exception_proto.ClearField("type")
             # Provenance is only meaningful beside a visible type. With the type,
             # message and trace all withheld, the frontend has nothing to offer
@@ -238,15 +247,17 @@ Traceback:
 
 def _error_detail_visibility(
     apply_show_error_details: bool,
-) -> tuple[bool, bool, bool]:
-    """Return ``(show_message, show_trace, show_type)`` for browser exceptions.
+) -> _ErrorDetailVisibility:
+    """Return message/trace/type visibility for browser exceptions.
 
     ``st.exception()`` does not apply ``client.showErrorDetails``, so all three
     stay True. Uncaught exceptions honor the config, including the legacy
     ``False`` value still used by Community Cloud (equivalent to ``stacktrace``).
     """
     if not apply_show_error_details:
-        return True, True, True
+        return _ErrorDetailVisibility(
+            show_message=True, show_trace=True, show_type=True
+        )
 
     show_error_details = config.get_option("client.showErrorDetails")
     show_message = (
@@ -261,7 +272,9 @@ def _error_detail_visibility(
     show_type = (
         show_trace or show_error_details == config.ShowErrorDetailsConfigOptions.TYPE
     )
-    return show_message, show_trace, show_type
+    return _ErrorDetailVisibility(
+        show_message=show_message, show_trace=show_trace, show_type=show_type
+    )
 
 
 def _format_syntax_error_message(exception: SyntaxError) -> str:
@@ -310,7 +323,10 @@ def _get_stack_trace_str_list(
       to its frames.
     """
     if isinstance(exception, StreamlitAPIWarning):
-        frames = _filter_frames_with_fallback(exception.tacked_on_stack)
+        stack = exception.tacked_on_stack
+        if not stack:
+            return []
+        frames = _filter_frames_with_fallback(stack)
         return [item.strip() for item in traceback.format_list(frames)]
 
     return _format_traceback_rows(
@@ -340,8 +356,8 @@ def _filter_frames_with_fallback(
     That stays correct when Streamlit is installed in a project-local venv
     (``.venv``), where package files sit under the user's app folder.
 
-    Unlike ``_drop_streamlit_frames``, this never returns an empty list: a
-    Streamlit-only stack is kept so internals stay diagnosable.
+    Unlike ``_drop_streamlit_frames``, an all-internal stack is kept rather
+    than reduced to nothing, so Streamlit-only failures stay diagnosable.
     """
     return _drop_streamlit_frames(extracted_tb) or list(extracted_tb)
 
@@ -365,8 +381,7 @@ def _user_facing_traceback_exception(
     The "keep internals if nothing remains" fallback applies to the chain, not
     each stack, and only when the filtered chain has no frames outside the
     Streamlit package. Third-party or stdlib frames count as user-facing
-    evidence and skip the fallback — reconstructing "app vs library" would
-    reopen the app-folder heuristic this module removes. A Streamlit-only
+    evidence and skip the fallback. A Streamlit-only
     ``__cause__`` / ``__context__`` (for example ``FileNotFoundError`` raised
     inside ``image_utils``) must not bring those frames back just because that
     one stack had no user code.
@@ -494,8 +509,10 @@ def _format_traceback_rows(
 
     children = getattr(tbe, "exceptions", None) or ()
     if children:
-        if _group_depth <= 1:
-            rows.append(f"... ({len(children)} ExceptionGroup child(ren) truncated)")
+        # Remaining depth 0 matches CPython: format through
+        # ``max_group_depth`` nested groups, then truncate children.
+        if _group_depth <= 0:
+            rows.append(f"... ({len(children)} nested exceptions not shown)")
         else:
             shown = children[:_group_width]
             for i, child in enumerate(shown, start=1):
@@ -511,5 +528,5 @@ def _format_traceback_rows(
                 )
             omitted = len(children) - len(shown)
             if omitted:
-                rows.append(f"... and {omitted} more exception(s)")
+                rows.append(f"... and {omitted} more exceptions")
     return rows

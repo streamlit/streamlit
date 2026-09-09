@@ -14,6 +14,7 @@
 
 """exception Unittest."""
 
+import builtins
 import os
 import traceback
 import unittest
@@ -28,6 +29,8 @@ import streamlit as st
 from streamlit import errors
 from streamlit.elements import exception
 from streamlit.elements.exception import (
+    _EXCEPTION_GROUP_MAX_DEPTH,
+    _EXCEPTION_GROUP_MAX_WIDTH,
     _GENERIC_UNCAUGHT_EXCEPTION_TEXT,
     _STREAMLIT_PACKAGE_DIR,
     _filter_frames_with_fallback,
@@ -364,6 +367,18 @@ def test_marshall_is_streamlit_exception_follows_type_redaction(
         assert proto.is_streamlit_exception is expected_flag
 
 
+@pytest.mark.parametrize("show_error_details", ["type", "none"])
+def test_marshall_clears_leftover_stack_trace_when_hidden(
+    show_error_details: str,
+) -> None:
+    """A reused proto must not keep leftover stack_trace rows when the trace is hidden."""
+    proto = ExceptionProto()
+    proto.stack_trace.append("leftover-frame")
+    with testutil.patch_config_options({"client.showErrorDetails": show_error_details}):
+        exception.marshall(proto, RuntimeError("hidden"), apply_show_error_details=True)
+    assert list(proto.stack_trace) == []
+
+
 def test_marshall_is_streamlit_exception_survives_redaction_for_direct_calls() -> None:
     """``st.exception()`` is not an uncaught app exception, so redaction is moot.
 
@@ -455,6 +470,14 @@ def test_get_stack_trace_no_traceback() -> None:
     err = RuntimeError("no traceback")
     err.__traceback__ = None
     result = _get_stack_trace_str_list(err)
+    assert result == []
+
+
+def test_get_stack_trace_streamlit_api_warning_without_tacked_stack() -> None:
+    """A ``StreamlitAPIWarning`` with no tacked stack must not crash marshalling."""
+    warning = errors.StreamlitAPIWarning("msg")
+    warning.tacked_on_stack = None
+    result = _get_stack_trace_str_list(warning)
     assert result == []
 
 
@@ -699,7 +722,7 @@ def test_uncaught_chained_exception_keeps_cause_message_when_full() -> None:
     assert "FileNotFoundError: /secret/path/do-not-leak" in joined
 
 
-_EXCEPTION_GROUP_TYPE = getattr(__import__("builtins"), "ExceptionGroup", None)
+_EXCEPTION_GROUP_TYPE = getattr(builtins, "ExceptionGroup", None)
 
 
 def _exception_group_with_raised_child(message: str) -> BaseException:
@@ -762,3 +785,67 @@ def test_exception_group_child_message_is_redacted() -> None:
     )
     assert not any(secret in row for row in rows)
     assert any("ValueError" in row for row in rows)
+
+
+def _wrap_in_exception_groups(
+    inner: BaseException, levels: int
+) -> traceback.TracebackException:
+    """Wrap ``inner`` in ``levels`` ExceptionGroup layers, innermost first."""
+    assert _EXCEPTION_GROUP_TYPE is not None
+    current: BaseException = inner
+    for i in range(levels):
+        current = _EXCEPTION_GROUP_TYPE(f"g{i}", [current])
+    return traceback.TracebackException.from_exception(current)
+
+
+@pytest.mark.skipif(
+    _EXCEPTION_GROUP_TYPE is None, reason="ExceptionGroup requires 3.11+"
+)
+def test_exception_group_formats_children_through_max_depth() -> None:
+    """CPython formats through ``max_group_depth`` nested groups, then truncates.
+
+    Remaining depth starts at 10 and truncates at ``<= 0``, so 10 wrapping
+    groups still emit the leaf and 11 groups do not.
+    """
+    leaf = "depth-leaf-do-not-drop"
+    at_limit = _wrap_in_exception_groups(ValueError(leaf), _EXCEPTION_GROUP_MAX_DEPTH)
+    over_limit = _wrap_in_exception_groups(
+        ValueError(leaf), _EXCEPTION_GROUP_MAX_DEPTH + 1
+    )
+
+    at_limit_rows = _format_traceback_rows(
+        at_limit, include_exception_line=False, include_exception_message=True
+    )
+    over_limit_rows = _format_traceback_rows(
+        over_limit, include_exception_line=False, include_exception_message=True
+    )
+
+    assert any(leaf in row for row in at_limit_rows)
+    assert not any(leaf in row for row in over_limit_rows)
+    assert any("nested exceptions not shown" in row for row in over_limit_rows)
+
+
+@pytest.mark.skipif(
+    _EXCEPTION_GROUP_TYPE is None, reason="ExceptionGroup requires 3.11+"
+)
+def test_exception_group_truncates_children_beyond_max_width() -> None:
+    """More than ``max_group_width`` children keep the first 15 and an omitted row."""
+    assert _EXCEPTION_GROUP_TYPE is not None
+    extra = 3
+    children = [
+        ValueError(f"width-child-{i}")
+        for i in range(_EXCEPTION_GROUP_MAX_WIDTH + extra)
+    ]
+    tbe = traceback.TracebackException.from_exception(
+        _EXCEPTION_GROUP_TYPE("wide", children)
+    )
+    rows = _format_traceback_rows(
+        tbe, include_exception_line=False, include_exception_message=True
+    )
+
+    headers = [row for row in rows if row.startswith("+----------------")]
+    assert len(headers) == _EXCEPTION_GROUP_MAX_WIDTH
+    assert any(f"... and {extra} more exceptions" in row for row in rows)
+    assert any("width-child-0" in row for row in rows)
+    assert any(f"width-child-{_EXCEPTION_GROUP_MAX_WIDTH - 1}" in row for row in rows)
+    assert not any(f"width-child-{_EXCEPTION_GROUP_MAX_WIDTH}" in row for row in rows)
