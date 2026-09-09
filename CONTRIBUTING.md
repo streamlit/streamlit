@@ -527,16 +527,18 @@ compiler on a newer `protobuf` package. Compare `protoc --version` with
 Drop the leading major version to convert: Python `protobuf` 6.33.6
 corresponds to `protoc` 33.6, and any `protoc` at or below that is fine.
 CI's 26.1 is an example of an older compiler that still works with the
-current lockfile.
+current lockfile. If generation already works, keep that compiler; do not
+replace a working install just to match CI.
 
 - Too old (`Error: protoc version X is < 3.20`): install a newer compiler from
   the [official installation instructions](https://protobuf.dev/installation/),
-  still no newer than `uv.lock`. Homebrew's unversioned `protobuf` formula may
-  be ahead of the lockfile.
+  still no newer than the Python `protobuf` version in `uv.lock`. Homebrew's
+  unversioned `protobuf` formula may be ahead of the lockfile.
 - Too new (`google.protobuf.runtime_version.VersionError` when generated
   modules are imported): switch to a compiler at or below the locked package,
-  then re-run `make protobuf`. On macOS, install the versioned formula matching
-  the lock's minor version (e.g. `protobuf@33` for `protobuf` 6.33.x):
+  then re-run `make protobuf`. On macOS, run `brew search protobuf@` for a
+  versioned formula matching the lock's minor version (e.g. `protobuf@33` for
+  `protobuf` 6.33.x). If one exists:
 
   ```bash
   brew install protobuf@33
@@ -546,17 +548,16 @@ current lockfile.
 
   The `PATH` export is session-scoped; a later `make protobuf` in a new shell
   will pick Homebrew's unversioned `protoc` again unless that `PATH` is
-  persisted. Alternatively, download the `protoc` release matching
+  persisted. If Homebrew has no matching formula, take the version number from
   `PROTOC_VERSION` in
   [`.github/actions/make_init/action.yml`](./.github/actions/make_init/action.yml)
-  (currently 26.1) from the
-  [protobuf releases page](https://github.com/protocolbuffers/protobuf/releases)
-  and put it first on your `PATH`.
+  and download the GitHub release asset for your OS and architecture (for
+  example `osx-aarch_64`) from the
+  [protobuf releases page](https://github.com/protocolbuffers/protobuf/releases).
+  Put that `protoc` first on your `PATH`.
 - `ImportError: cannot import name 'runtime_version'` from `google.protobuf`
   means the Python environment is out of sync (the locked `protobuf` package
   already includes `runtime_version`). Reinstall with `make python-init`.
-- Already working: keep that compiler. Do not replace a working install just
-  to match CI.
 
 To reproduce CI or release-generated output, use the compiler version configured in
 [`.github/actions/make_init/action.yml`](./.github/actions/make_init/action.yml).
