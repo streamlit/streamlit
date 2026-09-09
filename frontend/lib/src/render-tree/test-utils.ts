@@ -138,7 +138,10 @@ declare module "vitest" {
     R extends void | Promise<void> = void | Promise<void>,
     T = unknown,
   > {
-    // `T extends T` keeps T used so this merges with Vitest's Matchers.
+    // `T` is declared only to match Vitest's `Matchers` parameter list, so it is
+    // unused here. `T extends T` always resolves to `string` (except `never`);
+    // it exists to satisfy unused-vars. Renaming `T` cannot fix that because
+    // merging requires the exact parameter names.
     toBeTextNode(text: T extends T ? string : string): R
   }
 }

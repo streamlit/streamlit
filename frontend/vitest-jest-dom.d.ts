@@ -17,16 +17,20 @@
 /**
  * Vitest 5 custom matchers are declared on `Matchers<R, T>`.
  * `@testing-library/jest-dom/vitest` still augments `Assertion<T>`, which does
- * not merge with Vitest 5's two-parameter `Assertion<R, T>`.
+ * not merge with Vitest 5's two-parameter `Assertion<R, T>`. Remove this file
+ * once jest-dom augments `Matchers` itself:
+ * https://github.com/testing-library/jest-dom/issues/662
  */
 import type { TestingLibraryMatchers } from "@testing-library/jest-dom/matchers"
 import "vitest"
 
 declare module "vitest" {
   // Type parameters must match Vitest's Matchers exactly so the interfaces merge.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- jest-dom's expected-value param is any
+  // Unused `T`, empty body, and jest-dom's `any` are required for that merge.
+  /* eslint-disable @typescript-eslint/no-empty-object-type, @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any -- declaration merging shim */
   interface Matchers<
     R extends void | Promise<void> = void | Promise<void>,
     T = unknown,
   > extends TestingLibraryMatchers<any, R> {}
+  /* eslint-enable @typescript-eslint/no-empty-object-type, @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 }
