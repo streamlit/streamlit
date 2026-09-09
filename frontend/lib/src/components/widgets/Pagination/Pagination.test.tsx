@@ -324,6 +324,59 @@ describe("Pagination widget", () => {
       ])
     })
 
+    it.each([
+      {
+        defaultPage: 2,
+        slots: "start",
+        expected: ["1", "2", "3", "4", "5", "20"],
+      },
+      {
+        defaultPage: 19,
+        slots: "end",
+        expected: ["1", "16", "17", "18", "19", "20"],
+      },
+    ])(
+      "expands extra $slots slots when current page is near the $slots",
+      ({ defaultPage, expected }) => {
+        const props = getProps({
+          numPages: 20,
+          default: defaultPage,
+          maxVisiblePages: 7,
+        })
+        render(<Pagination {...props} />)
+
+        expect(getPageButtons().map(b => b.textContent)).toEqual(expected)
+        expect(screen.queryAllByTestId("stPaginationEllipsis")).toHaveLength(1)
+      }
+    )
+
+    it("recenters the window when a large maxVisiblePages still hits the last page", () => {
+      const props = getProps({
+        numPages: 20,
+        default: 17,
+        maxVisiblePages: 11,
+      })
+      render(<Pagination {...props} />)
+
+      // Without recentering, the middle window would start at 14 instead of 13.
+      expect(getPageButtons().map(b => b.textContent)).toEqual([
+        "1",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20",
+      ])
+      // Pre-existing: needRightEllipsis is currentPage < numPages - 2, so a
+      // trailing ellipsis still appears between 19 and 20 even though it hides
+      // no pages.
+      expect(screen.queryAllByTestId("stPaginationEllipsis")).toHaveLength(2)
+      expect(getActivePageButton()).toHaveTextContent("17")
+    })
+
     it("handles max_visible_pages=3 with current page in middle", () => {
       const props = getProps({ numPages: 10, default: 5, maxVisiblePages: 3 })
       render(<Pagination {...props} />)

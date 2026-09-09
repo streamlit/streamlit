@@ -76,6 +76,18 @@ function createErrorResponse(
   statusText: string,
   data?: unknown
 ): Response {
+  // DoInitPings treats status 0 as "no response", but `new Response()` rejects
+  // that status. Use a stand-in so this path can still be tested.
+  if (status === 0) {
+    return {
+      ok: false,
+      status: 0,
+      statusText,
+      json: () => Promise.resolve(data ?? null),
+      text: () => Promise.resolve(data ? JSON.stringify(data) : ""),
+    } as Response
+  }
+
   return new Response(data ? JSON.stringify(data) : "", {
     status,
     statusText,
@@ -100,28 +112,26 @@ function createNetworkError(message = "Failed to fetch"): TypeError {
 // Sets up fetch mock to fail a specific number of times before succeeding
 function setupFetchMockWithFailures(
   retryCount: number,
-  errorType: "response" | "network" | "timeout",
-  responseOptions?: { status: number; statusText: string; data?: unknown }
+  errorType: "response" | "network" | "timeout" | "error",
+  responseOptions?: { status: number; statusText: string; data?: unknown },
+  error?: Error
 ): typeof fetch {
-  const mock = vi.fn()
+  const mock = vi.fn<typeof fetch>()
 
   // Each "totalTries" increment involves cycling through all URIs
   // Each URI requires 2 fetch calls (health + config)
   // So total failed calls needed = retryCount * numUris * 2
   const totalFailedCalls = retryCount * 2 * 2
 
-  // Setup all the rejected/error calls
   for (let i = 0; i < totalFailedCalls; i++) {
     if (errorType === "timeout") {
-      ;(mock as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-        createAbortError()
-      )
+      mock.mockRejectedValueOnce(createAbortError())
     } else if (errorType === "network") {
-      ;(mock as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-        createNetworkError()
-      )
-    } else if (errorType === "response" && responseOptions) {
-      ;(mock as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      mock.mockRejectedValueOnce(createNetworkError())
+    } else if (errorType === "error") {
+      mock.mockRejectedValueOnce(error ?? new Error("request setup failed"))
+    } else if (responseOptions) {
+      mock.mockResolvedValueOnce(
         createErrorResponse(
           responseOptions.status,
           responseOptions.statusText,
@@ -131,13 +141,8 @@ function setupFetchMockWithFailures(
     }
   }
 
-  // Add final successful calls to break the loop
-  ;(mock as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-    createSuccessResponse(MOCK_HEALTH_RESPONSE)
-  ) // healthzUri success
-  ;(mock as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-    createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE)
-  ) // hostConfigUri success
+  mock.mockResolvedValueOnce(createSuccessResponse(MOCK_HEALTH_RESPONSE))
+  mock.mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
   return mock
 }
@@ -886,101 +891,89 @@ If you are trying to access a Streamlit app running on another server, this coul
   })
 
   describe("calls sendClientError when we've reached connection error threshold", () => {
-    it("with status = 403 response", async () => {
-      const sendClientErrorSpy = vi.fn()
+    it.each([
+      {
+        name: "with status = 403 response",
+        errorType: "response" as const,
+        responseOptions: { status: 403, statusText: "Forbidden" },
+        expectedError: 403,
+        expectedMessage: "Forbidden",
+      },
+      {
+        name: "with status = 500 response",
+        errorType: "response" as const,
+        responseOptions: {
+          status: 500,
+          statusText: "Internal Server Error",
+        },
+        expectedError: 500,
+        expectedMessage: "Internal Server Error",
+      },
+      {
+        name: "with network error",
+        errorType: "network" as const,
+        expectedError: "No response received from server",
+        expectedMessage: "Network error",
+      },
+      {
+        name: "with timeout",
+        errorType: "timeout" as const,
+        expectedError: "DoInitPings timed out",
+        expectedMessage: "Connection timed out - ECONNABORTED",
+      },
+      {
+        name: "with HTTP status 0",
+        errorType: "response" as const,
+        responseOptions: { status: 0, statusText: "No Response" },
+        expectedError: "Response received with status 0",
+        expectedMessage: "No Response",
+      },
+      {
+        name: "with a generic request setup error",
+        errorType: "error" as const,
+        error: new Error("request setup failed"),
+        expectedError: "Error setting up request to server",
+        expectedMessage: "request setup failed",
+      },
+    ])(
+      "$name",
+      async ({
+        errorType,
+        responseOptions,
+        error,
+        expectedError,
+        expectedMessage,
+      }) => {
+        const sendClientErrorSpy = vi.fn()
 
-      // We need to mock fetch to simulate connection error threshold
-      globalThis.fetch = setupFetchMockWithFailures(
-        MAX_RETRIES_BEFORE_CLIENT_ERROR,
-        "response",
-        { status: 403, statusText: "Forbidden" }
-      )
+        globalThis.fetch = setupFetchMockWithFailures(
+          MAX_RETRIES_BEFORE_CLIENT_ERROR,
+          errorType,
+          responseOptions,
+          error
+        )
 
-      const retryCallback = createTimerAdvancingRetryCallback()
+        const retryCallback = createTimerAdvancingRetryCallback()
 
-      const { promise } = doInitPings(
-        MOCK_PING_DATA.uri,
-        MOCK_PING_DATA.timeoutMs,
-        MOCK_PING_DATA.maxTimeoutMs,
-        retryCallback,
-        sendClientErrorSpy,
-        MOCK_PING_DATA.setAllowedOrigins
-      )
+        const { promise } = doInitPings(
+          MOCK_PING_DATA.uri,
+          MOCK_PING_DATA.timeoutMs,
+          MOCK_PING_DATA.maxTimeoutMs,
+          retryCallback,
+          sendClientErrorSpy,
+          MOCK_PING_DATA.setAllowedOrigins
+        )
 
-      // Run any remaining timers to complete the ping process
-      await vi.runAllTimersAsync()
-      await promise
+        await vi.runAllTimersAsync()
+        await promise
 
-      expect(sendClientErrorSpy).toHaveBeenCalledWith(
-        403,
-        "Forbidden",
-        expect.any(String)
-      )
-    })
-
-    it("with status = 500 response", async () => {
-      const sendClientErrorSpy = vi.fn()
-
-      // We need to mock fetch to simulate connection error threshold
-      globalThis.fetch = setupFetchMockWithFailures(
-        MAX_RETRIES_BEFORE_CLIENT_ERROR,
-        "response",
-        { status: 500, statusText: "Internal Server Error" }
-      )
-
-      const retryCallback = createTimerAdvancingRetryCallback()
-
-      const { promise } = doInitPings(
-        MOCK_PING_DATA.uri,
-        MOCK_PING_DATA.timeoutMs,
-        MOCK_PING_DATA.maxTimeoutMs,
-        retryCallback,
-        sendClientErrorSpy,
-        MOCK_PING_DATA.setAllowedOrigins
-      )
-
-      // Run any remaining timers to complete the ping process
-      await vi.runAllTimersAsync()
-      await promise
-
-      expect(sendClientErrorSpy).toHaveBeenCalledWith(
-        500,
-        "Internal Server Error",
-        expect.any(String)
-      )
-    })
-
-    it("with network error", async () => {
-      const sendClientErrorSpy = vi.fn()
-
-      // We need to mock fetch to simulate connection error threshold
-      globalThis.fetch = setupFetchMockWithFailures(
-        MAX_RETRIES_BEFORE_CLIENT_ERROR,
-        "network",
-        undefined
-      )
-
-      const retryCallback = createTimerAdvancingRetryCallback()
-
-      const { promise } = doInitPings(
-        MOCK_PING_DATA.uri,
-        MOCK_PING_DATA.timeoutMs,
-        MOCK_PING_DATA.maxTimeoutMs,
-        retryCallback,
-        sendClientErrorSpy,
-        MOCK_PING_DATA.setAllowedOrigins
-      )
-
-      // Run any remaining timers to complete the ping process
-      await vi.runAllTimersAsync()
-      await promise
-
-      expect(sendClientErrorSpy).toHaveBeenCalledWith(
-        "No response received from server",
-        "Network error",
-        expect.any(String)
-      )
-    })
+        expect(sendClientErrorSpy).toHaveBeenCalledWith(
+          expectedError,
+          expectedMessage,
+          expect.any(String)
+        )
+      }
+    )
   })
 
   it("stops the loop on cancel and does not resurrect when an in-flight request settles", async () => {
@@ -1062,6 +1055,38 @@ If you are trying to access a Streamlit app running on another server, this coul
 
     expect(MOCK_PING_DATA.setAllowedOrigins).not.toHaveBeenCalled()
     expect(MOCK_PING_DATA.retryCallback).not.toHaveBeenCalled()
+  })
+
+  it("does not schedule another ping after cancel is called from the retry callback", async () => {
+    // Extra success responses would be consumed if cancel failed to stop the loop.
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
+      .mockResolvedValueOnce(createSuccessResponse({}))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
+
+    let cancelPing: (() => void) | undefined = undefined
+    const retryCallback: OnRetry = vi.fn(() => {
+      cancelPing?.()
+    })
+
+    const { promise, cancel } = doInitPings(
+      MOCK_PING_DATA.uri,
+      MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
+      retryCallback,
+      MOCK_PING_DATA.sendClientError,
+      MOCK_PING_DATA.setAllowedOrigins
+    )
+    cancelPing = cancel
+
+    await expect(promise).rejects.toBeInstanceOf(PingCancelledError)
+
+    await vi.advanceTimersByTimeAsync(MOCK_PING_DATA.maxTimeoutMs + 100)
+
+    expect(vi.mocked(globalThis.fetch).mock.calls.length).toBe(2)
+    expect(MOCK_PING_DATA.setAllowedOrigins).not.toHaveBeenCalled()
   })
 })
 
