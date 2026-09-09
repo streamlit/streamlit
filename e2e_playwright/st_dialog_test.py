@@ -130,6 +130,10 @@ def open_on_dismiss_callback_dialog(app: Page):
     click_button(app, "Open on_dismiss callback Dialog")
 
 
+def open_dialog_that_blocks_after_close(app: Page):
+    click_button(app, "Open dialog that blocks after close")
+
+
 def click_to_dismiss(app: Page):
     # Click somewhere outside the close popover container:
     app.keyboard.press("Escape")
@@ -848,6 +852,32 @@ def test_non_dismissible_dialog_can_be_closed_programmatically(app: Page):
 
     # Dialog should now be closed
     expect(main_dialog).to_have_count(0)
+
+
+def test_dialog_closes_before_blocking_follow_up_work(app: Page):
+    """A dialog closed with st.rerun() must disappear before later blocking work.
+
+    Reproduces issue #9405: stale dialog nodes used to stay visible until the
+    next full-app run finished, so time.sleep after submit left the modal up.
+    """
+    open_dialog_that_blocks_after_close(app)
+    dialog = app.get_by_test_id(modal_test_id)
+    expect(dialog).to_be_visible()
+
+    # Do not wait_for_app_run: that would wait out the blocking sleep and
+    # hide the bug this test is meant to catch.
+    get_button(dialog, "Submit then block").click()
+
+    # Wait for the next run to start so we assert hide during the blocking
+    # window, not against a timeout that can miss startup or outlast the sleep.
+    expect(app.get_by_text("Blocking operation started")).to_be_visible()
+    expect(dialog).not_to_be_attached()
+    expect(app.get_by_text("Blocking operation done")).not_to_be_attached()
+
+    # The hide only applies while the script is executing. After a successful
+    # finish the leftover node is pruned, so the dialog must stay gone.
+    expect(app.get_by_text("Blocking operation done")).to_be_visible(timeout=10000)
+    expect(dialog).not_to_be_attached()
 
 
 def test_dialog_on_dismiss_rerun(app: Page):
