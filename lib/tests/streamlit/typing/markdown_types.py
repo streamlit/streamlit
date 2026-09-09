@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     markdown = MarkdownMixin().markdown
     caption = MarkdownMixin().caption
     latex = MarkdownMixin().latex
+    divider = MarkdownMixin().divider
     badge = MarkdownMixin().badge
 
     # =====================================================================
@@ -236,6 +237,35 @@ if TYPE_CHECKING:
     # st.latex does not take markdown-only keywords
     latex(r"x^2", text_alignment="center")  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
     latex(r"x^2", wrap=False)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
+
+    # =====================================================================
+    # st.divider return type tests
+    # =====================================================================
+
+    # No-arg call is valid (width is optional) and returns DeltaGenerator
+    assert_type(divider(), DeltaGenerator)
+
+    # width is keyword-only; accepts only "stretch" or an int (not "content")
+    assert_type(divider(width="stretch"), DeltaGenerator)
+    assert_type(divider(width=300), DeltaGenerator)
+
+    # =====================================================================
+    # Invalid st.divider usages - should NOT type check
+    # =====================================================================
+
+    # Invalid width value (not "stretch" or int)
+    # "content" is accepted by sibling markdown commands but NOT by st.divider
+    divider(width="content")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    divider(width="auto")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    divider(width=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Passing width as positional argument (should be keyword-only)
+    divider("stretch")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
+
+    # st.divider does not take markdown-only keywords
+    divider(help="A rule")  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
+    divider(text_alignment="center")  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
+    divider(wrap=False)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
 
     # =====================================================================
     # st.badge return type tests
