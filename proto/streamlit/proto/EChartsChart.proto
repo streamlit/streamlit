@@ -28,22 +28,18 @@ message EChartsChart {
   // activated (on_select != "ignore") or the user provided a key.
   string id = 3;
 
-  // Field 4 is intentionally unused for a future selection_mode. v1
-  // activates selection through on_select and reports the selection
-  // configured in the spec.
-
   // Form ID, filled if selections are activated.
-  string form_id = 5;
+  string form_id = 4;
 
   // Renderer passed to echarts.init.
-  Renderer renderer = 6;
+  Renderer renderer = 5;
 
   // True when ``on_select`` is not ``"ignore"``. Keyed display-only charts
   // also receive an element ID (CSS class + remount identity), so the
   // frontend cannot treat a non-empty ID as "this is a selection widget".
-  bool selection_activated = 7;
+  bool selection_activated = 6;
 
-  // Next ID: 8
+  // Next ID: 7
 
   // Available renderers:
   enum Renderer {
