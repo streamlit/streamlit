@@ -256,17 +256,30 @@ _CANNOT_IMPORT_FROM_RE: Final = re.compile(r"cannot import name '[^']+' from '([
 _STREAMLIT_ATTRIBUTE_RE: Final = re.compile(
     r"module 'streamlit' has no attribute '([^']+)'"
 )
-# Protobuf C++ / pure-Python TypeError markers for descriptor-pool name
-# collisions. Combined with ``streamlit/proto/`` this labels
-# https://github.com/streamlit/streamlit/issues/3082 without recording
-# colliding file names or unrelated library clashes.
+# Label Streamlit protobuf descriptor-pool collisions
+# (https://github.com/streamlit/streamlit/issues/3082) without recording
+# colliding file names. A path-qualified match requires a Streamlit proto
+# path plus one of these collision-specific substrings, not the generic
+# "couldn't build proto file into descriptor pool" prefix.
 _PROTOBUF_COLLISION_MARKERS: Final = (
-    "couldn't build proto file into descriptor pool",
     "conflict register for file",
     "already defined in file",
     "already in the pool",
+    "duplicate file name",
 )
 _STREAMLIT_PROTO_PATH: Final = "streamlit/proto/"
+# protobuf 5+ upb name collisions omit the file path:
+# "Couldn't build proto file into descriptor pool: duplicate symbol 'Empty'".
+_PROTOBUF_DUPLICATE_SYMBOL_RE: Final = re.compile(r"duplicate symbol '([^']+)'")
+# Un-namespaced Streamlit proto types used only as a match gate; the symbol
+# is never emitted in telemetry.
+_STREAMLIT_UNNAMESPACED_PROTO_NAMES: Final = frozenset(
+    {
+        "empty",
+        "image",
+        "imagelist",
+    }
+)
 # Import namespaces used by Streamlit itself or by its optional features. Only
 # these names are appended to telemetry to avoid recording private app modules.
 _STREAMLIT_IMPORT_MODULE_PREFIXES: Final = frozenset(
@@ -556,18 +569,21 @@ def _is_streamlit_import_module(module: str) -> bool:
 
 
 def _is_streamlit_protobuf_collision(msg: str) -> bool:
-    """Return whether ``msg`` is a protobuf descriptor-pool clash with Streamlit.
+    """True when this TypeError text is a descriptor-pool clash with Streamlit.
 
     Streamlit's generated protos are un-namespaced, so a third-party ``Empty``
     or ``Image`` message can collide in the global descriptor pool
-    (https://github.com/streamlit/streamlit/issues/3082). Both the C++ and
-    pure-Python protobuf backends surface this as a ``TypeError`` whose text
-    names a ``streamlit/proto/`` file.
+    (https://github.com/streamlit/streamlit/issues/3082). The C++ and
+    pure-Python backends name a ``streamlit/proto/`` file; protobuf 5+ upb
+    name collisions do not.
     """
     lowered = msg.lower()
-    if _STREAMLIT_PROTO_PATH not in lowered:
-        return False
-    return any(marker in lowered for marker in _PROTOBUF_COLLISION_MARKERS)
+    if _STREAMLIT_PROTO_PATH in lowered and any(
+        marker in lowered for marker in _PROTOBUF_COLLISION_MARKERS
+    ):
+        return True
+    match = _PROTOBUF_DUPLICATE_SYMBOL_RE.search(lowered)
+    return bool(match and match.group(1) in _STREAMLIT_UNNAMESPACED_PROTO_NAMES)
 
 
 def format_uncaught_exception(exc: BaseException) -> str:
@@ -579,7 +595,7 @@ def format_uncaught_exception(exc: BaseException) -> str:
     - unexpected-keyword ``TypeError`` → ``"TypeError:<param>"``
     - missing required argument ``TypeError`` → ``"TypeError:missing:<param>"``
     - protobuf descriptor-pool collisions with Streamlit protos
-      → ``"TypeError:protobuf_collision"``
+      → ``"TypeError:protobuf-collision"``
     - allowlisted ``ImportError`` / ``ModuleNotFoundError``
       → ``"<Type>:<module>"``
     - missing top-level ``streamlit`` attributes → ``"AttributeError:<attribute>"``
@@ -597,7 +613,7 @@ def format_uncaught_exception(exc: BaseException) -> str:
         if isinstance(exc, TypeError):
             msg = str(exc)
             if _is_streamlit_protobuf_collision(msg):
-                return f"{name}:protobuf_collision"
+                return f"{name}:protobuf-collision"
             match = _UNEXPECTED_KWARG_RE.search(msg)
             if match:
                 return f"{name}:{match.group(1)}"

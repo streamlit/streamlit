@@ -875,14 +875,14 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
                 'descriptor for file "worker_api.proto": Empty: "Empty" is '
                 'already defined in file "streamlit/proto/Empty.proto".'
             ),
-            "TypeError:protobuf_collision",
+            "TypeError:protobuf-collision",
         ),
         (
             TypeError(
                 'Conflict register for file "worker_api.proto": Empty is already '
                 'defined in file "streamlit/proto/Empty.proto".'
             ),
-            "TypeError:protobuf_collision",
+            "TypeError:protobuf-collision",
         ),
         (
             TypeError(
@@ -890,7 +890,7 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
                 'descriptor for file "streamlit/proto/Empty.proto": Empty: '
                 '"Empty" is already defined in file "worker_api.proto".'
             ),
-            "TypeError:protobuf_collision",
+            "TypeError:protobuf-collision",
         ),
         (
             TypeError(
@@ -898,7 +898,21 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
                 "streamlit/proto/Empty.proto: A file with this name is already "
                 "in the pool."
             ),
-            "TypeError:protobuf_collision",
+            "TypeError:protobuf-collision",
+        ),
+        (
+            TypeError(
+                "Couldn't build proto file into descriptor pool: duplicate "
+                "symbol 'Empty'"
+            ),
+            "TypeError:protobuf-collision",
+        ),
+        (
+            TypeError(
+                "Couldn't build proto file into descriptor pool: duplicate "
+                "file name streamlit/proto/Empty.proto"
+            ),
+            "TypeError:protobuf-collision",
         ),
         (
             TypeError(
@@ -909,6 +923,21 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
         ),
         (
             TypeError("failed to load streamlit/proto/Empty.proto"),
+            "TypeError",
+        ),
+        (
+            TypeError(
+                "Couldn't build proto file into descriptor pool: duplicate "
+                "symbol 'MyRequest'"
+            ),
+            "TypeError",
+        ),
+        (
+            TypeError(
+                "Couldn't build proto file into descriptor pool! Invalid proto "
+                'descriptor for file "streamlit/proto/Empty.proto": SomeField: '
+                "missing field number."
+            ),
             "TypeError",
         ),
         (
@@ -1052,8 +1081,12 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
         "protobuf-collision-python-backend",
         "protobuf-collision-streamlit-loaded-second",
         "protobuf-collision-duplicate-filename",
-        "protobuf-collision-unrelated-libraries",
+        "protobuf-collision-upb-duplicate-symbol",
+        "protobuf-collision-upb-duplicate-filename",
+        "unrelated-proto-collision-not-labeled",
         "protobuf-path-without-collision-markers",
+        "unrelated-upb-duplicate-symbol-not-labeled",
+        "protobuf-descriptor-error-not-collision",
         "streamlit-value-error",
         "streamlit-value-error-detail",
         "streamlit-missing-required-parameter",
@@ -1083,7 +1116,7 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
     ],
 )
 def test_format_uncaught_exception(exc: BaseException, expected: str) -> None:
-    """Return ``ExceptionType:<param>`` for known parameter failures; otherwise the bare type name."""
+    """Return a stable ``Type:<suffix>`` label, or the bare type name."""
     assert metrics_util.format_uncaught_exception(exc) == expected
 
 
