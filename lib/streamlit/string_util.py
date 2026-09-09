@@ -99,7 +99,7 @@ def _has_image_file_suffix(icon: str) -> bool:
 
 
 def _looks_like_unsupported_image(icon: str) -> bool:
-    """Return True if ``icon`` is a URL or an existing local file.
+    """Return True if ``icon`` is a URL, a UNC path, or an existing local file.
 
     Plain labels and emoji take the fast path: no extra imports, no URL
     parsing, and no filesystem access.
@@ -108,12 +108,11 @@ def _looks_like_unsupported_image(icon: str) -> bool:
     if icon.startswith(_STATIC_ICON_URL_PREFIX):
         return True
 
-    # ``data:`` URLs have no ``://``.
-    if "://" in icon or icon[:5].lower() == "data:":
-        from streamlit import url_util
-
-        # Treat it as a URL; do not stat it as a local path.
-        return url_util.is_url(icon, allowed_schemas=("http", "https", "data"))
+    # Any URL-shaped value is already not a valid icon. Detect ``scheme://``,
+    # ``data:`` URLs (which have no ``://``), and scheme-relative ``//host/path``
+    # URLs without importing url_util or probing the filesystem.
+    if "://" in icon or icon[:5].lower() == "data:" or icon.startswith("//"):
+        return True
 
     has_path_separator = "/" in icon or "\\" in icon
     looks_like_path = (
@@ -131,7 +130,7 @@ def _looks_like_unsupported_image(icon: str) -> bool:
 
     try:
         return Path(icon).expanduser().is_file()
-    except (OSError, ValueError):
+    except (OSError, ValueError, RuntimeError):
         return False
 
 

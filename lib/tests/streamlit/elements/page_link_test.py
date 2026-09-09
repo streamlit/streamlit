@@ -247,6 +247,15 @@ class PageLinkTest(DeltaGeneratorTestCase):
             assert c.icon == ""
 
     @patch("pathlib.Path.is_file", MagicMock(return_value=True))
+    def test_empty_icon_suppresses_page_icon(self) -> None:
+        """st.page_link(icon="") must not fall back to the Page icon."""
+        page = st.Page("foo.py", title="Bar Test", icon="🎈")
+        st.page_link(page=page, icon="")
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.icon == ""
+
+    @patch("pathlib.Path.is_file", MagicMock(return_value=True))
     def test_st_page_with_mismatched_file_path_raises(self):
         """Linking to an ``st.Page`` whose file path does not match the page
         registered under the same ``url_path`` raises.

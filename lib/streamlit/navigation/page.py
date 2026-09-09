@@ -357,14 +357,10 @@ class Page:
         self._title = title or inferred_name.replace("_", " ")
 
         if icon is not None:
-            # "" opts out of the filename emoji; do not fall back to it.
+            # An explicit icon wins, including ``icon=""``, which means no icon.
             self._icon = validate_icon_or_emoji(icon)
         else:
-            self._icon = inferred_icon
-            if inferred_icon:
-                # Filename inference already yields a bare emoji; validate it
-                # for errors but keep the inferred string.
-                validate_icon_or_emoji(inferred_icon)
+            self._icon = validate_icon_or_emoji(inferred_icon)
 
         if self._title.strip() == "":
             raise StreamlitMissingRequiredParameterError(

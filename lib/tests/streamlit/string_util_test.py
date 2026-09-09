@@ -271,6 +271,9 @@ class StringUtilTest(unittest.TestCase):
             ("😃😃", "invalid-emoji"),
             ("https://example.com/icon.png", "invalid-image"),
             ("http://example.com/icon.png", "invalid-image"),
+            ("file:///tmp/icon.png", "invalid-image"),
+            ("ftp://host/icon.png", "invalid-image"),
+            ("//cdn.example.com/icon.png", "invalid-image"),
             ("data:image/png;base64,abc", "invalid-image"),
             ("/app/static/icon.png", "invalid-image"),
             (r"\\server\share\icon.png", "invalid-image"),
@@ -457,6 +460,13 @@ def test_validate_icon_or_emoji_null_byte_path_is_invalid_icon() -> None:
     assert e.value.error_id == "invalid-icon"
 
 
+def test_validate_icon_or_emoji_unresolvable_home_is_invalid_icon() -> None:
+    """An unresolvable ``~user`` prefix must not leak a native RuntimeError."""
+    with pytest.raises(StreamlitAPIException) as e:
+        string_util.validate_icon_or_emoji("~nonexistent_user_12345/logo.png")
+    assert e.value.error_id == "invalid-icon"
+
+
 def test_validate_icon_or_emoji_skips_url_and_fs_work_for_plain_values() -> None:
     """Emoji, Material icons, spinner, labels, and shortcodes must not import URL or path helpers."""
     modules = ("streamlit.url_util", "streamlit.path_security")
@@ -496,6 +506,12 @@ def test_validate_icon_or_emoji_does_not_stat_plain_or_url_values(
     assert e.value.error_id == "invalid-icon"
     with pytest.raises(StreamlitAPIException) as e:
         string_util.validate_icon_or_emoji("https://example.com/icon.png")
+    assert e.value.error_id == "invalid-image"
+    with pytest.raises(StreamlitAPIException) as e:
+        string_util.validate_icon_or_emoji("file:///tmp/icon.png")
+    assert e.value.error_id == "invalid-image"
+    with pytest.raises(StreamlitAPIException) as e:
+        string_util.validate_icon_or_emoji("//cdn.example.com/icon.png")
     assert e.value.error_id == "invalid-image"
     with pytest.raises(StreamlitAPIException) as e:
         string_util.validate_icon_or_emoji("data:image/png;base64,abc")
