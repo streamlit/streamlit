@@ -99,7 +99,7 @@ To protect maintainer bandwidth and keep the process fair for active contributor
 
 ## AI Agent Skills and Subagents
 
-This repository includes skills and subagents in `.claude/` usable with Claude Code and Cursor to assist AI coding agents with common development tasks. Skills are invoked automatically based on their description, but can also be triggered manually via `/skill-name` (e.g., `/checking-changes`).
+This repository includes skills and subagents in `.claude/` usable with Claude Code and Cursor to assist AI coding agents with common development tasks. Skills are invoked automatically based on their description, but can also be triggered manually via `/skill-name` (e.g., `/checking-changes`). Skills with `disable-model-invocation: true` in their frontmatter (currently `creating-pull-requests`) are never auto-invoked; run them explicitly with `/skill-name`.
 
 ### Skills
 
@@ -113,7 +113,7 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | `fixing-flaky-e2e-tests` | When E2E tests fail intermittently, show timeout errors, have snapshot mismatches, or exhibit browser-specific failures |
 | `implementing-feature` | When you have a spec folder, URL, or GitHub issue to implement end-to-end, or want the next papercut enhancement selected automatically |
 | `understanding-streamlit-architecture` | When debugging cross-layer issues, understanding how features work end-to-end, or onboarding to the codebase |
-| `creating-pull-requests` | When changes are ready to be submitted as a PR with proper labels and formatting |
+| `creating-pull-requests` | When changes are ready to be submitted as a PR with proper labels and formatting. Manual only (`/creating-pull-requests`); not auto-invoked. |
 | `addressing-pr-review-comments` | When a PR has reviewer feedback to address, including inline and general PR comments |
 | `updating-internal-docs` | After significant codebase changes to review and update internal documentation |
 | `sharing-pr-agent-artifacts` | When you have agent-generated artifacts (specs, plans) relevant for the current PR to share for reviewing |

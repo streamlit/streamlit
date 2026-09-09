@@ -51,6 +51,12 @@ Instructions for the AI agent...
 | `name` | Unique skill identifier | Lowercase letters, numbers, and hyphens only; max 64 chars |
 | `description` | What the skill does and when to use it | Non-empty; max 1024 chars; include keywords |
 
+### Optional frontmatter fields
+
+| Field | Description |
+|-------|-------------|
+| `disable-model-invocation` | Set to `true` so the skill is never auto-invoked. Claude Code and Cursor then run it only when the user types `/skill-name`. Use for workflows with side effects (for example creating a PR). |
+
 ## Naming conventions
 
 | Item | Convention | Example |
