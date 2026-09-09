@@ -752,12 +752,11 @@ class TextWidgetsMixin:
     ) -> str | None:
         key = to_key(key)
 
-        validate_on_change_mode(on_change)
-        live_debounce_ms = _parse_text_input_live(live)
-
-        on_change_callback: WidgetCallback | None = (
-            on_change if callable(on_change) else None
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            modes_supported=True,
         )
+        live_debounce_ms = _parse_text_input_live(live)
 
         type_defaults = _TEXT_INPUT_TYPE_DEFAULTS.get(type)
         if type_defaults is None:
@@ -1196,6 +1195,10 @@ class TextWidgetsMixin:
         ctx: ScriptRunContext | None = None,
     ) -> str | None:
         key = to_key(key)
+        on_change = validate_on_change_mode(
+            on_change,
+            modes_supported=False,
+        )
 
         check_widget_policies(
             self.dg,

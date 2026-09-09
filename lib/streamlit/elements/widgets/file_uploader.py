@@ -49,6 +49,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 from streamlit.string_util import to_help_str
@@ -529,6 +530,10 @@ class FileUploaderMixin:
         width: WidthWithoutContent = "stretch",
     ) -> UploadedFile | list[UploadedFile] | None:
         key = to_key(key)
+        on_change = validate_on_change_mode(
+            on_change,
+            modes_supported=False,
+        )
 
         if max_upload_size is not None and (
             isinstance(max_upload_size, bool)

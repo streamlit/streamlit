@@ -14,10 +14,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, get_args
+from typing import TYPE_CHECKING
 
 from streamlit.errors import (
-    StreamlitAPIException,
     StreamlitIncompatibleParametersError,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
@@ -27,7 +26,6 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 )
 from streamlit.runtime.state.common import (
     BindOption,
-    OnChangeMode,
     PersistStateOption,
     RegisterWidgetResult,
     T,
@@ -54,7 +52,6 @@ def register_widget(
     ctx: ScriptRunContext | None,
     callbacks: dict[str, WidgetCallback] | None = None,
     on_change_handler: WidgetCallback | None = None,
-    on_change_param: str = "on_change",
     args: WidgetArgs | None = None,
     kwargs: WidgetKwargs | None = None,
     value_type: ValueFieldName,
@@ -87,10 +84,6 @@ def register_widget(
         A dictionary of callbacks for multi-callback support.
     on_change_handler : WidgetCallback or None
         An optional callback invoked when the widget's value changes.
-    on_change_param : str
-        The name of the public parameter that supplied `on_change_handler`, used
-        in error messages. Trigger widgets expose it as `on_click`, and
-        `st.chat_input` as `on_submit`.
     args : WidgetArgs or None
         Positional arguments to pass to the `on_change_handler` or `callbacks`.
     kwargs : WidgetKwargs or None
@@ -162,10 +155,8 @@ def register_widget(
         For both paths a widget return value is provided, allowing the widgets
         to be used in a non-streamlit setting.
     """
-    _validate_on_change_handler(on_change_handler, on_change_param)
-
     if on_change_handler is not None and callbacks is not None:
-        raise StreamlitIncompatibleParametersError(on_change_param, "callbacks")
+        raise StreamlitIncompatibleParametersError("on_change", "callbacks")
 
     # Validate bind parameter value
     if bind is not None and bind != "query-params":
@@ -225,31 +216,6 @@ def register_widget(
         disabled=disabled,
     )
     return register_widget_from_metadata(metadata, ctx)
-
-
-def _validate_on_change_handler(on_change_handler: object, param_name: str) -> None:
-    """Reject values that are not a callback or ``None``.
-
-    Widgets that support ``on_change="ignore"`` / ``"rerun"`` convert those
-    modes to ``None`` before calling ``register_widget``. If a mode string
-    still reaches this function, the calling widget does not support callback
-    modes. The argument is typed as ``object`` so that branch stays reachable
-    under mypy; ``register_widget`` still annotates it as
-    ``WidgetCallback | None``.
-    """
-    if on_change_handler is None or callable(on_change_handler):
-        return
-
-    if isinstance(on_change_handler, str) and on_change_handler in get_args(
-        OnChangeMode
-    ):
-        raise StreamlitAPIException(
-            f'`{param_name}="{on_change_handler}"` is not supported on this widget. '
-            f"Pass a callback, or omit `{param_name}`.",
-            error_id="unsupported-on-change-mode",
-        )
-
-    raise StreamlitValueError(param_name, ["a callback function"])
 
 
 def register_widget_from_metadata(

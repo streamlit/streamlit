@@ -301,27 +301,45 @@ def require_valid_user_key(key: str) -> None:
 
 
 def validate_on_change_mode(
-    on_change: WidgetCallback | OnChangeMode | None,
+    callback: object,
     *,
+    modes_supported: bool,
+    none_supported: bool = True,
     param_name: str = "on_change",
-) -> None:
-    """Reject `on_change` values that are neither a callback nor a supported mode.
+) -> WidgetCallback | None:
+    """Validate a callback parameter and return its normalized callback.
 
-    `None` is accepted as a legacy alias for `"rerun"`.
+    Callables are always valid. ``None`` and mode strings are valid only when
+    their corresponding support flag is true. Valid non-callback values normalize
+    to ``None`` because their behavior is handled separately by the widget.
 
     Raises
     ------
+    StreamlitAPIException
+        If `callback` is a valid mode string but the widget does not support
+        callback modes.
     StreamlitValueError
-        If `on_change` is not `None`, not callable, and not a valid mode string.
+        If `callback` is not `None`, not callable, and not a valid supported
+        mode string.
     """
-    if on_change is None or callable(on_change):
-        return
+    if callback is None and none_supported:
+        return None
+    if callable(callback):
+        return cast("WidgetCallback", callback)
 
     # Require a str before membership so array-like values (e.g. NumPy arrays)
     # cannot raise an ambiguous-truth ValueError from ``==``.
     supported_modes = get_args(OnChangeMode)
-    if not isinstance(on_change, str) or on_change not in supported_modes:
-        raise StreamlitValueError(
-            param_name,
-            [repr(mode) for mode in supported_modes] + ["a callback function"],
+    if isinstance(callback, str) and callback in supported_modes:
+        if modes_supported:
+            return None
+        raise StreamlitAPIException(
+            f'`{param_name}="{callback}"` is not supported on this widget. '
+            f"Pass a callback, or omit `{param_name}`.",
+            error_id="unsupported-on-change-mode",
         )
+
+    valid_values = ["a callback function"]
+    if modes_supported:
+        valid_values = [repr(mode) for mode in supported_modes] + valid_values
+    raise StreamlitValueError(param_name, valid_values)

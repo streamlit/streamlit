@@ -76,6 +76,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.runtime.state.session_state_proxy import get_session_state
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
@@ -976,6 +977,11 @@ class ChatMixin:
 
         """
         key = to_key(key)
+        on_submit = validate_on_change_mode(
+            on_submit,
+            modes_supported=False,
+            param_name="on_submit",
+        )
 
         check_widget_policies(
             self.dg,
@@ -1111,7 +1117,6 @@ class ChatMixin:
         widget_state = register_widget(
             chat_input_proto.id,
             on_change_handler=on_submit,
-            on_change_param="on_submit",
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,

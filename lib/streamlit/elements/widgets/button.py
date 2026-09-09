@@ -1387,12 +1387,10 @@ class ButtonMixin:
         key = to_key(key)
         label = "" if label is None else to_str(label)
 
-        validate_on_change_mode(on_click, param_name="on_click")
-
-        on_click_callback: WidgetCallback | None = (
-            None
-            if on_click is None or on_click in {"ignore", "rerun"}
-            else cast("WidgetCallback", on_click)  # ty: ignore[redundant-cast]
+        on_click_callback = validate_on_change_mode(
+            on_click,
+            modes_supported=True,
+            param_name="on_click",
         )
 
         normalized_shortcut: str | None = None
@@ -1460,7 +1458,6 @@ class ButtonMixin:
         button_state = register_widget(
             download_button_proto.id,
             on_change_handler=on_click_callback,
-            on_change_param="on_click",
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
@@ -1500,14 +1497,13 @@ class ButtonMixin:
     ) -> bool | DeltaGenerator:
         key = to_key(key)
         label = "" if label is None else to_str(label)
-        validate_on_change_mode(on_click, param_name="on_click")
+        on_click_callback = validate_on_change_mode(
+            on_click,
+            modes_supported=True,
+            param_name="on_click",
+        )
         ignore_rerun = on_click == "ignore"
         is_rerun_mode = not ignore_rerun
-        on_click_callback: WidgetCallback | None = (
-            None
-            if on_click in {"ignore", "rerun"}
-            else cast("WidgetCallback", on_click)  # ty: ignore[redundant-cast]
-        )
 
         link_button_proto = LinkButtonProto()
         normalized_shortcut = (
@@ -1567,7 +1563,6 @@ class ButtonMixin:
             button_state = register_widget(
                 link_button_proto.id,
                 on_change_handler=on_click_callback,
-                on_change_param="on_click",
                 args=args,
                 kwargs=kwargs,
                 deserializer=serde.deserialize,
@@ -1718,6 +1713,11 @@ class ButtonMixin:
     ) -> bool:
         key = to_key(key)
         label = "" if label is None else to_str(label)
+        on_click = validate_on_change_mode(
+            on_click,
+            modes_supported=False,
+            param_name="on_click",
+        )
 
         normalized_shortcut: str | None = None
         if shortcut is not None:
@@ -1792,7 +1792,6 @@ class ButtonMixin:
         button_state = register_widget(
             button_proto.id,
             on_change_handler=on_click,
-            on_change_param="on_click",
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,

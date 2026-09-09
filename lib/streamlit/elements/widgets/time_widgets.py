@@ -64,6 +64,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     get_session_state,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.string_util import to_help_str
 from streamlit.time_util import adjust_years
@@ -1024,6 +1025,10 @@ class TimeWidgetsMixin:
         ctx: ScriptRunContext | None = None,
     ) -> time | None:
         key = to_key(key)
+        on_change = validate_on_change_mode(
+            on_change,
+            modes_supported=False,
+        )
 
         check_widget_policies(
             self.dg,
@@ -1446,6 +1451,10 @@ class TimeWidgetsMixin:
         ctx: ScriptRunContext | None = None,
     ) -> datetime | None:
         key = to_key(key)
+        on_change = validate_on_change_mode(
+            on_change,
+            modes_supported=False,
+        )
 
         check_widget_policies(
             self.dg,
@@ -1947,6 +1956,10 @@ class TimeWidgetsMixin:
         ctx: ScriptRunContext | None = None,
     ) -> DateWidgetReturn:
         key = to_key(key)
+        on_change = validate_on_change_mode(
+            on_change,
+            modes_supported=False,
+        )
 
         check_widget_policies(
             self.dg,

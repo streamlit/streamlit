@@ -43,6 +43,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.string_util import to_help_str, to_str, validate_icon_or_emoji
 from streamlit.type_util import check_python_comparable
@@ -337,6 +338,11 @@ class MenuButtonMixin:
     ) -> T | None:
         key = to_key(key)
         label = "" if label is None else to_str(label)
+        on_click = validate_on_change_mode(
+            on_click,
+            modes_supported=False,
+            param_name="on_click",
+        )
 
         check_widget_policies(
             self.dg,
@@ -418,7 +424,6 @@ class MenuButtonMixin:
         widget_state = register_widget(
             menu_button_proto.id,
             on_change_handler=on_click,
-            on_change_param="on_click",
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
