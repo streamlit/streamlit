@@ -28,6 +28,8 @@ message ButtonGroup {
     string content = 1;
     // when set, this is the icon that will be displayed next to the option
     optional string content_icon = 3;
+    // when set to true, this option will be disabled and cannot be selected
+    bool disabled = 5;
 
     reserved 2, 4;
     reserved "selected_content", "selected_content_icon";
