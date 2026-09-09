@@ -117,6 +117,21 @@ class FileUtilTest(unittest.TestCase):
             == "/some_path/to/app/static"
         )
 
+    def test_get_static_dir_is_package_static_folder(self) -> None:
+        """Package static assets live next to the ``streamlit`` package."""
+        expected = os.path.normpath(
+            os.path.join(os.path.dirname(file_util.__file__), "static")
+        )
+        assert file_util.get_static_dir() == expected
+
+    def test_get_streamlit_file_path_raises_without_home(self) -> None:
+        """A missing home directory is a hard error."""
+        with (
+            patch("streamlit.file_util.Path.home", return_value=None),
+            pytest.raises(RuntimeError, match="No home directory"),
+        ):
+            file_util.get_streamlit_file_path("config.toml")
+
     @patch("os.path.getsize", MagicMock(return_value=42))
     @patch(
         "os.walk",

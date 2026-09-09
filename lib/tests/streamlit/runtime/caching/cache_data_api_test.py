@@ -54,6 +54,7 @@ from streamlit.runtime.caching.storage import (
     CacheStorageManager,
 )
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
+    CacheStorageError,
     InvalidCacheStorageContextError,
 )
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
@@ -620,6 +621,21 @@ class CacheDataStatsProviderTest(unittest.TestCase):
         assert CACHE_MEMORY_FAMILY in stats_dict
         assert set(expected) == set(stats_dict[CACHE_MEMORY_FAMILY])
 
+    def test_data_cache_get_stats_delegates_to_stats_provider_storage(self) -> None:
+        """DataCache.get_stats returns storage stats when storage is a StatsProvider."""
+        cache = _data_caches.get_cache(
+            key="stats_key",
+            persist=None,
+            max_entries=None,
+            ttl=None,
+            display_name="stats_fn",
+        )
+        cache.write_result("vk", 123, [])
+        stats = cache.get_stats()
+        family_stats = stats[CACHE_MEMORY_FAMILY]
+        assert family_stats
+        assert all(stat.byte_length > 0 for stat in family_stats)
+
 
 class CacheDataValidateParamsTest(DeltaGeneratorTestCase):
     """st.cache_data disk persistence tests"""
@@ -1052,3 +1068,90 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         assert cache_bg is not cache_fg
         # The replaced cache is detached so an in-flight refresh would be discarded.
         assert cache_fg.is_active is False
+
+    def _cache(self, key: str, **kwargs: Any) -> Any:
+        params: dict[str, Any] = {
+            "key": key,
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": key,
+        }
+        params.update(kwargs)
+        return _data_caches.get_cache(**params)
+
+    def _background_cache(self, key: str) -> Any:
+        cache = self._cache(key, ttl=100, refresh_mode="background")
+        cache.write_result("vk", 123, [])
+        return cache
+
+    def _write_background(self, cache: Any, value: object = 456) -> None:
+        cache.write_background_refresh_result(
+            "vk",
+            value,
+            expected_generation=cache.generation,
+            expected_key_generation=cache.key_generation("vk"),
+        )
+
+    def test_write_result_if_current_reraises_pickle_error_when_still_current(
+        self,
+    ) -> None:
+        """A pickle failure is re-raised if the cache was not invalidated during it."""
+        cache = self._cache("pickle_still_current")
+        token = cache.capture_invalidation_token("vk")
+        with (
+            patch.object(cache, "_pickle_result", side_effect=CacheError("nope")),
+            pytest.raises(CacheError, match="nope"),
+        ):
+            cache.write_result_if_current("vk", 1, [], invalidation_token=token)
+
+    def test_write_result_if_current_returns_false_if_invalidated_during_pickle(
+        self,
+    ) -> None:
+        """A pickle failure is ignored when a clear landed while serializing."""
+        cache = self._cache("pickle_invalidated")
+        token = cache.capture_invalidation_token("vk")
+
+        def _pickle_then_clear(*_args: object, **_kwargs: object) -> bytes:
+            cache.clear()
+            raise CacheError("nope")
+
+        with patch.object(cache, "_pickle_result", side_effect=_pickle_then_clear):
+            assert (
+                cache.write_result_if_current("vk", 1, [], invalidation_token=token)
+                is False
+            )
+
+    def test_background_writeback_raises_on_unpicklable_value(self) -> None:
+        """Unpicklable background refresh results surface as CacheError."""
+        cache = self._background_cache("bg_unpicklable")
+        with pytest.raises(CacheError, match="Failed to pickle"):
+            self._write_background(cache, lambda: None)
+
+    @parameterized.expand(
+        [
+            ("missing_entry", {"return_value": False}),
+            ("storage_error", {"side_effect": CacheStorageError("boom")}),
+        ]
+    )
+    def test_background_writeback_skips_when_presence_check_fails(
+        self, case: str, has_kwargs: dict[str, object]
+    ) -> None:
+        """A failed presence check discards the refresh write-back."""
+        cache = self._background_cache(f"bg_{case}")
+        with (
+            patch.object(cache.storage, "has", **has_kwargs),
+            patch.object(cache.storage, "set") as mock_set,
+        ):
+            self._write_background(cache)
+            mock_set.assert_not_called()
+
+    def test_background_writeback_skips_when_orphaned_under_lock(self) -> None:
+        """A refresh that becomes orphaned after pickling is not written."""
+        cache = self._background_cache("bg_orphaned_lock")
+        with (
+            patch.object(cache, "_refresh_is_orphaned", side_effect=[False, True]),
+            patch.object(cache.storage, "set") as mock_set,
+        ):
+            self._write_background(cache)
+            mock_set.assert_not_called()

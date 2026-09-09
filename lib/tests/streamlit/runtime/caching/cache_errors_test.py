@@ -50,6 +50,11 @@ def test_get_return_value_type_with_module() -> None:
     assert "lock" in result.lower() or "Lock" in result
 
 
+def test_get_return_value_type_without_module() -> None:
+    """Values without a ``__module__`` attribute fall back to the type name."""
+    assert get_return_value_type(42) == "`int`"
+
+
 class CacheErrorsTest(DeltaGeneratorTestCase):
     """Make sure user-visible error messages look correct.
 

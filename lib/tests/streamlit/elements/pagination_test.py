@@ -19,6 +19,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.widgets.pagination import PaginationSerde
@@ -335,3 +336,33 @@ class TestPaginationBindQueryParams(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.pagination
         assert proto.query_param_key == "my_key"
         assert proto.default == 5
+
+    @parameterized.expand(
+        [
+            ("string", "bogus", True),
+            ("zero", 0, True),
+            ("above_max", 11, True),
+            ("bool", True, False),
+        ]
+    )
+    def test_invalid_widget_value_resets_to_default(
+        self, _case: str, invalid_value: object, expect_proto_update: bool
+    ) -> None:
+        """Invalid widget values that bypass serde fall back to the default page.
+
+        ``bool`` is a subclass of ``int``, so after clamping to page 1 the proto
+        is not updated (``1 == True``). Other invalid values rewrite the proto.
+        """
+        widget_state = MagicMock()
+        widget_state.value = invalid_value
+        widget_state.value_changed = False
+        with patch(
+            "streamlit.elements.widgets.pagination.register_widget",
+            return_value=widget_state,
+        ):
+            val = st.pagination(10, key="pag_invalid")
+        assert val == 1
+        proto = self.get_delta_from_queue().new_element.pagination
+        if expect_proto_update:
+            assert proto.value == 1
+            assert proto.set_value is True
