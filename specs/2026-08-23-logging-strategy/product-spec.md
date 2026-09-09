@@ -9,9 +9,9 @@ created: 2026-08-23
 
 Make all `streamlit.*` logs controllable through the standard
 `logging.getLogger("streamlit")` hierarchy while preserving Streamlit's automatic console
-logging when it runs an app. Add an opt-in handler policy for applications that run
-`st.App` through an external ASGI server or embed it in another framework, without allowing
-Streamlit logs to disappear when the host has not configured logging.
+logging when it runs an app. Add `logger.handlerMode` (`"streamlit"`, `"auto"`, or
+`"host"`) for applications that run `st.App` through an external ASGI server or embed it in
+another framework, with a cooperative fallback when the host has not configured logging.
 
 ## Problem
 
@@ -102,6 +102,10 @@ that inspects `logging.getLogger("streamlit.runtime...").handlers` is not a supp
 The customization shown in the problem statement now works: adding a handler to the
 namespace adds a destination alongside Streamlit's default console handler. Use
 `handlerMode="host"` when the namespace or root handler should be the only destination.
+Handlers attached directly to `logging.getLogger("streamlit")` receive child records under
+every policy. Handlers attached only to Python's root logger, including pytest's `caplog`,
+still require `handlerMode="host"` or host-selected `"auto"` because the compatibility
+default remains isolated from root.
 
 ### Handler policy configuration
 
@@ -122,7 +126,7 @@ handlerMode = "streamlit"
 be discarded. `logger.level` and `logger.messageFormat` configure only Streamlit's default
 output path; the host owns levels, filters, formatting, and destinations in host mode.
 
-An enum is preferred over `enableDefaultHandler = true/false` because it distinguishes an
+Prefer an enum over `enableDefaultHandler = true/false` because it distinguishes an
 explicit host-owned policy from the cooperative fallback needed by external ASGI servers
 that have not configured Python's root logger.
 
@@ -146,6 +150,9 @@ not on Python's root logger. In that common case, `"auto"` deliberately keeps St
 fallback and behaves like `"streamlit"`. The value is useful when one deployment artifact
 can either call `App.run()` or be embedded in a host that configures a root or `streamlit`
 handler. Applications that always want external ownership should use `"host"`.
+This spec proposes shipping all three values in the first release. `"auto"` is included for
+hybrid launchers, while its compatibility fallback and the deterministic `"host"` option
+keep the initial default and embedded behavior explicit.
 
 ### Examples
 
@@ -165,10 +172,9 @@ streamlit_logger.addHandler(file_handler)
 With the default `handlerMode="streamlit"`, this intentionally produces two destinations:
 Streamlit's existing console output and `streamlit.log`. Select `"host"` when the custom
 handler should be the only output path. The config option can be supplied through
-`config.toml`, the equivalent `STREAMLIT_LOGGER_HANDLER_MODE` environment variable, or the
-applicable Streamlit CLI option; no new Python configuration API is introduced. As with
-other Streamlit config, removing the owned handler directly in Python is not durable across
-a config reload.
+`config.toml`, `STREAMLIT_LOGGER_HANDLER_MODE`, or `--logger.handlerMode`; no new Python
+configuration API is introduced. As with other Streamlit config, removing the owned handler
+directly in Python is not durable across a config reload.
 
 Use the host application's JSON logging exclusively for an embedded app:
 
@@ -239,8 +245,9 @@ selected handler policy.
 
 ### Behavior guarantees
 
-- Streamlit warnings and errors reach at least one handler in `"streamlit"` and `"auto"`
-  modes.
+- Streamlit warnings and errors emitted by enabled loggers reach at least one handler in
+  `"streamlit"` and `"auto"` modes. A host can still suppress a specific logger with
+  `Logger.disabled`.
 - Streamlit never removes, reformats, or replaces handlers it does not own.
 - Repeated config parsing does not increase handler counts.
 - Streamlit-owned configuration does not create duplicate delivery paths. Adding a custom
