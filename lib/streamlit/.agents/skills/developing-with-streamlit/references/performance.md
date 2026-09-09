@@ -305,9 +305,7 @@ if st.button("Apply"):
 
 Use this when a single control should not rerun the app until the user applies it. Use a form when several related inputs should commit together.
 
-Notes:
-- Unbound ignored values live in the browser only and are lost on refresh, unless you also set `bind="query-params"` (see [Syncing a widget to the URL](session-state.md#syncing-a-widget-to-the-url-shareable-links)).
-- Inside `st.form`, `"ignore"` has no extra effect: the form already defers commits until submit.
+Inside `st.form`, `"ignore"` has no extra effect: the form already defers commits until submit.
 
 ## Conditional rendering
 
