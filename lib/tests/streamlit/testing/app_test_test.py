@@ -873,8 +873,10 @@ def test_session_state_dict_api_matches_filtered_state() -> None:
     assert TESTING_KEY not in at.session_state
     assert set(at.session_state.keys()) == {"count", "r", "seeded"}
     assert dict(at.session_state.items()) == {"count": 1, "r": "a", "seeded": True}
+    assert dict(
+        zip(at.session_state.keys(), at.session_state.values(), strict=True)
+    ) == {"count": 1, "r": "a", "seeded": True}
     assert at.session_state.to_dict() == {"count": 1, "r": "a", "seeded": True}
-    assert len(at.session_state.values()) == 3
     assert len(at.session_state) == 3
     assert set(at.session_state) == {"count", "r", "seeded"}
     assert "count" in repr(at.session_state)
