@@ -648,6 +648,36 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
                 value_type="bool_value",
             )
 
+    @parameterized.expand([("ignore",), ("rerun",)])
+    def test_on_change_mode_string_raises_unsupported(self, mode: str) -> None:
+        """Mode strings are rejected when the widget does not support them."""
+        with pytest.raises(
+            errors.StreamlitAPIException,
+            match=f'`on_change="{mode}"` is not supported on this widget',
+        ):
+            register_widget(
+                "el_id",
+                deserializer=lambda x: x,
+                serializer=lambda x: x,
+                ctx=None,
+                on_change_handler=mode,  # type: ignore[arg-type]
+                value_type="bool_value",
+            )
+
+    def test_on_change_invalid_value_raises(self) -> None:
+        """Non-mode, non-callback on_change values raise StreamlitValueError."""
+        with pytest.raises(
+            errors.StreamlitValueError, match="Invalid `on_change` value"
+        ):
+            register_widget(
+                "el_id",
+                deserializer=lambda x: x,
+                serializer=lambda x: x,
+                ctx=None,
+                on_change_handler="not-a-mode",  # type: ignore[arg-type]
+                value_type="bool_value",
+            )
+
     def test_bind_query_params_requires_key(self):
         """Test that bind='query-params' raises if widget has no key."""
         # Element ID format for widgets without user key is "$$ID-<hash>-None"

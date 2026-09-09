@@ -68,6 +68,15 @@ class SelectboxTest(DeltaGeneratorTestCase):
         assert not c.accept_new_options
         assert c.filter_mode == ProtoSelectWidgetFilterMode.FILTER_MODE_FUZZY
 
+    @parameterized.expand([("ignore",), ("rerun",)])
+    def test_on_change_mode_not_supported(self, mode: str) -> None:
+        """Selectbox does not support on_change mode strings."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=f'`on_change="{mode}"` is not supported on this widget',
+        ):
+            st.selectbox("the label", ("m", "f"), on_change=mode)  # type: ignore[arg-type]
+
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
         st.selectbox("the label", ("m", "f"), disabled=True)

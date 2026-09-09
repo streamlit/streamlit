@@ -14,9 +14,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, get_args
 
 from streamlit.errors import (
+    StreamlitAPIException,
     StreamlitIncompatibleParametersError,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
@@ -26,6 +27,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 )
 from streamlit.runtime.state.common import (
     BindOption,
+    OnChangeMode,
     PersistStateOption,
     RegisterWidgetResult,
     T,
@@ -155,6 +157,8 @@ def register_widget(
         For both paths a widget return value is provided, allowing the widgets
         to be used in a non-streamlit setting.
     """
+    _validate_on_change_handler(on_change_handler)
+
     if on_change_handler is not None and callbacks is not None:
         raise StreamlitIncompatibleParametersError("on_change", "callbacks")
 
@@ -216,6 +220,28 @@ def register_widget(
         disabled=disabled,
     )
     return register_widget_from_metadata(metadata, ctx)
+
+
+def _validate_on_change_handler(on_change_handler: WidgetCallback | None) -> None:
+    """Reject values that are not a callback or ``None``.
+
+    Widgets that support ``on_change="ignore"`` / ``"rerun"`` convert those
+    modes to ``None`` before calling ``register_widget``. Passing a mode
+    string through is an unsupported widget, not a malformed callback.
+    """
+    if on_change_handler is None or callable(on_change_handler):
+        return
+
+    if isinstance(on_change_handler, str) and on_change_handler in get_args(
+        OnChangeMode
+    ):
+        raise StreamlitAPIException(
+            f'`on_change="{on_change_handler}"` is not supported on this widget. '
+            "Pass a callback, or omit `on_change`.",
+            error_id="unsupported-on-change-mode",
+        )
+
+    raise StreamlitValueError("on_change", ["a callback function"])
 
 
 def register_widget_from_metadata(
