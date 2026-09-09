@@ -1389,7 +1389,7 @@ class ButtonMixin:
 
         on_click_callback = validate_on_change_mode(
             on_click,
-            modes_supported=True,
+            supported_modes=("rerun", "ignore"),
             param_name="on_click",
         )
 
@@ -1499,7 +1499,7 @@ class ButtonMixin:
         label = "" if label is None else to_str(label)
         on_click_callback = validate_on_change_mode(
             on_click,
-            modes_supported=True,
+            supported_modes=("rerun", "ignore"),
             param_name="on_click",
         )
         ignore_rerun = on_click == "ignore"
@@ -1715,7 +1715,7 @@ class ButtonMixin:
         label = "" if label is None else to_str(label)
         on_click = validate_on_change_mode(
             on_click,
-            modes_supported=False,
+            supported_modes=(),
             param_name="on_click",
         )
 

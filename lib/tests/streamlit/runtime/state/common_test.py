@@ -25,7 +25,7 @@ def test_validate_on_change_mode_returns_callback() -> None:
         pass
 
     assert (
-        validate_on_change_mode(callback, modes_supported=False, param_name="on_click")
+        validate_on_change_mode(callback, supported_modes=(), param_name="on_click")
         is callback
     )
 
@@ -33,7 +33,7 @@ def test_validate_on_change_mode_returns_callback() -> None:
 @pytest.mark.parametrize("mode", ["ignore", "rerun"])
 def test_validate_on_change_mode_normalizes_supported_mode(mode: str) -> None:
     """Supported modes normalize to no callback."""
-    assert validate_on_change_mode(mode, modes_supported=True) is None
+    assert validate_on_change_mode(mode, supported_modes=("rerun", "ignore")) is None
 
 
 @pytest.mark.parametrize("mode", ["ignore", "rerun"])
@@ -45,8 +45,20 @@ def test_validate_on_change_mode_rejects_unsupported_mode(mode: str) -> None:
     ):
         validate_on_change_mode(
             mode,
-            modes_supported=False,
+            supported_modes=(),
             param_name="on_click",
+        )
+
+
+def test_validate_on_change_mode_rejects_mode_not_supported_by_widget() -> None:
+    """Widgets can support one mode without implicitly supporting every mode."""
+    with pytest.raises(
+        StreamlitAPIException,
+        match='`on_change="ignore"` is not supported on this widget',
+    ):
+        validate_on_change_mode(
+            "ignore",
+            supported_modes=("rerun",),
         )
 
 
@@ -55,7 +67,7 @@ def test_validate_on_change_mode_lists_supported_modes_for_invalid_value() -> No
     with pytest.raises(StreamlitValueError, match="Invalid `on_submit` value") as exc:
         validate_on_change_mode(
             "not-a-mode",
-            modes_supported=True,
+            supported_modes=("rerun", "ignore"),
             param_name="on_submit",
         )
 
@@ -65,10 +77,23 @@ def test_validate_on_change_mode_lists_supported_modes_for_invalid_value() -> No
     assert "a callback function" in message
 
 
+def test_validate_on_change_mode_lists_only_widget_supported_modes() -> None:
+    """Invalid-value errors advertise only modes supported by that widget."""
+    with pytest.raises(StreamlitValueError) as exc:
+        validate_on_change_mode(
+            "not-a-mode",
+            supported_modes=("rerun",),
+        )
+
+    message = str(exc.value)
+    assert "'rerun'" in message
+    assert "'ignore'" not in message
+
+
 def test_validate_on_change_mode_excludes_modes_for_callback_only_widget() -> None:
     """Callback-only widgets do not advertise callback modes as valid values."""
     with pytest.raises(StreamlitValueError, match="Invalid `on_change` value") as exc:
-        validate_on_change_mode("not-a-mode", modes_supported=False)
+        validate_on_change_mode("not-a-mode", supported_modes=())
 
     message = str(exc.value)
     assert "'ignore'" not in message
@@ -81,7 +106,7 @@ def test_validate_on_change_mode_rejects_none_when_unsupported() -> None:
     with pytest.raises(StreamlitValueError, match="Invalid `on_select` value"):
         validate_on_change_mode(
             None,
-            modes_supported=True,
+            supported_modes=("rerun", "ignore"),
             none_supported=False,
             param_name="on_select",
         )

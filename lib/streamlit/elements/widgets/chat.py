@@ -979,7 +979,7 @@ class ChatMixin:
         key = to_key(key)
         on_submit = validate_on_change_mode(
             on_submit,
-            modes_supported=False,
+            supported_modes=(),
             param_name="on_submit",
         )
 

@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
@@ -303,15 +303,16 @@ def require_valid_user_key(key: str) -> None:
 def validate_on_change_mode(
     callback: object,
     *,
-    modes_supported: bool,
+    supported_modes: Collection[OnChangeMode],
     none_supported: bool = True,
     param_name: str = "on_change",
 ) -> WidgetCallback | None:
     """Validate a callback parameter and return its normalized callback.
 
-    Callables are always valid. ``None`` and mode strings are valid only when
-    their corresponding support flag is true. Valid non-callback values normalize
-    to ``None`` because their behavior is handled separately by the widget.
+    Callables are always valid. ``None`` is valid only when ``none_supported``
+    is true, and mode strings are valid only when included in
+    ``supported_modes``. Valid non-callback values normalize to ``None`` because
+    their behavior is handled separately by the widget.
 
     Raises
     ------
@@ -329,9 +330,9 @@ def validate_on_change_mode(
 
     # Require a str before membership so array-like values (e.g. NumPy arrays)
     # cannot raise an ambiguous-truth ValueError from ``==``.
-    supported_modes = get_args(OnChangeMode)
-    if isinstance(callback, str) and callback in supported_modes:
-        if modes_supported:
+    all_modes = get_args(OnChangeMode)
+    if isinstance(callback, str) and callback in all_modes:
+        if callback in supported_modes:
             return None
         raise StreamlitAPIException(
             f'`{param_name}="{callback}"` is not supported on this widget. '
@@ -340,6 +341,6 @@ def validate_on_change_mode(
         )
 
     valid_values = ["a callback function"]
-    if modes_supported:
+    if supported_modes:
         valid_values = [repr(mode) for mode in supported_modes] + valid_values
     raise StreamlitValueError(param_name, valid_values)

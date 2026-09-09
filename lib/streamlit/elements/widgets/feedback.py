@@ -271,7 +271,7 @@ class FeedbackMixin:
         key = to_key(key)
         on_change = validate_on_change_mode(
             on_change,
-            modes_supported=False,
+            supported_modes=(),
         )
         layout_config = create_layout_config(width=width, allow_content_width=True)
 

@@ -551,7 +551,7 @@ def register_button_column_widgets(
     for col_name, button_col in button_columns.items():
         on_click = validate_on_change_mode(
             button_col.on_click,
-            modes_supported=False,
+            supported_modes=(),
             param_name="on_click",
         )
         check_widget_policies(

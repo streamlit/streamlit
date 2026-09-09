@@ -1011,7 +1011,7 @@ class LayoutsMixin:
 
         on_change_callback = validate_on_change_mode(
             on_change,
-            modes_supported=True,
+            supported_modes=("rerun", "ignore"),
             none_supported=False,
         )
 
@@ -1386,7 +1386,7 @@ class LayoutsMixin:
 
         on_change_callback = validate_on_change_mode(
             on_change,
-            modes_supported=True,
+            supported_modes=("rerun", "ignore"),
             none_supported=False,
         )
 
@@ -1781,7 +1781,7 @@ class LayoutsMixin:
 
         on_change_callback = validate_on_change_mode(
             on_change,
-            modes_supported=True,
+            supported_modes=("rerun", "ignore"),
             none_supported=False,
         )
 

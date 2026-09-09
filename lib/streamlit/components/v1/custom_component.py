@@ -113,7 +113,7 @@ class CustomComponent(BaseCustomComponent):
 
         on_change = validate_on_change_mode(
             on_change,
-            modes_supported=False,
+            supported_modes=(),
         )
 
         # -1 is valid per the HTML tabindex spec: focusable, but not tab-reachable.

@@ -468,7 +468,7 @@ class RadioMixin:
         key = to_key(key)
         on_change = validate_on_change_mode(
             on_change,
-            modes_supported=False,
+            supported_modes=(),
         )
 
         check_widget_policies(

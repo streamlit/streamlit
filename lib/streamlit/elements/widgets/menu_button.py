@@ -340,7 +340,7 @@ class MenuButtonMixin:
         label = "" if label is None else to_str(label)
         on_click = validate_on_change_mode(
             on_click,
-            modes_supported=False,
+            supported_modes=(),
             param_name="on_click",
         )
 
