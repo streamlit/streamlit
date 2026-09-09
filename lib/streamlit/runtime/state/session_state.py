@@ -685,8 +685,8 @@ class SessionState:
         default_factory=PersistedWidgetTracker
     )
 
-    # Preserve fresh browser state through callback dispatch so full-app escalation
-    # can replay active triggers if the body is preempted. Cleared after callbacks.
+    # Preserve fresh browser state through callback dispatch so a targeted rerun can
+    # replay consumed triggers whenever it preempts this body. Cleared after callbacks.
     _current_interaction_widget_states: WidgetStatesProto | None = field(
         default=None, repr=False
     )
@@ -922,7 +922,10 @@ class SessionState:
             self.set_widgets_from_proto(fresh_widget_states)
             self._current_interaction_widget_states = fresh_widget_states
             try:
-                self._call_callbacks(replay_trigger_states, replay_trigger_values)
+                self._call_callbacks(
+                    incoming_replay_trigger_states=replay_trigger_states,
+                    incoming_replay_trigger_values=replay_trigger_values,
+                )
             finally:
                 self._current_interaction_widget_states = None
         if replay_trigger_states is not None:
@@ -934,6 +937,7 @@ class SessionState:
 
     def _call_callbacks(
         self,
+        *,
         incoming_replay_trigger_states: WidgetStatesProto | None = None,
         incoming_replay_trigger_values: Mapping[str, Any] | None = None,
     ) -> None:

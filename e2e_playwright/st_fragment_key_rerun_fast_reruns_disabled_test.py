@@ -30,23 +30,16 @@ def test_fresh_input_coalesces_with_main_script_callback_replay(app: Page) -> No
 
     Each callback runs once, and the body still observes the replayed submit trigger.
     """
-    body_runs_text = (
-        get_element_by_key(app, "coalescing_results")
-        .get_by_text("Body runs:", exact=False)
-        .text_content()
-    )
-    assert body_runs_text is not None
-    initial_body_runs = int(body_runs_text.rsplit(": ", 1)[1])
+    results = get_element_by_key(app, "coalescing_results")
+    expect(results.get_by_text("Body runs: 1", exact=True)).to_be_visible()
+
     app.get_by_label("Submitted name").fill("  Laura  ")
     app.get_by_role("button", name="Submit coalescing form").click()
     expect(app.get_by_text("Form callback waiting for fresh input")).to_be_visible()
 
     app.get_by_role("button", name="Fresh interaction").click()
 
-    results = get_element_by_key(app, "coalescing_results")
-    expect(
-        results.get_by_text(f"Body runs: {initial_body_runs + 1}", exact=True)
-    ).to_be_visible()
+    expect(results.get_by_text("Body runs: 2", exact=True)).to_be_visible()
     expect(results.get_by_text("Form callbacks: 1", exact=True)).to_be_visible()
     expect(results.get_by_text("Fresh callbacks: 1", exact=True)).to_be_visible()
     expect(results.get_by_text("Normalized name: Laura", exact=True)).to_be_visible()

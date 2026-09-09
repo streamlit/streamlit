@@ -1464,7 +1464,7 @@ def test_preempting_callback_batch_carries_incoming_replay_state() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks(replay)
+        ss._call_callbacks(incoming_replay_trigger_states=replay)
 
     mock_ctx.script_requests.request_rerun.assert_not_called()
     mock_ctx.script_requests.request_rerun_batch.assert_called_once()
@@ -1487,7 +1487,10 @@ def test_preempting_callback_batch_carries_hydrated_chat_replay() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks(replay, {"chat": hydrated_chat})
+        ss._call_callbacks(
+            incoming_replay_trigger_states=replay,
+            incoming_replay_trigger_values={"chat": hydrated_chat},
+        )
 
     batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
     assert batch[0].replay_trigger_states == replay
@@ -1652,7 +1655,7 @@ def test_targeted_preemption_combines_incoming_and_current_replay_triggers() -> 
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks(incoming_replay)
+        ss._call_callbacks(incoming_replay_trigger_states=incoming_replay)
 
     batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
     replay = batch[0].replay_trigger_states
