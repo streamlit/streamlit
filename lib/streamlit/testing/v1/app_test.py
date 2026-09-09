@@ -115,11 +115,12 @@ TMP_DIR = tempfile.TemporaryDirectory()
 
 
 class _AppTestSessionState:
-    """Dict-like Session State for AppTest.
+    """User-facing Session State for AppTest.
 
-    ``st.session_state`` is a ``MutableMapping``. AppTest previously exposed
-    the inner ``SafeSessionState``, whose ``__getattr__`` treats missing names
-    as session keys, so ``.get`` / ``.keys`` raised ``AttributeError``.
+    Wraps ``SafeSessionState`` so testers get the same item/attribute access
+    and dict methods as ``st.session_state``. Mapping methods use filtered
+    user state. Production ``SafeSessionState`` is unchanged; its
+    ``__getattr__`` would treat ``get`` / ``keys`` as missing session keys.
     """
 
     _state: SafeSessionState
@@ -163,6 +164,8 @@ class _AppTestSessionState:
         del self._state[key]
 
     def __contains__(self, key: object) -> bool:
+        # Membership follows the tester-facing filtered view; item access
+        # still reaches internal keys that AppTest itself reads.
         return key in self._state.filtered_state
 
     def __getattr__(self, key: str) -> Any:
@@ -181,7 +184,7 @@ class _AppTestSessionState:
             raise AttributeError(f"{key} not found in session_state.")
 
     def __repr__(self) -> str:
-        return repr(self._state)
+        return repr(self._state.filtered_state)
 
 
 class AppTest:
@@ -238,9 +241,8 @@ class AppTest:
 
     session_state
         Session State for the simulated app. Supports item and attribute
-        access plus the dict methods of ``st.session_state`` (``get``,
-        ``keys``, ``items``, ``values``, ``to_dict``, ``len``, and
-        iteration).
+        access plus dict-style operations from ``st.session_state``: ``get``,
+        ``keys``, ``items``, ``values``, ``to_dict``, ``len``, and iteration.
 
     query_params: dict[str, Any]
         Dictionary of query parameters to be used by the simulated app. Use

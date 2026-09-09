@@ -840,15 +840,18 @@ def test_session_state_get_returns_script_value() -> None:
         import streamlit as st
 
         st.session_state["x"] = 7
+        st.session_state["empty"] = None
 
     at = AppTest.from_function(script).run()
     assert at.session_state.get("x") == 7
+    assert at.session_state.get("empty") is None
+    assert at.session_state.get("empty", "fallback") is None
     assert at.session_state.get("missing") is None
     assert at.session_state.get("missing", "fallback") == "fallback"
 
 
 def test_session_state_dict_api_matches_filtered_state() -> None:
-    """``keys`` / ``items`` / ``values`` / ``to_dict`` / ``len`` / iteration use filtered state."""
+    """Dict-style access exposes only user state and keyed widget values."""
 
     def script() -> None:
         import streamlit as st
@@ -868,3 +871,13 @@ def test_session_state_dict_api_matches_filtered_state() -> None:
     assert at.session_state.to_dict() == {"count": 1, "r": "a"}
     assert len(at.session_state) == 2
     assert set(at.session_state) == {"count", "r"}
+    assert "count" in repr(at.session_state)
+    assert TESTING_KEY not in repr(at.session_state)
+
+    at.session_state["count"] = 2
+    at.session_state.extra = "yes"
+    del at.session_state.extra
+    with pytest.raises(AttributeError, match="missing not found in session_state"):
+        _ = at.session_state.missing
+    assert at.session_state["count"] == 2
+    assert "extra" not in at.session_state
