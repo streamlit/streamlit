@@ -19,7 +19,6 @@ import fractions
 import numbers
 import re
 import textwrap
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, NoReturn, TypeAlias, Union, cast
 
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
@@ -38,10 +37,6 @@ _EMOJI_SHORTCODE_RE: Final = re.compile(r":[a-zA-Z0-9_+-]+:")
 _ICON_FORMAT_HINT: Final = (
     "Please use a single emoji or a Material icon shortcode "
     "like `:material\u200b/thumb_up:`."
-)
-# Suffixes that identify an image-like value; images are not supported for icon=.
-_IMAGE_FILE_SUFFIXES: Final = frozenset(
-    {".avif", ".bmp", ".gif", ".ico", ".jpeg", ".jpg", ".png", ".svg", ".webp"}
 )
 
 
@@ -93,57 +88,27 @@ def _raise_invalid_image(icon: object) -> NoReturn:
     )
 
 
-def _has_image_file_suffix(icon: str) -> bool:
-    dot = icon.rfind(".")
-    return dot != -1 and icon[dot:].lower() in _IMAGE_FILE_SUFFIXES
-
-
-def _looks_like_unsupported_image(icon: str) -> bool:
-    """Return True if ``icon`` is URL-shaped or path-like.
-
-    Classification is lexical so the error does not depend on CWD or whether
-    a file exists. URL-shaped values, path separators, ``~`` prefixes, and
-    image file suffixes are unsupported images. Plain labels and emoji take
-    the fast path: no extra imports and no filesystem access.
-    """
-    # Any URL-shaped value is already not a valid icon. Detect ``scheme://``,
-    # ``data:`` URLs (which have no ``://``), and scheme-relative ``//host/path``
-    # URLs without importing url_util.
-    if "://" in icon or icon[:5].lower() == "data:" or icon.startswith("//"):
-        return True
-
-    return (
-        icon.startswith("~")
-        or "/" in icon
-        or "\\" in icon
-        or _has_image_file_suffix(icon)
-    )
+def _looks_like_url(icon: str) -> bool:
+    """True for ``scheme://``, ``data:``, or scheme-relative ``//`` values."""
+    return "://" in icon or icon[:5].lower() == "data:" or icon.startswith("//")
 
 
 def validate_icon_or_emoji(icon: str | None) -> str:
     """Validate an icon or emoji and return it in normalized form if valid.
 
-    - ``None`` and whitespace-only strings mean no icon.
-    - ``pathlib.Path`` objects, URL-shaped values, and path-like strings
-      (separators, ``~`` prefixes, or image file suffixes) raise
-      ``invalid-image``. Images are not loaded.
+    ``None`` and whitespace-only strings mean no icon. URL-shaped values
+    raise ``invalid-image``; images are not loaded.
     """
     if icon is None:
         return ""
-
-    # Public type is ``str | None``. Rebind so runtime Path / non-str values
-    # can be rejected without mypy treating those branches as unreachable.
-    icon_value: object = icon
-    if isinstance(icon_value, Path):
-        _raise_invalid_image(icon_value)
-    if not isinstance(icon_value, str):
+    if not isinstance(icon, str):
         raise StreamlitInvalidParameterTypeError(
             "icon",
-            type(icon_value).__name__,
+            type(icon).__name__,
             ["str", "None"],
         )
 
-    icon = icon_value.strip()
+    icon = icon.strip()
     if not icon:
         return ""
 
@@ -155,7 +120,7 @@ def validate_icon_or_emoji(icon: str | None) -> str:
     # Skip those parsers for emoji and plain labels.
     if icon.startswith(":"):
         # Prefer Material so unknown names raise invalid-material-icon, not
-        # invalid-emoji, and so ``:material/name:`` is not treated as a path.
+        # invalid-emoji.
         if icon.lower().startswith(":material"):
             return validate_material_icon(icon)
 
@@ -166,7 +131,7 @@ def validate_icon_or_emoji(icon: str | None) -> str:
                 error_id="invalid-emoji-shortcode",
             )
 
-    if _looks_like_unsupported_image(icon):
+    if _looks_like_url(icon):
         _raise_invalid_image(icon)
 
     # Remaining ASCII cannot be emoji; fail without loading the catalog.

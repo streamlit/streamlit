@@ -19,7 +19,6 @@ import sys
 import unittest
 from contextlib import contextmanager
 from fractions import Fraction
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -275,14 +274,11 @@ class StringUtilTest(unittest.TestCase):
             ("ftp://host/icon.png", "invalid-image"),
             ("//cdn.example.com/icon.png", "invalid-image"),
             ("data:image/png;base64,abc", "invalid-image"),
-            ("/app/static/icon.png", "invalid-image"),
-            (r"\\server\share\icon.png", "invalid-image"),
-            ("logo.png", "invalid-image"),
-            ("./notes.txt", "invalid-image"),
-            ("images/日本.png", "invalid-image"),
-            ("~nonexistent_user_12345/logo.png", "invalid-image"),
-            (r"Z:\icons\logo.png", "invalid-image"),
-            ("foo\x00.png", "invalid-image"),
+            ("logo.png", "invalid-icon"),
+            ("./notes.txt", "invalid-icon"),
+            ("/app/static/icon.png", "invalid-icon"),
+            (r"\\server\share\icon.png", "invalid-icon"),
+            ("images/日本.png", "invalid-emoji"),
         ]
     )
     def test_validate_icon_or_emoji_classifies_invalid_values(
@@ -323,9 +319,6 @@ class StringUtilTest(unittest.TestCase):
             assert e.value.error_id == "invalid-emoji-shortcode"
             with pytest.raises(StreamlitAPIException) as e:
                 string_util.validate_icon_or_emoji("https://example.com/icon.png")
-            assert e.value.error_id == "invalid-image"
-            with pytest.raises(StreamlitAPIException) as e:
-                string_util.validate_icon_or_emoji(Path("logo.png"))  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
             assert e.value.error_id == "invalid-image"
             for name in catalog_modules:
                 assert name not in sys.modules
@@ -405,25 +398,9 @@ class StringUtilTest(unittest.TestCase):
             string_util.from_number(FakeNumpyValue())  # type: ignore[arg-type]
 
 
-def test_validate_icon_or_emoji_path_object_is_invalid_image() -> None:
-    """Path objects are classified as images, not as a type error."""
-    with pytest.raises(StreamlitAPIException) as e:
-        string_util.validate_icon_or_emoji(Path("logo.png"))  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
-    assert e.value.error_id == "invalid-image"
-    assert "not supported" in str(e.value)
-    assert "9770" in str(e.value)
-
-
-def test_validate_icon_or_emoji_skips_url_and_fs_helpers(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Validation must not import URL/path helpers or call Path.is_file."""
+def test_validate_icon_or_emoji_skips_url_and_path_helpers() -> None:
+    """Validation must not import URL or path-security helpers."""
     modules = ("streamlit.url_util", "streamlit.path_security")
-
-    def fail_is_file(self: Path) -> bool:
-        raise AssertionError("Path.is_file should not be called")
-
-    monkeypatch.setattr(Path, "is_file", fail_is_file)
     with _without_modules(*modules):
         assert string_util.validate_icon_or_emoji("spinner") == "spinner"
         assert string_util.validate_icon_or_emoji("😃") == "😃"
@@ -442,15 +419,6 @@ def test_validate_icon_or_emoji_skips_url_and_fs_helpers(
         assert e.value.error_id == "invalid-image"
         with pytest.raises(StreamlitAPIException) as e:
             string_util.validate_icon_or_emoji("logo.png")
-        assert e.value.error_id == "invalid-image"
-        with pytest.raises(StreamlitAPIException) as e:
-            string_util.validate_icon_or_emoji("./notes.txt")
-        assert e.value.error_id == "invalid-image"
-        with pytest.raises(StreamlitAPIException) as e:
-            string_util.validate_icon_or_emoji(r"\\server\share\icon.png")
-        assert e.value.error_id == "invalid-image"
-        with pytest.raises(StreamlitAPIException) as e:
-            string_util.validate_icon_or_emoji("~nonexistent_user_12345/logo.png")
-        assert e.value.error_id == "invalid-image"
+        assert e.value.error_id == "invalid-icon"
         for name in modules:
             assert name not in sys.modules
