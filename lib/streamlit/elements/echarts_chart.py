@@ -148,9 +148,15 @@ class EChartsSelectionState(ReadOnlyAttributeDictionary):
     supports both key and attribute notation. Selection states cannot be
     programmatically changed or set through Session State.
 
-    This state is derived from ECharts selection events and normalized into a
-    stable snapshot. Exposed field names use ``snake_case``; ECharts values,
-    such as ``brush_type="lineX"``, remain unchanged.
+    This is a Streamlit-normalized snapshot of ECharts selection events, not
+    the raw ``selectchanged`` or ``brushSelected`` payload. Exposed field
+    names use ``snake_case``; ECharts string values, such as
+    ``brush_type="lineX"``, remain unchanged.
+
+    Empty series groups that ECharts emits are omitted, so ``selected[0]`` is
+    the first series that has a selection, not necessarily series 0. Iterate
+    the groups and match ``series_index``. A brush region can appear in
+    ``areas`` even when it hits no data (``selected`` is empty).
 
     Attributes
     ----------
@@ -160,16 +166,24 @@ class EChartsSelectionState(ReadOnlyAttributeDictionary):
         ``series_name``, ``data_type``, and ``data_indices``. Series IDs and
         names are ``None`` when they weren't explicitly configured.
 
-        ``data_indices`` is series-local. For a dataset without transforms, it
-        addresses ``dataset.source`` rows. For inline series, it addresses
-        ``series.data``. For graph series, ``data_type="node"`` addresses
-        ``data`` and ``data_type="edge"`` addresses ``links``.
+        ``data_type`` is ``"main"`` (used when ECharts omits ``dataType``),
+        ``"node"``, or ``"edge"``.
+
+        ``data_indices`` is sorted and series-local. For a dataset without
+        transforms, it addresses ``dataset.source`` rows. For inline series,
+        it addresses ``series.data``. For graph series, ``data_type="node"``
+        addresses ``data`` and ``data_type="edge"`` addresses ``links``.
 
     areas : list[dict[str, Any]]
         The active brush regions. Each entry contains ``brush_index``,
-        ``brush_type``, and ``coord_range``. Regions that ECharts only
-        describes in pixel space are omitted, since their geometry can't be
-        mapped back to your data.
+        ``brush_type``, and ``coord_range``. ``brush_type`` is ECharts'
+        ``"rect"``, ``"lineX"``, ``"lineY"``, or ``"polygon"``. The shape of
+        ``coord_range`` depends on that type: ``"rect"`` uses
+        ``[[x0, x1], [y0, y1]]``; ``"lineX"`` and ``"lineY"`` use
+        ``[start, end]``; ``"polygon"`` uses ``[[x, y], ...]``. Category-axis
+        coordinates are ordinal positions and can include half-indices such
+        as ``[0.5, 3.5]``. Regions that ECharts only describes in pixel space
+        are omitted, since their geometry can't be mapped back to your data.
 
     Example
     -------
@@ -193,6 +207,15 @@ class EChartsSelectionState(ReadOnlyAttributeDictionary):
     ...         },
     ...     ],
     ... }
+
+    For a single series, index your data with:
+
+    >>> rows = (
+    ...     event.selection.selected[0]["data_indices"]
+    ...     if event.selection.selected
+    ...     else []
+    ... )
+    >>> filtered_df = df.iloc[rows]
 
     """
 
@@ -223,6 +246,9 @@ class EChartsState(ReadOnlyAttributeDictionary):
     programmatically changed or set through Session State.
 
     Only selection events are supported at this time.
+
+    ``selection`` is the Streamlit-normalized payload described by
+    ``EChartsSelectionState``, not a raw ECharts event.
 
     Attributes
     ----------
