@@ -15,15 +15,36 @@
 from __future__ import annotations
 
 import decimal
+import sys
 import unittest
+from contextlib import contextmanager
 from fractions import Fraction
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 from parameterized import parameterized
 
 from streamlit import string_util
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+
+@contextmanager
+def _without_modules(*module_names: str) -> Iterator[None]:
+    """Temporarily remove modules from ``sys.modules`` to detect unexpected imports."""
+    saved = {name: sys.modules.pop(name, None) for name in module_names}
+    try:
+        yield
+    finally:
+        for name, mod in saved.items():
+            if mod is not None:
+                sys.modules[name] = mod
+            else:
+                sys.modules.pop(name, None)
 
 
 class StringUtilTest(unittest.TestCase):
@@ -121,29 +142,6 @@ class StringUtilTest(unittest.TestCase):
     def test_extract_leading_icon(self, text, expected):
         """Test streamlit.string_util.extract_leading_icon."""
         assert string_util.extract_leading_icon(text) == expected
-
-    @parameterized.expand(
-        [
-            ("A", False),
-            ("hello", False),
-            ("1_foo", False),
-            ("1.foo", False),
-            ("1-foo", False),
-            ("foo bar", False),
-            ("foo.bar", False),
-            ("foo&bar", False),
-            ("", False),
-            ("a 😃bc", True),
-            ("X😃", True),
-            ("%", True),
-            ("😃", True),
-            ("😃 page name", True),
-            ("👨‍👨‍👧‍👦_page name", True),
-            ("何_is_this", True),
-        ]
-    )
-    def test_contains_special_chars(self, text: str, expected: bool):
-        assert string_util._contains_special_chars(text) == expected
 
     def test_simplify_number(self):
         """Test streamlit.string_util.simplify_number."""
@@ -243,25 +241,93 @@ class StringUtilTest(unittest.TestCase):
     @parameterized.expand(
         [
             (None, ""),
+            ("", ""),
+            ("   ", ""),
             ("spinner", "spinner"),
+            (" spinner ", "spinner"),
             ("😃", "😃"),
+            (" 😃 ", "😃"),
+            ("👨‍👨‍👧‍👦", "👨‍👨‍👧‍👦"),
+            ("👍🏽", "👍🏽"),
+            ("️🚨", "️🚨"),
             (":material/thumb_up:", ":material/thumb_up:"),
+            (" :material/thumb_up: ", ":material/thumb_up:"),
+            ("🇺🇸", "🇺🇸"),
+            ("1️⃣", "1️⃣"),
         ]
     )
-    def test_validate_icon_or_emoji(self, icon, expected):
-        """Test streamlit.string_util.validate_icon_or_emoji."""
+    def test_validate_icon_or_emoji(self, icon: str | None, expected: str) -> None:
+        """Valid icons are returned in normalized form; None and whitespace mean no icon."""
         assert string_util.validate_icon_or_emoji(icon) == expected
 
     @parameterized.expand(
         [
-            ("invalid"),
-            (":material/invalid:"),
+            (":material/invalid:", "invalid-material-icon"),
+            (":material/thumb_up", "invalid-material-icon"),
+            (":Material/thumb_up:", "invalid-material-icon"),
+            (":rocket:", "invalid-emoji-shortcode"),
+            (":+1:", "invalid-emoji-shortcode"),
+            ("invalid", "invalid-icon"),
+            ("😃😃", "invalid-emoji"),
+            ("https://example.com/icon.png", "invalid-image"),
+            ("http://example.com/icon.png", "invalid-image"),
+            ("data:image/png;base64,abc", "invalid-image"),
+            ("/app/static/icon.png", "invalid-image"),
+            (r"\\server\share\icon.png", "invalid-image"),
         ]
     )
-    def test_validate_icon_or_emoji_raises(self, icon):
-        """Test that validate_icon_or_emoji raises StreamlitAPIException on invalid inputs."""
-        with pytest.raises(StreamlitAPIException):
+    def test_validate_icon_or_emoji_classifies_invalid_values(
+        self, icon: str, error_id: str
+    ) -> None:
+        """Invalid values raise with a specific error_id rather than a catch-all."""
+        with pytest.raises(StreamlitAPIException) as e:
             string_util.validate_icon_or_emoji(icon)
+        assert e.value.error_id == error_id
+
+    def test_validate_icon_or_emoji_rejects_non_string(self) -> None:
+        """Non-string values raise StreamlitInvalidParameterTypeError, not AttributeError."""
+        with pytest.raises(StreamlitInvalidParameterTypeError) as e:
+            string_util.validate_icon_or_emoji(123)  # type: ignore[arg-type]
+        assert e.value.exec_kwargs["parameter"] == "icon"
+        assert "int" in str(e.value)
+
+    def test_validate_icon_or_emoji_emoji_error_says_single_emoji(self) -> None:
+        """Invalid emoji-like values mention a single emoji, not a single character."""
+        with pytest.raises(StreamlitAPIException) as e:
+            string_util.validate_icon_or_emoji("😃😃")
+        assert "single emoji" in str(e.value)
+        assert "single character" not in str(e.value)
+
+    def test_validate_icon_or_emoji_skips_icon_catalogs_for_plain_values(self) -> None:
+        """Non-emoji values must not import the emoji or Material icon catalogs."""
+        catalog_modules = ("streamlit.emojis", "streamlit.material_icon_names")
+        with _without_modules(*catalog_modules):
+            assert string_util.validate_icon_or_emoji("spinner") == "spinner"
+            assert string_util.validate_icon_or_emoji("") == ""
+            with pytest.raises(StreamlitAPIException) as e:
+                string_util.validate_icon_or_emoji("home")
+            assert e.value.error_id == "invalid-icon"
+            with pytest.raises(StreamlitAPIException) as e:
+                string_util.validate_icon_or_emoji(":rocket:")
+            assert e.value.error_id == "invalid-emoji-shortcode"
+            with pytest.raises(StreamlitAPIException) as e:
+                string_util.validate_icon_or_emoji("https://example.com/icon.png")
+            assert e.value.error_id == "invalid-image"
+            with pytest.raises(StreamlitAPIException) as e:
+                string_util.validate_icon_or_emoji(Path("logo.png"))  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+            assert e.value.error_id == "invalid-image"
+            for name in catalog_modules:
+                assert name not in sys.modules
+
+    def test_validate_icon_or_emoji_does_not_load_emoji_catalog_for_material(
+        self,
+    ) -> None:
+        """Malformed Material syntax must not load the emoji catalog."""
+        with _without_modules("streamlit.emojis"):
+            with pytest.raises(StreamlitAPIException) as e:
+                string_util.validate_icon_or_emoji(":material/not_a_real_icon:")
+            assert e.value.error_id == "invalid-material-icon"
+            assert "streamlit.emojis" not in sys.modules
 
     def test_validate_emoji_none(self):
         """Test that validate_emoji returns empty string for None input."""
@@ -326,3 +392,117 @@ class StringUtilTest(unittest.TestCase):
 
         with pytest.raises(TypeError):
             string_util.from_number(FakeNumpyValue())  # type: ignore[arg-type]
+
+
+def test_validate_icon_or_emoji_path_object_is_invalid_image() -> None:
+    """Path objects are classified as images, not as a type error."""
+    with pytest.raises(StreamlitAPIException) as e:
+        string_util.validate_icon_or_emoji(Path("logo.png"))  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    assert e.value.error_id == "invalid-image"
+    assert "not supported" in str(e.value)
+    assert "9770" in str(e.value)
+
+
+def test_validate_icon_or_emoji_existing_image_path_is_invalid_image(
+    tmp_path: Path,
+) -> None:
+    """An existing local file path is classified as an unsupported image."""
+    image = tmp_path / "logo.png"
+    image.write_bytes(b"png")
+    with pytest.raises(StreamlitAPIException) as e:
+        string_util.validate_icon_or_emoji(str(image))
+    assert e.value.error_id == "invalid-image"
+
+
+def test_validate_icon_or_emoji_existing_relative_image_path_is_invalid_image(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An existing image filename in the working directory is an unsupported image."""
+    monkeypatch.chdir(tmp_path)
+    Path("logo.png").write_bytes(b"png")
+    with pytest.raises(StreamlitAPIException) as e:
+        string_util.validate_icon_or_emoji("logo.png")
+    assert e.value.error_id == "invalid-image"
+
+
+def test_validate_icon_or_emoji_missing_image_filename_is_invalid_icon(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A missing image-like filename is a generic invalid icon, not an image."""
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(StreamlitAPIException) as e:
+        string_util.validate_icon_or_emoji("logo.png")
+    assert e.value.error_id == "invalid-icon"
+
+
+@pytest.mark.parametrize("exc_type", [OSError, ValueError])
+def test_validate_icon_or_emoji_fs_probe_errors_are_invalid_icon(
+    monkeypatch: pytest.MonkeyPatch, exc_type: type[Exception]
+) -> None:
+    """Filesystem probe failures must not leak native exceptions."""
+
+    def raise_error(self: Path) -> bool:
+        raise exc_type("probe failed")
+
+    monkeypatch.setattr(Path, "is_file", raise_error)
+    with pytest.raises(StreamlitAPIException) as e:
+        string_util.validate_icon_or_emoji("./logo.png")
+    assert e.value.error_id == "invalid-icon"
+
+
+def test_validate_icon_or_emoji_null_byte_path_is_invalid_icon() -> None:
+    """Embedded null bytes must not leak a native exception."""
+    with pytest.raises(StreamlitAPIException) as e:
+        string_util.validate_icon_or_emoji("foo\x00.png")
+    assert e.value.error_id == "invalid-icon"
+
+
+def test_validate_icon_or_emoji_skips_url_and_fs_work_for_plain_values() -> None:
+    """Emoji, Material icons, spinner, labels, and shortcodes must not import URL or path helpers."""
+    modules = ("streamlit.url_util", "streamlit.path_security")
+    with _without_modules(*modules):
+        assert string_util.validate_icon_or_emoji("spinner") == "spinner"
+        assert string_util.validate_icon_or_emoji("😃") == "😃"
+        assert (
+            string_util.validate_icon_or_emoji(":material/thumb_up:")
+            == ":material/thumb_up:"
+        )
+        with pytest.raises(StreamlitAPIException) as e:
+            string_util.validate_icon_or_emoji("home")
+        assert e.value.error_id == "invalid-icon"
+        with pytest.raises(StreamlitAPIException) as e:
+            string_util.validate_icon_or_emoji(":rocket:")
+        assert e.value.error_id == "invalid-emoji-shortcode"
+        for name in modules:
+            assert name not in sys.modules
+
+
+def test_validate_icon_or_emoji_does_not_stat_plain_or_url_values(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Material icons, emoji, labels, URLs, and UNC paths must not call Path.is_file."""
+
+    def fail_is_file(self: Path) -> bool:
+        raise AssertionError("Path.is_file should not be called")
+
+    monkeypatch.setattr(Path, "is_file", fail_is_file)
+    assert string_util.validate_icon_or_emoji("😃") == "😃"
+    assert (
+        string_util.validate_icon_or_emoji(":material/thumb_up:")
+        == ":material/thumb_up:"
+    )
+    with pytest.raises(StreamlitAPIException) as e:
+        string_util.validate_icon_or_emoji("home")
+    assert e.value.error_id == "invalid-icon"
+    with pytest.raises(StreamlitAPIException) as e:
+        string_util.validate_icon_or_emoji("https://example.com/icon.png")
+    assert e.value.error_id == "invalid-image"
+    with pytest.raises(StreamlitAPIException) as e:
+        string_util.validate_icon_or_emoji("data:image/png;base64,abc")
+    assert e.value.error_id == "invalid-image"
+    with pytest.raises(StreamlitAPIException) as e:
+        string_util.validate_icon_or_emoji("/app/static/icon.png")
+    assert e.value.error_id == "invalid-image"
+    with pytest.raises(StreamlitAPIException) as e:
+        string_util.validate_icon_or_emoji(r"\\server\share\icon.png")
+    assert e.value.error_id == "invalid-image"

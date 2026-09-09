@@ -113,8 +113,9 @@ class Page:
         An optional emoji or icon to display next to the page title and label.
         If ``icon`` is ``None`` (default), no icon is displayed next to the
         page label in the navigation menu, and a Streamlit icon is displayed
-        next to the title (in the browser tab). If ``icon`` is a string, the
-        following options are valid:
+        next to the title (in the browser tab). Pass ``icon=""`` to show no
+        icon even when the filename contains an emoji. If ``icon`` is a
+        non-empty string, the following options are valid:
 
         - A single-character emoji. For example, you can set ``icon="🚨"``
             or ``icon="🔥"``. Emoji short codes are not supported.
@@ -283,9 +284,7 @@ class Page:
             self._external_url = page
             self._page: Path | Callable[[], None] | None = None
             self._title: str = title
-            if icon is not None:
-                validate_icon_or_emoji(icon)
-            self._icon: str = icon or ""
+            self._icon: str = validate_icon_or_emoji(icon)
             # For external URLs, use a sanitized version of title as url_path if not provided
             self._url_path: str = (
                 _sanitize_url_path(title) if url_path is None else url_path
@@ -358,9 +357,14 @@ class Page:
         self._title = title or inferred_name.replace("_", " ")
 
         if icon is not None:
-            # validate user provided icon.
-            validate_icon_or_emoji(icon)
-        self._icon = icon or inferred_icon
+            # "" opts out of the filename emoji; do not fall back to it.
+            self._icon = validate_icon_or_emoji(icon)
+        else:
+            self._icon = inferred_icon
+            if inferred_icon:
+                # Filename inference already yields a bare emoji; validate it
+                # for errors but keep the inferred string.
+                validate_icon_or_emoji(inferred_icon)
 
         if self._title.strip() == "":
             raise StreamlitMissingRequiredParameterError(
@@ -384,9 +388,6 @@ class Page:
                     "The URL path cannot contain a nested path (e.g. foo/bar).",
                     error_id="page-nested-url-path",
                 )
-
-        if self._icon:
-            validate_icon_or_emoji(self._icon)
 
         # used by st.navigation to ordain a page as runnable
         self._can_be_called = False

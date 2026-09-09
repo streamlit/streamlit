@@ -100,21 +100,26 @@ class StPagesTest(DeltaGeneratorTestCase):
         # Provide an assertion to ensure no error
         assert True
 
-    def test_empty_string_icon_should_raise_exception(self):
-        """Test that passing an empty string icon raises an exception."""
+    @parameterized.expand(
+        [
+            ("",),
+            ("   ",),
+        ]
+    )
+    def test_empty_or_whitespace_icon_means_no_icon(self, icon: str) -> None:
+        """Empty or whitespace-only icon means no icon."""
+        page = st.Page("page.py", icon=icon)
+        assert page.icon == ""
 
-        with pytest.raises(StreamlitAPIException) as exc_info:
-            st.Page("page.py", icon="")
+    def test_empty_string_icon_overrides_inferred_filename_icon(self) -> None:
+        """An explicit empty icon must not fall back to an emoji in the filename."""
+        page = st.Page("1_👋_hello.py", icon="")
+        assert page.icon == ""
 
-        assert 'The value "" is not a valid emoji' in str(exc_info.value)
-
-    def test_whitespace_only_icon_should_raise_exception(self):
-        """Test that passing a whitespace-only icon raises an exception."""
-
-        with pytest.raises(StreamlitAPIException) as exc_info:
-            st.Page("page.py", icon="   ")
-
-        assert 'The value "   " is not a valid emoji' in str(exc_info.value)
+    def test_user_provided_icon_is_normalized(self) -> None:
+        """User-provided icons are stored in normalized form."""
+        page = st.Page("page.py", icon=" :material/thumb_up: ")
+        assert page.icon == ":material/thumb_up:"
 
     def test_script_hash_for_paths_are_different(self):
         """Tests that script hashes are different when url path (inferred or not) is unique"""

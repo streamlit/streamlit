@@ -810,8 +810,7 @@ class TextWidgetsMixin:
         if icon is None:
             icon = type_defaults.icon
         elif icon == "":
-            # `icon=""` opts out of the icon. Map it to None so it isn't passed
-            # to `validate_icon_or_emoji`, which raises on an empty string.
+            # `icon=""` opts out of the type-default icon.
             icon = None
 
         if placeholder is None:
