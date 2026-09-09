@@ -37,6 +37,7 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
+    StreamlitInvalidMinMaxError,
     StreamlitInvalidNumberFormatError,
     StreamlitJSNumberBoundsError,
     StreamlitMixedNumericTypesError,
@@ -750,6 +751,11 @@ class NumberInputMixin:
 
         # Ensure that the value matches arguments' types.
         all_ints = int_value and all_int_args
+
+        # Value-vs-bound checks below skip value is None, so inverted bounds
+        # would otherwise go uncaught in that case.
+        if min_value is not None and max_value is not None and min_value > max_value:
+            raise StreamlitInvalidMinMaxError(min_value, max_value)
 
         if min_value is not None and value is not None and min_value > value:
             raise StreamlitValueBelowMinError(value=value, min_value=min_value)

@@ -341,10 +341,10 @@ class StreamlitValueAboveMaxError(LocalizableStreamlitException):
 class StreamlitInvalidMinMaxError(LocalizableStreamlitException):
     """Raised when ``min_value`` is greater than ``max_value``.
 
-    ``st.slider`` swaps reversed bounds and raises this only for equal
-    bounds. ``st.date_input`` and ``st.datetime_input`` still reject
-    reversed bounds, and treat equal bounds as a valid single-day /
-    single-instant range.
+    - ``st.slider`` swaps reversed bounds and raises this only for equal
+      bounds.
+    - ``st.date_input``, ``st.datetime_input``, and ``st.number_input``
+      reject reversed bounds. Equal bounds stay valid.
     """
 
     def __init__(self, min_value: object, max_value: object) -> None:
