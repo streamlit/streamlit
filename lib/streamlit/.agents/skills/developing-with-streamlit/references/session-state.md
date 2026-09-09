@@ -124,22 +124,7 @@ Access a widget's value in its own callback via `st.session_state.key`, not the 
 
 Calling `st.rerun()` or `st.switch_page()` inside a callback ends that callback immediately (statements after the call don't run). Streamlit still runs the interaction's other callbacks before performing the rerun or navigation.
 
-## Suppressing reruns (`on_change="ignore"`)
-
-Some input widgets accept `on_change="ignore"` instead of a callback or `"rerun"`. The widget still updates in the UI, but Streamlit does not rerun the script. Python sees the new value only on the next rerun triggered by something else (a button, another widget, and so on).
-
-Not every widget supports this yet. Inspect `streamlit docs st.<command>` and look for `"ignore"` on `on_change` before using it.
-
-```python
-threshold = st.slider("Threshold", 0.0, 1.0, 0.5, on_change="ignore")
-if st.button("Apply"):
-    run_model(threshold)
-```
-
-Notes:
-- Unbound ignored values live in the browser only and are lost on refresh, unless you also set `bind="query-params"`.
-- Inside `st.form`, `"ignore"` has no extra effect: the form already defers commits until submit.
-- On `st.text_input`, `"ignore"` takes precedence over `live=`.
+`on_change` can also be `"ignore"` or `"rerun"` instead of a callback. `"ignore"` updates the widget without a rerun; see [Skip reruns on individual widgets](performance.md#skip-reruns-on-individual-widgets).
 
 ## Initialization patterns
 

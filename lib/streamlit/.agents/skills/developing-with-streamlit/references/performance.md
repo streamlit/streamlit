@@ -293,6 +293,25 @@ with st.form("invite", border=False):
 
 **When NOT to use forms:** If inputs depend on each other (e.g., selecting a country should update available cities), forms won't work since there's no rerun until submit.
 
+## Skip reruns on individual widgets
+
+Some input widgets accept `on_change="ignore"` instead of a callback or `"rerun"`. The widget still updates in the UI, but Streamlit does not rerun the script. Python sees the new value only on the next rerun triggered by something else (a button, another widget, and so on).
+
+Not every widget supports this yet. Inspect `streamlit docs st.<command>` and look for `"ignore"` on `on_change` before using it.
+
+```python
+threshold = st.slider("Threshold", 0.0, 1.0, 0.5, on_change="ignore")
+if st.button("Apply"):
+    run_model(threshold)
+```
+
+Use this when a single control should not rerun the app until the user applies it. Use a form when several related inputs should commit together.
+
+Notes:
+- Unbound ignored values live in the browser only and are lost on refresh, unless you also set `bind="query-params"` (see [Syncing a widget to the URL](session-state.md#syncing-a-widget-to-the-url-shareable-links)).
+- Inside `st.form`, `"ignore"` has no extra effect: the form already defers commits until submit.
+- On `st.text_input`, `"ignore"` takes precedence over `live=`.
+
 ## Conditional rendering
 
 **This is critical and often missed.**
