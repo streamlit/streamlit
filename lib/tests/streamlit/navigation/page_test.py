@@ -282,6 +282,7 @@ class StPagesTest(DeltaGeneratorTestCase):
         assert exc_info.value.error_id == "page-nested-url-path"
         message = str(exc_info.value)
         assert "nested path" in message
+        assert url_path.strip().strip("/") in message
         assert "https://github.com/streamlit/streamlit/issues/8971" in message
 
     def test_page_with_no_title_raises_api_exception(self):
@@ -500,6 +501,7 @@ class TestExternalUrlSupport(DeltaGeneratorTestCase):
         assert exc_info.value.error_id == "page-nested-url-path"
         message = str(exc_info.value)
         assert "nested path" in message
+        assert url_path.strip().strip("/") in message
         assert "https://github.com/streamlit/streamlit/issues/8971" in message
 
     @parameterized.expand(
