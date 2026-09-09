@@ -57,14 +57,14 @@ def _raise_if_nested_url_path(url_path: str) -> None:
     """Reject nested URL pathnames until they are supported."""
     # Browsers would resolve static assets relative to the nested page URL,
     # so a path like foo/bar would look for assets under /foo/ instead of the app root.
-    if "/" not in url_path:
-        return
-    raise StreamlitAPIException(
-        f"The `url_path` `{url_path}` cannot contain a nested path. "
-        "Nested URL pathnames are not supported yet. To upvote enabling them, "
-        "see GitHub issue [#8971](https://github.com/streamlit/streamlit/issues/8971).",
-        error_id="page-nested-url-path",
-    )
+    if "/" in url_path:
+        raise StreamlitAPIException(
+            f"The `url_path` `{url_path}` cannot include `/`. "
+            "Streamlit does not support nested URL pathnames yet, so use a single "
+            "path segment (e.g. `foo_bar`). To upvote support for nested pathnames, "
+            "see GitHub issue [#8971](https://github.com/streamlit/streamlit/issues/8971).",
+            error_id="page-nested-url-path",
+        )
 
 
 if TYPE_CHECKING:
@@ -158,8 +158,9 @@ class Page:
 
         The default page will have a pathname of ``""``, indicating the root
         URL of the app. If you set ``default=True``, ``url_path`` is ignored.
-        ``url_path`` can't include forward slashes; Streamlit does not support
-        nested URL pathnames yet. To upvote enabling them, see GitHub issue
+        ``url_path`` can't include forward slashes because Streamlit doesn't
+        support nested URL pathnames yet. To upvote support for nested
+        pathnames, see GitHub issue
         `#8971 <https://github.com/streamlit/streamlit/issues/8971>`_.
 
     default : bool
