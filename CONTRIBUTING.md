@@ -533,11 +533,10 @@ current lockfile.
   the [official installation instructions](https://protobuf.dev/installation/),
   still no newer than `uv.lock`. Homebrew's unversioned `protobuf` formula may
   be ahead of the lockfile.
-- Too new (`ImportError: cannot import name 'runtime_version'` or
-  `google.protobuf.runtime_version.VersionError` when generated modules are
-  imported): switch to a compiler at or below the locked package, then re-run
-  `make protobuf`. On macOS, install the versioned formula matching the lock's
-  minor version (e.g. `protobuf@33` for `protobuf` 6.33.x):
+- Too new (`google.protobuf.runtime_version.VersionError` when generated
+  modules are imported): switch to a compiler at or below the locked package,
+  then re-run `make protobuf`. On macOS, install the versioned formula matching
+  the lock's minor version (e.g. `protobuf@33` for `protobuf` 6.33.x):
 
   ```bash
   brew install protobuf@33
@@ -545,10 +544,17 @@ current lockfile.
   make protobuf
   ```
 
-  Alternatively, use `PROTOC_VERSION` from
-  [`.github/actions/make_init/action.yml`](./.github/actions/make_init/action.yml).
-  Do not hand-edit `uv.lock`. You can wait for the weekly lockfile update
-  (`update-python-lock.yml`) instead.
+  The `PATH` export is session-scoped; a later `make protobuf` in a new shell
+  will pick Homebrew's unversioned `protoc` again unless that `PATH` is
+  persisted. Alternatively, download the `protoc` release matching
+  `PROTOC_VERSION` in
+  [`.github/actions/make_init/action.yml`](./.github/actions/make_init/action.yml)
+  (currently 26.1) from the
+  [protobuf releases page](https://github.com/protocolbuffers/protobuf/releases)
+  and put it first on your `PATH`.
+- `ImportError: cannot import name 'runtime_version'` from `google.protobuf`
+  means the Python environment is out of sync (the locked `protobuf` package
+  already includes `runtime_version`). Reinstall with `make python-init`.
 - Already working: keep that compiler. Do not replace a working install just
   to match CI.
 
