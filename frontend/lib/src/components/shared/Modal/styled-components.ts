@@ -15,6 +15,7 @@
  */
 
 import isPropValid from "@emotion/is-prop-valid"
+import { CSSObject, keyframes } from "@emotion/react"
 import styled from "@emotion/styled"
 import {
   Dialog,
@@ -23,11 +24,60 @@ import {
   Modal as RAModal,
 } from "react-aria-components"
 
+import type { EmotionTheme } from "~lib/theme/types"
+
 /** `"center"` is a floating modal; `"left"` / `"right"` are full-height drawers. */
 export type ModalPosition = "left" | "center" | "right"
 
 const isSideDrawer = (position: ModalPosition): boolean =>
   position === "left" || position === "right"
+
+/**
+ * Enter duration matches the sidebar's 300ms transform so drawers feel like
+ * the same family of motion. Every dialog fades the overlay dim; left/right
+ * drawers also slide the panel in from the attached edge. Fill-mode `both`
+ * holds the first keyframe so the dim and panel never flash at rest before
+ * the animation starts. Close still unmounts immediately; an exit animation
+ * would require keeping the overlay mounted after dismiss.
+ *
+ * The overlay animates `background-color` rather than `opacity` so the
+ * grey-out can fade without also fading the panel (opacity on the overlay
+ * would composite its children). React Aria's enter state is tied to
+ * animations on the overlay node itself, so this must live on the overlay,
+ * not a pseudo-element.
+ */
+const DIALOG_ENTER_DURATION_MS = 300
+const DIALOG_ENTER_EASING = "cubic-bezier(0.22, 1, 0.36, 1)"
+
+const slideInFromLeft = keyframes({
+  from: { transform: "translateX(-100%)" },
+  to: { transform: "translateX(0)" },
+})
+
+const slideInFromRight = keyframes({
+  from: { transform: "translateX(100%)" },
+  to: { transform: "translateX(0)" },
+})
+
+function overlayScrimFade(theme: EmotionTheme): ReturnType<typeof keyframes> {
+  return keyframes({
+    from: { backgroundColor: theme.colors.transparent },
+    to: { backgroundColor: theme.colors.darkenedBgMix25 },
+  })
+}
+
+function enterAnimation(name: ReturnType<typeof keyframes>): CSSObject {
+  return {
+    "&[data-entering]": {
+      animation: `${name} ${DIALOG_ENTER_DURATION_MS}ms ${DIALOG_ENTER_EASING} both`,
+    },
+    "@media (prefers-reduced-motion: reduce)": {
+      "&[data-entering]": {
+        animation: "none",
+      },
+    },
+  }
+}
 
 // React Aria forwards unknown props to the DOM; drop emotion transient `$` props.
 const shouldForwardNonTransientProp = (prop: string): boolean =>
@@ -56,16 +106,19 @@ export const StyledDialogOverlay = styled(ModalOverlay, {
   return {
     position: "fixed",
     inset: 0,
-    background: theme.colors.darkenedBgMix25,
+    backgroundColor: theme.colors.darkenedBgMix25,
     display: "flex",
     zIndex: theme.zIndices.modal,
+    // Fade the dim for every dialog. A parent `opacity` animation would
+    // also fade the panel; `background-color` only affects the grey-out.
+    ...enterAnimation(overlayScrimFade(theme)),
     ...(isDrawer
       ? {
           alignItems: "stretch",
           justifyContent: $position === "left" ? "flex-start" : "flex-end",
           paddingTop: theme.spacing.none,
           paddingBottom: theme.spacing.none,
-          overflowY: "hidden",
+          overflow: "hidden",
         }
       : {
           alignItems: "flex-start",
@@ -119,6 +172,9 @@ export const StyledDialogPanel = styled(RAModal, {
       ? {
           height: "100%",
           borderRadius: 0,
+          ...enterAnimation(
+            $position === "left" ? slideInFromLeft : slideInFromRight
+          ),
         }
       : {
           borderRadius: theme.radii.xxl,

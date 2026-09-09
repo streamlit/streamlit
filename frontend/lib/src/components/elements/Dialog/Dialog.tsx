@@ -100,7 +100,10 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     icon,
     position,
   } = element
-  const [isOpen, setIsOpen] = useState<boolean>(false)
+  // Open on the first paint when the proto says so. Starting closed and
+  // flipping in an effect delayed the drawer by a frame, so the fully-rendered
+  // panel popped in with no chance to play the enter animation.
+  const [isOpen, setIsOpen] = useState<boolean>(() => Boolean(initialIsOpen))
 
   useEffect(() => {
     // Only apply the open state if it was actually set in the proto.
@@ -167,7 +170,9 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     return undefined
   }, [isOpen, element.dismissible, handleRKeySuppress])
 
-  // don't use the Modal's isOpen prop as it feels laggy when using it
+  // Unmount when closed so dismiss is immediate. Drawer enter motion is CSS
+  // on mount (`data-entering`); an exit animation would need the overlay to
+  // stay mounted after close.
   if (!isOpen) {
     return <></>
   }

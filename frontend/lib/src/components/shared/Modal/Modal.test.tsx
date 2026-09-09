@@ -337,6 +337,46 @@ describe("Modal subcomponents", () => {
     expect(handleClose).toHaveBeenCalledTimes(1)
   })
 
+  it.each(["left", "center", "right"] as const)(
+    "fades the overlay dim for a %s dialog",
+    position => {
+      render(
+        <Modal isOpen position={position}>
+          <ModalBody>content</ModalBody>
+        </Modal>
+      )
+
+      const css = Array.from(document.querySelectorAll("style"))
+        .map(el => el.textContent ?? "")
+        .join("\n")
+      expect(css).toContain("data-entering")
+      expect(css).toContain("background-color")
+    }
+  )
+
+  it.each(["left", "right"] as const)(
+    "slides a %s drawer in on enter",
+    position => {
+      render(
+        <Modal isOpen position={position}>
+          <ModalBody>content</ModalBody>
+        </Modal>
+      )
+
+      // jsdom does not compute CSS animation names from emotion stylesheets.
+      // Assert the enter keyframes are emitted so the drawer starts off-canvas.
+      const css = Array.from(document.querySelectorAll("style"))
+        .map(el => el.textContent ?? "")
+        .join("\n")
+      expect(css).toContain("data-entering")
+      expect(css).toContain(
+        position === "left" ? "translateX(-100%)" : "translateX(100%)"
+      )
+      // Overlay grey-out fades via background-color so the panel stays opaque.
+      expect(css).toContain("background-color")
+    }
+  )
+
   it("does not dismiss a non-closeable left-positioned dialog", async () => {
     const user = userEvent.setup()
     const handleClose = vi.fn()

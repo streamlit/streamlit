@@ -130,16 +130,30 @@ def open_on_dismiss_callback_dialog(app: Page):
     click_button(app, "Open on_dismiss callback Dialog")
 
 
+def _wait_for_drawer_enter(app: Page) -> None:
+    """Wait until the side-drawer enter animation has finished.
+
+    React Aria keeps ``data-entering`` on the overlay until the CSS animation
+    ends. Geometry assertions (flush edges, width) are wrong mid-slide.
+    """
+    overlay = app.get_by_test_id(modal_test_id)
+    expect(overlay).to_be_attached()
+    expect(overlay).not_to_have_attribute("data-entering")
+
+
 def open_left_drawer_dialog(app: Page):
     click_button(app, "Open Left Drawer")
+    _wait_for_drawer_enter(app)
 
 
 def open_right_drawer_dialog(app: Page):
     click_button(app, "Open Right Drawer")
+    _wait_for_drawer_enter(app)
 
 
 def open_tall_left_drawer_dialog(app: Page):
     click_button(app, "Open Tall Left Drawer")
+    _wait_for_drawer_enter(app)
 
 
 def click_to_dismiss(app: Page):
