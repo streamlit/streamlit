@@ -176,7 +176,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: created.data.number,
-              labels: ['change:chore', 'impact:internal', 'autofix', 'never-stale'],
+              labels: ['change:chore', 'impact:internal', 'never-stale', 'bot-pr'],
             });
 
       - name: Write workflow summary
