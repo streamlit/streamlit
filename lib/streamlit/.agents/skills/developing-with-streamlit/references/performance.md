@@ -71,9 +71,9 @@ def get_metrics():
 ```
 
 Requirements and caveats: a `ttl` is required, and `refresh_mode="background"` can't be
-combined with `persist` or used on coroutine functions. The function can't use
-session-specific features (e.g. `st.session_state`) or render Streamlit elements—pass any
-needed values as arguments. Works with both `st.cache_data` and `st.cache_resource`.
+combined with `persist`. The function can't use session-specific features (e.g.
+`st.session_state`) or render Streamlit elements—pass any needed values as arguments. Works
+with both `st.cache_data` and `st.cache_resource`.
 
 By default Streamlit hard-expires a background-refresh entry at `2 × ttl`, serving
 it stale for one extra `ttl`. Set `runner.cacheBackgroundRefreshTTLMultiplier` to a
@@ -120,25 +120,6 @@ def get_user_data(user_id):
 ```
 
 Use `ttl` for time-based expiration OR `max_entries` for size-based limits. You usually don't need both.
-
-### Async functions
-
-`@st.cache_data` and `@st.cache_resource` can decorate `async def` functions. Streamlit caches the awaited result; you must `await` the call (for example from `asyncio.run()`). Streamlit scripts can use `asyncio.run()` and `asyncio.get_event_loop()`.
-
-```python
-import asyncio
-
-@st.cache_data(ttl="1h")
-async def load_config():
-    return await fetch_config()
-
-
-config = asyncio.run(load_config())
-```
-
-- Define the cached function with `async def`. A plain `def` that returns a coroutine is rejected.
-- Don't cache live event-loop-bound clients or connections; cache loop-independent results instead.
-- `inspect.iscoroutinefunction` does not see the decorated callable as a coroutine function. If a framework requires that check, wrap the cached call in a thin `async def` adapter.
 
 ## Fragments
 
