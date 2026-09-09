@@ -132,7 +132,7 @@ combined serialized size of **all** `st.cache_data` in-memory caches:
 ```toml
 # .streamlit/config.toml
 [server]
-maxCachedDataSize = "1gb"   # applies across all @st.cache_data functions
+maxCachedDataSize = "2gb"   # applies across all @st.cache_data functions
 ```
 
 When the combined size of all `st.cache_data` caches exceeds this budget, Streamlit evicts
@@ -145,8 +145,7 @@ budget sees **no behavior change**, and an app that would previously OOM instead
 gracefully (slower, because of recomputation) while staying alive. This is the core reason
 a default here is far safer than, say, a default `ttl`.
 
-Choosing the **default value** for `maxCachedDataSize` is the main open decision; options
-and a recommendation are in
+`maxCachedDataSize` defaults to `"2gb"`. The alternatives considered are documented in
 [Default-value options](#default-value-options-for-the-global-budget) below.
 
 ### Behavior
@@ -187,20 +186,20 @@ and a recommendation are in
 
 ### Default-value options for the global budget
 
-The parameter (Part 1) is uncontroversial and low-risk. The judgment call is what
-`maxCachedDataSize` should default to. Ordered from safest-but-least-effective to
-most-protective:
+The parameter (Part 1) is uncontroversial and low-risk. The main judgment call was what
+`maxCachedDataSize` should default to; this proposal selects 2 GB. Alternatives are ordered
+from safest-but-least-effective to most-protective:
 
 **Option A — default off (`0` / unlimited), opt-in only.**
 - Pros: Zero behavior change; nothing can regress.
 - Cons: Doesn't solve the majority problem (developers who never set anything still OOM).
   Effectively ships only Part 1.
 
-**Option B — generous fixed default (e.g. `"1gb"` of serialized data). ✅ RECOMMENDED**
-- Pros: Normal apps (well under 1 GB of *serialized* cache) see no change; runaway caches
+**Option B — generous fixed default (`"2gb"` of serialized data). ✅ RECOMMENDED**
+- Pros: Normal apps (well under 2 GB of *serialized* cache) see no change; runaway caches
   evict LRU instead of crashing. Simple, predictable, no new dependency, easy to document
   and override. Directly addresses the crash-instead-of-degrade use case.
-- Cons: It's a behavior change — an app that legitimately relied on caching >1 GB of
+- Cons: It's a behavior change — an app that legitimately relied on caching >2 GB of
   serialized data now recomputes evicted entries (slower, but not broken). The value is a
   heuristic, not tailored to the machine.
 
@@ -222,9 +221,10 @@ most-protective:
 **Recommendation:** Ship **Part 1 (`max_size`) unconditionally**, and adopt **Option B**
 for the default global budget, combined with the Option D one-time warning (so developers
 who hit the budget are told why entries are being evicted and how to tune it). Start with a
-conservative, clearly-documented fixed default and revisit the exact number based on
-telemetry and G2K feedback. This gives explicit developers precise control while giving the
-silent majority a safety net that degrades instead of crashes.
+conservative, clearly documented 2 GB default to reduce the chance of disrupting apps that
+legitimately cache large amounts of data, and revisit it based on telemetry and G2K
+feedback. This gives explicit developers precise control while giving the silent majority
+a safety net that degrades instead of crashes.
 
 ### Technical feasibility (validated against the current implementation)
 

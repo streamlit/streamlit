@@ -181,12 +181,12 @@ _create_option(
     "server.maxCachedDataSize",
     description="""
         Maximum combined serialized size of all @st.cache_data in-memory caches.
-        Requires an explicit unit string like "1gb"/"500mb" (or "0" to disable).
+        Requires an explicit unit string like "2gb"/"500mb" (or "0" to disable).
         When exceeded, Streamlit evicts least-recently-used cached entries across
         functions until the total fits. This bounds serialized cache size, not
         process RSS.
     """,
-    default_val=...,  # see product-spec "Default-value options"; likely "1gb" or "0"
+    default_val="2gb",
     type_=str,
 )
 ```
@@ -197,21 +197,21 @@ layered on top (see below).
 **Config contract (resolved):** Existing `server.*` size caps (`server.maxUploadSize`,
 `server.maxMessageSize`) use `type_=int` in **megabytes**. Reusing that pattern here would
 clash with the `max_size` parameter's unit-string UX (`"500MB"`) and with the recommended
-default (`"1gb"`). Accepting bare ints as **bytes** would be a worse footgun: a user who
+default (`"2gb"`). Accepting bare ints as **bytes** would be a worse footgun: a user who
 writes `maxCachedDataSize = 500` (or `1`) almost certainly expects MB-scale behavior from
 the other `server.*` size options, not 500 bytes.
 
 Therefore `server.maxCachedDataSize` **requires an explicit unit for any non-zero
 value**. Accepted forms:
 
-- Unit string: `"1gb"`, `"500mb"`, `"1024KB"`, … (same `to_bytes` grammar as `max_size`)
+- Unit string: `"2gb"`, `"500mb"`, `"1024KB"`, … (same `to_bytes` grammar as `max_size`)
 - Disable sentinel only: `0` or `"0"` (unbounded / legacy behavior; handled before the
   `> 0` validation that `to_bytes` otherwise enforces)
 
 Bare non-zero integers (`500`, `1`, …) and unit-less numeric strings (`"500"`) are
 **rejected** with a clear config error pointing at the unit requirement. Because the
 option is `type_=str`, document that values in `config.toml` are written as strings
-(`maxCachedDataSize = "1gb"`, `maxCachedDataSize = "0"`). The Python `max_size`
+(`maxCachedDataSize = "2gb"`, `maxCachedDataSize = "0"`). The Python `max_size`
 parameter still accepts int-as-bytes — that is a different surface (call-site API, not
 `server.*` config) and is unaffected.
 
@@ -227,8 +227,8 @@ parameter still accepts int-as-bytes — that is a different surface (call-site 
   `popitem` paths notify `GlobalCacheBudget` (no phantom bytes).
 - `cache_data_api` tests: parameter parsing/validation (`"500MB"`, int bytes, bad unit,
   `<= 0`), cache-recreation on `max_size` change.
-- Config parsing: unit strings accepted; `0`/`"0"` disables; bare non-zero ints /
-  unit-less strings rejected.
+- Config parsing: the default resolves to 2 GB; unit strings accepted; `0`/`"0"` disables;
+  bare non-zero ints / unit-less strings rejected.
 - Global budget: cross-cache eviction picks the global LRU victim via the memory-only
   path; concurrency/lock-order stress test (many caches, concurrent read/write) with no
   deadlock; budget respected under churn.
