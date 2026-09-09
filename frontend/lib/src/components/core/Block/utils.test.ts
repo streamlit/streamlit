@@ -31,6 +31,7 @@ import {
   getKeyFromId,
   isElementStale,
   shouldActivateScrollToBottom,
+  shouldHideStaleDialog,
 } from "./utils"
 
 vi.mock("~lib/render-tree/visitors/ElementsSetVisitor", () => ({
@@ -64,51 +65,162 @@ describe("isElementStale", () => {
     ).toBe(true)
   })
 
-  // When running in a fragment, the only elements that should be set to stale
-  // are those belonging to the fragment that's currently running and only if the script run id is different.
-  // If the script run id is the same, the element has just been updated and is not stale.
-  it("if running and currentFragmentId is set, compares with node's fragmentId and scriptrunId", () => {
-    expect(
-      isElementStale(node, ScriptRunState.RUNNING, "myScriptRunId", [
-        "myFragmentId",
-      ])
-    ).toBe(false)
+  // A pending stop does not end the script run, so STOP_REQUESTED uses the
+  // same staleness rules as RUNNING.
+  describe.each([ScriptRunState.RUNNING, ScriptRunState.STOP_REQUESTED])(
+    "while the script is executing (%s)",
+    state => {
+      // When running in a fragment, the only elements that should be set to stale
+      // are those belonging to the fragment that's currently running and only if the script run id is different.
+      // If the script run id is the same, the element has just been updated and is not stale.
+      it("if fragmentIdsThisRun is set, compares the node's fragmentId and scriptRunId", () => {
+        expect(
+          isElementStale(node, state, "myScriptRunId", ["myFragmentId"])
+        ).toBe(false)
 
-    expect(
-      isElementStale(node, ScriptRunState.RUNNING, "otherScriptRunId", [
-        "myFragmentId",
-      ])
-    ).toBe(true)
+        expect(
+          isElementStale(node, state, "otherScriptRunId", ["myFragmentId"])
+        ).toBe(true)
 
-    expect(
-      isElementStale(node, ScriptRunState.RUNNING, "myScriptRunId", [
-        "someFragmentId",
-        "someOtherFragmentId",
-      ])
-    ).toBe(false)
-  })
+        expect(
+          isElementStale(node, state, "myScriptRunId", [
+            "someFragmentId",
+            "someOtherFragmentId",
+          ])
+        ).toBe(false)
 
-  // When not running in a fragment, all elements from script runs aside from
-  // the current one should be set to stale.
-  it("if running and currentFragmentId is not set, compares with node's scriptRunId", () => {
-    expect(
-      isElementStale(node, ScriptRunState.RUNNING, "someOtherScriptRunId", [])
-    ).toBe(true)
+        // A fragment that is not running this time is not stale, even when its
+        // scriptRunId differs.
+        expect(
+          isElementStale(node, state, "otherScriptRunId", ["someFragmentId"])
+        ).toBe(false)
+      })
 
-    expect(
-      isElementStale(node, ScriptRunState.RUNNING, "myScriptRunId", [])
-    ).toBe(false)
-  })
+      // When not running in a fragment, all elements from script runs aside from
+      // the current one should be set to stale.
+      it("if fragmentIdsThisRun is not set, compares the node's scriptRunId", () => {
+        expect(isElementStale(node, state, "someOtherScriptRunId", [])).toBe(
+          true
+        )
+
+        expect(isElementStale(node, state, "myScriptRunId", [])).toBe(false)
+      })
+
+      // fragmentIdsThisRun is optional, so omitting it has to behave like
+      // passing no fragment ids rather than throwing.
+      it("if fragmentIdsThisRun is omitted, compares the node's scriptRunId", () => {
+        expect(isElementStale(node, state, "someOtherScriptRunId")).toBe(true)
+
+        expect(isElementStale(node, state, "myScriptRunId")).toBe(false)
+      })
+    }
+  )
 
   it("returns false for all other script run states", () => {
     const states = [
       ScriptRunState.NOT_RUNNING,
-      ScriptRunState.STOP_REQUESTED,
       ScriptRunState.COMPILATION_ERROR,
     ]
     states.forEach(s => {
       expect(isElementStale(node, s, "someOtherScriptRunId", [])).toBe(false)
     })
+  })
+})
+
+describe("shouldHideStaleDialog", () => {
+  const node = new ElementNode(
+    // @ts-expect-error
+    null,
+    null,
+    "myScriptRunId",
+    "activeScriptHash",
+    "myFragmentId"
+  )
+
+  it("hides a leftover dialog during a full-app run", () => {
+    expect(
+      shouldHideStaleDialog(
+        node,
+        ScriptRunState.RUNNING,
+        "someOtherScriptRunId",
+        []
+      )
+    ).toBe(true)
+  })
+
+  it("hides a leftover dialog while stop is requested", () => {
+    expect(
+      shouldHideStaleDialog(
+        node,
+        ScriptRunState.STOP_REQUESTED,
+        "someOtherScriptRunId",
+        []
+      )
+    ).toBe(true)
+  })
+
+  it("keeps the dialog when it belongs to the current run", () => {
+    expect(
+      shouldHideStaleDialog(node, ScriptRunState.RUNNING, "myScriptRunId", [])
+    ).toBe(false)
+  })
+
+  it("keeps the dialog during a fragment run", () => {
+    expect(
+      shouldHideStaleDialog(
+        node,
+        ScriptRunState.RUNNING,
+        "someOtherScriptRunId",
+        ["myFragmentId"]
+      )
+    ).toBe(false)
+  })
+
+  it("keeps the dialog during an unrelated fragment run", () => {
+    // NewSession still assigns a new scriptRunId for fragment reruns, so any
+    // non-empty fragmentIdsThisRun must keep the dialog — not only the
+    // dialog's own fragment.
+    expect(
+      shouldHideStaleDialog(
+        node,
+        ScriptRunState.RUNNING,
+        "someOtherScriptRunId",
+        ["otherFragmentId"]
+      )
+    ).toBe(false)
+  })
+
+  it("keeps the dialog while a rerun is only requested", () => {
+    // RERUN_REQUESTED is set before we know whether this is a fragment or
+    // full-app rerun. Hiding here would unmount the dialog on every widget
+    // interaction inside it.
+    expect(
+      shouldHideStaleDialog(
+        node,
+        ScriptRunState.RERUN_REQUESTED,
+        "someOtherScriptRunId",
+        []
+      )
+    ).toBe(false)
+  })
+
+  it("keeps the dialog when the script is not executing", () => {
+    expect(
+      shouldHideStaleDialog(
+        node,
+        ScriptRunState.NOT_RUNNING,
+        "someOtherScriptRunId",
+        []
+      )
+    ).toBe(false)
+    expect(
+      shouldHideStaleDialog(
+        node,
+        ScriptRunState.COMPILATION_ERROR,
+        "someOtherScriptRunId",
+        []
+      )
+    ).toBe(false)
   })
 })
 

@@ -263,15 +263,23 @@ updated.caption("Last updated just now", wrap=False, width="stretch")
 region.text("North America · EMEA · APAC", wrap=False, width="stretch")
 ```
 
-## HTML (use very sparingly!)
+## HTML (use only when no native element exists)
 
-Mix Markdown with HTML using `unsafe_allow_html=True`. For pure HTML without markdown processing, use `st.html()` instead.
+Prefer native Streamlit elements and theming over custom HTML. Do not use `unsafe_allow_html` on `st.markdown`, `st.caption`, or `st.write` to recreate UI or inject CSS. Use Streamlit Markdown coloring (`:red[...]`, `:color[...]{foreground="..."}`) and `.streamlit/config.toml` instead.
+
+If you need HTML or CSS without Markdown, use `st.html`.
 
 ```python
+# BAD: HTML in Markdown to restyle text
 st.markdown(
     "**Status:** <span style='color: coral'>Custom styled</span>",
     unsafe_allow_html=True,
 )
+
+# GOOD: Native Markdown coloring
+st.markdown('**Status:** :color[Custom styled]{foreground="coral"}')
+
+# GOOD: HTML/CSS that isn't Markdown, when no native element exists
 st.html("<div class='custom'>Pure HTML content</div>")
 ```
 

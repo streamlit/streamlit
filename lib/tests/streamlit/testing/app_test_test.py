@@ -20,6 +20,7 @@ from pathlib import Path
 import pytest
 
 from streamlit.runtime.pages_manager import PagesManager
+from streamlit.runtime.state.common import TESTING_KEY
 from streamlit.testing.v1 import AppTest, local_script_runner
 from streamlit.util import calc_hash
 
@@ -830,3 +831,61 @@ def test_keyed_fragment_rerun_button_before_fragment() -> None:
     at.button[0].click().run()
     assert not at.exception, at.exception
     assert at.text[0].value == "fragment ran 2 time(s)"
+
+
+def test_session_state_get_returns_script_value() -> None:
+    """``AppTest.session_state.get`` returns a key the script set."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.session_state["x"] = 7
+        st.session_state["empty"] = None
+
+    at = AppTest.from_function(script).run()
+    assert at.session_state.get("x") == 7
+    assert at.session_state.get("empty") is None
+    assert at.session_state.get("empty", "fallback") is None
+    assert at.session_state.get("missing") is None
+    assert at.session_state.get("missing", "fallback") == "fallback"
+
+
+def test_session_state_dict_api_matches_filtered_state() -> None:
+    """Dict-style access exposes only user state and keyed widget values."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.session_state["count"] = 1
+        st.radio("radio", options=["a", "b"], key="r")
+
+    at = AppTest.from_function(script)
+    at.session_state["seeded"] = True
+    assert "seeded" in at.session_state
+    assert set(at.session_state.keys()) == {"seeded"}
+    assert len(at.session_state) == 1
+    at = at.run()
+    assert at.session_state["count"] == 1
+    assert at.session_state.count == 1
+    assert "count" in at.session_state
+    assert "r" in at.session_state
+    assert "seeded" in at.session_state
+    assert TESTING_KEY not in at.session_state
+    assert set(at.session_state.keys()) == {"count", "r", "seeded"}
+    assert dict(at.session_state.items()) == {"count": 1, "r": "a", "seeded": True}
+    assert dict(
+        zip(at.session_state.keys(), at.session_state.values(), strict=True)
+    ) == {"count": 1, "r": "a", "seeded": True}
+    assert at.session_state.to_dict() == {"count": 1, "r": "a", "seeded": True}
+    assert len(at.session_state) == 3
+    assert set(at.session_state) == {"count", "r", "seeded"}
+    assert "count" in repr(at.session_state)
+    assert TESTING_KEY not in repr(at.session_state)
+
+    at.session_state.extra = "yes"
+    del at.session_state.extra
+    del at.session_state["count"]
+    with pytest.raises(AttributeError, match="missing not found in session_state"):
+        _ = at.session_state.missing
+    assert "count" not in at.session_state
+    assert "extra" not in at.session_state

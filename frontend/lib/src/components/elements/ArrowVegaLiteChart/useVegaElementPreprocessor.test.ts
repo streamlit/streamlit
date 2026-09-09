@@ -1227,10 +1227,15 @@ describe("useVegaElementPreprocessor", () => {
       expect((second as { width?: number }).width).toBe(containerWidth)
     })
 
-    it("throws when datasets are included in the spec", () => {
-      expect(() => renderSpec({ mark: "bar", datasets: { foo: [] } })).toThrow(
-        "Datasets should not be passed as part of the spec"
-      )
+    it("preserves datasets included in the spec", () => {
+      const datasets = {
+        foo: { type: "FeatureCollection", features: [] },
+      }
+      const spec = renderSpec({ mark: "bar", datasets })
+      expect(spec.datasets).toEqual(datasets)
+
+      const specWithoutDatasets = renderSpec({ mark: "bar" })
+      expect(specWithoutDatasets).not.toHaveProperty("datasets")
     })
   })
 })
