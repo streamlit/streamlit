@@ -235,7 +235,11 @@ def _coalesce_replay_trigger_values(
     new_values: Mapping[str, Any] | None,
     coalesced_states: WidgetStates | None,
 ) -> Mapping[str, Any] | None:
-    """Coalesce hydrated chat values in lockstep with their replay protos."""
+    """Retain hydrated values only for replay states that survive coalescing.
+
+    For duplicate IDs, the hydrated value follows the winning protobuf, so a
+    newer winner without a hydrated value cannot inherit an older payload.
+    """
     values_by_id = dict(old_values or {})
 
     # A newer proto replaces the complete replay entry. Drop any older hydrated
