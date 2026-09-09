@@ -349,8 +349,10 @@ export const BlockNodeRenderer = (
     // Hide leftover dialogs from a previous full-app run as soon as the next
     // full-app run starts. Stale-node cleanup waits until the run finishes,
     // which would leave the overlay up during blocking work (issue #9405).
-    // Unmount without going through Dialog's onClose so on_dismiss is not
-    // fired for this script-driven hide.
+    // Same unmount as that later prune. Do not go through Dialog's onClose:
+    // that path is user dismiss and would newly fire on_dismiss.
+    // Re-opening the same dialog in this run remounts it when the new delta
+    // arrives; keeping a dialog open across st.rerun() is not supported.
     if (
       shouldHideStaleDialog(
         node,

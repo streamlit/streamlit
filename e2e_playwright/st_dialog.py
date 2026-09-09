@@ -423,6 +423,10 @@ if st.button("Open Dialog with JSON Path Tooltip"):
 
 # Regression coverage for #9405: a dialog closed via st.rerun() must disappear
 # as soon as the next full-app run starts, even if that run then blocks.
+# Keep this longer than the hide-assertion window in
+# test_dialog_closes_before_blocking_follow_up_work. If the sleep finishes
+# first, clearStaleNodes can unmount the leftover dialog and the test would
+# pass without the early-hide fix.
 _BLOCKING_AFTER_DIALOG_CLOSE_SECONDS = 4
 
 

@@ -176,6 +176,20 @@ describe("shouldHideStaleDialog", () => {
     ).toBe(false)
   })
 
+  it("keeps the dialog during an unrelated fragment run", () => {
+    // NewSession still assigns a new scriptRunId for fragment reruns, so any
+    // non-empty fragmentIdsThisRun must keep the dialog — not only the
+    // dialog's own fragment.
+    expect(
+      shouldHideStaleDialog(
+        node,
+        ScriptRunState.RUNNING,
+        "someOtherScriptRunId",
+        ["otherFragmentId"]
+      )
+    ).toBe(false)
+  })
+
   it("keeps the dialog while a rerun is only requested", () => {
     // RERUN_REQUESTED is set before we know whether this is a fragment or
     // full-app rerun. Hiding here would unmount the dialog on every widget

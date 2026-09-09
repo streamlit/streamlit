@@ -868,14 +868,14 @@ def test_dialog_closes_before_blocking_follow_up_work(app: Page):
     # hide the bug this test is meant to catch.
     get_button(dialog, "Submit then block").click()
 
-    expect(dialog).not_to_be_attached(timeout=3000)
+    # Wait for the next run to start so we assert hide during the blocking
+    # window, not against a timeout that can miss startup or outlast the sleep.
     expect(app.get_by_text("Blocking operation started")).to_be_visible()
+    expect(dialog).not_to_be_attached()
     expect(app.get_by_text("Blocking operation done")).not_to_be_attached()
 
-    # Let the blocking run finish so later tests in this module are not left
-    # with a still-running script. The hide is only applied while the script
-    # is running; after a successful finish the leftover node is pruned, so
-    # the dialog must stay gone.
+    # The hide only applies while the script is executing. After a successful
+    # finish the leftover node is pruned, so the dialog must stay gone.
     expect(app.get_by_text("Blocking operation done")).to_be_visible(timeout=10000)
     expect(dialog).not_to_be_attached()
 

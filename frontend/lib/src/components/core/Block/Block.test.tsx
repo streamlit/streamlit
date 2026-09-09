@@ -881,90 +881,59 @@ describe("BlockNodeRenderer container types", () => {
     expect(setTriggerValue).not.toHaveBeenCalled()
   })
 
-  it("keeps a dialog from the current full-app run visible while running", () => {
-    const dialogBlock = new BlockNode(
-      FAKE_SCRIPT_HASH,
-      [text("dialog body")],
-      new BlockProto({
-        allowEmpty: true,
-        dialog: {
-          title: "My dialog",
-          isOpen: true,
-          dismissible: true,
-          width: BlockProto.Dialog.DialogWidth.LARGE,
+  it.each([
+    {
+      desc: "from the current full-app run while running",
+      nodeScriptRunId: "current-run",
+      fragmentId: undefined,
+      scriptRunState: ScriptRunState.RUNNING,
+      fragmentIdsThisRun: [] as string[],
+    },
+    {
+      desc: "leftover while a rerun is only requested",
+      nodeScriptRunId: "previous-run",
+      fragmentId: undefined,
+      scriptRunState: ScriptRunState.RERUN_REQUESTED,
+      fragmentIdsThisRun: [] as string[],
+    },
+    {
+      desc: "leftover during a fragment run",
+      nodeScriptRunId: "previous-run",
+      fragmentId: "dialog-fragment",
+      scriptRunState: ScriptRunState.RUNNING,
+      fragmentIdsThisRun: ["dialog-fragment"],
+    },
+  ])(
+    "keeps a dialog $desc",
+    ({ nodeScriptRunId, fragmentId, scriptRunState, fragmentIdsThisRun }) => {
+      const dialogBlock = new BlockNode(
+        FAKE_SCRIPT_HASH,
+        [text("dialog body")],
+        new BlockProto({
+          allowEmpty: true,
+          dialog: {
+            title: "My dialog",
+            isOpen: true,
+            dismissible: true,
+            width: BlockProto.Dialog.DialogWidth.LARGE,
+          },
+        }),
+        nodeScriptRunId,
+        fragmentId
+      )
+
+      renderWithContexts(makeBlockNodeComponent(dialogBlock), {
+        scriptRunContext: {
+          scriptRunState,
+          scriptRunId: "current-run",
+          fragmentIdsThisRun,
         },
-      }),
-      "current-run"
-    )
+      })
 
-    renderWithContexts(makeBlockNodeComponent(dialogBlock), {
-      scriptRunContext: {
-        scriptRunState: ScriptRunState.RUNNING,
-        scriptRunId: "current-run",
-        fragmentIdsThisRun: [],
-      },
-    })
-
-    expect(screen.getByTestId("stDialog")).toBeVisible()
-    expect(screen.getByText("dialog body")).toBeVisible()
-  })
-
-  it("keeps a leftover dialog visible while a rerun is only requested", () => {
-    const dialogBlock = new BlockNode(
-      FAKE_SCRIPT_HASH,
-      [text("dialog body")],
-      new BlockProto({
-        allowEmpty: true,
-        dialog: {
-          title: "My dialog",
-          isOpen: true,
-          dismissible: true,
-          width: BlockProto.Dialog.DialogWidth.LARGE,
-        },
-      }),
-      "previous-run"
-    )
-
-    renderWithContexts(makeBlockNodeComponent(dialogBlock), {
-      scriptRunContext: {
-        scriptRunState: ScriptRunState.RERUN_REQUESTED,
-        scriptRunId: "current-run",
-        fragmentIdsThisRun: [],
-      },
-    })
-
-    expect(screen.getByTestId("stDialog")).toBeVisible()
-    expect(screen.getByText("dialog body")).toBeVisible()
-  })
-
-  it("keeps a leftover dialog visible during a fragment run", () => {
-    const dialogBlock = new BlockNode(
-      FAKE_SCRIPT_HASH,
-      [text("dialog body")],
-      new BlockProto({
-        allowEmpty: true,
-        dialog: {
-          title: "My dialog",
-          isOpen: true,
-          dismissible: true,
-          width: BlockProto.Dialog.DialogWidth.LARGE,
-        },
-      }),
-      "previous-run",
-      "dialog-fragment"
-    )
-
-    renderWithContexts(makeBlockNodeComponent(dialogBlock), {
-      scriptRunContext: {
-        scriptRunState: ScriptRunState.RUNNING,
-        scriptRunId: "current-run",
-        fragmentIdsThisRun: ["dialog-fragment"],
-      },
-    })
-
-    expect(screen.getByTestId("stDialog")).toBeVisible()
-    expect(screen.getByText("dialog body")).toBeVisible()
-  })
+      expect(screen.getByTestId("stDialog")).toBeVisible()
+      expect(screen.getByText("dialog body")).toBeVisible()
+    }
+  )
 
   it("renders a tab container", () => {
     const tab = makeVerticalBlock([text("tab body")], {
