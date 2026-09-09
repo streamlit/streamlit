@@ -31,26 +31,42 @@ const CARTO_POSITRON =
   "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
 
 describe("isUnsetMapStyle", () => {
-  it.each([undefined, null, "", PYDECK_UNSET_MAP_STYLE])(
-    "treats %p as unset",
-    mapStyle => {
-      expect(isUnsetMapStyle(mapStyle)).toBe(true)
-    }
-  )
+  it.each([
+    [undefined],
+    [null],
+    [""],
+    [PYDECK_UNSET_MAP_STYLE],
+    [["", PYDECK_UNSET_MAP_STYLE]],
+  ])("treats %p as unset", mapStyle => {
+    expect(isUnsetMapStyle(mapStyle)).toBe(true)
+  })
 
-  it("does not treat a Carto or Mapbox URL as unset", () => {
-    expect(isUnsetMapStyle(CARTO_POSITRON)).toBe(false)
-    expect(isUnsetMapStyle(MAPBOX_LIGHT)).toBe(false)
+  it.each([
+    [CARTO_POSITRON],
+    [MAPBOX_LIGHT],
+    [{ version: 8, layers: [] }],
+    [[MAPBOX_LIGHT]],
+  ])("does not treat %p as unset", mapStyle => {
+    expect(isUnsetMapStyle(mapStyle)).toBe(false)
   })
 })
 
 describe("isMapCompatibleViewSpec", () => {
-  it.each([undefined, null, [], { "@@type": "MapView" }])(
-    "treats %p as a MapView spec",
-    views => {
-      expect(isMapCompatibleViewSpec(views)).toBe(true)
-    }
-  )
+  it.each([
+    [undefined],
+    [null],
+    [[]],
+    [{ "@@type": "MapView" }],
+    [new MapView({ controller: true })],
+  ])("treats %p as a MapView spec", views => {
+    expect(isMapCompatibleViewSpec(views)).toBe(true)
+  })
+
+  it("rejects a list that includes a non-object view", () => {
+    expect(isMapCompatibleViewSpec([null, { "@@type": "MapView" }])).toBe(
+      false
+    )
+  })
 
   it.each(["OrbitView", "OrthographicView", "FirstPersonView", "GlobeView"])(
     "rejects serialized %s",
@@ -98,6 +114,11 @@ describe("withDefaultMapViewIds", () => {
       { "@@type": "MapView", x: "50%", width: "50%" },
     ])
   })
+
+  it("returns a MapView instance unchanged", () => {
+    const view = new MapView({ controller: true })
+    expect(withDefaultMapViewIds(view)).toBe(view)
+  })
 })
 
 describe("shouldShowBasemap", () => {
@@ -138,5 +159,20 @@ describe("sanitizeDeckParameters", () => {
       sanitizeDeckParameters(new MapView({ controller: true }))
     ).toBeUndefined()
     expect(sanitizeDeckParameters({ blend: () => true })).toBeUndefined()
+  })
+
+  it.each([
+    [
+      "a throwing toJSON",
+      {
+        toJSON: () => {
+          throw new Error("cannot serialize")
+        },
+      },
+    ],
+    ["a toJSON that returns an array", { toJSON: () => [1, 2, 3] }],
+    ["constructor/prototype keys", { constructor: true, prototype: true }],
+  ])("drops %s", (_label, parameters) => {
+    expect(sanitizeDeckParameters(parameters)).toBeUndefined()
   })
 })

@@ -38,6 +38,18 @@ def test_is_file_with_html_tag_substring() -> None:
     assert _is_file("not<a>file") is False
 
 
+@pytest.mark.parametrize(
+    "error",
+    [OSError("broken"), ValueError("null byte"), TypeError("bad")],
+    ids=["oserror", "valueerror", "typeerror"],
+)
+def test_is_file_returns_false_on_filesystem_error(error: Exception) -> None:
+    """Path.is_file errors are treated as 'not a file'."""
+    with patch("streamlit.elements.html.Path") as mock_path:
+        mock_path.return_value.is_file.side_effect = error
+        assert _is_file("shortpath") is False
+
+
 class StHtmlAPITest(DeltaGeneratorTestCase):
     """Test st.html API."""
 

@@ -21,7 +21,7 @@ from unittest.mock import patch
 import pytest
 
 from streamlit.elements.lib.shortcut_utils import normalize_shortcut
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 
 
 @pytest.mark.parametrize(
@@ -234,3 +234,15 @@ def test_normalize_shortcut_warns_per_distinct_reserved_combo() -> None:
         normalize_shortcut("Ctrl+PageDown")
         normalize_shortcut("Ctrl+T")
     assert mock_logger.warning.call_count == 2
+
+
+def test_normalize_shortcut_rejects_non_string() -> None:
+    """Non-string shortcuts raise StreamlitInvalidParameterTypeError."""
+    with pytest.raises(StreamlitInvalidParameterTypeError):
+        normalize_shortcut(1)  # type: ignore[arg-type]
+
+
+def test_normalize_shortcut_rejects_unsupported_key() -> None:
+    """Unknown non-modifier tokens raise StreamlitAPIException."""
+    with pytest.raises(StreamlitAPIException, match="supported keys"):
+        normalize_shortcut("Ctrl+FooBar")

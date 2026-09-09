@@ -48,6 +48,11 @@ function LabelTitleHarness({
   )
 }
 
+function MissingLabelHarness(): ReactElement {
+  const { titleRef } = useLabelTitleTooltip(true, "Unused")
+  return <div ref={titleRef} data-testid="title-host" />
+}
+
 describe("useLabelTitleTooltip", () => {
   it("sets a native title from the rendered label text when enabled", () => {
     render(
@@ -147,5 +152,19 @@ describe("useLabelTitleTooltip", () => {
       expect(screen.getByTitle("Updated plain text")).toBeVisible()
     })
     expect(screen.queryByTitle("First label")).not.toBeInTheDocument()
+  })
+
+  it("does not set a title when the rendered label text is empty", () => {
+    render(
+      <LabelTitleHarness addTitleTooltip={true} label="" labelContent="" />
+    )
+
+    expect(screen.getByTestId("title-host")).not.toHaveAttribute("title")
+  })
+
+  it("does not set a title when the label text node is missing", () => {
+    render(<MissingLabelHarness />)
+
+    expect(screen.getByTestId("title-host")).not.toHaveAttribute("title")
   })
 })
