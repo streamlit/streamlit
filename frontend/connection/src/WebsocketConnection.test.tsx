@@ -896,7 +896,8 @@ If you are trying to access a Streamlit app running on another server, this coul
         name: "with status = 403 response",
         errorType: "response" as const,
         responseOptions: { status: 403, statusText: "Forbidden" },
-        expected: [403, "Forbidden"],
+        expectedError: 403,
+        expectedMessage: "Forbidden",
       },
       {
         name: "with status = 500 response",
@@ -905,66 +906,74 @@ If you are trying to access a Streamlit app running on another server, this coul
           status: 500,
           statusText: "Internal Server Error",
         },
-        expected: [500, "Internal Server Error"],
+        expectedError: 500,
+        expectedMessage: "Internal Server Error",
       },
       {
         name: "with network error",
         errorType: "network" as const,
-        expected: ["No response received from server", "Network error"],
+        expectedError: "No response received from server",
+        expectedMessage: "Network error",
       },
       {
         name: "with timeout",
         errorType: "timeout" as const,
-        expected: [
-          "DoInitPings timed out",
-          "Connection timed out - ECONNABORTED",
-        ],
+        expectedError: "DoInitPings timed out",
+        expectedMessage: "Connection timed out - ECONNABORTED",
       },
       {
         name: "with HTTP status 0",
         errorType: "response" as const,
         responseOptions: { status: 0, statusText: "No Response" },
-        expected: ["Response received with status 0", "No Response"],
+        expectedError: "Response received with status 0",
+        expectedMessage: "No Response",
       },
       {
         name: "with a generic request setup error",
         errorType: "error" as const,
         error: new Error("request setup failed"),
-        expected: [
-          "Error setting up request to server",
-          "request setup failed",
-        ],
+        expectedError: "Error setting up request to server",
+        expectedMessage: "request setup failed",
       },
-    ])("$name", async ({ errorType, responseOptions, error, expected }) => {
-      const sendClientErrorSpy = vi.fn()
-
-      globalThis.fetch = setupFetchMockWithFailures(
-        MAX_RETRIES_BEFORE_CLIENT_ERROR,
+    ])(
+      "$name",
+      async ({
         errorType,
         responseOptions,
-        error
-      )
+        error,
+        expectedError,
+        expectedMessage,
+      }) => {
+        const sendClientErrorSpy = vi.fn()
 
-      const retryCallback = createTimerAdvancingRetryCallback()
+        globalThis.fetch = setupFetchMockWithFailures(
+          MAX_RETRIES_BEFORE_CLIENT_ERROR,
+          errorType,
+          responseOptions,
+          error
+        )
 
-      const { promise } = doInitPings(
-        MOCK_PING_DATA.uri,
-        MOCK_PING_DATA.timeoutMs,
-        MOCK_PING_DATA.maxTimeoutMs,
-        retryCallback,
-        sendClientErrorSpy,
-        MOCK_PING_DATA.setAllowedOrigins
-      )
+        const retryCallback = createTimerAdvancingRetryCallback()
 
-      await vi.runAllTimersAsync()
-      await promise
+        const { promise } = doInitPings(
+          MOCK_PING_DATA.uri,
+          MOCK_PING_DATA.timeoutMs,
+          MOCK_PING_DATA.maxTimeoutMs,
+          retryCallback,
+          sendClientErrorSpy,
+          MOCK_PING_DATA.setAllowedOrigins
+        )
 
-      expect(sendClientErrorSpy).toHaveBeenCalledWith(
-        expected[0],
-        expected[1],
-        expect.any(String)
-      )
-    })
+        await vi.runAllTimersAsync()
+        await promise
+
+        expect(sendClientErrorSpy).toHaveBeenCalledWith(
+          expectedError,
+          expectedMessage,
+          expect.any(String)
+        )
+      }
+    )
   })
 
   it("stops the loop on cancel and does not resurrect when an in-flight request settles", async () => {
@@ -1057,9 +1066,9 @@ If you are trying to access a Streamlit app running on another server, this coul
       .mockResolvedValueOnce(createSuccessResponse({}))
       .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
-    const pingCancel: { fn?: () => void } = {}
+    let cancelPing: (() => void) | undefined
     const retryCallback: OnRetry = vi.fn(() => {
-      pingCancel.fn?.()
+      cancelPing?.()
     })
 
     const { promise, cancel } = doInitPings(
@@ -1070,7 +1079,7 @@ If you are trying to access a Streamlit app running on another server, this coul
       MOCK_PING_DATA.sendClientError,
       MOCK_PING_DATA.setAllowedOrigins
     )
-    pingCancel.fn = cancel
+    cancelPing = cancel
 
     await expect(promise).rejects.toBeInstanceOf(PingCancelledError)
 

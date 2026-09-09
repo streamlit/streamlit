@@ -32,20 +32,20 @@ const CARTO_POSITRON =
 
 describe("isUnsetMapStyle", () => {
   it.each([
-    undefined,
-    null,
-    "",
-    PYDECK_UNSET_MAP_STYLE,
-    ["", PYDECK_UNSET_MAP_STYLE],
+    [undefined],
+    [null],
+    [""],
+    [PYDECK_UNSET_MAP_STYLE],
+    [["", PYDECK_UNSET_MAP_STYLE]],
   ])("treats %p as unset", mapStyle => {
     expect(isUnsetMapStyle(mapStyle)).toBe(true)
   })
 
   it.each([
-    CARTO_POSITRON,
-    MAPBOX_LIGHT,
-    { version: 8, layers: [] },
+    [CARTO_POSITRON],
     [MAPBOX_LIGHT],
+    [{ version: 8, layers: [] }],
+    [[MAPBOX_LIGHT]],
   ])("does not treat %p as unset", mapStyle => {
     expect(isUnsetMapStyle(mapStyle)).toBe(false)
   })
@@ -53,11 +53,11 @@ describe("isUnsetMapStyle", () => {
 
 describe("isMapCompatibleViewSpec", () => {
   it.each([
-    undefined,
-    null,
-    [],
-    { "@@type": "MapView" },
-    new MapView({ controller: true }),
+    [undefined],
+    [null],
+    [[]],
+    [{ "@@type": "MapView" }],
+    [new MapView({ controller: true })],
   ])("treats %p as a MapView spec", views => {
     expect(isMapCompatibleViewSpec(views)).toBe(true)
   })
@@ -116,9 +116,8 @@ describe("withDefaultMapViewIds", () => {
   })
 
   it("returns a MapView instance unchanged", () => {
-    expect(
-      withDefaultMapViewIds(new MapView({ controller: true }))
-    ).toBeInstanceOf(MapView)
+    const view = new MapView({ controller: true })
+    expect(withDefaultMapViewIds(view)).toBe(view)
   })
 })
 

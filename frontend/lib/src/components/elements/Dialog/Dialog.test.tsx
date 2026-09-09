@@ -365,7 +365,7 @@ describe("Dialog container", () => {
       expect(input).toHaveValue("test")
     })
 
-    it("allows typing R in a select within a non-dismissible dialog", () => {
+    it("does not intercept R keydown from a select in a non-dismissible dialog", () => {
       const props = getProps({ dismissible: false })
       render(
         <Dialog {...props}>
@@ -375,6 +375,7 @@ describe("Dialog container", () => {
         </Dialog>
       )
 
+      // Dispatch on the select so event.target is SELECT and the allow-typing path runs.
       const target = screen.getByLabelText("Test select")
       const event = new KeyboardEvent("keydown", {
         key: "r",

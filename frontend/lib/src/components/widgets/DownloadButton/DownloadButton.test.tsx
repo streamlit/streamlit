@@ -210,6 +210,7 @@ describe("DownloadButton widget", () => {
       onActivate()
 
       expect(props.widgetMgr.setTriggerValue).not.toHaveBeenCalled()
+      expect(anchorClickSpy).not.toHaveBeenCalled()
     })
 
     it("triggers the click handler when shortcut is activated", () => {

@@ -16,6 +16,7 @@
 
 import { CanvasContext } from "@luma.gl/core"
 
+// Side-effect import: patches CanvasContext.prototype.getMaxDrawingBufferSize.
 import "./patchLumaCanvasContext"
 
 type PatchedCanvasContext = CanvasContext & {

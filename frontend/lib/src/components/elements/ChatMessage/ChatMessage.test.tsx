@@ -186,6 +186,7 @@ describe("ChatMessage", () => {
     render(
       <ChatMessage
         {...props}
+        // Plain object so avatarType stays undefined; create() would default it to IMAGE.
         element={{ name: "alice", avatar: "unused" } as BlockProto.ChatMessage}
       />
     )

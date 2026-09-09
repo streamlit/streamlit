@@ -51,6 +51,7 @@ function WidgetValueProbe({
   onValue: (value: unknown) => void
 }): null {
   const ctx = useContext(BidiComponentContext)
+  // Synchronous because getWidgetValue is a pure getter, not an effect.
   onValue(ctx?.getWidgetValue())
   return null
 }
@@ -233,13 +234,15 @@ describe("BidiComponent", () => {
       await waitFor(() => {
         expect(container.shadowRoot).toBeTruthy()
       })
+      const originalShadowRoot = container.shadowRoot
 
       const attachSpy = vi.spyOn(Element.prototype, "attachShadow")
       rerenderWithContexts(
         <BidiComponent
           element={createMockElement({
             isolateStyles: true,
-            htmlContent,
+            htmlContent:
+              "<div data-testid='test-isolated-html'>Updated HTML</div>",
             id: "new-isolated-id",
           })}
           widgetMgr={mockWidgetMgr}
@@ -249,6 +252,14 @@ describe("BidiComponent", () => {
       )
 
       expect(attachSpy).not.toHaveBeenCalled()
+      expect(container.shadowRoot).toBe(originalShadowRoot)
+      await waitFor(() => {
+        expect(
+          originalShadowRoot?.querySelector(
+            "[data-testid='test-isolated-html']"
+          )?.textContent
+        ).toBe("Updated HTML")
+      })
       attachSpy.mockRestore()
     })
 
