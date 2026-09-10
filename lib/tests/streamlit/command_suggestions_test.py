@@ -14,12 +14,12 @@
 
 from __future__ import annotations
 
-import sys
-
 import pytest
 
 import streamlit as st
 from streamlit.command_suggestions import (
+    _PUBLIC_STREAMLIT_NAMESPACES,
+    _REMOVED_STREAMLIT_ATTRIBUTES,
     _format_st_names,
     missing_streamlit_attribute_message,
     public_streamlit_names,
@@ -84,8 +84,8 @@ def test_removed_cache_lists_both_successors() -> None:
     assert format_uncaught_exception(error) == "AttributeError:cache"
 
 
-def test_ambiguous_input_lists_input_commands() -> None:
-    """``st.input`` lists the input-command family instead of one alias."""
+def test_input_lists_input_widget_commands() -> None:
+    """``st.input`` lists the input-widget family instead of failing with no advice."""
     error = _missing_attr("input")
     message = str(error)
     assert "Use a specific input command" in message
@@ -129,6 +129,16 @@ def test_unrelated_names_keep_the_standard_attribute_error() -> None:
     assert error.name == "zzzz_not_a_command"
     assert error.obj is st
     assert format_uncaught_exception(error) == "AttributeError:zzzz_not_a_command"
+
+
+def test_mapped_successors_and_namespaces_still_exist() -> None:
+    """Advertised replacements and public namespaces remain on ``st``."""
+    catalog = public_streamlit_names(st)
+    for replacements in _REMOVED_STREAMLIT_ATTRIBUTES.values():
+        for replacement in replacements:
+            assert replacement in catalog
+    for namespace in _PUBLIC_STREAMLIT_NAMESPACES:
+        assert namespace in catalog
 
 
 def test_format_does_not_suggest_form() -> None:
@@ -189,16 +199,9 @@ def test_format_st_names_empty_is_safe() -> None:
 
 
 def test_missing_streamlit_attribute_message_keeps_standard_prefix() -> None:
-    """Helper messages stay AttributeError-shaped for telemetry fallbacks."""
+    """The enriched message still opens with Python's standard wording."""
     message = missing_streamlit_attribute_message("experimental_rerun", st)
     assert message.startswith(
         "module 'streamlit' has no attribute 'experimental_rerun'"
     )
     assert "st.rerun" in message
-
-
-def test_telemetry_uses_name_and_obj_not_message_text() -> None:
-    """A customized message still suffixes the missing attribute, not the advice."""
-    error = _missing_attr("experimental_rerun")
-    assert format_uncaught_exception(error) == "AttributeError:experimental_rerun"
-    assert error.obj is sys.modules["streamlit"]

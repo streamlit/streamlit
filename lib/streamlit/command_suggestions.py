@@ -21,9 +21,11 @@ from typing import TYPE_CHECKING, Final, NoReturn
 if TYPE_CHECKING:
     from collections.abc import Collection, Mapping
 
-# Exact former public names and the current public replacements they map to.
-# Ambiguous retired APIs (for example ``st.cache``) list every valid successor
-# rather than picking one alias.
+# Exact former public names and the current public ``st.*`` successors they
+# map to. Ambiguous retired APIs (for example ``st.cache``) list every valid
+# successor rather than picking one alias. Removals whose replacement is not
+# an ``st.*`` name (for example ``st.bokeh_chart`` → the ``streamlit-bokeh``
+# component) stay on the default AttributeError.
 _REMOVED_STREAMLIT_ATTRIBUTES: Final[Mapping[str, tuple[str, ...]]] = {
     "beta_color_picker": ("color_picker",),
     "beta_columns": ("columns",),
@@ -58,20 +60,23 @@ _MAX_SUGGESTION_LENGTH_DELTA: Final = 1
 
 
 def public_streamlit_names(module: ModuleType) -> frozenset[str]:
-    """Return the curated public ``st.*`` surface used for typo suggestions.
+    """Return the public top-level ``st.*`` names used for typo suggestions.
 
     Includes public commands and objects plus the documented public
     namespaces. Internal modules that leak into ``st.__dict__`` are omitted.
     """
+    # Snapshot so a concurrent first-time submodule import cannot raise
+    # ``RuntimeError: dictionary changed size during iteration``.
+    module_dict = dict(vars(module))
     names = {
         key
-        for key, value in module.__dict__.items()
+        for key, value in module_dict.items()
         if not key.startswith("_") and not isinstance(value, ModuleType)
     }
     names.update(
         namespace
         for namespace in _PUBLIC_STREAMLIT_NAMESPACES
-        if namespace in module.__dict__
+        if namespace in module_dict
     )
     return frozenset(names)
 
@@ -109,12 +114,13 @@ def missing_streamlit_attribute_message(name: str, module: ModuleType) -> str:
         )
 
     catalog = public_streamlit_names(module)
-    # st.input is a close match for st.info; list input widgets instead.
+    # ``st.input`` has no close match and no single successor. Point at the
+    # input-widget family instead of failing with no advice.
     if name == "input":
         input_commands = tuple(
             sorted(command for command in catalog if command.endswith("_input"))
         )
-        if not input_commands:
+        if not input_commands:  # pragma: no cover - defensive
             return prefix
         return (
             f"{prefix}. Use a specific input command such as "
@@ -129,11 +135,20 @@ def missing_streamlit_attribute_message(name: str, module: ModuleType) -> str:
 
 
 def raise_missing_streamlit_attribute(name: str) -> NoReturn:
-    """Raise AttributeError for a missing top-level ``st.*`` name."""
+    """Raise ``AttributeError`` for a missing top-level ``st.*`` name.
+
+    Sets ``name`` and ``obj`` so uncaught-exception telemetry records
+    ``AttributeError:<attribute>`` instead of parsing the message.
+    """
     import streamlit as st
 
+    try:
+        message = missing_streamlit_attribute_message(name, st)
+    except Exception:  # pragma: no cover - defensive
+        message = f"module 'streamlit' has no attribute '{name}'"
+
     raise AttributeError(
-        missing_streamlit_attribute_message(name, st),
+        message,
         name=name,
         obj=st,
     )

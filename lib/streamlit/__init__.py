@@ -321,7 +321,10 @@ from streamlit import components as components
 import streamlit.components.v1  # noqa: F401
 import streamlit.components.v2  # noqa: F401
 
-# Runtime-only: type checkers must still error on unknown ``st.*`` attributes.
+# Runtime-only module ``__getattr__``. Hide it from type checkers so unknown
+# ``st.*`` names stay type errors. mypy only honors the unaliased
+# ``TYPE_CHECKING`` name here; an alias made unknown names type-check as
+# valid. Deleting it afterward keeps it off the public ``st`` surface.
 from typing import TYPE_CHECKING
 
 if not TYPE_CHECKING:
