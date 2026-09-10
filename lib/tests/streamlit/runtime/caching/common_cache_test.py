@@ -1441,6 +1441,7 @@ class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
         )
         timer_patch.return_value = _BG_TTL * 1.5
         assert foo() == 1
+        assert call_count[0] == 2
 
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
