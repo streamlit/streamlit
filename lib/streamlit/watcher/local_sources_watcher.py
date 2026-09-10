@@ -46,22 +46,22 @@ _script_exec_count = 0
 
 @contextmanager
 def script_execution() -> Generator[None, None, None]:
-    """Register that a ScriptRunner thread is inside user ``exec()``.
+    """Keep ``flush_pending_evictions`` from popping ``sys.modules`` during this ``exec()``.
 
-    Process-wide: every ScriptRunner ``exec()`` holds this.
-    ``flush_pending_evictions`` waits until the count is 0, then pops
-    ``sys.modules`` under the same lock. Do not call flush from inside
-    this context (self-deadlock).
+    The counter is process-wide — every ScriptRunner ``exec()`` in this process
+    holds it, not just those of one session. Flush waits until the count is 0,
+    then pops under the same lock. Do not call flush from inside this context
+    (self-deadlock).
     """
     global _script_exec_count  # noqa: PLW0603
+    with _SCRIPT_EXEC_CONDITION:
+        _script_exec_count += 1
     try:
-        with _SCRIPT_EXEC_CONDITION:
-            _script_exec_count += 1
         yield
     finally:
         with _SCRIPT_EXEC_CONDITION:
             _script_exec_count -= 1
-            if _script_exec_count == 0:
+            if _script_exec_count <= 0:
                 _SCRIPT_EXEC_CONDITION.notify_all()
 
 
@@ -209,37 +209,43 @@ class LocalSourcesWatcher:
             cb(filepath)
 
     def on_script_run(self) -> None:
-        """Hook called by ``ScriptRunner`` at the start of each script run.
+        """Flush deferred evictions on this script thread before ``exec()``.
 
-        Flushes deferred evictions on the script thread before this run's
-        ``exec()``. Waits if any other ScriptRunner is still inside
-        ``script_execution()`` (fastReruns overlap, gh-6404).
+        Waits only when names are queued and another ScriptRunner still holds
+        ``script_execution()`` (fastReruns overlap, gh-6404). Widget reruns with
+        an empty pending set return immediately.
         """
         self.flush_pending_evictions()
 
     def flush_pending_evictions(self) -> None:
-        """Remove pending watched modules from ``sys.modules``.
+        """Pop queued watched modules only when no ScriptRunner is inside ``exec()``.
 
-        Called at the start of each script run on the script thread. The
-        watcher thread only queues names; this method performs the pops.
+        Called at the start of each script run, on the script thread. Blocks
+        until no ScriptRunner is inside ``script_execution()``, then pops while
+        holding the barrier. Returns immediately when nothing is pending.
 
-        If any ScriptRunner is inside ``script_execution()``, waits until
-        every such context exits (the full in-flight ``exec()``, not just
-        import), then pops while holding the barrier so a new ``exec()``
-        cannot start mid-eviction. A runaway script that never leaves
-        ``exec()`` therefore delays file-change reruns until it ends.
-        Returns immediately when nothing is pending. Must not be called
-        from a thread that already holds ``script_execution()``.
+        Must not be called from a thread that already holds
+        ``script_execution()``; doing so deadlocks.
         """
         with self._pending_evictions_lock:
-            pending = self._pending_evictions
-            self._pending_evictions = set()
-
-        if not pending:
-            return
+            if not self._pending_evictions:
+                return
 
         with _SCRIPT_EXEC_CONDITION:
-            _SCRIPT_EXEC_CONDITION.wait_for(lambda: _script_exec_count == 0)
+            # A runaway script that never leaves exec() delays file-change
+            # reruns until it ends. Claim pending only after the wait so a
+            # concurrent ScriptRunner cannot skip these evictions.
+            if _script_exec_count > 0:
+                _LOGGER.debug(
+                    "Waiting to evict watched modules until in-flight "
+                    "script execution ends"
+                )
+            _SCRIPT_EXEC_CONDITION.wait_for(lambda: _script_exec_count <= 0)
+            with self._pending_evictions_lock:
+                pending = self._pending_evictions
+                self._pending_evictions = set()
+            if not pending:
+                return
             prefixes = tuple(f"{name}." for name in pending)
             all_to_evict = set(pending)
             for key in list(sys.modules.keys()):

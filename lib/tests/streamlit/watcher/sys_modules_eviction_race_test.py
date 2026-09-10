@@ -173,6 +173,42 @@ def test_flush_is_immediate_when_no_script_is_execing() -> None:
         watcher.close()
 
 
+def test_flush_is_immediate_when_pending_empty_and_script_is_execing() -> None:
+    """Empty pending set returns immediately even if another thread holds exec."""
+    watcher = _make_watcher()
+    entered = threading.Event()
+    release = threading.Event()
+    flush_done = threading.Event()
+
+    def _hold() -> None:
+        with local_sources_watcher.script_execution():
+            entered.set()
+            release.wait(timeout=5)
+
+    def _flush() -> None:
+        watcher.flush_pending_evictions()
+        flush_done.set()
+
+    try:
+        holder = threading.Thread(target=_hold)
+        holder.start()
+        assert entered.wait(timeout=2)
+
+        flusher = threading.Thread(target=_flush)
+        flusher.start()
+        assert flush_done.wait(timeout=2)
+        assert not release.is_set()
+
+        release.set()
+        holder.join(timeout=2)
+        flusher.join(timeout=2)
+        assert not holder.is_alive()
+        assert not flusher.is_alive()
+    finally:
+        release.set()
+        watcher.close()
+
+
 def test_flush_waits_until_script_execution_exits() -> None:
     """Flush blocks while another thread holds ``script_execution``, then pops."""
     dummy_name = "_gh6404_wait_flush_mod"
@@ -208,6 +244,59 @@ def test_flush_waits_until_script_execution_exits() -> None:
         flusher.join(timeout=2)
         holder.join(timeout=2)
         assert flush_done.is_set()
+        assert dummy_name not in sys.modules
+    finally:
+        release.set()
+        sys.modules.pop(dummy_name, None)
+        watcher.close()
+
+
+def test_second_flush_waits_until_first_flush_finishes_eviction() -> None:
+    """A concurrent flush must not skip evictions held by a waiting flush."""
+    dummy_name = "_gh6404_concurrent_flush_mod"
+    watcher = _make_watcher()
+    entered = threading.Event()
+    release = threading.Event()
+    first_flush_done = threading.Event()
+    second_flush_done = threading.Event()
+
+    def _hold() -> None:
+        with local_sources_watcher.script_execution():
+            entered.set()
+            release.wait(timeout=5)
+
+    def _flush_first() -> None:
+        watcher.flush_pending_evictions()
+        first_flush_done.set()
+
+    def _flush_second() -> None:
+        watcher.flush_pending_evictions()
+        second_flush_done.set()
+
+    try:
+        _register_watched(watcher, _TRIGGER_PATH, dummy_name)
+        _queue_eviction(watcher, _TRIGGER_PATH, dummy_name)
+
+        holder = threading.Thread(target=_hold)
+        holder.start()
+        assert entered.wait(timeout=2)
+
+        first = threading.Thread(target=_flush_first)
+        first.start()
+        assert not first_flush_done.wait(timeout=0.3)
+        assert first.is_alive()
+
+        second = threading.Thread(target=_flush_second)
+        second.start()
+        assert not second_flush_done.wait(timeout=0.3)
+        assert dummy_name in sys.modules
+
+        release.set()
+        first.join(timeout=2)
+        second.join(timeout=2)
+        holder.join(timeout=2)
+        assert first_flush_done.is_set()
+        assert second_flush_done.is_set()
         assert dummy_name not in sys.modules
     finally:
         release.set()

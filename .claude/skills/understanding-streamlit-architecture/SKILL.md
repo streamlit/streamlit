@@ -108,7 +108,7 @@ Streamlit's execution model differs from traditional web frameworks:
 |-----------|------|---------|
 | Runtime | `lib/streamlit/runtime/runtime.py` | Singleton managing app lifecycle and sessions |
 | AppSession | `lib/streamlit/runtime/app_session.py` | Per-browser-tab: ScriptRunner + SessionState + ForwardMsgQueue |
-| ScriptRunner | `lib/streamlit/runtime/scriptrunner/script_runner.py` | Executes user scripts in a separate thread; another ScriptRunner's flush cannot pop `sys.modules` during import |
+| ScriptRunner | `lib/streamlit/runtime/scriptrunner/script_runner.py` | Executes user scripts in separate thread |
 | LocalSourcesWatcher | `lib/streamlit/watcher/local_sources_watcher.py` | Watches local sources; defers `sys.modules` eviction until no ScriptRunner is inside `exec()` |
 | DeltaGenerator | `lib/streamlit/delta_generator.py` | API entry point using mixin pattern |
 | SessionState | `lib/streamlit/runtime/state/session_state.py` | Widget values and user variables |
