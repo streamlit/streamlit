@@ -53,6 +53,7 @@ from streamlit.errors import (
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_background_refresh
 from streamlit.runtime.caching.cache_errors import (
+    CachedFunctionReturnedAwaitableError,
     CachedStFunctionInBackgroundModeWarning,
     CacheError,
     CacheKeyNotFoundError,
@@ -87,6 +88,24 @@ TTLCACHE_TIMER = time.monotonic
 # Type-annotate the cached function.
 P = ParamSpec("P")
 R = TypeVar("R")
+
+
+def _validate_sync_return_value(
+    cache_type: CacheType, func: Callable[..., Any], value: Any
+) -> None:
+    if not inspect.isawaitable(value):
+        return
+
+    if (
+        inspect.iscoroutine(value)
+        and inspect.getcoroutinestate(value) == inspect.CORO_CREATED
+    ):
+        # New native coroutines warn when discarded without being awaited. Started
+        # coroutines and other awaitables may have user-managed lifecycles.
+        value.close()
+
+    raise CachedFunctionReturnedAwaitableError(cache_type, func)
+
 
 # A function called with a cache entry as the argument when cache entries are removed.
 OnRelease: TypeAlias = Callable[[Any], None]
@@ -822,6 +841,9 @@ class CachedFunc(Generic[P, R]):
             ):
                 computed_value = self._info.func(*func_args, **func_kwargs)
 
+            _validate_sync_return_value(
+                self._info.cache_type, self._info.func, computed_value
+            )
             return self._store_computed_value(cache, value_key, computed_value)
 
     def _store_computed_value(
@@ -1072,6 +1094,9 @@ class CachedFunc(Generic[P, R]):
         """
         try:
             new_value = self._info.func(*func_args, **func_kwargs)
+            _validate_sync_return_value(
+                self._info.cache_type, self._info.func, new_value
+            )
             cache.write_background_refresh_result(
                 value_key,
                 new_value,

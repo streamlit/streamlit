@@ -23,8 +23,10 @@ from __future__ import annotations
 
 import asyncio
 import concurrent.futures
+import gc
 import inspect
 import threading
+import warnings
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -32,6 +34,9 @@ import pytest
 import streamlit as st
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.runtime.caching import cache_utils
+from streamlit.runtime.caching.cache_errors import (
+    CachedFunctionReturnedAwaitableError,
+)
 from streamlit.testing.v1 import AppTest
 
 if TYPE_CHECKING:
@@ -711,6 +716,162 @@ def test_sync_function_path_is_unchanged() -> None:
     result = load(1)
     assert result == 2
     assert not inspect.isawaitable(result)
+
+
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
+def test_sync_function_returning_coroutine_raises_without_caching(
+    name: str, decorator: Callable
+) -> None:
+    """Sync cached functions reject and close returned native coroutines."""
+    calls = 0
+    created_coroutines: list[Any] = []
+
+    async def operation() -> int:
+        return 42
+
+    @decorator
+    def load() -> Any:
+        nonlocal calls
+        calls += 1
+        coroutine = operation()
+        created_coroutines.append(coroutine)
+        return coroutine
+
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+        for _ in range(2):
+            with pytest.raises(CachedFunctionReturnedAwaitableError) as exc_info:
+                load()
+
+            message = str(exc_info.value)
+            assert "synchronous function" in message
+            assert "returned an awaitable" in message
+            assert f"`st.{name}`" in message
+            assert "`async def`" in message
+            assert "`await`" in message
+            assert "use `st.cache_resource` instead" not in message
+
+        assert calls == 2
+        assert all(
+            inspect.getcoroutinestate(coroutine) == inspect.CORO_CLOSED
+            for coroutine in created_coroutines
+        )
+        created_coroutines.clear()
+        gc.collect()
+
+    assert not any(
+        "was never awaited" in str(warning.message) for warning in caught_warnings
+    )
+
+
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
+def test_sync_function_does_not_close_started_coroutine(
+    name: str, decorator: Callable
+) -> None:
+    """A started coroutine retains its user-managed lifecycle after rejection."""
+
+    async def operation() -> int:
+        await asyncio.sleep(0)
+        return 42
+
+    coroutine = operation()
+    coroutine.send(None)
+
+    @decorator
+    def load() -> Any:
+        return coroutine
+
+    try:
+        with pytest.raises(
+            CachedFunctionReturnedAwaitableError, match=rf"`st\.{name}`"
+        ):
+            load()
+        assert inspect.getcoroutinestate(coroutine) == inspect.CORO_SUSPENDED
+    finally:
+        coroutine.close()
+
+
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
+@pytest.mark.parametrize("awaitable_kind", ["future", "task"])
+def test_sync_function_rejects_future_or_task_without_mutating_it(
+    name: str, decorator: Callable, awaitable_kind: str
+) -> None:
+    """Rejected Futures and Tasks retain their state and remain usable."""
+
+    async def exercise_awaitables() -> None:
+        task_release_event = asyncio.Event()
+        returned_values: list[asyncio.Future[int]] = []
+
+        async def operation(value: int) -> int:
+            await task_release_event.wait()
+            return value
+
+        @decorator
+        def load() -> asyncio.Future[int]:
+            value_index = len(returned_values)
+            value: asyncio.Future[int]
+            if awaitable_kind == "future":
+                value = asyncio.get_running_loop().create_future()
+            else:
+                value = asyncio.create_task(operation(value_index))
+            returned_values.append(value)
+            return value
+
+        for _ in range(2):
+            with pytest.raises(
+                CachedFunctionReturnedAwaitableError, match=rf"`st\.{name}`"
+            ):
+                load()
+
+        assert len(returned_values) == 2
+        assert all(
+            not value.done() and not value.cancelled() for value in returned_values
+        )
+
+        if awaitable_kind == "future":
+            for value_index, value in enumerate(returned_values):
+                value.set_result(value_index)
+        else:
+            task_release_event.set()
+
+        assert await asyncio.gather(*returned_values) == [0, 1]
+
+    asyncio.run(exercise_awaitables())
+
+
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
+def test_sync_function_rejects_custom_awaitable_without_mutating_it(
+    name: str, decorator: Callable
+) -> None:
+    """Rejected custom awaitables are not awaited or closed."""
+
+    class CustomAwaitable:
+        def __init__(self) -> None:
+            self.awaited = False
+            self.closed = False
+
+        def __await__(self) -> Any:
+            self.awaited = True
+            yield
+            return 42
+
+        def close(self) -> None:
+            self.closed = True
+
+    returned_values: list[CustomAwaitable] = []
+
+    @decorator
+    def load() -> CustomAwaitable:
+        value = CustomAwaitable()
+        returned_values.append(value)
+        return value
+
+    for _ in range(2):
+        with pytest.raises(CachedFunctionReturnedAwaitableError):
+            load()
+
+    assert len(returned_values) == 2
+    assert all(not value.awaited and not value.closed for value in returned_values)
 
 
 def test_async_cached_value_survives_script_rerun() -> None:

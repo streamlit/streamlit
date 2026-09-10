@@ -143,6 +143,20 @@ class UnserializableReturnValueError(MarkdownFormattedException, Generic[R]):
         )
 
 
+class CachedFunctionReturnedAwaitableError(StreamlitAPIException):
+    def __init__(self, cache_type: CacheType, func: Callable[..., Any]) -> None:
+        func_name = get_cached_func_name_md(func)
+        decorator_name = get_decorator_api_name(cache_type)
+        super().__init__(
+            f"{func_name} is a synchronous function decorated with "
+            f"`st.{decorator_name}`, but it returned an awaitable. This can happen "
+            "when the function is missing an `async def` declaration or when an "
+            "asynchronous operation is returned without being awaited.\n\n"
+            "Define the cached function with `async def` and `await` the asynchronous "
+            "operation before returning its result."
+        )
+
+
 class UnevaluatedDataFrameError(StreamlitAPIException):
     """Used to display a message about uncollected dataframe being used."""
 
