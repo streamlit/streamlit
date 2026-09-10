@@ -89,6 +89,6 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.69.0",
     "vitest": "^5.0.0",
-    "vitest-canvas-mock": "^1.1.5"
+    "vitest-canvas-mock": "^1.2.0"
   }
 }
