@@ -1,8 +1,9 @@
-# Reference: Templates for Issue Reproduction
+# Reference: Templates for issue reproduction
 
-## Minimal Repro App Template
+## Canonical repro app template
 
-Use this for `$OUT_DIR/gh-<N>/repro_gh_<N>.py` — the minimal app you run (via a released wheel or `make debug`) to reproduce the bug.
+Use this for `agent-wiki/issues/<N>/repro_app.py`. This is both the minimal app
+used to verify the bug and the publishable app discovered by issues.streamlit.app.
 
 ```python
 """
@@ -15,25 +16,27 @@ Actual:   <what the bug is>
 import streamlit as st
 
 st.header("Issue #<N>: <Short Title>")
+st.info("🔗 [View original issue](https://github.com/streamlit/streamlit/issues/<N>)")
 
-# --- Reproduction code ---
 # Paste or adapt the reporter's code snippet here.
 # Keep it minimal — only what's needed to trigger the bug.
 
-# --- Expected vs Actual markers (optional) ---
 # Use st.write() to annotate what the user should observe.
 ```
 
 Keep it as small as possible. If the reporter's snippet is 10 lines, don't make it 50.
+Before publishing, make the expected and actual behavior clear and include a workaround
+and environment information when useful.
 
-## Playwright Verification Script
+## Playwright verification script
 
-Write the verification script to `$OUT_DIR/gh-<N>/verify_gh_<N>.py`. It follows the same
-Playwright patterns as the [debugging-streamlit](../debugging-streamlit/SKILL.md) skill —
-see that skill for the full script template, the `e2e_playwright` helpers
-(`get_text_input`, `click_button`, `wait_for_app_loaded`, `wait_for_app_run`, …), and
-screenshot tips. The script runs in the repo's env (via `PYTHONPATH=. uv run`), so it can
-import those helpers even when the app under test is a separately-installed released wheel.
+Write the verification script to `agent-wiki/issues/<N>/repro_app_verify.py`. It
+follows the same Playwright patterns as the
+[debugging-streamlit](../debugging-streamlit/SKILL.md) skill — see that skill for the
+full script template, the `e2e_playwright` helpers (`get_text_input`, `click_button`,
+`wait_for_app_loaded`, `wait_for_app_run`, …), and screenshot tips. The script runs in
+the repo's environment, so it can import those helpers even when the app under test is
+a separately installed released wheel.
 
 Layer these reproduction-specific requirements on top of that template:
 
@@ -47,12 +50,14 @@ Run it once the app under test is up:
 ```bash
 OUT_DIR="${OUT_DIR:-work-tmp/debug}" \
 STREAMLIT_APP_URL="${STREAMLIT_APP_URL:-http://localhost:8600}" \
-PYTHONPATH=. uv run python "$OUT_DIR/gh-<N>/verify_gh_<N>.py"
+PYTHONPATH=. uv run python \
+  "${AGENT_WIKI_DIR:-agent-wiki}/issues/<N>/repro_app_verify.py"
 ```
 
-## st-issues App Template
+## Finalizing the repro app
 
-Use this for `$OUT_DIR/gh-<N>/app.py` — the polished app that will be published to st-issues (deployed to issues.streamlit.app).
+Polish the existing `agent-wiki/issues/<N>/repro_app.py` in place. Do not create a
+second app. A complete publishable app generally follows this structure:
 
 ```python
 """
@@ -69,15 +74,13 @@ import streamlit as st
 st.title("Issue #<N>: <Short Title>")
 st.info("🔗 [View original issue](https://github.com/streamlit/streamlit/issues/<N>)")
 
-# --- Issue Overview ---
-st.header("Issue Overview")
+st.header("Issue overview")
 st.write("**Expected:** <what should happen>")
 st.error("**Actual (Bug):** <what actually happens>")
 
 st.divider()
 
-# --- Bug Demonstration ---
-st.header("Bug Demonstration")
+st.header("Bug demonstration")
 st.write("""
 **Steps:**
 1. <Step 1>
@@ -89,19 +92,16 @@ st.write("""
 
 st.divider()
 
-# --- Workaround (if exists) ---
 st.header("Workaround")
 st.write("<Description of workaround, or 'No known workaround'>")
-# st.code("# workaround code", language="python")
 
 st.divider()
 
-# --- Environment ---
 st.header("Environment")
 st.code(f"Streamlit version: {st.__version__}")
 ```
 
-### Design principles for st-issues apps
+### Design principles
 
 - **Self-contained** — no external files, no setup
 - **Bug is obvious** — use `st.error()` to highlight the problem, `st.success()` for expected
@@ -109,9 +109,10 @@ st.code(f"Streamlit version: {st.__version__}")
 - **Link to issue** — always include the GitHub link
 - **One bug per app** — don't combine multiple issues
 
-## NOTES.md Template
+## Investigation notes template
 
-Use this for `$OUT_DIR/gh-<N>/NOTES.md` — structured investigation notes for maintainers and future triagers.
+Use this for `agent-wiki/issues/<N>/investigation.md` — structured investigation notes
+for maintainers and future triagers.
 
 ```markdown
 # gh-<N>: <Short Title>
@@ -131,7 +132,7 @@ of what was verified and on which version.>
 manual), and key observations. Include tables, DOM traces, or log excerpts
 when they clarify the finding.>
 
-## Root Cause
+## Root cause
 
 <What causes the bug at the code level. Include relevant file paths and
 function names. If the root cause is unknown, say so and note what was
@@ -146,7 +147,7 @@ investigated.>
 - **Fix complexity:** <Small / Medium / Large> — <brief description of what a fix involves>
 ```
 
-### Guidelines for NOTES.md
+### Guidelines for investigation notes
 
 - **Be specific** — include version numbers, file paths, and line references
 - **Show evidence** — paste relevant traces, DOM state, or assertion output

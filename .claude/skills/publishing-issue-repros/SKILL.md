@@ -1,86 +1,126 @@
 ---
 name: publishing-issue-repros
-description: Publish a reproduction bundle produced by the reproducing-issues skill to the st-issues repo so it deploys to issues.streamlit.app. Copies app.py, NOTES.md, and any requirements.txt into st-issues/issues/gh-<N>/, validates them, commits, and pushes to main. Use after investigating an issue when the bundle has a working repro app ready to share.
+description: Publishes issue reproduction artifacts produced by the reproducing-issues skill to streamlit.wiki so issues.streamlit.app can discover them. Validates the canonical agent-wiki issue files, commits only that issue directory, rebases, and pushes wiki master. Use after investigating an issue when its local artifacts are ready to share.
 ---
 
 # Publishing issue repros
 
-Takes a **repro bundle** produced by the `reproducing-issues` skill (in
-`$OUT_DIR/gh-<N>/`) and publishes it to the `st-issues` repo, which auto-deploys to
-`https://issues.streamlit.app/?issue=gh-<N>`.
+Publishes the artifacts prepared by the `reproducing-issues` skill in
+`agent-wiki/issues/<N>/`. The st-issues app discovers
+`issues/<N>/repro_app.py` from streamlit.wiki and exposes it through
+issues.streamlit.app.
 
-This is the **publish** phase — it performs writes. Keep it separate from investigation
-so the read-only investigate phase can run anywhere (including CI). Run it once the
-investigate phase has produced a working `app.py` in the bundle; any verdict is
-publishable, but record it in the commit message.
+This is the **publish** phase — it commits and pushes to a public repository. Keep it
+separate from investigation, validate the files first, and run it only after the user
+has explicitly confirmed publication.
 
 ## Inputs
 
-This skill runs locally. Substitute the issue number directly as `<N>` in the commands
-below (numeric only — normalize a URL to its number first). `OUT_DIR` and
-`ST_ISSUES_DIR` are optional paths with the defaults shown.
+Substitute the numeric issue number directly as `<N>` in the commands below. Normalize
+a GitHub URL to its number first.
 
 | Input | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `<N>` | yes | — | Issue number (numeric only). |
-| `OUT_DIR` | no | `work-tmp/debug` | Where the bundle was written by the investigate phase. |
-| `ST_ISSUES_DIR` | no | `~/dev/st-issues` | Local st-issues checkout to publish into. |
-
-The bundle at `$OUT_DIR/gh-<N>/` must contain at least `app.py`, `NOTES.md`, and
-`result.json`.
+|-------|----------|---------|-------------|
+| `<N>` | yes | — | Numeric GitHub issue number. |
+| `AGENT_WIKI_DIR` | no | `agent-wiki` | Local streamlit.wiki checkout containing the prepared artifacts. |
+| `OUT_DIR` | no | `work-tmp/debug` | Local-only directory containing `result.json`. |
 
 ## Preconditions
 
-Before publishing, confirm:
-- `app.py` exists and compiles: `python -m py_compile "${OUT_DIR:-work-tmp/debug}/gh-<N>/app.py"`.
-- `result.json` exists. Any verdict can be published — record it in the commit message
-  so reviewers know the bundle's status.
+Before publishing:
 
-If `issues/gh-<N>/` already exists in st-issues, this is a **refresh** rather than a new
-repro — proceed, but say so in the commit message.
+- Read and follow `${AGENT_WIKI_DIR:-agent-wiki}/AGENTS.md`.
+- Confirm `issues/<N>/repro_app.py`, `repro_app_verify.py`, and `investigation.md`
+  exist.
+- Confirm `${OUT_DIR:-work-tmp/debug}/gh-<N>/result.json` exists.
+- Review every file in `issues/<N>/`. The wiki is public; do not publish secrets,
+  private data, internal-only discussion, screenshots, logs, `result.json`, or other
+  generated output.
+- If the issue directory already exists on `origin/master`, tell the user this is a
+  refresh and confirm before replacing it.
 
 ## Publish
 
 ```bash
-set -e  # stop on any failure so we never commit a partial or empty bundle
+set -e
 
-SRC="${OUT_DIR:-work-tmp/debug}/gh-<N>"
-DEST="${ST_ISSUES_DIR:-$HOME/dev/st-issues}/issues/gh-<N>"
+WIKI="${AGENT_WIKI_DIR:-agent-wiki}"
+ISSUE_DIR="issues/<N>"
+RESULT="${OUT_DIR:-work-tmp/debug}/gh-<N>/result.json"
 
-# The investigate phase must have produced these — bail out if any are missing:
-[ -f "$SRC/app.py" ] || { echo "Error: $SRC/app.py not found"; exit 1; }
-[ -f "$SRC/NOTES.md" ] || { echo "Error: $SRC/NOTES.md not found"; exit 1; }
-[ -f "$SRC/result.json" ] || { echo "Error: $SRC/result.json not found"; exit 1; }
+[ -d "$WIKI/.git" ] || {
+  echo "Error: $WIKI is not an agent-wiki checkout"
+  exit 1
+}
+[ -f "$WIKI/$ISSUE_DIR/repro_app.py" ] || {
+  echo "Error: $WIKI/$ISSUE_DIR/repro_app.py not found"
+  exit 1
+}
+[ -f "$WIKI/$ISSUE_DIR/repro_app_verify.py" ] || {
+  echo "Error: $WIKI/$ISSUE_DIR/repro_app_verify.py not found"
+  exit 1
+}
+[ -f "$WIKI/$ISSUE_DIR/investigation.md" ] || {
+  echo "Error: $WIKI/$ISSUE_DIR/investigation.md not found"
+  exit 1
+}
+[ -f "$RESULT" ] || {
+  echo "Error: $RESULT not found"
+  exit 1
+}
 
-# "Add" for a new repro, "Refresh" if the destination already exists — capture
-# this before mkdir so the commit message reflects it:
-VERB="Add"; [ -d "$DEST" ] && VERB="Refresh"
-mkdir -p "$DEST"
-cp "$SRC/app.py" "$SRC/NOTES.md" "$DEST/"
-if [ -f "$SRC/requirements.txt" ]; then
-  cp "$SRC/requirements.txt" "$DEST/"
-else
-  rm -f "$DEST/requirements.txt"  # drop stale deps when refreshing
-fi
+uv run python -m py_compile \
+  "$WIKI/$ISSUE_DIR/repro_app.py" \
+  "$WIKI/$ISSUE_DIR/repro_app_verify.py"
 
-# Record the bundle's verdict from result.json so reviewers see the status:
-VERDICT=$(python -c "import json,sys; print(json.load(open(sys.argv[1]))['verdict'])" "$SRC/result.json")
+VERDICT=$(uv run python -c \
+  "import json,sys; print(json.load(open(sys.argv[1]))['verdict'])" "$RESULT")
 
-cd "${ST_ISSUES_DIR:-$HOME/dev/st-issues}"
-python -m py_compile "issues/gh-<N>/app.py"
-git add "issues/gh-<N>/"
-git commit -m "$VERB reproduction for issue #<N>: <Short Title> (verdict: $VERDICT)"
-git push origin main
+(
+  cd "$WIKI"
+  git checkout master
+  git fetch origin master
+
+  VERB="Add"
+  if git cat-file -e "origin/master:$ISSUE_DIR/repro_app.py" 2>/dev/null; then
+    VERB="Refresh"
+  fi
+
+  git add -- "$ISSUE_DIR"
+  git diff --cached --quiet -- "$ISSUE_DIR" && {
+    echo "Error: no issue artifacts changed"
+    exit 1
+  }
+
+  # --only prevents unrelated files already staged in the wiki checkout from
+  # being included in this commit.
+  git commit --only \
+    -m "$VERB reproduction for issue #<N> (verdict: $VERDICT)" \
+    -- "$ISSUE_DIR"
+  git pull --rebase origin master
+  git push origin master
+)
 ```
 
-The app deploys automatically to `https://issues.streamlit.app/?issue=gh-<N>` within
-2–5 minutes.
+Never force-push the wiki. If a concurrent update causes the push to fail, run
+`git pull --rebase origin master` inside the wiki checkout and retry the normal push.
+
+## Result
+
+The published app is available at:
+
+```text
+https://issues.streamlit.app/agent_wiki_explorer?file=issues/<N>/repro_app.py
+```
+
+The issue explorer also discovers the wiki reproduction automatically. A curated
+`st-issues/issues/gh-<N>/app.py` takes precedence if one exists.
 
 ## Related skills
 
 - [triaging-issues](../triaging-issues/SKILL.md): orchestrates investigation, verdict
   review, and this publish phase end-to-end.
-- [reproducing-issues](../reproducing-issues/SKILL.md): produces the bundle this skill
-  publishes.
-- [creating-pull-requests](../creating-pull-requests/SKILL.md): PR conventions if
-  opening a PR for the repro.
+- [reproducing-issues](../reproducing-issues/SKILL.md): prepares the issue artifacts
+  and local evidence.
+- [sharing-pr-agent-artifacts](../sharing-pr-agent-artifacts/SKILL.md): uses the same
+  wiki repository for PR-related documents.

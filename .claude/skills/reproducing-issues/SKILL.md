@@ -1,17 +1,16 @@
 ---
 name: reproducing-issues
-description: Investigate and reproduce a GitHub issue end-to-end — fetch the issue, build a minimal Streamlit app, verify the bug with Playwright across versions, root-cause it, and produce a self-contained repro bundle (app.py, NOTES.md, screenshots, result.json) in a staging directory. Read-only and non-interactive by design: it does not commit, push, or publish. Use when given a GitHub issue to reproduce, triage, or verify. To publish the resulting bundle to st-issues, use the publishing-issue-repros skill.
+description: Investigate and reproduce a GitHub issue end-to-end — fetch the issue, build a canonical repro app in agent-wiki, verify the bug with Playwright across versions, root-cause it, and record local evidence and a machine-readable verdict. Local-only and non-interactive by design: it does not commit, push, or publish. Use when given a GitHub issue to reproduce, triage, or verify. To publish the resulting artifacts, use the publishing-issue-repros skill.
 ---
 
 # Reproducing issues (investigate)
 
 Given a GitHub issue number or URL, reproduce the bug, collect evidence, root-cause
-it, and write a self-contained **repro bundle** to a staging directory.
+it, and prepare publishable issue artifacts in the local agent-wiki checkout.
 
-This is the **investigate** phase only. It is deliberately **read-only** (no commits,
-no pushes, no cross-repo writes) and **deterministic** (every decision resolves to a
-verdict rather than pausing for input), so the same skill can run locally or in a
-GitHub Actions job.
+This is the **investigate** phase only. It is deliberately **local-only** (no commits
+or pushes) and **deterministic** (every decision resolves to a verdict rather than
+pausing for input), so the same skill can run locally or in a GitHub Actions job.
 
 For running apps and driving Playwright, this skill builds on the
 [debugging-streamlit](../debugging-streamlit/SKILL.md) skill — see it for `make debug`,
@@ -27,23 +26,24 @@ variables instead. Either way, the defaults below apply when a value isn't given
 | Input | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `<N>` (`ISSUE` in CI) | yes | — | Issue number (e.g. `16003`) or full URL — resolve a URL to its number first. |
-| `OUT_DIR` | no | `work-tmp/debug` | Staging directory for the repro bundle and working files. |
+| `OUT_DIR` | no | `work-tmp/debug` | Local-only directory for screenshots, logs, and `result.json`. |
+| `AGENT_WIKI_DIR` | no | `agent-wiki` | Local checkout of `streamlit/streamlit.wiki`. |
 | `REPORTED_VERSION` | no | parsed from issue | Streamlit version to confirm the bug on. |
 | `STREAMLIT_APP_URL` | no | see Step 3 | URL the Playwright script connects to. |
 
 ## Outputs
 
-Everything is written under `$OUT_DIR/gh-<N>/`. Nothing is written outside this
-directory or to any remote.
+Publishable artifacts are written under `$AGENT_WIKI_DIR/issues/<N>/`, following the
+wiki's canonical issue layout. Generated evidence stays under `$OUT_DIR/gh-<N>/`.
+Nothing is committed or pushed.
 
 | File | Description |
 |------|-------------|
-| `result.json` | Machine-readable verdict and metadata (schema below) — the source of truth. |
-| `app.py` | Polished, self-contained repro app ready to publish to st-issues. |
-| `NOTES.md` | Investigation notes for maintainers (root cause, classification, priority). |
-| `requirements.txt` | Avoid — st-issues runs repros inline and won't install per-issue deps (see the Step 5 caution). |
-| `*.png` | Screenshots captured as evidence. |
-| `repro_gh_<N>.py`, `verify_gh_<N>.py` | Minimal app and Playwright script used during verification. |
+| `agent-wiki/issues/<N>/repro_app.py` | Canonical, self-contained app used for verification and publication. |
+| `agent-wiki/issues/<N>/repro_app_verify.py` | Canonical Playwright companion script. |
+| `agent-wiki/issues/<N>/investigation.md` | Findings, root cause, classification, and priority. |
+| `work-tmp/debug/gh-<N>/result.json` | Machine-readable verdict and metadata — the source of truth. |
+| `work-tmp/debug/gh-<N>/*.png` | Local-only screenshots captured as evidence. |
 
 ### `result.json` schema
 
@@ -60,8 +60,8 @@ directory or to any remote.
   "priority_rationale": "One sentence grounded in wiki/issue-prioritization.md.",
   "confidence": "high",
   "artifacts": {
-    "app": "app.py",
-    "notes": "NOTES.md",
+    "app": "agent-wiki/issues/16003/repro_app.py",
+    "notes": "agent-wiki/issues/16003/investigation.md",
     "screenshots": ["ape.png", "aple.png"]
   }
 }
@@ -75,6 +75,7 @@ directory or to any remote.
 - `gh` CLI authenticated with access to `streamlit/streamlit`
 - Streamlit dev environment set up (`make debug` works) if testing the `develop` build
 - `uv` available for throwaway environments (released-version testing)
+- Git access to the public `streamlit/streamlit.wiki` repository
 
 ## Workflow
 
@@ -82,6 +83,7 @@ directory or to any remote.
 
 ```bash
 gh issue view <N> --repo streamlit/streamlit --json number,title,body,comments,labels,author
+mkdir -p "${OUT_DIR:-work-tmp/debug}/gh-<N>"
 ```
 
 Extract: code snippets, steps to reproduce, expected vs. actual behavior, environment
@@ -89,20 +91,44 @@ Extract: code snippets, steps to reproduce, expected vs. actual behavior, enviro
 
 **Decision gate (non-interactive):**
 - Has code or a clear enough description to infer code → proceed to Step 2.
-- Too vague / missing critical info → write `result.json` with `verdict:
+- Too vague / missing critical info → write
+  `${OUT_DIR:-work-tmp/debug}/gh-<N>/result.json` with `verdict:
   insufficient_info`, note what's missing, and stop. Do not ask for input.
 
-### Step 2: Build a minimal repro app
+### Step 2: Set up agent-wiki and build the repro app
 
-Write `$OUT_DIR/gh-<N>/repro_gh_<N>.py` — the smallest app that triggers the reported
-behavior. See [reference.md](reference.md) for the template.
+Prepare the local wiki checkout before creating artifacts:
+
+```bash
+if [ -d "${AGENT_WIKI_DIR:-agent-wiki}/.git" ]; then
+  (
+    cd "${AGENT_WIKI_DIR:-agent-wiki}"
+    git checkout master
+    git pull --rebase origin master
+  )
+else
+  git clone https://github.com/streamlit/streamlit.wiki.git \
+    "${AGENT_WIKI_DIR:-agent-wiki}"
+fi
+```
+
+Read `${AGENT_WIKI_DIR:-agent-wiki}/AGENTS.md` and follow its issue-artifact rules.
+The wiki is public: never include secrets, private data, internal-only discussion,
+debug logs, or generated test output.
+
+Create `${AGENT_WIKI_DIR:-agent-wiki}/issues/<N>/repro_app.py` — the smallest
+self-contained app that triggers the reported behavior. This one canonical app is
+both the app under test and the publishable app. See [reference.md](reference.md).
 
 - Self-contained, minimal, and clearly labeled (`st.write`/`st.header`).
 - If the reporter's snippet works as-is, use it directly with light cleanup.
+- Use only Streamlit's required or optional dependencies; do not add a per-issue
+  `requirements.txt`.
 
 Validate syntax:
 ```bash
-python -m py_compile "${OUT_DIR:-work-tmp/debug}/gh-<N>/repro_gh_<N>.py"
+uv run python -m py_compile \
+  "${AGENT_WIKI_DIR:-agent-wiki}/issues/<N>/repro_app.py"
 ```
 
 ### Step 3: Verify with Playwright
@@ -124,7 +150,8 @@ Playwright script:
 ```bash
 uv venv /tmp/st-<version> --python 3.13
 uv pip install --python /tmp/st-<version>/bin/python "streamlit==<version>"
-/tmp/st-<version>/bin/streamlit run "${OUT_DIR:-work-tmp/debug}/gh-<N>/repro_gh_<N>.py" \
+/tmp/st-<version>/bin/streamlit run \
+  "${AGENT_WIKI_DIR:-agent-wiki}/issues/<N>/repro_app.py" \
   --server.port 8600 --server.headless true
 ```
 
@@ -132,18 +159,20 @@ uv pip install --python /tmp/st-<version>/bin/python "streamlit==<version>"
 `http://localhost:8600` for a released wheel, or `http://localhost:3001` when using
 `make debug` for the `develop` build.
 
-Write `$OUT_DIR/gh-<N>/verify_gh_<N>.py` — a script that navigates to the app, drives
-the widgets to trigger the bug, screenshots evidence into `$OUT_DIR/gh-<N>/`, and
-asserts expected vs. actual (assertions FAIL when the bug exists). See
-[reference.md](reference.md) for the template. The script runs in the repo's env (via
-`PYTHONPATH=. uv run`), so it can import `e2e_playwright` helpers even when the app under
-test is a separately-installed released wheel.
+Write `${AGENT_WIKI_DIR:-agent-wiki}/issues/<N>/repro_app_verify.py` — a script that
+navigates to the app, drives the widgets to trigger the bug, screenshots evidence into
+`${OUT_DIR:-work-tmp/debug}/gh-<N>/`, and asserts expected vs. actual (assertions FAIL
+when the bug exists). See [reference.md](reference.md) for the template. Keep the
+script portable and free of generated output. It runs in the repo's environment, so it
+can import `e2e_playwright` helpers even when the app under test is a separately
+installed released wheel.
 
 Run it once the app server is up:
 ```bash
 OUT_DIR="${OUT_DIR:-work-tmp/debug}" \
 STREAMLIT_APP_URL="${STREAMLIT_APP_URL:-http://localhost:8600}" \
-PYTHONPATH=. uv run python "$OUT_DIR/gh-<N>/verify_gh_<N>.py"
+PYTHONPATH=. uv run python \
+  "${AGENT_WIKI_DIR:-agent-wiki}/issues/<N>/repro_app_verify.py"
 ```
 
 ### Step 4: Interpret results → verdict
@@ -157,46 +186,38 @@ PYTHONPATH=. uv run python "$OUT_DIR/gh-<N>/verify_gh_<N>.py"
 
 For `cannot_reproduce`: confirm you tested `REPORTED_VERSION`, not just `develop`. A bug
 that reproduces on the reported version but not on `develop` is **already fixed** —
-record the fixing release/commit in `NOTES.md`.
+record the fixing release/commit in `investigation.md`.
 
-### Step 5: Produce the repro bundle
+### Step 5: Finalize the publishable artifacts
 
-For every verdict except `insufficient_info` (which stops at Step 1), write the
-publish-ready files **into `$OUT_DIR/gh-<N>/`**.
+For every verdict except `insufficient_info` (which stops at Step 1), finalize these
+files in `${AGENT_WIKI_DIR:-agent-wiki}/issues/<N>/`:
 
-- `app.py` — polished, self-contained app with Expected/Actual sections, workaround,
-  and environment info. See [reference.md](reference.md). For `cannot_reproduce`, frame
-  it around the reported behavior and note the agent could not trigger the bug (and on
-  which versions).
-- `NOTES.md` — findings, root cause with code pointers, and classification. See
-  [reference.md](reference.md).
-- `requirements.txt` — **avoid unless truly unavoidable.** st-issues runs every
-  repro's `app.py` *inline* inside one shared Streamlit app, so only the packages
-  already in that app's environment are available (Streamlit plus common data/plotting
-  libraries — pandas, numpy, polars, plotly, altair, matplotlib, etc.; see st-issues'
-  `pyproject.toml`). A per-issue `requirements.txt` is **not** installed for the shared
-  app: the explorer detects it and falls back to a separate, manually-triggered
-  deployment that is often not even running — so a repro that needs extra packages
-  effectively won't run in the explorer. Nearly all issues reproduce on the base
-  environment; build the repro against it. If a bug genuinely can't be shown without an
-  extra package, don't silently add one (and never pull in arbitrary or untrusted
-  packages a reporter happened to use) — note the limitation in `NOTES.md` and flag it
-  for a human.
+- `repro_app.py` — polish the same app used during verification. Include
+  Expected/Actual sections, a workaround when available, environment information, and
+  a link to the issue. For `cannot_reproduce`, explain which versions were tested.
+- `repro_app_verify.py` — retain the portable verification script used in Step 3.
+- `investigation.md` — record the finding, versions tested, root cause with code
+  pointers, verification evidence, and classification. See [reference.md].
 
-For **priority** in `NOTES.md`, read `wiki/issue-prioritization.md` first, then
+Do not add screenshots, logs, `result.json`, dependency files, or other generated
+output to agent-wiki. Keep those under `${OUT_DIR:-work-tmp/debug}/gh-<N>/`.
+
+For **priority** in `investigation.md`, read `wiki/issue-prioritization.md` first, then
 recommend a level (P0–P4) grounded in its criteria — not an ad-hoc judgment. In
 particular, measure reach by the *broken behavior*, not the affected surface.
 
 Validate:
 ```bash
-python -m py_compile "${OUT_DIR:-work-tmp/debug}/gh-<N>/app.py"
+uv run python -m py_compile \
+  "${AGENT_WIKI_DIR:-agent-wiki}/issues/<N>/repro_app.py" \
+  "${AGENT_WIKI_DIR:-agent-wiki}/issues/<N>/repro_app_verify.py"
 ```
 
 ### Step 6: Write result.json
 
-Write `$OUT_DIR/gh-<N>/result.json` using the schema above. This is the machine-readable
-summary the caller (command or workflow post-job) consumes to decide whether and how to
-publish.
+Write `${OUT_DIR:-work-tmp/debug}/gh-<N>/result.json` using the schema above. This is
+the machine-readable summary the caller consumes to decide whether and how to publish.
 
 ## Handling edge cases
 
@@ -214,7 +235,7 @@ publish.
 - [triaging-issues](../triaging-issues/SKILL.md): orchestrates this investigate phase
   with verdict review and optional publishing.
 - [publishing-issue-repros](../publishing-issue-repros/SKILL.md): publish the bundle to
-  st-issues.
+  agent-wiki for discovery by issues.streamlit.app.
 - [debugging-streamlit](../debugging-streamlit/SKILL.md): `make debug` and Playwright
   patterns.
 - [fixing-flaky-e2e-tests](../fixing-flaky-e2e-tests/SKILL.md): Playwright best
