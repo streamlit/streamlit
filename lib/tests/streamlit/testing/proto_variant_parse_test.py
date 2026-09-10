@@ -12,7 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""AppTest smoke tests asserting that every public Element/Block proto oneof parses."""
+"""AppTest smoke tests asserting that every public Element/Block proto oneof parses.
+
+Elements without a dedicated AppTest node class parse as ``UnknownElement``, so
+these cases assert that ``run()`` succeeds and the variant reaches the tree, not
+that AppTest exposes a typed accessor for it.
+"""
 
 from __future__ import annotations
 
@@ -46,13 +51,14 @@ EXCLUDED_BLOCK_TYPES: dict[str, str] = {
 
 
 class ParseCase(NamedTuple):
-    """One AppTest script covering proto oneofs.
+    """One AppTest script that exercises one or more proto oneofs.
 
-    ``proto_names`` is the inventory lock (Element/Block ``type`` oneof names).
-    ``tree_types`` is what ``test_public_st_command_proto_variant_parses``
-    asserts on ``node.type`` and can differ (``alert`` → ``error``,
-    ``imgs`` → ``image``, ``heading`` → ``title``). ``absent_types`` must not
-    appear (transients such as spinner).
+    ``proto_names`` are the Element/Block ``type`` oneof names this case claims
+    coverage for; ``test_every_public_proto_oneof_has_a_parse_smoke_case``
+    checks them against the protos. ``tree_types`` are the ``node.type`` values
+    the parsed tree must contain, which can differ from the oneof name
+    (``alert`` → ``error``, ``imgs`` → ``image``, ``heading`` → ``title``).
+    ``absent_types`` must not appear, for transients such as spinner.
     """
 
     proto_names: frozenset[str]
@@ -65,11 +71,13 @@ class ParseCase(NamedTuple):
 def _parse_case(
     name: str, body: str, *tree: str, absent: tuple[str, ...] = ()
 ) -> ParseCase:
+    """Build a case for a single proto oneof ``name``, expecting ``tree`` node types."""
     return ParseCase(frozenset({name}), body, frozenset(tree), name, frozenset(absent))
 
 
-# One case per public Element/Block oneof (tabs share a script). spinner is
-# sent as a new_transient delta and is skipped by parse_tree.
+# One case per public Element/Block oneof; tab_container and tab share one
+# script. Spinner is sent as a new_transient delta; parse_tree_from_messages
+# skips those deltas.
 PARSE_CASES: list[ParseCase] = [
     _parse_case("alert", "st.error('e')", "error"),
     _parse_case(
@@ -156,6 +164,9 @@ PARSE_CASES: list[ParseCase] = [
     _parse_case("slider", "st.slider('s')", "slider"),
     _parse_case("snow", "st.snow()", "snow"),
     _parse_case("space", "st.space()", "space"),
+    # Exiting immediately cancels the 0.5s timer, so only the clearing
+    # transient is sent — not Element.spinner. That still proves .run()
+    # skips new_transient and spinner never appears as a tree node.
     _parse_case("spinner", "with st.spinner('w'):\n    pass", absent=("spinner",)),
     _parse_case("text", "st.text('t')", "text"),
     _parse_case("text_area", "st.text_area('t')", "text_area"),
@@ -219,21 +230,32 @@ PARSE_CASES: list[ParseCase] = [
 def test_every_public_proto_oneof_has_a_parse_smoke_case() -> None:
     """Every Element/Block type oneof is covered by a smoke case or an exclusion."""
     covered = {name for case in PARSE_CASES for name in case.proto_names}
-    missing_elements = (
-        _oneof_names(ElementProto.DESCRIPTOR) - covered - set(EXCLUDED_ELEMENT_TYPES)
+    element_oneofs = _oneof_names(ElementProto.DESCRIPTOR)
+    block_oneofs = _oneof_names(BlockProto.DESCRIPTOR)
+    assert set(EXCLUDED_ELEMENT_TYPES) <= element_oneofs, (
+        "EXCLUDED_ELEMENT_TYPES names that are no longer Element oneofs: "
+        f"{sorted(set(EXCLUDED_ELEMENT_TYPES) - element_oneofs)}"
     )
-    missing_blocks = (
-        _oneof_names(BlockProto.DESCRIPTOR) - covered - set(EXCLUDED_BLOCK_TYPES)
+    assert set(EXCLUDED_BLOCK_TYPES) <= block_oneofs, (
+        "EXCLUDED_BLOCK_TYPES names that are no longer Block oneofs: "
+        f"{sorted(set(EXCLUDED_BLOCK_TYPES) - block_oneofs)}"
     )
-    assert missing_elements == set()
-    assert missing_blocks == set()
+    missing_elements = element_oneofs - covered - set(EXCLUDED_ELEMENT_TYPES)
+    missing_blocks = block_oneofs - covered - set(EXCLUDED_BLOCK_TYPES)
+    assert not missing_elements, (
+        f"Element oneofs without a parse smoke case: {sorted(missing_elements)}. "
+        "Add a PARSE_CASES entry, or an EXCLUDED_ELEMENT_TYPES entry with a reason."
+    )
+    assert not missing_blocks, (
+        f"Block oneofs without a parse smoke case: {sorted(missing_blocks)}. "
+        "Add a PARSE_CASES entry, or an EXCLUDED_BLOCK_TYPES entry with a reason."
+    )
 
-    extra = (
-        covered
-        - _oneof_names(ElementProto.DESCRIPTOR)
-        - _oneof_names(BlockProto.DESCRIPTOR)
+    extra = covered - element_oneofs - block_oneofs
+    assert not extra, (
+        "PARSE_CASES references names that are no longer Element/Block oneofs: "
+        f"{sorted(extra)}"
     )
-    assert extra == set()
 
 
 @pytest.mark.parametrize("case", PARSE_CASES, ids=[c.case_id for c in PARSE_CASES])
@@ -242,7 +264,7 @@ def test_public_st_command_proto_variant_parses(case: ParseCase) -> None:
     script = "import streamlit as st\n" + textwrap.dedent(case.body).strip() + "\n"
     at = AppTest.from_string(script, default_timeout=10).run()
     assert at.session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY], [
-        getattr(exc, "message", str(exc)) for exc in at.exception
+        exc.message for exc in at.exception
     ]
     tree_types = {node.type for node in at}
     assert case.tree_types <= tree_types, tree_types
