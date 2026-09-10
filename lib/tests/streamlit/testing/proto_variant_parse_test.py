@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""AppTest parse smoke tests for every public Element/Block proto oneof (P0.5)."""
+"""AppTest smoke tests asserting that every public Element/Block proto oneof parses."""
 
 from __future__ import annotations
 
 import textwrap
-from typing import Any, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 import pytest
 
@@ -26,8 +26,11 @@ from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.runtime.state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
 from streamlit.testing.v1 import AppTest
 
+if TYPE_CHECKING:
+    from google.protobuf.descriptor import Descriptor
 
-def _oneof_names(descriptor: Any) -> set[str]:
+
+def _oneof_names(descriptor: Descriptor) -> set[str]:
     """Return field names in the ``type`` oneof of a proto message descriptor."""
     return {field.name for field in descriptor.oneofs_by_name["type"].fields}
 
@@ -39,32 +42,37 @@ EXCLUDED_ELEMENT_TYPES: dict[str, str] = {
 EXCLUDED_BLOCK_TYPES: dict[str, str] = {
     "vertical": "legacy; layouts emit flex_container",
     "horizontal": "legacy; layouts emit flex_container",
-    "transparent": "internal fragment outside-container wrapper, not a public st.* command",
 }
 
 
 class ParseCase(NamedTuple):
-    """One AppTest script that must emit the given proto oneofs."""
+    """One AppTest script covering proto oneofs.
+
+    ``proto_names`` is the inventory lock (Element/Block ``type`` oneof names).
+    ``tree_types`` is what ``test_public_st_command_proto_variant_parses``
+    asserts on ``node.type`` and can differ (``alert`` → ``error``,
+    ``imgs`` → ``image``, ``heading`` → ``title``). ``absent_types`` must not
+    appear (transients such as spinner).
+    """
 
     proto_names: frozenset[str]
     body: str
     tree_types: frozenset[str]
     case_id: str
+    absent_types: frozenset[str] = frozenset()
 
 
-def _el(name: str, body: str, *tree: str) -> ParseCase:
-    return ParseCase(frozenset({name}), body, frozenset(tree), name)
-
-
-def _blk(name: str, body: str, *tree: str) -> ParseCase:
-    return ParseCase(frozenset({name}), body, frozenset(tree), name)
+def _parse_case(
+    name: str, body: str, *tree: str, absent: tuple[str, ...] = ()
+) -> ParseCase:
+    return ParseCase(frozenset({name}), body, frozenset(tree), name, frozenset(absent))
 
 
 # One case per public Element/Block oneof (tabs share a script). spinner is
-# transient and is skipped by parse_tree; .run() must still succeed.
+# sent as a new_transient delta and is skipped by parse_tree.
 PARSE_CASES: list[ParseCase] = [
-    _el("alert", "st.error('e')", "error"),
-    _el(
+    _parse_case("alert", "st.error('e')", "error"),
+    _parse_case(
         "dataframe",
         "import pandas as pd\n"
         "df = pd.DataFrame({'a': [1]})\n"
@@ -72,105 +80,105 @@ PARSE_CASES: list[ParseCase] = [
         "st.data_editor(df)",
         "dataframe",
     ),
-    _el("table", "import pandas as pd\nst.table(pd.DataFrame({'a': [1]}))", "table"),
-    _el(
+    _parse_case(
+        "table", "import pandas as pd\nst.table(pd.DataFrame({'a': [1]}))", "table"
+    ),
+    _parse_case(
         "vega_lite_chart",
         "import pandas as pd\nst.line_chart(pd.DataFrame({'y': [1, 2]}))",
         "vega_lite_chart",
     ),
-    _el("audio", "st.audio(b'\\x11\\x22')", "audio"),
-    _el("audio_input", "st.audio_input('a')", "audio_input"),
-    _el("balloons", "st.balloons()", "balloons"),
-    _el(
+    _parse_case("audio", "st.audio(b'\\x11\\x22')", "audio"),
+    _parse_case("audio_input", "st.audio_input('a')", "audio_input"),
+    _parse_case("balloons", "st.balloons()", "balloons"),
+    _parse_case(
         "bidi_component",
-        "c = st.components.v2.component('p05_bidi', html='<div>hi</div>')\nc()",
+        "c = st.components.v2.component('smoke_test_bidi', html='<div>hi</div>')\nc()",
         "bidi_component",
     ),
-    _el("button", "st.button('b')", "button"),
-    _el("button_group", "st.pills('p', ['a'])", "button_group"),
-    _el(
+    _parse_case("button", "st.button('b')", "button"),
+    _parse_case("button_group", "st.pills('p', ['a'])", "button_group"),
+    _parse_case(
         "download_button",
         "st.download_button('d', data='x', file_name='a.txt')",
         "download_button",
     ),
-    _el("camera_input", "st.camera_input('c')", "camera_input"),
-    _el("chat_input", "st.chat_input('c')", "chat_input"),
-    _el("checkbox", "st.checkbox('c')", "checkbox"),
-    _el("color_picker", "st.color_picker('c')", "color_picker"),
-    _el(
+    _parse_case("camera_input", "st.camera_input('c')", "camera_input"),
+    _parse_case("chat_input", "st.chat_input('c')", "chat_input"),
+    _parse_case("checkbox", "st.checkbox('c')", "checkbox"),
+    _parse_case("color_picker", "st.color_picker('c')", "color_picker"),
+    _parse_case(
         "component_instance",
         "import streamlit.components.v1 as components\n"
-        "foo = components.declare_component('p05_v1', url='http://example.com')\n"
+        "foo = components.declare_component('smoke_test_v1', url='http://example.com')\n"
         "foo()",
         "component_instance",
     ),
-    _el("date_input", "st.date_input('d')", "date_input"),
-    _el("deck_gl_json_chart", "st.map()", "deck_gl_json_chart"),
-    _el("help_info", "st.help(st.write)", "help_info"),
-    _el("empty", "st.empty()", "empty"),
-    _el("exception", "st.exception(RuntimeError('boom'))", "exception"),
-    _el("feedback", "st.feedback('thumbs')", "feedback"),
-    _el("file_uploader", "st.file_uploader('f')", "file_uploader"),
-    _el(
+    _parse_case("date_input", "st.date_input('d')", "date_input"),
+    _parse_case("deck_gl_json_chart", "st.map()", "deck_gl_json_chart"),
+    _parse_case("help_info", "st.help(st.write)", "help_info"),
+    _parse_case("empty", "st.empty()", "empty"),
+    _parse_case("exception", "st.exception(RuntimeError('boom'))", "exception"),
+    _parse_case("feedback", "st.feedback('thumbs')", "feedback"),
+    _parse_case("file_uploader", "st.file_uploader('f')", "file_uploader"),
+    _parse_case(
         "graphviz_chart",
         "st.graphviz_chart('digraph { a -> b }')",
         "graphviz_chart",
     ),
-    _el("html", "st.html('<b>h</b>')", "html"),
-    _el(
-        "iframe",
-        "st.components.v1.iframe('https://example.com')",
-        "iframe",
-    ),
-    _el("imgs", "st.image('https://example.com/x.png')", "image"),
-    _el("json", "st.json({'a': 1})", "json"),
-    _el(
+    _parse_case("html", "st.html('<b>h</b>')", "html"),
+    _parse_case("iframe", "st.iframe('https://example.com')", "iframe"),
+    _parse_case("imgs", "st.image('https://example.com/x.png')", "image"),
+    _parse_case("json", "st.json({'a': 1})", "json"),
+    _parse_case(
         "link_button",
         "st.link_button('Go', 'https://example.com')",
         "link_button",
     ),
-    _el("markdown", "st.markdown('hi')", "markdown"),
-    _el("metric", "st.metric('m', 1)", "metric"),
-    _el("multiselect", "st.multiselect('m', ['a'])", "multiselect"),
-    _el("number_input", "st.number_input('n')", "number_input"),
-    _el(
+    _parse_case("markdown", "st.markdown('hi')", "markdown"),
+    _parse_case("metric", "st.metric('m', 1)", "metric"),
+    _parse_case("multiselect", "st.multiselect('m', ['a'])", "multiselect"),
+    _parse_case("number_input", "st.number_input('n')", "number_input"),
+    _parse_case(
         "page_link",
         "st.page_link('https://example.com', label='Ex')",
         "page_link",
     ),
-    _el(
+    _parse_case(
         "plotly_chart",
         "st.plotly_chart({'data': [{'x': [1], 'y': [2], 'type': 'scatter'}]})",
         "plotly_chart",
     ),
-    _el("progress", "st.progress(40)", "progress"),
-    _el("radio", "st.radio('r', ['a'])", "radio"),
-    _el("selectbox", "st.selectbox('s', ['a'])", "selectbox"),
-    _el("skeleton", "st.skeleton()", "skeleton"),
-    _el("slider", "st.slider('s')", "slider"),
-    _el("snow", "st.snow()", "snow"),
-    _el("space", "st.space()", "space"),
-    _el("spinner", "with st.spinner('w'):\n    pass"),
-    _el("text", "st.text('t')", "text"),
-    _el("text_area", "st.text_area('t')", "text_area"),
-    _el("text_input", "st.text_input('t')", "text_input"),
-    _el("time_input", "st.time_input('t')", "time_input"),
-    _el("date_time_input", "st.datetime_input('d')", "date_time_input"),
-    _el("toast", "st.toast('t')", "toast"),
-    _el("video", "st.video(b'\\x12\\x10')", "video"),
-    _el("heading", "st.title('T')", "title"),
-    _el("code", "st.code('x=1')", "code"),
-    _el("menu_button", "st.menu_button('m', ['a'])", "menu_button"),
-    _el("pagination", "st.pagination(5)", "pagination"),
-    _el(
+    _parse_case("progress", "st.progress(40)", "progress"),
+    _parse_case("radio", "st.radio('r', ['a'])", "radio"),
+    _parse_case("selectbox", "st.selectbox('s', ['a'])", "selectbox"),
+    _parse_case("skeleton", "st.skeleton()", "skeleton"),
+    _parse_case("slider", "st.slider('s')", "slider"),
+    _parse_case("snow", "st.snow()", "snow"),
+    _parse_case("space", "st.space()", "space"),
+    _parse_case("spinner", "with st.spinner('w'):\n    pass", absent=("spinner",)),
+    _parse_case("text", "st.text('t')", "text"),
+    _parse_case("text_area", "st.text_area('t')", "text_area"),
+    _parse_case("text_input", "st.text_input('t')", "text_input"),
+    _parse_case("time_input", "st.time_input('t')", "time_input"),
+    _parse_case("date_time_input", "st.datetime_input('d')", "date_time_input"),
+    _parse_case("toast", "st.toast('t')", "toast"),
+    _parse_case("video", "st.video(b'\\x12\\x10')", "video"),
+    _parse_case("heading", "st.title('T')", "title"),
+    _parse_case("code", "st.code('x=1')", "code"),
+    _parse_case("menu_button", "st.menu_button('m', ['a'])", "menu_button"),
+    _parse_case("pagination", "st.pagination(5)", "pagination"),
+    _parse_case(
         "echarts_chart",
         "st.echarts_chart({'xAxis': {'type': 'category', 'data': ['A']}, "
         "'yAxis': {'type': 'value'}, 'series': [{'type': 'bar', 'data': [1]}]})",
         "echarts_chart",
     ),
-    _blk("column", "c1, c2 = st.columns(2)\nc1.write('a')\nc2.write('b')", "column"),
-    _blk("expandable", "with st.expander('e'):\n    st.write('x')", "expander"),
-    _blk(
+    _parse_case(
+        "column", "c1, c2 = st.columns(2)\nc1.write('a')\nc2.write('b')", "column"
+    ),
+    _parse_case("expandable", "with st.expander('e'):\n    st.write('x')", "expander"),
+    _parse_case(
         "form",
         "with st.form('f'):\n    st.text_input('n')\n    st.form_submit_button('go')",
         "form",
@@ -181,18 +189,30 @@ PARSE_CASES: list[ParseCase] = [
         frozenset({"tab_container", "tab"}),
         "tabs",
     ),
-    _blk(
+    _parse_case(
         "chat_message",
         "with st.chat_message('user'):\n    st.write('hi')",
         "chat_message",
     ),
-    _blk("popover", "with st.popover('p'):\n    st.write('x')", "popover"),
-    _blk(
+    _parse_case("popover", "with st.popover('p'):\n    st.write('x')", "popover"),
+    _parse_case(
         "dialog",
         "@st.dialog('D')\ndef _dlg():\n    st.write('x')\n_dlg()",
         "dialog",
     ),
-    _blk("flex_container", "with st.container():\n    st.write('x')", "flex_container"),
+    _parse_case(
+        "flex_container", "with st.container():\n    st.write('x')", "flex_container"
+    ),
+    _parse_case(
+        "transparent",
+        "outside = st.container()\n"
+        "outside.empty()\n"
+        "@st.fragment\n"
+        "def _frag():\n"
+        "    outside.write('hi')\n"
+        "_frag()",
+        "transparent",
+    ),
 ]
 
 
@@ -226,3 +246,4 @@ def test_public_st_command_proto_variant_parses(case: ParseCase) -> None:
     ]
     tree_types = {node.type for node in at}
     assert case.tree_types <= tree_types, tree_types
+    assert case.absent_types.isdisjoint(tree_types), tree_types
