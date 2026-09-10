@@ -320,3 +320,17 @@ from streamlit.starlette import App as App
 from streamlit import components as components
 import streamlit.components.v1  # noqa: F401
 import streamlit.components.v2  # noqa: F401
+
+# Runtime-only: type checkers must still error on unknown ``st.*`` attributes.
+from typing import TYPE_CHECKING
+
+if not TYPE_CHECKING:
+
+    def __getattr__(name: str) -> object:
+        from streamlit.command_suggestions import raise_missing_streamlit_attribute
+
+        raise_missing_streamlit_attribute(name)
+
+
+# Drop TYPE_CHECKING so it is not a public ``st`` name.
+del TYPE_CHECKING
