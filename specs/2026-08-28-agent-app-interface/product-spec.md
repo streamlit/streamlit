@@ -394,8 +394,7 @@ right now. Naming follows the public API, for the reason above:
   "actions": [
     { "key": "region", "kind": "value" },
     { "key": "$$ID-8f2c9a1d4b6e7f30-None", "kind": "trigger" }
-  ],
-  "limitations": []
+  ]
 }
 ```
 
@@ -432,10 +431,12 @@ Rules:
   at a glance; type and constraints are read from the element in the tree. A `disabled`
   widget appears in the tree but not in `actions`. Form membership is visible from
   nesting.
-- **Unsupported things stay visible.** Every element declares whether it is inspectable,
-  interactive, or browser-required, and unsupported interactions appear in `limitations`
-  with a machine-readable reason. CI asserts that every `Element` and `Block` variant has
-  a declaration, so nothing silently degrades to a placeholder.
+- **Unsupported things stay visible, on the element itself.** An element that is not
+  fully supported carries a `support` field with a machine-readable reason —
+  `browser_required` for a custom component, for example — and absent means fully
+  supported. Keeping it on the node means an agent never has to cross-reference a summary
+  list to find out which element a gap belongs to. CI asserts that every `Element` and
+  `Block` variant has a declaration, so nothing silently degrades to a placeholder.
 - **It is an observation, not a Python dump.** Callbacks, arbitrary objects, secrets,
   source, caches, and `st.session_state` are absent by construction. Password values are
   write-only. Markdown, code, and LaTeX stay source strings.
@@ -517,21 +518,22 @@ request before anything is applied.
 | Form                             | Send that form's fields plus exactly one of its submit triggers. Omitted fields keep current values. Reject fields without a submit, fields from two forms, and unrelated controls in the same call. `clear_on_submit` discards the form's mirrored values after submit, so the next snapshot shows declared defaults.                                                                                                        |
 | Trigger                          | At most one per request. Triggers reset and never persist as `true`.                                                                                                                                                                                                                                                                                                                                                          |
 | Navigation                       | `page` and `query_params` are a navigation transition and cannot be combined with widget changes.                                                                                                                                                                                                                                                                                                                             |
-| Widget inside a fragment         | Interactive, but v1 always performs a **full** rerun and reports the widened scope. See below.                                                                                                                                                                                                                                                                                                                                |
+| Widget inside a fragment         | Interactive, but v1 always performs a **full** rerun. See below.                                                                                                                                                                                                                                                                                                                                |
 | Widget with `on_change="ignore"` | Interactive, like any other widget. The mode only tells the browser not to rerun on change; it carries no backend meaning, so the endpoint applies the value and reruns. An agent that wants browser-equivalent deferral batches the value with whatever trigger should cause the rerun.                                                                                                                                      |
 
 **v1 always reruns the whole script.** A widget inside `st.fragment` is still
 interactive, because a full rerun produces a correct app state and this covers apps that
 scope work into fragments for performance. It is not identical to a browser session,
 though: the outer script re-executes, so any content that exists only because a trigger
-fired during the previous run is not re-emitted. The response reports the widened scope
-so an agent is never guessing.
+fired during the previous run is not re-emitted. Since the scope is always the whole
+script in v1, there is nothing per-response to report; a `rerun_scope` field only becomes
+meaningful once fragment-scoped reruns land.
 
 **Dialogs are the exception and stay non-interactive in v1.** A dialog block
 is only emitted when the code path calls the dialog function, and the canonical pattern
 gates that on a button. Since trigger values reset, a full rerun does not re-emit the
 dialog and it closes — a broken interaction rather than a slower one. Fragment-scoped
-reruns (follow-up #2) make dialogs interactive.
+reruns (follow-up #1) make dialogs interactive.
 
 Actions do not carry a JSON Schema in v1. The element's `type` plus its constraint
 properties (`options`, `min_value`, `max_value`) already tell a model what to send, and
@@ -552,7 +554,7 @@ without introducing a new authorization surface.
 | Lazy dataframe                 | The same shape, with the chunk already emitted as the preview and `complete: false`. `data.url` serves that chunk; fetching further ranges is a follow-up.                                                                                                 |
 | Chart                          | Public properties in `props`, the native specification inline when it fits the size budget and behind `data.url` otherwise, and chart data under `data` exactly as a dataframe's.                                                                          |
 | Image, audio, video, PDF       | Caption, MIME type, and the existing `/media/...` URL the app already exposed to its own client.                                                                                                                                                           |
-| HTML, iframe, custom component | Type, safe metadata, and a `browser_required` limitation. Component JavaScript is never executed.                                                                                                                                                          |
+| HTML, iframe, custom component | Type, safe metadata, and `support: browser_required`. Component JavaScript is never executed.                                                                                                                                                          |
 | Download                       | Label, file metadata, and the existing media URL. `st.download_button` with eager `data` already registers its bytes and carries a `url`, so it needs nothing new; only deferred generation (which carries a file ID instead of a URL) requires an action. |
 
 Arrow bytes and oversized chart specifications are registered in the existing media-file
@@ -581,8 +583,8 @@ is not a confidentiality hole between sessions of one app, and storage belongs t
 server's single runtime instance, so it does not span app processes.
 
 Serving full data has a cost worth bounding, since storage is in memory and the bytes are
-retained separately from the emitted message: v1 caps what it will externalize and reports
-an oversized artifact as a limitation rather than registering it.
+retained separately from the emitted message: v1 caps what it will externalize and marks
+an oversized artifact unavailable on the node rather than registering it.
 
 Truncation is always explicit. **A preview must never look like the complete answer to
 an aggregate question.** If the structural document itself cannot fit the response
@@ -595,11 +597,11 @@ explain the gap or fall back to a browser:
 
 | Not in v1                                               | Behavior                                                                                                                                                           |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Fragment-scoped reruns                                  | Every interaction is a full rerun, with the widened scope reported. Widgets in fragments still work; `st.dialog` contents do not and are declared non-interactive. |
+| Fragment-scoped reruns                                  | Every interaction is a full rerun. Widgets in fragments still work; `st.dialog` contents do not and are declared non-interactive. |
 | `st.file_uploader`, `st.camera_input`, `st.audio_input` | Inspectable, not interactive.                                                                                                                                      |
 | `st.data_editor` edits, dataframe and chart selections  | Read-only.                                                                                                                                                         |
 | Deferred downloads and download callbacks               | Not triggerable. Eager downloads expose their existing URL.                                                                                                        |
-| `run_every` fragments                                   | Initial run works; background timers are inactive and reported as a limitation.                                                                                    |
+| `run_every` fragments                                   | Initial run works; background timers are inactive and declared on the fragment.                                                                                    |
 | Long-running interactions                               | No polling or partial results; the request either settles or returns `run_timed_out`.                                                                              |
 
 ### Security
@@ -631,10 +633,15 @@ This is a new programmatic execution surface and needs an explicit review.
 Two things must be built before the interface can be reached remotely, and they are the
 reason v1 is loopback-only:
 
-1. **Identity mapping.** Verified deployment identity must be mapped explicitly into
-   `st.user`; routing behind middleware does not do that by itself, and identity is never
-   accepted from the request body. Without this, an agent session acts with the app's
-   privileges and no user identity.
+1. **Authentication and identity parity.** For a public app this changes nothing: an
+   agent session is anonymous and runs with the server's credentials, exactly like an
+   anonymous browser viewer, and there is no reason to treat the two differently. What
+   matters is parity, not extra protection. The route must sit behind the same
+   authentication gate as the app, and where a request *is* authenticated, that identity
+   must reach `st.user` the way the WebSocket handshake already does — routing behind
+   middleware does not do the second half by itself, and identity is never accepted from
+   the request body. Skipping it is the real hazard: an app that branches on `st.user`
+   for per-user data access would serve an agent as though nobody were signed in.
 2. **Resource authorization.** The media route is currently a bare content-hash lookup
    with no session check, and identical bytes deduplicate to the same URL across
    sessions. That is acceptable for media an app already chose to display; it is not
@@ -673,7 +680,7 @@ settled before the default flips:
 | Bulk data access  | A dataframe becomes typed data rather than a scrolled viewport, and v1 serves the full Arrow bytes over a link. The same data an app already sent its client, far easier to take in one request. | Response, preview, and artifact-size budgets in v1; principal-scoped or expiring resource links before remote enablement.                                                                                                     |
 | Request volume    | An agent loops faster than a human clicks.                                                                                                                                                       | Session caps, one in-flight interaction per session, and request rate limits.                                                                                                                                                 |
 | Cross-origin POST | The WebSocket has origin checks; a new cookie-authenticated mutating route needs its own.                                                                                                        | Origin and XSRF handling on the route.                                                                                                                                                                                        |
-| Identity          | Without explicit mapping, an agent session acts with the app's privileges and no `st.user`, so an app behind SSO could be reached by something that never authenticated.                         | Identity **parity**: the caller resolves to the same principal, the same `st.user`, and the same access-control branches as an equivalent browser session. This is a hard requirement for default-on, not a later refinement. |
+| Identity          | Nothing changes for a public app, where a browser viewer is equally anonymous. The gap is an authenticated app whose route or identity mapping is skipped, leaving `st.user` unset so per-user access branches silently take the anonymous path. | **Parity** with the app's existing gate: the same authentication on the route, and an authenticated caller resolving to the same `st.user` and access-control branches as an equivalent browser session. A hard requirement for default-on, not a later refinement. |
 
 So v1 is **off by default and served only to loopback peers**, matching the existing
 conservative gate used for the skills-install backend operation. That makes the first
@@ -725,15 +732,19 @@ work: one app, one set of explanations, two clients.
 Each of these is additive to the v1 contract and independently shippable. They are
 ordered roughly by expected value.
 
-1. **Remote enablement, then on by default.** Identity mapping into `st.user`, Origin
+1. **Fragment-scoped reruns.** Derive scope from the action instead of always
+   full-rerunning, with fragment-scoped stale-node cleanup. Fragments are how we tell
+   authors to keep apps performant, so they should be first-class in any new surface
+   rather than something a client silently widens. Assuming apps use them, scoping also
+   makes every agent turn cheaper — less work per interaction and a smaller response —
+   which is why this comes before reach. It restores browser parity for fragment
+   interactions, avoids re-running work the author deliberately scoped away, and is what
+   makes `st.dialog` contents interactive.
+2. **Remote enablement, then on by default.** Identity mapping into `st.user`, Origin
    and XSRF handling, and the response and rate budgets that make bulk access and request
    volume safe — then flip the flag to opt-out. Per-platform
    routing, session affinity for multi-worker deployments, and quotas. Unlocks use cases
    2–4.
-2. **Fragment-scoped reruns.** Derive scope from the action instead of always
-   full-rerunning, with fragment-scoped stale-node cleanup. This restores browser parity
-   for fragment interactions, avoids re-running work the author deliberately scoped away,
-   and is what makes `st.dialog` contents interactive.
 3. **Authored descriptions** — a standalone project worth doing on its own accessibility
    merits: static `app_title`/`app_description` on `st.App`, `page_description` on
    `st.set_page_config` and optionally `st.Page`
@@ -774,6 +785,50 @@ ordered roughly by expected value.
 9. **Remaining interaction coverage.** Uploads, `st.data_editor` edits, dataframe and
    chart selections, lazy-data continuation, deferred downloads, `run_every` scheduling,
    and per-action JSON Schema.
+
+## Beyond the app surface
+
+Everything above is bounded by what the app already showed its own client. That boundary
+is what makes the interface safe to turn on for existing apps without asking anyone's
+permission, and it is also its ceiling: an agent can only answer a question the app was
+already built to answer. If a dashboard filters to one region and never explains what
+"net revenue" excludes, the interface faithfully reports a number nobody can interpret.
+
+Two different things get conflated when people ask to go further, and only one of them is
+actually a new exposure:
+
+- **Transmitted but not displayed.** A column hidden through `column_config`, the rows
+  behind a truncated preview, the full Arrow buffer behind a chart — all of this was
+  already sent to this client, and the browser could read it. Surfacing it is a
+  completeness question inside the existing boundary, not a new decision. v1 already
+  serves the full Arrow bytes for exactly this reason, and other cases here are fair game.
+- **Never transmitted.** The source table a dataframe was derived from, the rows a filter
+  excluded, the columns a query never selected, other entries in a cache. None of this
+  reached the client, so exposing it grants an agent access the app's own UI does not
+  grant. Whether that is acceptable depends entirely on who is asking and what the
+  deployment's data-access rules are — which is a question only the developer can answer,
+  never something the framework should infer.
+
+So the second category cannot be automatic. It needs an explicit, opt-in way for an author
+to say "this data is available to agents," and a few shapes are worth exploring:
+
+- Marking selected `@st.cache_data` functions as agent-callable, since they are already
+  named, typed, and deterministic units of data access.
+- An `st.data` command or decorator that publishes a dataset or a semantic view — with its
+  definitions and units — independently of whether the app renders it.
+- An `st.tool` decorator for domain operations and context that no widget represents.
+
+The honest cost is adoption. Any of these requires a new API, documentation, and authors
+choosing to use it, so the payoff arrives over quarters rather than in a release. That is
+precisely the argument for not blocking v1 on it: the already-exposed surface works for
+every app that exists today, while a declared surface only works for apps that opt in.
+Both are worth having, in that order.
+
+One reason to think a declared surface pays for itself twice: a dataset an author marks as
+available is exactly what a built-in interactive data explorer in the Streamlit UI would
+need. The same declaration could serve agents and give humans a first-class way to browse
+and pivot the data behind an app — which is a better justification for the API than
+agent access alone.
 
 ## Success criteria
 
@@ -835,14 +890,18 @@ apply.
 
 - A Streamlit-hosted agent, LLM-generated summaries, or a natural-language endpoint.
 - A global app catalog or an agent authorization product.
-- Access to arbitrary Python callables, source, caches, or `st.session_state`.
+- Access to arbitrary Python callables, source, caches, or `st.session_state`. Exposing
+  specific data or functions an author has explicitly marked is a separate, opt-in
+  direction — see [Beyond the app surface](#beyond-the-app-surface).
 - Attaching to or taking over a human's live browser session.
 - A Markdown dialect, standalone semantic renderer, or a second observation format.
 - Built-in scheduling, email delivery, report templates, or standalone HTML export.
   External agents can build these on the same snapshot.
-- Author-declared domain tools (`@st.tool`). A form already provides a typed operation
-  boundary, and authors who need a stable service contract should keep using
-  `st.App(routes=...)`.
+- Author-declared domain tools (`@st.tool`) as a *substitute* for driving widgets. A form
+  already provides a typed operation boundary, and authors who need a stable service
+  contract should keep using `st.App(routes=...)`. Where such a decorator would genuinely
+  add something — operations and data no widget represents — is
+  [Beyond the app surface](#beyond-the-app-surface).
 - Executing custom-component or iframe JavaScript in the backend.
 - Replacing visual, keyboard, accessibility, or custom-component browser testing.
 
