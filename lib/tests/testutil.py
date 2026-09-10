@@ -17,15 +17,20 @@
 from __future__ import annotations
 
 import os
+import threading
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
 from streamlit import config
+from streamlit.connections.retry_util import retry as _REAL_RETRY
 from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import ScriptRunContext
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
+from streamlit.runtime.scriptrunner_utils.script_run_context_attr import (
+    SCRIPT_RUN_CONTEXT_ATTR_NAME,
+)
 from streamlit.runtime.state import SafeSessionState, SessionState
 
 # Reexport functions that were moved to main codebase
@@ -37,6 +42,8 @@ from streamlit.testing.v1.util import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from snowflake.snowpark import Session
 
 
@@ -59,6 +66,40 @@ def create_mock_script_run_ctx() -> ScriptRunContext:
         fragment_storage=MemoryFragmentStorage(),
         pages_manager=PagesManager(""),
     )
+
+
+def retry_without_sleep(**kwargs: object) -> object:
+    """Call the original connection retry with a no-op sleep so unit tests stay fast.
+
+    The original ``retry`` is bound at import time. Tests patch
+    ``retry_util.retry`` with this helper, so a lazy import would resolve to
+    this function and recurse.
+    """
+    kwargs["sleep"] = lambda _seconds: None
+    return _REAL_RETRY(**kwargs)
+
+
+@contextmanager
+def script_run_ctx_and_cleared_cache() -> Iterator[None]:
+    """Attach a mock ScriptRunContext and restore the previous one after the test.
+
+    Also clears ``st.cache_data`` so query-cache tests cannot leak across cases.
+    """
+    import streamlit as st
+    from streamlit.runtime.scriptrunner import add_script_run_ctx
+
+    thread = threading.current_thread()
+    previous_ctx = getattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None)
+    add_script_run_ctx(thread, create_mock_script_run_ctx())
+    try:
+        yield
+    finally:
+        st.cache_data.clear()
+        if previous_ctx is None:
+            if hasattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME):
+                delattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME)
+        else:
+            setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, previous_ctx)
 
 
 def build_mock_config_is_manually_set(overrides_dict):

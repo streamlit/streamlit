@@ -17,6 +17,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import (
@@ -239,21 +240,23 @@ class PageLinkTest(DeltaGeneratorTestCase):
         assert c.page == "https://docs.streamlit.io"
         assert c.external
 
-    def test_empty_string_icon_for_external_page_should_raise_exception(self):
-        """Test that st.page_link with empty string icon raises an exception for external pages."""
+    @parameterized.expand([("",), ("   ",)])
+    def test_empty_or_whitespace_icon_for_external_page_means_no_icon(
+        self, icon: str
+    ) -> None:
+        """st.page_link treats empty or whitespace-only icon as no icon."""
+        st.page_link(page="https://example.com", label="Test", icon=icon)
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.icon == ""
 
-        with pytest.raises(StreamlitAPIException) as exc_info:
-            st.page_link(page="https://example.com", label="Test", icon="")
+    @patch("pathlib.Path.is_file", MagicMock(return_value=True))
+    def test_empty_icon_suppresses_page_icon(self) -> None:
+        """st.page_link(icon="") must not fall back to the Page icon."""
+        page = st.Page("foo.py", title="Bar Test", icon="🎈")
+        st.page_link(page=page, icon="")
 
-        assert 'The value "" is not a valid emoji' in str(exc_info.value)
-
-    def test_whitespace_only_icon_for_external_page_should_raise_exception(self):
-        """Test that st.page_link with whitespace-only icon raises an exception for external pages."""
-
-        with pytest.raises(StreamlitAPIException) as exc_info:
-            st.page_link(page="https://example.com", label="Test", icon="   ")
-
-        assert 'The value "   " is not a valid emoji' in str(exc_info.value)
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.icon == ""
 
     @patch("pathlib.Path.is_file", MagicMock(return_value=True))
     def test_st_page_with_mismatched_file_path_raises(self):

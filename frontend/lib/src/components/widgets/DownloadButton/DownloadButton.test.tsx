@@ -187,6 +187,32 @@ describe("DownloadButton widget", () => {
       expect(downloadButton).toBeDisabled()
     })
 
+    it.each([
+      { type: "primary", testId: "stBaseButton-primary" },
+      { type: "tertiary", testId: "stBaseButton-tertiary" },
+    ])("renders a $type button", ({ type, testId }) => {
+      const props = getProps({ type })
+      render(<DownloadButton {...props} />)
+
+      expect(screen.getByTestId(testId)).toBeVisible()
+      expect(
+        screen.queryByTestId("stBaseButton-secondary")
+      ).not.toBeInTheDocument()
+    })
+
+    it("does not download when a shortcut is activated while disabled", () => {
+      const props = getProps({ shortcut: "Ctrl+Enter" }, { disabled: true })
+      const useRegisterShortcutMock = vi.mocked(useRegisterShortcut)
+
+      render(<DownloadButton {...props} />)
+
+      const { onActivate } = useRegisterShortcutMock.mock.calls[0][0]
+      onActivate()
+
+      expect(props.widgetMgr.setTriggerValue).not.toHaveBeenCalled()
+      expect(anchorClickSpy).not.toHaveBeenCalled()
+    })
+
     it("triggers the click handler when shortcut is activated", () => {
       const props = getProps({ shortcut: "Ctrl+Enter" })
       const useRegisterShortcutMock = vi.mocked(useRegisterShortcut)

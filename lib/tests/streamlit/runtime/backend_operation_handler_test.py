@@ -486,6 +486,10 @@ def test_install_skills_handler_refuses_without_agent_harness() -> None:
     with (
         patch("streamlit.config.get_option", return_value=False),
         patch.object(skills, "detect_installed_agents", return_value=[]),
+        # Pinned: agent_harness_present also consults PATH, so on a contributor
+        # machine with the CLI installed the gate would let the install through,
+        # failing this test locally while it passes in CI.
+        patch.object(skills, "_is_claude_code_present", return_value=False),
         patch("streamlit.web.skills.install_skills") as mock_install,
     ):
         response = asyncio.run(
@@ -498,6 +502,32 @@ def test_install_skills_handler_refuses_without_agent_harness() -> None:
     assert response.error_msg == "Skills install is not available in this environment."
     assert response.error_reason == "refused:no_agent"
     assert not response.HasField("install_skills")
+
+
+def test_install_skills_handler_accepts_path_only_claude_detection() -> None:
+    """Install proceeds when Claude Code is detected only via PATH (no ~/.claude).
+
+    The nudge shows for these users (they get a .claude/skills target reported as
+    partially installed), so the handler must not refuse with no_agent.
+    """
+    install_result = skills._InstallResult(installed=[".claude/skills/foo"])
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch.object(skills, "detect_installed_agents", return_value=[]),
+        patch.object(skills, "_is_claude_code_present", return_value=True),
+        patch(
+            "streamlit.web.skills.install_skills", return_value=install_result
+        ) as mock_install,
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler(lambda: "/app/dir").handle(
+                _install_skills_request(), "session-id"
+            )
+        )
+
+    mock_install.assert_called_once()
+    assert response.error_reason == ""
+    assert response.HasField("install_skills")
 
 
 def test_install_skills_handler_refuses_non_loopback_connection() -> None:
@@ -610,8 +640,10 @@ def test_install_skills_handler_runs_real_installer(tmp_path: Path) -> None:
         patch.object(skills, "detect_installed_agents", return_value=["claude"]),
         patch.object(skills, "_get_source_skills_dir", return_value=source_dir),
         patch("pathlib.Path.cwd", return_value=project_dir),
-        # No ~/.claude, so only .agents/skills is targeted.
         patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        # Pinned: detection also consults PATH, so a contributor machine with
+        # the CLI would add .claude/skills and break the detail-string assertion.
+        patch.object(skills, "_is_claude_code_present", return_value=False),
         patch.object(skills, "clear_installed_skills_cache"),
     ):
         response = asyncio.run(

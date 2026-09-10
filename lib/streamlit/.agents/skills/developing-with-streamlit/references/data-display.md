@@ -56,6 +56,22 @@ st.altair_chart(chart)
 - Interactive tooltips
 - Layered visualizations
 
+## Apache ECharts
+
+Use `st.echarts_chart` when you already have an Apache ECharts option dict, a JSON string, or a `pyecharts` chart. Don't add a third-party ECharts component for this. Prefer Vega-based charts unless the spec is already ECharts-native.
+
+Pass JSON-compatible options only. JavaScript callbacks (`formatter` functions, `JsCode`, `custom` series), GeoJSON map registration, and ECharts GL / 3D charts are not supported.
+
+```python
+st.echarts_chart(
+    {
+        "xAxis": {"type": "category", "data": ["Mon", "Tue", "Wed"]},
+        "yAxis": {"type": "value"},
+        "series": [{"type": "bar", "data": [120, 200, 150]}],
+    }
+)
+```
+
 ## Deprecated: `use_container_width`
 
 **Do not use `use_container_width`.** It is deprecated — Streamlit elements now stretch to fill their container by default. Use the `width` parameter instead: `width="stretch"` (equivalent to `use_container_width=True`) or `width="content"` (equivalent to `use_container_width=False`). Remove `use_container_width` when you see it, and never add it to new code.
@@ -364,3 +380,4 @@ See `dashboards.md` for composing metrics into dashboard layouts.
 - [st.line_chart](https://docs.streamlit.io/develop/api-reference/charts/st.line_chart)
 - [st.bar_chart](https://docs.streamlit.io/develop/api-reference/charts/st.bar_chart)
 - [st.altair_chart](https://docs.streamlit.io/develop/api-reference/charts/st.altair_chart)
+- [st.echarts_chart](https://docs.streamlit.io/develop/api-reference/charts/st.echarts_chart)

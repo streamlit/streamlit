@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { useContext } from "react"
+
 import "@testing-library/jest-dom"
 import { screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -26,6 +28,8 @@ import { renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import BidiComponent from "./BidiComponent"
+import { BidiComponentContext } from "./BidiComponentContext"
+import { BidiComponentContextProvider } from "./BidiComponentContextProvider"
 import { blobUrlManager } from "./utils/blobUrl"
 
 vi.mock("@streamlit/utils", async () => {
@@ -40,6 +44,17 @@ vi.mock("@streamlit/utils", async () => {
 
 // Mock WidgetStateManager
 vi.mock("~lib/WidgetStateManager")
+
+function WidgetValueProbe({
+  onValue,
+}: {
+  onValue: (value: unknown) => void
+}): null {
+  const ctx = useContext(BidiComponentContext)
+  // Synchronous because getWidgetValue is a pure getter, not an effect.
+  onValue(ctx?.getWidgetValue())
+  return null
+}
 
 describe("BidiComponent", () => {
   let mockWidgetMgr: WidgetStateManager
@@ -201,6 +216,51 @@ describe("BidiComponent", () => {
         expect(testContent).toBeTruthy()
         expect(testContent?.textContent).toBe("Isolated HTML")
       })
+    })
+
+    it("reuses an existing shadow root when the isolated component id changes", async () => {
+      const htmlContent =
+        "<div data-testid='test-isolated-html'>Isolated HTML</div>"
+      const { rerenderWithContexts } = renderWithContexts(
+        <BidiComponent
+          element={createMockElement({ isolateStyles: true, htmlContent })}
+          widgetMgr={mockWidgetMgr}
+          fragmentId={mockFragmentId}
+          componentRegistry={mockComponentRegistry}
+        />
+      )
+
+      const container = screen.getByTestId("stBidiComponentIsolated")
+      await waitFor(() => {
+        expect(container.shadowRoot).toBeTruthy()
+      })
+      const originalShadowRoot = container.shadowRoot
+
+      const attachSpy = vi.spyOn(Element.prototype, "attachShadow")
+      rerenderWithContexts(
+        <BidiComponent
+          element={createMockElement({
+            isolateStyles: true,
+            htmlContent:
+              "<div data-testid='test-isolated-html'>Updated HTML</div>",
+            id: "new-isolated-id",
+          })}
+          widgetMgr={mockWidgetMgr}
+          fragmentId={mockFragmentId}
+          componentRegistry={mockComponentRegistry}
+        />
+      )
+
+      expect(attachSpy).not.toHaveBeenCalled()
+      expect(container.shadowRoot).toBe(originalShadowRoot)
+      await waitFor(() => {
+        expect(
+          originalShadowRoot?.querySelector(
+            "[data-testid='test-isolated-html']"
+          )?.textContent
+        ).toBe("Updated HTML")
+      })
+      attachSpy.mockRestore()
     })
 
     it("should handle complex HTML with nested elements", async () => {
@@ -648,6 +708,34 @@ describe("BidiComponent", () => {
 
       // Component should handle malformed widget JSON gracefully
     })
+
+    it.each([
+      ["without saved state", undefined],
+      ["with unparseable widget JSON", '{"invalid": true'],
+    ])(
+      "returns an empty object when getWidgetValue is called %s",
+      (_label, jsonValue) => {
+        vi.spyOn(mockWidgetMgr, "getJsonValue").mockReturnValue(jsonValue)
+        let widgetValue: unknown
+
+        renderWithContexts(
+          <BidiComponentContextProvider
+            element={createMockElement({ id: "widget-value", formId: "" })}
+            widgetMgr={mockWidgetMgr}
+            fragmentId={mockFragmentId}
+            componentRegistry={mockComponentRegistry}
+          >
+            <WidgetValueProbe
+              onValue={value => {
+                widgetValue = value
+              }}
+            />
+          </BidiComponentContextProvider>
+        )
+
+        expect(widgetValue).toEqual({})
+      }
+    )
   })
 
   describe("Error Handling", () => {

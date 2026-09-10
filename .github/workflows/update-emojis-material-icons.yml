@@ -39,9 +39,6 @@ jobs:
         with:
           python_version: ${{ env.PYTHON_MAX_VERSION }}
 
-      - name: Install newest version of emoji package
-        run: uv pip install --upgrade emoji
-
       - name: Update Material Icons
         id: update-material-icons
         env:

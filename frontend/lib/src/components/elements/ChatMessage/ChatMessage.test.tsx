@@ -169,6 +169,43 @@ describe("ChatMessage", () => {
     expect(screen.getByText("T")).toBeTruthy()
   })
 
+  it("falls back to the name initial when an ICON avatar is unrecognized", () => {
+    const props = getProps({
+      avatar: "mystery",
+      avatarType: BlockProto.ChatMessage.AvatarType.ICON,
+      name: "alice",
+    })
+    render(<ChatMessage {...props} />)
+
+    expect(screen.getByText("A")).toBeVisible()
+    expect(screen.queryByAltText("alice avatar")).not.toBeInTheDocument()
+  })
+
+  it("falls back to the name initial when avatar type is omitted", () => {
+    const props = getProps()
+    render(
+      <ChatMessage
+        {...props}
+        // Plain object so avatarType stays undefined; create() would default it to IMAGE.
+        element={{ name: "alice", avatar: "unused" } as BlockProto.ChatMessage}
+      />
+    )
+
+    expect(screen.getByText("A")).toBeVisible()
+    expect(screen.queryByAltText("alice avatar")).not.toBeInTheDocument()
+  })
+
+  it("falls back to a default avatar when the name is empty", () => {
+    const props = getProps({
+      avatar: undefined,
+      avatarType: undefined,
+      name: "",
+    })
+    render(<ChatMessage {...props} />)
+
+    expect(screen.getByText("🧑‍💻")).toBeVisible()
+  })
+
   it("renders with a 'user' icon avatar", () => {
     const props = getProps({
       avatar: "user",
@@ -193,6 +230,23 @@ describe("ChatMessage", () => {
       "stChatMessageAvatarAssistant"
     )
     expect(assistantAvatarIcon).toBeInTheDocument()
+  })
+
+  it("renders a custom material icon avatar", () => {
+    const props = getProps({
+      avatar: ":material/smart_toy:",
+      avatarType: BlockProto.ChatMessage.AvatarType.ICON,
+      name: "bot",
+    })
+    render(<ChatMessage {...props} />)
+
+    expect(screen.getByTestId("stChatMessageAvatarCustom")).toBeVisible()
+    expect(
+      screen.queryByTestId("stChatMessageAvatarUser")
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stChatMessageAvatarAssistant")
+    ).not.toBeInTheDocument()
   })
 
   it("renders with a grey background when name is 'user'", () => {

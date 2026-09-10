@@ -25,8 +25,18 @@ import pytest
 from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
 from streamlit.dataframe import lazy_df_source as dataframe_source
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
+from streamlit.proto.Alert_pb2 import Alert as AlertProto
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
+from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.testing.v1.app_test import AppTest
-from streamlit.testing.v1.element_tree import AppTestError, _format_value_for_widget
+from streamlit.testing.v1.element_tree import (
+    AppTestError,
+    UnknownElement,
+    _format_value_for_widget,
+    parse_tree_from_messages,
+)
+from streamlit.typing import ChatInputValue
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -1338,6 +1348,103 @@ def test_unknown_element():
     assert at.markdown[0].value == "Hello"
 
 
+def test_parse_tree_unknown_proto_subtypes_become_unknown_element() -> None:
+    """Unknown markdown, heading, alert, and slider subtypes parse as UnknownElement."""
+
+    def element_msg(index: int) -> ForwardMsg:
+        msg = ForwardMsg()
+        msg.metadata.delta_path.extend([0, index])
+        return msg
+
+    code_msg = element_msg(0)
+    code_msg.delta.new_element.markdown.body = "print('hi')"
+    code_msg.delta.new_element.markdown.element_type = MarkdownProto.Type.CODE
+
+    heading_msg = element_msg(1)
+    heading_msg.delta.new_element.heading.body = "Section"
+    heading_msg.delta.new_element.heading.tag = "h4"
+
+    alert_msg = element_msg(2)
+    alert_msg.delta.new_element.alert.body = "unused format"
+    alert_msg.delta.new_element.alert.format = AlertProto.Format.UNUSED
+
+    slider_msg = element_msg(3)
+    slider_msg.delta.new_element.slider.label = "pager"
+    slider_msg.delta.new_element.slider.type = SliderProto.Type.UNSPECIFIED
+
+    tree = parse_tree_from_messages([code_msg, heading_msg, alert_msg, slider_msg])
+    nodes = [tree.main[i] for i in range(4)]
+
+    assert all(isinstance(node, UnknownElement) for node in nodes)
+    assert [node.type for node in nodes] == ["markdown", "heading", "alert", "slider"]
+    assert nodes[0].value == "print('hi')"
+    assert nodes[1].value == "Section"
+    assert nodes[2].value == "unused format"
+
+
+def test_inspectable_elements_reject_unsupported_interactions() -> None:
+    """Inspectable-only nodes reject set_value/click with AppTestError.
+
+    ``st.pagination`` is inspectable (key and current page) but has no typed
+    wrapper. Its proto field ``set_value: bool`` must not leak through
+    ``Element.__getattr__`` as a callable. Typed ``Markdown`` is covered too.
+    """
+
+    def script():
+        import streamlit as st
+
+        st.pagination(5, key="pager")
+        st.markdown("hi")
+
+    at = AppTest.from_function(script).run()
+    node = at.get("pagination")[0]
+    assert isinstance(node, UnknownElement)
+    assert node.key == "pager"
+    assert node.value == 1
+    assert node.proto.set_value is False
+
+    inspectable_guidance = (
+        "AppTest can inspect this element but does not implement "
+        "interactions for it. Set its value through at.session_state if it "
+        "has a key, or use a Playwright e2e test."
+    )
+    with pytest.raises(AppTestError) as set_value_info:
+        node.set_value(2)
+    assert str(set_value_info.value) == (
+        "set_value() is not supported for pagination (key='pager'). "
+        f"{inspectable_guidance}"
+    )
+    with pytest.raises(AppTestError) as click_info:
+        node.click()
+    assert str(click_info.value) == (
+        f"click() is not supported for pagination (key='pager'). {inspectable_guidance}"
+    )
+    with pytest.raises(AppTestError) as markdown_info:
+        at.markdown[0].set_value("nope")
+    assert str(markdown_info.value) == (
+        f"set_value() is not supported for markdown. {inspectable_guidance}"
+    )
+
+
+def test_typed_widget_without_click_raises_app_test_error() -> None:
+    """Typed widgets without click() point testers at set_value()."""
+
+    def script():
+        import streamlit as st
+
+        st.checkbox("ok")
+
+    at = AppTest.from_function(script).run()
+    with pytest.raises(
+        AppTestError,
+        match=(
+            r"click\(\) is not supported for checkbox\. "
+            r"Use set_value\(\) or one of this widget's typed interaction methods\."
+        ),
+    ):
+        at.checkbox[0].click()
+
+
 def test_element_list_equality():
     """Test ElementList equality comparison."""
 
@@ -1830,6 +1937,38 @@ def test_chat_input_value_reflects_set_value_before_run():
     at = AppTest.from_function(script).run()
     at.chat_input[0].set_value("hello")
     assert at.chat_input[0].value == "hello"
+
+
+def test_chat_input_preserves_empty_string_value() -> None:
+    """Empty chat submit is visible before and after run, then resets."""
+
+    def script():
+        import streamlit as st
+
+        st.chat_input("say something")
+
+    at = AppTest.from_function(script).run()
+    at.chat_input[0].set_value("")
+    assert at.chat_input[0].value == ""
+    at.run()
+    assert at.chat_input[0].value == ""
+    at.run()
+    assert at.chat_input[0].value is None
+
+
+def test_chat_input_value_repr_when_accept_file() -> None:
+    """ChatInputValue from accept_file is printable without an audio field."""
+
+    def script():
+        import streamlit as st
+
+        st.chat_input("say something", accept_file=True)
+
+    at = AppTest.from_function(script).run()
+    at.chat_input[0].set_value("hello").run()
+    value = at.chat_input[0].value
+    assert isinstance(value, ChatInputValue)
+    assert repr(value) == "ChatInputValue(text='hello', files=[])"
 
 
 def test_color_picker_pick_adds_hash_prefix():
