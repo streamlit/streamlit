@@ -15,11 +15,11 @@
 from __future__ import annotations
 
 from difflib import get_close_matches
+from types import ModuleType
 from typing import TYPE_CHECKING, Final, NoReturn
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Mapping
-    from types import ModuleType
 
 # Exact former public names and the current public replacements they map to.
 # Ambiguous retired APIs (for example ``st.cache``) list every valid successor
@@ -30,6 +30,7 @@ _REMOVED_STREAMLIT_ATTRIBUTES: Final[Mapping[str, tuple[str, ...]]] = {
     "beta_container": ("container",),
     "beta_expander": ("expander",),
     "beta_secrets": ("secrets",),
+    "beta_set_page_config": ("set_page_config",),
     "cache": ("cache_data", "cache_resource"),
     "experimental_audio_input": ("audio_input",),
     "experimental_connection": ("connection",),
@@ -40,12 +41,13 @@ _REMOVED_STREAMLIT_ATTRIBUTES: Final[Mapping[str, tuple[str, ...]]] = {
     "experimental_memo": ("cache_data",),
     "experimental_rerun": ("rerun",),
     "experimental_set_query_params": ("query_params",),
+    "experimental_show": ("write",),
     "experimental_singleton": ("cache_resource",),
     "experimental_user": ("user",),
 }
 
-# Public namespaces that are modules, so they are excluded by the non-module
-# command filter used for the rest of the ``st`` surface.
+# Include these public module namespaces in typo suggestions; the non-module
+# filter below would otherwise drop them.
 _PUBLIC_STREAMLIT_NAMESPACES: Final[frozenset[str]] = frozenset(
     {"column_config", "components", "typing"}
 )
@@ -64,7 +66,7 @@ def public_streamlit_names(module: ModuleType) -> frozenset[str]:
     names = {
         key
         for key, value in module.__dict__.items()
-        if not key.startswith("_") and not isinstance(value, type(module))
+        if not key.startswith("_") and not isinstance(value, ModuleType)
     }
     names.update(
         namespace
@@ -102,18 +104,20 @@ def missing_streamlit_attribute_message(name: str, module: ModuleType) -> str:
     replacements = _REMOVED_STREAMLIT_ATTRIBUTES.get(name)
     if replacements is not None:
         return (
-            f"{prefix}. `{_st_name(name)}` has been removed. "
+            f"{prefix}. {_st_name(name)} has been removed. "
             f"Use {_format_st_names(replacements)} instead."
         )
 
     catalog = public_streamlit_names(module)
+    # st.input is a close match for st.info; list input widgets instead.
     if name == "input":
         input_commands = tuple(
             sorted(command for command in catalog if command.endswith("_input"))
         )
+        if not input_commands:
+            return prefix
         return (
-            f"{prefix}. Streamlit has no `{_st_name(name)}`. "
-            "Use a specific input command such as "
+            f"{prefix}. Use a specific input command such as "
             f"{_format_st_names(input_commands)}."
         )
 
@@ -140,7 +144,9 @@ def _st_name(name: str) -> str:
 
 
 def _format_st_names(names: Collection[str]) -> str:
-    labeled = [f"`{_st_name(name)}`" for name in names]
+    labeled = [_st_name(name) for name in names]
+    if not labeled:
+        return ""
     if len(labeled) == 1:
         return labeled[0]
     if len(labeled) == 2:

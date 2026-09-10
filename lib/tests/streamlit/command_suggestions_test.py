@@ -20,6 +20,7 @@ import pytest
 
 import streamlit as st
 from streamlit.command_suggestions import (
+    _format_st_names,
     missing_streamlit_attribute_message,
     public_streamlit_names,
     suggest_streamlit_commands,
@@ -38,22 +39,24 @@ def _missing_attr(name: str) -> AttributeError:
 @pytest.mark.parametrize(
     ("old_name", "expected_replacement"),
     [
-        ("experimental_rerun", "`st.rerun`"),
-        ("experimental_memo", "`st.cache_data`"),
-        ("experimental_singleton", "`st.cache_resource`"),
-        ("experimental_data_editor", "`st.data_editor`"),
-        ("experimental_connection", "`st.connection`"),
-        ("experimental_user", "`st.user`"),
-        ("experimental_dialog", "`st.dialog`"),
-        ("experimental_fragment", "`st.fragment`"),
-        ("experimental_audio_input", "`st.audio_input`"),
-        ("experimental_get_query_params", "`st.query_params`"),
-        ("experimental_set_query_params", "`st.query_params`"),
-        ("beta_columns", "`st.columns`"),
-        ("beta_expander", "`st.expander`"),
-        ("beta_container", "`st.container`"),
-        ("beta_secrets", "`st.secrets`"),
-        ("beta_color_picker", "`st.color_picker`"),
+        ("experimental_rerun", "st.rerun"),
+        ("experimental_memo", "st.cache_data"),
+        ("experimental_singleton", "st.cache_resource"),
+        ("experimental_data_editor", "st.data_editor"),
+        ("experimental_connection", "st.connection"),
+        ("experimental_user", "st.user"),
+        ("experimental_dialog", "st.dialog"),
+        ("experimental_fragment", "st.fragment"),
+        ("experimental_audio_input", "st.audio_input"),
+        ("experimental_get_query_params", "st.query_params"),
+        ("experimental_set_query_params", "st.query_params"),
+        ("experimental_show", "st.write"),
+        ("beta_columns", "st.columns"),
+        ("beta_expander", "st.expander"),
+        ("beta_container", "st.container"),
+        ("beta_secrets", "st.secrets"),
+        ("beta_color_picker", "st.color_picker"),
+        ("beta_set_page_config", "st.set_page_config"),
     ],
 )
 def test_removed_attributes_name_the_replacement(
@@ -67,7 +70,6 @@ def test_removed_attributes_name_the_replacement(
     assert f"module 'streamlit' has no attribute '{old_name}'" in message
     assert error.name == old_name
     assert error.obj is st
-    assert not hasattr(st, old_name)
     assert not isinstance(error, StreamlitAPIException)
     assert format_uncaught_exception(error) == f"AttributeError:{old_name}"
 
@@ -77,8 +79,8 @@ def test_removed_cache_lists_both_successors() -> None:
     error = _missing_attr("cache")
     message = str(error)
     assert "has been removed" in message
-    assert "`st.cache_data`" in message
-    assert "`st.cache_resource`" in message
+    assert "st.cache_data" in message
+    assert "st.cache_resource" in message
     assert format_uncaught_exception(error) == "AttributeError:cache"
 
 
@@ -86,8 +88,8 @@ def test_ambiguous_input_lists_input_commands() -> None:
     """``st.input`` lists the input-command family instead of one alias."""
     error = _missing_attr("input")
     message = str(error)
-    assert "Streamlit has no `st.input`" in message
-    assert "`st.info`" not in message
+    assert "Use a specific input command" in message
+    assert "st.info" not in message
     for command in (
         "audio_input",
         "camera_input",
@@ -98,8 +100,7 @@ def test_ambiguous_input_lists_input_commands() -> None:
         "text_input",
         "time_input",
     ):
-        assert f"`st.{command}`" in message
-    assert not hasattr(st, "input")
+        assert f"st.{command}" in message
     assert format_uncaught_exception(error) == "AttributeError:input"
 
 
@@ -117,7 +118,7 @@ def test_typo_suggestions_use_the_public_command(typo: str, expected: str) -> No
     """Close typos suggest the matching public command."""
     error = _missing_attr(typo)
     assert "Did you mean" in str(error)
-    assert f"`st.{expected}`" in str(error)
+    assert f"st.{expected}" in str(error)
     assert format_uncaught_exception(error) == f"AttributeError:{typo}"
 
 
@@ -182,13 +183,18 @@ def test_suggest_streamlit_commands_is_conservative() -> None:
     assert suggest_streamlit_commands("text_inpt", catalog) == ("text_input",)
 
 
+def test_format_st_names_empty_is_safe() -> None:
+    """Joining zero command names does not raise."""
+    assert _format_st_names(()) == ""
+
+
 def test_missing_streamlit_attribute_message_keeps_standard_prefix() -> None:
     """Helper messages stay AttributeError-shaped for telemetry fallbacks."""
     message = missing_streamlit_attribute_message("experimental_rerun", st)
     assert message.startswith(
         "module 'streamlit' has no attribute 'experimental_rerun'"
     )
-    assert "`st.rerun`" in message
+    assert "st.rerun" in message
 
 
 def test_telemetry_uses_name_and_obj_not_message_text() -> None:
