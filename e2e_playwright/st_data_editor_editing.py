@@ -141,6 +141,7 @@ cell_overlay_test_column_config = {
     # The e2e interaction testing logic requires all cells to be medium width to
     # calculate the cell positions correctly.
     "big_numbers": st.column_config.NumberColumn(
+        step=0.0001,
         width="medium",
     ),
     "text": st.column_config.TextColumn(

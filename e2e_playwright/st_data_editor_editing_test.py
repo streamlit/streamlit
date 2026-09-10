@@ -395,6 +395,23 @@ def test_number_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFunc
     _test_number_cell_editing(themed_app, assert_snapshot)
 
 
+def test_number_cell_editing_preserves_leading_decimal(app: Page) -> None:
+    """Test that sequential ".07" input stays literal and commits as 0.07."""
+    cell_editor = _get_editor(app, "cell_editor")
+    expect_canvas_to_be_visible(cell_editor)
+
+    click_on_cell(cell_editor, 1, 0, double_click=True, column_width="medium")
+    input_field = get_open_cell_overlay(app).locator(".gdg-input")
+    input_field.press("ControlOrMeta+A")
+    input_field.press_sequentially(".07", delay=50)
+
+    expect(input_field).to_have_value(".07")
+    input_field.press("Enter")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Edited DF:", "0.07", exact_match=False)
+
+
 @pytest.mark.performance
 def test_number_cell_editing_performance(
     app: Page, assert_snapshot: ImageCompareFunction
