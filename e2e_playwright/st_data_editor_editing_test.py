@@ -396,13 +396,21 @@ def test_number_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFunc
 
 
 def test_number_cell_editing_preserves_leading_decimal(app: Page) -> None:
-    """Test that sequential ".07" input stays literal and commits as 0.07."""
+    """Test that a leading decimal point survives sequential input.
+
+    Regression test for streamlit/streamlit#16909: the number overlay editor
+    reset its text from the parsed cell value on every keystroke, so typing
+    ".07" lost the leading "." and committed 7.
+    """
     cell_editor = _get_editor(app, "cell_editor")
     expect_canvas_to_be_visible(cell_editor)
 
     click_on_cell(cell_editor, 1, 0, double_click=True, column_width="medium")
-    input_field = get_open_cell_overlay(app).locator(".gdg-input")
-    input_field.press("ControlOrMeta+A")
+    cell_overlay = get_open_cell_overlay(app)
+    cell_overlay.click()
+    cell_overlay.press("ControlOrMeta+A")
+    input_field = cell_overlay.locator(".gdg-input")
+    # Sequential input reproduces the per-keystroke reset; fill() does not.
     input_field.press_sequentially(".07", delay=50)
 
     expect(input_field).to_have_value(".07")

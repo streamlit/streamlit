@@ -19,16 +19,17 @@ index face64122d35e884020eeabc6d96514141fc18d1..1e71f5198f0685882e1282cc2abd606d
 diff --git a/dist/cjs/internal/data-grid-overlay-editor/private/number-overlay-editor.js b/dist/cjs/internal/data-grid-overlay-editor/private/number-overlay-editor.js
 --- a/dist/cjs/internal/data-grid-overlay-editor/private/number-overlay-editor.js
 +++ b/dist/cjs/internal/data-grid-overlay-editor/private/number-overlay-editor.js
-@@ -13,6 +13,21 @@ function getThousandSeprator() {
+@@ -13,6 +13,22 @@ function getThousandSeprator() {
  const NumberOverlayEditor = p => {
 -    const { value, onChange, disabled, highlight, validatedSelection, fixedDecimals, allowNegative, thousandSeparator, decimalSeparator, } = p;
 +    const { value: cellValue, onChange, disabled, highlight, validatedSelection, fixedDecimals, allowNegative, thousandSeparator, decimalSeparator, } = p;
      const inputRef = React.useRef();
 +    const [value, setValue] = React.useState(() => Object.is(cellValue, -0) ? "-" : cellValue ?? "");
 +    const lastEmittedFloatValueRef = React.useRef(cellValue);
-+    React.useEffect(() => {
-+        // Preserve literal input when the parent echoes its parsed value. Replace
-+        // it when validation or another parent update supplies a different number.
++    React.useLayoutEffect(() => {
++        // Keep typed text when Glide re-renders with the same parsed float.
++        // Replace it when validation or another update sends a different number.
++        // See streamlit/streamlit#16909.
 +        if (!Object.is(cellValue, lastEmittedFloatValueRef.current)) {
 +            lastEmittedFloatValueRef.current = cellValue;
 +            setValue(Object.is(cellValue, -0) ? "-" : cellValue ?? "");
@@ -42,7 +43,7 @@ diff --git a/dist/cjs/internal/data-grid-overlay-editor/private/number-overlay-e
      React.useLayoutEffect(() => {
          if (validatedSelection !== undefined) {
              const range = typeof validatedSelection === "number" ? [validatedSelection, null] : validatedSelection;
-@@ -24,5 +39,5 @@ const NumberOverlayEditor = p => {
+@@ -24,5 +40,5 @@ const NumberOverlayEditor = p => {
              // decimalScale={3}
              // prefix={"$"}
 -            onValueChange: onChange })));
@@ -52,16 +53,17 @@ diff --git a/dist/cjs/internal/data-grid-overlay-editor/private/number-overlay-e
 diff --git a/dist/esm/internal/data-grid-overlay-editor/private/number-overlay-editor.js b/dist/esm/internal/data-grid-overlay-editor/private/number-overlay-editor.js
 --- a/dist/esm/internal/data-grid-overlay-editor/private/number-overlay-editor.js
 +++ b/dist/esm/internal/data-grid-overlay-editor/private/number-overlay-editor.js
-@@ -13,6 +13,21 @@ function getThousandSeprator() {
+@@ -13,6 +13,22 @@ function getThousandSeprator() {
  const NumberOverlayEditor = p => {
 -    const { value, onChange, disabled, highlight, validatedSelection, fixedDecimals, allowNegative, thousandSeparator, decimalSeparator, } = p;
 +    const { value: cellValue, onChange, disabled, highlight, validatedSelection, fixedDecimals, allowNegative, thousandSeparator, decimalSeparator, } = p;
      const inputRef = React.useRef();
 +    const [value, setValue] = React.useState(() => Object.is(cellValue, -0) ? "-" : cellValue ?? "");
 +    const lastEmittedFloatValueRef = React.useRef(cellValue);
-+    React.useEffect(() => {
-+        // Preserve literal input when the parent echoes its parsed value. Replace
-+        // it when validation or another parent update supplies a different number.
++    React.useLayoutEffect(() => {
++        // Keep typed text when Glide re-renders with the same parsed float.
++        // Replace it when validation or another update sends a different number.
++        // See streamlit/streamlit#16909.
 +        if (!Object.is(cellValue, lastEmittedFloatValueRef.current)) {
 +            lastEmittedFloatValueRef.current = cellValue;
 +            setValue(Object.is(cellValue, -0) ? "-" : cellValue ?? "");
@@ -75,7 +77,7 @@ diff --git a/dist/esm/internal/data-grid-overlay-editor/private/number-overlay-e
      React.useLayoutEffect(() => {
          if (validatedSelection !== undefined) {
              const range = typeof validatedSelection === "number" ? [validatedSelection, null] : validatedSelection;
-@@ -24,5 +39,5 @@ const NumberOverlayEditor = p => {
+@@ -24,5 +40,5 @@ const NumberOverlayEditor = p => {
              // decimalScale={3}
              // prefix={"$"}
 -            onValueChange: onChange })));
