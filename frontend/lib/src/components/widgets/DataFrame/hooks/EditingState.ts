@@ -327,6 +327,7 @@ class EditingState {
 
   /**
    * Deletes the given rows from the editing state.
+   * Does not mutate the input array.
    *
    * @param rows - The rows to delete
    */
