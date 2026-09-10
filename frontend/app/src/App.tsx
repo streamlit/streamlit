@@ -937,7 +937,7 @@ export class App extends PureComponent<Props, State> {
         notNullOrUndefined(environmentInfo) &&
         notNullOrUndefined(environmentInfo.streamlitVersion)
       ) {
-        return currentStreamlitVersion != environmentInfo.streamlitVersion
+        return currentStreamlitVersion !== environmentInfo.streamlitVersion
       }
     }
 
@@ -2897,7 +2897,9 @@ export class App extends PureComponent<Props, State> {
             className={outerDivClass}
             data-testid="stApp"
             data-test-script-state={
-              scriptRunId == INITIAL_SCRIPT_RUN_ID ? "initial" : scriptRunState
+              scriptRunId === INITIAL_SCRIPT_RUN_ID
+                ? "initial"
+                : scriptRunState
             }
             data-test-connection-state={connectionState}
           >

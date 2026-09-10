@@ -333,7 +333,7 @@ class EditingState {
   deleteRows(rows: number[]): void {
     // Delete row one by one starting from the row with the highest index
     rows
-      .sort((a, b) => b - a)
+      .toSorted((a, b) => b - a)
       .forEach(row => {
         this.deleteRow(row)
       })
@@ -361,7 +361,7 @@ class EditingState {
       // Add to the set
       this.deletedRows.push(row)
       // Sort the deleted rows (important for calculation of the original row index)
-      this.deletedRows = this.deletedRows.sort((a, b) => a - b)
+      this.deletedRows = this.deletedRows.toSorted((a, b) => a - b)
     }
 
     // Remove all cells from cell state associated with this row:

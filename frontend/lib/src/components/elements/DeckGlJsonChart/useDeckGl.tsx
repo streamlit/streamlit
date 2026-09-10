@@ -450,7 +450,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     }
 
     const isUsingCarto =
-      jsonCopy?.mapProvider == "carto" ||
+      jsonCopy?.mapProvider === "carto" ||
       (jsonCopy?.mapStyle && jsonCopy.mapStyle?.indexOf("cartocdn") >= 0)
 
     if (isUsingCarto && !jsonCopy.cartoKey) {

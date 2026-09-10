@@ -388,7 +388,7 @@ function useWidgetState({
           // keeps the widget value unchanged when only the display order
           // changes (e.g. after sorting), avoiding spurious reruns / on_select
           // callbacks.
-          .sort((a, b) => a - b)
+          .toSorted((a, b) => a - b)
         selectionState.selection.columns = newSelection.columns
           .toArray()
           .map(columnIdx => getColumnName(columns[columnIdx]))

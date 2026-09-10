@@ -196,6 +196,14 @@ describe("EditingState class", () => {
     expect(editingState.getNumRows()).toEqual(0)
   })
 
+  it("does not mutate the rows array passed to deleteRows", () => {
+    const editingState = new EditingState(3)
+    const rows = [0, 2]
+    editingState.deleteRows(rows)
+    expect(rows).toEqual([0, 2])
+    expect(editingState.getNumRows()).toEqual(1)
+  })
+
   it("ignores rows with required empty values in toJson", () => {
     const NUM_OF_ROWS = 3
     const editingState = new EditingState(NUM_OF_ROWS)
