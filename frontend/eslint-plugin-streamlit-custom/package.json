@@ -21,7 +21,7 @@
   "devDependencies": {
     "@typescript-eslint/rule-tester": "^8.69.0",
     "@typescript-eslint/utils": "^8.69.0",
-    "eslint": "^10.9.1",
+    "eslint": "^10.10.0",
     "typescript": "^6.0.3",
     "typescript-v7": "npm:typescript@7.0.2",
     "typesync": "^0.14.3",
