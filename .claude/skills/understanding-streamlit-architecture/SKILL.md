@@ -73,7 +73,7 @@ Streamlit's execution model differs from traditional web frameworks:
 
 **Rerun triggers**:
 1. **Widget interaction**: User clicks button, moves slider, etc. (widgets with `on_change="ignore"` update without a rerun)
-2. **Source code change**: File watcher detects script modification
+2. **Source code change**: File watcher detects script modification. Watched modules are evicted from `sys.modules` at the next run start, after any in-flight user `exec()` finishes
 3. **`st.rerun()`**: Explicit programmatic rerun
 4. **Fragment timer**: `@st.fragment(run_every=...)` periodic reruns
 
@@ -108,7 +108,8 @@ Streamlit's execution model differs from traditional web frameworks:
 |-----------|------|---------|
 | Runtime | `lib/streamlit/runtime/runtime.py` | Singleton managing app lifecycle and sessions |
 | AppSession | `lib/streamlit/runtime/app_session.py` | Per-browser-tab: ScriptRunner + SessionState + ForwardMsgQueue |
-| ScriptRunner | `lib/streamlit/runtime/scriptrunner/script_runner.py` | Executes user scripts in separate thread |
+| ScriptRunner | `lib/streamlit/runtime/scriptrunner/script_runner.py` | Executes user scripts in a separate thread; another ScriptRunner's flush cannot pop `sys.modules` during import |
+| LocalSourcesWatcher | `lib/streamlit/watcher/local_sources_watcher.py` | Watches local sources; defers `sys.modules` eviction until no ScriptRunner is inside `exec()` |
 | DeltaGenerator | `lib/streamlit/delta_generator.py` | API entry point using mixin pattern |
 | SessionState | `lib/streamlit/runtime/state/session_state.py` | Widget values and user variables |
 | Elements | `lib/streamlit/elements/` | Backend implementation of `st.*` commands |

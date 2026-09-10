@@ -17,6 +17,7 @@ from __future__ import annotations
 import os
 import sys
 import threading
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, Final, NamedTuple, cast
 
 from streamlit import config, env_util, file_util
@@ -30,12 +31,38 @@ from streamlit.watcher.path_watcher import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Generator
     from types import ModuleType
 
     from streamlit.runtime.pages_manager import PagesManager
 
 _LOGGER: Final = get_logger(__name__)
+
+# Process-wide barrier so flush_pending_evictions never pops sys.modules
+# while any ScriptRunner thread is inside user exec() (gh-6404).
+_SCRIPT_EXEC_CONDITION: Final = threading.Condition()
+_script_exec_count = 0
+
+
+@contextmanager
+def script_execution() -> Generator[None, None, None]:
+    """Register that a ScriptRunner thread is inside user ``exec()``.
+
+    Process-wide: every ScriptRunner ``exec()`` holds this.
+    ``flush_pending_evictions`` waits until the count is 0, then pops
+    ``sys.modules`` under the same lock. Do not call flush from inside
+    this context (self-deadlock).
+    """
+    global _script_exec_count  # noqa: PLW0603
+    try:
+        with _SCRIPT_EXEC_CONDITION:
+            _script_exec_count += 1
+        yield
+    finally:
+        with _SCRIPT_EXEC_CONDITION:
+            _script_exec_count -= 1
+            if _script_exec_count == 0:
+                _SCRIPT_EXEC_CONDITION.notify_all()
 
 
 class WatchedModule(NamedTuple):
@@ -184,18 +211,25 @@ class LocalSourcesWatcher:
     def on_script_run(self) -> None:
         """Hook called by ``ScriptRunner`` at the start of each script run.
 
-        Runs on the script thread before any user code executes.  Currently
-        flushes deferred ``sys.modules`` evictions so that the watcher thread
-        never mutates ``sys.modules`` while user code is running.
+        Flushes deferred evictions on the script thread before this run's
+        ``exec()``. Waits if any other ScriptRunner is still inside
+        ``script_execution()`` (fastReruns overlap, gh-6404).
         """
         self.flush_pending_evictions()
 
     def flush_pending_evictions(self) -> None:
         """Remove pending watched modules from ``sys.modules``.
 
-        Called at the start of each script run on the script thread so that
-        ``sys.modules`` is not mutated from the file watcher thread while user
-        code (or cache serialization) is executing.
+        Called at the start of each script run on the script thread. The
+        watcher thread only queues names; this method performs the pops.
+
+        If any ScriptRunner is inside ``script_execution()``, waits until
+        every such context exits (the full in-flight ``exec()``, not just
+        import), then pops while holding the barrier so a new ``exec()``
+        cannot start mid-eviction. A runaway script that never leaves
+        ``exec()`` therefore delays file-change reruns until it ends.
+        Returns immediately when nothing is pending. Must not be called
+        from a thread that already holds ``script_execution()``.
         """
         with self._pending_evictions_lock:
             pending = self._pending_evictions
@@ -204,14 +238,15 @@ class LocalSourcesWatcher:
         if not pending:
             return
 
-        prefixes = tuple(f"{name}." for name in pending)
-        all_to_evict = set(pending)
-        for key in list(sys.modules.keys()):
-            if key.startswith(prefixes):
-                all_to_evict.add(key)
-
-        for name in all_to_evict:
-            sys.modules.pop(name, None)
+        with _SCRIPT_EXEC_CONDITION:
+            _SCRIPT_EXEC_CONDITION.wait_for(lambda: _script_exec_count == 0)
+            prefixes = tuple(f"{name}." for name in pending)
+            all_to_evict = set(pending)
+            for key in list(sys.modules.keys()):
+                if key.startswith(prefixes):
+                    all_to_evict.add(key)
+            for name in all_to_evict:
+                sys.modules.pop(name, None)
 
     def close(self) -> None:
         for wm in self._watched_modules.values():

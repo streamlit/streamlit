@@ -61,6 +61,7 @@ from streamlit.runtime.state import (
 )
 from streamlit.signal_util import Signal
 from streamlit.source_util import page_sort_key
+from streamlit.watcher import local_sources_watcher
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
@@ -573,7 +574,8 @@ class ScriptRunner:
             raise RuntimeError("Nested set_execing_flag call")
         self._execing = True
         try:
-            yield
+            with local_sources_watcher.script_execution():
+                yield
         finally:
             self._execing = False
 
