@@ -36,8 +36,9 @@ dependencies = ["streamlit"]
 [tool.uv]
 # The development toolchain is the default local environment.
 default-groups = ["dev"]
-# Keep this floor low enough for Dependabot's bundled uv.
-# Raise it when Dependabot ships a newer uv and we want a tighter floor.
+# Keep this floor compatible with Dependabot's bundled uv and downstream CI
+# consumers that create environments from this repository.
+# Check their compatibility before raising it.
 required-version = ">=0.11.8"
 # Resolve the development lock only for the currently supported Python range.
 environments = ["python_version < '3.15'"]
