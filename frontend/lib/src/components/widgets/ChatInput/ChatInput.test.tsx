@@ -810,7 +810,7 @@ describe("ChatInput widget", () => {
         screen
           .getAllByTestId("stFileChipName")
           .map(el => el.getAttribute("title"))
-          .sort()
+          .toSorted()
       ).toEqual(["folder/file1.txt", "folder/file2.txt"])
     })
 
