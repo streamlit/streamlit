@@ -106,22 +106,22 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | Skill | When to use |
 |-------|-------------|
 | `checking-changes` | After making backend or frontend changes, before committing |
-| `assessing-external-test-risk` | When reviewing branch or PR changes to decide whether `@pytest.mark.external_test` coverage is needed for externally hosted or embedded scenarios |
+| `assessing-external-test-risk` | When reviewing branch or PR changes to decide whether `@pytest.mark.external_test` coverage is needed for externally hosted or embedded scenarios. Manual only (`/assessing-external-test-risk`); not auto-invoked. |
 | `debugging-streamlit` | When testing code changes, investigating bugs, or checking UI behavior |
 | `discovering-make-commands` | To list available `make` commands for build, test, lint, or format tasks |
 | `fixing-streamlit-ci` | When CI checks fail and you need to diagnose and fix errors |
 | `fixing-flaky-e2e-tests` | When E2E tests fail intermittently, show timeout errors, have snapshot mismatches, or exhibit browser-specific failures |
-| `implementing-feature` | When you have a spec folder, URL, or GitHub issue to implement end-to-end, or want the next papercut enhancement selected automatically |
+| `implementing-feature` | When you have a spec folder, URL, or GitHub issue to implement end-to-end, or want the next papercut enhancement selected automatically. Manual only (`/implementing-feature`); not auto-invoked. |
 | `understanding-streamlit-architecture` | When debugging cross-layer issues, understanding how features work end-to-end, or onboarding to the codebase |
 | `creating-pull-requests` | When changes are ready to be submitted as a PR with proper labels and formatting. Manual only (`/creating-pull-requests`); not auto-invoked. |
 | `addressing-pr-review-comments` | When a PR has reviewer feedback to address, including inline and general PR comments |
 | `updating-internal-docs` | After significant codebase changes to review and update internal documentation |
 | `sharing-pr-agent-artifacts` | When you have agent-generated artifacts (specs, plans) relevant for the current PR to share for reviewing |
 | `writing-spec` | When designing new API commands, widgets, or significant changes that need team review before implementation |
-| `finalizing-pr` | When changes are ready to merge — runs quality checks, simplifies code, and creates/updates the PR |
+| `finalizing-pr` | When changes are ready to merge — runs quality checks, simplifies code, and creates/updates the PR. Manual only (`/finalizing-pr`); not auto-invoked. |
 | `generating-changelog` | When preparing release notes between two git tags |
-| `improving-frontend-coverage` | When you want to systematically improve frontend test coverage with high-value test cases |
-| `improving-python-coverage` | When you want to systematically improve Python test coverage with high-value test cases |
+| `improving-frontend-coverage` | When you want to systematically improve frontend test coverage with high-value test cases. Manual only (`/improving-frontend-coverage`); not auto-invoked. |
+| `improving-python-coverage` | When you want to systematically improve Python test coverage with high-value test cases. Manual only (`/improving-python-coverage`); not auto-invoked. |
 | `reviewing-readability` | When reviewing a PR, branch, or changes for comment, docstring, and naming readability — produces findings with concrete proposed rewrites |
 | `reviewing-pr-description` | When reviewing a PR's title and description for clarity and conciseness |
 
