@@ -1407,7 +1407,7 @@ class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
     def test_background_refresh_rejects_awaitable(
         self, _, cache_decorator, timer_patch: Mock
     ):
-        """An invalid refresh result is closed and never replaces the stale value."""
+        """A rejected coroutine is closed, keeps stale data, and starts cooldown."""
         call_count = [0]
         created_coroutines = []
 

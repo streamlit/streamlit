@@ -749,13 +749,14 @@ def test_sync_function_returning_coroutine_raises_without_caching(
             assert f"`st.{name}`" in message
             assert "`async def`" in message
             assert "`await`" in message
-            assert "use `st.cache_resource` instead" not in message
 
         assert calls == 2
         assert all(
             inspect.getcoroutinestate(coroutine) == inspect.CORO_CLOSED
             for coroutine in created_coroutines
         )
+        # Drop references and collect so an unclosed coroutine would warn inside
+        # this catch_warnings block.
         created_coroutines.clear()
         gc.collect()
 

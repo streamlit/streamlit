@@ -104,7 +104,10 @@ RefreshMode: TypeAlias = Literal["foreground", "background"]
 def _reject_awaitable_return_value(
     cache_type: CacheType, func: Callable[..., Any], value: Any
 ) -> None:
-    """Reject awaitables returned by synchronous cached functions."""
+    """Raise if a synchronous cached function returned an awaitable.
+
+    Closes unstarted native coroutines before raising; other awaitables are left as-is.
+    """
     if not inspect.isawaitable(value):
         return
 
@@ -117,7 +120,7 @@ def _reject_awaitable_return_value(
         # untouched; the caller may still own their lifecycle.
         value.close()
 
-    raise CachedFunctionReturnedAwaitableError(cache_type, func)
+    raise CachedFunctionReturnedAwaitableError(cache_type, func, value)
 
 
 # Unset or invalid config still hard-expires background caches at 2 * ttl.
