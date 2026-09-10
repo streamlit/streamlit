@@ -84,7 +84,7 @@
     "oxfmt": "^0.66.0",
     "oxlint": "^1.81.0",
     "react": "^18.2.0",
-    "react-aria": "^3.52.0",
+    "react-aria": "^3.52.1",
     "react-dom": "^18.2.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.69.0",
