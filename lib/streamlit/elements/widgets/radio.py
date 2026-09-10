@@ -56,6 +56,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     get_session_state,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.string_util import to_help_str
 from streamlit.type_util import check_python_comparable
@@ -465,6 +466,10 @@ class RadioMixin:
         width: Width = "content",
     ) -> T | None:
         key = to_key(key)
+        on_change = validate_on_change_mode(
+            on_change,
+            supported_modes=(),
+        )
 
         check_widget_policies(
             self.dg,

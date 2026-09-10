@@ -69,7 +69,11 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     get_script_run_ctx,
 )
-from streamlit.runtime.state import WidgetCallback, register_widget
+from streamlit.runtime.state import (
+    WidgetCallback,
+    register_widget,
+    validate_on_change_mode,
+)
 from streamlit.util import ReadOnlyAttributeDictionary
 
 if TYPE_CHECKING:
@@ -1059,10 +1063,12 @@ class ArrowMixin:
         """
         import pyarrow as pa
 
-        if on_select not in {"ignore", "rerun"} and not callable(on_select):
-            raise StreamlitValueError(
-                "on_select", ["'rerun'", "'ignore'", "a callback function"]
-            )
+        on_select_callback = validate_on_change_mode(
+            on_select,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+            param_name="on_select",
+        )
 
         key = to_key(key)
         is_selection_activated = on_select != "ignore"
@@ -1080,13 +1086,11 @@ class ArrowMixin:
 
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
-            is_callback = callable(on_select)
+            is_callback = on_select_callback is not None
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_select)  # ty: ignore[redundant-cast]
-                if is_callback
-                else None,
+                on_change=on_select_callback,
                 default_value=None,
                 writes_allowed=True,
                 enable_check_callback_rules=is_callback,
@@ -1299,7 +1303,7 @@ class ArrowMixin:
             )
             widget_state = register_widget(
                 proto.id,
-                on_change_handler=on_select if callable(on_select) else None,
+                on_change_handler=on_select_callback,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,
                 ctx=ctx,

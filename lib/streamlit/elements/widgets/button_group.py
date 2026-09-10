@@ -66,6 +66,7 @@ from streamlit.runtime.state import (
     PersistStateOption,
     get_session_state,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.string_util import extract_leading_icon, to_help_str
 
@@ -1355,6 +1356,10 @@ class ButtonGroupMixin:
             raise StreamlitValueError("style", ["'pills'", "'segmented_control'"])
 
         key = to_key(key)
+        on_change = validate_on_change_mode(
+            on_change,
+            supported_modes=(),
+        )
 
         _default = default
         if default is not None and len(default) == 0:

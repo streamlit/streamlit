@@ -102,7 +102,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
 
   const mapboxToken = element.mapboxToken || contextMapboxToken
   const usesMapbox =
-    deck.mapProvider == "mapbox" ||
+    deck.mapProvider === "mapbox" ||
     (deck?.mapStyle && deck.mapStyle?.indexOf("mapbox") >= 0)
   const showBasemap = useMemo(
     () =>

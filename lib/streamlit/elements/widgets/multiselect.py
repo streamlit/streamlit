@@ -723,11 +723,9 @@ class MultiSelectMixin:
         ctx: ScriptRunContext | None = None,
     ) -> list[T] | list[T | str]:
         key = to_key(key)
-
-        validate_on_change_mode(on_change)
-
-        on_change_callback: WidgetCallback | None = (
-            on_change if callable(on_change) else None
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
         )
 
         widget_name = "multiselect"

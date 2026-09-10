@@ -849,7 +849,7 @@ describe("DateInput", () => {
         .queryAllByRole("button", { expanded: false })
         .filter(el => el.getAttribute("aria-haspopup") === "listbox")
         .map(el => el.getAttribute("aria-label"))
-      expect(pickerNames.sort()).toEqual(["month", "year"])
+      expect(pickerNames.toSorted()).toEqual(["month", "year"])
       expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
     })
 

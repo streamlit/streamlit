@@ -385,7 +385,7 @@ const enforceMemo = createRule<[], MessageIds>({
 
       // Apply fixes in reverse order to avoid position shifts
       return exportMatches
-        .reverse()
+        .toReversed()
         .map(({ start, end }) =>
           fixer.replaceTextRange([start, end], `memo(${componentName})`)
         )

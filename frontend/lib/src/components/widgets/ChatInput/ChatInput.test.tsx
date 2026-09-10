@@ -430,6 +430,46 @@ describe("ChatInput widget", () => {
       expect(button).not.toBeDisabled()
     })
 
+    it("submits an attachment with explicit empty text", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        acceptFile: ChatInputProto.AcceptFile.SINGLE,
+        maxUploadSizeMb: 50,
+      })
+      const spy = vi.spyOn(props.widgetMgr, "setChatInputValue")
+      render(<ChatInput {...props} />)
+
+      const file = new File(["attachment contents"], "attachment.txt", {
+        type: "text/plain",
+      })
+      const uploadButton = screen.getByTestId("stChatInputFileUploadButton")
+      const fileInput = uploadButton.querySelector("input") as HTMLInputElement
+      await user.upload(fileInput, file)
+
+      const submitButton = screen.getByTestId("stChatInputSubmitButton")
+      await waitFor(() => {
+        expect(submitButton).toBeEnabled()
+      })
+      await user.click(submitButton)
+
+      expect(spy).toHaveBeenCalledWith(
+        props.element.id,
+        expect.objectContaining({
+          data: "",
+          fileUploaderState: expect.objectContaining({
+            uploadedFileInfo: [
+              expect.objectContaining({
+                fileId: "attachment.txt",
+                name: "attachment.txt",
+                size: file.size,
+              }),
+            ],
+          }),
+        }),
+        { formId: undefined, fragmentId: undefined, fromUser: true }
+      )
+    })
+
     it("disables submit button when files are uploading", async () => {
       const user = userEvent.setup()
       const props = getProps({
@@ -810,7 +850,7 @@ describe("ChatInput widget", () => {
         screen
           .getAllByTestId("stFileChipName")
           .map(el => el.getAttribute("title"))
-          .sort()
+          .toSorted()
       ).toEqual(["folder/file1.txt", "folder/file2.txt"])
     })
 
