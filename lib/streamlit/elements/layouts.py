@@ -52,7 +52,7 @@ from streamlit.errors import (
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.state import register_widget
+from streamlit.runtime.state import register_widget, validate_on_change_mode
 from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
@@ -1009,11 +1009,11 @@ class LayoutsMixin:
                     ["a string for each tab label"],
                 )
 
-        if not callable(on_change) and on_change not in {"ignore", "rerun"}:
-            raise StreamlitValueError(
-                "on_change",
-                ["'rerun'", "'ignore'", "a callback function"],
-            )
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+        )
 
         key = to_key(key)
         default_index = tabs.index(default) if default else 0
@@ -1024,13 +1024,11 @@ class LayoutsMixin:
         current_tab_label = tabs[default_index]
 
         if is_stateful:
-            is_callback = callable(on_change)
+            is_callback = on_change_callback is not None
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_change)  # ty: ignore[redundant-cast]
-                if is_callback
-                else None,
+                on_change=on_change_callback,
                 default_value=None,
                 writes_allowed=True,
                 enable_check_callback_rules=is_callback,
@@ -1058,9 +1056,9 @@ class LayoutsMixin:
                 serializer=serde.serialize,
                 ctx=ctx,
                 value_type="string_value",
-                on_change_handler=on_change if callable(on_change) else None,
-                args=args if callable(on_change) else None,
-                kwargs=kwargs if callable(on_change) else None,
+                on_change_handler=on_change_callback,
+                args=args if is_callback else None,
+                kwargs=kwargs if is_callback else None,
             )
 
             current_tab_label = tabs_state.value
@@ -1386,10 +1384,11 @@ class LayoutsMixin:
         if label is None:
             raise StreamlitMissingRequiredParameterError("label")
 
-        if not callable(on_change) and on_change not in {"ignore", "rerun"}:
-            raise StreamlitValueError(
-                "on_change", ["'rerun'", "'ignore'", "a callback function"]
-            )
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+        )
 
         if type not in EXPANDABLE_TYPE_TO_PROTO_MAPPING:
             raise StreamlitValueError(
@@ -1404,13 +1403,11 @@ class LayoutsMixin:
         block_id: str | None = None
 
         if is_stateful:
-            is_callback = callable(on_change)
+            is_callback = on_change_callback is not None
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_change)  # ty: ignore[redundant-cast]
-                if is_callback
-                else None,
+                on_change=on_change_callback,
                 default_value=None,
                 writes_allowed=True,
                 enable_check_callback_rules=is_callback,
@@ -1439,9 +1436,9 @@ class LayoutsMixin:
                 serializer=serde.serialize,
                 ctx=ctx,
                 value_type="bool_value",
-                on_change_handler=on_change if callable(on_change) else None,
-                args=args if callable(on_change) else None,
-                kwargs=kwargs if callable(on_change) else None,
+                on_change_handler=on_change_callback,
+                args=args if is_callback else None,
+                kwargs=kwargs if is_callback else None,
             )
 
             current_expanded = expander_state.value
@@ -1782,10 +1779,11 @@ class LayoutsMixin:
                 "type", ["'primary'", "'secondary'", "'tertiary'"]
             )
 
-        if not callable(on_change) and on_change not in {"ignore", "rerun"}:
-            raise StreamlitValueError(
-                "on_change", ["'rerun'", "'ignore'", "a callback function"]
-            )
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+        )
 
         key = to_key(key)
         is_stateful = on_change != "ignore"
@@ -1795,13 +1793,11 @@ class LayoutsMixin:
         block_id: str | None = None
 
         if is_stateful:
-            is_callback = callable(on_change)
+            is_callback = on_change_callback is not None
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_change)  # ty: ignore[redundant-cast]
-                if is_callback
-                else None,
+                on_change=on_change_callback,
                 default_value=None,
                 writes_allowed=True,
                 enable_check_callback_rules=is_callback,
@@ -1831,9 +1827,9 @@ class LayoutsMixin:
                 serializer=serde.serialize,
                 ctx=ctx,
                 value_type="bool_value",
-                on_change_handler=on_change if callable(on_change) else None,
-                args=args if callable(on_change) else None,
-                kwargs=kwargs if callable(on_change) else None,
+                on_change_handler=on_change_callback,
+                args=args if is_callback else None,
+                kwargs=kwargs if is_callback else None,
                 disabled=disabled,
             )
 

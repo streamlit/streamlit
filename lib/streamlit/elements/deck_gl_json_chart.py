@@ -52,6 +52,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_r
 from streamlit.runtime.state import (
     WidgetCallback,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.util import ReadOnlyAttributeDictionary
 
@@ -592,23 +593,23 @@ class PydeckMixin:
         key = to_key(key)
         is_selection_activated = on_select != "ignore"
 
-        if on_select not in {"ignore", "rerun"} and not callable(on_select):
-            raise StreamlitValueError(
-                "on_select", ["'rerun'", "'ignore'", "a callback function"]
-            )
+        on_select_callback = validate_on_change_mode(
+            on_select,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+            param_name="on_select",
+        )
 
         if is_selection_activated:
             # Selections are activated, treat Pydeck as a widget:
             pydeck_proto.selection_mode.extend(parse_selection_mode(selection_mode))
 
             # Run some checks that are only relevant when selections are activated
-            is_callback = callable(on_select)
+            is_callback = on_select_callback is not None
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_select)  # ty: ignore[redundant-cast]
-                if is_callback
-                else None,
+                on_change=on_select_callback,
                 default_value=None,
                 writes_allowed=False,
                 enable_check_callback_rules=is_callback,
@@ -636,7 +637,7 @@ class PydeckMixin:
                 pydeck_proto.id,
                 ctx=ctx,
                 deserializer=serde.deserialize,
-                on_change_handler=on_select if callable(on_select) else None,
+                on_change_handler=on_select_callback,
                 serializer=serde.serialize,
                 value_type="string_value",
             )
