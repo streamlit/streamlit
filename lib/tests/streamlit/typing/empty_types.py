@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     # st.empty return type tests
     # =====================================================================
 
-    # Basic usage - returns a single-element container
+    # Basic usage - returns DeltaGenerator
     assert_type(empty(), DeltaGenerator)
 
     # Returned container can be written to directly
@@ -41,11 +41,8 @@ if TYPE_CHECKING:
     # Calling empty() on the placeholder clears it and still returns DeltaGenerator
     assert_type(placeholder.empty(), DeltaGenerator)
 
-    # Documented ``with st.empty():`` form. DeltaGenerator.__enter__ returns None
-    # (and does so at runtime), so the with-target is None rather than the container.
-    with empty():
-        pass
-
+    # `with empty():` is valid. `DeltaGenerator.__enter__` returns None, so `as`
+    # binds None rather than the placeholder.
     with empty() as ctx:
         assert_type(ctx, None)
 
