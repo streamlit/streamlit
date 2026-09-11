@@ -288,7 +288,7 @@ function SingleDateInput({
       const segments = triggerRef.current?.querySelectorAll<HTMLElement>(
         '[role="spinbutton"]'
       )
-      const lastSegment = segments?.[segments.length - 1]
+      const lastSegment = segments ? Array.from(segments).at(-1) : undefined
       if (lastSegment) {
         lastSegment.focus()
       } else {
@@ -462,9 +462,10 @@ function SingleDateInput({
       const segments = wrapper.querySelectorAll<HTMLElement>(
         '[role="spinbutton"]'
       )
+      const segmentList = Array.from(segments)
       const isLeavingField =
-        (!e.shiftKey && e.target === segments[segments.length - 1]) ||
-        (e.shiftKey && e.target === segments[0])
+        (!e.shiftKey && e.target === segmentList.at(-1)) ||
+        (e.shiftKey && e.target === segmentList[0])
       if (isLeavingField) {
         setIsOpen(false)
       }
@@ -607,7 +608,7 @@ function SingleDateInput({
         </StyledTrailingIcons>
         {error && (
           <StyledVisuallyHidden id={errorId} role="alert">
-            {error.replace(/\*\*/g, "")}
+            {error.replaceAll("**", "")}
           </StyledVisuallyHidden>
         )}
       </StyledDateInputWrapper>

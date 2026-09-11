@@ -1367,12 +1367,15 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
       //
       // Unordered lists (-, +, *), headings (#), and blockquotes (>)
       // Note: > doesn't need lookahead (always a blockquote), others need (?=\s|$)
-      processed = processed.replace(
+      processed = processed.replaceAll(
         /^(\s*)((?:[+\-*]|#+)(?=\s|$)|>)/gm,
         "$1\\$2"
       )
       // Ordered lists (1., 2., etc.): escape only the punctuation, not the digits
-      processed = processed.replace(/^(\s*)(\d+)([.)])(?=\s|$)/gm, "$1$2\\$3")
+      processed = processed.replaceAll(
+        /^(\s*)(\d+)([.)])(?=\s|$)/gm,
+        "$1$2\\$3"
+      )
     }
 
     // Complete incomplete markdown syntax (e.g., unclosed **bold) during streaming.

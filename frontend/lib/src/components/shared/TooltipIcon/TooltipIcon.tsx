@@ -163,7 +163,7 @@ export function getHelpTooltipAriaLabel(label?: string | null): string {
   // label), so we fall back to a generic "Help" label rather than returning an
   // empty accessible name.
   const trimmed = label?.trim()
-  const normalized = trimmed ? trimmed.replace(/\s+/g, " ") : null
+  const normalized = trimmed ? trimmed.replaceAll(/\s+/g, " ") : null
   return normalized ? `Help for ${normalized}` : "Help"
 }
 

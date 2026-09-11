@@ -525,7 +525,7 @@ export function arrayToCopyValue(array?: unknown[] | null): string {
     array.map((x: unknown) =>
       // Replace commas with spaces since commas are used to
       // separate the list items.
-      typeof x === "string" && x.includes(",") ? x.replace(/,/g, " ") : x
+      typeof x === "string" && x.includes(",") ? x.replaceAll(",", " ") : x
     )
   )
 }
@@ -659,7 +659,7 @@ export function countDecimals(value: number): number {
 
   let numberStr = value.toString()
 
-  if (numberStr.indexOf("e") !== -1) {
+  if (numberStr.includes("e")) {
     // Handle scientific notation
     numberStr = value.toLocaleString("fullwide", {
       useGrouping: false,
@@ -667,7 +667,7 @@ export function countDecimals(value: number): number {
     })
   }
 
-  if (numberStr.indexOf(".") === -1) {
+  if (!numberStr.includes(".")) {
     // Fallback to 0 decimals, this can happen with
     // extremely large or small numbers
     return 0
@@ -710,7 +710,7 @@ const LINE_BREAK_REGEX = new RegExp(/(\r\n|\n|\r)/gm)
  * @returns The text without line breaks.
  */
 export function removeLineBreaks(text: string): string {
-  if (text.indexOf("\n") !== -1) {
+  if (text.includes("\n")) {
     return text.replace(LINE_BREAK_REGEX, " ")
   }
   return text
@@ -744,7 +744,7 @@ export function getLinkDisplayValueFromRegex(
       // return the first matching group
       // Since this might be a URI encoded value, we decode it.
       // Note: we replace + with %20 to correctly convert + to whitespaces.
-      return decodeURIComponent(patternMatch[1].replace(/\+/g, "%20"))
+      return decodeURIComponent(patternMatch[1].replaceAll("+", "%20"))
     }
 
     // if the regex doesn't find a match with the url, just use the url as display value

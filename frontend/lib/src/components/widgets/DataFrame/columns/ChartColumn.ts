@@ -210,18 +210,19 @@ function BaseChartColumn(
 
       // Check if the first value is larger than the second value
       let chartColor = defaultColor
+      const lastValue = normalizedChartData.at(-1)
       if (
         parameters.color === "auto" &&
+        lastValue !== undefined &&
         // Chart is pointing down
-        normalizedChartData[0] >
-          normalizedChartData[normalizedChartData.length - 1]
+        normalizedChartData[0] > lastValue
       ) {
         chartColor = theme.colors.redColor
       } else if (
         parameters.color === "auto-inverse" &&
+        lastValue !== undefined &&
         // Chart is pointing up:
-        normalizedChartData[0] <
-          normalizedChartData[normalizedChartData.length - 1]
+        normalizedChartData[0] < lastValue
       ) {
         chartColor = theme.colors.redColor
       }
