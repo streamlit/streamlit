@@ -32,6 +32,7 @@ from typing import (
 )
 
 from streamlit import runtime
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id, is_in_form
 from streamlit.elements.lib.layout_utils import Width, create_layout_config
 from streamlit.elements.lib.policies import check_widget_policies
@@ -127,6 +128,25 @@ class ButtonSerde:
 
     def deserialize(self, ui_value: bool | None) -> bool:
         return ui_value or False
+
+
+def _page_link_agent_props(proto: PageLinkProto) -> str | None:
+    """Describe a page link for the agent API.
+
+    Built from the proto because st.page_link resolves `page` through several
+    branches (an st.Page, a script path, an external URL) and only the proto
+    holds the outcome. `page` is reported as the public ``url_path`` a client
+    can navigate to; the internal script hash stays internal.
+    """
+    return agent_spec.element(
+        "page_link",
+        label=proto.label or None,
+        page=proto.page or None,
+        help=proto.help or None,
+        icon=proto.icon or None,
+        external=proto.external,
+        disabled=proto.disabled,
+    )
 
 
 class ButtonMixin:
@@ -1472,7 +1492,23 @@ class ButtonMixin:
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
         self.dg._enqueue(
-            "download_button", download_button_proto, layout_config=layout_config
+            "download_button",
+            download_button_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "download_button",
+                key=element_id,
+                # Deferred generation and download callbacks cannot be fired
+                # through this interface; an eager download exposes its URL.
+                support="not_interactive_in_v1",
+                label=label,
+                help=help,
+                icon=icon,
+                type=type,
+                disabled=disabled,
+                file_name=download_button_proto.url or None,
+                mime=mime,
+            ),
         )
         return button_state.value
 
@@ -1574,7 +1610,18 @@ class ButtonMixin:
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
         link_button_dg = self.dg._enqueue(
-            "link_button", link_button_proto, layout_config=layout_config
+            "link_button",
+            link_button_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "link_button",
+                label=label,
+                url=url,
+                help=help,
+                icon=icon,
+                type=type,
+                disabled=disabled,
+            ),
         )
 
         if button_state is not None:
@@ -1605,7 +1652,10 @@ class ButtonMixin:
         ctx = get_script_run_ctx()
         if not ctx:
             return self.dg._enqueue(
-                "page_link", page_link_proto, layout_config=layout_config
+                "page_link",
+                page_link_proto,
+                layout_config=layout_config,
+                agent_props=_page_link_agent_props(page_link_proto),
             )
 
         page_link_proto.disabled = disabled
@@ -1631,7 +1681,10 @@ class ButtonMixin:
                 page_link_proto.page = page.external_url or ""
                 page_link_proto.external = True
                 return self.dg._enqueue(
-                    "page_link", page_link_proto, layout_config=layout_config
+                    "page_link",
+                    page_link_proto,
+                    layout_config=layout_config,
+                    agent_props=_page_link_agent_props(page_link_proto),
                 )
 
             _validate_registered_page(page)
@@ -1652,7 +1705,10 @@ class ButtonMixin:
                 page_link_proto.page = page
                 page_link_proto.external = True
                 return self.dg._enqueue(
-                    "page_link", page_link_proto, layout_config=layout_config
+                    "page_link",
+                    page_link_proto,
+                    layout_config=layout_config,
+                    agent_props=_page_link_agent_props(page_link_proto),
                 )
 
             ctx_main_script = ""
@@ -1689,7 +1745,10 @@ class ButtonMixin:
                 )
 
         return self.dg._enqueue(
-            "page_link", page_link_proto, layout_config=layout_config
+            "page_link",
+            page_link_proto,
+            layout_config=layout_config,
+            agent_props=_page_link_agent_props(page_link_proto),
         )
 
     def _button(
@@ -1800,7 +1859,23 @@ class ButtonMixin:
             save_for_app_testing(ctx, element_id, button_state.value)
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
-        self.dg._enqueue("button", button_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "button",
+            button_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                # st.button and st.form_submit_button share this proto.
+                "form_submit_button" if is_form_submitter else "button",
+                key=element_id,
+                action="trigger",
+                label=label,
+                help=help,
+                icon=icon,
+                type=type,
+                disabled=disabled,
+                shortcut=normalized_shortcut,
+            ),
+        )
 
         return button_state.value
 

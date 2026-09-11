@@ -27,6 +27,7 @@ from typing import (
     overload,
 )
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     WidthWithoutContent,
@@ -1137,6 +1138,19 @@ class TimeWidgetsMixin:
             time_input_proto,
             layout_config=layout_config,
             has_one_shot_effect=widget_state.value_changed,
+            agent_props=agent_spec.element(
+                "time_input",
+                key=element_id,
+                action="value",
+                label=label,
+                # Times serialize as ISO 8601, which is also what the public
+                # API accepts back.
+                step=step,
+                format=time_input_proto.format,
+                help=help,
+                disabled=disabled,
+                label_visibility=label_visibility,
+            ),
         )
         return widget_state.value
 
@@ -1593,6 +1607,22 @@ class TimeWidgetsMixin:
             date_time_input_proto,
             layout_config=layout_config,
             has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+            agent_props=agent_spec.element(
+                "datetime_input",
+                key=element_id,
+                action="value",
+                label=label,
+                # The resolved bounds, which are always present: st.date_input
+                # and st.datetime_input default to a window around the value
+                # when the author sets none.
+                min_value=date_time_input_proto.min or None,
+                max_value=date_time_input_proto.max or None,
+                step=step,
+                format=date_time_input_proto.format or None,
+                help=help,
+                disabled=disabled,
+                label_visibility=label_visibility,
+            ),
         )
         return current_value
 
@@ -2102,6 +2132,18 @@ class TimeWidgetsMixin:
             date_input_proto,
             layout_config=layout_config,
             has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+            agent_props=agent_spec.element(
+                "date_input",
+                key=element_id,
+                action="value",
+                label=label,
+                min_value=date_input_proto.min or None,
+                max_value=date_input_proto.max or None,
+                format=date_input_proto.format or None,
+                help=help,
+                disabled=disabled,
+                label_visibility=label_visibility,
+            ),
         )
         return current_value
 

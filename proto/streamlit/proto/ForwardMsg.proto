@@ -201,6 +201,28 @@ message ForwardMsgMetadata {
   // For multipage apps v2, this can be the main script or the page script
   string active_script_hash = 4;
 
+  // How the command that emitted this delta describes itself to the agent API,
+  // JSON-encoded. Carries what the element payload cannot: the public command
+  // name where several commands share one proto (st.line_chart and
+  // st.vega_lite_chart, st.image and st.pyplot), and parameters that never
+  // reach the wire at all (a built-in chart's `x` and `y`, which are compiled
+  // into the generated Vega-Lite spec and discarded).
+  //
+  // Exists because the description is built while the script runs and read
+  // when the HTTP response is written, so it needs a channel between the two.
+  // The alternative is a session-side table keyed by delta path, which would
+  // have to be merged and stale-cleaned in lockstep with the delta stream.
+  //
+  // Lives in metadata, not on Element, because metadata is cleared before the
+  // ForwardMsg cache hash is computed, so descriptions cannot perturb caching.
+  //
+  // Only ever populated for a session the agent API created, so a browser
+  // session never carries this field regardless of server configuration. That
+  // is a property of where it is built, not of what is stripped on the way
+  // out: `agent_spec.is_recording()` checks the running session against the
+  // agent API's own session registry.
+  optional string agent_props = 5;
+
   reserved 3;
 }
 

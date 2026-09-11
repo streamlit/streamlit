@@ -37,6 +37,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_spec, data_offload
 from streamlit.elements.lib.built_in_chart_utils import (
     ChartStackType,
     ChartType,
@@ -772,6 +773,35 @@ def _stabilize_vega_json_spec(vega_spec: str) -> str:
     return vega_spec
 
 
+def _builtin_chart_encoding(
+    *,
+    x: Any,
+    y: Any,
+    x_label: str | None,
+    y_label: str | None,
+    color: Any,
+    size: Any = None,
+) -> dict[str, Any]:
+    """The encoding arguments a built-in chart was given, for the agent API.
+
+    All six Vega commands emit the same proto with no field saying which one
+    ran, and these arguments are compiled into the generated Vega-Lite spec
+    rather than sent as parameters. So the columns the author chose are only
+    knowable at the command.
+
+    `color` and `size` are reported only when they name a column; a literal
+    color or pixel size carries no meaning for a non-visual client.
+    """
+    return {
+        "x": x,
+        "y": y,
+        "x_label": x_label,
+        "y_label": y_label,
+        "color": color if isinstance(color, str) else None,
+        "size": size if isinstance(size, str) else None,
+    }
+
+
 class VegaChartsMixin:
     """Mix-in class for all vega-related chart commands.
 
@@ -1014,6 +1044,14 @@ class VegaChartsMixin:
                 theme="streamlit",
                 width=width,
                 height=height,
+                agent_command="line_chart",
+                agent_encoding=_builtin_chart_encoding(
+                    x=x,
+                    y=y,
+                    x_label=x_label,
+                    y_label=y_label,
+                    color=color,
+                ),
             ),
         )
 
@@ -1300,6 +1338,14 @@ class VegaChartsMixin:
                 theme="streamlit",
                 width=width,
                 height=height,
+                agent_command="area_chart",
+                agent_encoding=_builtin_chart_encoding(
+                    x=x,
+                    y=y,
+                    x_label=x_label,
+                    y_label=y_label,
+                    color=color,
+                ),
             ),
         )
 
@@ -1628,6 +1674,14 @@ class VegaChartsMixin:
                 theme="streamlit",
                 width=width,
                 height=height,
+                agent_command="bar_chart",
+                agent_encoding=_builtin_chart_encoding(
+                    x=x,
+                    y=y,
+                    x_label=x_label,
+                    y_label=y_label,
+                    color=color,
+                ),
             ),
         )
 
@@ -1878,6 +1932,15 @@ class VegaChartsMixin:
                 theme="streamlit",
                 width=width,
                 height=height,
+                agent_command="scatter_chart",
+                agent_encoding=_builtin_chart_encoding(
+                    x=x,
+                    y=y,
+                    x_label=x_label,
+                    y_label=y_label,
+                    color=color,
+                    size=size,
+                ),
             ),
         )
 
@@ -2104,6 +2167,7 @@ class VegaChartsMixin:
             key=key,
             on_select=on_select,
             selection_mode=selection_mode,
+            agent_command="altair_chart",
         )
 
     # When on_select=Ignore, return DeltaGenerator.
@@ -2357,6 +2421,8 @@ class VegaChartsMixin:
         selection_mode: str | Iterable[str] | None = None,
         width: Width | None = None,
         height: Height = "content",
+        agent_command: str = "altair_chart",
+        agent_encoding: dict[str, Any] | None = None,
     ) -> DeltaGenerator | VegaLiteState:
         """Internal method to enqueue a vega-lite chart element based on an Altair chart.
 
@@ -2383,6 +2449,8 @@ class VegaChartsMixin:
             selection_mode=selection_mode,
             width=width,
             height=height,
+            agent_command=agent_command,
+            agent_encoding=agent_encoding,
         )
 
     def _vega_lite_chart(
@@ -2396,6 +2464,8 @@ class VegaChartsMixin:
         selection_mode: str | Iterable[str] | None = None,
         width: Width | None = None,
         height: Height = "content",
+        agent_command: str = "vega_lite_chart",
+        agent_encoding: dict[str, Any] | None = None,
     ) -> DeltaGenerator | VegaLiteState:
         """Internal method to enqueue a vega-lite chart element based on a vega-lite spec.
 
@@ -2551,6 +2621,13 @@ class VegaChartsMixin:
                 "vega_lite_chart",
                 vega_lite_proto,
                 layout_config=layout_config,
+                agent_props=self._chart_agent_props(
+                    vega_lite_proto,
+                    command=agent_command,
+                    encoding=agent_encoding,
+                    theme=theme,
+                    selection_mode=list(vega_lite_proto.selection_mode),
+                ),
             )
             return widget_state.value
 
@@ -2561,6 +2638,45 @@ class VegaChartsMixin:
             "vega_lite_chart",
             vega_lite_proto,
             layout_config=layout_config,
+            agent_props=self._chart_agent_props(
+                vega_lite_proto,
+                command=agent_command,
+                encoding=agent_encoding,
+                theme=theme,
+            ),
+        )
+
+    def _chart_agent_props(
+        self,
+        proto: VegaLiteChartProto,
+        *,
+        command: str,
+        encoding: dict[str, Any] | None,
+        theme: str | None,
+        selection_mode: list[str] | None = None,
+    ) -> str | None:
+        """Describe a Vega chart for the agent API.
+
+        Built here rather than at the public command because the Arrow buffer
+        only exists once the proto is marshalled, and the command name and
+        encoding arguments are only known at the command -- so both halves meet
+        here.
+        """
+        # Inline data goes in `data`; the built-in charts and Altair use a
+        # named dataset instead.
+        arrow_bytes = proto.data.data or (
+            proto.datasets[0].data.data if proto.datasets else b""
+        )
+        return agent_spec.element(
+            command,
+            key=proto.id or None,
+            support="read_only_in_v1",
+            data_url=data_offload.serve_arrow_over_http(
+                arrow_bytes, coordinates=self.dg._get_delta_path_str()
+            ),
+            theme=theme,
+            selection_mode=selection_mode or None,
+            **(encoding or {}),
         )
 
     @property

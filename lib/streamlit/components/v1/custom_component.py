@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any
 from streamlit.components.types.base_custom_component import BaseCustomComponent
 from streamlit.dataframe_util import is_dataframe_like
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_cache_replay_rules
 from streamlit.elements.lib.utils import compute_and_register_element_id
@@ -221,7 +222,18 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt.""",
         element = Element()
         return_value = marshall_component(dg, element)
 
-        dg._enqueue("component_instance", element.component_instance)
+        dg._enqueue(
+            "component_instance",
+            element.component_instance,
+            # Component JavaScript is never executed server-side, so only the
+            # component's identity and the arguments it was given are visible.
+            agent_props=agent_spec.element(
+                "components.v1.declare_component",
+                key=element.component_instance.id or None,
+                support="browser_required",
+                component_name=self.name,
+            ),
+        )
         return return_value
 
     def __eq__(self, other: object) -> bool:

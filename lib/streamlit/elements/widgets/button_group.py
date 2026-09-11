@@ -27,6 +27,7 @@ from typing import (
 )
 
 from streamlit.dataframe_util import convert_anything_to_list
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Width,
@@ -1485,6 +1486,20 @@ class ButtonGroupMixin:
             has_one_shot_effect=value_needs_reset
             or widget_state.value_changed
             or labels_changed,
+            agent_props=agent_spec.element(
+                # st.pills and st.segmented_control share this proto,
+                # discriminated only by `style`.
+                "pills" if style == "pills" else "segmented_control",
+                key=element_id,
+                action="value",
+                label=label,
+                options=[option.content for option in proto.options],
+                selection_mode=selection_mode,
+                help=help,
+                required=proto.required,
+                disabled=disabled,
+                label_visibility=label_visibility,
+            ),
         )
 
         # Return widget_state with possibly updated value

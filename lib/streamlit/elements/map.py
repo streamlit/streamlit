@@ -27,6 +27,7 @@ from streamlit.deprecation_util import (
     show_deprecation_warning,
 )
 from streamlit.elements import deck_gl_json_chart
+from streamlit.elements.lib import agent_spec, data_offload
 from streamlit.elements.lib.color_util import (
     Color,
     IntColorTuple,
@@ -39,6 +40,7 @@ from streamlit.elements.lib.layout_utils import (
     create_layout_config,
 )
 from streamlit.errors import StreamlitAPIException
+from streamlit.logger import get_logger
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -49,6 +51,8 @@ if TYPE_CHECKING:
 
     from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
+
+_LOGGER: Final = get_logger(__name__)
 
 # Map used as the basis for st.map.
 _DEFAULT_MAP: Final[dict[str, Any]] = dict(deck_gl_json_chart.EMPTY_MAP)
@@ -280,13 +284,50 @@ class MapMixin:
         marshall(map_proto, deck_gl_json)
 
         return self.dg._enqueue(
-            "deck_gl_json_chart", map_proto, layout_config=layout_config
+            "deck_gl_json_chart",
+            map_proto,
+            layout_config=layout_config,
+            # st.map and st.pydeck_chart share this proto, and the columns the
+            # author chose are compiled into the generated Deck.gl spec. The
+            # points are only in that spec, so the plotted table is offloaded
+            # separately -- reading coordinates back out of Deck.gl layers is
+            # not a data contract.
+            agent_props=agent_spec.element(
+                "map",
+                support="read_only_in_v1",
+                data_url=_serve_points(data, self.dg._get_delta_path_str()),
+                latitude=latitude,
+                longitude=longitude,
+                size=size if isinstance(size, str) else None,
+                color=color if isinstance(color, str) else None,
+                zoom=zoom,
+            ),
         )
 
     @property
     def dg(self) -> DeltaGenerator:
         """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+
+def _serve_points(data: Data, coordinates: str) -> str | None:
+    """Offload the plotted table as Arrow, for the agent API.
+
+    Returns None when there is nothing to serve, which is also the case
+    outside an agent session.
+    """
+    if data is None or not agent_spec.is_recording():
+        return None
+
+    try:
+        arrow_bytes = dataframe_util.convert_anything_to_arrow_bytes(data)
+    except Exception:
+        _LOGGER.debug("Could not serve map data as Arrow.", exc_info=True)
+        # A map accepts shapes the Arrow conversion may reject. The Deck.gl
+        # spec is emitted either way, so this only costs the fetchable copy.
+        return None
+
+    return data_offload.serve_arrow_over_http(arrow_bytes, coordinates=coordinates)
 
 
 def to_deckgl_json(

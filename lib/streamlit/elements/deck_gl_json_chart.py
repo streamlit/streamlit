@@ -33,6 +33,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     HeightWithoutContent,
@@ -642,13 +643,24 @@ class PydeckMixin:
             )
 
             self.dg._enqueue(
-                "deck_gl_json_chart", pydeck_proto, layout_config=layout_config
+                "deck_gl_json_chart",
+                pydeck_proto,
+                layout_config=layout_config,
+                agent_props=agent_spec.element(
+                    "pydeck_chart",
+                    key=pydeck_proto.id,
+                    support="read_only_in_v1",
+                    selection_mode=sorted(pydeck_proto.selection_mode) or None,
+                ),
             )
 
             return widget_state.value
 
         return self.dg._enqueue(
-            "deck_gl_json_chart", pydeck_proto, layout_config=layout_config
+            "deck_gl_json_chart",
+            pydeck_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element("pydeck_chart", support="read_only_in_v1"),
         )
 
     @property

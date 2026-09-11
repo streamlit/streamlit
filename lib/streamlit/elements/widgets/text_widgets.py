@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import TYPE_CHECKING, Final, Literal, NamedTuple, cast, overload
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -910,6 +911,22 @@ class TextWidgetsMixin:
             text_input_proto,
             layout_config=layout_config,
             has_one_shot_effect=widget_state.value_changed,
+            agent_props=agent_spec.element(
+                "text_input",
+                key=element_id,
+                action="value",
+                label=label,
+                max_chars=max_chars,
+                type=type,
+                help=help,
+                # The wire form encodes an explicit empty placeholder as a
+                # single space; report what the author passed.
+                placeholder=placeholder if placeholder != " " else "",
+                icon=icon,
+                disabled=disabled,
+                label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
         )
         return widget_state.value
 
@@ -1285,6 +1302,17 @@ class TextWidgetsMixin:
             text_area_proto,
             layout_config=layout_config,
             has_one_shot_effect=widget_state.value_changed,
+            agent_props=agent_spec.element(
+                "text_area",
+                key=element_id,
+                action="value",
+                label=label,
+                max_chars=max_chars,
+                help=help,
+                placeholder=placeholder if placeholder != " " else "",
+                disabled=disabled,
+                label_visibility=label_visibility,
+            ),
         )
         return widget_state.value
 

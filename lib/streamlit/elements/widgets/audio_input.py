@@ -17,6 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypeAlias, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.file_uploader_utils import enforce_filename_restriction
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import create_layout_config
@@ -334,7 +335,20 @@ class AudioInputMixin:
             disabled=disabled,
         )
 
-        self.dg._enqueue("audio_input", audio_input_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "audio_input",
+            audio_input_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "audio_input",
+                key=element_id,
+                support="not_interactive_in_v1",
+                label=label,
+                help=help,
+                disabled=disabled,
+                label_visibility=label_visibility,
+            ),
+        )
 
         if isinstance(audio_input_state.value, DeletedFile):
             return None

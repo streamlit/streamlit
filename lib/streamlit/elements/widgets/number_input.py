@@ -19,6 +19,7 @@ import numbers
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final, Literal, TypeAlias, cast, overload
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
 from streamlit.elements.lib.layout_utils import (
@@ -917,6 +918,25 @@ class NumberInputMixin:
             number_input_proto,
             layout_config=layout_config,
             has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+            agent_props=agent_spec.element(
+                "number_input",
+                key=element_id,
+                action="value",
+                label=label,
+                # The authored bounds, which are absent rather than 0 when the
+                # author set none. The proto needs `has_min` / `has_max` flags
+                # to express that.
+                min_value=min_value,
+                max_value=max_value,
+                step=step,
+                format=format,
+                help=help,
+                placeholder=placeholder,
+                icon=icon,
+                disabled=disabled,
+                label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
         )
         return current_value
 

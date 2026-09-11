@@ -30,6 +30,7 @@ from typing import (
     overload,
 )
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
 from streamlit.elements.lib.layout_utils import create_layout_config
@@ -1292,6 +1293,23 @@ class SliderMixin:
             slider_proto,
             layout_config=layout_config,
             has_one_shot_effect=widget_state.value_changed,
+            agent_props=agent_spec.element(
+                "slider",
+                key=element_id,
+                action="value",
+                label=label,
+                # The authored bounds and step, in their own types. The proto
+                # stores all three as doubles regardless of whether the slider
+                # is over ints, dates, or times.
+                min_value=min_value,
+                max_value=max_value,
+                step=step,
+                format=format,
+                help=help,
+                disabled=disabled,
+                label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
         )
         return cast("SliderReturn", widget_state.value)
 

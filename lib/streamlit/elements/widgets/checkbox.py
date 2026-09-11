@@ -17,6 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Width,
@@ -535,6 +536,16 @@ class CheckboxMixin:
             checkbox_proto,
             layout_config=layout_config,
             has_one_shot_effect=checkbox_state.value_changed,
+            agent_props=agent_spec.element(
+                # st.checkbox and st.toggle share this proto.
+                "toggle" if type == CheckboxProto.StyleType.TOGGLE else "checkbox",
+                key=element_id,
+                action="value",
+                label=label,
+                help=help,
+                disabled=disabled,
+                label_visibility=label_visibility,
+            ),
         )
         return checkbox_state.value
 

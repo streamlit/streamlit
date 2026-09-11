@@ -14,11 +14,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, Literal, TypeAlias, cast
 
 from typing_extensions import Self
 
 from streamlit.delta_generator import DeltaGenerator
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import StreamlitInvalidLayoutContextError, StreamlitValueError
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -52,6 +53,26 @@ def _process_dialog_width_input(
         return BlockProto.Dialog.DialogWidth.MEDIUM
 
     return BlockProto.Dialog.DialogWidth.SMALL
+
+
+def _agent_description(
+    element_id: str, title: str, dismissible: bool, width: DialogWidth, is_open: bool
+) -> dict[str, Any]:
+    """The agent-API props for a dialog, shared by creation and `_update`.
+
+    A dialog's body is a fragment, so its contents stay drivable as long as an
+    interaction targets them: that scopes the rerun to the dialog's fragment,
+    which re-renders the body without re-emitting the block. Anything else is a
+    full rerun, which does not re-emit the dialog at all and therefore closes
+    it -- the same rule the browser follows.
+    """
+    return {
+        "key": element_id,
+        "title": title,
+        "dismissible": dismissible,
+        "width": width,
+        "is_open": is_open,
+    }
 
 
 def _assert_first_dialog_to_be_opened(should_open: bool) -> None:
@@ -146,7 +167,21 @@ class Dialog(DeltaGenerator):
                 value_type="trigger_value",
             )
 
-        dialog = cast("Dialog", parent._block(block_proto=block_proto, dg_type=Dialog))
+        dialog = cast(
+            "Dialog",
+            parent._block(
+                block_proto=block_proto,
+                dg_type=Dialog,
+                agent_props=agent_spec.block(
+                    "dialog",
+                    **_agent_description(element_id, title, dismissible, width, False),
+                ),
+            ),
+        )
+        dialog._agent_element_id = element_id
+        dialog._agent_title = title
+        dialog._agent_dismissible = dismissible
+        dialog._agent_width = width
 
         # `_update` re-sends the block proto at this path. Use the path `_block()` wrote
         # to, not the parent cursor, so the update targets the block even if a wrapper
@@ -170,6 +205,10 @@ class Dialog(DeltaGenerator):
         # Initialized in `_create()`:
         self._current_proto: BlockProto | None = None
         self._delta_path: list[int] | None = None
+        self._agent_element_id: str = ""
+        self._agent_title: str = ""
+        self._agent_dismissible: bool = True
+        self._agent_width: Any = "small"
 
     def _update(self, should_open: bool) -> None:
         """Send an updated proto message to indicate the open-status for the dialog."""
@@ -185,6 +224,21 @@ class Dialog(DeltaGenerator):
         msg = ForwardMsg()
         msg.metadata.delta_path[:] = self._delta_path
         msg.delta.add_block.CopyFrom(self._current_proto)
+        # This message replaces the one sent at the same delta path, so it has
+        # to carry a description too, rebuilt so `is_open` reflects this update
+        # rather than the value the dialog was created with.
+        agent_props = agent_spec.block(
+            "dialog",
+            **_agent_description(
+                self._agent_element_id,
+                self._agent_title,
+                self._agent_dismissible,
+                self._agent_width,
+                should_open,
+            ),
+        )
+        if agent_props is not None:
+            msg.metadata.agent_props = agent_props
         msg.delta.add_block.dialog.is_open = should_open
         self._current_proto = msg.delta.add_block
 

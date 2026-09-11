@@ -28,6 +28,7 @@ from typing import (
 )
 
 from streamlit import dataframe_util
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import (
     Height,
     LayoutConfig,
@@ -841,7 +842,15 @@ class EChartsMixin:
 
         layout_config = LayoutConfig(width=final_width, height=final_height)
         return self.dg._enqueue(
-            "echarts_chart", echarts_chart_proto, layout_config=layout_config
+            "echarts_chart",
+            echarts_chart_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "echarts_chart",
+                key=echarts_chart_proto.id or None,
+                support="read_only_in_v1",
+                theme=theme,
+            ),
         )
 
     @property

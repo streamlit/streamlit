@@ -17,6 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import Width, create_layout_config
 from streamlit.elements.lib.policies import check_widget_policies
@@ -368,6 +369,13 @@ class PaginationMixin:
             proto,
             layout_config=layout_config,
             has_one_shot_effect=value_changed,
+            agent_props=agent_spec.element(
+                "pagination",
+                key=element_id,
+                action="value",
+                total_pages=proto.num_pages,
+                disabled=disabled,
+            ),
         )
 
         return current_value
