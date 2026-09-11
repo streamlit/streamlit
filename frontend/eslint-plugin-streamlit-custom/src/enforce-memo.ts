@@ -224,8 +224,10 @@ const enforceMemo = createRule<[], MessageIds>({
 
         if (hasNamedImports) {
           // Add to existing named imports
-          const lastSpecifier =
-            reactImport.specifiers[reactImport.specifiers.length - 1]
+          const lastSpecifier = reactImport.specifiers.at(-1)
+          if (!lastSpecifier) {
+            return null
+          }
           return fixer.insertTextAfter(lastSpecifier, ", memo")
         }
         // Add as new named import alongside default import
@@ -241,12 +243,17 @@ const enforceMemo = createRule<[], MessageIds>({
           // Handle the case where there are no specifiers
           return fixer.insertTextAfter(reactImport.source, " { memo }")
         }
-        const lastSpecifier =
-          reactImport.specifiers[reactImport.specifiers.length - 1]
+        const lastSpecifier = reactImport.specifiers.at(-1)
+        if (!lastSpecifier) {
+          return null
+        }
         return fixer.insertTextAfter(lastSpecifier, ", memo")
       } else if (allImports.length > 0) {
         // Add after the last import
-        const lastImport = allImports[allImports.length - 1]
+        const lastImport = allImports.at(-1)
+        if (!lastImport) {
+          return null
+        }
         return fixer.insertTextAfter(
           lastImport,
           "\nimport { memo } from 'react';"

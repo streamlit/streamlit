@@ -165,7 +165,7 @@ const AudioInput: React.FC<Props> = ({
         const timestamp = new Date()
           .toISOString()
           .slice(0, 16)
-          .replace(/:/g, "-")
+          .replaceAll(":", "-")
         const file = new File([wavBlob], `${timestamp}_audio.wav`, {
           type: wavBlob.type,
         })

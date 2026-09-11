@@ -128,7 +128,7 @@ export function parsePastedDateTime(
   if (isoResult) return isoResult
 
   const { order, separator } = parseFormatOrder(dateFormat)
-  const escapedSep = separator.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  const escapedSep = separator.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")
   const datePartRe = `(\\d{1,4})${escapedSep}(\\d{1,4})${escapedSep}(\\d{1,4})`
   const timePartRe = `(\\d{1,2}):(\\d{2})`
   const re = new RegExp(`^${datePartRe}[,\\s]+${timePartRe}$`)

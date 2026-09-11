@@ -99,7 +99,8 @@ describe("katexWoff2Only", () => {
     for (const pattern of [/@font-face/g, /font-display:block/g, /\{/g]) {
       expect(count(css, pattern)).toBe(count(INSTALLED_KATEX_CSS, pattern))
     }
-    const withoutSrc = (s: string): string => s.replace(/src:[^;}]*/g, "src:X")
+    const withoutSrc = (s: string): string =>
+      s.replaceAll(/src:[^;}]*/g, "src:X")
     expect(withoutSrc(css)).toBe(withoutSrc(INSTALLED_KATEX_CSS))
   })
 

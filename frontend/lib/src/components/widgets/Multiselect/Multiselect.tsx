@@ -598,7 +598,7 @@ const Multiselect: FC<Props> = props => {
         }
       } else if (e.key === "End") {
         e.preventDefault()
-        const last = tags[tags.length - 1]
+        const last = tags.at(-1)
         if (last && last !== tag) {
           tag.tabIndex = -1
           last.tabIndex = 0

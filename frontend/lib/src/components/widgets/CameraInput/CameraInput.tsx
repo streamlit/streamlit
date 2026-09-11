@@ -267,11 +267,9 @@ const CameraInput = ({
    * Upload progress for the current file, derived during render.
    */
   const progress: number | undefined = useMemo(() => {
-    if (
-      files.length > 0 &&
-      files[files.length - 1].status.type === "uploading"
-    ) {
-      const lastFileStatus = files[files.length - 1].status as UploadingStatus
+    const lastFile = files.at(-1)
+    if (lastFile?.status.type === "uploading") {
+      const lastFileStatus: UploadingStatus = lastFile.status
       return lastFileStatus.progress
     }
     return undefined
@@ -491,7 +489,7 @@ const CameraInput = ({
 
       const capturePromise = urltoFile(
         capturedImgSrc,
-        `camera-input-${new Date().toISOString().replace(/:/g, "_")}.jpg`
+        `camera-input-${new Date().toISOString().replaceAll(":", "_")}.jpg`
       )
         .then(file =>
           uploadClient.fetchFileURLs([file]).then(fileURLsArray => ({

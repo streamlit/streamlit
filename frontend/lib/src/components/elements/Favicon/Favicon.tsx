@@ -57,7 +57,7 @@ export function handleFavicon(
   // Check for direct emoji (synchronous, no library loading needed)
   const EMOJI_PREFIX = "emoji:"
   if (favicon.startsWith(EMOJI_PREFIX)) {
-    const emoji = favicon.substring(EMOJI_PREFIX.length)
+    const emoji = favicon.slice(EMOJI_PREFIX.length)
     const imageUrl = createEmojiDataUrl(emoji)
     setFavicon(imageUrl)
     return
@@ -129,7 +129,7 @@ async function convertShortcodeToEmoji(shortcode: string): Promise<string> {
   const nodeEmoji = await import("node-emoji")
 
   // Normalize dashes to underscores (node-emoji uses underscores)
-  const normalizedShortcode = shortcode.replace(/-/g, "_")
+  const normalizedShortcode = shortcode.replaceAll("-", "_")
 
   // Get the emoji for this shortcode
   const emoji = nodeEmoji.get(normalizedShortcode)

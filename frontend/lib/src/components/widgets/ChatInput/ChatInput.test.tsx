@@ -145,10 +145,10 @@ const createRecordingController = (): WaveformController => ({
 
 /** Returns the controller events from the most recent useWaveformController call. */
 const getWaveformEvents = (): WaveformControllerEvents => {
-  const lastCall =
-    useWaveformControllerMock.mock.calls[
-      useWaveformControllerMock.mock.calls.length - 1
-    ]
+  const lastCall = useWaveformControllerMock.mock.calls.at(-1)
+  if (!lastCall) {
+    throw new Error("Expected useWaveformController to have been called")
+  }
   return lastCall[0].events as WaveformControllerEvents
 }
 

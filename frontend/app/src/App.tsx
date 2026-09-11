@@ -2631,7 +2631,7 @@ export class App extends PureComponent<Props, State> {
         ? queryParams
         : document.location.search
 
-    return queryString.startsWith("?") ? queryString.substring(1) : queryString
+    return queryString.startsWith("?") ? queryString.slice(1) : queryString
   }
 
   getThemeColorScheme = (): string => {

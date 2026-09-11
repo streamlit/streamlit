@@ -63,7 +63,7 @@ function escapeValue(value: unknown): string {
   // Special chars need to be escaped:
   if (CSV_SPECIAL_CHARS_REGEX.test(strValue)) {
     // Add quotes around the value:
-    return `${CSV_QUOTE_CHAR}${strValue.replace(
+    return `${CSV_QUOTE_CHAR}${strValue.replaceAll(
       // Escape all quote chars if inside a quoted string:
       new RegExp(CSV_QUOTE_CHAR, "g"),
       CSV_ESCAPE_CHAR + CSV_QUOTE_CHAR

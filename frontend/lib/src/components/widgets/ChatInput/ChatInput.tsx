@@ -744,7 +744,7 @@ function ChatInput({
     // eslint-disable-next-line react-hooks/preserve-manual-memoization -- chatInputRef and uploadAbortControllerRef are refs; setAudioUploading and setRecordingError are stable setters
     async (wav: Blob): Promise<void> => {
       // Convert blob to File
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
+      const timestamp = new Date().toISOString().replaceAll(/[:.]/g, "-")
       const audioFile = new File([wav], `audio-${timestamp}.wav`, {
         type: "audio/wav",
       })
