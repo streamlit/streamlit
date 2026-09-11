@@ -332,6 +332,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         data-variant={dataVariant}
         $containerWidth={containerWidth}
         $wrap={wrap}
+        isDisabled={Boolean(option.disabled)}
       >
         <DynamicButtonLabel
           icon={option.contentIcon ?? undefined}

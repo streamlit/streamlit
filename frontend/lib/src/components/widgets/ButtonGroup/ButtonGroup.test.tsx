@@ -1197,4 +1197,19 @@ describe("ButtonGroup wrap", () => {
     expect(group).not.toHaveAttribute("data-can-scroll-end")
     expect(group).not.toHaveStyle("overflow-x: auto")
   })
+
+  it("renders disabled option when option.disabled is true", () => {
+    const props = getProps({
+      options: [
+        { content: "Option 1" },
+        { content: "Option 2", disabled: true },
+      ],
+    })
+    render(<ButtonGroup {...props} />)
+
+    const buttons = getButtonGroupButtons()
+    expect(buttons[0]).toBeEnabled()
+    expect(buttons[1]).toBeDisabled()
+  })
 })
+
