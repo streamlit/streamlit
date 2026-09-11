@@ -1857,7 +1857,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@luma.gl/core@npm:^9.3.5, @luma.gl/core@npm:~9.3.5":
+"@luma.gl/core@npm:^9.4.0":
+  version: 9.4.0
+  resolution: "@luma.gl/core@npm:9.4.0"
+  dependencies:
+    "@math.gl/types": "npm:^4.1.0"
+    "@probe.gl/env": "npm:^4.1.1"
+    "@probe.gl/log": "npm:^4.1.1"
+    "@probe.gl/stats": "npm:^4.1.1"
+    "@types/offscreencanvas": "npm:^2019.7.3"
+  checksum: 10c0/c74d7be48d7f0223b0232d860fbaebff4277ded133773ba8a21cde89a7a12f1ad15e4bcc7e5e4237006ea113ba4b07b4466cf955ffaba81c1fba5e342f7b938c
+  languageName: node
+  linkType: hard
+
+"@luma.gl/core@npm:~9.3.5":
   version: 9.3.6
   resolution: "@luma.gl/core@npm:9.3.6"
   dependencies:
@@ -1870,7 +1883,22 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@luma.gl/engine@npm:^9.3.5, @luma.gl/engine@npm:~9.3.5":
+"@luma.gl/engine@npm:^9.4.0":
+  version: 9.4.0
+  resolution: "@luma.gl/engine@npm:9.4.0"
+  dependencies:
+    "@math.gl/core": "npm:^4.1.0"
+    "@math.gl/types": "npm:^4.1.0"
+    "@probe.gl/log": "npm:^4.1.1"
+    "@probe.gl/stats": "npm:^4.1.1"
+  peerDependencies:
+    "@luma.gl/core": ~9.4.0
+    "@luma.gl/shadertools": ~9.4.0
+  checksum: 10c0/322b860b7c1c72e1e50269cf56c1fb4ef95caec701979a5bb780c361cb0f9032c6a66416250646b95170967c91cf763fcc2ec61c8c6f81a7d78e4e557edf7e7f
+  languageName: node
+  linkType: hard
+
+"@luma.gl/engine@npm:~9.3.5":
   version: 9.3.6
   resolution: "@luma.gl/engine@npm:9.3.6"
   dependencies:
@@ -1901,7 +1929,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@luma.gl/shadertools@npm:^9.3.5, @luma.gl/shadertools@npm:~9.3.5":
+"@luma.gl/shadertools@npm:^9.4.0":
+  version: 9.4.0
+  resolution: "@luma.gl/shadertools@npm:9.4.0"
+  dependencies:
+    "@math.gl/core": "npm:^4.1.0"
+    "@math.gl/types": "npm:^4.1.0"
+  peerDependencies:
+    "@luma.gl/core": ~9.4.0
+  checksum: 10c0/906cfa8b4b7a1aa6a52177752fd3b2afb49745909aa4a38577033c72bd4167d0742de8ce698c4c42e32d9327026df1500d2acb2b7ebae5f28905a3244e7efe2d
+  languageName: node
+  linkType: hard
+
+"@luma.gl/shadertools@npm:~9.3.5":
   version: 9.3.6
   resolution: "@luma.gl/shadertools@npm:9.3.6"
   dependencies:
@@ -3421,9 +3461,9 @@ __metadata:
     "@loaders.gl/core": "npm:^4.4.5"
     "@loaders.gl/csv": "npm:^4.4.5"
     "@loaders.gl/gltf": "npm:^4.4.5"
-    "@luma.gl/core": "npm:^9.3.5"
-    "@luma.gl/engine": "npm:^9.3.5"
-    "@luma.gl/shadertools": "npm:^9.3.5"
+    "@luma.gl/core": "npm:^9.4.0"
+    "@luma.gl/engine": "npm:^9.4.0"
+    "@luma.gl/shadertools": "npm:^9.4.0"
     "@microlink/react-json-view": "npm:^1.31.32"
     "@sindresorhus/slugify": "npm:^3.0.1"
     "@streamlit/component-v2-lib": "workspace:^"
