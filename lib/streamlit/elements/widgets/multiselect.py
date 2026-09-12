@@ -63,7 +63,11 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    OnChangeMode,
     PersistStateOption,
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
     register_widget,
     validate_on_change_mode,
 )
@@ -74,11 +78,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.runtime.state import (
-        WidgetArgs,
-        WidgetCallback,
-        WidgetKwargs,
-    )
 
 T = TypeVar("T")
 
@@ -237,7 +236,7 @@ class MultiSelectMixin:
         format_func: Callable[[Any], str] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -263,7 +262,7 @@ class MultiSelectMixin:
         format_func: Callable[[Any], str] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -289,7 +288,7 @@ class MultiSelectMixin:
         format_func: Callable[[Any], str] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -315,7 +314,7 @@ class MultiSelectMixin:
         format_func: Callable[[Any], str] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -401,8 +400,31 @@ class MultiSelectMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change : callable
-            An optional callback invoked when this widget's value changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the multiselect should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the multiselect. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a new value (selecting or removing options,
+              select-all / select matches, clearing, or adding a new option
+              when ``accept_new_options=True``). Filtering or typing alone
+              does not commit.
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits a new value. The multiselect still updates in the UI.
+              The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. Ignored
+              commits are held in the browser and are lost if the page is
+              refreshed before that rerun, unless ``bind="query-params"``
+              is set (see ``bind``). Inside ``st.form``, this has no
+              effect: the form already defers all commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -549,6 +571,14 @@ class MultiSelectMixin:
             are truncated. When ``accept_new_options`` is ``True``, any
             value is accepted.
 
+            When ``on_change="ignore"``, the URL is updated as soon as the
+            value is committed (selecting or removing options, select-all /
+            select matches, clearing, or adding a new option); typing or
+            filtering alone does not update it. As with widgets inside a
+            form, the URL can show a value that Python hasn't received yet.
+            Python receives the new value on the next rerun, so a page
+            load or share uses the updated URL value.
+
         persist_state : "page", "session", or None
             How long to preserve the widget's value when it isn't rendered.
             If this is ``None`` (default), the value is lost when the widget
@@ -675,7 +705,7 @@ class MultiSelectMixin:
         format_func: Callable[[Any], str] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -693,16 +723,16 @@ class MultiSelectMixin:
         ctx: ScriptRunContext | None = None,
     ) -> list[T] | list[T | str]:
         key = to_key(key)
-        on_change = validate_on_change_mode(
+        on_change_callback = validate_on_change_mode(
             on_change,
-            supported_modes=(),
+            supported_modes=("rerun", "ignore"),
         )
 
         widget_name = "multiselect"
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=default,
         )
         label = maybe_raise_label_warnings(label, label_visibility)
@@ -794,6 +824,9 @@ class MultiSelectMixin:
         if bind == "query-params" and key is not None:
             proto.query_param_key = str(key)
 
+        if isinstance(on_change, str) and on_change == "ignore":
+            proto.ignore_rerun = True
+
         serde = MultiSelectSerde(
             indexable_options,
             formatted_options=formatted_options,
@@ -804,7 +837,7 @@ class MultiSelectMixin:
 
         widget_state = register_widget(
             proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
