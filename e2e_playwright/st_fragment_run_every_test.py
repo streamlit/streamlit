@@ -52,11 +52,15 @@ def test_nested_fragment_run_every_can_hide_without_crash(app: Page):
     assert nested_text is not None
 
     click_checkbox(app, "Show nested auto fragment")
-    expect(nested_fragment).not_to_be_attached()
-
     expect(app.get_by_test_id("stException")).to_have_count(0)
 
-    # Standalone auto fragment keeps ticking; no frontend exception across ticks.
+    # After hiding, let the app run through several run_every cycles (observed via
+    # the standalone auto fragment still ticking) before asserting the nested
+    # fragment is gone. This drains any in-flight nested run_every tick that can
+    # briefly re-render ``.st-key-nested_auto_fragment`` right after the uncheck,
+    # so we assert the settled state instead of racing the transient. A genuine
+    # #15084 regression keeps the nested container attached and still fails the
+    # not_to_be_attached check below (as well as the stException checks).
     for _ in range(3):
         expect(standalone_fragment.get_by_test_id("stMarkdown").first).not_to_have_text(
             standalone_text
@@ -66,6 +70,9 @@ def test_nested_fragment_run_every_can_hide_without_crash(app: Page):
         ).first.text_content()
         assert standalone_text is not None
         expect(app.get_by_test_id("stException")).to_have_count(0)
+
+    expect(nested_fragment).not_to_be_attached()
+    expect(app.get_by_test_id("stException")).to_have_count(0)
 
     click_checkbox(app, "Show nested auto fragment")
     expect(get_element_by_key(app, "nested_auto_fragment")).to_be_visible()
