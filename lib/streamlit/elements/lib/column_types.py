@@ -51,6 +51,8 @@ NumberFormat: TypeAlias = Literal[
     "bytes",
 ]
 
+NumberColumnFormat: TypeAlias = NumberFormat | Literal["duration"]
+
 DateTimeFormat: TypeAlias = Literal[
     "localized",
     "distance",
@@ -136,7 +138,7 @@ def _validate_chart_color(maybe_color: str) -> None:
 
 class NumberColumnConfig(TypedDict):
     type: Literal["number"]
-    format: NotRequired[str | NumberFormat | None]
+    format: NotRequired[str | NumberColumnFormat | None]
     min_value: NotRequired[int | float | None]
     max_value: NotRequired[int | float | None]
     step: NotRequired[int | float | None]
@@ -525,16 +527,18 @@ def NumberColumn(
     pinned: bool | None = None,
     alignment: ContentAlignment | None = None,
     default: int | float | None = None,
-    format: str | NumberFormat | None = None,
+    format: str | NumberColumnFormat | None = None,
     min_value: int | float | None = None,
     max_value: int | float | None = None,
     step: int | float | None = None,
 ) -> ColumnConfig:
     """Configure a number column in ``st.dataframe`` or ``st.data_editor``.
 
-    This is the default column type for integer and float values. This command needs to
-    be used in the ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
-    When used with ``st.data_editor``, editing will be enabled with a numeric input widget.
+    This is the default column type for integer, float, and timedelta values. This
+    command needs to be used in the ``column_config`` parameter of ``st.dataframe``
+    or ``st.data_editor``. When used with ``st.data_editor``, editing will be
+    enabled with a numeric input widget. Timedelta values are edited as a number
+    of seconds.
 
     Parameters
     ----------
@@ -591,15 +595,20 @@ def NumberColumn(
 
     default : int, float, or None
         Specifies the default value in this column when a new row is added by
-        the user. This defaults to ``None``.
+        the user. This defaults to ``None``. On timedelta / duration columns,
+        this is a number of seconds.
 
-    format :  str, "plain", "localized", "percent", "dollar", "euro", "yen", "accounting", "compact", "scientific", "engineering", or None
+    format :  str, "plain", "localized", "percent", "dollar", "euro", "yen", "accounting", "compact", "scientific", "engineering", "duration", or None
         A format string controlling how numbers are displayed.
         This can be one of the following values:
 
         - ``None`` (default): Streamlit infers the formatting from the data.
         - ``"plain"``: Show the full number without any formatting (e.g. "1234.567").
-        - ``"localized"``: Show the number in the default locale format (e.g. "1,234.567").
+        - ``"localized"``: Show the number in the default locale format
+          (e.g. "1,234.567"). On timedelta / duration columns, show a
+          locale-aware duration instead (e.g. "5 sec", "1 sec, 500 ms").
+          Browsers without ``Intl.DurationFormat`` fall back to the
+          elapsed-time clock (the same display as ``format="compact"``).
         - ``"percent"``: Show the number as a percentage (e.g. "123456.70%").
         - ``"dollar"``: Show the number as a dollar amount (e.g. "$1,234.57").
         - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
@@ -607,8 +616,13 @@ def NumberColumn(
         - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.00").
         - ``"bytes"``: Show the number in a byte format (e.g. "1.2KB").
         - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
+          On timedelta / duration columns, show an elapsed-time clock instead
+          (e.g. "00:00:01.5", "336:00:00"). Hours are not wrapped at 24.
         - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").
         - ``"engineering"``: Show the number in engineering notation (e.g. "1.235E3").
+        - ``"duration"``: Treat the value as seconds and show an approximate
+          humanized duration (e.g. "a few seconds", "2 hours", "a day").
+          Works for any number or duration column.
         - printf-style format string: Format the number with a printf
           specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
           ``"%X"`` to show an unsigned hexadecimal integer (e.g. "4D2"). You
@@ -618,17 +632,22 @@ def NumberColumn(
           `sprintf-js
           <https://github.com/alexei/sprintf.js?tab=readme-ov-file#format-specification>`_.
 
+        For timedelta / duration columns, other named and printf number
+        formats apply to the value in **seconds**.
+
         Formatting from ``column_config`` always takes precedence over
         formatting from ``pandas.Styler``. The formatting does not impact the
         return value when used in ``st.data_editor``.
 
     min_value : int, float, or None
         The minimum value that can be entered. If this is ``None`` (default),
-        there will be no minimum.
+        there will be no minimum. On timedelta / duration columns, this is a
+        number of seconds.
 
     max_value : int, float, or None
         The maximum value that can be entered. If this is ``None`` (default),
-        there will be no maximum.
+        there will be no maximum. On timedelta / duration columns, this is a
+        number of seconds.
 
     step : int, float, or None
         The precision of numbers that can be entered. If this ``None``
@@ -639,7 +658,8 @@ def NumberColumn(
 
         If ``format`` is a predefined format like ``"dollar"``, ``step``
         overrides the display precision. If ``format`` is a printf-style format
-        string, ``step`` will not change the display precision.
+        string, ``step`` will not change the display precision. On timedelta /
+        duration columns, this is a number of seconds.
 
     Examples
     --------
@@ -2559,6 +2579,9 @@ def TimeColumn(
     This is the default column type for time values. This command needs to be used in
     the ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``. When
     used with ``st.data_editor``, editing will be enabled with a time picker widget.
+
+    This column type is for clock times, not elapsed durations. Use
+    ``NumberColumn`` for ``timedelta`` / duration values.
 
     Parameters
     ----------

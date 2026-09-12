@@ -17,10 +17,12 @@
 
 import { GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
 import {
+  Duration,
   DurationNanosecond,
   Field,
   Float64,
   Int64,
+  TimeUnit,
   Uint64,
 } from "apache-arrow"
 
@@ -79,6 +81,17 @@ const MOCK_DURATION_ARROW_TYPE: ArrowType = {
     numpy_type: "timedelta64[ns]",
     metadata: null,
   },
+}
+
+function getDurationArrowType(unit: TimeUnit, numpyType: string): ArrowType {
+  return {
+    ...MOCK_DURATION_ARROW_TYPE,
+    arrowField: new Field("duration_column", new Duration(unit), true),
+    pandasType: {
+      ...MOCK_DURATION_ARROW_TYPE.pandasType!,
+      numpy_type: numpyType,
+    },
+  }
 }
 
 const NUMBER_COLUMN_TEMPLATE: Partial<BaseColumnProps> = {
@@ -545,23 +558,167 @@ describe("NumberColumn", () => {
     })
   })
 
-  it("uses arrow formatting for duration types", () => {
-    // Without a custom format, duration types render with arrow's humanized
-    // formatting (left-aligned) instead of plain number formatting.
+  it("uses humanized duration formatting by default", () => {
+    // Duration cells receive seconds (converted from Arrow ticks in
+    // getCellFromArrow). Without a custom format they render a humanized
+    // duration, left-aligned, and store the second count for numeric sorting.
     const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE)
-    const cell = mockColumn.getCell(60_000_000_000)
+    const cell = mockColumn.getCell(60)
     expect(cell.contentAlign).toEqual("left")
-    // Use regex to avoid coupling to moment.js's exact humanize output.
+    expect((cell as NumberCell).data).toEqual(60)
+    // Use regex to avoid coupling to the exact locale duration string.
     expect((cell as NumberCell).displayData).toMatch(/minute/i)
+    expect((cell as NumberCell).copyData).toEqual("60")
   })
 
-  it("uses configured number format instead of arrow formatting when format is set", () => {
-    // With a custom format, the right-aligned numeric formatting takes over.
+  it("keeps a minus sign for negative durations", () => {
+    const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE)
+    const cell = mockColumn.getCell(-3 * 24 * 60 * 60)
+    expect((cell as NumberCell).displayData).toMatch(/^-/)
+  })
+
+  it("renders multi-day durations stored as seconds", () => {
+    // 200 days in nanoseconds would overflow Number.MAX_SAFE_INTEGER;
+    // storing seconds keeps the cell numeric and sortable.
+    const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE)
+    const twoHundredDays = 200 * 24 * 60 * 60
+    const cell = mockColumn.getCell(twoHundredDays)
+    expect(isErrorCell(cell)).toEqual(false)
+    expect((cell as NumberCell).data).toEqual(twoHundredDays)
+    expect((cell as NumberCell).displayData.length).toBeGreaterThan(0)
+  })
+
+  it("applies numeric formats to duration values in seconds", () => {
     const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE, {
-      format: "%.0f ns",
+      format: "%.0f s",
     })
-    const cell = mockColumn.getCell(60_000_000_000)
+    const cell = mockColumn.getCell(60)
     expect(cell.contentAlign).toEqual("right")
-    expect((cell as NumberCell).displayData).toEqual("60000000000 ns")
+    expect((cell as NumberCell).displayData).toEqual("60 s")
+  })
+
+  it("applies the localized duration format on duration columns", () => {
+    const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE, {
+      format: "localized",
+    })
+    const twoHours = mockColumn.getCell(7200)
+    expect(twoHours.contentAlign).toEqual("right")
+    expect((twoHours as NumberCell).displayData).toMatch(/2 hr|02:00:00/i)
+
+    const fiveSeconds = mockColumn.getCell(5)
+    expect((fiveSeconds as NumberCell).displayData).toMatch(/5 sec|00:00:05/i)
+
+    const fractionalSecond = mockColumn.getCell(1.5)
+    expect((fractionalSecond as NumberCell).displayData).toMatch(
+      /1 sec, 500 ms|00:00:01.5/i
+    )
+  })
+
+  it.each([MOCK_DURATION_ARROW_TYPE, MOCK_FLOAT_ARROW_TYPE])(
+    "humanizes values as a duration when format is duration",
+    arrowType => {
+      const mockColumn = getNumberColumn(arrowType, {
+        format: "duration",
+      })
+      const fewSeconds = mockColumn.getCell(5)
+      expect(fewSeconds.contentAlign).toEqual("left")
+      expect((fewSeconds as NumberCell).displayData).toEqual("a few seconds")
+
+      const twoHours = mockColumn.getCell(7200)
+      expect((twoHours as NumberCell).displayData).toMatch(/hour/i)
+      expect((twoHours as NumberCell).copyData).toEqual("7200")
+    }
+  )
+
+  it("formats duration values as an elapsed-time clock when format is compact", () => {
+    const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE, {
+      format: "compact",
+    })
+    const oneSecond = mockColumn.getCell(1)
+    expect(oneSecond.contentAlign).toEqual("right")
+    expect((oneSecond as NumberCell).displayData).toEqual("00:00:01")
+
+    const twoHours = mockColumn.getCell(7200)
+    expect((twoHours as NumberCell).displayData).toEqual("02:00:00")
+
+    const fourteenDays = mockColumn.getCell(14 * 24 * 60 * 60)
+    expect((fourteenDays as NumberCell).displayData).toEqual("336:00:00")
+
+    const fractionalSecond = mockColumn.getCell(1.00025)
+    expect((fractionalSecond as NumberCell).displayData).toEqual(
+      "00:00:01.00025"
+    )
+
+    const negativeFraction = mockColumn.getCell(-0.5)
+    expect((negativeFraction as NumberCell).displayData).toEqual("-00:00:00.5")
+  })
+
+  it.each([
+    [TimeUnit.SECOND, "timedelta64[s]", 90, true],
+    [TimeUnit.SECOND, "timedelta64[s]", 90.5, false],
+    [TimeUnit.SECOND, "timedelta64[s]", 9_223_372_036, true],
+    [TimeUnit.SECOND, "timedelta64[s]", 9_223_372_036.000_008, false],
+    [TimeUnit.MILLISECOND, "timedelta64[ms]", 90.5, true],
+    [TimeUnit.MILLISECOND, "timedelta64[ms]", 90.0005, false],
+    [TimeUnit.MILLISECOND, "timedelta64[ms]", 9_223_372_036, true],
+    [TimeUnit.MILLISECOND, "timedelta64[ms]", 9_223_372_036.000_008, false],
+    [TimeUnit.MICROSECOND, "timedelta64[us]", 90.0005, true],
+    [TimeUnit.MICROSECOND, "timedelta64[us]", 90.0000005, false],
+    [TimeUnit.NANOSECOND, "timedelta64[ns]", 90.0000005, true],
+    [TimeUnit.NANOSECOND, "timedelta64[ns]", 90.0000000005, false],
+  ])(
+    "validates %s duration precision for %p seconds",
+    (unit, numpyType, seconds, expected) => {
+      const mockColumn = getNumberColumn(getDurationArrowType(unit, numpyType))
+      expect(mockColumn.validateInput!(seconds)).toEqual(expected)
+    }
+  )
+
+  it("keeps copyData as the raw second count for duration formats", () => {
+    const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE)
+    const cell = mockColumn.getCell(7200)
+    expect((cell as NumberCell).copyData).toEqual("7200")
+    expect(mockColumn.validateInput!(cell.copyData)).toBe(true)
+  })
+
+  it("revalidates duration precision after max_value correction", () => {
+    const mockColumn = getNumberColumn(
+      getDurationArrowType(TimeUnit.SECOND, "timedelta64[s]"),
+      { max_value: 90.5 }
+    )
+    // 100 clamps to 90.5, which timedelta64[s] cannot store.
+    expect(mockColumn.validateInput!(100)).toBe(false)
+    expect(mockColumn.validateInput!(90)).toBe(true)
+  })
+
+  it("rejects a max_value correction that is finer than the duration unit", () => {
+    const mockColumn = getNumberColumn(
+      getDurationArrowType(TimeUnit.SECOND, "timedelta64[s]"),
+      { max_value: 90.5 }
+    )
+    expect(mockColumn.validateInput!(100)).toBe(false)
+    expect(mockColumn.validateInput!(90)).toBe(true)
+  })
+
+  it("rejects duration edits outside the pandas Timedelta range", () => {
+    const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE)
+    expect(mockColumn.validateInput!(9_223_372_036)).toBe(true)
+    expect(mockColumn.validateInput!(9_223_372_036.854_776)).toBe(false)
+    expect(mockColumn.validateInput!(9_223_372_037)).toBe(false)
+    expect(mockColumn.validateInput!(-9_223_372_036.854_776)).toBe(false)
+    expect(mockColumn.validateInput!(-9_223_372_037)).toBe(false)
+  })
+
+  it("renders non-finite compact duration values as their string form", () => {
+    const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE, {
+      format: "compact",
+    })
+    expect(isErrorCell(mockColumn.getCell(Number.NaN))).toEqual(true)
+    expect(
+      (mockColumn.getCell(Number.POSITIVE_INFINITY) as NumberCell).displayData
+    ).toEqual("Infinity")
+    expect(
+      (mockColumn.getCell(Number.NEGATIVE_INFINITY) as NumberCell).displayData
+    ).toEqual("-Infinity")
   })
 })

@@ -15,7 +15,7 @@
  */
 
 import { renderHook } from "@testing-library/react"
-import { Field, Int64, Utf8 } from "apache-arrow"
+import { Duration, Field, Int64, TimeUnit, Utf8 } from "apache-arrow"
 import { getLogger } from "loglevel"
 
 import {
@@ -188,6 +188,41 @@ describe("applyColumnConfig", () => {
     const column2 = applyColumnConfig(MOCK_COLUMNS[1], columnConfig)
     expect(column2.width).toBe(undefined)
     expect(column2.isIndex).toBe(false)
+  })
+
+  it("allows disabling a duration column", () => {
+    const durationColumn = NumberColumn({
+      id: "td",
+      name: "td",
+      title: "td",
+      indexNumber: 1,
+      arrowType: {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("td", new Duration(TimeUnit.NANOSECOND), true),
+        pandasType: {
+          field_name: "td",
+          name: "td",
+          pandas_type: "object",
+          numpy_type: "timedelta64[ns]",
+          metadata: null,
+        },
+      },
+      isEditable: true,
+      isHidden: false,
+      isIndex: false,
+      isPinned: false,
+      isStretched: false,
+    })
+
+    expect(applyColumnConfig(durationColumn, new Map()).isEditable).toBe(true)
+    expect(
+      applyColumnConfig(durationColumn, new Map([["td", { disabled: true }]]))
+        .isEditable
+    ).toBe(false)
+    expect(
+      applyColumnConfig(durationColumn, new Map([["td", { disabled: false }]]))
+        .isEditable
+    ).toBe(true)
   })
 
   it("allows configuring a column via numeric ID", () => {

@@ -768,7 +768,11 @@ st.dataframe(
             "localized": [0.0123123, -1234.567, 12, 0],
             "accounting": [0.0123123, -1234.567, 12, 0],
             "bytes": [0.0123123, -1234.567, 12, 0],
-            "custom format": [0.0123123, -1234.567, 12, 0],
+            "duration": [5, 7200, 14 * 24 * 60 * 60, 0],
+            "compact (td)": pd.to_timedelta(
+                [5.25, 7200, 14 * 24 * 60 * 60, 0], unit="s"
+            ),
+            "custom": [0.0123123, -1234.567, 12, 0],
         }
     ),
     column_config={
@@ -783,7 +787,9 @@ st.dataframe(
         "localized": st.column_config.NumberColumn(format="localized"),
         "accounting": st.column_config.NumberColumn(format="accounting"),
         "bytes": st.column_config.NumberColumn(format="bytes"),
-        "custom format": st.column_config.NumberColumn(format="%,.2f"),
+        "duration": st.column_config.NumberColumn(format="duration"),
+        "compact (td)": st.column_config.NumberColumn(format="compact"),
+        "custom": st.column_config.NumberColumn(format="%,.2f"),
     },
     hide_index=True,
     width="content",
