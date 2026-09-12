@@ -2539,6 +2539,76 @@ describe("createEmotionTheme", () => {
     }
   )
 
+  // == Theme spacing properties ==
+
+  it("scales rem spacing tokens when spacingScale is provided", () => {
+    const theme = createEmotionTheme({ spacingScale: 0.5 })
+
+    expect(theme.spacing).toEqual({
+      ...baseTheme.emotion.spacing,
+      threeXS: "0.06rem",
+      twoXS: "0.13rem",
+      xs: "0.19rem",
+      sm: "0.25rem",
+      md: "0.38rem",
+      lg: "0.5rem",
+      xl: "0.63rem",
+      twoXL: "0.75rem",
+      threeXL: "1rem",
+      fourXL: "2rem",
+      fiveXL: "3rem",
+      sixXL: "4rem",
+    })
+    // minElementHeight / dropdownItemHeight are 2.5rem; largestElementHeight is 4.25rem
+    expect(theme.sizes.minElementHeight).toBe("1.25rem")
+    expect(theme.sizes.dropdownItemHeight).toBe("1.25rem")
+    expect(theme.sizes.largestElementHeight).toBe("2.13rem")
+    // Derived size tokens that embed spacing / min height stay in sync
+    expect(theme.sizes.elementHighlightHeight).toBe(
+      `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`
+    )
+    expect(theme.sizes.tagMarginInsideBorder).toBe(
+      `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`
+    )
+  })
+
+  it("keeps default spacing when spacingScale is unset", () => {
+    const theme = createEmotionTheme({})
+
+    expect(theme.spacing).toEqual(baseTheme.emotion.spacing)
+    expect(theme.sizes.minElementHeight).toBe(
+      baseTheme.emotion.sizes.minElementHeight
+    )
+    expect(theme.sizes.dropdownItemHeight).toBe(
+      baseTheme.emotion.sizes.dropdownItemHeight
+    )
+    expect(theme.sizes.largestElementHeight).toBe(
+      baseTheme.emotion.sizes.largestElementHeight
+    )
+  })
+
+  it.each([0, -1, NaN, Infinity])(
+    "logs a warning and falls back to default for invalid spacingScale '%s'",
+    spacingScale => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const theme = createEmotionTheme({ spacingScale })
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid spacingScale: ${spacingScale}. Falling back to default spacing.`
+      )
+      expect(theme.spacing).toEqual(baseTheme.emotion.spacing)
+      expect(theme.sizes.minElementHeight).toBe(
+        baseTheme.emotion.sizes.minElementHeight
+      )
+      expect(theme.sizes.dropdownItemHeight).toBe(
+        baseTheme.emotion.sizes.dropdownItemHeight
+      )
+      expect(theme.sizes.largestElementHeight).toBe(
+        baseTheme.emotion.sizes.largestElementHeight
+      )
+    }
+  )
+
   // == Theme radii properties ==
 
   it("adapts the radii theme props if baseRadius is provided", () => {
@@ -4631,6 +4701,22 @@ describe("Sidebar theme creation", () => {
 
       // Should apply sidebar primary color override
       expect(sidebarTheme.emotion.colors.primary).toBe("blue")
+    })
+
+    it("inherits main spacingScale when sidebar theme is rebuilt", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        spacingScale: 0.5,
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(sidebarTheme.emotion.spacing.lg).toBe("0.5rem")
+      expect(sidebarTheme.emotion.sizes.minElementHeight).toBe("1.25rem")
+      expect(sidebarTheme.emotion.sizes.dropdownItemHeight).toBe("1.25rem")
+      expect(sidebarTheme.emotion.sizes.largestElementHeight).toBe("2.13rem")
+      expect(sidebarTheme.emotion.sizes.elementHighlightHeight).toBe(
+        `calc(${sidebarTheme.emotion.sizes.minElementHeight} - 2 * ${sidebarTheme.emotion.spacing.xs})`
+      )
     })
 
     it("uses default sidebar heading font sizes when not configured", () => {
