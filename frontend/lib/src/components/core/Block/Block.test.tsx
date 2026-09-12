@@ -846,6 +846,30 @@ describe("BlockNodeRenderer container types", () => {
 
     expect(screen.getByTestId("stDialog")).toBeVisible()
     expect(screen.getByText("dialog body")).toBeVisible()
+    expect(
+      screen.queryByTestId("stDialogContentEndPad")
+    ).not.toBeInTheDocument()
+  })
+
+  it("pads the end of a left drawer dialog", () => {
+    renderWithContexts(
+      makeBlockNodeComponent(
+        makeVerticalBlock([text("drawer body")], {
+          dialog: {
+            title: "My drawer",
+            isOpen: true,
+            dismissible: true,
+            width: BlockProto.Dialog.DialogWidth.LARGE,
+            position: BlockProto.Dialog.DialogPosition.LEFT,
+          },
+        })
+      )
+    )
+
+    expect(screen.getByText("drawer body")).toBeVisible()
+    expect(screen.getByTestId("stDialogContentEndPad")).toHaveStyle({
+      height: "2rem",
+    })
   })
 
   it("hides a leftover dialog from a previous full-app run", () => {

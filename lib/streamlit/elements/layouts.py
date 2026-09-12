@@ -2055,8 +2055,9 @@ class LayoutsMixin:
         self,
         title: str,
         *,
-        dismissible: bool = True,
         width: Literal["small", "large", "medium"] = "small",
+        position: Literal["left", "center", "right"] = "center",
+        dismissible: bool = True,
         icon: str | None = None,
         on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     ) -> Dialog:
@@ -2068,8 +2069,9 @@ class LayoutsMixin:
         return get_dg_singleton_instance().dialog_container_cls._create(
             self.dg,
             title,
-            dismissible=dismissible,
             width=width,
+            position=position,
+            dismissible=dismissible,
             icon=icon,
             on_dismiss=on_dismiss,
         )

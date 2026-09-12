@@ -301,6 +301,53 @@ describe("Dialog container", () => {
     )
   })
 
+  describe("dialog position", () => {
+    it("renders a centered dialog when position is omitted", () => {
+      const props = getProps()
+      // Simulate a payload that never set the enum (proto3 default not applied).
+      delete (props.element as { position?: BlockProto.Dialog.DialogPosition })
+        .position
+      render(
+        <Dialog {...props}>
+          <div>test</div>
+        </Dialog>
+      )
+
+      expect(screen.getByTestId("stDialog")).toHaveStyle({
+        justifyContent: "center",
+      })
+      expect(screen.getByText("test")).toBeVisible()
+    })
+
+    it.each([
+      {
+        position: BlockProto.Dialog.DialogPosition.CENTER,
+        justifyContent: "center",
+      },
+      {
+        position: BlockProto.Dialog.DialogPosition.LEFT,
+        justifyContent: "flex-start",
+      },
+      {
+        position: BlockProto.Dialog.DialogPosition.RIGHT,
+        justifyContent: "flex-end",
+      },
+    ])(
+      "places a $position dialog with overlay justifyContent $justifyContent",
+      ({ position, justifyContent }) => {
+        const props = getProps({ position })
+        render(
+          <Dialog {...props}>
+            <div>test</div>
+          </Dialog>
+        )
+
+        expect(screen.getByTestId("stDialog")).toHaveStyle({ justifyContent })
+        expect(screen.getByText("test")).toBeVisible()
+      }
+    )
+  })
+
   describe("keyboard handling", () => {
     it("prevents R keydown from triggering rerun when dialog is non-dismissible", () => {
       const props = getProps({ dismissible: false })

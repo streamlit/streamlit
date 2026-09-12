@@ -26,12 +26,14 @@ from streamlit.errors import (
     StreamlitInvalidLayoutContextError,
     StreamlitMissingRequiredParameterError,
 )
+from streamlit.proto.PageProfile_pb2 import Argument
 from streamlit.runtime.fragment import _check_not_parallel_worker, _fragment
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.type_util import get_object_name
 
 if TYPE_CHECKING:
-    from streamlit.elements.lib.dialog import DialogWidth
+    from streamlit.elements.lib.dialog import DialogPosition, DialogWidth
     from streamlit.runtime.state import WidgetCallback
 
 
@@ -63,12 +65,39 @@ def _assert_no_nested_dialogs() -> None:
 
 F = TypeVar("F", bound=Callable[..., Any])
 
+_TRACKED_DIALOG_POSITIONS = frozenset({"center", "left", "right"})
+
+
+def _record_dialog_position_metric(position: str) -> None:
+    """Record the position literal on the already-tracked ``dialog`` command.
+
+    ``gather_metrics`` only stores string arguments as ``len:N``. Closed enums
+    like ``position`` need an explicit ``val:`` so we can tell center/left/right
+    apart. Invalid values are ignored; they still fail later at dialog open.
+    """
+    if position not in _TRACKED_DIALOG_POSITIONS:
+        return
+    ctx = get_script_run_ctx()
+    if ctx is None or not ctx.gather_usage_stats:
+        return
+    position_meta = f"val:{position}"
+    for command in reversed(ctx.shared.tracked_commands):
+        if command.name != "dialog":
+            continue
+        for arg in command.args:
+            if arg.k == "position":
+                arg.m = position_meta
+                return
+        command.args.append(Argument(k="position", t="str", m=position_meta))
+        return
+
 
 def _dialog_decorator(
     non_optional_func: F,
     title: str,
     *,
     width: DialogWidth = "small",
+    position: DialogPosition = "center",
     dismissible: bool = True,
     icon: str | None = None,
     on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
@@ -88,8 +117,9 @@ def _dialog_decorator(
         # not inherit the sidebar theming.
         dialog = get_dg_singleton_instance().event_dg._dialog(
             title=title,
-            dismissible=dismissible,
             width=width,
+            position=position,
+            dismissible=dismissible,
             icon=icon,
             on_dismiss=on_dismiss,
         )
@@ -121,6 +151,7 @@ def dialog_decorator(
     title: str,
     *,
     width: DialogWidth = "small",
+    position: DialogPosition = "center",
     dismissible: bool = True,
     icon: str | None = None,
     on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
@@ -138,6 +169,7 @@ def dialog_decorator(
     title: F,
     *,
     width: DialogWidth = "small",
+    position: DialogPosition = "center",
     dismissible: bool = True,
     icon: str | None = None,
     on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
@@ -149,6 +181,7 @@ def dialog_decorator(
     title: F | str,
     *,
     width: DialogWidth = "small",
+    position: DialogPosition = "center",
     dismissible: bool = True,
     icon: str | None = None,
     on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
@@ -159,6 +192,12 @@ def dialog_decorator(
     function. When you call a dialog function, Streamlit inserts a modal dialog
     into your app. Streamlit element commands called within the dialog function
     render inside the modal dialog.
+
+    By default, the dialog is a centered modal. Set ``position`` to ``"left"``
+    or ``"right"`` to show the dialog as a user-resizable full-height side
+    drawer. Side drawers stay modal: the rest of the app is inert, and
+    ``width``, ``dismissible``, ``icon``, and ``on_dismiss`` apply the same
+    way in every position.
 
     The dialog function can accept arguments that can be passed when it is
     called. Any values from the dialog that need to be accessed from the wider
@@ -220,6 +259,16 @@ def dialog_decorator(
           pixels wide.
         - ``"medium"``: The modal dialog will be up to 750 pixels wide.
         - ``"large"``: The modal dialog will be up to 1280 pixels wide.
+
+    position : "center", "left", "right"
+        The position of the modal dialog. This can be one of the following:
+
+        - ``"center"`` (default): The modal dialog is centered in the
+          viewport.
+        - ``"left"``: The dialog is shown as a user-resizable full-height
+          drawer attached to the left side of the viewport.
+        - ``"right"``: The dialog is shown as a user-resizable full-height
+          drawer attached to the right side of the viewport.
 
     dismissible : bool
         Whether the modal dialog can be dismissed by the user. If this is
@@ -301,6 +350,7 @@ def dialog_decorator(
     """
 
     func_or_title = title
+    _record_dialog_position_metric(position)
     if isinstance(func_or_title, str):
         # Support passing the params via function decorator
         def wrapper(f: F) -> F:
@@ -308,6 +358,7 @@ def dialog_decorator(
                 non_optional_func=f,
                 title=func_or_title,
                 width=width,
+                position=position,
                 dismissible=dismissible,
                 icon=icon,
                 on_dismiss=on_dismiss,
@@ -320,6 +371,7 @@ def dialog_decorator(
         func,
         "",
         width=width,
+        position=position,
         dismissible=dismissible,
         icon=icon,
         on_dismiss=on_dismiss,
