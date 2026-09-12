@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import threading
 import time
 import unittest
@@ -40,6 +41,7 @@ from streamlit.runtime.caching import (
     clear_session_resource_cache,
 )
 from streamlit.runtime.caching.cache_errors import (
+    CachedFunctionReturnedAwaitableError,
     CachedStFunctionInBackgroundModeWarning,
     CacheReplayClosureError,
 )
@@ -1396,6 +1398,49 @@ class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
         assert call_count[0] == 2
         timer_patch.return_value = _BG_TTL * 1.5
         assert foo() == 2
+        assert call_count[0] == 2
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_background_refresh_rejects_awaitable(
+        self, _, cache_decorator, timer_patch: Mock
+    ):
+        """A rejected coroutine is closed, keeps stale data, and starts cooldown."""
+        call_count = [0]
+        created_coroutines = []
+
+        async def operation() -> int:
+            return 42
+
+        @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+        def foo() -> Any:
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return 1
+            coroutine = operation()
+            created_coroutines.append(coroutine)
+            return coroutine
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        with (
+            self._patch_sync_submit(),
+            patch.object(_LOGGER, "warning") as warning_mock,
+        ):
+            timer_patch.return_value = _BG_TTL * 1.5
+            assert foo() == 1
+
+        assert call_count[0] == 2
+        assert len(created_coroutines) == 1
+        assert inspect.getcoroutinestate(created_coroutines[0]) == inspect.CORO_CLOSED
+        assert isinstance(
+            warning_mock.call_args.args[2], CachedFunctionReturnedAwaitableError
+        )
+        timer_patch.return_value = _BG_TTL * 1.5
+        assert foo() == 1
         assert call_count[0] == 2
 
     @parameterized.expand(

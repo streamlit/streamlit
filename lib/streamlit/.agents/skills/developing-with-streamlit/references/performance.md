@@ -103,6 +103,12 @@ keys](server-asgi.md#scheduled-background-refresh-for-specific-keys).
 call returns an awaitable; you must await it (for example with `asyncio.run()` in a Streamlit
 script). Streamlit caches the awaited return value, not the coroutine.
 
+Streamlit raises an error if a synchronous cached function returns an awaitable. Prefer
+defining the function with `async def` and awaiting the asynchronous operation before
+returning its result. If you use `refresh_mode="background"`, switch to `"foreground"` first.
+In a synchronous script context without an active event loop, you can instead run the
+operation to completion with `asyncio.run()` before returning.
+
 ```python
 import asyncio
 
