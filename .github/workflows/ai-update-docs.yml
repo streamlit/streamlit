@@ -395,11 +395,17 @@ jobs:
             });
             core.setOutput('pr_url', pr.html_url);
 
+            const labels = ['change:docs', 'impact:internal'];
+            // Only PRs targeting develop are marked as bot PRs; this workflow
+            // can also target a source PR's base branch.
+            if (baseBranch === 'develop') {
+              labels.push('bot-pr');
+            }
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: pr.number,
-              labels: ['change:docs', 'impact:internal'],
+              labels,
             });
 
       - name: Write step summary
