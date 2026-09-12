@@ -1182,7 +1182,7 @@ __metadata:
 
 "@glideapps/glide-data-grid@patch:@glideapps/glide-data-grid@npm%3A6.0.4-alpha24#~/.yarn/patches/@glideapps-glide-data-grid-npm-6.0.4-alpha24-9c1a40557b.patch":
   version: 6.0.4-alpha24
-  resolution: "@glideapps/glide-data-grid@patch:@glideapps/glide-data-grid@npm%3A6.0.4-alpha24#~/.yarn/patches/@glideapps-glide-data-grid-npm-6.0.4-alpha24-9c1a40557b.patch::version=6.0.4-alpha24&hash=8b6f4e"
+  resolution: "@glideapps/glide-data-grid@patch:@glideapps/glide-data-grid@npm%3A6.0.4-alpha24#~/.yarn/patches/@glideapps-glide-data-grid-npm-6.0.4-alpha24-9c1a40557b.patch::version=6.0.4-alpha24&hash=21d05a"
   dependencies:
     "@linaria/react": "npm:^6.3.0"
     canvas-hypertxt: "npm:^1.0.3"
@@ -1193,7 +1193,7 @@ __metadata:
     react: ^16.12.0 || 17.x || 18.x || 19.x
     react-dom: ^16.12.0 || 17.x || 18.x || 19.x
     react-responsive-carousel: ^3.2.7
-  checksum: 10c0/caf10dc82f75567e918f58cca10c960aec481e4f2c5cf6c9881984dbadf521a7a32c27199e6758dbf142b503b6c49bd064ced5286e498e11c05c8b00558e7155
+  checksum: 10c0/d22d11c7b04818456a5d1b4ae3ea6ca8f80915146116eb1210bc6e858fc19267c2b87674b203d3a443fc1cee8170ca601739cb855bf175c671619d10b4bd51dd
   languageName: node
   linkType: hard
 
@@ -3317,6 +3317,7 @@ __metadata:
     "@emotion/serialize": "npm:^1.1.3"
     "@emotion/styled": "npm:^11.14.1"
     "@floating-ui/react": "npm:^0.27.20"
+    "@linaria/react": "npm:^6.3.0"
     "@streamlit/connection": "workspace:^"
     "@streamlit/lib": "workspace:^"
     "@streamlit/protobuf": "workspace:^"
@@ -3348,6 +3349,7 @@ __metadata:
     react: "npm:^18.2.0"
     react-dom: "npm:^18.2.0"
     react-helmet-async: "npm:^3.0.0"
+    react-number-format: "npm:^5.4.4"
     react-transition-group: "npm:^4.4.5"
     tree-kill: "npm:^1.2.2"
     typed-signals: "npm:^3.0.0"

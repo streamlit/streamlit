@@ -7,12 +7,14 @@
   },
   "ignoreDependencies": [
     "@bufbuild/buf",
+    "@linaria/react",
     "@playwright/cli",
     "@swc/plugin-emotion",
     "eslint-plugin-streamlit-custom",
     "oxfmt",
     "protobufjs",
     "protobufjs-cli",
+    "react-number-format",
     "typescript-v7"
   ],
   "workspaces": {
