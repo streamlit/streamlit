@@ -22,8 +22,12 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 /**
  * Think of useState, but the state is also persisted in the widget manager.
- * This allows you to have the state be persisted between mounting and unmounting of the component.
- * @param widgetMgr - The widget manager instance to use
+ * This persists the state across component mount and unmount cycles.
+ *
+ * The `widgetMgr` may be undefined (e.g. for `st.dataframe`, which shares the
+ * DataFrame component with `st.data_editor` but has no widget manager). In that
+ * case the state falls back to a purely local `useState` and is not persisted.
+ * @param widgetMgr - The widget manager instance to use (optional)
  * @param id - The id of the widget to store the state for
  * @param key - The key of the state to store
  * @param defaultValue - The default value to use if the state is not set in the widget manager
@@ -36,13 +40,16 @@ const useWidgetManagerElementState = <T,>({
   key,
   defaultValue,
 }: {
-  widgetMgr: WidgetStateManager
+  widgetMgr: WidgetStateManager | undefined
   id: string
   formId?: string
   key: string
   defaultValue: T
 }): [T, (value: T) => void] => {
   useEffect(() => {
+    if (!widgetMgr) {
+      return
+    }
     const existingValue = widgetMgr.getElementState(id, key)
     if (isNullOrUndefined(existingValue) && notNullOrUndefined(defaultValue)) {
       widgetMgr.setElementState(id, key, defaultValue)
@@ -50,12 +57,12 @@ const useWidgetManagerElementState = <T,>({
   }, [widgetMgr, id, key, defaultValue])
 
   const [state, setStateInternal] = useState<T>(
-    widgetMgr.getElementState(id, key) ?? defaultValue
+    widgetMgr?.getElementState(id, key) ?? defaultValue
   )
 
   const setState = useCallback(
     (value: T) => {
-      widgetMgr.setElementState(id, key, value)
+      widgetMgr?.setElementState(id, key, value)
       setStateInternal(value)
     },
     [widgetMgr, id, key]

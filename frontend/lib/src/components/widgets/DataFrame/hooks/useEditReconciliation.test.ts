@@ -99,7 +99,7 @@ describe("useEditReconciliation hook", () => {
     rerender({ data: createMockData("bar") })
 
     expect(editingState.current.getCell(0, 0)).toBeUndefined()
-    expect(syncEditState).toHaveBeenCalled()
+    expect(syncEditState).toHaveBeenCalledWith({ submit: false })
   })
 
   it("preserves edits that do not match updated source data", () => {
@@ -218,7 +218,7 @@ describe("useEditReconciliation hook", () => {
     // reconciliation and clear the now-matching edit.
     rerender({ data: refreshedData, isEditingEnabled: true })
     expect(editingState.current.getCell(0, 0)).toBeUndefined()
-    expect(syncEditState).toHaveBeenCalled()
+    expect(syncEditState).toHaveBeenCalledWith({ submit: false })
   })
 
   it("reconciles restored edits when they are hydrated from the widget manager", () => {
@@ -253,6 +253,6 @@ describe("useEditReconciliation hook", () => {
     // reconciliation and clear the now-redundant restored edit.
     rerender({ editStateHydrationCount: 1 })
     expect(editingState.current.getCell(0, 0)).toBeUndefined()
-    expect(syncEditState).toHaveBeenCalled()
+    expect(syncEditState).toHaveBeenCalledWith({ submit: false })
   })
 })
