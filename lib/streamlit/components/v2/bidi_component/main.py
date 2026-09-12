@@ -37,6 +37,7 @@ from streamlit.dataframe_util import (
     convert_anything_to_arrow_bytes,
     determine_data_format,
 )
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -528,6 +529,12 @@ class BidiComponentMixin:
             INTERNAL_COMPONENT_NAME,
             bidi_component_proto,
             layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "components.v2.component",
+                key=bidi_component_proto.id or None,
+                support="browser_required",
+                component_name=bidi_component_proto.component_name or None,
+            ),
         )
 
         state_vals = unwrap_component_state(component_state.value)

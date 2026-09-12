@@ -62,6 +62,7 @@ from streamlit.elements.iframe import IframeMixin
 from streamlit.elements.image import ImageMixin
 from streamlit.elements.json import JsonMixin
 from streamlit.elements.layouts import LayoutsMixin
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import FormData, current_form_id
 from streamlit.elements.lib.layout_utils import (
     get_height_config,
@@ -516,6 +517,7 @@ class DeltaGenerator(
         element_proto: Message,
         layout_config: LayoutConfig | None = None,
         has_one_shot_effect: bool = False,
+        agent_props: str | None = None,
     ) -> DeltaGenerator:
         """Create NewElement delta, fill it, and enqueue it.
 
@@ -525,6 +527,10 @@ class DeltaGenerator(
             The name of the streamlit method being called
         element_proto : proto
             The actual proto in the NewElement type e.g. Alert/Button/Slider
+        agent_props : str or None
+            Semantic properties the command supplied for the agent API that its
+            proto cannot carry, from ``agent_spec.inline_props``. ``None``
+            whenever the agent API is off, which is the normal case.
 
         Returns
         -------
@@ -593,6 +599,8 @@ class DeltaGenerator(
         msg_was_enqueued = False
         if dg._root_container is not None and dg._cursor is not None:
             msg.metadata.delta_path[:] = dg._cursor.delta_path
+            if agent_props is not None:
+                msg.metadata.agent_props = agent_props
 
             _enqueue_message(msg)
             msg_was_enqueued = True
@@ -624,6 +632,7 @@ class DeltaGenerator(
             used_dg_id=dg._id,
             returned_dg_id=output_dg._id,
             layout_config=layout_config,
+            agent_props=agent_props,
         )
 
         return output_dg
@@ -632,6 +641,7 @@ class DeltaGenerator(
         self,
         block_proto: Block_pb2.Block | None = None,
         dg_type: type | None = None,
+        agent_props: str | None = None,
     ) -> DeltaGenerator:
         if block_proto is None:
             block_proto = Block_pb2.Block()
@@ -686,13 +696,14 @@ class DeltaGenerator(
         block_dg._creating_fragment_id = ts.fragment_id if ts else None
 
         # open_block() already advanced the parent cursor, so we only emit here.
-        _enqueue_add_block(block_delta_path, block_proto)
+        _enqueue_add_block(block_delta_path, block_proto, agent_props=agent_props)
 
         caching.save_block_message(
             block_proto,
             invoked_dg_id=self._id,
             used_dg_id=dg._id,
             returned_dg_id=block_dg._id,
+            agent_props=agent_props,
         )
 
         return block_dg
@@ -770,10 +781,16 @@ def _is_inside_fragment_path(
     return cursor_path[: len(fragment_path)] == fragment_path
 
 
-def _enqueue_add_block(delta_path: list[int], block_proto: Block_pb2.Block) -> None:
+def _enqueue_add_block(
+    delta_path: list[int],
+    block_proto: Block_pb2.Block,
+    agent_props: str | None = None,
+) -> None:
     """Send an add_block ForwardMsg for `block_proto` at `delta_path`."""
     msg = ForwardMsg()
     msg.metadata.delta_path[:] = delta_path
+    if agent_props is not None:
+        msg.metadata.agent_props = agent_props
     msg.delta.add_block.CopyFrom(block_proto)
     _enqueue_message(msg)
 
@@ -849,6 +866,9 @@ def _get_or_create_outside_wrapper(
     block_proto = Block_pb2.Block()
     block_proto.transparent.SetInParent()
     block_proto.allow_empty = True
+    # An internal wrapper with no public counterpart: its children belong to
+    # the container the author actually wrote to.
+    wrapper_agent_props = agent_spec.block("container", transparent=True)
 
     creation_delta_path = list(parent_cursor.delta_path)
 
@@ -871,7 +891,9 @@ def _get_or_create_outside_wrapper(
         block_type="transparent",
     )
 
-    _enqueue_add_block(creation_delta_path, block_proto)
+    _enqueue_add_block(
+        creation_delta_path, block_proto, agent_props=wrapper_agent_props
+    )
     # Advance the outside container's cursor exactly once, at creation time.
     parent_cursor.lock_element()
 

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import FormData, current_form_id, is_in_form
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -213,7 +214,16 @@ class FormMixin:
         block_proto.width_config.CopyFrom(get_width_config(width))
         validate_height(height, allow_content=True)
         block_proto.height_config.CopyFrom(get_height_config(height))
-        block_dg = self.dg._block(block_proto)
+        block_dg = self.dg._block(
+            block_proto,
+            agent_props=agent_spec.block(
+                "form",
+                key=form_id,
+                clear_on_submit=clear_on_submit,
+                border=border,
+                enter_to_submit=enter_to_submit,
+            ),
+        )
 
         # Attach the form's button info to the newly-created block's
         # DeltaGenerator.

@@ -26,6 +26,7 @@ from typing import (
 from typing_extensions import Never
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     WidthWithoutContent,
@@ -826,6 +827,26 @@ class SelectboxMixin:
             "selectbox",
             selectbox_proto,
             layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "selectbox",
+                key=element_id,
+                action="value",
+                label=label,
+                # The formatted options, not the author's Python objects:
+                # these are the strings a client has to send back to set the
+                # widget, so they are the actionable form.
+                options=formatted_options,
+                index=index,
+                help=help,
+                # The wire form encodes an explicit empty placeholder as a
+                # single space; report what the author passed.
+                placeholder=placeholder if placeholder != " " else "",
+                disabled=disabled,
+                label_visibility=label_visibility,
+                accept_new_options=accept_new_options,
+                filter_mode=filter_mode,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
             has_one_shot_effect=value_needs_reset or widget_state.value_changed,
         )
         return current_value

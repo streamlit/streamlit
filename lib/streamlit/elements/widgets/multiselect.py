@@ -27,6 +27,7 @@ from typing import (
 )
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     WidthWithoutContent,
@@ -861,6 +862,22 @@ class MultiSelectMixin:
             proto,
             layout_config=layout_config,
             has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+            agent_props=agent_spec.element(
+                widget_name,
+                key=element_id,
+                action="value",
+                label=label,
+                # The formatted options a client must send back, not the
+                # author's Python objects.
+                options=formatted_options,
+                default=default,
+                help=help,
+                placeholder=placeholder,
+                max_selections=max_selections,
+                accept_new_options=accept_new_options,
+                disabled=disabled,
+                label_visibility=label_visibility,
+            ),
         )
 
         return current_values

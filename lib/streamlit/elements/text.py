@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import create_layout_config, validate_wrap
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -122,7 +123,12 @@ class TextMixin:
             allow_content_width=True,
         )
 
-        return self.dg._enqueue("text", text_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "text",
+            text_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element("text", body=text_proto.body, help=help),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

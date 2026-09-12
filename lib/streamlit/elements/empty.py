@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -96,7 +97,9 @@ class EmptyMixin:
 
         """
         empty_proto = EmptyProto()
-        return self.dg._enqueue("empty", empty_proto)
+        return self.dg._enqueue(
+            "empty", empty_proto, agent_props=agent_spec.element("empty")
+        )
 
     @property
     def dg(self) -> DeltaGenerator:
