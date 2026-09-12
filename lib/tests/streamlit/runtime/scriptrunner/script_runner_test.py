@@ -20,6 +20,7 @@ import asyncio
 import os
 import sys
 import time
+import types
 import unittest
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, call, patch
@@ -67,6 +68,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     get_script_run_ctx,
 )
 from streamlit.runtime.state.session_state import SessionState
+from streamlit.watcher import local_sources_watcher
 from tests import testutil
 
 if TYPE_CHECKING:
@@ -75,6 +77,7 @@ if TYPE_CHECKING:
     from streamlit.proto.Delta_pb2 import Delta
     from streamlit.proto.Element_pb2 import Element
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+    from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 
 text_utf = "complete! 👨‍🎤"
 text_utf2 = "complete2! 👨‍🎤"
@@ -2051,7 +2054,8 @@ class TestScriptRunner(ScriptRunner):
         script_name: str,
         initial_rerun_data: RerunData | None = None,
         event_loop: asyncio.AbstractEventLoop | None = None,
-    ):
+        local_sources_watcher: LocalSourcesWatcher | None = None,
+    ) -> None:
         """Initialize the ScriptRunner for the given script_name.
 
         ``initial_rerun_data`` defaults to a full-app rerun; supply data with a
@@ -2086,6 +2090,7 @@ class TestScriptRunner(ScriptRunner):
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=PagesManager(main_script_path, script_cache),
             event_loop=event_loop,
+            local_sources_watcher=local_sources_watcher,
         )
 
         # Accumulates uncaught exceptions thrown by our run thread.
@@ -2130,10 +2135,10 @@ class TestScriptRunner(ScriptRunner):
         # Set the _dg_stack here to the one belonging to the thread context
         self._dg_stack = context_dg_stack.get()
 
-    def join(self) -> None:
+    def join(self, timeout: float | None = None) -> None:
         """Join the script_thread if it's running."""
         if self._script_thread is not None:
-            self._script_thread.join()
+            self._script_thread.join(timeout=timeout)
 
     def clear_forward_msgs(self) -> None:
         """Clear all messages from our ForwardMsgQueue."""
@@ -2288,3 +2293,99 @@ def test_log_if_error_logs_exception_and_does_not_raise() -> None:
         _log_if_error(raises)
 
     mock_logger.warning.assert_called_once()
+
+
+_GH6404_SLEEP_MODULE_NAME = "tests.streamlit.watcher.test_data.import_sleep_module"
+_GH6404_SLEEP_MODULE_PATH = os.path.realpath(
+    os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "watcher",
+        "test_data",
+        "import_sleep_module.py",
+    )
+)
+
+
+def _exception_summaries(runner: TestScriptRunner) -> list[str]:
+    """Return ``type: message`` for each exception element on ``runner``."""
+    summaries: list[str] = []
+    for element in runner.elements():
+        if element.WhichOneof("type") == "exception":
+            summaries.append(f"{element.exception.type}: {element.exception.message}")
+    return summaries
+
+
+def _join_or_fail(runner: TestScriptRunner, timeout: float) -> None:
+    """Join ``runner`` and fail the test if it is still alive after ``timeout``."""
+    runner.join(timeout=timeout)
+    thread = runner._script_thread
+    if thread is not None and thread.is_alive():
+        runner.request_stop()
+        runner.join(timeout=2.0)
+        pytest.fail(f"ScriptRunner did not finish within {timeout}s")
+
+
+def test_gh6404_scriptrunner_overlap_flush_does_not_keyerror() -> None:
+    """Two ScriptRunners sharing a watcher must not KeyError on overlapping import.
+
+    Mirrors fastRerun overlap: the old runner is inside ``import`` when the new
+    runner flushes pending ``sys.modules`` evictions at ``on_script_run``.
+    """
+    # Imported inside the test so collection does not load test_data modules
+    # that LocalSourcesWatcherTest would then treat as newly watched sources.
+    from tests.streamlit.watcher.test_data import import_sleep_gate
+
+    import_sleep_gate.reset(sleep=0.15)
+    sys.modules.pop(_GH6404_SLEEP_MODULE_NAME, None)
+
+    mock_runtime = MagicMock(spec=Runtime)
+    mock_runtime.media_file_mgr = MediaFileManager(
+        MemoryMediaFileStorage("/mock/media")
+    )
+    mock_runtime.media_file_mgr.clear_session_refs = MagicMock()
+    Runtime._instance = mock_runtime
+
+    app_path = os.path.join(
+        os.path.dirname(__file__), "test_data", "gh6404_import_sleep_app.py"
+    )
+    watcher = local_sources_watcher.LocalSourcesWatcher(PagesManager(app_path))
+    watcher._watched_modules[_GH6404_SLEEP_MODULE_PATH] = (
+        local_sources_watcher.WatchedModule(MagicMock(), _GH6404_SLEEP_MODULE_NAME)
+    )
+
+    old: TestScriptRunner | None = None
+    new: TestScriptRunner | None = None
+    try:
+        old = TestScriptRunner(
+            "gh6404_import_sleep_app.py", local_sources_watcher=watcher
+        )
+        old.start()
+        assert import_sleep_gate.started.wait(timeout=3)
+
+        sys.modules.setdefault(
+            _GH6404_SLEEP_MODULE_NAME, types.ModuleType(_GH6404_SLEEP_MODULE_NAME)
+        )
+        watcher.on_path_changed(_GH6404_SLEEP_MODULE_PATH)
+
+        new = TestScriptRunner(
+            "gh6404_import_sleep_app.py", local_sources_watcher=watcher
+        )
+        new.start()
+
+        for runner in (old, new):
+            _join_or_fail(runner, timeout=10.0)
+        for runner in (old, new):
+            assert runner.script_thread_exceptions == []
+            assert _exception_summaries(runner) == []
+    finally:
+        for runner in (old, new):
+            if runner is not None:
+                runner.request_stop()
+                runner.join(timeout=2.0)
+        watcher.close()
+        sys.modules.pop(_GH6404_SLEEP_MODULE_NAME, None)
+        import_sleep_gate.reset()
+        sys.modules.pop("tests.streamlit.watcher.test_data.import_sleep_gate", None)
+        Runtime._instance = None
