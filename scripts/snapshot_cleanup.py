@@ -154,9 +154,11 @@ def get_used_snapshots() -> dict[str, tuple[set[str], set[str]]]:
     )
 
     try:
-        cmd = "find e2e_playwright -name '*_test.py'"
         result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, check=True
+            ["find", "e2e_playwright", "-name", "*_test.py"],
+            capture_output=True,
+            text=True,
+            check=True,
         )
         test_files = result.stdout.strip().split("\n")
     except subprocess.CalledProcessError as e:
@@ -221,12 +223,12 @@ def search_for_snapshot_name(snapshot_name: str) -> bool:
     Returns True if found, False otherwise.
     """
     try:
-        # Use grep to search for the snapshot name in all test files
-        cmd = f'grep -r --include="*.py" "{snapshot_name}" e2e_playwright/'
         result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, check=False
+            ["grep", "-r", "--include=*.py", "--", snapshot_name, "e2e_playwright/"],
+            capture_output=True,
+            text=True,
+            check=False,
         )
-        # If grep finds something, it returns 0
         return result.returncode == 0
     except Exception as e:
         print(f"Error searching for {snapshot_name}: {e}")
