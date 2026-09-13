@@ -56,7 +56,13 @@ def _process_dialog_width_input(
 
 
 def _agent_description(
-    element_id: str, title: str, dismissible: bool, width: DialogWidth, is_open: bool
+    element_id: str,
+    title: str,
+    dismissible: bool,
+    width: DialogWidth,
+    is_open: bool,
+    *,
+    dismissable_by_request: bool,
 ) -> dict[str, Any]:
     """The agent-API props for a dialog, shared by creation and `_update`.
 
@@ -65,14 +71,25 @@ def _agent_description(
     which re-renders the body without re-emitting the block. Anything else is a
     full rerun, which does not re-emit the dialog at all and therefore closes
     it -- the same rule the browser follows.
+
+    The overlay is only addressable when `on_dismiss` registered a widget for
+    it. Otherwise it has an ID the frontend uses to avoid showing stale content
+    and nothing is registered under it, so reporting that as a `key` would offer
+    a handle that resolves to nothing -- a client that walks the tree rather
+    than `actions` would try it and get `unknown_key`.
     """
-    return {
-        "key": element_id,
+    description: dict[str, Any] = {
         "title": title,
         "dismissible": dismissible,
         "width": width,
         "is_open": is_open,
     }
+    if dismissable_by_request:
+        description["key"] = element_id
+        # Firing it is how a client closes the dialog deliberately, rather than
+        # by causing some unrelated full rerun.
+        description["action"] = "trigger"
+    return description
 
 
 def _assert_first_dialog_to_be_opened(should_open: bool) -> None:
@@ -174,11 +191,19 @@ class Dialog(DeltaGenerator):
                 dg_type=Dialog,
                 agent_props=agent_spec.block(
                     "dialog",
-                    **_agent_description(element_id, title, dismissible, width, False),
+                    **_agent_description(
+                        element_id,
+                        title,
+                        dismissible,
+                        width,
+                        False,
+                        dismissable_by_request=is_dismiss_activated,
+                    ),
                 ),
             ),
         )
         dialog._agent_element_id = element_id
+        dialog._agent_dismissable_by_request = is_dismiss_activated
         dialog._agent_title = title
         dialog._agent_dismissible = dismissible
         dialog._agent_width = width
@@ -206,6 +231,7 @@ class Dialog(DeltaGenerator):
         self._current_proto: BlockProto | None = None
         self._delta_path: list[int] | None = None
         self._agent_element_id: str = ""
+        self._agent_dismissable_by_request: bool = False
         self._agent_title: str = ""
         self._agent_dismissible: bool = True
         self._agent_width: Any = "small"
@@ -235,6 +261,7 @@ class Dialog(DeltaGenerator):
                 self._agent_dismissible,
                 self._agent_width,
                 should_open,
+                dismissable_by_request=self._agent_dismissable_by_request,
             ),
         )
         if agent_props is not None:

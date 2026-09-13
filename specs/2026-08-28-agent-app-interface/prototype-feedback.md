@@ -19,7 +19,10 @@ Six trials, same protocol, growing app set. The first found holes where the
 snapshot was dishonest. Later trials re-ran after patches. The fifth added an
 element gallery to sweep many `st.*` commands at once. The sixth is the first
 that can drive `@st.fragment` regions and `st.dialog` bodies the way a browser
-would.
+would. The seventh left the kitchen-sink apps and drove a real Community Cloud
+host: [issues.streamlit.app](https://issues.streamlit.app/), Streamlit’s
+internal `streamlit/streamlit` dashboard, using only the iframe-prefixed agent
+API. Callers were not allowed to read GitHub or the app source.
 
 Challenge apps and raw notes live under `work-tmp/agent-challenges/` (gitignored).
 The apps are not the product; they exist to exercise the API.
@@ -39,6 +42,7 @@ be one-shot parameterizable:
 | Longevity desk | Vega `gapminder` | 8515 | Year `select_slider`; region pills; Altair bubble vs native scatter behind **lazy** `st.tabs`; country drill-down; two-submit notes form |
 | Equity tape | Vega `stocks` | 8516 | Ticker pills; `1Y`/`5Y`/`YTD`/`All` time range; `st.toggle` index-to-100; Altair lines; calendar-year page; overlay rebuild button |
 | Element gallery | Vega cars / airports / weather | 8520 | Coverage sweep of public `st` widgets, display, charts, layouts, forms, chat, tabs, status, two named fragments, a driveable dialog, media |
+| Issue explorer (live) | `streamlit/streamlit` dashboards | [issues.streamlit.app](https://issues.streamlit.app/~/+/) | 21 pages; open issues + labels; interrupt rotation fragments; AI workflow pills; flaky tests; coverage; community PRs; wiki `file` bind |
 
 The extra apps follow the bundled developing-with-streamlit guidance
 (`st.navigation` + `app_pages/` with titles in `streamlit_app.py`, top nav for
@@ -74,6 +78,11 @@ Five challenges, each a separate agent pointed at
 10. **Element gallery** — sweep many `st.*` types; re-check pills, dates,
     tabs, map Arrow, status, expander, echarts, `clear_on_submit`; drive two
     named fragments and an open dialog without a full-script rerun.
+11. **Issue explorer (live)** — `https://issues.streamlit.app/~/+/` only:
+    open-issue catalog + `type:bug` one-shot, interrupt-rotation health,
+    AI workflow pills, flaky tests, community PRs, coverage (blocked
+    row-select), company requests from a table URL, wiki one-shot, email +
+    HTML briefing. No GitHub API.
 
 Answers matched independent aggregates of the Vega catalogs in every trial.
 
@@ -418,6 +427,154 @@ from the fifth trial is fixed.
 | Same-fragment batch | **Works.** Note + confirm in one POST. |
 | Issue N, lazy expander | **Fixed.** |
 
+## Seventh trial (live Issue explorer)
+
+Host: [issues.streamlit.app](https://issues.streamlit.app/), a Community Cloud
+app of 21 pages about `streamlit/streamlit` (open issues, coverage, flaky
+tests, AI workflows, load testing, …). Served OpenAPI is the same v1
+document. Because of the iframe embed, every agent URL has to be
+`https://issues.streamlit.app/~/+/…`. Callers used only that prefix: no
+GitHub API, no app source. Caption on the default page: Python 3.13.0,
+Streamlit 1.63.0.
+
+Artifacts: `work-tmp/agent-challenges/reports-r7/` (`email.md`,
+`briefing.html`, Arrow dumps, `probes.json`).
+
+### Iframe is load-bearing
+
+| Probe | Result |
+| --- | --- |
+| `https://issues.streamlit.app/_stcore/agent/v1/interact` | **303** to Community Cloud auth HTML |
+| Same path under `/~/+/` | **200** snapshot |
+| `data.url` `/media/<hash>` on the naked host | **303** HTML |
+| `https://issues.streamlit.app/~/+/media/<hash>` | **200** `application/vnd.apache.arrow.stream`, 976 rows matching `row_count` |
+
+OpenAPI has no `servers` entry and `data.url` is a root-relative path. An
+agent that concatenates the public origin + `/_stcore/...` never sees the
+app. The iframe prefix has to be part of the client’s base URL, including
+for Arrow.
+
+`Link: rel="service-desc"` was **absent** on both 200 and 4xx from this
+host. That may be the proxy; the prototype still sets it locally.
+
+### What a real dashboard looks like on the wire
+
+- **21 pages**, `url_path`s like `Open_Issues` and `Test_Coverage_(Python)`.
+  One-shot `{"page":"Open_Issues"}` lands correctly.
+- **Almost no authored `key=`**. Open issues, bug explorer, most coverage /
+  flaky / bundle widgets are `$$ID-…-None`. They are in `actions` and they
+  work if you copy them from the latest snapshot. You cannot write a
+  stable script. Exceptions with real keys: AI usage (`ai_usage_workflows`,
+  …), wiki `file`, interrupt `show_reference_views`, playwright/pytest tabs.
+- **Option dumps**: default selectbox 497 issue ids; Open issues labels
+  157; community-PR author exclude 591; wiki file 256. Same cost as the
+  watchlist `options` dump, now on a production page.
+- **`app_title` tracks `page.title`** after navigation (“Open issues”,
+  “Interrupt rotation”, …). Each page likely calls `st.set_page_config`.
+  Cite `page.url_path`.
+- **Default `query_params.issue: [""]`** on the landing page.
+
+### Challenges (answers from this snapshot / Arrow only)
+
+**Open issues.** Caption: 976 issues, 13,386 reactions, 218,745 views.
+Table `complete: false`, 100-row preview; iframe Arrow is 976 rows. Top
+`importance` is not in the preview: alt-text on images/charts (#8563, 314
+reactions). One-shot
+`{"page":"Open_Issues","query_params":{"label":["type:bug"]}}` seeds the
+bound multiselect: **109** bugs, **957** reactions, **24,536** views
+(caption and Arrow agree). Highest-importance open bug: `st.login()` /
+`st.logout()` regression since 1.53 (#14290). Generated filter key
+round-tripped.
+
+**Company requests.** Pasting that catalog’s most-reacted bug URL
+(#7076) into the (generated) text input: 10 unique users, 8 reactions, 10
+comments, 10 companies. ~9 s. Still no GitHub client.
+
+**Interrupt rotation.** Python coverage **98.71%** (+0.22), frontend
+**95.19%**, wheel **9.5 MiB**, total bundle gzip **8.5 MiB**, Playwright
+tests **6,290**, failed CI **1%** (2/203), nightly **0/8**. Six fragments
+on the page; the selectbox / expander / refresh button are **not**
+fragment-scoped (`fragment` absent, mix expander+timeframe is 200). No
+`run_every` advertised. Lazy expander `show_reference_views` is in
+`actions`; opening it works and reveals more fragments, but the run took
+**139 s** (live fetches behind the expander).
+
+**AI workflow usage.** Authored pills. All workflows: 2,733 runs, 95%
+success, 144 failed, avg 8m 56s. Pills → `["AI Issue Triage"]`: 295 /
+98% / 7 / 3m 45s. Invalid pill and reversed dates still 400
+`invalid_value`. Creating-call
+`query_params.ai_usage_workflows=["AI QA Testing"]` **stores** the param
+but **does not seed** the pills (not bound). Wiki `file` *is* bound:
+one-shot `query_params.file` opens that markdown.
+
+**Flaky tests.** Caption: 38 flaky reruns in 200 successful runs
+(2026-09-07), 20 tests / 18 scripts; top 5 would cut reruns 60.53%.
+Arrow: `test_custom_theme[firefox]` 9 failures, nested
+`run_every` webkit 7.
+
+**Python coverage.** 98.71% / 28,305 statements / 366 missed. Info says
+“select a row” for the per-commit breakdown. The dataframe has **no
+key** and is not in `actions`. File uploader is `unsupported_element`.
+Chart click-to-filter captions (“Click on a bar”) are the same gap.
+
+**Community PRs.** 403 / 16 open / 191 merged / 196 closed without
+merge; 21.5 days to merge. Contributor Arrow: wyattscarpenter 18 PRs
+(16 merged). Merger Arrow: lukasmasuch 71. Author column is GitHub
+profile URLs.
+
+**Plotly.** `read_only_in_v1`, `data.complete: true`, no `url`. The
+inlined `spec` carries the Plotly default template (tokenized colors)
+and traces as base64 `bdata`. Usable as a figure dump, not as a table.
+Altair on the same host still has Arrow (flaky trend, bundle, lighthouse,
+open-issue statistics once the checkbox is on).
+
+### New issues this round
+
+**W. Community Cloud iframe prefix is not in the protocol.** OpenAPI
+paths are `/_stcore/agent/v1/…` with no server. Relative `/media/…` is
+the same. On this host both 303 unless the client already knows `/~/+/`.
+Worth a sentence for hosted / embedded apps, or a `servers` / `base` field
+on the snapshot.
+
+**X. `query_params` leaks across pages.** After filtering Open issues,
+Interrupt rotation and AI usage still showed `label: ["type:bug"]`.
+Nothing on those pages reads `label`. A briefing that cites
+`query_params` as applied filters is wrong. Bound widgets still write
+their names; unbound `query_params` on create do not move widgets (AI
+pills).
+
+**Y. Plotly “complete” is a theme dump.** Same complete-or-URL-or-unavailable
+rule as echarts, but the payload is large enough to matter on a real
+dashboard (load testing 549 KB, mostly metrics `chart_data` + Plotly
+specs).
+
+**Z. Selection and chart clicks are browser-only.** Coverage, GitHub
+stats, community PR bars, and similar tell the user to click. v1 has no
+dataframe selection and no Plotly click. The snapshot is honest
+(`actions` omits them); the captions still read as if a headless client
+could continue.
+
+**AA. `unknown_page` lists paths in the message, not in `pages`.** Error
+body has `session_id` (the round-3 leak is now a handle, good) and
+`pages: null`. OpenAPI says the response’s `pages` lists them.
+
+**AB. Duplicate metric labels.** AI usage uses “AI PR Review” for both
+run count and average duration. Keying metrics by `props.label` drops
+one.
+
+### Scorecard deltas
+
+| Item | Seventh trial |
+| --- | --- |
+| One-shot `page` + bound `query_params` | **Works** on this host (`label`, wiki `file`). |
+| Arrow for truncated catalogs | **Works**, if fetched from the iframe prefix. 976 = 976, 109 = 109. |
+| Generated keys | **Work**, session-scoped. Almost the whole app is this. |
+| `disabled_widget` / `unsupported_element` | Uploader 400 `unsupported_element`. |
+| `app_title` vs `page.title` | Split is **not usable here**; both follow the current page. Use `url_path`. |
+| `Link` on errors | **Missing** on this host. |
+| Fragments | Present on Interrupt; not how the page’s widgets are scoped. Lazy expander 139 s. |
+| Email / HTML | **True** for KPI + inlined Arrow, with the iframe-prefix caveat. |
+
 ## Remaining issues (prioritized)
 
 ### 1. `clear_on_submit`
@@ -432,24 +589,36 @@ Pills/`format_func` now round-trip: snapshot `value` is the formatted label.
 
 ### 3. Query params and citation of filters
 
-Unchanged: string query params coerced; `widget_state` does not write
-`query_params`; navigation can desync them; no structured `applied_filters`.
+Unchanged from earlier trials: string query params coerced; no structured
+`applied_filters`. **New from the live app:** `query_params` is session-global.
+A bound `label=type:bug` on Open issues was still sitting on Interrupt
+rotation and AI workflow usage after `page` navigation. A creating-call
+`query_params.ai_usage_workflows` was stored but did **not** seed the pills
+(those keys are not bound). Bound ones (`label`, wiki `file`) do seed on
+create. Do not cite `query_params` as “the filters that produced this page.”
 
 ### 4. Surfaces without a full data contract
 
-Vega/Altair charts and **`st.map` now have Arrow.** **`st.echarts_chart` does
-not** (option inlined in `spec`). Map nodes omit `row_count`. `st.status`
-now reports `complete`. Displayed `st.exception` still flips interact
-`status` to `error`. `st.mermaid_chart` is `markdown`.
+Vega/Altair charts and **`st.map` now have Arrow.** **`st.echarts_chart` and
+`st.plotly_chart` do not.** Plotly reports `data.complete: true` with the
+figure `spec` inlined — including the default theme template and base64
+`bdata` traces — so a “complete” chart can be hundreds of kilobytes without
+a table a briefing can sum. The live load-testing page was **549 KB**.
+Displayed `st.exception` still flips interact `status` to `error`.
+`st.mermaid_chart` is `markdown`.
 
 ### 5. Other papercuts
 
-- **Watchlist `wl_title.options`** dumps ~3176 strings into every snapshot on that page.
+- **Watchlist `wl_title.options`** dumps ~3176 strings into every snapshot on that page. Live Issue explorer dumps 497 / 157 / 591 / 256 the same way.
+- **Generated keys** are the default on a real app. Copy from `actions`; do not persist.
+- **Iframe / embed prefix** is required on Community Cloud (`/~/+/`) and is not in OpenAPI.
 - **`clear_on_submit`** is advertised and not applied (see #1).
 - **Tabs** with `on_change="rerun"` are now addressable. Eager tabs still dump every child.
-- **Metric values** are still display strings when the author formats them; `display_value` duplicates `props.value`. `chart_data` is under `data`.
+- **Metric values** are still display strings when the author formats them (`98.71%`, `8m 56s`). Duplicate labels collide. `chart_data` is under `data`.
 - **Empty interact is a rerun**, not a read.
 - **Catalog preview order** is not “top by the page’s sort.”
+- **Plotly / echarts** inline a spec with `complete: true` and no Arrow.
+- **Dataframe and chart selection** are not in `actions`; captions may still say “click.”
 - **Dialog overlay** still has a generated tree `key` that is not in `actions` (acting on it is `unknown_key`). Confirm *is* in `actions` while the dialog is open.
 - **No dismiss action.** `props.dismissible: true` is advertised; closing is a full rerun, not an overlay-only X.
 - **Popover children** are in the tree and addressable while closed.
@@ -492,6 +661,14 @@ dataframes, or maps in this trial. It would still want structured `filters`, num
 metric values, and an Arrow path for `st.echarts_chart`. Chart *figures* are still
 not in the snapshot; the associated Arrow table is the exportable meaning.
 
+**Round 7 (live Issue explorer):** still true for KPI + definition briefings and
+for a complete dump of the *current* open-issue slice, if the exporter uses
+the iframe base `https://issues.streamlit.app/~/+/` for both interact and
+`/media/…`. The HTML briefing inlined the interrupt metrics and the 109-row
+`type:bug` Arrow. It did not call GitHub. Plotly pages were cited from
+metrics and Altair/dataframe Arrow, not from figure specs. `query_params`
+was not used as a citation of filters after a later `page` change.
+
 ## First trial (baseline)
 
 Same apps and challenges, before the patches. All five completed without a browser.
@@ -504,17 +681,17 @@ Artifacts: `work-tmp/agent-challenges/reports/` (not `reports-r2/`).
 
 ## Verdict
 
-v1 is a usable **observe → act → observe** loop across a wide `st.*` surface:
-value widgets (including dates, pills with `format_func`, datetime, color,
-feedback, pagination), Vega/Altair charts, maps (Arrow), lazy tabs and
-expanders, forms, chat, **fragment-scoped reruns**, **driveable dialogs**,
-and one-shot `query_params`. After the honesty patch the snapshot is honest on
-the holes the fourth trial named (pills, dates/shapes, map Arrow, status,
-tabs). After the fragment work, acting inside a region reruns only that
-region, and an open dialog stays open until a full rerun.
+v1 is a usable **observe → act → observe** loop on both kitchen-sink apps and
+a real 21-page Community Cloud dashboard: value widgets (including generated
+keys), bound one-shot `query_params`, Altair/dataframe Arrow, lazy expanders,
+pills/dates that reject bad input, and fragment-tagged regions. After the
+honesty patch the snapshot is honest on the holes the fourth trial named.
+After the fragment work, acting inside a region reruns only that region.
 
-What is left is narrower: `clear_on_submit` does not clear; echarts has no
-Arrow; a displayed `st.exception` marks the interact `error`; mermaid is
-markdown; query_params can still diverge; a dialog has no dismiss short of a
-full rerun. Those do not block the spec’s email/HTML examples. Clients that
-need to finish a dialog must do it before touching anything else.
+On the live host the new load-bearing facts are **where** to send the
+request (`/~/+/` on Community Cloud, including `/media/`) and **not** to
+treat `query_params` as the current page’s filters after a navigation.
+Plotly is not a data contract. Dataframe clicks are not actions. Email and
+HTML still work if the exporter fetches iframe-prefixed Arrow immediately
+and inlines it — that is how the 109-row `type:bug` catalog and the
+interrupt metrics were cited, without GitHub.

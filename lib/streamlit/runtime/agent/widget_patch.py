@@ -56,12 +56,20 @@ class AgentRequestError(Exception):
     """
 
     def __init__(
-        self, code: str, message: str, *, session_id: str | None = None
+        self,
+        code: str,
+        message: str,
+        *,
+        session_id: str | None = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(message)
         self.code = code
         self.message = message
         self.session_id = session_id
+        # Machine-readable fields for errors whose remedy is a choice from a
+        # list, so a client does not have to parse the message to recover.
+        self.details = details or {}
 
 
 # Value types that reset after the run that observed them. These are the only

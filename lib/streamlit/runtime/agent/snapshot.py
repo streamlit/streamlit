@@ -57,6 +57,11 @@ SCHEMA_VERSION: Final = 1
 # outright.
 _PREVIEW_ROW_LIMIT: Final = 100
 
+# How much of a chart's own specification to inline. A figure is a rendering
+# instruction rather than a table, so past a point it costs a response without
+# answering anything; a client that needs the picture needs a browser.
+_MAX_INLINE_SPEC_BYTES: Final = 32 * 1024
+
 _ROOT_CONTAINER_NAMES: Final = {
     RootContainer.MAIN: "main",
     RootContainer.SIDEBAR: "sidebar",
@@ -511,12 +516,11 @@ def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
         return data or None
 
     if proto_field in {"plotly_chart", "echarts_chart"}:
-        spec = _parse_json(payload.spec)
         # These take a figure or an option object rather than a dataframe, so
         # the values are inside the specification and there is no separate
         # table to fetch. Saying so is the point: `complete` means a client
         # already has everything, so it does not go looking for a `url`.
-        return {"spec": spec, "complete": True} if spec is not None else None
+        return _figure_data(_parse_json(payload.spec))
 
     if proto_field == "deck_gl_json_chart":
         spec = _parse_json(payload.json)
@@ -531,6 +535,46 @@ def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
         return {"chart_data": list(payload.chart_data)}
 
     return None
+
+
+def _figure_data(spec: Any) -> dict[str, Any] | None:
+    """Describe a chart whose values live inside its own specification.
+
+    Two things are dropped, because they are weight without meaning for a
+    non-visual client. Plotly's `layout.template` is the theme, and it is about
+    nine tenths of a figure: a small bar chart is 7.6 KB of which 7.1 KB is
+    template, and a page of them measured 549 KB on a live app. Then a
+    specification that is still oversized is left out entirely rather than
+    dominating the response.
+
+    What is omitted is always named in `spec_omitted`, so a client can tell a
+    trimmed figure from one the app never configured.
+    """
+    if spec is None:
+        return None
+
+    data: dict[str, Any] = {"complete": True}
+    omitted: list[str] = []
+
+    if (
+        isinstance(spec, dict)
+        and isinstance(spec.get("layout"), dict)
+        and "template" in spec["layout"]
+    ):
+        spec = {
+            **spec,
+            "layout": {k: v for k, v in spec["layout"].items() if k != "template"},
+        }
+        omitted.append("layout.template")
+
+    if len(json.dumps(spec, default=str)) > _MAX_INLINE_SPEC_BYTES:
+        omitted.append("spec")
+    else:
+        data["spec"] = spec
+
+    if omitted:
+        data["spec_omitted"] = omitted
+    return data
 
 
 def _deck_gl_row_count(spec: Any) -> int | None:

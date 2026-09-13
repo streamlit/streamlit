@@ -56,6 +56,37 @@ _ROUTE_AGENT_INTERACT: Final = "_stcore/agent/v1/interact"
 _ROUTE_AGENT_SCHEMA: Final = "_stcore/agent/v1/openapi.json"
 
 
+def _server_prefix(request: Request, schema_path: str) -> str:
+    """Whatever sits in front of the API paths on the way this caller reached it.
+
+    A hosted app is not always served at the root a client would guess. Community
+    Cloud serves embedded apps under `/~/+/`, so an agent that joins the public
+    origin with `/_stcore/agent/v1/interact` gets a redirect to a login page and
+    never reaches the app. The document has to say where it is, and the only
+    authority on that is the request that just arrived.
+
+    Deliberately a path and not an absolute URL: behind a proxy the scheme and
+    host this process sees are not necessarily the ones the client used, and a
+    relative OpenAPI server URL resolves against wherever the document was
+    fetched from, which is exactly right.
+    """
+    path = request.url.path
+    prefix = (
+        path[: -len(schema_path)] if schema_path and path.endswith(schema_path) else ""
+    )
+
+    if not prefix:
+        # A proxy that strips its prefix before forwarding has to announce it,
+        # or nothing here can know. Trusting the header is safe for this one
+        # use: it only changes where this caller is told to look, so a forged
+        # value misdirects the caller that forged it.
+        prefix = request.headers.get("X-Forwarded-Prefix", "").rstrip("/")
+
+    # "/" rather than "" so the field is never an empty string, which OpenAPI
+    # does not allow as a server URL.
+    return prefix or "/"
+
+
 def _is_loopback_peer(request: Request) -> bool:
     """True when the TCP peer is on a loopback address.
 
@@ -122,6 +153,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
                 interact_path=interact_path,
                 schema_path=schema_path,
                 availability=availability,
+                server_prefix=_server_prefix(request, schema_path),
             )
         )
         response.headers["Cache-Control"] = "no-cache"
@@ -167,6 +199,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
                 exc.message,
                 status=error_status(exc.code),
                 session_id=exc.session_id,
+                details=exc.details,
             )
         except Exception as exc:
             _LOGGER.exception("Agent API interaction failed")
@@ -188,8 +221,11 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         *,
         status: int = 400,
         session_id: str | None = None,
+        details: dict[str, Any] | None = None,
     ) -> JSONResponse:
         body: dict[str, Any] = {"error": {"code": code, "message": message}}
+        if details:
+            body["error"].update(details)
         if session_id is not None:
             # Only set when a creating call already produced a usable session.
             body["session_id"] = session_id

@@ -207,6 +207,10 @@ omitted rather than sent as null.
 `st.dialog` body, which is one). Acting on it reruns that fragment alone, \
 which is both faster and the only way to interact with a dialog without \
 closing it. See the top-level `fragments` field.
+
+A dialog node itself has no `fragment`: it is the overlay around one, and its \
+body is the child container. Read the scope from the node you intend to act \
+on, not from the dialog.
 """
 
 _KEY_DESCRIPTION: Final = """\
@@ -227,6 +231,7 @@ def build_openapi_document(
     interact_path: str,
     schema_path: str,
     availability: str = "available",
+    server_prefix: str = "/",
 ) -> dict[str, Any]:
     """Build the OpenAPI document for the agent API.
 
@@ -252,6 +257,11 @@ def build_openapi_document(
         The served path of the interact operation, including any base URL path.
     schema_path
         The served path of this document, so it is self-locating.
+    server_prefix
+        What precedes the API paths on the way this caller reached them, reported
+        as the OpenAPI server so paths resolve where the app actually is. Hosted
+        deployments are not always at the root: Community Cloud serves embedded
+        apps under ``/~/+/``.
     """
     from streamlit import __version__
 
@@ -273,6 +283,18 @@ def build_openapi_document(
     return {
         "openapi": "3.1.0",
         "info": info,
+        "servers": [
+            {
+                "url": server_prefix,
+                "description": (
+                    "Where this app is served, as seen by the request that "
+                    "fetched this document. Join it with the paths below, and "
+                    "with any relative `data.url` from a snapshot: a hosted app "
+                    "may sit behind a prefix, and skipping it reaches the "
+                    "platform rather than the app."
+                ),
+            }
+        ],
         "paths": {
             interact_path: {
                 "post": {
@@ -569,8 +591,13 @@ def _schemas() -> dict[str, Any]:
                 "app_title": {
                     "type": "string",
                     "description": (
-                        "The whole app's title, from `st.set_page_config`. Not "
-                        "the current page's title -- that is `page.title`."
+                        "The app's title, from the most recent "
+                        "`st.set_page_config`. Not the current page's title -- "
+                        "that is `page.title`.\n\n"
+                        "An app that calls `st.set_page_config` on every page "
+                        "will have this track the page, because that is what "
+                        "the app asked the browser tab to say. `page.url_path` "
+                        "is the reliable identity of where you are."
                     ),
                 },
                 "page": {
@@ -600,7 +627,14 @@ def _schemas() -> dict[str, Any]:
                         "type": "array",
                         "items": {"type": "string"},
                     },
-                    "description": "The app's current query parameters.",
+                    "description": (
+                        "The session's current URL parameters.\n\n"
+                        "Not a description of the filters that produced this "
+                        "page. They are session-global and survive navigation, "
+                        "so a parameter a bound widget wrote on one page is "
+                        "still here on the next one, where nothing reads it. "
+                        "Cite widget `value`s for what produced a number."
+                    ),
                 },
                 "tree": {
                     "$ref": "#/components/schemas/Node",
@@ -788,6 +822,10 @@ def _schemas() -> dict[str, Any]:
                     "description": (
                         "Where to fetch the complete data as an Arrow IPC "
                         "stream (`application/vnd.apache.arrow.stream`).\n\n"
+                        "Relative to the server above, not to the app's public "
+                        "origin. Joining it with the origin instead reaches the "
+                        "hosting platform on a deployment served behind a "
+                        "prefix.\n\n"
                         "A fetch-now handle, not a durable reference: it is "
                         "reference counted against the elements currently on "
                         "the page and collected once they stop rendering. "
@@ -917,6 +955,14 @@ def _schemas() -> dict[str, Any]:
                                 for code, (status, meaning) in sorted(
                                     ERROR_CATALOG.items()
                                 )
+                            ),
+                        },
+                        "pages": {
+                            "type": "array",
+                            "items": {"$ref": "#/components/schemas/Page"},
+                            "description": (
+                                "The pages that do exist, on `unknown_page`, so "
+                                "the remedy is data rather than prose to parse."
                             ),
                         },
                         "message": {

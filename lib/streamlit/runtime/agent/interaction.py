@@ -393,11 +393,15 @@ def _verify_navigation_landed(requested_page: Any, document: dict[str, Any]) -> 
     if landed is None or landed == requested_page.strip("/"):
         return
 
-    available = [page["url_path"] for page in document.get("pages", [])]
+    pages = document.get("pages", [])
+    available = [page["url_path"] for page in pages]
     raise AgentRequestError(
         "unknown_page",
         f"No page with url_path {requested_page!r}; the app ran its default "
         f"page instead. Available: {sorted(available)}.",
+        # The page list is the whole remedy, so it travels as data rather than
+        # only inside the message.
+        details={"pages": pages},
     )
 
 

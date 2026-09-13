@@ -876,6 +876,70 @@ rather than a prototype detail. Other conventions worth considering as complemen
 `/llms.txt`, which is the natural place for the observe-act-observe strategy in prose
 rather than schema, and a skill for agents that can be equipped in advance.
 
+A seventh trial against the live Community Cloud host
+`https://issues.streamlit.app/` made a related discovery gap concrete. The
+public origin is not the agent origin: interact and `/media/` without the
+iframe prefix `/~/+/` **303 to auth HTML**. OpenAPI has no `servers` field,
+`data.url` is root-relative, and this host also stripped `Link:
+rel="service-desc"` on both 200 and 4xx. An agent that follows the spec’s
+paths against the URL a human opens never reaches the API. Hosted / embedded
+apps need the iframe (or equivalent) prefix as part of the advertised base,
+not only in operator folklore.
+
+The same trial showed `query_params` is session-global leftover rather than
+a citation of the current page: a bound Open-issues `label` was still
+present after navigating to Interrupt rotation. Plotly’s `complete: true`
+inlined spec is the echarts gap at production size (load-testing snapshot
+~549 KB). Dataframe and chart clicks remain browser-only; the coverage page
+tells you to select a row and `actions` does not offer one.
+
+## 7e. What a live hosted app found that six local trials did not
+
+Trials two through six ran against apps on `127.0.0.1`. The seventh drove
+[issues.streamlit.app](https://issues.streamlit.app/), a 21-page Community Cloud app, and
+found the one class of defect local testing structurally cannot: **everything that assumes
+the app is at the root of its origin.**
+
+Community Cloud serves embedded apps under `/~/+/`. An agent that joins the public origin
+with `/_stcore/agent/v1/interact` gets a `303` to a login page, and root-relative
+`data.url`s behave the same way, so a client that has not been told the prefix concludes
+the app has no API and no data. Nothing in the protocol said where the app was: the OpenAPI
+document had no `servers` entry and its paths were absolute. It now reports where it was
+reached from, as a *relative* server URL — behind a proxy the scheme and host this process
+sees are not necessarily the client's, and a relative server URL resolves against wherever
+the document was fetched. Where a proxy strips its prefix before forwarding,
+`X-Forwarded-Prefix` is honored, which is safe here because a forged value only misdirects
+the caller that forged it. A proxy that strips silently and announces nothing cannot be
+detected; that is a limit, not a bug to hide.
+
+The same host stripped the `Link: rel="service-desc"` header from every response. Headers
+are the fragile channel, which is the argument for a self-describing document rather than
+relying on the header.
+
+Three other findings were only visible at production scale:
+
+- **A Plotly figure is mostly theme.** `layout.template` is about nine tenths of a figure —
+  7.1 KB of a 7.6 KB bar chart — and one page measured 549 KB of specifications that answer
+  no question, because traces arrive as base64. Reporting `complete: true` was correct and
+  not sufficient: the payload is now trimmed of the theme, names what it dropped, and omits
+  a specification that is still oversized. That cut the figure block in the repro from
+  7,673 to 619 bytes.
+- **`query_params` is session-global, so citing it as "the filters" is wrong.** A bound
+  `label=type:bug` set on one page was still reported on two unrelated pages after
+  navigation. Streamlit's own behavior, but the snapshot has to say so.
+- **`app_title` follows the page when an app sets `st.set_page_config` per page.** The
+  round-1 split is still right, and its limit needs stating: `page.url_path` is the
+  reliable identity.
+
+Two smaller corrections came from the same round: an `unknown_page` error now carries the
+page list as data rather than only inside its message, and duplicate metric labels are a
+reminder that `props.label` is not a key.
+
+**The general lesson is about test topology, not any one bug.** Every local trial shared an
+assumption with the implementation — same origin, no proxy, no platform in between — so no
+number of local rounds could have found this. Externally hosted coverage is a different
+axis from feature coverage.
+
 ## 8. Open questions the prototype surfaced
 
 1. **How is "the run chain settled" defined?** The prototype's grace period is a

@@ -453,7 +453,16 @@ Rules:
   `st.set_page_config(page_title=...)` set for the whole app. Collapsing them makes
   `page.title` answer "which app am I in?" while every caller reads it as "which page am
   I on?", and a client-side trial cited the wrong one in a report before the two were
-  split.
+  split. Note the limit of the split: an app that calls `st.set_page_config` on each page
+  makes `app_title` follow the page, because that is what the app asked the browser tab to
+  say. `page.url_path` is the reliable identity of where a client is, and a 21-page
+  production app confirmed both halves of that.
+- **`query_params` is URL state, not a description of the page's filters.** Parameters are
+  session-global and survive navigation, so a value a bound widget wrote on one page is
+  still reported on the next one, where nothing reads it. A trial against a live app cited
+  a stale `label=type:bug` on two unrelated pages. This is Streamlit's existing behavior
+  rather than something the interface introduces; what the interface owes a client is
+  saying so, and pointing at widget `value`s as the answer to "what produced this number".
 - **The `actions` list is an index, not a duplicate.** It lists the key of every element that
   can be set (`value`) or fired (`trigger`) right now, so a model can see the action space
   at a glance; type and constraints are read from the element in the tree. A `disabled`
@@ -608,6 +617,20 @@ is not merely slower for `st.dialog` — it is broken, and the two cannot be sep
 Because the wire carries one fragment id, a request naming two fragments — or mixing a
 fragment's contents with controls outside it — is rejected rather than widened to a full
 rerun. Widening is the friendlier-looking choice and would silently close an open dialog.
+A refused request leaves the previous snapshot current, so a rejected batch does not close
+one either.
+
+Two details about the overlay, both found by driving one:
+
+- **The dialog node is the wrapper, not the fragment.** Its body is the child container, so
+  `fragment` appears on the contents rather than on the overlay. A client reads the scope
+  from the node it intends to act on.
+- **The overlay is addressable only when `on_dismiss` registered a widget for it**, and
+  then firing it is how a client closes the dialog deliberately. With the default
+  `on_dismiss="ignore"` nothing is registered, so the overlay carries no key at all rather
+  than one that resolves to nothing — the same "a key is an identity, not an invitation"
+  rule, applied to the container. Without a registered dismissal, closing is any full
+  rerun, including an empty interaction, which is heavier than clicking an X in a browser.
 
 **A scoped rerun makes freshness per-region, which the response has to say.** After a
 fragment-scoped interaction most of the tree is carried over from an earlier run, still
@@ -712,7 +735,12 @@ Two consequences of that framing are worth stating, because both were mistakes f
 - **A chart that was given a specification rather than a dataframe is `complete`.**
   `st.plotly_chart` and `st.echarts_chart` carry their values inside the specification, so
   there is no table to serve and a client should stop looking for one. This is different
-  from having no data contract at all.
+  from having no data contract at all. It does not mean the specification is worth its
+  weight: about nine tenths of a Plotly figure is `layout.template`, the theme, and a page
+  of them measured 549 KB on a live app while answering nothing. Report the figure with
+  the theme dropped, name what was dropped so a trimmed figure is distinguishable from one
+  the app never configured, and omit a specification that is still oversized rather than
+  letting it dominate the response.
 - **A rendering specification is not a data contract.** `st.map` compiles its points into
   a Deck.gl layer, and an agent should not be mining coordinates out of layer JSON, so the
   plotted table is externalized like any other dataframe's.
@@ -828,6 +856,24 @@ What this does *not* solve is worth stating: discovery is not capability. Most a
 harnesses' web tools only issue GET requests, so an agent can find the protocol and still
 be unable to `POST` to it. Closing that gap needs a caller with a general HTTP tool, or
 the MCP adapter in follow-up #6.
+
+**The document has to say where the app is, because a hosted app is not at the root a
+client would guess.** Trialling against a Community Cloud app found this the hard way:
+that platform serves embedded apps under `/~/+/`, so an agent that joins the public origin
+with `/_stcore/agent/v1/interact` gets a redirect to a login page and concludes the app has
+no API. Root-relative `data.url`s fail the same way. So the served document carries an
+OpenAPI `servers` entry describing where it was reached from, and the paths and any
+`data.url` resolve against it. Two deliberate choices: it is a *relative* URL, because
+behind a proxy the scheme and host this process sees are not necessarily the ones the
+client used, and a relative server URL resolves against wherever the document was fetched;
+and where a proxy strips its prefix before forwarding, `X-Forwarded-Prefix` is honored,
+since a forged value can only misdirect the caller that forged it. A proxy that strips
+silently and announces nothing cannot be detected, which is a real limit rather than
+something to paper over.
+
+The same trial found `Link: rel="service-desc"` missing from that host's responses, which
+the proxy is stripping. Headers are the more fragile channel, which is the argument for
+keeping the document self-describing rather than relying on the header alone.
 
 **The intended end state is on by default, with a deployment or platform opt-out.** The
 governing invariant is that a caller gets **no more authority and no more information than
@@ -1157,3 +1203,15 @@ apply.
 7. Which exact JSON encodings should be standardized for dates, datetimes, decimals,
    large integers, non-finite numbers, ranges, and object-valued options? These must be
    settled before v1 ships, with or without per-action schemas.
+8. **How should an option list be bounded?** A production page's selectbox carried 497
+   options, another 591, and every snapshot of that page pays for them. Truncating an
+   option list is worse than truncating table rows, because the omitted options are
+   exactly the values a request may legally send. Candidates: report a count plus a
+   bounded sample and accept anything the server can validate; or keep them whole and
+   treat the response budget as the app author's problem.
+9. **Should a browser-only affordance be declared where the app tells a human to use it?**
+   A live app's captions said "click on a bar" and "select a row" for charts and dataframes
+   whose selection this interface does not support. `actions` correctly omits them, so the
+   contract is honest, but the app's own prose invites a client to try. A `support` reason
+   on the element carrying the affordance would close the gap between what the document
+   says and what the app's text says.
