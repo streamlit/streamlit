@@ -161,7 +161,7 @@ def get_used_snapshots() -> dict[str, tuple[set[str], set[str]]]:
             check=True,
         )
         test_files = result.stdout.strip().split("\n")
-    except subprocess.CalledProcessError as e:
+    except (subprocess.CalledProcessError, OSError) as e:
         print(f"Error finding test files: {e}")
         return snapshots_by_test
 
@@ -224,7 +224,7 @@ def search_for_snapshot_name(snapshot_name: str) -> bool:
     """
     try:
         result = subprocess.run(
-            ["grep", "-r", "--include=*.py", "--", snapshot_name, "e2e_playwright/"],
+            ["grep", "-rF", "--include=*.py", "--", snapshot_name, "e2e_playwright/"],
             capture_output=True,
             text=True,
             check=False,
