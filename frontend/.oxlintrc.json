@@ -99,6 +99,9 @@
     "vitest/valid-expect-in-promise": "off",
     "vitest/valid-title": "off",
     "vitest/warn-todo": "off",
+    "eslint/no-promise-executor-return": "error",
+    "promise/always-return": "error",
+    "promise/catch-or-return": "error",
     "promise/no-callback-in-promise": "error",
     "promise/no-new-statics": "error",
     "promise/valid-params": "error"

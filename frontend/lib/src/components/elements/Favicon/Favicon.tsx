@@ -71,11 +71,10 @@ export function handleFavicon(
     void convertShortcodeToEmoji(favicon)
       .then(emoji => {
         if (emoji) {
-          setFavicon(createEmojiDataUrl(emoji))
-        } else {
-          // Not a valid shortcode, treat as URL
-          setFavicon(endpoints.buildMediaURL(favicon))
+          return setFavicon(createEmojiDataUrl(emoji))
         }
+        // Not a valid shortcode, treat as URL
+        return setFavicon(endpoints.buildMediaURL(favicon))
       })
       .catch(() => {
         // Error loading node-emoji, treat as URL

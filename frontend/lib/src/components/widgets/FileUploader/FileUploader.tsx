@@ -475,24 +475,29 @@ const FileUploader = ({
         }
       }
 
+      const replaceExistingFileIfNeeded = (): void => {
+        if (multipleFiles || acceptedFiles.length === 0) {
+          return
+        }
+        const existingFile = filesRef.current.find(
+          f => f.status.type !== "error"
+        )
+        if (!existingFile) {
+          return
+        }
+        setForceUpdatingStatus(true)
+        try {
+          deleteFile(existingFile.id)
+        } finally {
+          setForceUpdatingStatus(false)
+        }
+      }
+
       uploadClient
         .fetchFileURLs(acceptedFiles)
         .then((fileURLsArray: FileURLsProto.$Properties[]) => {
-          if (!multipleFiles && acceptedFiles.length > 0) {
-            const existingFile = filesRef.current.find(
-              f => f.status.type !== "error"
-            )
-            if (existingFile) {
-              setForceUpdatingStatus(true)
-              try {
-                deleteFile(existingFile.id)
-              } finally {
-                setForceUpdatingStatus(false)
-              }
-            }
-          }
-
-          zip(fileURLsArray, acceptedFiles).forEach(
+          replaceExistingFileIfNeeded()
+          return zip(fileURLsArray, acceptedFiles).forEach(
             ([fileURLs, acceptedFile]) => {
               uploadFile(fileURLs as FileURLsProto, acceptedFile as File)
             }

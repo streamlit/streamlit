@@ -1980,11 +1980,18 @@ export class App extends PureComponent<Props, State> {
       status ===
         ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
     ) {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-      Promise.resolve().then(() => {
-        // Notify any subscribers of this event (and do it on the next cycle of
-        // the event loop)
-        this.state.scriptFinishedHandlers.forEach(handler => handler())
+      // Notify subscribers on the next microtask so this finish handler can
+      // return before widgets react to the completion of this run. Isolate
+      // handler failures so one throw does not skip the rest or become an
+      // unhandled rejection.
+      queueMicrotask(() => {
+        this.state.scriptFinishedHandlers.forEach(handler => {
+          try {
+            handler()
+          } catch (error) {
+            LOG.error("Script finished handler failed", error)
+          }
+        })
       })
 
       if (

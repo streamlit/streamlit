@@ -89,7 +89,7 @@ function SkillsNudgeToast({
     onInstall()
       .then(detail => {
         setSuccessDetail(detail ?? "")
-        setStatus("success")
+        return setStatus("success")
       })
       .catch((error: unknown) => {
         setStatus("error")

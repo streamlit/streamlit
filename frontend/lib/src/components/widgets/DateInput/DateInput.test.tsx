@@ -2123,7 +2123,12 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     // Let pending rAF focus moves land before clicking.
     for (let i = 0; i < 3; i++) {
       await act(
-        async () => new Promise<void>(r => requestAnimationFrame(() => r()))
+        async () =>
+          new Promise<void>(r => {
+            requestAnimationFrame(() => {
+              r()
+            })
+          })
       )
     }
 
@@ -2131,7 +2136,12 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     // Let any rAF re-steal attempt land.
     for (let i = 0; i < 3; i++) {
       await act(
-        async () => new Promise<void>(r => requestAnimationFrame(() => r()))
+        async () =>
+          new Promise<void>(r => {
+            requestAnimationFrame(() => {
+              r()
+            })
+          })
       )
     }
     expect(day).toHaveFocus()
@@ -2152,7 +2162,12 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     await screen.findByTestId("stDateInputCalendar")
     for (let i = 0; i < 3; i++) {
       await act(
-        async () => new Promise<void>(r => requestAnimationFrame(() => r()))
+        async () =>
+          new Promise<void>(r => {
+            requestAnimationFrame(() => {
+              r()
+            })
+          })
       )
     }
     expect(refreshed.day).toHaveFocus()

@@ -316,7 +316,7 @@ export const useHandleJsContent = ({
       if (maybeCleanup) {
         void Promise.resolve(maybeCleanup)
           .then(result => {
-            result?.()
+            return result?.()
           })
           .catch(error => {
             LOG.error("Failed to run custom component cleanup", error)

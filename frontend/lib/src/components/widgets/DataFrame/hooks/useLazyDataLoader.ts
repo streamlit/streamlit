@@ -190,7 +190,7 @@ function useLazyDataLoader({
           } else {
             cache.addChunk(chunkIndex, new Quiver(response.arrowData))
           }
-          bumpCacheVersion()
+          return bumpCacheVersion()
         })
         .catch((error: unknown) => {
           inFlight.delete(chunkIndex)

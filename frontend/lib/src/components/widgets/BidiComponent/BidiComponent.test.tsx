@@ -1075,7 +1075,9 @@ describe("BidiComponent", () => {
       )
 
       // Wait for the module to execute
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => {
+        setTimeout(resolve, 100)
+      })
 
       // Verify setTriggerValue was NOT called
       expect(mockWidgetMgr.setTriggerValue).not.toHaveBeenCalled()
@@ -1108,7 +1110,9 @@ describe("BidiComponent", () => {
       )
 
       // Wait a bit to ensure the module is loaded
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => {
+        setTimeout(resolve, 100)
+      })
 
       // Unmount the component
       unmount()
