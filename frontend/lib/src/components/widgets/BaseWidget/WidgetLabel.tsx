@@ -77,6 +77,7 @@ export function WidgetLabel({
         <StyledRequiredMarker
           data-testid="stWidgetLabelRequired"
           aria-hidden="true"
+          $disabled={disabled}
         >
           (required)
         </StyledRequiredMarker>

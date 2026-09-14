@@ -340,11 +340,20 @@ function TextInput({
     : null
   // Gate on the current proto flag and UI value: required is not part of
   // keyed widget identity, so hasRequiredError can survive a rerun that
-  // turns required off or writes a non-empty session_state value.
+  // turns required off or writes a non-empty session_state value. Also
+  // drop the stored flag when the mask would hide it, so required off→on
+  // or a programmatic fill-then-clear does not resurrect the error
+  // without a new user commit/submit.
   const requiredError =
     element.required && hasRequiredError && isRequiredEmptyText(uiValue)
       ? REQUIRED_FIELD_MESSAGE
       : null
+  if (
+    hasRequiredError &&
+    (!element.required || !isRequiredEmptyText(uiValue))
+  ) {
+    setHasRequiredError(false)
+  }
   const validateDisplayed = hasValidationConfig
     ? (configError ?? userError)
     : null
@@ -585,10 +594,11 @@ function TextInput({
   const handleClear = useCallback((): void => {
     // Commits "" immediately so search results update. Unreachable when
     // element.required is true: showClearButton already hides the X.
+    // Required-error state is not reset here; that path never renders
+    // the button.
     cancelLiveCommit()
     setUiValueAndRef("")
     setHasUserError(false)
-    setHasRequiredError(false)
     commitWidgetValue("")
   }, [cancelLiveCommit, commitWidgetValue, setUiValueAndRef])
 

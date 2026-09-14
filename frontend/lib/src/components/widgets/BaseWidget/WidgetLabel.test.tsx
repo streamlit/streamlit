@@ -112,6 +112,15 @@ describe("Widget Label", () => {
     expect(marker).toHaveTextContent("(required)")
     expect(marker).toHaveAttribute("aria-hidden", "true")
     expect(marker).toHaveStyle("font-size: 0.75rem")
+    expect(marker).toHaveStyle("white-space: nowrap")
+  })
+
+  it("fades the required marker to match a disabled label", () => {
+    render(<WidgetLabel {...getProps({ required: true, disabled: true })} />)
+
+    expect(screen.getByTestId("stWidgetLabelRequired")).toHaveStyle(
+      `color: ${mockTheme.emotion.colors.fadedText40}`
+    )
   })
 
   it.each([

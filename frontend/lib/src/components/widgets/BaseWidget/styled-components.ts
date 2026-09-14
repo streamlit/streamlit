@@ -52,10 +52,14 @@ export const StyledWidgetLabelHelp = styled.div({
   flex: 1,
 })
 
-export const StyledRequiredMarker = styled.span(({ theme }) => ({
+export const StyledRequiredMarker = styled.span<{
+  $disabled?: boolean | null
+}>(({ theme, $disabled }) => ({
   fontSize: theme.fontSizes.twoSm,
-  color: theme.colors.fadedText60,
+  color: $disabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
   marginLeft: theme.spacing.xs,
+  flexShrink: 0,
+  whiteSpace: "nowrap",
 }))
 
 export const StyledWidgetInstructions = styled.div(({ theme }) => ({

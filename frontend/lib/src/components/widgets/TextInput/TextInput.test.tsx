@@ -1388,6 +1388,38 @@ describe("TextInput widget", () => {
       )
     })
 
+    it("does not resurrect a leftover required error when required is turned back on", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ required: true, default: "hello" })
+      const { rerender } = render(<TextInput {...props} />)
+
+      const textInput = screen.getByRole("textbox")
+      await user.clear(textInput)
+      await user.click(document.body)
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required."
+      )
+
+      rerender(
+        <TextInput
+          {...props}
+          element={TextInputProto.create({
+            ...props.element,
+            required: false,
+          })}
+        />
+      )
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+
+      rerender(<TextInput {...props} />)
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId("stTextInputErrorIcon")
+      ).not.toBeInTheDocument()
+      expect(textInput).not.toHaveAttribute("aria-invalid")
+    })
+
     it("clears a leftover required error after a programmatic refill", () => {
       const sendRerunBackMsg = vi.fn()
       const widgetMgr = new WidgetStateManager({
@@ -1419,6 +1451,57 @@ describe("TextInput widget", () => {
       )
 
       expect(screen.getByRole("textbox")).toHaveValue("Ada")
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId("stTextInputErrorIcon")
+      ).not.toBeInTheDocument()
+      expect(screen.getByRole("textbox")).not.toHaveAttribute("aria-invalid")
+    })
+
+    it("does not show a leftover required error after a programmatic fill-then-clear", () => {
+      const sendRerunBackMsg = vi.fn()
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg,
+        formsDataChanged: vi.fn(),
+      })
+      const props = getProps(
+        { formId: "form", required: true, id: "required-fill-clear" },
+        { widgetMgr }
+      )
+      const { rerender } = render(<TextInput {...props} />)
+
+      act(() => {
+        widgetMgr.submitForm("form", undefined)
+      })
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required."
+      )
+
+      rerender(
+        <TextInput
+          {...props}
+          element={TextInputProto.create({
+            ...props.element,
+            setValue: true,
+            value: "Ada",
+          })}
+        />
+      )
+      expect(screen.getByRole("textbox")).toHaveValue("Ada")
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+
+      rerender(
+        <TextInput
+          {...props}
+          element={TextInputProto.create({
+            ...props.element,
+            setValue: true,
+            value: "",
+          })}
+        />
+      )
+
+      expect(screen.getByRole("textbox")).toHaveValue("")
       expect(screen.queryByRole("alert")).not.toBeInTheDocument()
       expect(
         screen.queryByTestId("stTextInputErrorIcon")
