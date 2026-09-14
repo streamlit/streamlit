@@ -7,15 +7,16 @@ created: 2026-09-14
 
 ## Summary
 
-Add a keyword-only `alt` parameter to the 18 display commands with no author-facing way to
+Add a keyword-only `alt` parameter to the 19 display commands with no author-facing way to
 supply an accessible name: images, media players, charts, maps, dataframes, and tables.
 Authors write a short plain-text description and Streamlit maps it to whichever attribute
 is correct for that element.
 
-Three of the 18 have a partial mechanism today, none of it a parameter: `st.mermaid_chart`
-honors `accTitle` / `accDescr` directives written into the diagram source, and `st.altair_chart` /
-`st.vega_lite_chart` surface a `description` set inside the Vega spec. The other 15 have
-nothing.
+Four of the 19 have a partial mechanism today, none of it a parameter: `st.mermaid_chart`
+honors `accTitle` / `accDescr` directives written into the diagram source, `st.altair_chart` /
+`st.vega_lite_chart` surface a `description` set inside the Vega spec, and `st.echarts_chart` is a
+case of its own — ECharts *generates* an `aria-label` from the data whenever `aria.enabled` is on,
+which is its default, so those charts already have an automatic name. The other 15 have nothing.
 
 ```python
 st.image("q3-revenue.png", alt="Bar chart showing Q3 revenue up 15% year over year")
@@ -34,20 +35,26 @@ open issue. It also ratifies the `alt` name proposed for `st.audio` and `st.vide
 
 ## Outstanding decisions
 
-1. **[The parameter name](#the-parameter-name)** — **recommend `alt`**, on all 18 commands.
+1. **[The parameter name](#the-parameter-name)** — **recommend `alt`**, on all 19 commands.
    Effectively permanent once shipped, and `alt_text` has peer precedent, so worth an explicit call.
 2. **[What an image gets with no `alt`](#what-an-image-gets-with-no-alt)** — **recommend emitting no
    `alt` attribute.** All three candidate answers are non-conforming for a typical call, so the
    choice is which failure we prefer: one a scanner keeps flagging, or one nothing can detect.
-3. **[Lenient or strict list pairing on `st.image`](#api)** — **recommend lenient**: a short `alt`
-   list leaves later images unlabelled rather than raising. That diverges from `caption` on the same
-   command, which raises — an intra-command inconsistency of the kind principle 11 guards against,
-   while principle 23 argues for raising. Reasonable to land either way.
+3. **[Lenient or strict list pairing on `st.image`](#api)** — **recommend strict**, matching
+   `caption` on the same command: a list whose length does not equal the number of images raises.
+   Principle 11 argues for matching the existing parameter and principle 23 for failing fast, and a
+   deliberate gap is still expressible as `None` in the list. Reasonable to land either way.
 
 Three smaller choices are made inline rather than listed, and are called out where they occur:
 `alt` overwrites an author's Vega-spec `description` when both are set; `alt=""` means decorative
 on images and warns everywhere else; and `alt` takes plain text rather than markdown, the one
 deliberate exception to how markdown is handled elsewhere.
+
+The second of those is the one a reviewer is most likely to want changed: `st.pyplot` renders through
+`st.image`'s proto, so the same empty value means "decorative" on one command and "not provided" on
+the other, which cuts against principle 10. It is deliberate — a plot is author data, so
+"decorative" is never a truthful claim about one — but the reasoning is a judgment about intent, the
+same kind of claim the spec declines to make when it rejects auto-decorating captioned images.
 
 ## Problem
 
@@ -57,7 +64,7 @@ Section 508 in the US, or EN 301 549 for European public-sector procurement. The
 two incorporate WCAG AA by reference, so one target covers all three. [SC 1.1.1 Non-text
 Content](https://www.w3.org/TR/WCAG21/#non-text-content) (Level A) requires a text
 alternative for non-text content. Streamlit offers authors no parameter for one on any of
-the 18 commands, and no mechanism at all on 15 of them — see the Summary for the three
+the 19 commands, and no mechanism at all on 15 of them — see the Summary for the four
 partial exceptions, none of which is discoverable from a command signature.
 
 ### User requests
@@ -104,18 +111,9 @@ The #8563 thread is short, but it did useful work on four points:
 
 ### What authors get today
 
-| Element                                                              | Today                                                                                                                                                                                  |
-| -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `st.image`                                                           | `<img alt="0">` — the array index. A screen reader announces "0, image". **Worse than no alt.** For a *linked* image, caption already names the link, so the two are not fully independent today                                                                                         |
-| `st.pyplot`                                                          | Renders through the image path, so it inherits the index bug                                                                                                                           |
-| `st.audio` / `st.video`                                              | No accessible name. YouTube embeds fall back to the raw URL as the iframe `title`, and they still will after phase 1 — an iframe must have a title, so `alt` replaces it only when set |
-| `st.line_chart`, `st.bar_chart`, `st.area_chart`, `st.scatter_chart` | Per-datapoint labels from Vega, but no chart-level name and no way to set one — these commands build the spec themselves                                                               |
-| `st.altair_chart`, `st.vega_lite_chart`                              | Same, except an author who hand-writes `description` into the spec does get a chart-level name                                                                                         |
-| Plotly, graphviz                                                     | Nothing — an unlabeled region                                                                                                                                                          |
-| `st.map`, `st.pydeck_chart`                                          | Nothing, and no text alternative of any kind behind the canvas                                                                                                                         |
-| `st.dataframe` / `st.data_editor`                                    | Cells are navigable, but nothing says what the data _is_                                                                                                                               |
-| `st.table`                                                           | Correct table semantics. No author-facing name, and when scrollable a hardcoded `aria-label="Scrollable table"` the author cannot change                                               |
-| `st.mermaid_chart`                                                   | A generic `"Mermaid flowchart"` unless the author writes diagram directives                                                                                                            |
+Nothing author-facing on any of them, and `st.image` is worse than silent: it emits `<img alt="0">`,
+the array index, so a screen reader announces "0, image" for every image in an app. Per-command
+detail is in [Commands in scope](#commands-in-scope).
 
 Workarounds are all poor. A heading above the chart is visible to everyone and not
 programmatically tied to it; CSS injection depends on private DOM; a custom component
@@ -160,7 +158,7 @@ st.image("chart.png", alt="Line chart of monthly revenue")
 ```
 
 - Pros: Short; the term authors and WCAG both use ("alt text"); familiar from HTML, React,
-  and markdown `![alt](url)`; one name across all 18 commands
+  and markdown `![alt](url)`; one name across all 19 commands
 - Cons: HTML `alt` exists only on `<img>`, so using it for charts and tables is a slight
   stretch
 
@@ -191,6 +189,11 @@ st.image("chart.png", alt_text="Line chart of monthly revenue")
   Note that principle 8 (Semantic Names Over Geeky Names) actually favours this option — its own
   bad examples are HTML-derived names like `st.h1`. The counter is principle 7: `alt` is the term
   authors and WCAG already use, so it is the standardized vocabulary rather than the geeky one
+- `accessible_name` is the same construction on the correct side of the name/description
+  distinction, and so the strongest plain-English candidate. Rejected on principle 7 as well:
+  "accessible name" is accessibility-tree vocabulary that authors do not write, where `alt` is
+  the word they already use for this exact slot. Recorded so the permanent name is chosen against
+  the full set rather than against `alt_text` alone
 
 **Option 4:** `alt` **on** `st.image`**,** `aria_label` **elsewhere**
 
@@ -210,20 +213,20 @@ own `![alt](url)` behaves.
 
 ### Why `alt` stays short
 
-`alt` holds **one short sentence**. The reason that matters is worth reviewers' attention,
-because it is the constraint authors are most likely to break. Assistive technology
-reads an accessible name before the content it names, and no spec constrains how much of it is
-read or whether a user can interrupt — that is platform and AT configuration. We have not tested
-it. What we can say without a source is the design intent: `alt` occupies the _name_ slot, names
-are meant to identify rather than explain, and a 40-word name is not identifying anything. So the docs say "roughly one
-sentence; put longer context in `caption` or nearby markdown."
+`alt` is an accessible **name**, not a description: roughly one sentence that identifies the
+element. Assistive technology reads that name before the content it names, so a 40-word name is
+not identifying anything — it is delaying the thing the reader asked for. Longer context belongs in
+`caption` or nearby markdown.
+
+How much of a name gets read, and whether a user can interrupt, is platform and AT configuration
+rather than anything a spec constrains — so the one-sentence guidance is design intent, not a limit
+we can source.
 
 **The case for deferring is "Start Minimal" (principle 4), not a standards preference.** A
-second parameter on 18 commands, plus a description region per element, for a use case we
+second parameter on 19 commands, plus a description region per element, for a use case we
 have not yet observed. That reason stands on its own.
 
-Recording what the standards actually say, because earlier drafts of this section leaned on
-them in ways they do not support:
+What the standards actually say:
 [ARIA15](https://www.w3.org/WAI/WCAG21/Techniques/aria/ARIA15) is titled "Using
 `aria-describedby` to provide descriptions of images" — it _sanctions_ the exact mechanism a
 future `description` parameter would use. Its example points at visible text and it notes an
@@ -254,26 +257,21 @@ declared explicitly before it** — otherwise `alt=` is swallowed into `kwargs` 
 Matplotlib.
 
 ```python
-alt: str | None = None  # 17 commands
+alt: str | None = None  # 18 commands
 alt: str | Sequence[str] | None = None  # st.image only
 ```
 
-**Why `st.image` differs.** One call can render many images — it accepts a list, tuple, set, or
-4-D array — so a single string cannot describe them all. A list applies **in sequence**:
-`alt=["a", "b"]` with three images labels the first two and leaves the third with no
-`alt`, landing it in the [no-`alt` behavior](#what-an-image-gets-with-no-alt). More values
-than images raises, since that is unambiguously a mistake.
+**Why `st.image` differs.** One call can render many images, so a list pairs positionally — one
+entry per image, exactly as `caption` does. `st.pyplot` takes a single string: one figure, one image.
+The table below is the full contract.
 
-This is deliberately more lenient than `st.image`'s own `caption`, which raises on any
-mismatch (`Cannot pair 2 captions with 3 images`). Two reasons: a missing `alt` is already
-a defined, meaningful state, so a short list is coherent input rather than malformed; and
-`st.radio`'s `captions` already works this way, applying in sequence with no length check.
-The cost is real and worth naming — **a miscount becomes invisible.** Write two when you
-meant three and the third image is silently unlabeled, which is the exact failure this
-feature exists to fix. A reviewer could reasonably prefer `caption`'s strictness for that
-reason.
-
-`st.pyplot` takes a single string: one figure, one image.
+Matching `caption`'s strictness is the point: two list-valued parameters on one command behaving
+differently is the inconsistency principle 11 exists to prevent. Leniency also buys nothing here,
+because `caption` already accepts `None` per entry, so a deliberate gap is expressible either way —
+all a short list would add is tolerance for a **miscount**, which silently leaves an image
+unlabelled, the exact failure this feature exists to fix. Strict pairing separates "I skipped this
+one" from "I lost count". The lenient alternative is still a reasonable landing, which is why the
+choice stays listed for reviewers.
 
 | Value                                     | Meaning                                                                                                                                                                                                                                 |
 | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -281,41 +279,56 @@ reason.
 | Non-empty string                          | The description. Plain text. Leading and trailing whitespace is stripped — note this is new behavior, not inherited: `to_str` returns strings unchanged, and `label` does not strip either                                                                                                                                                                            |
 | Whitespace-only                           | Treated as `""`, after stripping. Same handling as an empty string below                                                                                                                                                                |
 | `""` on `st.image`                        | Decorative — the standard WCAG pattern, and a [sufficient technique](https://www.w3.org/WAI/WCAG21/Techniques/html/H67)                                                                                                                 |
-| `""` anywhere else, including `st.pyplot` | **Treated as not provided**, with a warning. That wording matters: it preserves each element's existing fallback rather than stripping it, so a YouTube iframe keeps its URL-derived `title` and a mermaid diagram keeps its derived name. The warning mirrors `maybe_raise_label_warnings`, though the analogy stops there — an empty `label` is warned about but still forwarded. `st.pyplot` is excluded from the decorative reading because a plot is author data, so "decorative" is never a truthful claim about one           |
+| `""` anywhere else, including `st.pyplot` | **Treated as not provided**, with a warning. The wording matters: it preserves each element's existing fallback rather than stripping it, so a YouTube iframe keeps its URL-derived `title` and a mermaid diagram keeps its derived name. Why `st.pyplot` is not read as decorative is covered under [Outstanding decisions](#outstanding-decisions) |
 | `[""]` inside an `st.image` list          | Decorative for that one image; the same rule applied per element                                                                                                                                                                        |
 | Non-string                                | Coerced with `to_str`, as `label` does, then stripped. Note this lets an author recreate the bug: `alt=0` becomes `"0"`, the F30 pattern we are removing. Author-chosen rather than Streamlit-imposed, so not validated, but worth a docstring warning |
-| List shorter than the images              | Trailing images get no `alt` — see the note below                                                                                                                                                                       |
-| List longer than the images               | Raises, mirroring the existing caption/image mismatch error                                                                                                                                                                             |
+| A single string with several images        | Raises. `str` is itself a `Sequence[str]`, so this must be checked before the list path or `alt="cats"` iterates into one-character alts. One string describes one image; it is neither broadcast to all of them nor applied to the first                                                                                          |
+| `None` inside an `st.image` list          | That image gets no `alt`, deliberately — this is how you label some images and not others. Distinct from `""`, which claims the image *is* decorative. `marshall_images` already types its captions `Sequence[str \| None]`                                                                                          |
+| List length ≠ number of images            | Raises, mirroring the existing caption/image mismatch error. Too few and too many are both errors; pad with `None` to skip an image on purpose                                                                                                                                                                             |
+| A sequence with a `set` of images         | Raises. `st.image` accepts a `set` (`image_utils.py` branches on `(list, set, tuple)`) and set order is arbitrary, so positional pairing would attach descriptions to whichever images came out in that order. `caption` mislabels silently here today; a feature whose purpose is correct names should not inherit that |
 
-Two limits of positional pairing, both inherited from `caption` rather than introduced here:
-`st.image` accepts a `set`, whose iteration order is arbitrary, so a list of `alt` values cannot be
-reliably paired with one — pass a list or tuple if you are labelling. And a list of the right length
-in the wrong order mislabels every image rather than leaving any unlabelled, which no validation can
-detect. Both are worth a docstring note, since a wrong name is worse than a missing one.
+Two notes for the docstring rather than the API. A list of the right length in the wrong order
+mislabels every image and no validation can detect it, so a wrong name is the one failure this
+feature can still introduce. And `alt` does not accept the 1-D `np.ndarray` that `caption` does,
+on the grounds that a described image list is written by hand rather than computed; the type can
+widen later without a break.
 
 ### Commands in scope
 
-| Group                  | Commands                                                                                                      | Where `alt` ends up                                                                                                                                                                    |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Images                 | `st.image`, `st.pyplot`                                                                                       | The image's HTML `alt` attribute                                                                                                                                                       |
-| Diagrams | `st.mermaid_chart` | Same — the diagram renders as an image. It has no proto of its own, so the wiring route is settled in phase 4 |
-| Media                  | `st.audio`, `st.video`                                                                                        | An accessible label on the player; the frame title for YouTube embeds                                                                                                                  |
-| Simple and Vega charts | `st.line_chart`, `st.bar_chart`, `st.area_chart`, `st.scatter_chart`, `st.altair_chart`, `st.vega_lite_chart` | Vega's own chart-description field. Where an author already set `description` in an Altair or Vega-Lite spec, `alt` wins — it is the documented parameter — and the override is logged |
-| Other charts           | `st.plotly_chart`, `st.graphviz_chart`                                                                        | An accessible label on the chart                                                                                                                                                       |
-| Maps                   | `st.map`, `st.pydeck_chart`                                                                                   | An accessible label on the map                                                                                                                                                         |
-| Data grids             | `st.dataframe`, `st.data_editor`                                                                              | An accessible label on the grid                                                                                                                                                        |
-| Tables | `st.table` | An accessible label on the `<table>` itself. The existing `"Scrollable table"` label stays put — it describes the scroll affordance, not the content, so the two do not compete |
-
-Authors write one parameter and Streamlit picks the attribute; nobody needs to know which
-one.
+| Commands | Today | Where `alt` ends up |
+| --- | --- | --- |
+| `st.image` | `<img alt="0">` — the array index, announced as "0, image". **Worse than no alt.** For a *linked* image the caption already names the anchor, so the two are not fully independent today | The image's HTML `alt` attribute |
+| `st.pyplot` | Renders through the image path — the same `ImageList` proto — so it inherits the index bug, and its fix | Same |
+| `st.mermaid_chart` | A name derived from the diagram type — `"Mermaid flowchart"`, falling back to `"Mermaid diagram"` for an unrecognized type — unless the author writes diagram directives | Same, since the diagram renders as an image. It has no proto of its own, so phase 4 picks the wiring route |
+| `st.audio`, `st.video` | No accessible name. YouTube embeds fall back to the raw URL as the iframe `title` | An accessible label on the player, and the frame title for YouTube embeds — which `alt` replaces only when set, since an iframe must have a title |
+| `st.line_chart`, `st.bar_chart`, `st.area_chart`, `st.scatter_chart` | Per-datapoint labels from Vega, but no chart-level name and no way to set one — these commands build the spec themselves | Vega's own chart-description field |
+| `st.altair_chart`, `st.vega_lite_chart` | Same, except an author who hand-writes `description` into the spec does get a chart-level name | Same. Where the author already set `description`, `alt` wins as the documented parameter, and the override is logged |
+| `st.echarts_chart` | The only command that already names itself: ECharts sets `role="img"` and generates an `aria-label` from the chart's data whenever `aria.enabled` is on, which is its default. Data-derived boilerplate rather than the author's point | ECharts' `aria.label.description` — the one command where `alt` *replaces a generated name* rather than filling an empty slot |
+| `st.plotly_chart`, `st.graphviz_chart` | Nothing — an unlabeled region | An accessible label on the chart |
+| `st.map`, `st.pydeck_chart` | Nothing, and no text alternative of any kind behind the canvas | An accessible label on the map |
+| `st.dataframe`, `st.data_editor` | Cells are navigable, but nothing says what the data _is_ | An accessible label on the grid |
+| `st.table` | Correct table semantics. No author-facing name, and when scrollable a hardcoded `aria-label="Scrollable table"` the author cannot change | An accessible label on the `<table>` itself. The `"Scrollable table"` label stays put — it describes the scroll affordance, not the content, so the two do not compete |
 
 ### Caption vs. `alt`
 
 Independent, and neither becomes the other's value. One existing exception worth knowing: for a
-**linked** image, `ImageList.tsx` already uses the caption as the anchor's `aria-label`, so a linked
-captioned image is named by its caption today while the `<img>` still carries the index. Phase 6 has
-to settle what that announces once `alt` exists. `st.image` is the only command
-with both.
+**linked** image, `ImageList.tsx` sets the anchor's `aria-label` to the caption, or to the raw link
+URL when there is no caption and the link is not blocked. So a linked image is already named today —
+by its caption, else by its URL — while the `<img>` still carries the index.
+
+Three sources are therefore in play for a linked image — `alt`, `caption`, and the link URL — and
+phase 6 has to compose them. This matters for one case in particular: removing `alt={index}` from an *unlinked* uncaptioned
+image leaves it with no accessible name, a detectable F65 failure, whereas the same change to a
+*linked* uncaptioned image leaves the URL-derived anchor name in place. The two do not degrade the
+same way, so the fix cannot be reasoned about as one case. `st.image` is the only command with
+both.
+
+**Recommended composition rule for phase 6,** rather than leaving the whole interaction open: the
+`<img>` always carries `alt`, including `alt=""` for a decorative image, and the anchor is named by
+`caption` if present, else `alt`, else the link URL. Inserting `alt` ahead of the URL is the part
+worth deciding now — otherwise a raw URL keeps outranking a description the author actually wrote.
+What stays for implementation is narrower: when the anchor and the `<img>` would carry the same
+string, phase 6 picks which node holds it so the pair is not announced twice.
 
 |          | `caption`                                                   | `alt`                                                      |
 | -------- | ----------------------------------------------------------- | ---------------------------------------------------------- |
@@ -332,10 +345,6 @@ would assert it is "not intended for the user" — a claim only the author can m
 the [W3C decision tree](https://www.w3.org/WAI/tutorials/images/decision-tree/) branch
 that would justify it requires the image be redundant to _real text nearby_, which
 contradicts this spec's own position that a caption is not a description of the image.
-
-Worth noting because it is sometimes read the other way: moniquesch's #8563 comment
-proposes using caption **and** a non-empty alt together, which is what the table above
-describes — not the decorative treatment.
 
 ### What an image gets with no `alt`
 
@@ -387,9 +396,9 @@ dashboard chasing an audit may score _worse_ on an automated scan after this cha
 today's `alt="0"` populates the attribute while Option 1 leaves it absent. That is exactly use
 case 1, so it deserves an answer rather than a footnote.
 
-What F30 does settle is the _classification_ of today's `alt="0"` — it is squarely F30's
-numbered-placeholder pattern. Which failure is worse is our own judgment: neither F30 nor F65 ranks
-itself against the other, and neither discusses scanner detectability.
+F30 does settle the _classification_ of today's `alt="0"` as its numbered-placeholder pattern. Which
+failure is worse is our own judgment: neither F30 nor F65 ranks itself against the other, and neither
+discusses scanner detectability.
 
 **This decision does not reach `st.mermaid_chart`.** Adding `alt` there prepends to a precedence
 chain that already exists — `alt`, then the author's `accTitle` / `accDescr`, then Streamlit's
@@ -400,12 +409,9 @@ One rule to settle in that phase: `getAltText` currently *concatenates* `accTitl
 rather than choosing between them, so `alt` should **replace** both when set rather than joining
 them — matching how it overrides a Vega `description`.
 
-Whether that fallback should exist at all is a question for the broader accessibility effort, not
-this spec: it defaults to `"Mermaid diagram"`, which is close to F30's examples, but it was a
-deliberate choice in the merged [mermaid spec](../2026-05-02-mermaid-chart/product-spec.md) and
-markdown fences share it without getting a parameter.
-
-This is the only change to an image's own `alt`; every other command is untouched when `alt` is
+This is the only change to an image's own `alt`, and it reaches `st.pyplot` too — `image.py` and
+`pyplot.py` are the only commands that marshal the `ImageList` proto, so `st.pyplot` inherits both
+the index bug and its fix with no separate handling. No other command is touched when `alt` is
 omitted. No author could have relied on `"0"`, so treat it as an accessibility bugfix rather than
 an API break.
 
@@ -422,8 +428,9 @@ st.image(
     alt="Line chart of monthly active users rising from 12k in January to 48k in December",
 )
 
-# one alt per image; a short list leaves the rest unlabeled (caption would raise)
+# exactly one alt per image, as with caption; use None to skip one on purpose
 st.image(["cat.png", "dog.png"], alt=["Orange tabby on a windowsill", "Black labrador"])
+st.image(["logo.png", "chart.png"], alt=[None, "Revenue by quarter, up 12%"])
 
 st.pyplot(fig, alt="Histogram of response times, right-skewed with a long tail past 2s")
 st.audio("earnings.mp3", alt="Q2 2026 earnings call recording")
@@ -441,7 +448,9 @@ they are the mistakes authors will actually make: write `alt` as a replacement f
 visual, not a label for it; keep it to about a sentence and put longer context in
 `caption` or nearby markdown; do not open with "Image of…", since assistive tech already
 announces the role; never make `caption` and `alt` identical; describe a chart's takeaway
-rather than its data points; name a dataframe rather than pasting it; and remember that
+rather than its data points; name a dataframe rather than pasting it; note that on
+`st.echarts_chart` your `alt` *replaces* a generated description, so a vague one is a regression
+rather than an improvement there; and remember that
 `subtitles`, not `alt`, is what addresses SC 1.2.2 for video — `alt` only names the player.
 
 ### Conformance scope
@@ -482,45 +491,58 @@ own.
 
 | Phase | Commands                                                            | Why here                                                                                                                                                                                                                          |
 | ----- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | `st.audio`, `st.video`                                              | Nothing unresolved, and the code exists — though only in [#16568](https://github.com/streamlit/streamlit/pull/16568), which was approved and then closed, so no proto in the tree carries `alt` yet. Reopening it lands 2 of the 18 first and fixes the parameter name in the codebase |
-| 2     | The six simple and Vega charts                                      | Vega already supports a chart-level description natively, so this is the least work for the most commands. Cheap to confirm before committing to the order: setting `description` in an Altair spec reaches assistive tech today  |
+| 1     | `st.audio`, `st.video`                                              | Nothing unresolved, and the code exists — though only in [#16568](https://github.com/streamlit/streamlit/pull/16568), which was approved and then closed, so no proto in the tree carries `alt` yet. Reopening it lands 2 of the 19 first and fixes the parameter name in the codebase |
+| 2     | The six simple and Vega charts, plus `st.echarts_chart`             | Each library already supports a chart-level description natively — Vega's `description`, ECharts' `aria.label.description` — so this is the least work for the most commands. Cheap to confirm before committing to the order: setting `description` in an Altair spec reaches assistive tech today. `st.echarts_chart` carries the one extra question below |
 | 3     | `st.plotly_chart`, `st.graphviz_chart`, `st.map`, `st.pydeck_chart` | All four need the same new wiring; decide once, apply four times                                                                                                                                                                  |
 | 4     | `st.table`, `st.mermaid_chart`                                      | `st.table` is natively nameable. Mermaid is not as easy as it looks — no proto of its own, and its name is derived on the frontend, so this phase picks a wiring route                                                            |
 | 5     | `st.dataframe`, `st.data_editor`                                    | One component covers both                                                                                                                                                                                                         |
 | 6     | `st.image`, `st.pyplot`                                             | The headline ask, and the only structurally involved phase                                                                                                                                                                        |
 
-Note that #16568 describes itself as the first slice of a "17-element" project while this spec
-counts 18. The gap is unexplained — `st.mermaid_chart` predates that PR by two months, so it is not
-the difference. Worth reconciling against the original element list rather than assuming.
+#16568 describes itself as the first slice of a "17-element" project, which reconciles as follows.
+The original list held 18 commands, one of which was `st.bokeh_chart`; that command was removed in
+[#15636](https://github.com/streamlit/streamlit/pull/15636) on 2026-06-19, two months before #16568
+opened, leaving the 17 it counted. This spec adds `st.mermaid_chart`, which renders as an image and
+meets the same scope rule, and `st.echarts_chart`, which landed 2026-09-05. **The reconciled count
+is 19.**
 
 The phases are very unevenly sized: 1 and 2 are close to free, and **phase 6 carries most of the
 risk and most of the user-visible value.** The `st.image` index alt is a defect rather than new API, so it needs no API
 sign-off and could ship ahead of the parameter, benefiting every existing app whether or
 not its author adopts `alt`.
 
-One implementation note worth stating once so it is not rediscovered per phase: **editing `alt`
-must never reset state a user has built up.** It only arises for commands that compute an element
-ID — most in scope compute none, and `st.dataframe`'s is conditional on selections or button
-columns — but three need care beyond simply keeping `alt` out of the keyed identity:
+One implementation note worth stating once so it is not rediscovered per phase: **editing `alt` must
+never reset state a user has built up.** It arises only for commands that compute an element ID, and
+four of those need more than keeping `alt` out of the keyed identity:
 
-- **`st.plotly_chart`** computes an ID unconditionally, not just under `on_select`, and always
-  passes `key_as_main_identity=False`, so there is no allowlist to exclude `alt` from. Hashing it
-  would discard exactly the frontend chart state that unconditional ID exists to preserve.
-- **`st.data_editor`** uses an allowlist only when it is keyed *and* `num_rows="fixed"`. A keyed
-  editor with `num_rows="dynamic"` passes `False`, so a description-only edit would discard rows
-  the user added.
-- **`st.audio` and `st.video`** are a different mechanism again: their `id` is not an identity that
-  keys state but the dedup key for the one-shot autoplay flag (`Audio.tsx` reads `preventAutoplay`
-  from it), so `alt` stays out of it, as #16568 does. Worth naming rather than hiding: because the
-  same field also raises `StreamlitDuplicateElementId`, excluding `alt` means two autoplaying players
-  differing only in their description still collide, and neither command accepts `key`. That
-  collision pre-dates this spec; the real fix is separating autoplay dedup from element identity,
-  which is out of scope.
+- **The Vega commands** — `vega_charts.py` hashes the spec itself (`vega_lite_spec`), so `alt` must
+  travel as its own proto field rather than being written into `description` on the backend.
+  Otherwise editing a description resets the selection on an unkeyed `on_select` chart. Keyed charts
+  are safe, which is what makes this easy to miss in testing. The same applies to mutating Plotly's
+  layout.
+- **`st.plotly_chart`** always passes `key_as_main_identity=False`, so there is no allowlist to
+  exclude `alt` from; hashing it discards the chart state its unconditional ID exists to preserve.
+- **`st.data_editor`** uses an allowlist only when keyed *and* `num_rows="fixed"` — in `"dynamic"`,
+  `"add"` or `"delete"` it passes `False`, so a description-only edit discards the user's edits.
+- **`st.audio` and `st.video`** use `id` as the one-shot autoplay dedup key rather than a state
+  identity, so `alt` stays out of it, as #16568 does. Worth naming: that same field raises
+  `StreamlitDuplicateElementId`, so two autoplaying players differing only in their description
+  still collide, and neither command accepts `key`. Pre-existing, and out of scope here.
 
-The exact mechanics belong to implementation; what needs sign-off here is the invariant.
+`st.dataframe` computes an ID only with selections enabled, and `st.echarts_chart` hashes nothing at
+all, so writing `aria.label.description` into its option dict on the backend is safe — the constraint
+is about hashed specs, not backend mutation as such. ECharts does need one product answer the others
+do not, being the only command where `alt` displaces a generated name rather than filling a gap:
+`EChartsChart.tsx` already reconciles the library's ARIA after every `setOption`, so `alt` has to
+compose with that, and phase 2 should settle precedence when an author sets `alt` *and*
+`aria: {enabled: false}` — overriding matches how `alt` beats a Vega `description`, but an explicit
+opt-out is a request for silence rather than a value to replace.
 
 Each phase gets Python and frontend unit tests plus an e2e test asserting the _computed_
-accessible name rather than the presence of an attribute. Automated tests confirm a name
+accessible name rather than the presence of an attribute. Three additions worth naming: a typing
+test for `st.image`'s scalar-or-sequence parameter once that contract lands, a per-phase regression
+that an `alt`-only edit leaves the element ID unchanged — the invariant above, asserted rather than
+assumed — and VoiceOver as the practical first screen reader, since it needs no license and ships on
+the machines most contributors already have. Automated tests confirm a name
 exists, not that it is useful — so each phase also wants a manual spot-check with a real screen
 reader. That a short name actually helps is the one claim here we cannot verify automatically.
 
@@ -595,5 +617,5 @@ implementation choices rather than API ones and are settled during each phase.
 | No breaking API changes    | ⚠️ Additive keyword-only parameter, but one intentional accessibility-tree change lands with no author action, fixing a current defect: `st.image`'s index alt is removed ([why](#what-an-image-gets-with-no-alt)) |
 | No new dependencies        | ✅                                                                                                                                                                                                                                                                   |
 | Metrics collected          | ⚠️ Existing per-command metrics, which is enough to ship. Tracking the share of calls that set `alt` would measure adoption, but it is not proposed here and needs its own call                                                                                      |
-| Any security/legal impact? | ✅ Author-provided plain text rendered into attributes by React, which escapes them. No markdown or HTML pipeline. Legal upside: unblocks apps with procurement accessibility requirements                                                                           |
+| Any security/legal impact? | ✅ Author-provided plain text rendered into attributes by React, which escapes them. No markdown or HTML pipeline. Later phases must keep it that way — no `dangerouslySetInnerHTML`, and no interpolating `alt` into SVG or HTML strings, which is a live risk for the SVG-rendering commands in phases 3 and 4. Legal upside: unblocks apps with procurement accessibility requirements                                                                           |
 | Any docs changes needed?   | ✅ Per-command API reference plus a short accessibility guide — see [Docs guidance](#docs-guidance)                                                                                                                                                                  |
