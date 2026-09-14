@@ -238,9 +238,10 @@ jobs:
           retention-days: 1
 
   # Job 3: Consolidate multiple reviews into one (only runs for multi-model)
+  # Default model_count to 0: fromJson() errors on empty input when parse-models is skipped.
   consolidate-reviews:
     needs: [parse-models, ai-pr-review]
-    if: always() && fromJson(needs.parse-models.outputs.model_count) > 1 && needs.parse-models.outputs.has_key == 'true' && needs.ai-pr-review.result != 'skipped'
+    if: always() && fromJson(needs.parse-models.outputs.model_count || '0') > 1 && needs.parse-models.outputs.has_key == 'true' && needs.ai-pr-review.result != 'skipped'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:
