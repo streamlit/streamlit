@@ -4698,7 +4698,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@typescript-eslint/tsconfig-utils@npm:8.69.0, @typescript-eslint/tsconfig-utils@npm:^8.69.0":
+"@typescript-eslint/tsconfig-utils@npm:8.69.0":
   version: 8.69.0
   resolution: "@typescript-eslint/tsconfig-utils@npm:8.69.0"
   peerDependencies:
@@ -4707,7 +4707,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@typescript-eslint/tsconfig-utils@npm:8.70.0, @typescript-eslint/tsconfig-utils@npm:^8.70.0":
+"@typescript-eslint/tsconfig-utils@npm:8.70.0, @typescript-eslint/tsconfig-utils@npm:^8.69.0, @typescript-eslint/tsconfig-utils@npm:^8.70.0":
   version: 8.70.0
   resolution: "@typescript-eslint/tsconfig-utils@npm:8.70.0"
   peerDependencies:
@@ -4716,7 +4716,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@typescript-eslint/type-utils@npm:8.70.0":
+"@typescript-eslint/type-utils@npm:8.70.0, @typescript-eslint/type-utils@npm:^8.69.0":
   version: 8.70.0
   resolution: "@typescript-eslint/type-utils@npm:8.70.0"
   dependencies:
@@ -4732,22 +4732,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@typescript-eslint/type-utils@npm:^8.69.0":
-  version: 8.69.0
-  resolution: "@typescript-eslint/type-utils@npm:8.69.0"
-  dependencies:
-    "@typescript-eslint/types": "npm:8.69.0"
-    "@typescript-eslint/typescript-estree": "npm:8.69.0"
-    "@typescript-eslint/utils": "npm:8.69.0"
-    debug: "npm:^4.4.3"
-    ts-api-utils: "npm:^2.5.0"
-  peerDependencies:
-    eslint: ^8.57.0 || ^9.0.0 || ^10.0.0
-    typescript: ">=4.8.4 <6.1.0"
-  checksum: 10c0/39b61aae6724ccd5d9a568f0a1954a3d1820109ee49ee8e9f1feb5a4f87e3156455bfb0d34c4fc7f3ef27c66cde982cc7d0f456a9ce7633dcc764991c79c0b88
-  languageName: node
-  linkType: hard
-
 "@typescript-eslint/types@npm:^8.58.2":
   version: 8.67.0
   resolution: "@typescript-eslint/types@npm:8.67.0"
@@ -4755,7 +4739,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@typescript-eslint/typescript-estree@npm:8.69.0, @typescript-eslint/typescript-estree@npm:^8.69.0":
+"@typescript-eslint/typescript-estree@npm:8.69.0":
   version: 8.69.0
   resolution: "@typescript-eslint/typescript-estree@npm:8.69.0"
   dependencies:
@@ -4774,7 +4758,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@typescript-eslint/typescript-estree@npm:8.70.0":
+"@typescript-eslint/typescript-estree@npm:8.70.0, @typescript-eslint/typescript-estree@npm:^8.69.0":
   version: 8.70.0
   resolution: "@typescript-eslint/typescript-estree@npm:8.70.0"
   dependencies:
