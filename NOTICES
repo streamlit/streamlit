@@ -1021,7 +1021,7 @@ See the License for the specific language governing permissions and limitations 
 
 -----
 
-The following software may be included in this product: @luma.gl/core, @luma.gl/engine, @luma.gl/gltf, @luma.gl/shadertools, @luma.gl/webgl. A copy of the source code may be downloaded from https://github.com/visgl/luma.gl (@luma.gl/core), https://github.com/visgl/luma.gl (@luma.gl/engine), https://github.com/visgl/luma.gl (@luma.gl/gltf), https://github.com/visgl/luma.gl (@luma.gl/shadertools), https://github.com/visgl/luma.gl (@luma.gl/webgl). This software contains the following license and notice below:
+The following software may be included in this product: @luma.gl/core, @luma.gl/engine, @luma.gl/gltf, @luma.gl/gpgpu, @luma.gl/shadertools, @luma.gl/webgl. A copy of the source code may be downloaded from https://github.com/visgl/luma.gl (@luma.gl/core), https://github.com/visgl/luma.gl (@luma.gl/engine), https://github.com/visgl/luma.gl (@luma.gl/gltf), https://github.com/visgl/luma.gl (@luma.gl/gpgpu), https://github.com/visgl/luma.gl (@luma.gl/shadertools), https://github.com/visgl/luma.gl (@luma.gl/webgl). This software contains the following license and notice below:
 
 luma.gl is provided under the MIT license
 
@@ -1036,6 +1036,11 @@ under MIT license. PhiloGL parts Copyright © 2013 Sencha Labs.
 This software includes adaptations of some postprocessing code from 
 THREE.js (https://github.com/mrdoob/three.js/) under MIT license. 
 THREE.js parts Copyright © 2010-2018 three.js authors. 
+
+This software includes adaptations of Gaussian-splat rendering and
+level-of-detail behavior from Spark (https://github.com/sparkjsdev/spark)
+under MIT license.
+Spark parts Copyright © 2025 WORLD LABS TECHNOLOGIES, INC.
 
 Additional attribution given in specific source files. 
 
