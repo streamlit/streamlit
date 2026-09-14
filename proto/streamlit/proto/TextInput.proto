@@ -70,8 +70,6 @@ message TextInput {
   optional uint32 live_debounce_ms = 19;
 
   // If true, empty / whitespace-only values cannot be committed (client-side).
-  // Hashed into unkeyed widget identity. A user key keeps identity stable
-  // when required changes (unlike max_chars / validate).
   bool required = 20;
   // Next: 21
 }
