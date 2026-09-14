@@ -507,9 +507,9 @@ class TextWidgetsMixin:
             the last submitted value is kept. Inside a form, submission is
             blocked until the field has a value.
 
-            The widget still returns its empty default on the first run, so
-            check the returned value in your app if empty input is not
-            valid for your logic.
+            The widget still returns its default value until the user
+            provides input, so check the returned value in your app if
+            empty input is not valid for your logic.
 
             When used with ``validate``, empty values fail this check and
             skip validation. Non-empty values are checked against
@@ -525,6 +525,10 @@ class TextWidgetsMixin:
                This check runs in the user's browser and can be bypassed.
                If requiredness is security-relevant, you must also check the
                value on the server (in your app code) after it is submitted.
+
+            .. note::
+               A disabled empty required field can trap a form: submit stays
+               blocked and the user cannot fill the field.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
