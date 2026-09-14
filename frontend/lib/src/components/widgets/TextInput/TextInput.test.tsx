@@ -266,6 +266,31 @@ describe("TextInput widget", () => {
       })
     })
 
+    it("clears a leftover validate error when the search clear button is clicked", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        type: TextInputProto.Type.SEARCH,
+        validateRegex: "^[a-z]+$",
+        validateMessage: "Lowercase only",
+      })
+      render(<TextInput {...props} />)
+
+      const searchbox = screen.getByRole("searchbox")
+      await user.type(searchbox, "123")
+      await user.click(document.body)
+      expect(screen.getByRole("alert")).toHaveTextContent("Lowercase only")
+      expect(searchbox).toHaveAttribute("aria-invalid", "true")
+
+      await user.click(screen.getByTestId("stTextInputClearButton"))
+
+      expect(searchbox).toHaveValue("")
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId("stTextInputErrorIcon")
+      ).not.toBeInTheDocument()
+      expect(searchbox).not.toHaveAttribute("aria-invalid")
+    })
+
     it.each([
       ["outside a form", {}],
       ["inside a form", { formId: "form" }],

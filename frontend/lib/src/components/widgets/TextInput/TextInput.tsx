@@ -564,6 +564,8 @@ function TextInput({
   const handleClear = useCallback((): void => {
     cancelLiveCommit()
     setUiValueAndRef("")
+    setHasUserError(false)
+    setHasRequiredError(false)
     commitWidgetValue("")
   }, [cancelLiveCommit, commitWidgetValue, setUiValueAndRef])
 
