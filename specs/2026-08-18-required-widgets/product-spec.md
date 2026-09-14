@@ -409,10 +409,10 @@ with st.form("upload"):
   trap is visible in the terminal, not only the docs.
 - **`st.multiselect(..., max_selections=1, required=True)`.** Last-chip lock plus
   the existing "Remove an option first" cap can deadlock (the user cannot change
-  the only selected option). v1 keeps the uniform last-chip lock — no swap/replace
-  hatch and no API reject. `st.selectbox(..., required=True)` still allows
-  replacing the selection. A swap hatch or combo reject needs a product call
-  before Wave 1 ships this as a trap.
+  the only selected option). Wave 1 ships this known limitation: the uniform
+  last-chip lock applies; no swap/replace hatch and no API reject. Changelog
+  should call it out. A later product call can add a swap hatch or reject the
+  combo. `st.selectbox(..., required=True)` still allows replacing the selection.
 - **`label_visibility`.** `(required)` is omitted when the label is hidden or
   collapsed; `aria-required` remains.
 - **`bind="query-params"`.** Same caveat as `validate`: inside a form, keystrokes may
