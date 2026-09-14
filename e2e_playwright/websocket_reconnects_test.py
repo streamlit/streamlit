@@ -131,6 +131,30 @@ def test_retain_uploaded_files_when_websocket_connection_drops_and_reconnects(
     expect(app.get_by_test_id("stText").first).to_have_text(str(file_content))
 
 
+def test_upload_file_selected_while_websocket_is_disconnected(app: Page):
+    """Selecting a file while disconnected should still upload after reconnect.
+
+    Simulates the Android Chrome file-picker path (#11419): the chooser is
+    opened while connected, the websocket drops, then the user confirms a file.
+    """
+    file_name = "late-pick.txt"
+    file_content = b"after-disconnect"
+
+    with app.expect_file_chooser() as fc_info:
+        app.get_by_test_id("stFileUploaderDropzone").click()
+    file_chooser = fc_info.value
+
+    expect_connection_status(app, "CONNECTING", DISCONNECT_WEBSOCKET_ACTION)
+
+    file_chooser.set_files(
+        [FilePayload(name=file_name, buffer=file_content, mimeType="text/plain")]
+    )
+
+    expect(app.get_by_test_id("stFileChipName")).to_have_text(file_name)
+    wait_for_app_run(app)
+    expect(app.get_by_test_id("stText").first).to_have_text(str(file_content))
+
+
 # skip webkit because the camera permission cannot be set programmatically
 @pytest.mark.skip_browser("webkit")
 def test_retain_captured_pictures_when_websocket_connection_drops_and_reconnects(

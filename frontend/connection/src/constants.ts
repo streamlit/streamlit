@@ -72,11 +72,11 @@ const isAndroidDevice = (): boolean => {
 }
 
 /**
- * Timeout when attempting to connect to a websocket, in millis.
- * Android devices get a longer timeout (60s vs 15s) because file pickers
- * background the browser tab for extended periods, causing premature
- * connection timeouts.
- * See: https://github.com/streamlit/streamlit/issues/11419
+ * Websocket handshake timeout in milliseconds. WebsocketConnection measures
+ * this only while the tab is visible so a backgrounded file picker cannot
+ * burn the timer (#11419). Android uses 60s instead of 15s when the tab is
+ * still reported visible (some pickers never fire `visibilitychange`).
+ * Hidden tabs do not start this timer.
  */
 export const WEBSOCKET_TIMEOUT_MS = isAndroidDevice() ? 60 * 1000 : 15 * 1000
 

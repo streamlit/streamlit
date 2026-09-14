@@ -231,3 +231,76 @@ describe("FileUploadClient without optional endpoints", () => {
     )
   })
 })
+
+describe("FileUploadClient in-flight request joining", () => {
+  const makeJoiningUploader = (): {
+    requestFileURLs: Mock
+    uploader: FileUploadClient
+  } => {
+    const requestFileURLs = vi.fn()
+    const uploader = new FileUploadClient({
+      sessionInfo: mockSessionInfo(),
+      endpoints: makeMockEndpoints(),
+      formsWithPendingRequestsChanged: vi.fn(),
+      requestFileURLs,
+    })
+    return { requestFileURLs, uploader }
+  }
+
+  it("returns the same promise for the same widget id and File batch", () => {
+    const { requestFileURLs, uploader } = makeJoiningUploader()
+
+    const first = uploader.fetchFileURLs([MOCK_FILE], "widget-1")
+    const second = uploader.fetchFileURLs([MOCK_FILE], "widget-1")
+
+    expect(first).toBe(second)
+    expect(requestFileURLs).toHaveBeenCalledTimes(1)
+  })
+
+  it("creates a new request after the in-flight promise settles", async () => {
+    const { requestFileURLs, uploader } = makeJoiningUploader()
+
+    const first = uploader.fetchFileURLs([MOCK_FILE], "widget-1")
+    // @ts-expect-error
+    const pendingReqs = uploader.pendingFileURLsRequests
+    const reqId = pendingReqs.keys().next().value as string
+    uploader.onFileURLsResponse({
+      responseId: reqId,
+      fileUrls: [],
+    })
+    await expect(first).resolves.toEqual([])
+
+    const second = uploader.fetchFileURLs([MOCK_FILE], "widget-1")
+    expect(second).not.toBe(first)
+    expect(requestFileURLs).toHaveBeenCalledTimes(2)
+  })
+
+  it("does not join different File batches for the same widget", () => {
+    const { requestFileURLs, uploader } = makeJoiningUploader()
+
+    const otherFile = new File(["file2"], "file2.txt")
+    const first = uploader.fetchFileURLs([MOCK_FILE], "widget-1")
+    const second = uploader.fetchFileURLs([otherFile], "widget-1")
+
+    expect(first).not.toBe(second)
+    expect(requestFileURLs).toHaveBeenCalledTimes(2)
+  })
+
+  it("cleans in-flight widget entries when a joined request fails", async () => {
+    const { requestFileURLs, uploader } = makeJoiningUploader()
+
+    const first = uploader.fetchFileURLs([MOCK_FILE], "widget-1")
+    // @ts-expect-error
+    const pendingReqs = uploader.pendingFileURLsRequests
+    const reqId = pendingReqs.keys().next().value as string
+    uploader.onFileURLsResponse({
+      responseId: reqId,
+      errorMsg: "kaboom",
+    })
+    await expect(first).rejects.toBe("kaboom")
+
+    const second = uploader.fetchFileURLs([MOCK_FILE], "widget-1")
+    expect(second).not.toBe(first)
+    expect(requestFileURLs).toHaveBeenCalledTimes(2)
+  })
+})

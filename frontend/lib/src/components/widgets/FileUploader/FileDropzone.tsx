@@ -46,6 +46,13 @@ export interface Props {
   acceptDirectory?: boolean
   uploadedFiles?: React.ReactNode
   hasFiles?: boolean
+  /**
+   * Disable the hidden file input. Defaults to `disabled`. FileUploader
+   * passes the proto disabled flag so a connection-only disable still
+   * accepts `change` from an already-open picker without allowing a new
+   * one (#11419).
+   */
+  inputDisabled?: boolean
 }
 
 const FileDropzone = ({
@@ -58,13 +65,19 @@ const FileDropzone = ({
   acceptDirectory = false,
   uploadedFiles,
   hasFiles = false,
+  inputDisabled,
 }: Props): React.ReactElement => (
   <Dropzone
     onDrop={onDrop}
     multiple={multiple}
     accept={getAccept(acceptedTypes)}
     maxSize={maxSizeBytes}
-    disabled={disabled}
+    disabled={inputDisabled ?? disabled}
+    // When only widgetsDisabled is set, keep the input enabled for an
+    // already-open picker but block new click/drag/keyboard selection.
+    noClick={disabled}
+    noDrag={disabled}
+    noKeyboard={disabled}
     // react-dropzone v12+ uses the File System Access API by default,
     // causing the bug described in https://github.com/streamlit/streamlit/issues/6176.
     useFsAccessApi={false}

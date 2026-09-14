@@ -46,6 +46,8 @@ vi.mock("~lib/util/FileHelper", () => ({
 
 type DropHandlerParams = Parameters<typeof createDropHandler>[0]
 
+const CHAT_WIDGET_ID = "chat-input-id"
+
 const createMockParams = (
   overrides?: Partial<DropHandlerParams>
 ): DropHandlerParams => ({
@@ -63,7 +65,7 @@ const createMockParams = (
   getNextLocalFileId: vi.fn().mockReturnValue(1),
   deleteExistingFiles: vi.fn(),
   onUploadComplete: vi.fn(),
-  element: ChatInputProto.create({ fileType: [] }),
+  element: ChatInputProto.create({ id: CHAT_WIDGET_ID, fileType: [] }),
   ...overrides,
 })
 
@@ -95,7 +97,7 @@ describe("createDropHandler", () => {
 
     handler([oversized], [])
 
-    expect(fetchFileURLs).toHaveBeenCalledWith([])
+    expect(fetchFileURLs).toHaveBeenCalledWith([], CHAT_WIDGET_ID)
     expect(params.uploadFile).not.toHaveBeenCalled()
   })
 
@@ -207,7 +209,7 @@ describe("createDropHandler", () => {
 
     handler([], rejected)
 
-    expect(fetchFileURLs).toHaveBeenCalledWith([recoveredFile])
+    expect(fetchFileURLs).toHaveBeenCalledWith([recoveredFile], CHAT_WIDGET_ID)
     expect(params.deleteExistingFiles).toHaveBeenCalledTimes(1)
   })
 
@@ -225,7 +227,7 @@ describe("createDropHandler", () => {
 
     handler([firstFile, secondFile], [])
 
-    expect(fetchFileURLs).toHaveBeenCalledWith([firstFile])
+    expect(fetchFileURLs).toHaveBeenCalledWith([firstFile], CHAT_WIDGET_ID)
     expect(getRejectedFileInfo).toHaveBeenCalledWith(
       expect.objectContaining({
         file: secondFile,
@@ -252,7 +254,10 @@ describe("createDropHandler", () => {
 
     handler([firstFile, secondFile], [])
 
-    expect(fetchFileURLs).toHaveBeenCalledWith([firstFile, secondFile])
+    expect(fetchFileURLs).toHaveBeenCalledWith(
+      [firstFile, secondFile],
+      CHAT_WIDGET_ID
+    )
   })
 
   it("calls uploadClient.fetchFileURLs with accepted files", async () => {
@@ -268,7 +273,7 @@ describe("createDropHandler", () => {
 
     handler([file], [])
 
-    expect(fetchFileURLs).toHaveBeenCalledWith([file])
+    expect(fetchFileURLs).toHaveBeenCalledWith([file], CHAT_WIDGET_ID)
     await vi.waitFor(() => {
       expect(params.uploadFile).toHaveBeenCalledWith(fileURLs, file)
     })

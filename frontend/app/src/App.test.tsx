@@ -4187,12 +4187,11 @@ describe("App", () => {
       })
     })
 
-    it("rejects with error when server is disconnected", () => {
-      // When disconnected, file upload requests should be rejected immediately
-      // with an error. We can't queue and retry because reconnection triggers
-      // a script rerun, which remounts the FileUploader component and
-      // invalidates the promise callback.
+    it("queues file URL requests until the server reconnects", () => {
       renderApp(getProps())
+
+      const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
+      sessionInfo.setCurrent(mockSessionInfoProps())
 
       const fileUploadClient =
         getStoredValue<FileUploadClient>(FileUploadClient)
@@ -4205,20 +4204,174 @@ describe("App", () => {
       // @ts-expect-error - requestFileURLs is private
       fileUploadClient.requestFileURLs("myRequestId", [
         new File([""], "file1.txt"),
-        new File([""], "file2.txt"),
-        new File([""], "file3.txt"),
       ])
 
       const connectionManager = getMockConnectionManager()
 
-      // No message sent when disconnected
       expect(connectionManager.sendMessage).not.toHaveBeenCalled()
+      expect(onFileURLsResponseSpy).not.toHaveBeenCalled()
 
-      // Error response should be sent to reject the pending promise
+      getMockConnectionManager(true)
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      expect(connectionManager.sendMessage).toHaveBeenCalled()
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls.at(-1)[0].toJSON()
+      ).toStrictEqual({
+        fileUrlsRequest: {
+          fileNames: ["file1.txt"],
+          requestId: "myRequestId",
+          sessionId: "mockSessionId",
+        },
+      })
+    })
+
+    it("rejects queued file URL requests when permanently disconnected", () => {
+      renderApp(getProps())
+
+      const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
+      sessionInfo.setCurrent(mockSessionInfoProps())
+
+      const fileUploadClient =
+        getStoredValue<FileUploadClient>(FileUploadClient)
+
+      const onFileURLsResponseSpy = vi.spyOn(
+        fileUploadClient,
+        "onFileURLsResponse"
+      )
+
+      // @ts-expect-error - requestFileURLs is private
+      fileUploadClient.requestFileURLs("myRequestId", [
+        new File([""], "file1.txt"),
+      ])
+
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.DISCONNECTED_FOREVER
+        )
+      })
+
       expect(onFileURLsResponseSpy).toHaveBeenCalledWith({
         responseId: "myRequestId",
         errorMsg:
           "Connection lost. Please wait for the app to reconnect, then try again.",
+      })
+    })
+
+    it("keeps file URL requests queued until sessionInfo is set", () => {
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager(true)
+      const fileUploadClient =
+        getStoredValue<FileUploadClient>(FileUploadClient)
+
+      // @ts-expect-error - requestFileURLs is private
+      fileUploadClient.requestFileURLs("myRequestId", [
+        new File([""], "file1.txt"),
+      ])
+
+      expect(connectionManager.sendMessage).not.toHaveBeenCalled()
+
+      const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
+      sessionInfo.setCurrent(mockSessionInfoProps())
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      expect(connectionManager.sendMessage).toHaveBeenCalled()
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls.at(-1)[0].toJSON()
+      ).toMatchObject({
+        fileUrlsRequest: {
+          fileNames: ["file1.txt"],
+          requestId: "myRequestId",
+        },
+      })
+    })
+
+    it("rejects new file URL requests when already permanently disconnected", () => {
+      renderApp(getProps())
+
+      const fileUploadClient =
+        getStoredValue<FileUploadClient>(FileUploadClient)
+      const onFileURLsResponseSpy = vi.spyOn(
+        fileUploadClient,
+        "onFileURLsResponse"
+      )
+
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.DISCONNECTED_FOREVER
+        )
+      })
+
+      const connectionManager = getMockConnectionManager()
+
+      // @ts-expect-error - requestFileURLs is private
+      fileUploadClient.requestFileURLs("myRequestId", [
+        new File([""], "file1.txt"),
+      ])
+
+      expect(connectionManager.sendMessage).not.toHaveBeenCalled()
+      expect(onFileURLsResponseSpy).toHaveBeenCalledWith({
+        responseId: "myRequestId",
+        errorMsg:
+          "Connection lost. Please wait for the app to reconnect, then try again.",
+      })
+    })
+
+    it("resends in-flight file URL requests after a transient disconnect", () => {
+      renderApp(getProps())
+
+      const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
+      sessionInfo.setCurrent(mockSessionInfoProps())
+
+      const connectionManager = getMockConnectionManager(true)
+      const fileUploadClient =
+        getStoredValue<FileUploadClient>(FileUploadClient)
+
+      // @ts-expect-error - requestFileURLs is private
+      fileUploadClient.requestFileURLs("myRequestId", [
+        new File([""], "file1.txt"),
+      ])
+
+      expect(connectionManager.sendMessage).toHaveBeenCalled()
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const sendCountAfterFirst = connectionManager.sendMessage.mock.calls
+        .length as number
+
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTING
+        )
+      })
+      getMockConnectionManager(true)
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      expect(
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        connectionManager.sendMessage.mock.calls.length
+      ).toBeGreaterThan(sendCountAfterFirst)
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls.at(-1)[0].toJSON()
+      ).toMatchObject({
+        fileUrlsRequest: {
+          fileNames: ["file1.txt"],
+          requestId: "myRequestId",
+        },
       })
     })
   })

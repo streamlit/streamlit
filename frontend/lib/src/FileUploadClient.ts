@@ -41,6 +41,9 @@ interface Props {
 
 const LOG = getLogger("FileUploadClient")
 
+const areSameFileBatch = (a: File[], b: File[]): boolean =>
+  a.length === b.length && a.every((file, index) => file === b[index])
+
 /**
  * Handles operations related to the widgets that require file uploading.
  */
@@ -78,6 +81,14 @@ export class FileUploadClient {
   private readonly pendingFileURLsRequests = new Map<
     string,
     PromiseWithResolvers<FileURLs.$Properties[]>
+  >()
+
+  /**
+   * In-flight URL requests by widget id so a remount can join the same promise.
+   */
+  private readonly inFlightFileURLRequestsByWidget = new Map<
+    string,
+    Array<{ files: File[]; promise: Promise<FileURLs.$Properties[]> }>
   >()
 
   public constructor(props: Props) {
@@ -137,12 +148,26 @@ export class FileUploadClient {
    * signify completion.
    *
    * @param files: An array of files.
+   * @param widgetId: When set, a remounted widget with the same File batch
+   *   reuses the in-flight promise instead of issuing a second request.
    *
    * @return a Promise<FileURLs.$Properties[]> of upload and delete URLs for the given files.
    */
-  public fetchFileURLs(files: File[]): Promise<FileURLs.$Properties[]> {
+  public fetchFileURLs(
+    files: File[],
+    widgetId?: string
+  ): Promise<FileURLs.$Properties[]> {
     if (!this.requestFileURLs) {
       return Promise.resolve([])
+    }
+
+    if (widgetId) {
+      const match = this.inFlightFileURLRequestsByWidget
+        .get(widgetId)
+        ?.find(entry => areSameFileBatch(entry.files, files))
+      if (match) {
+        return match.promise
+      }
     }
 
     const resolver = Promise.withResolvers<FileURLs.$Properties[]>()
@@ -151,7 +176,25 @@ export class FileUploadClient {
     this.pendingFileURLsRequests.set(requestId, resolver)
     this.requestFileURLs(requestId, files)
 
-    return resolver.promise
+    const { promise } = resolver
+    if (widgetId) {
+      const inFlight = this.inFlightFileURLRequestsByWidget.get(widgetId) ?? []
+      inFlight.push({ files, promise })
+      this.inFlightFileURLRequestsByWidget.set(widgetId, inFlight)
+      const cleanupInFlight = (): void => {
+        const remaining = (
+          this.inFlightFileURLRequestsByWidget.get(widgetId) ?? []
+        ).filter(entry => entry.promise !== promise)
+        if (remaining.length === 0) {
+          this.inFlightFileURLRequestsByWidget.delete(widgetId)
+        } else {
+          this.inFlightFileURLRequestsByWidget.set(widgetId, remaining)
+        }
+      }
+      void promise.then(cleanupInFlight, cleanupInFlight)
+    }
+
+    return promise
   }
 
   /**

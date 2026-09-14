@@ -140,6 +140,44 @@ describe("FileDropzone widget", () => {
     expect(button).toBeDisabled()
   })
 
+  it("keeps the hidden file input enabled when inputDisabled is false", () => {
+    const props = getProps({
+      disabled: true,
+      inputDisabled: false,
+    })
+    render(<FileDropzone {...props} />)
+
+    expect(screen.getByRole("button")).toBeDisabled()
+    expect(screen.getByTestId("stFileUploaderDropzoneInput")).toBeEnabled()
+  })
+
+  it("ignores new drops when disabled even if the hidden input stays enabled", () => {
+    const onDrop = vi.fn()
+    const props = getProps({
+      disabled: true,
+      inputDisabled: false,
+      onDrop,
+    })
+    render(<FileDropzone {...props} />)
+
+    const dropzone = screen.getByTestId("stFileUploaderDropzone")
+    const file = new File(["x"], "late.txt", { type: "text/plain" })
+    const dropEvent = createEvent.drop(dropzone)
+    Object.defineProperty(dropEvent, "dataTransfer", {
+      value: {
+        types: ["Files"],
+        files: [file],
+        items: [{ kind: "file", type: file.type, getAsFile: () => file }],
+      },
+    })
+    act(() => {
+      dropzone.dispatchEvent(dropEvent)
+    })
+
+    expect(onDrop).not.toHaveBeenCalled()
+    expect(screen.getByTestId("stFileUploaderDropzoneInput")).toBeEnabled()
+  })
+
   it("renders uploaded files when hasFiles is true", () => {
     const props = getProps({
       uploadedFiles: <div data-testid="mockUploadedFiles">files here</div>,

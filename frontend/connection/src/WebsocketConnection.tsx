@@ -248,10 +248,106 @@ export class WebsocketConnection {
    */
   private reconnectAttempt = 0
 
+  /**
+   * True when a health probe was deferred because the tab was hidden.
+   */
+  private pingDeferredWhileHidden = false
+
+  /**
+   * True when the CONNECTING handshake timeout is paused because the tab is
+   * hidden. A fresh WEBSOCKET_TIMEOUT_MS window starts when the tab is visible.
+   */
+  private connectingTimeoutPaused = false
+
+  /**
+   * URI last passed to setConnectionTimeout, so a paused timeout can restart.
+   */
+  private connectingTimeoutUri?: string
+
   constructor(props: Args) {
     this.args = props
     this.cache = new ForwardMsgCache()
+    this.setPageLifecycleListeners(true)
     this.stepFsm("INITIALIZED")
+  }
+
+  private readonly onVisibilityChange = (): void => {
+    if (this.isDocumentHidden()) {
+      this.pauseReconnectWhileHidden()
+    } else {
+      this.resumeReconnectAfterVisible()
+    }
+  }
+
+  private isDocumentHidden(): boolean {
+    return (
+      typeof document !== "undefined" && document.visibilityState === "hidden"
+    )
+  }
+
+  private setPageLifecycleListeners(enabled: boolean): void {
+    if (typeof document === "undefined") {
+      return
+    }
+
+    const method = enabled ? "addEventListener" : "removeEventListener"
+    document[method]("visibilitychange", this.onVisibilityChange)
+    // freeze/resume are Page Lifecycle events, not on DocumentEventMap.
+    const lifecycleTarget: EventTarget = document
+    lifecycleTarget[method]("freeze", this.pauseReconnectWhileHidden)
+    lifecycleTarget[method]("resume", this.resumeReconnectAfterVisible)
+  }
+
+  /**
+   * Pause reconnect work while the tab is backgrounded (Android/iOS file
+   * pickers freeze the page and the handshake cannot complete).
+   */
+  private readonly pauseReconnectWhileHidden = (): void => {
+    if (notNullOrUndefined(this.wsConnectionTimeout)) {
+      globalThis.clearTimeout(this.wsConnectionTimeout)
+      this.wsConnectionTimeout = undefined
+      this.connectingTimeoutPaused = true
+    }
+
+    this.clearReconnectDelayTimeout()
+    if (this.pingRequest) {
+      this.pingRequest.cancel()
+      this.pingRequest = undefined
+      this.pingDeferredWhileHidden = true
+    } else if (this.state === ConnectionState.PINGING_SERVER) {
+      this.pingDeferredWhileHidden = true
+    }
+  }
+
+  /**
+   * Restart deferred health pings and the CONNECTING handshake timeout.
+   */
+  private readonly resumeReconnectAfterVisible = (): void => {
+    // Page Lifecycle `resume` can fire while the tab is still hidden
+    // (e.g. Chrome unfreezing a backgrounded picker). Do not start the
+    // handshake timeout or a health ping until the document is visible.
+    if (this.isDocumentHidden()) {
+      return
+    }
+
+    if (this.pingDeferredWhileHidden) {
+      this.pingDeferredWhileHidden = false
+      if (this.state === ConnectionState.PINGING_SERVER) {
+        void this.pingServer()
+      } else if (this.state === ConnectionState.CONNECTING) {
+        void this.pingServerInBackground()
+      }
+    }
+
+    if (
+      this.connectingTimeoutPaused &&
+      this.state === ConnectionState.CONNECTING &&
+      isNullOrUndefined(this.wsConnectionTimeout) &&
+      this.connectingTimeoutUri
+    ) {
+      this.connectingTimeoutPaused = false
+      this.setConnectionTimeout(this.connectingTimeoutUri)
+    }
   }
 
   /**
@@ -300,6 +396,8 @@ export class WebsocketConnection {
       case ConnectionState.CONNECTED:
         this.reconnectAttempt = 0
         this.clearReconnectDelayTimeout()
+        this.pingDeferredWhileHidden = false
+        this.connectingTimeoutPaused = false
         // Pin to the URI the live socket actually used (captured at socket
         // creation), not this.uriIndex: in bypass mode a background ping can
         // overwrite this.uriIndex before the socket's open event fires, which
@@ -324,6 +422,7 @@ export class WebsocketConnection {
 
       case ConnectionState.DISCONNECTED_FOREVER:
         this.closeConnection()
+        this.setPageLifecycleListeners(false)
         break
 
       default:
@@ -485,6 +584,13 @@ export class WebsocketConnection {
    */
   private schedulePingServer(delayMs: number): void {
     this.clearReconnectDelayTimeout()
+
+    if (this.isDocumentHidden()) {
+      this.pingDeferredWhileHidden = true
+      return
+    }
+
+    this.pingDeferredWhileHidden = false
 
     if (delayMs <= 0) {
       void this.pingServer()
@@ -733,6 +839,13 @@ export class WebsocketConnection {
   }
 
   private setConnectionTimeout(uri: string): void {
+    this.connectingTimeoutUri = uri
+
+    if (this.isDocumentHidden()) {
+      this.connectingTimeoutPaused = true
+      return
+    }
+
     if (notNullOrUndefined(this.wsConnectionTimeout)) {
       // This should never happen. We set the timeout ID to null in both FSM
       // nodes that lead to this one.
