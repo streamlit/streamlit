@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     # st.help return type tests
     # =====================================================================
 
-    # No arguments uses the default object and returns DeltaGenerator
+    # A no-argument call uses the default obj and returns DeltaGenerator.
     assert_type(st_help(), DeltaGenerator)
 
     # obj accepts any value
