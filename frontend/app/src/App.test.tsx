@@ -3411,49 +3411,51 @@ describe("App", () => {
 
     it("logs a throwing script-finished handler and still runs later handlers", async () => {
       const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
-      let appInstance: App | null = null
+      try {
+        let appInstance: App | null = null
 
-      render(
-        <RootStyleProvider theme={getDefaultTheme()}>
-          <WindowDimensionsProvider>
-            <App
-              {...getProps()}
-              ref={instance => {
-                appInstance = instance
-              }}
-            />
-          </WindowDimensionsProvider>
-        </RootStyleProvider>
-      )
+        render(
+          <RootStyleProvider theme={getDefaultTheme()}>
+            <WindowDimensionsProvider>
+              <App
+                {...getProps()}
+                ref={instance => {
+                  appInstance = instance
+                }}
+              />
+            </WindowDimensionsProvider>
+          </RootStyleProvider>
+        )
 
-      expect(appInstance).not.toBeNull()
+        expect(appInstance).not.toBeNull()
 
-      const handlerError = new Error("handler boom")
-      const throwingHandler = vi.fn(() => {
-        throw handlerError
-      })
-      const laterHandler = vi.fn()
+        const handlerError = new Error("handler boom")
+        const throwingHandler = vi.fn(() => {
+          throw handlerError
+        })
+        const laterHandler = vi.fn()
 
-      act(() => {
-        appInstance?.addScriptFinishedHandler(throwingHandler)
-        appInstance?.addScriptFinishedHandler(laterHandler)
-      })
+        act(() => {
+          appInstance?.addScriptFinishedHandler(throwingHandler)
+          appInstance?.addScriptFinishedHandler(laterHandler)
+        })
 
-      sendForwardMessage(
-        "scriptFinished",
-        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
-      )
+        sendForwardMessage(
+          "scriptFinished",
+          ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+        )
 
-      await waitFor(() => {
-        expect(laterHandler).toHaveBeenCalledTimes(1)
-      })
-      expect(throwingHandler).toHaveBeenCalledTimes(1)
-      expect(logErrorSpy).toHaveBeenCalledWith(
-        "Script finished handler failed",
-        handlerError
-      )
-
-      logErrorSpy.mockRestore()
+        await waitFor(() => {
+          expect(laterHandler).toHaveBeenCalledTimes(1)
+        })
+        expect(throwingHandler).toHaveBeenCalledTimes(1)
+        expect(logErrorSpy).toHaveBeenCalledWith(
+          "Script finished handler failed",
+          handlerError
+        )
+      } finally {
+        logErrorSpy.mockRestore()
+      }
     })
   })
 

@@ -31,6 +31,7 @@ import BidiComponent from "./BidiComponent"
 import { BidiComponentContext } from "./BidiComponentContext"
 import { BidiComponentContextProvider } from "./BidiComponentContextProvider"
 import { blobUrlManager } from "./utils/blobUrl"
+import { LOG } from "./utils/logger"
 
 vi.mock("@streamlit/utils", async () => {
   const actual = await vi.importActual("@streamlit/utils")
@@ -1124,6 +1125,53 @@ describe("BidiComponent", () => {
 
       // Clean up
       delete (globalThis as Record<string, unknown>).__test_cleanup__
+    })
+
+    it("logs when unmount cleanup returns a rejected Promise", async () => {
+      const cleanupError = new Error("async cleanup failed")
+      const cleanupFn = vi.fn(() => Promise.reject(cleanupError))
+      ;(globalThis as Record<string, unknown>).__test_cleanup__ = cleanupFn
+      const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+
+      try {
+        const jsContent = `
+          export default function(args) {
+            return globalThis.__test_cleanup__;
+          }
+        `
+
+        const element = createMockElement({
+          isolateStyles: false,
+          jsContent,
+          componentName: "AsyncCleanupComponent",
+        })
+
+        const { unmount } = renderWithContexts(
+          <BidiComponent
+            element={element}
+            widgetMgr={mockWidgetMgr}
+            fragmentId={mockFragmentId}
+            componentRegistry={mockComponentRegistry}
+          />
+        )
+
+        await new Promise(resolve => {
+          setTimeout(resolve, 100)
+        })
+
+        unmount()
+
+        await waitFor(() => {
+          expect(logErrorSpy).toHaveBeenCalledWith(
+            "Failed to run custom component cleanup",
+            cleanupError
+          )
+        })
+        expect(cleanupFn).toHaveBeenCalled()
+      } finally {
+        logErrorSpy.mockRestore()
+        delete (globalThis as Record<string, unknown>).__test_cleanup__
+      }
     })
 
     it("should handle errors in module execution", async () => {

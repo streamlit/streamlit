@@ -1982,8 +1982,8 @@ export class App extends PureComponent<Props, State> {
     ) {
       // Notify subscribers on the next microtask so this finish handler can
       // return before widgets react to the completion of this run. Isolate
-      // handler failures so one throw does not skip the rest or become an
-      // unhandled rejection.
+      // handler failures so one throw does not skip later handlers or surface
+      // as an uncaught error.
       queueMicrotask(() => {
         this.state.scriptFinishedHandlers.forEach(handler => {
           try {

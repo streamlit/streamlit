@@ -316,6 +316,8 @@ export const useHandleJsContent = ({
       if (maybeCleanup) {
         void Promise.resolve(maybeCleanup)
           .then(result => {
+            // Return the cleanup result so a thenable teardown stays in the
+            // chain; `result?.(); return` would drop async cleanup rejections.
             return result?.()
           })
           .catch(error => {
