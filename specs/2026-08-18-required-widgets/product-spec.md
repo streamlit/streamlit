@@ -383,8 +383,12 @@ with st.form("upload"):
   `validate`). The error appears on the next user commit/submit, not on the
   programmatic write.
 - **AppTest / tampered client.** Client-side only; tests can still set empty values.
-- **Widget identity.** Changing `required` must not reset the widget (same as
-  `disabled`). Do not hash `required` into the element ID.
+- **Widget identity.** Hash `required` like other stable kwargs (`label`, `help`,
+  `type`), not like `disabled`. An unkeyed widget resets if `required` changes;
+  `key=` keeps the value, same as toggling `help` or `placeholder`. Do **not** add
+  `required` to `key_as_main_identity` (unlike `validate` / `max_chars` on
+  `st.text_input`) — a key is the workaround for `required=some_condition`.
+  Shipped pills omit `required` from the ID; the pills follow-up should add it.
 
 ## Out of Scope (Future Work)
 

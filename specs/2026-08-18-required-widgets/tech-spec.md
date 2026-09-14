@@ -39,8 +39,11 @@ Add `bool required = N;` to each affected widget message (`TextInput`, `TextArea
 `MultiSelect`, `FileUploader`, `CameraInput`, `AudioInput`). `ButtonGroup.required`
 already exists (field 16); update its comment to cover multi-select and form gating.
 
-Do **not** put `required` in the widget identity / element ID (same as `disabled`).
-Toggling `required` must not reset state.
+Pass `required` into `compute_and_register_element_id` as a normal kwarg (like
+`help` / `type`). Do **not** add it to `key_as_main_identity` and do **not** treat
+it like `disabled` (which is omitted even without a key). Unkeyed widgets reset
+when `required` flips; a user `key` preserves state. Pills today omit `required`
+from the ID; add it in the pills follow-up.
 
 Python: keyword-only `required: bool = False`, forwarded onto the proto. Drop the
 pills/segmented exception that raises on `required=True` + `selection_mode="multi"`.
@@ -284,7 +287,8 @@ include `(required)` in the accessible name.
   send the previous bounds; `on_change="ignore"` + `required=True`: a passing
   unflushed edit, then clear, keeps the pending value (error on local UI) and does
   not flush empty on the next rerun.
-- Python: proto field set on wave-1 widgets; `required` not in widget ID.
+- Python: proto field set on wave-1 widgets; `required` is in the element ID
+  kwargs and not in `key_as_main_identity`.
 - Public typing tests (`lib/tests/streamlit/typing/`) for every wave-1 widget.
 - E2E: form with two required fields (both errors on submit); outside-form
   text_input does not rerun on empty blur; email `type` + `required` (empty vs
