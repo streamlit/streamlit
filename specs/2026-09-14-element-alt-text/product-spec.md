@@ -257,13 +257,13 @@ relaxing to it later would not break existing calls.
 | Non-string | Coerced with `to_str`, as `label` does, then stripped |
 | `None` inside an `st.image` list | That image gets no `alt` — how you label some images and not others |
 | `""` as an entry in an `st.image` list | Decorative for that one image |
+| A single string with several images | Raises |
+| List length ≠ number of images | Raises |
+| A sequence-valued `alt` paired with a `set` of images | Raises |
 
 `None` and `""` mean different things here, so they have to stay distinguishable all the way to the
 DOM — every phase must preserve that, rather than letting an absent value and an empty one collapse
 into each other in transit.
-| A single string with several images | Raises |
-| List length ≠ number of images | Raises |
-| A sequence-valued `alt` paired with a `set` of images | Raises |
 
 One failure no validation can catch: a list of the right length in the wrong order mislabels every
 image. That is the one failure this feature can still introduce, and a docstring warning is the only
