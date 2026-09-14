@@ -514,10 +514,13 @@ One implementation note worth stating once so it is not rediscovered per phase: 
 never reset state a user has built up.** It arises only for commands that compute an element ID, and
 four of those need more than keeping `alt` out of the keyed identity:
 
-- **The Vega commands** — `vega_charts.py` hashes the spec itself (`vega_lite_spec`), so `alt` must
-  travel as its own proto field rather than being written into `description` on the backend.
-  Otherwise editing a description resets the selection on an unkeyed `on_select` chart. Keyed charts
-  are safe, which is what makes this easy to miss in testing. The same applies to mutating Plotly's
+- **The Vega commands, `st.map` and `st.pydeck_chart`** — all of them hash the chart spec into the
+  ID (`vega_charts.py` passes `vega_lite_spec`, `deck_gl_json_chart.py` passes `spec`), each only
+  when selections are enabled. So `alt` must travel as its own proto field rather than being written
+  into the spec on the backend; otherwise editing a description resets the selection on an unkeyed
+  `on_select` chart or map. Keyed ones are safe (`key_as_main_identity={"selection_mode"}`), which is
+  what makes this easy to miss in testing. Worth flagging for phase 3 in particular, where writing
+  into the deck spec is the obvious way to apply `alt` — the same care applies to mutating Plotly's
   layout.
 - **`st.plotly_chart`** always passes `key_as_main_identity=False`, so there is no allowlist to
   exclude `alt` from; hashing it discards the chart state its unconditional ID exists to preserve.
@@ -528,9 +531,12 @@ four of those need more than keeping `alt` out of the keyed identity:
   `StreamlitDuplicateElementId`, so two autoplaying players differing only in their description
   still collide, and neither command accepts `key`. Pre-existing, and out of scope here.
 
-`st.dataframe` computes an ID only with selections enabled, and `st.echarts_chart` hashes nothing at
-all, so writing `aria.label.description` into its option dict on the backend is safe — the constraint
-is about hashed specs, not backend mutation as such. ECharts does need one product answer the others
+`st.dataframe` computes an ID only with selections enabled. `st.echarts_chart` computes one only
+when keyed, and passes no spec kwargs into it — `key_as_main_identity=True`, so the key is the whole
+identity and the option dict sits outside it. Writing `aria.label.description` there on the backend
+is therefore safe: the constraint is about hashed specs, not backend mutation as such. That ID still
+has a job worth preserving, so phase 2 should not read this as ECharts having no identity lifecycle —
+it is what keeps a keyed chart from remounting and replaying its entry animation across reruns. ECharts does need one product answer the others
 do not, being the only command where `alt` displaces a generated name rather than filling a gap:
 `EChartsChart.tsx` already reconciles the library's ARIA after every `setOption`, so `alt` has to
 compose with that, and phase 2 should settle precedence when an author sets `alt` *and*
