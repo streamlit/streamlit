@@ -3493,7 +3493,7 @@ __metadata:
     native-file-system-adapter: "npm:^3.0.1"
     node-emoji: "npm:^2.2.0"
     numbro: "npm:^2.5.0"
-    plotly.js: "npm:^4.0.0"
+    plotly.js: "npm:^4.1.0"
     protobufjs: "npm:^8.8.0"
     query-string: "npm:^9.5.1"
     re-resizable: "npm:^6.11.2"
@@ -4277,6 +4277,13 @@ __metadata:
     "@types/d3-interpolate": "npm:^1"
     "@types/d3-selection": "npm:^1"
   checksum: 10c0/c487cd62ebb038a73a0b2dc4547367ddd17231ffee65bc278cb953586e5aeb883efc01f186402c695ee75f9324703da33abd09c81413a8b1b4c6de502cbd9324
+  languageName: node
+  linkType: hard
+
+"@types/d3@npm:^3.5.53":
+  version: 3.5.53
+  resolution: "@types/d3@npm:3.5.53"
+  checksum: 10c0/1ffab5a29e9a5eb2fe976b38333a085406b3f1f3d0d1ed07d2947217ad891e61c95b06d74bb7db378b7d6ea51df93bc7c57edfcade45dadd4dff7e0f7c415507
   languageName: node
   linkType: hard
 
@@ -6267,7 +6274,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"country-iso-search@npm:^0.1.1":
+"country-iso-search@npm:^0.1.2":
   version: 0.1.2
   resolution: "country-iso-search@npm:0.1.2"
   checksum: 10c0/931a8ccd91e62b2d32434e0d83ef4a36433bc00aebfa4fcb4e9ca78717b17af7670f87570657cff7860bb39a4bb17ffa62c621d1dcc5b1d15234b52f8db1a096
@@ -12223,19 +12230,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"plotly.js@npm:^4.0.0":
-  version: 4.0.0
-  resolution: "plotly.js@npm:4.0.0"
+"plotly.js@npm:^4.1.0":
+  version: 4.1.0
+  resolution: "plotly.js@npm:4.1.0"
   dependencies:
     "@plotly/d3": "npm:3.8.2"
     "@plotly/d3-sankey": "npm:0.12.3"
     "@plotly/d3-sankey-circular": "npm:0.33.1"
+    "@plotly/point-cluster": "npm:^3.1.9"
     "@plotly/regl": "npm:^2.1.2"
     "@turf/area": "npm:^7.3.5"
     "@turf/centroid": "npm:^7.3.5"
     "@turf/meta": "npm:^7.3.5"
+    "@types/d3": "npm:^3.5.53"
     base64-arraybuffer: "npm:^1.0.2"
-    country-iso-search: "npm:^0.1.1"
+    country-iso-search: "npm:^0.1.2"
     culori: "npm:^4.0.2"
     d3-force: "npm:^1.2.1"
     d3-format: "npm:^1.4.5"
@@ -12267,7 +12276,7 @@ __metadata:
     topojson-client: "npm:^3.1.0"
     webgl-context: "npm:^2.2.0"
     world-calendars: "npm:^1.0.4"
-  checksum: 10c0/9a7dd0d690618753184f00d450e5631943be97e36d2daa8206142640b22e427677164725483fd166bf6ae253fcd1e9260c460f849a0c0cd482379c6ee90d30c2
+  checksum: 10c0/73682b2fb218232b37f07832c1f42aed397ce8e2835995e1b24a51a20f569a47288ad234b97b91c5c23da1c3ea1a547ae66007886312923c813fee899ae059e1
   languageName: node
   linkType: hard
 
