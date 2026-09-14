@@ -17,7 +17,9 @@
 import {
   compileTextInputValidationRegex,
   getInvalidTextInputMessage,
+  isRequiredEmptyText,
   passesTextInputValidation,
+  REQUIRED_FIELD_MESSAGE,
 } from "./validation"
 
 describe("compileTextInputValidationRegex", () => {
@@ -80,12 +82,32 @@ describe("passesTextInputValidation", () => {
     }
   )
 
+  it("returns false for whitespace-only values so they still run the regex", () => {
+    expect(passesTextInputValidation("   ", regex)).toBe(false)
+  })
+
   it("returns true when the value matches the regex", () => {
     expect(passesTextInputValidation("abc", regex)).toBe(true)
   })
 
   it("returns false when the value does not match the regex", () => {
     expect(passesTextInputValidation("abc123", regex)).toBe(false)
+  })
+})
+
+describe("isRequiredEmptyText", () => {
+  it.each([null, "", "   ", "\t\n"])("treats %j as required-empty", value => {
+    expect(isRequiredEmptyText(value)).toBe(true)
+  })
+
+  it.each(["a", " a ", "0"])("treats %j as not required-empty", value => {
+    expect(isRequiredEmptyText(value)).toBe(false)
+  })
+})
+
+describe("REQUIRED_FIELD_MESSAGE", () => {
+  it("is the user-facing required copy", () => {
+    expect(REQUIRED_FIELD_MESSAGE).toBe("This field is required")
   })
 })
 

@@ -52,6 +52,12 @@ export const StyledWidgetLabelHelp = styled.div({
   flex: 1,
 })
 
+export const StyledRequiredMarker = styled.span(({ theme }) => ({
+  fontSize: theme.fontSizes.twoSm,
+  color: theme.colors.fadedText60,
+  marginLeft: theme.spacing.xs,
+}))
+
 export const StyledWidgetInstructions = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.twoSm,
   color: theme.colors.fadedText60,

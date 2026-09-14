@@ -80,7 +80,9 @@ import {
   compileTextInputValidationRegex,
   getInvalidTextInputMessage,
   INVALID_TEXT_INPUT_MESSAGE,
+  isRequiredEmptyText,
   passesTextInputValidation,
+  REQUIRED_FIELD_MESSAGE,
 } from "./validation"
 
 export interface Props {
@@ -207,12 +209,14 @@ function TextInput({
   // rerun while the widget identity stays stable (only the regex is part of
   // the widget ID), and a stored string would otherwise go stale.
   const [hasUserError, setHasUserError] = useState(false)
+  const [hasRequiredError, setHasRequiredError] = useState(false)
 
   const onFormCleared = useCallback(() => {
     uiValueRef.current = element.default ?? null
     setUiValue(element.default ?? null)
     setDirtyAndRef(true)
     setHasUserError(false)
+    setHasRequiredError(false)
   }, [element.default, setDirtyAndRef])
 
   const queryParamBinding = element.queryParamKey
@@ -306,8 +310,10 @@ function TextInput({
   const isSearch = element.type === TextInputProto.Type.SEARCH
   // Show a Streamlit-styled clear (×) button for search inputs holding a value,
   // replacing the browser's native (and visually inconsistent) search-clear
-  // control, which we hide via CSS.
-  const showClearButton = isSearch && !disabled && Boolean(uiValue)
+  // control, which we hide via CSS. Required fields hide the X because it
+  // would commit empty; keyboard emptying still works.
+  const showClearButton =
+    isSearch && !disabled && !element.required && Boolean(uiValue)
 
   const compiledValidationResult = useMemo(
     () => compileTextInputValidationRegex(element.validateRegex),
@@ -332,9 +338,11 @@ function TextInput({
         ? getInvalidTextInputMessage(validateRegex)
         : INVALID_TEXT_INPUT_MESSAGE)
     : null
-  const displayedError = hasValidationConfig
+  const requiredError = hasRequiredError ? REQUIRED_FIELD_MESSAGE : null
+  const validateDisplayed = hasValidationConfig
     ? (configError ?? userError)
     : null
+  const displayedError = requiredError ?? validateDisplayed
 
   const commitWidgetValue = useCallback(
     (valueToCommit: string | null = uiValueRef.current): void => {
@@ -360,13 +368,22 @@ function TextInput({
     [validateRegex]
   )
 
-  // Runs validation for the given value, updates the displayed user error,
-  // and returns whether the value may be committed.
+  // Required-empty fails before validate so whitespace-only shows the required
+  // message, not the validate message. Only null/"" skip validate.
   const validateBeforeCommit = useCallback(
     (valueToValidate: string | null = uiValueRef.current): boolean => {
+      if (element.required && isRequiredEmptyText(valueToValidate)) {
+        setHasRequiredError(true)
+        setHasUserError(false)
+        return false
+      }
+
+      setHasRequiredError(false)
+
       // Empty values always bypass validation — including when the regex config
       // itself is broken — so users can still clear the field or submit an empty
-      // form input. The config error remains visible via `displayedError`.
+      // form input when the field is not required. The config error remains
+      // visible via `displayedError`.
       if (valueToValidate === null || valueToValidate === "") {
         setHasUserError(false)
         return true
@@ -380,13 +397,20 @@ function TextInput({
       setHasUserError(invalid)
       return !invalid
     },
-    [configError, isUserValueInvalid]
+    [configError, element.required, isUserValueInvalid]
   )
 
   const tryCommitOutsideForm = useCallback(
     (valueToCommit: string | null = uiValueRef.current): boolean => {
       if (!dirtyRef.current) {
         return true
+      }
+
+      // Validate before the same-value short-circuit. An empty default is also
+      // the last accepted value, so typing then clearing would otherwise skip
+      // the required error.
+      if (!validateBeforeCommit(valueToCommit)) {
+        return false
       }
 
       // Skip a second commit of the same value (e.g. a trailing input event
@@ -396,10 +420,6 @@ function TextInput({
       if (valueToCommit === lastCommittedValueRef.current && !forceResync) {
         setDirtyAndRef(false)
         return true
-      }
-
-      if (!validateBeforeCommit(valueToCommit)) {
-        return false
       }
 
       droppedIncomingWhileDirtyRef.current = false
@@ -456,6 +476,7 @@ function TextInput({
   const handleAcceptedChange = useCallback(
     (newValue: string): void => {
       setHasUserError(false)
+      setHasRequiredError(false)
       commitOrScheduleLive(newValue)
     },
     [commitOrScheduleLive]
@@ -532,14 +553,23 @@ function TextInput({
     setShowPassword(prev => !prev)
   }, [])
 
-  // Clear the search input and commit the empty value so results update
-  // immediately (empty values bypass validation).
+  // Required search hides the X so this should not run. If it does,
+  // treat clear as a blocked empty commit.
   const handleClear = useCallback((): void => {
     cancelLiveCommit()
     setUiValueAndRef("")
-    setHasUserError(false)
+    if (!validateBeforeCommit("")) {
+      setDirtyAndRef(true)
+      return
+    }
     commitWidgetValue("")
-  }, [cancelLiveCommit, commitWidgetValue, setUiValueAndRef])
+  }, [
+    cancelLiveCommit,
+    commitWidgetValue,
+    setDirtyAndRef,
+    setUiValueAndRef,
+    validateBeforeCommit,
+  ])
 
   const onChange = useOnInputChange({
     formId,
@@ -631,7 +661,7 @@ function TextInput({
   }, [configError])
 
   useEffect(() => {
-    if (!inForm || !hasValidationConfig) {
+    if (!inForm || (!element.required && !hasValidationConfig)) {
       return undefined
     }
 
@@ -641,7 +671,14 @@ function TextInput({
     return () => {
       widgetMgr.removeFormSubmitValidator(formId, element.id)
     }
-  }, [element.id, formId, hasValidationConfig, inForm, widgetMgr])
+  }, [
+    element.id,
+    element.required,
+    formId,
+    hasValidationConfig,
+    inForm,
+    widgetMgr,
+  ])
 
   return (
     <StyledTextInput
@@ -659,6 +696,7 @@ function TextInput({
       <WidgetLabel
         label={element.label}
         disabled={disabled}
+        required={element.required}
         labelVisibility={labelVisibilityProtoValueToEnum(
           element.labelVisibility?.value
         )}
@@ -695,6 +733,7 @@ function TextInput({
             id={id}
             data-testid="stTextInputField"
             aria-label={element.label}
+            aria-required={element.required ? true : undefined}
             aria-invalid={displayedError ? true : undefined}
             aria-describedby={displayedError ? errorId : undefined}
             value={uiValue ?? ""}

@@ -17,7 +17,7 @@
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { isNullOrUndefined, LabelVisibilityOptions } from "~lib/util/utils"
 
-import { StyledWidgetLabel } from "./styled-components"
+import { StyledRequiredMarker, StyledWidgetLabel } from "./styled-components"
 
 export interface LabelProps {
   // Label body text. If nullsy, WidgetLabel won't show. But if empty string it will.
@@ -34,6 +34,9 @@ export interface LabelProps {
 
   // Associates the label with the input field programmatically. Makes it possible to focus input by clicking on label.
   htmlFor?: string
+
+  // When true and the label is visible, append a muted caption "(required)".
+  required?: boolean
 }
 
 export function WidgetLabel({
@@ -42,10 +45,16 @@ export function WidgetLabel({
   disabled,
   labelVisibility,
   htmlFor,
+  required,
 }: LabelProps): React.ReactElement {
   if (isNullOrUndefined(label)) {
     return <></>
   }
+
+  const labelIsVisible =
+    isNullOrUndefined(labelVisibility) ||
+    labelVisibility === LabelVisibilityOptions.Visible
+  const showRequiredMarker = Boolean(required) && labelIsVisible
 
   return (
     <StyledWidgetLabel
@@ -62,6 +71,14 @@ export function WidgetLabel({
       <span aria-hidden="true">
         <StreamlitMarkdown source={label} allowHTML={false} isLabel />
       </span>
+      {showRequiredMarker && (
+        <StyledRequiredMarker
+          data-testid="stWidgetLabelRequired"
+          aria-hidden="true"
+        >
+          (required)
+        </StyledRequiredMarker>
+      )}
       {children}
     </StyledWidgetLabel>
   )

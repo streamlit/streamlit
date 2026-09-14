@@ -68,5 +68,9 @@ message TextInput {
   // Unset = live off. 0 = commit on every accepted change.
   // Positive = debounce in milliseconds (`True` maps to 250).
   optional uint32 live_debounce_ms = 19;
-  // Next: 20
+
+  // If true, empty / whitespace-only values cannot be committed (client-side).
+  // Not part of widget identity (same as disabled).
+  bool required = 20;
+  // Next: 21
 }

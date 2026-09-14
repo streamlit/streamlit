@@ -276,6 +276,7 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         validate: str | tuple[str, str] | None = None,
@@ -304,6 +305,7 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         validate: str | tuple[str, str] | None = None,
@@ -332,6 +334,7 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         validate: str | tuple[str, str] | None = None,
@@ -418,7 +421,8 @@ class TextWidgetsMixin:
               empties the field. Defaults to a search icon, a ``Search``
               placeholder, and ``autocomplete="off"`` (so private search terms
               don't leak into the browser's autofill history). No default
-              validation is applied.
+              validation is applied. When ``required=True``, the clear button
+              is hidden; the field can still be emptied with the keyboard.
 
             The smart defaults are only applied when you don't pass a value
             for ``icon``, ``placeholder``, ``validate``, or ``autocomplete``.
@@ -494,6 +498,44 @@ class TextWidgetsMixin:
         disabled : bool
             An optional boolean that disables the text input if set to
             ``True``. The default is ``False``.
+
+        required : bool
+            Whether a non-empty value is required. The default is ``False``.
+
+            If this is ``True``, empty and whitespace-only values cannot be
+            committed:
+
+            - Outside a form, clearing the field and blurring or pressing
+              Enter does not rerun the app. The field shows
+              ``This field is required``, and the last accepted value is
+              kept.
+            - Inside a form, submit is blocked until the field is
+              non-empty. ``clear_on_submit`` does not run on failure. The
+              submit button stays enabled.
+
+            The first run still returns the empty default, so callers still
+            write ``if name:`` when downstream code cannot handle empty.
+
+            ``required`` composes with ``validate``: empty values fail
+            required and skip validate; non-empty values skip required and
+            run validate. ``type="email"`` and ``type="url"`` without
+            ``required`` still allow empty.
+
+            For ``type="search"``, the clear button is hidden when
+            ``required=True``. The field can still be emptied with the
+            keyboard and follows the empty-commit gate.
+
+            A blocked empty commit is not a value change. With
+            ``on_change="ignore"``, it does not become a pending value.
+
+            .. note::
+               This check runs in the user's browser and can be bypassed.
+               If requiredness is security-relevant, you must also check the
+               value on the server (in your app code) after it is submitted.
+
+            .. note::
+               A disabled empty required field can trap a form: submit stays
+               blocked and the user cannot fill the field.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -716,6 +758,7 @@ class TextWidgetsMixin:
             kwargs=kwargs,
             placeholder=placeholder,
             disabled=disabled,
+            required=required,
             label_visibility=label_visibility,
             icon=icon,
             validate=validate,
@@ -741,6 +784,7 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         validate: str | tuple[str, str] | None = None,
@@ -835,6 +879,7 @@ class TextWidgetsMixin:
             text_input_proto.default = value
         text_input_proto.form_id = current_form_id(self.dg)
         text_input_proto.disabled = disabled
+        text_input_proto.required = required
         text_input_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )

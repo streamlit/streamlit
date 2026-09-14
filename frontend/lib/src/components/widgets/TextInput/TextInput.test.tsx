@@ -266,6 +266,52 @@ describe("TextInput widget", () => {
       })
     })
 
+    it.each([
+      ["outside a form", {}],
+      ["inside a form", { formId: "form" }],
+    ])("hides the clear button when required %s", (_where, formProps) => {
+      const props = getProps({
+        type: TextInputProto.Type.SEARCH,
+        required: true,
+        default: "hello",
+        ...formProps,
+      })
+      render(<TextInput {...props} />)
+
+      expect(screen.getByRole<HTMLInputElement>("searchbox").value).toBe(
+        "hello"
+      )
+      expect(
+        screen.queryByTestId("stTextInputClearButton")
+      ).not.toBeInTheDocument()
+    })
+
+    it("does not commit an empty required search field after keyboard clear", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        type: TextInputProto.Type.SEARCH,
+        required: true,
+        default: "hello",
+      })
+      const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TextInput {...props} />)
+      setStringValueSpy.mockClear()
+
+      const searchbox = screen.getByRole<HTMLInputElement>("searchbox")
+      await user.clear(searchbox)
+      await user.click(document.body)
+
+      expect(searchbox.value).toBe("")
+      expect(setStringValueSpy).not.toHaveBeenCalledWith(
+        props.element.id,
+        "",
+        expect.anything()
+      )
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required"
+      )
+    })
+
     it("does not show the clear button when disabled", async () => {
       const user = userEvent.setup()
       const props = getProps(
@@ -1132,6 +1178,277 @@ describe("TextInput widget", () => {
       screen.queryByTestId("stTextInputErrorIcon")
     ).not.toBeInTheDocument()
   })
+
+  describe("required", () => {
+    it("does not show a required error on initial render", () => {
+      const props = getProps({ required: true })
+      render(<TextInput {...props} />)
+
+      expect(
+        screen.queryByTestId("stTextInputErrorIcon")
+      ).not.toBeInTheDocument()
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    })
+
+    it("sets aria-required only when required is true", () => {
+      const { unmount } = render(
+        <TextInput {...getProps({ required: true })} />
+      )
+      expect(screen.getByRole("textbox")).toHaveAttribute(
+        "aria-required",
+        "true"
+      )
+      unmount()
+
+      render(<TextInput {...getProps({ required: false })} />)
+      expect(screen.getByRole("textbox")).not.toHaveAttribute("aria-required")
+    })
+
+    it("shows the required marker when the label is visible", () => {
+      render(<TextInput {...getProps({ required: true })} />)
+
+      expect(screen.getByTestId("stWidgetLabelRequired")).toHaveTextContent(
+        "(required)"
+      )
+    })
+
+    it("omits the required marker when the label is hidden", () => {
+      render(
+        <TextInput
+          {...getProps({
+            required: true,
+            labelVisibility: {
+              value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
+            },
+          })}
+        />
+      )
+
+      expect(
+        screen.queryByTestId("stWidgetLabelRequired")
+      ).not.toBeInTheDocument()
+    })
+
+    it("blocks empty commits outside a form", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ required: true, default: "hello" })
+      const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TextInput {...props} />)
+      setStringValueSpy.mockClear()
+
+      const textInput = screen.getByRole("textbox")
+      await user.clear(textInput)
+      await user.click(document.body)
+
+      expect(setStringValueSpy).not.toHaveBeenCalledWith(
+        props.element.id,
+        "",
+        expect.anything()
+      )
+      expect(screen.getByTestId("stTextInputErrorIcon")).toBeVisible()
+      expect(textInput).toHaveAttribute("aria-invalid", "true")
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required"
+      )
+      expect(textInput).toHaveAttribute("aria-required", "true")
+    })
+
+    it("blocks empty blur after touching a field whose last accepted value is empty", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ required: true })
+      const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TextInput {...props} />)
+      setStringValueSpy.mockClear()
+
+      const textInput = screen.getByRole("textbox")
+      await user.type(textInput, "x")
+      await user.clear(textInput)
+      await user.click(document.body)
+
+      expect(setStringValueSpy).not.toHaveBeenCalled()
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required"
+      )
+    })
+
+    it("blocks empty Enter commits outside a form", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ required: true, default: "hello" })
+      const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TextInput {...props} />)
+      setStringValueSpy.mockClear()
+
+      const textInput = screen.getByRole("textbox")
+      await user.clear(textInput)
+      await user.keyboard("{Enter}")
+
+      expect(setStringValueSpy).not.toHaveBeenCalledWith(
+        props.element.id,
+        "",
+        expect.anything()
+      )
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required"
+      )
+    })
+
+    it.each([
+      [true, "This field is required", "Lowercase only"],
+      [false, "Lowercase only", "This field is required"],
+    ])(
+      "when required is %s, whitespace-only shows %s and not %s",
+      async (required, shown, hidden) => {
+        const user = userEvent.setup()
+        const props = getProps({
+          required,
+          validateRegex: "^[a-z]+$",
+          validateMessage: "Lowercase only",
+        })
+        const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+        render(<TextInput {...props} />)
+        setStringValueSpy.mockClear()
+
+        const textInput = screen.getByRole("textbox")
+        await user.type(textInput, "   ")
+        await user.click(document.body)
+
+        expect(setStringValueSpy).not.toHaveBeenCalled()
+        expect(screen.getByRole("alert")).toHaveTextContent(shown)
+        expect(screen.getByRole("alert")).not.toHaveTextContent(hidden)
+      }
+    )
+
+    it("shows required copy for empty and validate copy for invalid content", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        required: true,
+        default: "hello",
+        validateRegex: "^[a-z]+$",
+        validateMessage: "Lowercase only",
+      })
+      render(<TextInput {...props} />)
+
+      const textInput = screen.getByRole("textbox")
+      await user.clear(textInput)
+      await user.click(document.body)
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required"
+      )
+      expect(screen.getByRole("alert")).not.toHaveTextContent("Lowercase only")
+
+      await user.type(textInput, "123")
+      await user.click(document.body)
+      expect(screen.getByRole("alert")).toHaveTextContent("Lowercase only")
+      expect(screen.getByRole("alert")).not.toHaveTextContent(
+        "This field is required"
+      )
+    })
+
+    it("runs all form validators so every required field can show an error", () => {
+      const sendRerunBackMsg = vi.fn()
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg,
+        formsDataChanged: vi.fn(),
+      })
+      const nameProps = getProps(
+        { id: "required-name", formId: "form", required: true, label: "Name" },
+        { widgetMgr }
+      )
+      const emailProps = getProps(
+        {
+          id: "required-email",
+          formId: "form",
+          required: true,
+          label: "Email",
+        },
+        { widgetMgr }
+      )
+      render(
+        <>
+          <TextInput {...nameProps} />
+          <TextInput {...emailProps} />
+        </>
+      )
+
+      act(() => {
+        widgetMgr.submitForm("form", undefined)
+      })
+
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+      const alerts = screen.getAllByRole("alert")
+      expect(alerts).toHaveLength(2)
+      expect(alerts[0]).toHaveTextContent("This field is required")
+      expect(alerts[1]).toHaveTextContent("This field is required")
+      expect(screen.getAllByTestId("stTextInputErrorIcon")).toHaveLength(2)
+    })
+
+    it("does not clear widget values when a required form submit fails", async () => {
+      const user = userEvent.setup()
+      const sendRerunBackMsg = vi.fn()
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg,
+        formsDataChanged: vi.fn(),
+      })
+      widgetMgr.setFormSubmitBehaviors("form", true)
+      const props = getProps(
+        { formId: "form", required: true, default: "hello" },
+        { widgetMgr }
+      )
+      render(<TextInput {...props} />)
+
+      const textInput = screen.getByRole("textbox")
+      await user.clear(textInput)
+      act(() => {
+        widgetMgr.submitForm("form", undefined)
+      })
+
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+      expect(textInput).toHaveValue("")
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required"
+      )
+    })
+
+    it("registers a form validator for required without validate", () => {
+      const sendRerunBackMsg = vi.fn()
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg,
+        formsDataChanged: vi.fn(),
+      })
+      const props = getProps({ formId: "form", required: true }, { widgetMgr })
+      render(<TextInput {...props} />)
+
+      act(() => {
+        widgetMgr.submitForm("form", undefined)
+      })
+
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required"
+      )
+    })
+
+    it("deregisters the form submit validator on unmount", () => {
+      const sendRerunBackMsg = vi.fn()
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg,
+        formsDataChanged: vi.fn(),
+      })
+      const props = getProps({ formId: "form", required: true }, { widgetMgr })
+      const { unmount } = render(<TextInput {...props} />)
+
+      act(() => {
+        widgetMgr.submitForm("form", undefined)
+      })
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+
+      unmount()
+      act(() => {
+        widgetMgr.submitForm("form", undefined)
+      })
+      expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+    })
+  })
 })
 
 describe("TextInput query param binding", () => {
@@ -1316,6 +1633,44 @@ describe("on_change='ignore' mode", () => {
       fromUser: true,
       triggerRerun: false,
     })
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("keeps the last accepted ignore pending value when a required empty commit is blocked", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps(
+      { required: true, ignoreRerun: true },
+      { widgetMgr }
+    )
+    const setStringValueSpy = vi.spyOn(widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+    setStringValueSpy.mockClear()
+
+    await user.type(screen.getByRole("textbox"), "world{Enter}")
+    expect(setStringValueSpy).toHaveBeenCalledWith(props.element.id, "world", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+
+    await user.clear(screen.getByRole("textbox"))
+    await user.click(document.body)
+
+    expect(setStringValueSpy).not.toHaveBeenCalledWith(
+      props.element.id,
+      "",
+      expect.anything()
+    )
+    expect(widgetMgr.getStringValue(props.element)).toBe("world")
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required"
+    )
     expect(sendRerunBackMsg).not.toHaveBeenCalled()
   })
 })
@@ -1563,6 +1918,24 @@ describe("TextInput live updates", () => {
       props.element.id,
       "abc",
       fromUserCommit(props)
+    )
+  })
+
+  it("does not live-commit empty when required", async () => {
+    const { user, props, setStringValueSpy } = renderLive({
+      required: true,
+      default: "hello",
+    })
+
+    await user.clear(screen.getByRole("textbox"))
+    advanceMs(300)
+    expect(setStringValueSpy).not.toHaveBeenCalledWith(
+      props.element.id,
+      "",
+      expect.anything()
+    )
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required"
     )
   })
 

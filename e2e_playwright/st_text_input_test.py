@@ -39,7 +39,7 @@ from e2e_playwright.shared.input_utils import (
     type_common_characters_into_input,
 )
 
-TEXT_INPUT_ELEMENTS = 42
+TEXT_INPUT_ELEMENTS = 47
 
 
 def test_text_input_widget_rendering(
@@ -924,3 +924,123 @@ def test_text_input_live_dialog_scopes_rerun(app: Page) -> None:
     wait_until(app, lambda: dialog.get_by_text("Live dialog value: hi").is_visible())
     expect_prefixed_markdown(app, "Outside fragment counter:", "2")
     expect(app.get_by_text("Press Enter to apply")).to_have_count(0)
+
+
+def test_text_input_required_gates_form_empty_blur_email_and_search(app: Page):
+    """Required fields gate form submit, empty blur, email compose, and hide the search X."""
+    expect_markdown(app, "required form submitted: False")
+    expect_markdown(app, "Required rerun counter: 1")
+    expect(
+        get_element_by_key(app, "required_name").get_by_test_id("stTextInputErrorIcon")
+    ).not_to_be_visible()
+    expect(
+        get_element_by_key(app, "required_name").locator("input").first
+    ).to_have_attribute("aria-required", "true")
+    expect(
+        get_element_by_key(app, "required_name").get_by_test_id("stWidgetLabelRequired")
+    ).to_be_visible()
+
+    submit_button = app.get_by_role(
+        "button", name="Submit required text input form", exact=True
+    )
+    submit_button.click()
+
+    name_widget = get_element_by_key(app, "required_name")
+    email_widget = get_element_by_key(app, "required_email")
+    expect(name_widget.get_by_test_id("stTextInputErrorIcon")).to_be_visible()
+    expect(email_widget.get_by_test_id("stTextInputErrorIcon")).to_be_visible()
+    expect(name_widget.get_by_role("alert")).to_have_text("This field is required")
+    expect(email_widget.get_by_role("alert")).to_have_text("This field is required")
+    expect_markdown(app, "required form submitted: False")
+    expect_markdown(app, "Required rerun counter: 1")
+
+    name_field = name_widget.locator("input").first
+    name_field.fill("Ada")
+    submit_button.click()
+    expect(name_field).to_have_value("Ada")
+    expect(email_widget.get_by_test_id("stTextInputErrorIcon")).to_be_visible()
+    expect_markdown(app, "required form submitted: False")
+    expect_markdown(app, "Required rerun counter: 1")
+
+    email_widget.locator("input").first.fill("a@b.co")
+    submit_button.click()
+    wait_for_app_run(app)
+
+    expect_markdown(app, "required form submitted: True")
+    expect_markdown(app, "required name: Ada")
+    expect_markdown(app, "required form email: a@b.co")
+    expect_markdown(app, "Required rerun counter: 2")
+    expect(name_widget.get_by_test_id("stTextInputErrorIcon")).not_to_be_visible()
+    expect(email_widget.get_by_test_id("stTextInputErrorIcon")).not_to_be_visible()
+
+    sql_widget = get_element_by_key(app, "required_sql")
+    sql_field = sql_widget.locator("input").first
+    sql_field.fill("select 1")
+    sql_field.press("Enter")
+    wait_for_app_run(app)
+    expect_markdown(app, "required sql: select 1")
+    expect_markdown(app, "Required rerun counter: 3")
+
+    sql_field.fill("")
+    sql_field.blur()
+    expect_markdown(app, "required sql: select 1")
+    expect_markdown(app, "Required rerun counter: 3")
+    expect(sql_widget.get_by_test_id("stTextInputErrorIcon")).to_be_visible()
+    expect(sql_widget.get_by_role("alert")).to_have_text("This field is required")
+
+    standalone_email = get_element_by_key(app, "required_email_standalone")
+    standalone_field = standalone_email.locator("input").first
+    standalone_field.fill("x")
+    standalone_field.fill("")
+    standalone_field.blur()
+    expect(standalone_email.get_by_role("alert")).to_have_text("This field is required")
+    expect(standalone_email.get_by_test_id("stTextInputErrorIcon")).to_be_visible()
+    expect(app.get_by_text("required email: x", exact=True)).to_have_count(0)
+    expect_markdown(app, "Required rerun counter: 3")
+
+    standalone_field.fill("abc")
+    standalone_field.blur()
+    expect(app.get_by_text("required email: abc", exact=True)).to_have_count(0)
+    expect_markdown(app, "Required rerun counter: 3")
+    expect(standalone_email.get_by_role("alert")).to_have_text(
+        "Enter a valid email address."
+    )
+
+    standalone_field.fill("a@b.co")
+    standalone_field.press("Enter")
+    wait_for_app_run(app)
+    expect_markdown(app, "required email: a@b.co")
+    expect_markdown(app, "Required rerun counter: 4")
+    expect(standalone_email.get_by_test_id("stTextInputErrorIcon")).not_to_be_visible()
+
+    search_widget = get_element_by_key(app, "required_search")
+    search_field = search_widget.locator("input").first
+    search_field.fill("query")
+    search_field.press("Enter")
+    wait_for_app_run(app)
+    expect_markdown(app, "required search: query")
+    expect_markdown(app, "Required rerun counter: 5")
+    expect(search_widget.get_by_test_id("stTextInputClearButton")).to_have_count(0)
+    search_field.fill("")
+    search_field.blur()
+    expect_markdown(app, "required search: query")
+    expect_markdown(app, "Required rerun counter: 5")
+    expect(search_widget.get_by_role("alert")).to_have_text("This field is required")
+
+
+def test_text_input_required_marker_and_error_rendering(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Snapshot the required marker and the required error chrome."""
+    widget = get_element_by_key(themed_app, "required_sql")
+    expect(widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+    assert_snapshot(widget, name="st_text_input-required_marker")
+
+    field = widget.locator("input").first
+    field.fill("select 1")
+    field.press("Enter")
+    wait_for_app_run(themed_app)
+    field.fill("")
+    field.blur()
+    expect(widget.get_by_test_id("stTextInputErrorIcon")).to_be_visible()
+    assert_snapshot(widget, name="st_text_input-required_error")

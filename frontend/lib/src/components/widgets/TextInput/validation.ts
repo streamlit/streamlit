@@ -15,6 +15,15 @@
  */
 
 export const INVALID_TEXT_INPUT_MESSAGE = "Invalid input."
+export const REQUIRED_FIELD_MESSAGE = "This field is required"
+
+/**
+ * True when `required` treats the value as empty. Whitespace-only counts
+ * as empty, unlike validate's skip path (`null` / `""` only).
+ */
+export function isRequiredEmptyText(value: string | null): boolean {
+  return value === null || value.trim() === ""
+}
 
 export function getInvalidTextInputMessage(validateRegex: RegExp): string {
   return `${INVALID_TEXT_INPUT_MESSAGE} Must match pattern: ${validateRegex.toString()}`
