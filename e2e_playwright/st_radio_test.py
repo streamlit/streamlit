@@ -34,7 +34,7 @@ from e2e_playwright.shared.app_utils import (
     select_radio_option,
 )
 
-NUM_RADIO_ELEMENTS = 22
+NUM_RADIO_ELEMENTS = 23
 
 
 def test_radio_widget_rendering(
@@ -480,3 +480,43 @@ def test_radio_query_param_non_clearable_empty_value(page: Page, app_port: int):
     # Non-clearable radio should reject empty value, show default "cat"
     expect_prefixed_markdown(page, "bound radio value:", "cat")
     expect(page).not_to_have_url(re.compile(r"[?&]bound_radio="))
+
+
+def test_radio_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun, updates bound query params
+    on commit, and sends the buffered value on the next rerun.
+    """
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore radio value:", "alpha")
+    # Default is omitted from the URL.
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_radio="))
+
+    ignore_radio = get_radio(app, "Ignore change radio")
+
+    # Choosing an option updates the URL without rerunning the app.
+    select_radio_option(app, option="beta", label="Ignore change radio")
+
+    # Catch a delayed rerun that select_radio_option's wait might miss.
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(get_radio_option(ignore_radio, "beta").get_by_role("radio")).to_be_checked()
+    expect_prefixed_markdown(app, "Ignore radio value:", "alpha")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_radio=beta"))
+
+    # A later rerun should send the buffered value.
+    app.get_by_role("button", name="Apply ignore radio", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore radio value: beta", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore radio value: beta", exact=True)
+    ).to_be_visible()
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(get_radio_option(ignore_radio, "beta").get_by_role("radio")).to_be_checked()
+    expect_prefixed_markdown(app, "Ignore radio value:", "beta")
