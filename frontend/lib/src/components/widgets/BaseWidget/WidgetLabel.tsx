@@ -35,7 +35,9 @@ export interface LabelProps {
   // Associates the label with the input field programmatically. Makes it possible to focus input by clicking on label.
   htmlFor?: string
 
-  // When true and the label is visible, append a muted caption "(required)".
+  // Visible-label hint that the field must be filled. Keep this out of the
+  // Python label so toggling required does not change widget identity.
+  // Omitted for hidden/collapsed labels.
   required?: boolean
 }
 

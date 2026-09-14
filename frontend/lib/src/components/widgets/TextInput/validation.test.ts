@@ -107,7 +107,7 @@ describe("isRequiredEmptyText", () => {
 
 describe("REQUIRED_FIELD_MESSAGE", () => {
   it("is the user-facing required copy", () => {
-    expect(REQUIRED_FIELD_MESSAGE).toBe("This field is required")
+    expect(REQUIRED_FIELD_MESSAGE).toBe("This field is required.")
   })
 })
 

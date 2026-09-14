@@ -89,7 +89,7 @@ class TextInputTest(DeltaGeneratorTestCase):
         """Test that toggling required with a key keeps the widget ID.
 
         Unlike max_chars / validate, required cannot make a stored value
-        incompatible, so it is not on the keyed-identity whitelist.
+        incompatible, so it is not on the keyed-identity allowlist.
         """
         with patch(
             "streamlit.elements.lib.utils._register_element_id",

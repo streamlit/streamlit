@@ -333,7 +333,7 @@ describe("TextInput widget", () => {
         expect.anything()
       )
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "This field is required"
+        "This field is required."
       )
     })
 
@@ -1294,9 +1294,22 @@ describe("TextInput widget", () => {
       expect(screen.getByTestId("stTextInputErrorIcon")).toBeVisible()
       expect(textInput).toHaveAttribute("aria-invalid", "true")
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "This field is required"
+        "This field is required."
       )
       expect(textInput).toHaveAttribute("aria-required", "true")
+    })
+
+    it("does not show a required error on unedited empty blur", async () => {
+      const user = userEvent.setup()
+      render(<TextInput {...getProps({ required: true })} />)
+
+      await user.click(screen.getByRole("textbox"))
+      await user.click(document.body)
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId("stTextInputErrorIcon")
+      ).not.toBeInTheDocument()
     })
 
     it("blocks empty blur after touching a field whose last accepted value is empty", async () => {
@@ -1313,7 +1326,7 @@ describe("TextInput widget", () => {
 
       expect(setStringValueSpy).not.toHaveBeenCalled()
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "This field is required"
+        "This field is required."
       )
     })
 
@@ -1334,7 +1347,7 @@ describe("TextInput widget", () => {
         expect.anything()
       )
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "This field is required"
+        "This field is required."
       )
     })
 
@@ -1349,7 +1362,7 @@ describe("TextInput widget", () => {
       await user.clear(textInput)
       await user.click(document.body)
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "This field is required"
+        "This field is required."
       )
 
       const updatedElement = TextInputProto.create({
@@ -1375,9 +1388,47 @@ describe("TextInput widget", () => {
       )
     })
 
+    it("clears a leftover required error after a programmatic refill", () => {
+      const sendRerunBackMsg = vi.fn()
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg,
+        formsDataChanged: vi.fn(),
+      })
+      const props = getProps(
+        { formId: "form", required: true, id: "required-refill" },
+        { widgetMgr }
+      )
+      const { rerender } = render(<TextInput {...props} />)
+
+      act(() => {
+        widgetMgr.submitForm("form", undefined)
+      })
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required."
+      )
+
+      rerender(
+        <TextInput
+          {...props}
+          element={TextInputProto.create({
+            ...props.element,
+            setValue: true,
+            value: "Ada",
+          })}
+        />
+      )
+
+      expect(screen.getByRole("textbox")).toHaveValue("Ada")
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId("stTextInputErrorIcon")
+      ).not.toBeInTheDocument()
+      expect(screen.getByRole("textbox")).not.toHaveAttribute("aria-invalid")
+    })
+
     it.each([
-      [true, "This field is required", "Lowercase only"],
-      [false, "Lowercase only", "This field is required"],
+      [true, "This field is required.", "Lowercase only"],
+      [false, "Lowercase only", "This field is required."],
     ])(
       "when required is %s, whitespace-only shows %s and not %s",
       async (required, shown, hidden) => {
@@ -1415,7 +1466,7 @@ describe("TextInput widget", () => {
       await user.clear(textInput)
       await user.click(document.body)
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "This field is required"
+        "This field is required."
       )
       expect(screen.getByRole("alert")).not.toHaveTextContent("Lowercase only")
 
@@ -1423,7 +1474,7 @@ describe("TextInput widget", () => {
       await user.click(document.body)
       expect(screen.getByRole("alert")).toHaveTextContent("Lowercase only")
       expect(screen.getByRole("alert")).not.toHaveTextContent(
-        "This field is required"
+        "This field is required."
       )
     })
 
@@ -1460,8 +1511,8 @@ describe("TextInput widget", () => {
       expect(sendRerunBackMsg).not.toHaveBeenCalled()
       const alerts = screen.getAllByRole("alert")
       expect(alerts).toHaveLength(2)
-      expect(alerts[0]).toHaveTextContent("This field is required")
-      expect(alerts[1]).toHaveTextContent("This field is required")
+      expect(alerts[0]).toHaveTextContent("This field is required.")
+      expect(alerts[1]).toHaveTextContent("This field is required.")
       expect(screen.getAllByTestId("stTextInputErrorIcon")).toHaveLength(2)
     })
 
@@ -1488,7 +1539,7 @@ describe("TextInput widget", () => {
       expect(sendRerunBackMsg).not.toHaveBeenCalled()
       expect(textInput).toHaveValue("")
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "This field is required"
+        "This field is required."
       )
     })
 
@@ -1507,7 +1558,7 @@ describe("TextInput widget", () => {
 
       expect(sendRerunBackMsg).not.toHaveBeenCalled()
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "This field is required"
+        "This field is required."
       )
     })
 
@@ -1752,7 +1803,7 @@ describe("on_change='ignore' mode", () => {
     )
     expect(widgetMgr.getStringValue(props.element)).toBe("world")
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "This field is required"
+      "This field is required."
     )
     expect(sendRerunBackMsg).not.toHaveBeenCalled()
   })
@@ -2017,9 +2068,17 @@ describe("TextInput live updates", () => {
       "",
       expect.anything()
     )
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stTextInputErrorIcon")
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole("textbox")).not.toHaveAttribute("aria-invalid")
+
+    await user.click(document.body)
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "This field is required"
+      "This field is required."
     )
+    expect(screen.getByTestId("stTextInputErrorIcon")).toBeVisible()
   })
 
   it("commits empty values that bypass validation", async () => {

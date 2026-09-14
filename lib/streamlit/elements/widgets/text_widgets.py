@@ -504,7 +504,7 @@ class TextWidgetsMixin:
             and whitespace-only values cannot be submitted.
 
             Outside a form, clearing the field does not rerun the app, and
-            the last submitted value is kept. Inside a form, submission is
+            the last committed value is kept. Inside a form, submission is
             blocked until the field has a value. The widget still returns
             its default value until the user provides input.
 
@@ -806,12 +806,12 @@ class TextWidgetsMixin:
         element_id = compute_and_register_element_id(
             "text_input",
             user_key=key,
-            # Explicitly whitelist max_chars and validate so the ID changes when
+            # Explicitly allowlist max_chars and validate so the ID changes when
             # they change, since the widget value might become invalid based on a
             # different max_chars or validation regex. Only the regex (not the
             # message) is used for identity, since the message is purely cosmetic.
-            # required is hashed for unkeyed widgets but is not on this
-            # whitelist: toggling it cannot make a stored value incompatible.
+            # `required` is hashed for unkeyed widgets but is not on this
+            # allowlist: toggling it cannot make a stored value incompatible.
             key_as_main_identity={"max_chars", "validate"},
             dg=self.dg,
             label=label,

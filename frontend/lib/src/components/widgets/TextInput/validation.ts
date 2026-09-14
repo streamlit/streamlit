@@ -15,7 +15,7 @@
  */
 
 export const INVALID_TEXT_INPUT_MESSAGE = "Invalid input."
-export const REQUIRED_FIELD_MESSAGE = "This field is required"
+export const REQUIRED_FIELD_MESSAGE = "This field is required."
 
 /**
  * True when `required` treats the value as empty. Whitespace-only counts

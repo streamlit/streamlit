@@ -926,8 +926,8 @@ def test_text_input_live_dialog_scopes_rerun(app: Page) -> None:
     expect(app.get_by_text("Press Enter to apply")).to_have_count(0)
 
 
-def test_text_input_required_gates_form_empty_blur_email_and_search(app: Page):
-    """Required fields gate form submit, empty blur, email compose, and hide the search X."""
+def test_text_input_required_blocks_empty_commits_and_form_submits(app: Page):
+    """Test required validation for forms, blur commits, email formats, and search inputs."""
     expect_markdown(app, "required form submitted: False")
     expect_markdown(app, "Required rerun counter: 1")
     expect(
@@ -949,8 +949,8 @@ def test_text_input_required_gates_form_empty_blur_email_and_search(app: Page):
     email_widget = get_element_by_key(app, "required_email")
     expect(name_widget.get_by_test_id("stTextInputErrorIcon")).to_be_visible()
     expect(email_widget.get_by_test_id("stTextInputErrorIcon")).to_be_visible()
-    expect(name_widget.get_by_role("alert")).to_have_text("This field is required")
-    expect(email_widget.get_by_role("alert")).to_have_text("This field is required")
+    expect(name_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect(email_widget.get_by_role("alert")).to_have_text("This field is required.")
     expect_markdown(app, "required form submitted: False")
     expect_markdown(app, "Required rerun counter: 1")
 
@@ -983,18 +983,20 @@ def test_text_input_required_gates_form_empty_blur_email_and_search(app: Page):
 
     sql_field.fill("")
     sql_field.blur()
+    expect(sql_widget.get_by_test_id("stTextInputErrorIcon")).to_be_visible()
+    expect(sql_widget.get_by_role("alert")).to_have_text("This field is required.")
     expect_markdown(app, "required sql: select 1")
     expect_markdown(app, "Required rerun counter: 3")
-    expect(sql_widget.get_by_test_id("stTextInputErrorIcon")).to_be_visible()
-    expect(sql_widget.get_by_role("alert")).to_have_text("This field is required")
 
     standalone_email = get_element_by_key(app, "required_email_standalone")
     standalone_field = standalone_email.locator("input").first
     standalone_field.fill("x")
     standalone_field.fill("")
     standalone_field.blur()
-    expect(standalone_email.get_by_role("alert")).to_have_text("This field is required")
     expect(standalone_email.get_by_test_id("stTextInputErrorIcon")).to_be_visible()
+    expect(standalone_email.get_by_role("alert")).to_have_text(
+        "This field is required."
+    )
     expect(app.get_by_text("required email: x", exact=True)).to_have_count(0)
     expect_markdown(app, "Required rerun counter: 3")
 
@@ -1023,9 +1025,10 @@ def test_text_input_required_gates_form_empty_blur_email_and_search(app: Page):
     expect(search_widget.get_by_test_id("stTextInputClearButton")).to_have_count(0)
     search_field.fill("")
     search_field.blur()
+    expect(search_widget.get_by_test_id("stTextInputErrorIcon")).to_be_visible()
+    expect(search_widget.get_by_role("alert")).to_have_text("This field is required.")
     expect_markdown(app, "required search: query")
     expect_markdown(app, "Required rerun counter: 5")
-    expect(search_widget.get_by_role("alert")).to_have_text("This field is required")
 
 
 def test_text_input_required_marker_and_error_rendering(

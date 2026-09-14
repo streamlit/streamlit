@@ -338,10 +338,13 @@ function TextInput({
         ? getInvalidTextInputMessage(validateRegex)
         : INVALID_TEXT_INPUT_MESSAGE)
     : null
-  // Gate on the current proto flag: required is not part of keyed widget
-  // identity, so hasRequiredError can survive a rerun that turns required off.
+  // Gate on the current proto flag and UI value: required is not part of
+  // keyed widget identity, so hasRequiredError can survive a rerun that
+  // turns required off or writes a non-empty session_state value.
   const requiredError =
-    element.required && hasRequiredError ? REQUIRED_FIELD_MESSAGE : null
+    element.required && hasRequiredError && isRequiredEmptyText(uiValue)
+      ? REQUIRED_FIELD_MESSAGE
+      : null
   const validateDisplayed = hasValidationConfig
     ? (configError ?? userError)
     : null
@@ -376,12 +379,19 @@ function TextInput({
    * displayed error, and returns whether the value may be committed.
    *
    * Required-empty is checked first so whitespace-only values show the required
-   * message rather than the validate message.
+   * message rather than the validate message. Live debounce can pass
+   * `showRequiredError: false` so an empty mid-edit block does not paint
+   * until blur, Enter, or form submit.
    */
   const validateBeforeCommit = useCallback(
-    (valueToValidate: string | null = uiValueRef.current): boolean => {
+    (
+      valueToValidate: string | null = uiValueRef.current,
+      { showRequiredError = true }: { showRequiredError?: boolean } = {}
+    ): boolean => {
       if (element.required && isRequiredEmptyText(valueToValidate)) {
-        setHasRequiredError(true)
+        if (showRequiredError) {
+          setHasRequiredError(true)
+        }
         setHasUserError(false)
         return false
       }
@@ -409,7 +419,10 @@ function TextInput({
   )
 
   const tryCommitOutsideForm = useCallback(
-    (valueToCommit: string | null = uiValueRef.current): boolean => {
+    (
+      valueToCommit: string | null = uiValueRef.current,
+      { showRequiredError = true }: { showRequiredError?: boolean } = {}
+    ): boolean => {
       if (!dirtyRef.current) {
         return true
       }
@@ -417,7 +430,7 @@ function TextInput({
       // Validate before the same-value short-circuit. An empty default is also
       // the last accepted value, so typing then clearing would otherwise skip
       // the required error.
-      if (!validateBeforeCommit(valueToCommit)) {
+      if (!validateBeforeCommit(valueToCommit, { showRequiredError })) {
         return false
       }
 
@@ -437,8 +450,16 @@ function TextInput({
     [commitWidgetValue, setDirtyAndRef, validateBeforeCommit]
   )
 
+  // Live debounce blocks empty required commits without painting the error
+  // while the user is still editing. Blur, Enter, and form submit paint.
+  const tryLiveCommit = useCallback((): boolean => {
+    return tryCommitOutsideForm(uiValueRef.current, {
+      showRequiredError: false,
+    })
+  }, [tryCommitOutsideForm])
+
   const { debouncedCallback: scheduleLiveCommit, cancel: cancelLiveCommit } =
-    useDebouncedCallback(tryCommitOutsideForm, liveDebounceMs)
+    useDebouncedCallback(tryLiveCommit, liveDebounceMs)
 
   // useDebouncedCallback (autoStart: false) does not cancel a manually
   // started timer when the delay changes. Cancel when live is disabled or
@@ -460,11 +481,11 @@ function TextInput({
       return
     }
     if (liveDebounceMs === 0) {
-      tryCommitOutsideForm()
+      tryLiveCommit()
       return
     }
     scheduleLiveCommit()
-  }, [liveDebounceMs, liveEnabled, scheduleLiveCommit, tryCommitOutsideForm])
+  }, [liveDebounceMs, liveEnabled, scheduleLiveCommit, tryLiveCommit])
 
   const commitOrScheduleLive = useCallback(
     (valueToCommit: string | null = uiValueRef.current): void => {
@@ -472,7 +493,7 @@ function TextInput({
         return
       }
       if (liveDebounceMs === 0) {
-        tryCommitOutsideForm(valueToCommit)
+        tryCommitOutsideForm(valueToCommit, { showRequiredError: false })
         return
       }
       // Debounce > 0: fire with uiValueRef at timer time, not this keystroke.
@@ -562,6 +583,8 @@ function TextInput({
   }, [])
 
   const handleClear = useCallback((): void => {
+    // Commits "" immediately so search results update. Unreachable when
+    // element.required is true: showClearButton already hides the X.
     cancelLiveCommit()
     setUiValueAndRef("")
     setHasUserError(false)
