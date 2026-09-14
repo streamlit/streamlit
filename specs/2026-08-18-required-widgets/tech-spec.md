@@ -40,10 +40,13 @@ Add `bool required = N;` to each affected widget message (`TextInput`, `TextArea
 already exists (field 16); update its comment to cover multi-select and form gating.
 
 Pass `required` into `compute_and_register_element_id` as a normal kwarg (like
-`help` / `type`). Do **not** add it to `key_as_main_identity` and do **not** treat
-it like `disabled` (which is omitted even without a key). Unkeyed widgets reset
-when `required` flips; a user `key` preserves state. Pills today omit `required`
-from the ID; add it in the pills follow-up.
+`help` / `type`). Do **not** add it to `key_as_main_identity` (unlike `max_chars`
+/ `validate`) and do **not** omit it like `disabled`. No `key`: two calls that
+differ only by `required` get distinct IDs and remount if `required` flips. With
+a `key`: the stored value is kept — flipping `required` never makes a stored
+value illegal (`""` stays valid in session state; `required` only gates later
+empty commits). Later wave-1 widgets copy this split. Pills today omit
+`required` from the ID; add the split in the pills follow-up.
 
 Python: keyword-only `required: bool = False`, forwarded onto the proto. Drop the
 pills/segmented exception that raises on `required=True` + `selection_mode="multi"`.
@@ -108,6 +111,16 @@ Generalize text-input `validateBeforeCommit` to:
    skip).
 3. Otherwise run `validate` regex when present (today's path), including whitespace-only
    when `required=False`.
+
+Typed widgets that skip a second commit when the dirty value equals the last
+accepted value must run required / `validate` **before** that short-circuit. An
+empty default is the last accepted value, so type-then-clear would otherwise
+skip the required error.
+
+Show `This field is required` only while `element.required` is true. A keyed
+widget can toggle `required` `True → False` without remounting; do not leave a
+sticky `hasRequiredError` (or equivalent) painted after the proto drops
+`required`. Gate `displayedError` / `aria-invalid` on the current proto flag.
 
 A `true` result still goes through the existing commit path, including
 `on_change="ignore"`. A `false` result must **not** overwrite a held `"ignore"`
@@ -281,6 +294,9 @@ include `(required)` in the accessible name.
   `required=False` and is a required error when `required=True`; required error vs
   validate error; form submit runs all validators; `clear_on_submit` not invoked on
   failure; search X and None-default number/date/time X are hidden when required;
+  type-then-clear from an empty default still shows the required error (gates run
+  before the last-accepted short-circuit); keyed widget `required` `True → False`
+  after a failed empty commit clears the required error and `aria-invalid`;
   selectbox/multiselect last value is locked; range `st.date_input` first bound is visible with no rerun and
   no required error until outside-form blur/close or form submit; re-edit a complete
   required range and submit after only the first bound fails required and does not
@@ -288,7 +304,7 @@ include `(required)` in the accessible name.
   unflushed edit, then clear, keeps the pending value (error on local UI) and does
   not flush empty on the next rerun.
 - Python: proto field set on wave-1 widgets; `required` is in the element ID
-  kwargs and not in `key_as_main_identity`.
+  kwargs when there is no `key`, and not in `key_as_main_identity`.
 - Public typing tests (`lib/tests/streamlit/typing/`) for every wave-1 widget.
 - E2E: form with two required fields (both errors on submit); outside-form
   text_input does not rerun on empty blur; email `type` + `required` (empty vs

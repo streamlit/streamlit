@@ -383,12 +383,22 @@ with st.form("upload"):
   `validate`). The error appears on the next user commit/submit, not on the
   programmatic write.
 - **AppTest / tampered client.** Client-side only; tests can still set empty values.
-- **Widget identity.** Hash `required` like other stable kwargs (`label`, `help`,
-  `type`), not like `disabled`. An unkeyed widget resets if `required` changes;
-  `key=` keeps the value, same as toggling `help` or `placeholder`. Do **not** add
-  `required` to `key_as_main_identity` (unlike `validate` / `max_chars` on
-  `st.text_input`) — a key is the workaround for `required=some_condition`.
-  Shipped pills omit `required` from the ID; the pills follow-up should add it.
+- **Widget identity.** Not the same as `disabled` (`disabled` is omitted even
+  without a key). Later wave-1 widgets copy this split:
+
+  | | `required` in identity? | Why |
+  | --- | --- | --- |
+  | No `key` | Yes | Two unkeyed fields that differ only by `required` should be distinct, like other call kwargs |
+  | With `key` | No (not on `key_as_main_identity`) | Unlike `max_chars` / `validate`, flipping `required` never makes a **stored** value illegal. `""` is still valid in session state; `required` only gates later empty commits |
+
+  So `st.text_input("Name", required=flag)` **without** a `key` remounts when
+  `flag` changes. With a `key`, the value is kept. Shipped pills omit `required`
+  from the ID; the pills follow-up should add this split.
+- **Required error follows the current proto.** Show `This field is required` only
+  while `required` is true on this run. A keyed widget can go `True → False`
+  without remounting; a sticky local error after a failed empty commit must
+  clear. Gate `displayedError` / `aria-invalid` on the current proto, not a
+  leftover React flag.
 
 ## Out of Scope (Future Work)
 
