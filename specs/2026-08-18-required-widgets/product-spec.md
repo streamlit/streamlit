@@ -64,7 +64,8 @@ if submitted:
 1. **Signup / contact forms** — Name and email must be filled before submit; optional
    message can stay empty.
 2. **Filters and tools outside forms** — A search box, SQL editor, or "run model" field
-   should not rerun the app when the user clears it and tabs away.
+   should not rerun the app when the user clears it and tabs away. That empty-commit
+   gate is not a substitute for batching every edit with `on_change="ignore"`.
 3. **Pills / segmented control as tabs** — Always keep one option selected
    (`required=True, default="Overview"`). Already shipped; this spec extends the same
    parameter to the rest of the input API.
@@ -92,6 +93,35 @@ Current behavior (already implemented):
   also skips empty — so `st.text_input("Email", type="email")` still accepts a blank field.
 
 `required` is that missing emptiness check, using the same commit/form-submit pipeline.
+
+### Relationship to `on_change="ignore"`
+
+[`specs/2026-04-14-on-change-modes`](../2026-04-14-on-change-modes/product-spec.md)
+lets stateful widgets suppress the rerun on **every** value change
+(`on_change="ignore"`). That is a rerun policy, not an emptiness check.
+
+| | `required=True` | `on_change="ignore"` |
+| --- | --- | --- |
+| Job | Emptiness: block empty commits (error UI + form-submit gate) | Rerun policy: hold any change in the frontend until something else reruns |
+| Valid non-empty edit | Normal commit / rerun | No rerun; flush later |
+| Empty edit | Blocked; error; last accepted value kept | Held as empty and sent on the next rerun |
+| Never-filled field + a button | Button still reruns; Python sees the empty default (`if name:` still required) | Same — `"ignore"` does not invent form-submit gating |
+
+They compose; `required` and `validate` run **before** the rerun policy:
+
+- **Blocked** empty or invalid: error state, no commit, nothing new to flush. Keep
+  the last **accepted** value — including an unflushed `"ignore"` pending value.
+  Typing `"world"` with `"ignore"` then clearing must not replace that pending
+  `"world"` with `""`.
+- **Passing** non-empty: commit follows `on_change` (`"rerun"`, a callable, or
+  `"ignore"`).
+
+Inside a form, `"ignore"` is mostly redundant with form batching; `required` still
+gates submit. Outside a form, `"ignore"` plus a button is **not** a form: Save does
+not run the required check on never-touched fields.
+
+A blocked empty commit is not a widget value change, so a callable `on_change` does
+not fire and `"ignore"` does not take an empty pending value.
 
 ## Proposal
 
@@ -127,14 +157,15 @@ Keyword-only `required: bool = False` on every input widget that can be empty (s
 Add `required` everywhere an input can be empty. Widgets that always have a value are
 omitted — a no-op `required` is worse than leaving the parameter off.
 
-| Widget | Empty means | `required` already? |
-| --- | --- | --- |
-| `st.text_input`, `st.text_area` | `None` or whitespace-only (`str.strip() == ""`) for **required**. `validate` skip remains `""` / `None` only (see [`required` and `validate`](#required-and-validate)). | No |
-| `st.number_input`, `st.date_input`, `st.time_input`, `st.datetime_input` | `None` | No |
-| `st.selectbox`, `st.radio` | `None` (`index=None`) | No |
-| `st.multiselect` | `[]` | No |
-| `st.pills`, `st.segmented_control` | `None` / `[]` | Yes (single-select only) |
-| `st.file_uploader`, `st.camera_input`, `st.audio_input` | `None` or `[]` | No |
+| Widget | Empty means | `required` already? | Wave |
+| --- | --- | --- | --- |
+| `st.text_input`, `st.text_area` | `None` or whitespace-only (`str.strip() == ""`) for **required**. `validate` skip remains `""` / `None` only (see [`required` and `validate`](#required-and-validate)). | No | 1 |
+| `st.number_input`, `st.date_input`, `st.time_input`, `st.datetime_input` | `None` | No | 1 |
+| `st.selectbox` | `None` (`index=None`) | No | 1 |
+| `st.multiselect` | `[]` | No | 1 |
+| `st.radio` | `None` (`index=None`) | No | Follow-up |
+| `st.pills`, `st.segmented_control` | `None` / `[]` | Yes (single-select only) | Follow-up |
+| `st.file_uploader`, `st.camera_input`, `st.audio_input` | `None` or `[]` | No | Follow-up |
 
 In range-mode `st.date_input`, `required` treats a complete `(start, end)` as non-empty. `()`, a missing bound, and a one-element `tuple[date]` are empty. When `required=False`, today's partial-range commit is unchanged.
 
@@ -144,6 +175,28 @@ In range-mode `st.date_input`, `required` treats a complete `(start, end)` as no
 valid response — requiring a rating is a "must rate" question like checkbox
 "must be checked," not a missing form value), `st.data_editor` (column `required`
 already exists).
+
+### Rollout
+
+Specify the full API above; ship it in two waves so the first PRs reuse existing
+invalid-field chrome and a simple empty-commit gate. Do not leave a permanently
+partial implementation — follow-up widgets stay in this spec, not "out of scope."
+
+**Wave 1** — typed widgets plus clearable selects: `st.text_input`, `st.text_area`,
+`st.number_input`, `st.date_input`, `st.time_input`, `st.datetime_input`,
+`st.selectbox`, `st.multiselect`. Unblocks #13497 and most of #7165 (text/select
+form fields). Range `st.date_input` stays here (same widget as single-date); it is
+the fiddliest piece of this wave. Selectbox/multiselect do not already have the
+text-input error chrome, but they share a clear-X empty gesture and a contained
+select control — unlike radio, which is an option group with no field chrome.
+
+**Follow-up** — option groups and file-like widgets: `st.radio`; `st.pills` /
+`st.segmented_control` (form gate, `(required)` marker, error if still empty,
+allow multi-select `required`); `st.file_uploader`, `st.camera_input`,
+`st.audio_input`. Pills/segmented already ship `required` for single-select; this
+wave closes gaps (including the 1.56 form-submit hole) rather than adding the
+parameter. File-like widgets have upload/Clear state that does not share the
+text-input commit path. Details in the [tech spec](./tech-spec.md).
 
 ### Core behavior
 
@@ -157,7 +210,7 @@ This is **not** "the script waits until the field is filled." Commands stay non-
 | Moment | Empty + `required=True` | Result |
 | --- | --- | --- |
 | Initial render | Yes (default empty) | No error, no blocked script. Return value is the empty default. |
-| User tries to commit empty **outside** a form (blur / Enter / change) | Yes | Error state. **No rerun.** Backend keeps the last committed value. |
+| User tries to commit empty **outside** a form (blur / Enter / change) | Yes | Error state. **No rerun.** Last accepted value is kept (backend, or unflushed frontend state when `on_change="ignore"`). |
 | User blurs an empty field **inside** a form | Yes | No error yet — the value stages into form pending state without running the required check (same as `validate`). Gating happens at submit. |
 | Form submit with any required field empty | Yes | Submit aborted (no rerun, no `clear_on_submit`). Every failing field shows its error. |
 | User commits a non-empty value | No | Normal commit / submit. Then `validate` runs if configured. |
@@ -170,7 +223,9 @@ in forms, fragments, dialogs, and standalone widgets.
 
 ### `required` and `validate`
 
-One pipeline, two checks, required first:
+One pipeline, two checks, required first. A value that passes both is committed;
+whether that commit reruns the app is `on_change`'s job (`"rerun"` / callable /
+`"ignore"`):
 
 | Current value | `required` | `validate` | Commit / form submit |
 | --- | --- | --- | --- |
@@ -238,6 +293,8 @@ allowed. Empty *commit* is not. Matches `validate`.
 empty is "no choice," not an in-progress edit. Once a value is selected,
 `required=True` prevents returning to empty (hide/disable the clear control;
 ignore click-to-deselect; do not remove the last multiselect/pills chip).
+Wave 1 ships `selectbox` / `multiselect`. `radio` and pills/segmented gaps are
+[follow-up](#rollout).
 
 If the widget still starts empty (`index=None` / `default=None`):
 - Inside a form, submit is gated until the user picks something.
@@ -254,10 +311,10 @@ extended to:
   ([#14900](https://github.com/streamlit/streamlit/issues/14900)). Drop the current
   `required=True` + `selection_mode="multi"` exception.
 
-**File-like widgets** (`file_uploader`, `camera_input`, `audio_input`): these **do**
-commit empty today (file delete, Clear photo, clear recording). `required=True` must
-block a later empty commit, same as typed/selection widgets — not only add a label and
-form gate.
+**File-like widgets** (`file_uploader`, `camera_input`, `audio_input`): [follow-up](#rollout).
+These **do** commit empty today (file delete, Clear photo, clear recording).
+`required=True` must block a later empty commit, same as typed/selection widgets —
+not only add a label and form gate.
 
 - **Camera / audio:** treat Clear as a typed-widget empty edit. Clear updates local UI,
   shows the required error, and does **not** commit `None`. A new capture commits.
@@ -324,8 +381,8 @@ can be finalized in Figma against the [design-system invalid field](https://www.
 
 ### Pills and segmented_control (existing `required`)
 
-Keep the 1.56 behavior, then close the gaps so `required` means the same thing
-everywhere:
+[Follow-up](#rollout). Keep the 1.56 behavior, then close the gaps so `required`
+means the same thing everywhere:
 
 | Today (single-select) | This spec |
 | --- | --- |
@@ -373,7 +430,8 @@ if query:
 
 Clearing the box and tabbing away does not rerun with `query == ""` (the table stays).
 The field shows the required error until the user enters text again. First page load
-still has `query == ""` and shows no table — `if query:` remains necessary.
+still has `query == ""` and shows no table — `if query:` remains necessary. Valid
+edits still rerun; add `on_change="ignore"` if those should wait for another widget.
 
 **Pills as tabs (already possible)**
 
@@ -427,8 +485,9 @@ with st.form("upload"):
   `validate`). The error appears on the next user commit/submit, not on the
   programmatic write.
 - **AppTest / tampered client.** Client-side only; tests can still set empty values.
-- **`on_change`.** Does not fire on a blocked empty commit (no widget value change
-  reaches the server).
+- **`on_change`.** A blocked empty commit is not a value change: a callable does not
+  fire, and `on_change="ignore"` does not take an empty pending value. See
+  [Relationship to `on_change="ignore"`](#relationship-to-on_changeignore).
 - **Widget identity.** Changing `required` must not reset the widget (same as
   `disabled`). Do not hash `required` into the element ID.
 - **`st.form(clear_on_submit=True)`.** Clear only runs after a successful submit.
@@ -480,8 +539,9 @@ self-explanatory. `(required)` is explicit.
 selection widgets additionally locking the last value when `required=True`.
 
 **Only ship on `st.text_input`.** Too narrow given #7165 (forms) and the pills
-precedent. Specify the full input-widget API; implementation can still land in waves
-(see the [tech spec](./tech-spec.md)).
+precedent. Specify the full input-widget API. First implementation is wave 1
+(typed widgets + selectbox/multiselect), not text_input alone; radio, pills, and
+file-like widgets are an explicit follow-up (see [Rollout](#rollout)).
 
 **Skip `required` when `disabled=True` (HTML constraint-validation precedent).**
 Rejected for v1: `validate` does not skip disabled widgets either, and skipping
@@ -494,8 +554,8 @@ special-casing.
 | Item                      | ✅ or comment                                                                 |
 | ------------------------- | ----------------------------------------------------------------------------- |
 | Works on SiS, Cloud, etc? | ✅ Frontend commit/submit gating; no new backend runtime dependency            |
-| No breaking API changes   | ✅ New optional param (`False`). Pills: allowing `required` in multi-select is additive (today it raises). **Intentional behavior fix:** empty shipped `required` pills/segmented widgets will start failing form submit (today those forms still submit). Not a deprecation; changelog should call out closing the 1.56 form-gating gap. |
+| No breaking API changes   | ✅ Wave 1 is a new optional param (`False`) only. **Follow-up (pills/segmented):** allowing `required` in multi-select is additive (today it raises). **Intentional behavior fix in that follow-up:** empty shipped `required` pills/segmented widgets will start failing form submit (today those forms still submit). Not a deprecation; changelog should call out closing the 1.56 form-gating gap. |
 | No new dependencies       | ✅ Reuses `validate` error UI and `addFormSubmitValidator`                     |
 | Metrics collected         | ✅ Track `required=True` usage per widget                                      |
 | Any security/legal impact? | Client-side only; document that app code must still check values if it matters |
-| Any docs changes needed?  | Yes — `required` on each affected widget; how it composes with `validate`; first-run empty still returned |
+| Any docs changes needed?  | Yes — `required` on each **shipped** widget (wave 1 first); how it composes with `validate` and `on_change="ignore"`; first-run empty still returned |
