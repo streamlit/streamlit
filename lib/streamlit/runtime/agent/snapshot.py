@@ -540,12 +540,13 @@ def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
 def _figure_data(spec: Any) -> dict[str, Any] | None:
     """Describe a chart whose values live inside its own specification.
 
-    Two things are dropped, because they are weight without meaning for a
-    non-visual client. Plotly's `layout.template` is the theme, and it is about
-    nine tenths of a figure: a small bar chart is 7.6 KB of which 7.1 KB is
-    template, and a page of them measured 549 KB on a live app. Then a
-    specification that is still oversized is left out entirely rather than
-    dominating the response.
+    The theme is dropped, because it is weight without meaning for a non-visual
+    client: Plotly's `layout.template` is about nine tenths of a figure, a small
+    bar chart being 7.6 KB of which 7.1 KB is template, and a page of them
+    measured 549 KB on a live app. A specification still oversized after that is
+    left out rather than dominating the response, and then reported as
+    unavailable -- for these charts the specification *is* the data, so dropping
+    one drops the other.
 
     What is omitted is always named in `spec_omitted`, so a client can tell a
     trimmed figure from one the app never configured.
@@ -553,7 +554,7 @@ def _figure_data(spec: Any) -> dict[str, Any] | None:
     if spec is None:
         return None
 
-    data: dict[str, Any] = {"complete": True}
+    data: dict[str, Any] = {}
     omitted: list[str] = []
 
     if (
@@ -568,9 +569,16 @@ def _figure_data(spec: Any) -> dict[str, Any] | None:
         omitted.append("layout.template")
 
     if len(json.dumps(spec, default=str)) > _MAX_INLINE_SPEC_BYTES:
+        # Dropping the specification drops the data with it, because for these
+        # charts they are the same thing. Reporting `complete` here would claim
+        # the client has everything while carrying nothing, so this takes the
+        # same shape as an unfetchable table.
         omitted.append("spec")
+        data["complete"] = False
+        data["unavailable"] = "too_large_to_serve"
     else:
         data["spec"] = spec
+        data["complete"] = True
 
     if omitted:
         data["spec_omitted"] = omitted

@@ -740,7 +740,10 @@ Two consequences of that framing are worth stating, because both were mistakes f
   of them measured 549 KB on a live app while answering nothing. Report the figure with
   the theme dropped, name what was dropped so a trimmed figure is distinguishable from one
   the app never configured, and omit a specification that is still oversized rather than
-  letting it dominate the response.
+  letting it dominate the response. Note what that last case implies: for these charts the
+  specification *is* the data, so a dropped specification is not a complete element with a
+  missing picture — it reports `complete: false` and `unavailable`, the same as an
+  unfetchable table. A 20,000-point scatter is 548 KB and lands there.
 - **A rendering specification is not a data contract.** `st.map` compiles its points into
   a Deck.gl layer, and an agent should not be mining coordinates out of layer JSON, so the
   plotted table is externalized like any other dataframe's.
