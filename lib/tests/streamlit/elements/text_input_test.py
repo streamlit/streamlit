@@ -79,10 +79,10 @@ class TextInputTest(DeltaGeneratorTestCase):
             ("unkeyed", {}),
         ]
     )
-    def test_required_not_in_widget_id(
+    def test_required_is_in_widget_id(
         self, _case: str, extra_kwargs: dict[str, str]
     ) -> None:
-        """Test that toggling required does not change the widget ID."""
+        """Test that toggling required changes the widget ID."""
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
@@ -91,7 +91,7 @@ class TextInputTest(DeltaGeneratorTestCase):
             id1 = self.get_delta_from_queue().new_element.text_input.id
             st.text_input("the label", required=True, **extra_kwargs)
             id2 = self.get_delta_from_queue().new_element.text_input.id
-            assert id1 == id2
+            assert id1 != id2
 
     def test_value_types(self):
         """Test that it supports different types of values."""
@@ -630,6 +630,7 @@ class TextInputTest(DeltaGeneratorTestCase):
         [
             ("max_chars", 100, 200),
             ("validate", "^[a-z]+$", "^[0-9]+$"),
+            ("required", False, True),
         ]
     )
     def test_whitelisted_stable_key_kwargs(

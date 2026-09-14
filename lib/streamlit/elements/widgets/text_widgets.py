@@ -386,8 +386,8 @@ class TextWidgetsMixin:
             state across reruns even when other parameters change.
 
             .. note::
-               Changing ``max_chars`` or the validation regex resets the
-               widget even when a key is provided.
+               Changing ``max_chars``, ``required``, or the validation regex
+               resets the widget even when a key is provided.
 
             A key lets you read or update the widget's value via
             ``st.session_state[key]``. For more details, see `Widget
@@ -827,11 +827,12 @@ class TextWidgetsMixin:
         element_id = compute_and_register_element_id(
             "text_input",
             user_key=key,
-            # Explicitly whitelist max_chars and validate so the ID changes when
-            # they change, since the widget value might become invalid based on a
-            # different max_chars or validation regex. Only the regex (not the
-            # message) is used for identity, since the message is purely cosmetic.
-            key_as_main_identity={"max_chars", "validate"},
+            # Explicitly whitelist max_chars, validate, and required so the ID
+            # changes when they change: the current value might become invalid
+            # under a different max_chars, regex, or requiredness. Only the
+            # regex (not the message) is used for identity, since the message
+            # is purely cosmetic.
+            key_as_main_identity={"max_chars", "validate", "required"},
             dg=self.dg,
             label=label,
             value=value,
@@ -845,6 +846,7 @@ class TextWidgetsMixin:
             # Normalized milliseconds so `True` and `"250ms"` share an ID.
             live=live_debounce_ms,
             validate=identity_validate_regex,
+            required=required,
         )
 
         # Resolve the effective values from the type defaults now that the

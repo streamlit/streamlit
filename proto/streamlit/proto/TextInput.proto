@@ -70,7 +70,9 @@ message TextInput {
   optional uint32 live_debounce_ms = 19;
 
   // If true, empty / whitespace-only values cannot be committed (client-side).
-  // Not part of widget identity (same as disabled).
+  // Part of widget identity (same as validate / max_chars): changing required
+  // remounts the widget so a newly required field does not keep an empty
+  // committed value from when it was optional.
   bool required = 20;
   // Next: 21
 }
