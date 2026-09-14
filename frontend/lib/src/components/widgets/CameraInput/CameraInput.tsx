@@ -500,7 +500,8 @@ const CameraInput = ({
         .then(({ file, fileUrls }) => uploadFile(fileUrls, file))
         .then(waitForMinShutterEffect)
         .then(() => {
-          return setMinShutterEffectPassed(true)
+          setMinShutterEffectPassed(true)
+          return
         })
         .catch(err => {
           LOG.error(err)

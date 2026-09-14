@@ -143,7 +143,8 @@ function SkillsInstallCallout({
     onInstall()
       .then(detail => {
         setSuccessDetail(detail ?? "")
-        return setStatus("success")
+        setStatus("success")
+        return
       })
       .catch((error: unknown) => {
         setStatus("error")

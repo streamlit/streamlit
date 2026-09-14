@@ -497,11 +497,12 @@ const FileUploader = ({
         .fetchFileURLs(acceptedFiles)
         .then((fileURLsArray: FileURLsProto.$Properties[]) => {
           replaceExistingFileIfNeeded()
-          return zip(fileURLsArray, acceptedFiles).forEach(
+          zip(fileURLsArray, acceptedFiles).forEach(
             ([fileURLs, acceptedFile]) => {
               uploadFile(fileURLs as FileURLsProto, acceptedFile as File)
             }
           )
+          return
         })
         .catch((errorMessage: string) => {
           addFiles(
