@@ -157,7 +157,7 @@ have `required`). See [Out of scope](#out-of-scope-future-work).
 
 The table above is the full API. Ship the Wave 1 column first (typed widgets plus
 `st.selectbox` — unblocks #13497 and most of #7165). Follow-up stays in this spec,
-not out of scope. Implementation order is in the [tech spec](./tech-spec.md).
+not out of scope.
 
 ### Core behavior
 
@@ -240,8 +240,7 @@ Matches `validate`. Commit vs submit timing is in [Core behavior](#core-behavior
 
 Incomplete range `st.date_input` is empty. Keep the incomplete range in local UI
 while the picker is open (no error, no commit). Re-editing a complete range down to
-one bound must not send the previous `(start, end)`. Implementation is in the
-[tech spec](./tech-spec.md).
+one bound must not send the previous `(start, end)`.
 
 **Selection widgets** (`selectbox`, `radio`, `multiselect`, `pills`, `segmented_control`):
 empty is "no choice," not an in-progress edit. Once a value is selected,
@@ -261,8 +260,7 @@ These **do** commit empty today. `required=True` blocks a later empty commit.
 - **File uploader:** lock deleting the last file. A new drop still replaces. Form
   submit is gated while empty (`None` / `[]`). An upload in flight is not empty.
 - **Camera / audio:** keep Clear — there is no select-all path; Clear is how the
-  user recaptures. Clear does not commit `None`; a new capture commits. Recapture
-  and upload gating live in the [tech spec](./tech-spec.md).
+  user recaptures. Clear does not commit `None`; a new capture commits.
 
 ### Design
 
