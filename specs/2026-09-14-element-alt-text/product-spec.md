@@ -251,8 +251,8 @@ warning is additive and can follow.
 Keyword-only, optional, appended after each command's existing keyword-only parameters:
 
 ```python
-alt: str | None = None                # 17 commands
-alt: str | Sequence[str] | None = None    # st.image only
+alt: str | None = None  # 17 commands
+alt: str | Sequence[str] | None = None  # st.image only
 ```
 
 **Why `st.image` differs.** One call can render many images — it accepts a list, tuple, set, or
