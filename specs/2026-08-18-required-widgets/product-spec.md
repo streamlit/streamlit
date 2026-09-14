@@ -113,7 +113,7 @@ field still returns the empty default (`if name:`).
 [`specs/2026-08-03-text-input-live-update`](../2026-08-03-text-input-live-update/product-spec.md)
 says empty strings still bypass `validate` and commit normally. `required=True`
 overrides that: an empty live debounce is a blocked empty commit (last accepted
-value kept, no rerun). Do not paint `This field is required` while the field is
+value kept, no rerun). Do not paint `This field is required.` while the field is
 still focused — debounce can fire mid-backspace, and empty UI while editing is
 allowed. Paint the error on blur, Enter, or form submit. Search-clear must not
 bypass the required check (today `handleClear` commits `""` because empty skips
@@ -173,14 +173,15 @@ option groups (`st.radio`; pills/segmented form gate, `(required)` marker, multi
 `required=True` means: **the widget's committed value must be non-empty.**
 
 This is **not** "the script waits until the field is filled." Commands stay non-blocking
-(API principle 32). The first run still returns the empty default; developers still write
-`if name:` when downstream code cannot handle empty. What `required` prevents is a
-*later* empty commit and an empty form submit.
+(API principle 32). The widget still returns the empty default on every rerun until the
+user provides input; developers still write `if name:` when downstream code cannot
+handle empty. What `required` prevents is a *later* empty commit and an empty form
+submit.
 
 | Moment | Empty + `required=True` | Result |
 | --- | --- | --- |
 | Initial render | Yes (default empty) | No error, no blocked script. Return value is the empty default. |
-| Unedited empty blur / Enter **outside** a form (`dirty === false`; focus then Tab) | Yes | No error. Same as first-run: looking at the field is not a failed commit. |
+| Unedited empty blur / Enter **outside** a form (`dirty === false`; focus then Tab) | Yes | No error. Same as initial render: looking at the field is not a failed commit. |
 | Empty live debounce (`live=True`) | Yes | Blocked empty commit: last accepted value kept, **no rerun**. Do not paint the required error while focused (mid-backspace). Paint on blur / Enter / form submit. |
 | User tries to commit empty **outside** a form after an edit (blur / Enter / change / search-clear) | Yes | Error state. **No rerun.** Last accepted value is kept (backend, or unflushed frontend state when `on_change="ignore"`). The field renders empty with an error; `st.session_state[key]` and the return value still hold the previous non-empty value. A rerun from another widget must **not** snap the field back to that stored value (keep `dirty`). |
 | User blurs an empty field **inside** a form (Enter without form submission) | Yes | No error yet — the value stages into form pending state without running the required check (same as `validate`). When `enter_to_submit=True` and Enter submits the form, that is form submit, not this row. Gating happens at submit. |
@@ -208,7 +209,7 @@ whether that commit reruns the app is `on_change`'s job:
 | --- | --- | --- | --- |
 | `""` / `None` | `False` (default) | any | Allowed; `validate` is skipped (today's behavior) |
 | Whitespace-only (`"   "`) | `False` (default) | any | `required` passes; `validate` runs on the raw string (today's behavior) |
-| `""` / `None` / whitespace-only | `True` | any | **Blocked.** Message: `This field is required`. `validate` does not run |
+| `""` / `None` / whitespace-only | `True` | any | **Blocked.** Message: `This field is required.` `validate` does not run |
 | Non-empty after strip, invalid | any | regex / tuple | **Blocked.** `validate` message (today's behavior) |
 | Non-empty after strip, valid | any | regex / tuple / none | Allowed |
 
@@ -296,7 +297,7 @@ fallback below) only.
 
 **Error state** — after a failed commit or failed form submit, the widget uses the
 existing invalid-input treatment. Tooltip / `aria-describedby` text:
-`This field is required`.
+`This field is required.` Later widgets copy this constant (including the period).
 
 ![Existing invalid-field chrome (red field, error icon, tooltip) — reference, not the final required copy](./required-error-state.png)
 
@@ -347,7 +348,7 @@ if submitted:
     st.success("Sent")
 ```
 
-Empty name/email: submit does nothing, both fields show `This field is required`,
+Empty name/email: submit does nothing, both fields show `This field is required.`,
 `clear_on_submit` does not run. Invalid email format: name can be valid while email
 shows the `type="email"` validate message.
 
@@ -362,8 +363,9 @@ if query:
 ```
 
 Clearing the box and tabbing away does not rerun with `query == ""` (the table stays).
-The field shows the required error until the user enters text again. First page load
-still has `query == ""` and shows no table — `if query:` remains necessary. If another
+The field shows the required error until the user enters text again. The widget still
+returns `""` on every rerun until the user provides input — `if query:` remains
+necessary. If another
 widget then reruns the app while this field is still showing the blocked empty UI,
 the field must stay empty with the error (do not snap back to the stored last
 accepted value). Valid edits still rerun; add `on_change="ignore"` if those should
@@ -400,13 +402,11 @@ with st.form("upload"):
 ### Edge cases
 
 - **Return types do not narrow.** `st.selectbox(index=None, required=True)` stays
-  `V | None` because the first run can still be empty. Existing pills overloads that
-  narrow when `required=True` and `default` is set stay as they are. Multi-select
-  `required` still returns `list[V]` with no non-empty guarantee.
-- **`disabled=True`.** A disabled empty required field can trap a form. Do not raise
-  (disabled is often toggled dynamically); document the footgun. Log a developer
-  warning when a disabled, empty, required widget is rendered inside a form so the
-  trap is visible in the terminal, not only the docs.
+  `V | None` because the widget can still return empty until the user provides
+  input. Existing pills overloads that narrow when `required=True` and `default`
+  is set stay as they are. Multi-select `required` still returns `list[V]` with no
+  non-empty guarantee.
+- **`disabled=True`.** Do not raise (disabled is often toggled dynamically).
 - **`st.multiselect(..., max_selections=1, required=True)`.** Last-chip lock plus
   the existing "Remove an option first" cap can deadlock (the user cannot change
   the only selected option). Wave 1 ships this known limitation: the uniform
@@ -436,11 +436,12 @@ with st.form("upload"):
   So `st.text_input("Name", required=flag)` **without** a `key` remounts when
   `flag` changes. With a `key`, the value is kept. Shipped pills omit `required`
   from the ID; the pills follow-up should add this split.
-- **Required error follows the current proto.** Show `This field is required` only
-  while `required` is true on this run. A keyed widget can go `True → False`
-  without remounting; a sticky local error after a failed empty commit must
-  clear. Gate `displayedError` / `aria-invalid` on the current proto, not a
-  leftover React flag.
+- **Required chrome follows the current proto and emptiness.** Show
+  `This field is required.` only while `required` is true **and** the UI value is
+  still empty. A keyed widget can go `True → False` without remounting, or
+  `st.session_state[key] = "hello"` can fill the field; leftover chrome after a
+  failed empty commit must clear. Gate `displayedError` / `aria-invalid` on the
+  current proto **and** current emptiness, not a leftover React flag.
 
 ## Out of Scope (Future Work)
 
@@ -454,6 +455,8 @@ with st.form("upload"):
 - **Widget-level `required` on `st.data_editor`** — columns already have it.
 - **Native HTML `required` / browser bubble** — Streamlit forms are not native
   `<form>` submits; `validate` already rejected that path.
+- **Developer warning / docs callout** for `disabled=True` + empty + `required=True`
+  inside a form. Wave 1 does not raise, warn, or document that trap.
 - **Auto-selecting a default** when `required=True` and no `default`/`index` is set
   (would make "required but empty until the user picks" impossible).
 - **`min_selections` / "at least N"** — `required=True` on multi-select is the
@@ -486,8 +489,8 @@ field. Select-all + delete already empties it. The X's job is to commit `""`.
 Wave 1 is typed widgets + selectbox/multiselect, not text_input alone.
 
 **Skip `required` when `disabled=True` (HTML constraint-validation precedent).**
-Rejected for v1: `validate` does not skip disabled widgets either. Document the
-disabled-empty-required form trap.
+Rejected for v1: `validate` does not skip disabled widgets either. A developer
+warning for the disabled-empty-required form trap is deferred.
 
 ## Checklist
 
@@ -498,4 +501,4 @@ disabled-empty-required form trap.
 | No new dependencies       | ✅ Reuses `validate` error UI and `addFormSubmitValidator`                     |
 | Metrics collected         | ✅ Track `required=True` usage per widget                                      |
 | Any security/legal impact? | Client-side only; document that app code must still check values if it matters |
-| Any docs changes needed?  | Yes — `required` on each **shipped** widget (wave 1 first); how it composes with `validate` and `on_change="ignore"`; first-run empty still returned |
+| Any docs changes needed?  | Yes — `required` on each **shipped** widget (wave 1 first). Docstrings match `st.text_input`: submit gate, form vs outside, default until the user provides input, empty skips `validate`, browser-bypass. Not `on_change="ignore"` composition. |

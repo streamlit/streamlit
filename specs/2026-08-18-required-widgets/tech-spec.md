@@ -81,7 +81,7 @@ Only two things are used by enough widgets, in the same way, to extract:
    `(required)` (`aria-hidden`) when `required && labelVisibility === visible`.
    `aria-required` stays on the control. Do **not** append the suffix in Python
    label markdown. Wave 1 lands this; later widgets pass `required={element.required}`.
-2. **`REQUIRED_FIELD_MESSAGE`** (`"This field is required"`) plus
+2. **`REQUIRED_FIELD_MESSAGE`** (`"This field is required."`) plus
    **`isRequiredEmptyText`** (`null` / `trim() === ""`). Put them next to
    `TextInput/validation.ts` (or a tiny sibling). Text input and text area share
    the trim-vs-validate-skip distinction; it is easy to get wrong if inlined
@@ -133,10 +133,12 @@ path — today's empty skip that commits `""` is the hole.
 Do not add ignore-mode proto/runtime plumbing on `st.text_area` /
 `st.date_input` / `st.time_input` / `st.datetime_input` as part of `required`.
 
-Show `This field is required` only while `element.required` is true. A keyed
-widget can toggle `required` `True → False` without remounting; do not leave a
-sticky `hasRequiredError` (or equivalent) painted after the proto drops
-`required`. Gate `displayedError` / `aria-invalid` on the current proto flag.
+Show `This field is required.` only while `element.required` is true **and** the
+current UI value is still required-empty. A keyed widget can toggle `required`
+`True → False` without remounting, or a script can write
+`st.session_state[key] = "hello"`; do not leave a sticky `hasRequiredError` (or
+equivalent) painted. Gate `displayedError` / `aria-invalid` on the current proto
+flag **and** current emptiness.
 
 A `true` result still goes through the existing commit path, including
 `on_change="ignore"` where that mode exists. A `false` result must **not**
@@ -163,7 +165,7 @@ aborts before clearing form state, so `clear_on_submit` cannot run on a failed s
 Keep `dirty` set on failure so `useUpdateUiValue` doesn't overwrite the value the user
 is still correcting.
 
-Error copy: `"This field is required"` for the required failure; keep the existing
+Error copy: `"This field is required."` for the required failure; keep the existing
 `validate` message for content failures. `aria-required` is independent of error
 visibility; `aria-invalid` / `aria-describedby` follow `displayedError`.
 
@@ -242,10 +244,13 @@ date-time range errors) and a straightforward empty-commit + form-submit gate.
    they are separate handlers in `Multiselect.tsx`.
 
 Wave 1 unblocks #13497 and most of #7165 (text/select form fields). Wave-1
-docstrings must describe emptiness and the commit/submit gate (first run can
-still be empty; form submit is gated; last-value lock only where a
-clear/deselect affordance exists). Do **not** copy the current `st.pills`
-docstring (single-select deselect locking; `required=True` +
+docstrings match the `st.text_input` `required` contract: submit gate; form vs
+outside (outside: clearing does not rerun, last committed value kept; inside:
+submit blocked until the field has a value); the widget still returns its default
+until the user provides input; empty skips `validate`; browser-bypass note. Do
+not expand later widgets with `on_change="ignore"` composition. Widget-specific
+extras (last-value lock on selectbox/multiselect) stay. Do **not** copy the
+current `st.pills` docstring (single-select deselect locking; `required=True` +
 `selection_mode="multi"` raises). Reuse that wording only as a starting point
 for the pills/segmented follow-up, and update those docs when multi-select
 `required` becomes legal.
@@ -328,7 +333,7 @@ product spec: lock last-file delete; keep camera/audio Clear but do not commit
   while already holding committed files). A first-file upload to an empty
   required uploader has empty widget state plus local pending files: that is
   not required-empty, so the required validator must not paint
-  `This field is required` even if a central upload gate also returns false.
+  `This field is required.` even if a central upload gate also returns false.
   Local pending files stay not-uploaded (do not flush them). Gate every submit
   path as specified above — not only `FormSubmitButton`. Camera/audio Clear is
   a different local state: that staged empty **is** the submit-time source of
@@ -352,7 +357,7 @@ include `(required)` in the accessible name.
   before the last-accepted short-circuit); `live=True` + `required=True`: empty live
   debounce is blocked (last accepted kept, no rerun) and does not paint the
   required error while focused; `handleClear` does not bypass `validateBeforeCommit`;
-  keyed widget `required` `True → False`
+  keyed widget `required` `True → False` or `st.session_state[key] = "hello"`
   after a failed empty commit clears the required error and `aria-invalid`;
   selectbox/multiselect last value is locked on every remove path (clear-all, chip
   remove, Backspace/Delete, option toggle); range `st.date_input` first bound is visible with no rerun and
