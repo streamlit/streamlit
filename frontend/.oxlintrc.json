@@ -25,6 +25,7 @@
     "eslint/radix": "error",
     "eslint/no-unneeded-ternary": "error",
     "eslint/eqeqeq": ["error", "always", { "null": "ignore" }],
+    "eslint/no-promise-executor-return": "error",
     "oxc/no-accumulating-spread": "error",
     "typescript/no-dynamic-delete": "error",
     "jsx-a11y/control-has-associated-label": "error",
@@ -99,6 +100,8 @@
     "vitest/valid-expect-in-promise": "off",
     "vitest/valid-title": "off",
     "vitest/warn-todo": "off",
+    "promise/always-return": "error",
+    "promise/catch-or-return": "error",
     "promise/no-callback-in-promise": "error",
     "promise/no-new-statics": "error",
     "promise/valid-params": "error"

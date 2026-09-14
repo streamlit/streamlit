@@ -328,17 +328,12 @@ describe("DownloadButton widget", () => {
     it("shows loading state during deferred download", async () => {
       const user = userEvent.setup()
       const mockBackendOperationClient = {
-        requestDeferredFile: vi
-          .fn()
-          .mockImplementation(
-            () =>
-              new Promise(resolve =>
-                setTimeout(
-                  () => resolve({ url: "/media/generated_file" }),
-                  100
-                )
-              )
-          ),
+        requestDeferredFile: vi.fn().mockImplementation(
+          () =>
+            new Promise(resolve => {
+              setTimeout(() => resolve({ url: "/media/generated_file" }), 100)
+            })
+        ),
       } as unknown as BackendOperationClient
 
       const props = getProps({

@@ -171,6 +171,7 @@ export const createDropHandler =
             )
           }
         )
+        return
       })
       .catch((errorMessage: string) => {
         addFiles(

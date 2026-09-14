@@ -277,6 +277,7 @@ function StatisticsChart({
           } else {
             embedResult = result
           }
+          return
         })
         .catch((error: unknown) => {
           // Embed errors are expected when the component unmounts mid-render, so
