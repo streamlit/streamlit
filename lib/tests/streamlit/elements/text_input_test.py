@@ -73,25 +73,33 @@ class TextInputTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.text_input
         assert c.required is required
 
-    @parameterized.expand(
-        [
-            ("keyed", {"key": "text_input_key"}),
-            ("unkeyed", {}),
-        ]
-    )
-    def test_required_is_in_widget_id(
-        self, _case: str, extra_kwargs: dict[str, str]
-    ) -> None:
-        """Test that toggling required changes the widget ID."""
+    def test_required_is_in_unkeyed_widget_id(self) -> None:
+        """Test that toggling required without a key changes the widget ID."""
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
         ):
-            st.text_input("the label", required=False, **extra_kwargs)
+            st.text_input("the label", required=False)
             id1 = self.get_delta_from_queue().new_element.text_input.id
-            st.text_input("the label", required=True, **extra_kwargs)
+            st.text_input("the label", required=True)
             id2 = self.get_delta_from_queue().new_element.text_input.id
             assert id1 != id2
+
+    def test_required_not_in_keyed_widget_id(self) -> None:
+        """Test that toggling required with a key keeps the widget ID.
+
+        Unlike max_chars / validate, required cannot make a stored value
+        incompatible, so it is not on the keyed-identity whitelist.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.text_input("the label", key="text_input_key", required=False)
+            id1 = self.get_delta_from_queue().new_element.text_input.id
+            st.text_input("the label", key="text_input_key", required=True)
+            id2 = self.get_delta_from_queue().new_element.text_input.id
+            assert id1 == id2
 
     def test_value_types(self):
         """Test that it supports different types of values."""
@@ -630,7 +638,6 @@ class TextInputTest(DeltaGeneratorTestCase):
         [
             ("max_chars", 100, 200),
             ("validate", "^[a-z]+$", "^[0-9]+$"),
-            ("required", False, True),
         ]
     )
     def test_whitelisted_stable_key_kwargs(
