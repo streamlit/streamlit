@@ -907,6 +907,27 @@ describe("TextInput widget", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("validates a dirty revert to a last-committed value that fails validate", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: "123",
+      validateRegex: "^[a-z]+$",
+      validateMessage: "Lowercase only",
+    })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+    setStringValueSpy.mockClear()
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "4")
+    await user.keyboard("{Backspace}")
+    await user.click(document.body)
+
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+    expect(screen.getByRole("alert")).toHaveTextContent("Lowercase only")
+    expect(textInput).toHaveAttribute("aria-invalid", "true")
+  })
+
   it("shows a custom validation message", async () => {
     const user = userEvent.setup()
     const props = getProps({
@@ -1289,6 +1310,43 @@ describe("TextInput widget", () => {
       )
       expect(screen.getByRole("alert")).toHaveTextContent(
         "This field is required"
+      )
+    })
+
+    it("clears a leftover required error when required is turned off", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ required: true, default: "hello" })
+      const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+      const { rerender } = render(<TextInput {...props} />)
+      setStringValueSpy.mockClear()
+
+      const textInput = screen.getByRole("textbox")
+      await user.clear(textInput)
+      await user.click(document.body)
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required"
+      )
+
+      const updatedElement = TextInputProto.create({
+        ...props.element,
+        required: false,
+      })
+      rerender(<TextInput {...props} element={updatedElement} />)
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId("stTextInputErrorIcon")
+      ).not.toBeInTheDocument()
+      expect(textInput).not.toHaveAttribute("aria-invalid")
+      expect(textInput).not.toHaveAttribute("aria-required")
+
+      await user.type(textInput, "x")
+      await user.clear(textInput)
+      await user.click(document.body)
+      expect(setStringValueSpy).toHaveBeenCalledWith(
+        props.element.id,
+        "",
+        expect.anything()
       )
     })
 

@@ -513,7 +513,13 @@ class TextWidgetsMixin:
 
             When used with ``validate``, empty values fail this check and
             skip validation. Non-empty values are checked against
-            ``validate``.
+            ``validate``. Visible labels show a ``(required)`` marker.
+            For ``type="search"``, the clear button is hidden.
+
+            Inside a form with ``bind="query-params"``, keystrokes still
+            stage into the URL before submit-time checks run. A blocked
+            empty commit outside a form does not write an empty value
+            into the URL.
 
             .. note::
                This check runs in the user's browser and can be bypassed.

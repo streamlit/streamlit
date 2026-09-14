@@ -338,7 +338,10 @@ function TextInput({
         ? getInvalidTextInputMessage(validateRegex)
         : INVALID_TEXT_INPUT_MESSAGE)
     : null
-  const requiredError = hasRequiredError ? REQUIRED_FIELD_MESSAGE : null
+  // Gate on the current proto flag: required is not part of keyed widget
+  // identity, so hasRequiredError can survive a rerun that turns required off.
+  const requiredError =
+    element.required && hasRequiredError ? REQUIRED_FIELD_MESSAGE : null
   const validateDisplayed = hasValidationConfig
     ? (configError ?? userError)
     : null
@@ -368,8 +371,13 @@ function TextInput({
     [validateRegex]
   )
 
-  // Required-empty fails before validate so whitespace-only shows the required
-  // message, not the validate message. Only null/"" skip validate.
+  /**
+   * Runs the required and `validate` checks for the given value, updates the
+   * displayed error, and returns whether the value may be committed.
+   *
+   * Required-empty is checked first so whitespace-only values show the required
+   * message rather than the validate message.
+   */
   const validateBeforeCommit = useCallback(
     (valueToValidate: string | null = uiValueRef.current): boolean => {
       if (element.required && isRequiredEmptyText(valueToValidate)) {
@@ -553,23 +561,11 @@ function TextInput({
     setShowPassword(prev => !prev)
   }, [])
 
-  // Required search hides the X so this should not run. If it does,
-  // treat clear as a blocked empty commit.
   const handleClear = useCallback((): void => {
     cancelLiveCommit()
     setUiValueAndRef("")
-    if (!validateBeforeCommit("")) {
-      setDirtyAndRef(true)
-      return
-    }
     commitWidgetValue("")
-  }, [
-    cancelLiveCommit,
-    commitWidgetValue,
-    setDirtyAndRef,
-    setUiValueAndRef,
-    validateBeforeCommit,
-  ])
+  }, [cancelLiveCommit, commitWidgetValue, setUiValueAndRef])
 
   const onChange = useOnInputChange({
     formId,
