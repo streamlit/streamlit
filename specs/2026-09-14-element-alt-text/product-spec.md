@@ -492,7 +492,7 @@ own.
 | Phase | Commands                                                            | Why here                                                                                                                                                                                                                          |
 | ----- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1     | `st.audio`, `st.video`                                              | Nothing unresolved, and the code exists — though only in [#16568](https://github.com/streamlit/streamlit/pull/16568), which was approved and then closed, so no proto in the tree carries `alt` yet. Reopening it lands 2 of the 19 first and fixes the parameter name in the codebase |
-| 2     | The six simple and Vega charts, plus `st.echarts_chart`             | Each library already supports a chart-level description natively — Vega's `description`, ECharts' `aria.label.description` — so this is the least work for the most commands. Cheap to confirm before committing to the order: setting `description` in an Altair spec reaches assistive tech today. `st.echarts_chart` carries the one extra question below |
+| 2     | The six simple and Vega charts, plus `st.echarts_chart`             | Each library already supports a chart-level description natively — Vega's `description`, ECharts' `aria.label.description` — so this is the least work for the most commands. Confirmed rather than assumed: `vega-view` sets `role="graphics-document"` on the container and maps `view.description()` to its `aria-label`, fed from `spec.description`, so an Altair `description` reaches assistive tech today. `st.echarts_chart` carries the one extra question below |
 | 3     | `st.plotly_chart`, `st.graphviz_chart`, `st.map`, `st.pydeck_chart` | All four need the same new wiring; decide once, apply four times                                                                                                                                                                  |
 | 4     | `st.table`, `st.mermaid_chart`                                      | `st.table` is natively nameable. Mermaid is not as easy as it looks — no proto of its own, and its name is derived on the frontend, so this phase picks a wiring route                                                            |
 | 5     | `st.dataframe`, `st.data_editor`                                    | One component covers both                                                                                                                                                                                                         |
@@ -511,32 +511,39 @@ sign-off and could ship ahead of the parameter, benefiting every existing app wh
 not its author adopts `alt`.
 
 One implementation note worth stating once so it is not rediscovered per phase: **editing `alt` must
-never reset state a user has built up.** It arises only for commands that compute an element ID, and
-four of those need more than keeping `alt` out of the keyed identity:
+never reset state a user has built up.** Every command in scope falls into one of these groups, and
+the group is what determines the work:
 
-- **The Vega commands, `st.map` and `st.pydeck_chart`** — all of them hash the chart spec into the
-  ID (`vega_charts.py` passes `vega_lite_spec`, `deck_gl_json_chart.py` passes `spec`), each only
-  when selections are enabled. So `alt` must travel as its own proto field rather than being written
-  into the spec on the backend; otherwise editing a description resets the selection on an unkeyed
-  `on_select` chart or map. Keyed ones are safe (`key_as_main_identity={"selection_mode"}`), which is
-  what makes this easy to miss in testing. Worth flagging for phase 3 in particular, where writing
-  into the deck spec is the obvious way to apply `alt` — the same care applies to mutating Plotly's
-  layout.
-- **`st.plotly_chart`** always passes `key_as_main_identity=False`, so there is no allowlist to
-  exclude `alt` from; hashing it discards the chart state its unconditional ID exists to preserve.
-- **`st.data_editor`** uses an allowlist only when keyed *and* `num_rows="fixed"` — in `"dynamic"`,
+- **No element ID at all** — `st.image`, `st.pyplot`, `st.mermaid_chart`, `st.graphviz_chart`,
+  `st.table`, and `st.map`, whose own marshaller clears the ID outright (`map.py` sets
+  `pydeck_proto.id = ""`) despite sharing a proto with `st.pydeck_chart`. Nothing to do for any of
+  them, which covers most of the phases.
+- **Hash the chart spec into the ID** — the six Vega charts (`vega_lite_spec`), `st.pydeck_chart`
+  (`spec`), and `st.plotly_chart` (`plotly_spec`). `alt` must travel as its own proto field rather
+  than being written into the spec on the backend, or editing a description resets the user's
+  selection. Vega and pydeck compute the ID only when selections are enabled and keep a
+  `{"selection_mode"}` allowlist, so keyed charts are safe — which is exactly what makes this easy to
+  miss in testing.
+- **`st.plotly_chart` is the most exposed** of those, and needs `alt` kept out of its ID entirely: it
+  computes one unconditionally rather than only under `on_select`, hashes `plotly_spec`, *and* passes
+  `key_as_main_identity=False`, so there is no allowlist to exclude `alt` from and no keyed escape.
+- **`st.data_editor`** keeps an allowlist only when keyed *and* `num_rows="fixed"`; in `"dynamic"`,
   `"add"` or `"delete"` it passes `False`, so a description-only edit discards the user's edits.
-- **`st.audio` and `st.video`** use `id` as the one-shot autoplay dedup key rather than a state
-  identity, so `alt` stays out of it, as #16568 does. Worth naming: that same field raises
-  `StreamlitDuplicateElementId`, so two autoplaying players differing only in their description
-  still collide, and neither command accepts `key`. Pre-existing, and out of scope here.
+- **`st.audio` and `st.video`** compute an ID only when `autoplay` is set, and use it as the one-shot
+  autoplay dedup key rather than a state identity, so `alt` stays out of it, as #16568 does. Worth
+  naming: that field also raises `StreamlitDuplicateElementId`, so two autoplaying players differing
+  only in their description collide, and neither command accepts `key`. Pre-existing, and out of
+  scope here.
+- **`st.dataframe`** computes an ID only when selections are enabled and keeps an allowlist, so the
+  general shape applies — hash `alt`, exclude it from `key_as_main_identity`.
+- **`st.echarts_chart`** computes an ID only when keyed and hashes no spec kwargs at all
+  (`key_as_main_identity=True`), so its option dict sits outside the identity and writing
+  `aria.label.description` there on the backend is safe. The constraint is about hashed specs, not
+  backend mutation as such. That ID still has a job — keeping a keyed chart from remounting and
+  replaying its entry animation across reruns — so phase 2 should not read this as ECharts having no
+  identity lifecycle.
 
-`st.dataframe` computes an ID only with selections enabled. `st.echarts_chart` computes one only
-when keyed, and passes no spec kwargs into it — `key_as_main_identity=True`, so the key is the whole
-identity and the option dict sits outside it. Writing `aria.label.description` there on the backend
-is therefore safe: the constraint is about hashed specs, not backend mutation as such. That ID still
-has a job worth preserving, so phase 2 should not read this as ECharts having no identity lifecycle —
-it is what keeps a keyed chart from remounting and replaying its entry animation across reruns. ECharts does need one product answer the others
+ECharts does need one product answer the others
 do not, being the only command where `alt` displaces a generated name rather than filling a gap:
 `EChartsChart.tsx` already reconciles the library's ARIA after every `setOption`, so `alt` has to
 compose with that, and phase 2 should settle precedence when an author sets `alt` *and*
