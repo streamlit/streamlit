@@ -16,7 +16,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 
-import { isEqual, zip } from "lodash-es"
+import { isEqual } from "lodash-es"
 import { flushSync } from "react-dom"
 
 import {
@@ -61,22 +61,35 @@ type FilesUpdater =
   | UploadFileInfo[]
   | ((prev: UploadFileInfo[]) => UploadFileInfo[])
 
+/** Frontend-only key for File objects waiting for upload URLs across remount. */
+export const PENDING_UPLOAD_FILES_STATE_KEY = "pendingUploadFiles"
+
+const createUploadingFileInfo = (file: File, id: number): UploadFileInfo =>
+  new UploadFileInfo(
+    file.webkitRelativePath || file.name,
+    file.size,
+    id,
+    {
+      type: "uploading",
+      abortController: new AbortController(),
+      progress: 0,
+    },
+    file
+  )
+
 const createInitialFiles = (
   element: FileUploaderProto,
   widgetMgr: WidgetStateManager
-): { files: UploadFileInfo[]; nextLocalId: number } => {
+): { files: UploadFileInfo[]; nextLocalId: number; pendingFiles: File[] } => {
   const widgetValue = widgetMgr.getFileUploaderStateValue(element)
-  if (isNullOrUndefined(widgetValue)) {
-    return { files: [], nextLocalId: 1 }
-  }
-
-  const { uploadedFileInfo } = widgetValue
-  if (isNullOrUndefined(uploadedFileInfo) || uploadedFileInfo.length === 0) {
-    return { files: [], nextLocalId: 1 }
-  }
+  const pendingFiles =
+    widgetMgr.getElementState<File[]>(
+      element.id,
+      PENDING_UPLOAD_FILES_STATE_KEY
+    ) ?? []
 
   let nextLocalId = 1
-  const files = uploadedFileInfo.map(f => {
+  const uploadedFiles = (widgetValue?.uploadedFileInfo ?? []).map(f => {
     const name = f.name as string
     const size = f.size as number
     const fileId = f.fileId as string
@@ -91,7 +104,17 @@ const createInitialFiles = (
     return uploadFile
   })
 
-  return { files, nextLocalId }
+  const pendingInfos = pendingFiles.map(file => {
+    const info = createUploadingFileInfo(file, nextLocalId)
+    nextLocalId += 1
+    return info
+  })
+
+  return {
+    files: [...uploadedFiles, ...pendingInfos],
+    nextLocalId,
+    pendingFiles,
+  }
 }
 
 /**
@@ -138,7 +161,11 @@ const FileUploader = ({
 }: Props): React.ReactElement => {
   const { width, elementRef } = useCalculatedDimensions()
 
-  const { files: initialFiles, nextLocalId: initialNextLocalId } = useMemo(
+  const {
+    files: initialFiles,
+    nextLocalId: initialNextLocalId,
+    pendingFiles,
+  } = useMemo(
     () => createInitialFiles(element, widgetMgr),
     [element, widgetMgr]
   )
@@ -146,9 +173,16 @@ const FileUploader = ({
   const localFileIdCounterRef = useRef(initialNextLocalId)
   const [files, setFiles] = useState<UploadFileInfo[]>(() => initialFiles)
   const filesRef = useRef<UploadFileInfo[]>(files)
+  const mountedRef = useRef(true)
   useEffect(() => {
     filesRef.current = files
   }, [files])
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
   const [isForceUpdating, setIsForceUpdating] = useState(false)
 
   /**
@@ -199,16 +233,6 @@ const FileUploader = ({
       })
     },
     [setIsForceUpdating]
-  )
-
-  /**
-   * Add a file to the list of files.
-   */
-  const addFile = useCallback(
-    (file: UploadFileInfo): void => {
-      setFilesImmediate(prev => [...prev, file])
-    },
-    [setFilesImmediate]
   )
 
   /**
@@ -290,10 +314,16 @@ const FileUploader = ({
         fromUser: true,
       })
     }
+
+    // Keep pending Files until the widget is ready (upload finished or failed).
+    // Clearing them when URL fetch settles would lose the batch if reconnect
+    // remounts during the HTTP POST (#11419).
+    widgetMgr.deleteElementState(element.id, PENDING_UPLOAD_FILES_STATE_KEY)
   }, [status, files, widgetMgr, element, fragmentId])
 
   const onFormCleared = useCallback((): void => {
     setFilesImmediate(() => [])
+    widgetMgr.deleteElementState(element.id, PENDING_UPLOAD_FILES_STATE_KEY)
     const newWidgetValue = toWidgetState([])
     widgetMgr.setFileUploaderStateValue(element.id, newWidgetValue, {
       formId: element.formId,
@@ -364,21 +394,14 @@ const FileUploader = ({
    * Upload a file to the backend.
    */
   const uploadFile = useCallback(
-    (fileURLs: FileURLsProto.$Properties, file: File): void => {
-      const abortController = new AbortController()
-      const fileName = file.webkitRelativePath || file.name
-
-      const uploadingFileInfo = new UploadFileInfo(
-        fileName,
-        file.size,
-        nextLocalFileId(),
-        {
-          type: "uploading",
-          abortController,
-          progress: 0,
-        }
-      )
-      addFile(uploadingFileInfo)
+    (
+      fileURLs: FileURLsProto.$Properties,
+      file: File,
+      uploadingInfo: UploadFileInfo
+    ): void => {
+      if (uploadingInfo.status.type !== "uploading") {
+        return
+      }
 
       uploadClient
         .uploadFile(
@@ -386,14 +409,14 @@ const FileUploader = ({
           fileURLs.uploadUrl as string,
           file,
           undefined,
-          abortController.signal
+          uploadingInfo.status.abortController.signal
         )
-        .then(() => onUploadComplete(uploadingFileInfo.id, fileURLs))
+        .then(() => onUploadComplete(uploadingInfo.id, fileURLs))
         .catch(err => {
           if (!(err instanceof DOMException && err.name === "AbortError")) {
             updateFile(
-              uploadingFileInfo.id,
-              uploadingFileInfo.setStatus({
+              uploadingInfo.id,
+              uploadingInfo.setStatus({
                 type: "error",
                 errorMessage: err ? err.toString() : "Unknown error",
               })
@@ -401,14 +424,44 @@ const FileUploader = ({
           }
         })
     },
-    [
-      addFile,
-      element,
-      nextLocalFileId,
-      onUploadComplete,
-      updateFile,
-      uploadClient,
-    ]
+    [element, onUploadComplete, updateFile, uploadClient]
+  )
+
+  const beginUploadsFromUrls = useCallback(
+    (
+      fileURLsArray: FileURLsProto.$Properties[],
+      sourceFiles: File[],
+      uploadingInfos: UploadFileInfo[]
+    ): void => {
+      fileURLsArray.forEach((fileURLs, index) => {
+        const sourceFile = sourceFiles[index]
+        const uploadingInfo = uploadingInfos[index]
+        if (
+          !sourceFile ||
+          !uploadingInfo ||
+          isNullOrUndefined(getFile(uploadingInfo.id))
+        ) {
+          return
+        }
+        uploadFile(fileURLs, sourceFile, uploadingInfo)
+      })
+    },
+    [getFile, uploadFile]
+  )
+
+  const markUploadingFilesFailed = useCallback(
+    (uploadingInfos: UploadFileInfo[], errorMessage: string): void => {
+      uploadingInfos.forEach(info => {
+        updateFile(
+          info.id,
+          info.setStatus({
+            type: "error",
+            errorMessage,
+          })
+        )
+      })
+    },
+    [updateFile]
   )
 
   /**
@@ -436,6 +489,51 @@ const FileUploader = ({
       removeFile(fileId)
     },
     [disabled, getFile, removeFile, uploadClient]
+  )
+
+  const fetchUrlsAndUpload = useCallback(
+    (sourceFiles: File[], uploadingInfos: UploadFileInfo[]): void => {
+      void uploadClient
+        .fetchFileURLs(sourceFiles, element.id)
+        .then((fileURLsArray: FileURLsProto.$Properties[]) => {
+          if (!mountedRef.current) {
+            return
+          }
+
+          if (!element.multipleFiles) {
+            const existingFile = filesRef.current.find(
+              f =>
+                f.status.type !== "error" &&
+                !uploadingInfos.some(info => info.id === f.id)
+            )
+            if (existingFile) {
+              setForceUpdatingStatus(true)
+              try {
+                deleteFile(existingFile.id)
+              } finally {
+                setForceUpdatingStatus(false)
+              }
+            }
+          }
+
+          beginUploadsFromUrls(fileURLsArray, sourceFiles, uploadingInfos)
+        })
+        .catch((errorMessage: string) => {
+          if (!mountedRef.current) {
+            return
+          }
+          markUploadingFilesFailed(uploadingInfos, errorMessage)
+        })
+    },
+    [
+      beginUploadsFromUrls,
+      deleteFile,
+      element.id,
+      element.multipleFiles,
+      markUploadingFilesFailed,
+      setForceUpdatingStatus,
+      uploadClient,
+    ]
   )
 
   /**
@@ -475,41 +573,6 @@ const FileUploader = ({
         }
       }
 
-      uploadClient
-        .fetchFileURLs(acceptedFiles)
-        .then((fileURLsArray: FileURLsProto.$Properties[]) => {
-          if (!multipleFiles && acceptedFiles.length > 0) {
-            const existingFile = filesRef.current.find(
-              f => f.status.type !== "error"
-            )
-            if (existingFile) {
-              setForceUpdatingStatus(true)
-              try {
-                deleteFile(existingFile.id)
-              } finally {
-                setForceUpdatingStatus(false)
-              }
-            }
-          }
-
-          zip(fileURLsArray, acceptedFiles).forEach(
-            ([fileURLs, acceptedFile]) => {
-              uploadFile(fileURLs as FileURLsProto, acceptedFile as File)
-            }
-          )
-        })
-        .catch((errorMessage: string) => {
-          addFiles(
-            acceptedFiles.map(
-              f =>
-                new UploadFileInfo(f.name, f.size, nextLocalFileId(), {
-                  type: "error",
-                  errorMessage,
-                })
-            )
-          )
-        })
-
       if (rejectedFiles.length > 0) {
         const rejectedInfos = rejectedFiles.map(rejected =>
           getRejectedFileInfo(
@@ -520,19 +583,51 @@ const FileUploader = ({
         )
         addFiles(rejectedInfos)
       }
+
+      if (acceptedFiles.length > 0) {
+        widgetMgr.setElementState(
+          element.id,
+          PENDING_UPLOAD_FILES_STATE_KEY,
+          acceptedFiles
+        )
+        const uploadingInfos = acceptedFiles.map(file =>
+          createUploadingFileInfo(file, nextLocalFileId())
+        )
+        addFiles(uploadingInfos)
+
+        fetchUrlsAndUpload(acceptedFiles, uploadingInfos)
+      }
     },
     [
       addFiles,
-      deleteFile,
       element,
+      fetchUrlsAndUpload,
       filterDirectoryFiles,
       maxUploadSizeInBytes,
       nextLocalFileId,
-      uploadClient,
-      uploadFile,
-      setForceUpdatingStatus,
+      widgetMgr,
     ]
   )
+
+  /**
+   * Resume in-flight uploads after a remount (reconnect can rebuild the tree).
+   */
+  useEffect(() => {
+    if (pendingFiles.length === 0) {
+      return
+    }
+
+    const pendingInfos = filesRef.current.filter(
+      file =>
+        file.status.type === "uploading" &&
+        file.file &&
+        pendingFiles.includes(file.file)
+    )
+
+    fetchUrlsAndUpload(pendingFiles, pendingInfos)
+    // Resume only on mount; pendingFiles comes from the first render's widget state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only remount resume
+  }, [])
 
   return (
     <StyledFileUploader
@@ -559,6 +654,9 @@ const FileUploader = ({
         maxSizeBytes={maxUploadSizeInBytes}
         label={element.label}
         disabled={disabled}
+        // Keep the hidden input enabled across a disconnect so a picker
+        // opened while connected can still deliver files (#11419).
+        inputDisabled={element.disabled}
         acceptDirectory={Boolean(element.acceptDirectory)}
         hasFiles={files.length > 0}
         uploadedFiles={

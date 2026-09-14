@@ -161,7 +161,7 @@ export const createDropHandler =
     }
 
     uploadClient
-      .fetchFileURLs(acceptedFiles)
+      .fetchFileURLs(acceptedFiles, element.id)
       .then((fileURLsArray: FileURLsProto.$Properties[]) => {
         zip(fileURLsArray, acceptedFiles).forEach(
           ([fileURLs, acceptedFile]) => {

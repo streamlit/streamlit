@@ -311,6 +311,16 @@ export class App extends PureComponent<Props, State> {
 
   private readonly uploadClient: FileUploadClient
 
+  /**
+   * File-URL requests waiting for a usable websocket (#11419):
+   * - Flushed when CONNECTED and sessionInfo is set
+   * - Rejected only on DISCONNECTED_FOREVER
+   */
+  private pendingFileURLRequests: Array<{
+    requestId: string
+    files: File[]
+  }> = []
+
   private readonly componentRegistry: ComponentRegistry
 
   private readonly embeddingId: string = generateUID()
@@ -1011,6 +1021,8 @@ export class App extends PureComponent<Props, State> {
       this.hostCommunicationMgr.sendMessageToHost({
         type: "WEBSOCKET_CONNECTED",
       })
+
+      this.processPendingFileURLRequests()
     } else {
       // If we're starting from the CONNECTED state and going to any other
       // state, we must be disconnecting.
@@ -1028,6 +1040,12 @@ export class App extends PureComponent<Props, State> {
 
       // Clean up pending backend operation requests on disconnect
       this.backendOperationClient.cleanup()
+
+      // Keep queued file-URL requests across transient disconnects; reject
+      // them only when we will never reconnect.
+      if (newState === ConnectionState.DISCONNECTED_FOREVER) {
+        this.rejectPendingFileURLRequests()
+      }
     }
 
     if (this.isInitializingConnectionManager) {
@@ -1673,6 +1691,10 @@ export class App extends PureComponent<Props, State> {
         "toast"
       )
     }
+
+    // CONNECTED can precede sessionInfo on first connect; flush requests
+    // that were waiting for sessionInfo.isSet.
+    this.processPendingFileURLRequests()
   }
 
   /**
@@ -2661,9 +2683,32 @@ export class App extends PureComponent<Props, State> {
   }
 
   requestFileURLs = (requestId: string, files: File[]): void => {
-    const isConnected = this.isServerConnected()
-    const isSessionInfoSet = this.sessionInfo.isSet
-    if (isConnected && isSessionInfoSet) {
+    this.pendingFileURLRequests.push({ requestId, files })
+    if (this.isServerConnected() && this.sessionInfo.isSet) {
+      this.processPendingFileURLRequests()
+      return
+    }
+
+    // Queue until CONNECTED and sessionInfo are both ready. A mobile file
+    // picker can drop the websocket while the tab is backgrounded, then
+    // deliver files before reconnect completes (#11419).
+    LOG.info(
+      `Queueing file URL request (isServerConnected: ${this.isServerConnected()}, isSessionInfoSet: ${this.sessionInfo.isSet})`
+    )
+  }
+
+  private readonly processPendingFileURLRequests = (): void => {
+    if (
+      this.pendingFileURLRequests.length === 0 ||
+      !this.isServerConnected() ||
+      !this.sessionInfo.isSet
+    ) {
+      return
+    }
+
+    const queued = this.pendingFileURLRequests
+    this.pendingFileURLRequests = []
+    queued.forEach(({ requestId, files }) => {
       const backMsg = new BackMsg({
         fileUrlsRequest: {
           requestId,
@@ -2673,23 +2718,19 @@ export class App extends PureComponent<Props, State> {
       })
       backMsg.type = "fileUrlsRequest"
       this.sendBackMsg(backMsg)
-    } else {
-      // Reject the request immediately with an error. This can happen on mobile
-      // browsers when the file picker is open for an extended period causing
-      // the WebSocket connection to time out.
-      //
-      // We can't queue and retry because reconnection triggers a script rerun,
-      // which remounts the FileUploader component and invalidates the promise
-      // callback. The user needs to re-select the file after reconnection.
-      LOG.warn(
-        `Cannot request file URLs (isServerConnected: ${isConnected}, isSessionInfoSet: ${isSessionInfoSet})`
-      )
+    })
+  }
+
+  private readonly rejectPendingFileURLRequests = (): void => {
+    const queued = this.pendingFileURLRequests
+    this.pendingFileURLRequests = []
+    queued.forEach(({ requestId }) => {
       this.uploadClient.onFileURLsResponse({
         responseId: requestId,
         errorMsg:
           "Connection lost. Please wait for the app to reconnect, then try again.",
       })
-    }
+    })
   }
 
   handleKeyDown = (keyName: string, keyboardEvent?: KeyboardEvent): void => {

@@ -1577,6 +1577,100 @@ describe("WebsocketConnection", () => {
       expect(client.getBaseUriParts()).toBeUndefined()
     })
   })
+
+  describe("page visibility", () => {
+    const unusedUri = {
+      protocol: "http:",
+      hostname: "127.0.0.1",
+      port: "59999",
+      pathname: "/",
+    } as URL
+
+    const stubDocumentHidden = (hidden: boolean): void => {
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => (hidden ? "hidden" : "visible"),
+      })
+    }
+
+    afterEach(() => {
+      stubDocumentHidden(false)
+    })
+
+    const createHiddenConnectingConnection =
+      async (): Promise<WebsocketConnection> => {
+        stubDocumentHidden(true)
+        const ws = new WebsocketConnection(
+          createMockArgs({
+            enableBypass: true,
+            baseUriPartsList: [unusedUri],
+          })
+        )
+        await vi.advanceTimersByTimeAsync(0)
+        return ws
+      }
+
+    it("does not start the connecting timeout while the tab is hidden", async () => {
+      const ws = await createHiddenConnectingConnection()
+
+      // @ts-expect-error - accessing private property for testing
+      expect(ws.state).toBe(ConnectionState.CONNECTING)
+      // @ts-expect-error - accessing private property for testing
+      expect(ws.wsConnectionTimeout).toBeUndefined()
+      // @ts-expect-error - accessing private property for testing
+      expect(ws.connectingTimeoutPaused).toBe(true)
+
+      ws.disconnect()
+    })
+
+    it("starts a connecting timeout when the tab becomes visible", async () => {
+      const ws = await createHiddenConnectingConnection()
+
+      stubDocumentHidden(false)
+      document.dispatchEvent(new Event("visibilitychange"))
+
+      // @ts-expect-error - accessing private property for testing
+      expect(ws.connectingTimeoutPaused).toBe(false)
+      // @ts-expect-error - accessing private property for testing
+      expect(ws.wsConnectionTimeout).toBeDefined()
+
+      ws.disconnect()
+    })
+
+    it("does not start the connecting timeout on resume while still hidden", async () => {
+      const ws = await createHiddenConnectingConnection()
+
+      document.dispatchEvent(new Event("resume"))
+
+      // @ts-expect-error - accessing private property for testing
+      expect(ws.connectingTimeoutPaused).toBe(true)
+      // @ts-expect-error - accessing private property for testing
+      expect(ws.wsConnectionTimeout).toBeUndefined()
+
+      ws.disconnect()
+    })
+
+    it("defers health pings while the tab is hidden and resumes when visible", async () => {
+      await vi.runAllTimersAsync()
+      await server.connected
+      vi.mocked(globalThis.fetch).mockClear()
+
+      stubDocumentHidden(true)
+      client.reconnect()
+
+      // @ts-expect-error - accessing private property for testing
+      expect(client.state).toBe(ConnectionState.PINGING_SERVER)
+
+      await vi.advanceTimersByTimeAsync(10_000)
+      expect(globalThis.fetch).not.toHaveBeenCalled()
+
+      stubDocumentHidden(false)
+      document.dispatchEvent(new Event("visibilitychange"))
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(globalThis.fetch).toHaveBeenCalled()
+    })
+  })
 })
 
 describe("WebsocketConnection auth token handling", () => {

@@ -35,7 +35,10 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import FileUploader, { Props } from "./FileUploader"
+import FileUploader, {
+  PENDING_UPLOAD_FILES_STATE_KEY,
+  Props,
+} from "./FileUploader"
 
 const createFile = (
   filename = "filename.txt",
@@ -313,9 +316,7 @@ describe("FileUploader widget tests", () => {
     )
 
     const fileElements = screen.getAllByTestId("stFileChip")
-    // We should have 3 files. One will be uploading, the other two will
-    // be in the error state. Rejected files appear first (added synchronously),
-    // accepted files appear last (added after async URL fetch).
+    // Rejected files are added first, then the accepted file as an uploading chip.
     expect(fileElements.length).toBe(3)
 
     const errors = screen.getAllByRole("alert")
@@ -372,10 +373,9 @@ describe("FileUploader widget tests", () => {
     expect(currentFiles[0].textContent).toContain("filename2.txt")
     expect(fileDropZoneInput.files?.[0]).toEqual(secondFile)
     expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
-    // setFileUploaderStateValue should have been called once on init (fromUser false),
-    // once when the first file finished uploading, once when the existing file was
-    // cleared before the replacement, and once for the replacement upload.
-    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(4)
+    // Init, first file uploaded, replacement uploaded. Replacement keeps an
+    // uploading chip so we no longer write an empty widget value in between.
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(3)
   })
 
   it("uploads multiple files, even if some have errors", async () => {
@@ -930,6 +930,113 @@ describe("FileUploader widget tests", () => {
 
     await waitFor(() => {
       expect(screen.queryAllByTestId("stFileChip")).toHaveLength(0)
+    })
+  })
+
+  it("shows an uploading chip before upload URLs resolve", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    props.uploadClient.fetchFileURLs = vi
+      .fn()
+      .mockImplementation(() => new Promise(() => {}))
+
+    render(<FileUploader {...props} />)
+
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
+    await user.upload(fileDropZoneInput, createFile("queued.txt"))
+
+    expect(screen.getByTestId("stFileChipIconSpinner")).toBeInTheDocument()
+    expect(props.uploadClient.uploadFile).not.toHaveBeenCalled()
+  })
+
+  it("resumes a pending file after remount when upload URLs resolve", async () => {
+    const props = getProps()
+    const pendingFile = createFile("pending.txt")
+    let resolveURLs: ((value: FileURLsProto.$Properties[]) => void) | undefined
+    props.uploadClient.fetchFileURLs = vi.fn().mockImplementation(
+      () =>
+        new Promise<FileURLsProto.$Properties[]>(resolve => {
+          resolveURLs = resolve
+        })
+    )
+    props.widgetMgr.setElementState(
+      props.element.id,
+      PENDING_UPLOAD_FILES_STATE_KEY,
+      [pendingFile]
+    )
+
+    const { unmount } = render(<FileUploader {...props} />)
+    expect(screen.getByTestId("stFileChipIconSpinner")).toBeInTheDocument()
+    unmount()
+
+    render(<FileUploader {...props} />)
+    expect(screen.getByTestId("stFileChipIconSpinner")).toBeInTheDocument()
+
+    act(() => {
+      resolveURLs?.([
+        new FileURLsProto({
+          fileId: "pending.txt",
+          uploadUrl: "pending.txt",
+          deleteUrl: "pending.txt",
+        }),
+      ])
+    })
+
+    await waitFor(() => {
+      expect(props.uploadClient.uploadFile).toHaveBeenCalled()
+    })
+  })
+
+  it("replaces an existing uploaded file when remount resume resolves URLs", async () => {
+    const props = getProps()
+    const pendingFile = createFile("replacement.txt")
+    let resolveURLs: ((value: FileURLsProto.$Properties[]) => void) | undefined
+    props.uploadClient.fetchFileURLs = vi.fn().mockImplementation(
+      () =>
+        new Promise<FileURLsProto.$Properties[]>(resolve => {
+          resolveURLs = resolve
+        })
+    )
+    props.widgetMgr.setFileUploaderStateValue(
+      props.element.id,
+      buildFileUploaderStateProto([
+        new FileURLsProto({
+          fileId: "filename.txt",
+          uploadUrl: "filename.txt",
+          deleteUrl: "filename.txt",
+        }),
+      ]),
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: false,
+      }
+    )
+    props.widgetMgr.setElementState(
+      props.element.id,
+      PENDING_UPLOAD_FILES_STATE_KEY,
+      [pendingFile]
+    )
+
+    render(<FileUploader {...props} />)
+    expect(screen.getByText("filename.txt")).toBeInTheDocument()
+    expect(screen.getByTestId("stFileChipIconSpinner")).toBeInTheDocument()
+
+    act(() => {
+      resolveURLs?.([
+        new FileURLsProto({
+          fileId: "replacement.txt",
+          uploadUrl: "replacement.txt",
+          deleteUrl: "replacement.txt",
+        }),
+      ])
+    })
+
+    await waitFor(() => {
+      expect(props.uploadClient.deleteFile).toHaveBeenCalledWith(
+        "filename.txt"
+      )
+      expect(props.uploadClient.uploadFile).toHaveBeenCalled()
     })
   })
 })
