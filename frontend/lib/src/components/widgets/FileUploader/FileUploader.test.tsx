@@ -1039,4 +1039,55 @@ describe("FileUploader widget tests", () => {
       expect(props.uploadClient.uploadFile).toHaveBeenCalled()
     })
   })
+
+  it("replaces an existing file on remount even when the widget is disabled", async () => {
+    const props = getProps({}, { disabled: true })
+    const pendingFile = createFile("replacement.txt")
+    let resolveURLs: ((value: FileURLsProto.$Properties[]) => void) | undefined
+    props.uploadClient.fetchFileURLs = vi.fn().mockImplementation(
+      () =>
+        new Promise<FileURLsProto.$Properties[]>(resolve => {
+          resolveURLs = resolve
+        })
+    )
+    props.widgetMgr.setFileUploaderStateValue(
+      props.element.id,
+      buildFileUploaderStateProto([
+        new FileURLsProto({
+          fileId: "filename.txt",
+          uploadUrl: "filename.txt",
+          deleteUrl: "filename.txt",
+        }),
+      ]),
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: false,
+      }
+    )
+    props.widgetMgr.setElementState(
+      props.element.id,
+      PENDING_UPLOAD_FILES_STATE_KEY,
+      [pendingFile]
+    )
+
+    render(<FileUploader {...props} />)
+
+    act(() => {
+      resolveURLs?.([
+        new FileURLsProto({
+          fileId: "replacement.txt",
+          uploadUrl: "replacement.txt",
+          deleteUrl: "replacement.txt",
+        }),
+      ])
+    })
+
+    await waitFor(() => {
+      expect(props.uploadClient.deleteFile).toHaveBeenCalledWith(
+        "filename.txt"
+      )
+      expect(props.uploadClient.uploadFile).toHaveBeenCalled()
+    })
+  })
 })

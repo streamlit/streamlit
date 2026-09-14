@@ -285,4 +285,22 @@ describe("FileUploadClient in-flight request joining", () => {
     expect(first).not.toBe(second)
     expect(requestFileURLs).toHaveBeenCalledTimes(2)
   })
+
+  it("cleans in-flight widget entries when a joined request fails", async () => {
+    const { requestFileURLs, uploader } = makeJoiningUploader()
+
+    const first = uploader.fetchFileURLs([MOCK_FILE], "widget-1")
+    // @ts-expect-error
+    const pendingReqs = uploader.pendingFileURLsRequests
+    const reqId = pendingReqs.keys().next().value as string
+    uploader.onFileURLsResponse({
+      responseId: reqId,
+      errorMsg: "kaboom",
+    })
+    await expect(first).rejects.toBe("kaboom")
+
+    const second = uploader.fetchFileURLs([MOCK_FILE], "widget-1")
+    expect(second).not.toBe(first)
+    expect(requestFileURLs).toHaveBeenCalledTimes(2)
+  })
 })

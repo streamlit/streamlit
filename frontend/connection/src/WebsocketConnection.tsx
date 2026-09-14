@@ -309,12 +309,12 @@ export class WebsocketConnection {
       this.connectingTimeoutPaused = true
     }
 
-    if (this.state === ConnectionState.PINGING_SERVER) {
-      this.clearReconnectDelayTimeout()
-      if (this.pingRequest) {
-        this.pingRequest.cancel()
-        this.pingRequest = undefined
-      }
+    this.clearReconnectDelayTimeout()
+    if (this.pingRequest) {
+      this.pingRequest.cancel()
+      this.pingRequest = undefined
+      this.pingDeferredWhileHidden = true
+    } else if (this.state === ConnectionState.PINGING_SERVER) {
       this.pingDeferredWhileHidden = true
     }
   }
@@ -330,12 +330,13 @@ export class WebsocketConnection {
       return
     }
 
-    if (
-      this.pingDeferredWhileHidden &&
-      this.state === ConnectionState.PINGING_SERVER
-    ) {
+    if (this.pingDeferredWhileHidden) {
       this.pingDeferredWhileHidden = false
-      void this.pingServer()
+      if (this.state === ConnectionState.PINGING_SERVER) {
+        void this.pingServer()
+      } else if (this.state === ConnectionState.CONNECTING) {
+        void this.pingServerInBackground()
+      }
     }
 
     if (

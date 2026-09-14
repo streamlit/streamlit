@@ -173,6 +173,9 @@ const FileUploader = ({
   const localFileIdCounterRef = useRef(initialNextLocalId)
   const [files, setFiles] = useState<UploadFileInfo[]>(() => initialFiles)
   const filesRef = useRef<UploadFileInfo[]>(files)
+  // False after unmount so URL-fetch callbacks from a previous mount cannot
+  // touch this instance's state; re-set on mount for StrictMode's
+  // double-invoked effects.
   const mountedRef = useRef(true)
   useEffect(() => {
     filesRef.current = files
@@ -181,6 +184,11 @@ const FileUploader = ({
     mountedRef.current = true
     return () => {
       mountedRef.current = false
+      filesRef.current.forEach(file => {
+        if (file.status.type === "uploading") {
+          file.status.abortController.abort()
+        }
+      })
     }
   }, [])
   const [isForceUpdating, setIsForceUpdating] = useState(false)
@@ -427,6 +435,9 @@ const FileUploader = ({
     [element, onUploadComplete, updateFile, uploadClient]
   )
 
+  /**
+   * Start HTTP uploads for each file that still has an uploading chip.
+   */
   const beginUploadsFromUrls = useCallback(
     (
       fileURLsArray: FileURLsProto.$Properties[],
@@ -449,6 +460,9 @@ const FileUploader = ({
     [getFile, uploadFile]
   )
 
+  /**
+   * Mark the given uploading chips as failed after a URL-request error.
+   */
   const markUploadingFilesFailed = useCallback(
     (uploadingInfos: UploadFileInfo[], errorMessage: string): void => {
       uploadingInfos.forEach(info => {
@@ -466,10 +480,13 @@ const FileUploader = ({
 
   /**
    * Delete a file from the backend and client.
+   *
+   * @param allowWhileDisabled - Internal replacements must run even when
+   *   widgets are disabled (open picker after disconnect / host SET_INPUTS_DISABLED).
    */
   const deleteFile = useCallback(
-    (fileId: number): void => {
-      if (disabled) {
+    (fileId: number, allowWhileDisabled = false): void => {
+      if (disabled && !allowWhileDisabled) {
         return
       }
 
@@ -486,11 +503,28 @@ const FileUploader = ({
         void uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
       }
 
+      if (file.file) {
+        const pending =
+          widgetMgr.getElementState<File[]>(
+            element.id,
+            PENDING_UPLOAD_FILES_STATE_KEY
+          ) ?? []
+        widgetMgr.setElementState(
+          element.id,
+          PENDING_UPLOAD_FILES_STATE_KEY,
+          pending.filter(pendingFile => pendingFile !== file.file)
+        )
+      }
+
       removeFile(fileId)
     },
-    [disabled, getFile, removeFile, uploadClient]
+    [disabled, element.id, getFile, removeFile, uploadClient, widgetMgr]
   )
 
+  /**
+   * Request upload URLs for `sourceFiles`, then POST each matching uploading
+   * chip. Replaces the existing file first when the uploader is single-file.
+   */
   const fetchUrlsAndUpload = useCallback(
     (sourceFiles: File[], uploadingInfos: UploadFileInfo[]): void => {
       void uploadClient
@@ -509,7 +543,7 @@ const FileUploader = ({
             if (existingFile) {
               setForceUpdatingStatus(true)
               try {
-                deleteFile(existingFile.id)
+                deleteFile(existingFile.id, true)
               } finally {
                 setForceUpdatingStatus(false)
               }
@@ -585,11 +619,15 @@ const FileUploader = ({
       }
 
       if (acceptedFiles.length > 0) {
-        widgetMgr.setElementState(
-          element.id,
-          PENDING_UPLOAD_FILES_STATE_KEY,
-          acceptedFiles
-        )
+        const previousPending =
+          widgetMgr.getElementState<File[]>(
+            element.id,
+            PENDING_UPLOAD_FILES_STATE_KEY
+          ) ?? []
+        widgetMgr.setElementState(element.id, PENDING_UPLOAD_FILES_STATE_KEY, [
+          ...previousPending,
+          ...acceptedFiles.filter(file => !previousPending.includes(file)),
+        ])
         const uploadingInfos = acceptedFiles.map(file =>
           createUploadingFileInfo(file, nextLocalFileId())
         )

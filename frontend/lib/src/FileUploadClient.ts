@@ -181,7 +181,7 @@ export class FileUploadClient {
       const inFlight = this.inFlightFileURLRequestsByWidget.get(widgetId) ?? []
       inFlight.push({ files, promise })
       this.inFlightFileURLRequestsByWidget.set(widgetId, inFlight)
-      void promise.finally(() => {
+      const cleanupInFlight = (): void => {
         const remaining = (
           this.inFlightFileURLRequestsByWidget.get(widgetId) ?? []
         ).filter(entry => entry.promise !== promise)
@@ -190,7 +190,8 @@ export class FileUploadClient {
         } else {
           this.inFlightFileURLRequestsByWidget.set(widgetId, remaining)
         }
-      })
+      }
+      void promise.then(cleanupInFlight, cleanupInFlight)
     }
 
     return promise

@@ -312,13 +312,15 @@ export class App extends PureComponent<Props, State> {
   private readonly uploadClient: FileUploadClient
 
   /**
-   * File-URL requests waiting for a usable websocket (#11419):
-   * - Flushed when CONNECTED and sessionInfo is set
-   * - Rejected only on DISCONNECTED_FOREVER
+   * File-URL requests waiting for a usable websocket (#11419).
+   * `sent` is true after a BackMsg goes out; a transient disconnect
+   * clears that flag so CONNECTED can resend until `fileUrlsResponse`.
+   * Rejected only on DISCONNECTED_FOREVER.
    */
   private pendingFileURLRequests: Array<{
     requestId: string
     files: File[]
+    sent: boolean
   }> = []
 
   private readonly componentRegistry: ComponentRegistry
@@ -1041,10 +1043,15 @@ export class App extends PureComponent<Props, State> {
       // Clean up pending backend operation requests on disconnect
       this.backendOperationClient.cleanup()
 
-      // Keep queued file-URL requests across transient disconnects; reject
-      // them only when we will never reconnect.
+      // Keep queued and in-flight file-URL requests across transient
+      // disconnects so they can be resent; reject only when we will
+      // never reconnect.
       if (newState === ConnectionState.DISCONNECTED_FOREVER) {
         this.rejectPendingFileURLRequests()
+      } else {
+        this.pendingFileURLRequests.forEach(request => {
+          request.sent = false
+        })
       }
     }
 
@@ -1138,8 +1145,12 @@ export class App extends PureComponent<Props, State> {
         autoRerun: (autoRerun: AutoRerun) => this.handleAutoRerun(autoRerun),
         stopAutoRerun: (stopAutoRerun: StopAutoRerun) =>
           this.handleStopAutoRerun(stopAutoRerun),
-        fileUrlsResponse: (fileURLsResponse: FileURLsResponse) =>
-          this.uploadClient.onFileURLsResponse(fileURLsResponse),
+        fileUrlsResponse: (fileURLsResponse: FileURLsResponse) => {
+          this.pendingFileURLRequests = this.pendingFileURLRequests.filter(
+            request => request.requestId !== fileURLsResponse.responseId
+          )
+          this.uploadClient.onFileURLsResponse(fileURLsResponse)
+        },
         parentMessage: (parentMessage: ParentMessage) =>
           this.handleCustomParentMessage(parentMessage),
         logo: (logo: Logo) =>
@@ -2683,7 +2694,16 @@ export class App extends PureComponent<Props, State> {
   }
 
   requestFileURLs = (requestId: string, files: File[]): void => {
-    this.pendingFileURLRequests.push({ requestId, files })
+    if (this.state.connectionState === ConnectionState.DISCONNECTED_FOREVER) {
+      this.uploadClient.onFileURLsResponse({
+        responseId: requestId,
+        errorMsg:
+          "Connection lost. Please wait for the app to reconnect, then try again.",
+      })
+      return
+    }
+
+    this.pendingFileURLRequests.push({ requestId, files, sent: false })
     if (this.isServerConnected() && this.sessionInfo.isSet) {
       this.processPendingFileURLRequests()
       return
@@ -2698,26 +2718,25 @@ export class App extends PureComponent<Props, State> {
   }
 
   private readonly processPendingFileURLRequests = (): void => {
-    if (
-      this.pendingFileURLRequests.length === 0 ||
-      !this.isServerConnected() ||
-      !this.sessionInfo.isSet
-    ) {
+    if (!this.isServerConnected() || !this.sessionInfo.isSet) {
       return
     }
 
-    const queued = this.pendingFileURLRequests
-    this.pendingFileURLRequests = []
-    queued.forEach(({ requestId, files }) => {
+    this.pendingFileURLRequests.forEach(request => {
+      if (request.sent) {
+        return
+      }
+
       const backMsg = new BackMsg({
         fileUrlsRequest: {
-          requestId,
-          fileNames: files.map(f => f.name),
+          requestId: request.requestId,
+          fileNames: request.files.map(f => f.name),
           sessionId: this.sessionInfo.current.sessionId,
         },
       })
       backMsg.type = "fileUrlsRequest"
       this.sendBackMsg(backMsg)
+      request.sent = true
     })
   }
 
