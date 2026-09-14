@@ -117,24 +117,42 @@ accepted value must run required / `validate` **before** that short-circuit. An
 empty default is the last accepted value, so type-then-clear would otherwise
 skip the required error.
 
+Do **not** bypass the `dirty === false` / unchanged-value early return just to
+paint on tab-through. Unedited empty blur/Enter (focus then Tab on first render)
+does not show the required error. The error appears after the user empties a
+previously accepted value, after type-then-clear (gates before the last-accepted
+short-circuit), or on form submit.
+
+`live=True` empty debounce is a blocked empty commit (last accepted kept, no
+rerun) but does **not** paint the required error while focused. Paint on blur /
+Enter / submit. `handleClear` (search X) must call the same `validateBeforeCommit`
+path — today's empty skip that commits `""` is the hole.
+
+`on_change="ignore"` composition applies only where that mode already exists
+(`st.text_input`, `st.number_input`, `st.selectbox`, `st.multiselect` in wave 1).
+Do not add ignore-mode proto/runtime plumbing on `st.text_area` /
+`st.date_input` / `st.time_input` / `st.datetime_input` as part of `required`.
+
 Show `This field is required` only while `element.required` is true. A keyed
 widget can toggle `required` `True → False` without remounting; do not leave a
 sticky `hasRequiredError` (or equivalent) painted after the proto drops
 `required`. Gate `displayedError` / `aria-invalid` on the current proto flag.
 
 A `true` result still goes through the existing commit path, including
-`on_change="ignore"`. A `false` result must **not** overwrite a held `"ignore"`
-value with empty or invalid: keep the last accepted pending value and set the
-error on local UI only.
+`on_change="ignore"` where that mode exists. A `false` result must **not**
+overwrite a held `"ignore"` pending value with empty or invalid: keep the last
+accepted pending value and set the error on local UI only.
 
 Outside a form, a `false` result skips `commitWidgetValue` / `setValueWithSource`
-(no rerun). Inside a form, blur/Enter stages into form pending state without
-running the required check — the same as `validate` (`TextInput.handleBlur` calls
-`commitWidgetValue()`, and `useOnInputChange` writes form pending on every
-keystroke). The form-submit validator is what blocks the backend commit.
-"Local field only" means "no backend commit," not "no `WidgetStateManager` write":
-widgets without a separate `uiValue` lose the user's edit if the form-pending
-write is skipped.
+(no rerun). Inside a form, blur and Enter-without-submit stage into form pending
+state without running the required check — the same as `validate`
+(`TextInput.handleBlur` calls `commitWidgetValue()`, and `useOnInputChange`
+writes form pending on every keystroke). When `enter_to_submit=True` and an
+enabled submit button exists, Enter calls `widgetMgr.submitForm` and **must**
+run the required validator. The form-submit validator is what blocks the
+backend commit. "Local field only" means "no backend commit," not "no
+`WidgetStateManager` write": widgets without a separate `uiValue` lose the
+user's edit if the form-pending write is skipped.
 
 When `required=True`, hide the search X and the None-default number/date/time X
 (see the product spec). If `handleClear` still runs, do not commit `""`.
@@ -199,22 +217,38 @@ date-time range errors) and a straightforward empty-commit + form-submit gate.
    next to range errors. Hide the None-default clear X when `required=True` (keyboard
    emptying while editing stays). For range `st.date_input` (stays in wave 1: same widget):
 
-   - Keep the incomplete range in DateInput local state. Today's calendar `value`
-     is the committed widget state, so skipping the `setValueWithSource` write
-     without a local display snaps back to the last committed parent value and
-     the start date is lost.
-   - Skip the widget-manager write until both bounds exist.
+   - Keep the incomplete range in DateInput local state **when `required=True`**.
+     Today's calendar `value` is the committed widget state, so skipping the
+     `setValueWithSource` write without a local display snaps back to the last
+     committed parent value and the start date is lost. When `required=False`,
+     keep today's one-bound commit; do not buffer locally or skip the
+     widget-manager write.
+   - Skip the widget-manager write until both bounds exist **only when
+     `required=True`**.
    - On blur/close **outside** a form, fail required if the range is still
      incomplete (no backend commit).
    - Inside a form, blur/close does not run the required check (same as other
-     typed widgets). The form-submit validator reads **local/staged** bounds, not
-     `WidgetStateManager`. Submit fails required if either bound is missing and
-     must not serialize a previously committed `(start, end)`.
+     typed widgets). The form-submit validator must read **currently displayed**
+     bounds, not `WidgetStateManager`. Those bounds live in child-local
+     `displayStart` / `displayEnd` on `RangeDateInput`; the parent only sees the
+     last committed pair. Add an explicit parent-child staging interface (ref
+     or callback) so the validator can read the displayed bounds. Submit fails
+     required if either bound is missing and must not serialize a previously
+     committed `(start, end)` even when the user has not blurred.
 4. **`st.selectbox` / `st.multiselect`** — lock last value (hide/disable clear X /
    last remaining chip), add the same error chrome typed widgets already have,
-   form-submit gate when still empty.
+   form-submit gate when still empty. Cover every last-value remove path on
+   multiselect (clear-all, chip remove, Backspace/Delete, option toggle) —
+   they are separate handlers in `Multiselect.tsx`.
 
-Wave 1 unblocks #13497 and most of #7165 (text/select form fields).
+Wave 1 unblocks #13497 and most of #7165 (text/select form fields). Wave-1
+docstrings must describe emptiness and the commit/submit gate (first run can
+still be empty; form submit is gated; last-value lock only where a
+clear/deselect affordance exists). Do **not** copy the current `st.pills`
+docstring (single-select deselect locking; `required=True` +
+`selection_mode="multi"` raises). Reuse that wording only as a starting point
+for the pills/segmented follow-up, and update those docs when multi-select
+`required` becomes legal.
 
 **Follow-up — option groups and file-like**
 
@@ -237,19 +271,28 @@ product spec: lock last-file delete; keep camera/audio Clear but do not commit
 - Camera/audio: Clear is a typed-widget empty edit. Form submit reads **local/staged**
   capture, not `WidgetStateManager`:
 
-  - **Clear:** local empty, required error, do not commit `None`.
+  - **Clear outside a form:** blocked empty commit — show the required error, do
+    not commit `None`.
+  - **Clear inside a form:** local empty edit, no error until submit (same as
+    other typed widgets). The form-submit validator reads that local empty and
+    fails required; it must not serialize the previous file.
   - **Recapture:** local non-empty; the validator flushes via
     `setFileUploaderStateValue` **before** returning true — the same as `TextInput`
     writing dirty `uiValue` in its form-submit validator — so `submitForm`
     serializes the new file, not the previous one.
-  - **Recapture upload:** in-progress from first paint of the new capture until a
-    *successful* upload (`files[].status.type === "uploaded"`), not merely
-    `status === "ready"`. `CameraInput` also returns `"ready"` after a failed
-    upload (`files[].status.type === "error"`), and `toWidgetState` then drops
-    those files because it keeps only `"uploaded"`. `AudioInput` can still display
-    a local recording when no uploaded-file state exists. Disable submit for that
-    window; do not treat the widget as required-empty (the new capture is already
-    visible). Today's `formsWithUploads` starts too late: only once `uploadFile` /
+  - **Recapture upload:** in-progress from **recording/capture start** (not only
+    first paint of the new capture) until a *successful* upload
+    (`files[].status.type === "uploaded"`), not merely `status === "ready"`.
+    `AudioInput.startRecording` already clears the previous local recording
+    (`handleClear({ updateWidgetManager: false })`) before a new capture is
+    painted, while widget state still holds the previous file — gating only from
+    first paint leaves an Enter/`submitForm` window for stale audio. `CameraInput`
+    also returns `"ready"` after a failed upload (`files[].status.type === "error"`),
+    and `toWidgetState` then drops those files because it keeps only `"uploaded"`.
+    `AudioInput` can still display a local recording when no uploaded-file state
+    exists. Disable submit for that window; do not treat the widget as
+    required-empty (the new capture is already visible, or recording has started).
+    Today's `formsWithUploads` starts too late: only once `uploadFile` /
     `addFile` runs, after `urltoFile` / `fetchFileURLs`.
   - **After upload succeeds:** enable submit and run the flush above.
   - **Failed/cancelled recapture:** stay uncommittable; do not restore or submit
@@ -263,12 +306,22 @@ product spec: lock last-file delete; keep camera/audio Clear but do not commit
   gate (or an equivalent validator covering every submit path) so a replacement
   in flight cannot submit the stale committed file via Enter.
 
+  Today's `setFormsWithUploadsInProgress` **replaces the entire shared set**, so
+  independent audio/file-upload writers can clear each other's gate. The central
+  gate must be owner-aware or reference-counted (or validator-only coordination)
+  so concurrent uploads cannot drop another widget's in-flight flag.
+
   (`WidgetStateManager` remains the source of truth for `st.file_uploader`, where
   last-file delete is locked so local UI and widget state cannot diverge to empty.)
 - File uploader: lock deleting the last committed file when `required=True`; a new drop
-  that replaces still commits. Register a form-submit validator that fails when
-  `WidgetStateManager` is empty and `required=True`. Last-file lock also avoids the
-  race where local UI is empty but widget state still holds the previous file.
+  that replaces still commits. A single-file replacement currently deletes the
+  committed file before the replacement upload succeeds (`replaceExistingFileIfNeeded`
+  → `deleteFile`). `toWidgetState` keeps only `"uploaded"` files, so a failed
+  replacement can commit empty. Retain the old committed file/state until the
+  replacement succeeds (inside and outside forms). Register a form-submit validator
+  that fails when `WidgetStateManager` is empty and `required=True`. Last-file lock
+  also avoids the race where local UI is empty but widget state still holds the
+  previous file.
 - In-progress upload: for `st.file_uploader`, required-empty is
   `WidgetStateManager` empty **and** no in-flight local files. Do not treat
   `status === "updating"` alone as empty (a multi-file widget can be updating
@@ -289,20 +342,31 @@ include `(required)` in the accessible name.
 
 **Wave 1**
 
-- Frontend unit: empty commit blocked / allowed; `validate` still skipped for `""` /
-  `null` when `required=False`; whitespace-only still runs `validate` when
+- Frontend unit: empty commit blocked / allowed; unedited empty blur/Enter
+  (`dirty === false`) does not show the required error; `validate` still skipped for
+  `""` / `null` when `required=False`; whitespace-only still runs `validate` when
   `required=False` and is a required error when `required=True`; required error vs
   validate error; form submit runs all validators; `clear_on_submit` not invoked on
   failure; search X and None-default number/date/time X are hidden when required;
   type-then-clear from an empty default still shows the required error (gates run
-  before the last-accepted short-circuit); keyed widget `required` `True → False`
+  before the last-accepted short-circuit); `live=True` + `required=True`: empty live
+  debounce is blocked (last accepted kept, no rerun) and does not paint the
+  required error while focused; `handleClear` does not bypass `validateBeforeCommit`;
+  keyed widget `required` `True → False`
   after a failed empty commit clears the required error and `aria-invalid`;
-  selectbox/multiselect last value is locked; range `st.date_input` first bound is visible with no rerun and
+  selectbox/multiselect last value is locked on every remove path (clear-all, chip
+  remove, Backspace/Delete, option toggle); range `st.date_input` first bound is visible with no rerun and
   no required error until outside-form blur/close or form submit; re-edit a complete
-  required range and submit after only the first bound fails required and does not
-  send the previous bounds; `on_change="ignore"` + `required=True`: a passing
+  required range and submit after only the first bound with **no prior blur** fails
+  required and does not send the previous bounds; `required=False` range still
+  commits a one-bound value (no local-buffer regression); `on_change="ignore"` +
+  `required=True` on widgets that already support ignore: a passing
   unflushed edit, then clear, keeps the pending value (error on local UI) and does
   not flush empty on the next rerun.
+- Accessibility: visible `(required)` marker; `aria-required`; accessible-name
+  fallback on roles that do not support `aria-required`; `aria-invalid` /
+  `aria-describedby` transitions. `role="alert"` alone does not cover the product
+  a11y contract.
 - Python: proto field set on wave-1 widgets; `required` is in the element ID
   kwargs when there is no `key`, and not in `key_as_main_identity`.
 - Public typing tests (`lib/tests/streamlit/typing/`) for every wave-1 widget.
@@ -318,11 +382,15 @@ include `(required)` in the accessible name.
 
 - Frontend unit: file/camera/audio clear does not commit empty when required;
   last file-uploader delete is locked; camera/audio in a form: Clear after a
-  capture blocks submit and does not send the previous file; recapture then
+  capture blocks submit and does not send the previous file (no required error
+  until submit); recapture then
   submit sends the new file (validator flushes local capture before returning
-  true); recapture upload in-progress (including before `uploadFile`) blocks
-  submit without a required-empty error; failed or cancelled recapture stays
-  uncommittable and does not restore or submit the prior capture; Enter during a
+  true); recapture upload in-progress (including from recording start, before
+  `uploadFile`) blocks submit without a required-empty error; Enter during active
+  recording does not submit stale audio; failed or cancelled recapture stays
+  uncommittable and does not restore or submit the prior capture; failed
+  file-uploader replacement retains the old committed file (inside and outside
+  forms); concurrent audio + file uploads do not clear each other's gate; Enter during a
   replacement upload does not submit the stale committed file (covers
   `submitForm`, not only `FormSubmitButton`); first-file in-flight on an empty
   required `st.file_uploader` blocks submit without a required-empty error;
