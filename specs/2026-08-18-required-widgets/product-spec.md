@@ -76,52 +76,26 @@ if submitted:
 ### Relationship to `validate`
 
 [`specs/2025-12-03-text-input-validation`](../2025-12-03-text-input-validation/product-spec.md)
-shipped client-side regex `validate` on `st.text_input` (server-side callables are still a
-follow-up). That spec **explicitly skipped empty values** and deferred requiredness:
+shipped client-side regex `validate` on `st.text_input` and **explicitly skipped empty
+values**:
 
 > If the input is the empty string, validation is skipped. Requiredness is handled
 > separately by a future `required` parameter.
 
-Current behavior (already implemented):
-
-- Empty `""` / `None` **bypasses** `validate` and is committed.
-- Non-empty values that fail the regex are **not** committed: error state, no rerun.
-- Inside a form, `widgetMgr.addFormSubmitValidator` runs on submit (no short-circuit, so
-  every invalid field can show an error). Failed validation blocks submit and
-  `clear_on_submit`.
-- Specialized types (`type="email"` / `"url"`) install a default `validate` rule, which
-  also skips empty — so `st.text_input("Email", type="email")` still accepts a blank field.
-
-`required` is that missing emptiness check, using the same commit/form-submit pipeline.
+`required` is that emptiness check, on the same commit/form-submit pipeline.
+`type="email"` / `"url"` still accept a blank field until `required=True`. See
+[`required` and `validate`](#required-and-validate).
 
 ### Relationship to `on_change="ignore"`
 
 [`specs/2026-04-14-on-change-modes`](../2026-04-14-on-change-modes/product-spec.md)
-lets stateful widgets suppress the rerun on **every** value change
-(`on_change="ignore"`). That is a rerun policy, not an emptiness check.
+is a rerun policy, not an emptiness check. `required` only blocks **empty** commits.
 
-| | `required=True` | `on_change="ignore"` |
-| --- | --- | --- |
-| Job | Emptiness: block empty commits (error UI + form-submit gate) | Rerun policy: hold any change in the frontend until something else reruns |
-| Valid non-empty edit | Normal commit / rerun | No rerun; flush later |
-| Empty edit | Blocked; error; last accepted value kept | Held as empty and sent on the next rerun |
-| Never-filled field + a button | Button still reruns; Python sees the empty default (`if name:` still required) | Same — `"ignore"` does not invent form-submit gating |
-
-They compose; `required` and `validate` run **before** the rerun policy:
-
-- **Blocked** empty or invalid: error state, no commit, nothing new to flush. Keep
-  the last **accepted** value — including an unflushed `"ignore"` pending value.
-  Typing `"world"` with `"ignore"` then clearing must not replace that pending
-  `"world"` with `""`.
-- **Passing** non-empty: commit follows `on_change` (`"rerun"`, a callable, or
-  `"ignore"`).
-
-Inside a form, `"ignore"` is mostly redundant with form batching; `required` still
-gates submit. Outside a form, `"ignore"` plus a button is **not** a form: Save does
-not run the required check on never-touched fields.
-
-A blocked empty commit is not a widget value change, so a callable `on_change` does
-not fire and `"ignore"` does not take an empty pending value.
+They compose: `required` and `validate` run first. A blocked empty value must not
+replace an unflushed `"ignore"` pending value (typing `"world"` then clearing keeps
+`"world"`). A passing commit follows `on_change` (`"rerun"`, a callable, or
+`"ignore"`). `"ignore"` plus a button is not form-submit gating — a never-filled
+field still returns the empty default (`if name:`).
 
 ## Proposal
 
@@ -133,24 +107,9 @@ st.text_input(..., *, required: bool = False)
 
 Keyword-only `required: bool = False` on every input widget that can be empty (see
 [Affected widgets](#affected-widgets)). Same name and meaning as
-`st.pills(..., required=True)` and `st.column_config.*.required`.
-
-**Option 1: Boolean `required`** ✅ PREFERRED
-
-- Pros: Matches HTML, column config, and shipped pills/segmented_control. No third state.
-- Cons: Custom error copy needs a later parameter (see [Out of scope](#out-of-scope-future-work)).
-
-**Option 2: `required: bool | str = False`** (custom message as a string)
-
-- Pros: `required="Enter your work email."` is a nice progressive disclosure.
-- Cons: Overloads a boolean with a message; pills already ship `bool`. Defer until we
-  know custom copy is needed — `validate=(regex, message)` already covers content copy.
-
-**Option 3: `clearable` instead of `required`**
-
-- Pros: Describes the X-button on selectbox/number_input.
-- Cons: Does not describe form gating or text inputs (users can always delete text).
-  Rejected; `required` is the user-facing concept, clear affordances follow from it.
+`st.pills(..., required=True)` and `st.column_config.*.required`. Custom message
+strings and renaming the parameter to `clearable` are
+[rejected](#alternatives-considered).
 
 ### Affected widgets
 
@@ -167,36 +126,25 @@ omitted — a no-op `required` is worse than leaving the parameter off.
 | `st.pills`, `st.segmented_control` | `None` / `[]` | Yes (single-select only) | Follow-up |
 | `st.file_uploader`, `st.camera_input`, `st.audio_input` | `None` or `[]` | No | Follow-up |
 
-In range-mode `st.date_input`, `required` treats a complete `(start, end)` as non-empty. `()`, a missing bound, and a one-element `tuple[date]` are empty. When `required=False`, today's partial-range commit is unchanged.
+In range-mode `st.date_input`, a complete `(start, end)` is non-empty. `()`, a missing
+bound, and a one-element `tuple[date]` are empty. When `required=False`, today's
+partial-range commit is unchanged.
 
-**Not in scope:** `st.checkbox` / `st.toggle` (boolean, not emptiness), sliders and
-`st.color_picker` (always a value), buttons, `st.chat_input` (trigger widget),
-`st.feedback` (sentiment/rating control; empty means "no opinion yet," which is a
-valid response — requiring a rating is a "must rate" question like checkbox
-"must be checked," not a missing form value), `st.data_editor` (column `required`
-already exists).
+**Not in this spec:** widgets that cannot be empty (`st.slider`, `st.color_picker`,
+buttons) and meanings other than emptiness (`st.checkbox` / `st.toggle`,
+`st.chat_input`, `st.feedback`, widget-level `st.data_editor` — columns already
+have `required`). See [Out of scope](#out-of-scope-future-work).
 
 ### Rollout
 
-Specify the full API above; ship it in two waves so the first PRs reuse existing
-invalid-field chrome and a simple empty-commit gate. Do not leave a permanently
-partial implementation — follow-up widgets stay in this spec, not "out of scope."
+The table above is the full API. Ship wave 1 first so PRs reuse existing invalid-field
+chrome. Follow-up widgets stay in this spec, not "out of scope."
 
-**Wave 1** — typed widgets plus clearable selects: `st.text_input`, `st.text_area`,
-`st.number_input`, `st.date_input`, `st.time_input`, `st.datetime_input`,
-`st.selectbox`, `st.multiselect`. Unblocks #13497 and most of #7165 (text/select
-form fields). Range `st.date_input` stays here (same widget as single-date); it is
-the fiddliest piece of this wave. Selectbox/multiselect do not already have the
-text-input error chrome, but they share a clear-X empty gesture and a contained
-select control — unlike radio, which is an option group with no field chrome.
-
-**Follow-up** — option groups and file-like widgets: `st.radio`; `st.pills` /
-`st.segmented_control` (form gate, `(required)` marker, error if still empty,
-allow multi-select `required`); `st.file_uploader`, `st.camera_input`,
-`st.audio_input`. Pills/segmented already ship `required` for single-select; this
-wave closes gaps (including the 1.56 form-submit hole) rather than adding the
-parameter. File-like widgets have upload/Clear state that does not share the
-text-input commit path. Details in the [tech spec](./tech-spec.md).
+Wave 1 is typed widgets plus clearable selects — unblocks #13497 and most of #7165.
+Range `st.date_input` stays in wave 1 (same command as single-date). Follow-up is
+option groups (`st.radio`; pills/segmented form gate, `(required)` marker, multi-select
+`required`) and file-like widgets. Implementation order is in the
+[tech spec](./tech-spec.md).
 
 ### Core behavior
 
@@ -216,21 +164,24 @@ This is **not** "the script waits until the field is filled." Commands stay non-
 | User commits a non-empty value | No | Normal commit / submit. Then `validate` runs if configured. |
 
 Do **not** disable `st.form_submit_button`. Let the user click, then show field errors.
-Disabled submit is confusing (why can't I click?).
+Do **not** raise if `required=True` is used outside a form.
 
-Do **not** raise if `required=True` is used outside a form. The same parameter must work
-in forms, fragments, dialogs, and standalone widgets.
+`required=True` does **not** change defaults. `st.selectbox(options)` still starts on
+the first option; `st.number_input()` still starts at `min`. Empty required select:
+
+```python
+st.selectbox("Country", countries, index=None, required=True)
+```
 
 ### `required` and `validate`
 
 One pipeline, two checks, required first. A value that passes both is committed;
-whether that commit reruns the app is `on_change`'s job (`"rerun"` / callable /
-`"ignore"`):
+whether that commit reruns the app is `on_change`'s job:
 
 | Current value | `required` | `validate` | Commit / form submit |
 | --- | --- | --- | --- |
 | `""` / `None` | `False` (default) | any | Allowed; `validate` is skipped (today's behavior) |
-| Whitespace-only (`"   "`) | `False` (default) | any | `required` passes; `validate` runs on the raw string and decides (today's behavior) |
+| Whitespace-only (`"   "`) | `False` (default) | any | `required` passes; `validate` runs on the raw string (today's behavior) |
 | `""` / `None` / whitespace-only | `True` | any | **Blocked.** Message: `This field is required`. `validate` does not run |
 | Non-empty after strip, invalid | any | regex / tuple | **Blocked.** `validate` message (today's behavior) |
 | Non-empty after strip, valid | any | regex / tuple / none | Allowed |
@@ -242,7 +193,6 @@ st.text_input("Email", type="email")
 # Required email: empty is not OK, "foo" is not OK, "a@b.co" is
 st.text_input("Email", type="email", required=True)
 
-# Required and custom format
 st.text_input(
     "Username",
     required=True,
@@ -253,12 +203,6 @@ st.text_input(
 )
 ```
 
-Whitespace-only strings on `st.text_input` / `st.text_area` count as empty **for
-`required`** (`"   "` + `required=True` → required error, not a `validate` error). They
-do **not** count as empty for the `validate` skip: when `required=False`, `"   "` still
-runs the regex (today only `""` / `None` skip). `validate` still sees the raw value when
-the field is non-empty after strip.
-
 Like `validate`, this is **client-side**. It can be bypassed. It is not a security
 boundary; app code that cares must still check the Python value after submit.
 
@@ -266,85 +210,45 @@ boundary; app code that cares must still check the Python value after submit.
 
 Widgets differ in whether an empty UI is a reasonable in-progress state.
 
+When `required=True`, **hide every explicit empty-commit control**: search X,
+None-default number/date/time X, selectbox X, last multiselect/pills chip, last
+file-uploader delete. Those buttons exist to commit empty. Keyboard emptying
+(backspace, select-all + delete) stays on typed widgets.
+
 **Typed widgets** (`text_input`, `text_area`, `number_input`, `date_input`, `time_input`,
-`datetime_input`): the user must be able to empty the field **while editing**
-(backspace, select-all + delete). Empty UI is allowed. Empty *commit* is not.
+`datetime_input`): empty UI while editing is allowed; empty *commit* is not.
 Matches `validate`.
 
-Hide every **explicit empty-commit control** when `required=True`. That includes
-the search X (`type="search"`) and the None-default X on number/date/time/datetime.
-Those buttons exist to commit empty; showing them and then failing required is a
-trap. Search is not a trigger widget (`st.chat_input` is). Select-all + delete
-already empties a search field. Keyboard emptying stays; the dedicated X does not.
-
-- Backspace / select-all-to-empty updates the local field only.
 - Outside a form, on blur / Enter / change: if empty, show the error and do not send a
-  value. Inside a form, blur/Enter stages into form pending state without running the
-  required check (same as `validate`); the error is shown at submit.
-- Incomplete range `st.date_input` while the picker is still open is in-progress
-  editing, not a failed commit. Keep the incomplete range in local UI and do not
-  commit. No required error when the user picks the first bound. Outside a form,
-  blur or calendar close of an incomplete range shows the required error.
-  Inside a form, that error waits until submit (same as other typed empty
-  fields). Re-editing a complete range down to one bound must not submit the
-  previous `(start, end)`.
+  value. Inside a form, blur/Enter stages into form pending without the required
+  check; gating happens at submit.
+- Incomplete range `st.date_input` is empty. Keep the incomplete range in local UI
+  while the picker is open (no error, no commit). Error timing matches other typed
+  widgets (outside-form blur/close vs in-form submit). Re-editing a complete range
+  down to one bound must not send the previous `(start, end)`. Implementation is in
+  the [tech spec](./tech-spec.md).
 
 **Selection widgets** (`selectbox`, `radio`, `multiselect`, `pills`, `segmented_control`):
 empty is "no choice," not an in-progress edit. Once a value is selected,
-`required=True` prevents returning to empty (hide/disable the clear control;
-ignore click-to-deselect; do not remove the last multiselect/pills chip).
-Wave 1 ships `selectbox` / `multiselect`. `radio` and pills/segmented gaps are
-[follow-up](#rollout).
+`required=True` prevents returning to empty.
 
 If the widget still starts empty (`index=None` / `default=None`):
 - Inside a form, submit is gated until the user picks something.
-- Outside a form there is no empty-commit gesture until the user selects
-  and then tries to clear, so `required` is a label plus "cannot clear
-  after the first choice." Downstream code still uses `if country:`.
+- Outside a form, `required` is a label plus "cannot clear after the first choice."
+  Downstream code still uses `if country:`.
 
 This is the shipped pills/segmented single-select behavior (`disallowEmptySelection`),
-extended to:
-
-- form-submit gating when the widget is *still* empty
-- the error state + `(required)` label when empty is possible
-- **multi-select** pills/segmented_control and `st.multiselect`: at least one item
-  ([#14900](https://github.com/streamlit/streamlit/issues/14900)). Drop the current
-  `required=True` + `selection_mode="multi"` exception.
+plus form-submit gating, the `(required)` label, and **multi-select** "at least one"
+([#14900](https://github.com/streamlit/streamlit/issues/14900)).
 
 **File-like widgets** (`file_uploader`, `camera_input`, `audio_input`): [follow-up](#rollout).
-These **do** commit empty today (file delete, Clear photo, clear recording).
-`required=True` must block a later empty commit, same as typed/selection widgets —
-not only add a label and form gate.
+These **do** commit empty today. `required=True` blocks a later empty commit.
 
-- **Camera / audio:** keep Clear. Unlike search, there is no select-all / backspace
-  path — Clear is how the user recaptures. Treat it as a typed-widget empty edit:
-  Clear updates local UI, shows the required error, and does **not** commit `None`.
-  A new capture commits. Users must be able to recapture. Inside a form: Clear then
-  submit fails required (does not send the previous capture); recapture then submit
-  sends the new capture.
-  While a recapture is still uploading, submit stays blocked and the required error
-  is not shown. A failed or cancelled recapture stays uncommittable (do not restore
-  or submit the prior capture). Implementation details (staged local state vs widget
-  manager, when the upload window starts, and gating every submit path) live in the
-  [tech spec](./tech-spec.md).
-- **File uploader:** once at least one file is committed, `required=True` **locks
-  deleting the last file** (hide/disable that delete control), like selection widgets.
-  Replacing via a new drop still works. Form submit is gated while the widget is still
-  empty (`None` / `[]`).
-- **In-progress upload:** an upload in flight is not empty. That includes a first
-  file on an empty required uploader: in-flight local files are not
-  required-empty. Gate **every** form submit path for that window (submit button,
-  its shortcut, and Enter / `submitForm`) — `formsWithUploads` today only
-  disables `FormSubmitButton`. This is not a `This field is required` click path.
-  After a **successful** upload, required is evaluated on the committed files.
-
-`required=True` does **not** change defaults. `st.selectbox(options)` still starts on
-the first option; `st.number_input()` still starts at `min`. To get an empty required
-selectbox:
-
-```python
-st.selectbox("Country", countries, index=None, required=True)
-```
+- **File uploader:** lock deleting the last file. A new drop still replaces. Form
+  submit is gated while empty (`None` / `[]`). An upload in flight is not empty.
+- **Camera / audio:** keep Clear — there is no select-all path; Clear is how the
+  user recaptures. Clear does not commit `None`; a new capture commits. Recapture
+  and upload gating live in the [tech spec](./tech-spec.md).
 
 ### Design
 
@@ -393,10 +297,6 @@ means the same thing everywhere:
 | No `(required)` label | Add the marker |
 | Empty required widget can still submit a form | Gate form submit; show error |
 | `required=True` + `selection_mode="multi"` raises | Allow it: at least one selection |
-
-Auto-selecting the first option when `required=True` and `default` is unset was
-considered for tabs and rejected: it makes "required but empty until the user picks"
-impossible, which forms need.
 
 ### Examples
 
@@ -454,7 +354,7 @@ if country:
     st.write(f"Selected {country}")
 ```
 
-**File upload in a form**
+**File upload in a form** (follow-up)
 
 ```python
 with st.form("upload"):
@@ -465,14 +365,10 @@ with st.form("upload"):
 
 ### Edge cases
 
-- **First run / empty default.** No error until the user attempts a commit or form
-  submit. Return types do **not** narrow (e.g. `st.selectbox(index=None, required=True)`
-  stays `V | None`) because the first run can still be empty. Existing pills overloads
-  that narrow when `required=True` and `default` is set stay as they are. Once
-  `required=True` is legal with `selection_mode="multi"`, the multi overload still
-  returns `list[V]` with no non-empty guarantee.
-- **Pre-filled required field.** `st.text_input("Name", value="Ada", required=True)`
-  starts valid. Clearing it and committing is blocked.
+- **Return types do not narrow.** `st.selectbox(index=None, required=True)` stays
+  `V | None` because the first run can still be empty. Existing pills overloads that
+  narrow when `required=True` and `default` is set stay as they are. Multi-select
+  `required` still returns `list[V]` with no non-empty guarantee.
 - **`disabled=True`.** A disabled empty required field can trap a form. Do not raise
   (disabled is often toggled dynamically); document the footgun.
 - **`label_visibility`.** `(required)` is omitted when the label is hidden or
@@ -487,75 +383,54 @@ with st.form("upload"):
   `validate`). The error appears on the next user commit/submit, not on the
   programmatic write.
 - **AppTest / tampered client.** Client-side only; tests can still set empty values.
-- **`on_change`.** A blocked empty commit is not a value change: a callable does not
-  fire, and `on_change="ignore"` does not take an empty pending value. See
-  [Relationship to `on_change="ignore"`](#relationship-to-on_changeignore).
 - **Widget identity.** Changing `required` must not reset the widget (same as
   `disabled`). Do not hash `required` into the element ID.
-- **`st.form(clear_on_submit=True)`.** Clear only runs after a successful submit.
-- **Range `st.date_input`.** An incomplete range counts as empty. With
-  `required=True`, the intermediate single-date commit (which reruns the app today)
-  is suppressed until both bounds are selected. Error timing matches typed widgets
-  (picker-open first bound is in-progress; outside-form blur/close vs in-form
-  submit). Form submit uses the local/staged bounds: an incomplete re-edit of a
-  previously complete range fails required and does not send the old pair.
-- **`type="email"` / `"url"` without `required`.** Unchanged: empty still allowed.
 
 ## Out of Scope (Future Work)
 
-- **Custom required message** (`required="Enter your name"`) — wait for demand; default
-  copy is enough for v1.
-- **Server-side enforcement** of requiredness / callable `validate` (the unshipped half
-  of the text-input validation spec). When callables ship, `required` still runs
-  client-side first so empty values never hit the callable.
+- **Custom required message** (`required="Enter your name"`).
+- **Server-side enforcement** / callable `validate`. When callables ship, `required`
+  still runs client-side first so empty values never hit the callable.
 - **`required` on checkbox/toggle** ("must be checked") — different meaning than
   emptiness.
 - **`st.chat_input`** — trigger widget; empty submit is a separate interaction model.
 - **`st.feedback`** — empty means no opinion yet, not a missing data field.
-  Requiring a rating is a distinct "must rate" product (like checkbox must-be-checked)
-  and can be added later if demand appears.
 - **Widget-level `required` on `st.data_editor`** — columns already have it.
-- **Native HTML `required` / browser bubble** — Streamlit forms are not native `<form>`
-  submits; `validate` already rejected React Aria/native constraint validation for this
-  reason. Use Streamlit's error chrome + `aria-required`.
-- **Auto-selecting a default** when `required=True` and no `default`/`index` is set.
-- **`min_selections` / "at least N"** — `required=True` on multi-select is deliberately
-  the `min_selections=1` special case. A numeric minimum can be added later without
-  conflict (`st.multiselect` already has `max_selections`).
+- **Native HTML `required` / browser bubble** — Streamlit forms are not native
+  `<form>` submits; `validate` already rejected that path.
+- **Auto-selecting a default** when `required=True` and no `default`/`index` is set
+  (would make "required but empty until the user picks" impossible).
+- **`min_selections` / "at least N"** — `required=True` on multi-select is the
+  `min_selections=1` special case. `st.multiselect` already has `max_selections`.
 
 ## Alternatives considered
 
-**Restrict `required=True` to forms; raise outside.** The previous draft preferred this
-as a safe default. Rejected: it makes the parameter illegal in the cases where pills
+**Restrict `required=True` to forms; raise outside.** Rejected: illegal where pills
 already use it, and it blocks the outside-form "don't rerun on clear" use case.
-`validate` already shipped the outside-form commit-gate; `required` should too.
+`validate` already shipped the outside-form commit-gate.
 
 **Disable the submit button while required fields are empty.** Rejected: users don't
 learn *why* they can't submit. Click-then-error is the standard pattern.
 
-**Asterisk instead of `(required)`.** Common on the web, but easy to miss and not
-self-explanatory. `(required)` is explicit.
+**Asterisk instead of `(required)`.** Common on the web, but easy to miss.
+`(required)` is explicit.
 
-**`required="auto"` mixing clear-button policy with requiredness.** Rejected: keep
-`required` a boolean. When `required=True`, hide every explicit empty-commit
-control (search X, None-default number/date/time X, selectbox X, last
-multiselect chip). Clearable-without-required stays "has an empty default" as
-today.
+**`required: bool | str`** (custom message as the string). Overloads a boolean;
+pills already ship `bool`. Defer; `validate=(regex, message)` covers content copy.
 
-**Keep the `type="search"` clear X when `required=True`.** Rejected: search is
-still a text field, not a trigger widget. Select-all + delete already empties
-it. The X's job is to commit `""`, which required forbids.
+**`clearable` instead of `required`.** Describes the X on selectbox/number_input, not
+form gating or text inputs. When `required=True`, hide every explicit empty-commit
+control; clearable-without-required stays "has an empty default."
 
-**Only ship on `st.text_input`.** Too narrow given #7165 (forms) and the pills
-precedent. Specify the full input-widget API. First implementation is wave 1
-(typed widgets + selectbox/multiselect), not text_input alone; radio, pills, and
-file-like widgets are an explicit follow-up (see [Rollout](#rollout)).
+**Keep the `type="search"` clear X when `required=True`.** Search is still a text
+field. Select-all + delete already empties it. The X's job is to commit `""`.
+
+**Only ship on `st.text_input`.** Too narrow given #7165 and the pills precedent.
+Wave 1 is typed widgets + selectbox/multiselect, not text_input alone.
 
 **Skip `required` when `disabled=True` (HTML constraint-validation precedent).**
-Rejected for v1: `validate` does not skip disabled widgets either, and skipping
-here would make `required` and `validate` diverge without a product call. A
-disabled empty required field can trap a form; document that footgun rather than
-special-casing.
+Rejected for v1: `validate` does not skip disabled widgets either. Document the
+disabled-empty-required form trap.
 
 ## Checklist
 
