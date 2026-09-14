@@ -248,7 +248,10 @@ warning is additive and can follow.
 
 ### API
 
-Keyword-only, optional, appended after each command's existing keyword-only parameters:
+Keyword-only, optional, appended after each command's existing keyword-only parameters — with one
+exception: `st.pyplot` ends in a `**kwargs` that it forwards to `savefig`, so **`alt` must be
+declared explicitly before it** — otherwise `alt=` is swallowed into `kwargs` and handed to
+Matplotlib.
 
 ```python
 alt: str | None = None  # 17 commands
@@ -278,7 +281,7 @@ reason.
 | Non-empty string                          | The description. Plain text. Leading and trailing whitespace is stripped — note this is new behavior, not inherited: `to_str` returns strings unchanged, and `label` does not strip either                                                                                                                                                                            |
 | Whitespace-only                           | Treated as `""`, after stripping. Same handling as an empty string below                                                                                                                                                                |
 | `""` on `st.image`                        | Decorative — the standard WCAG pattern, and a [sufficient technique](https://www.w3.org/WAI/WCAG21/Techniques/html/H67)                                                                                                                 |
-| `""` anywhere else, including `st.pyplot` | Logs a warning and is then ignored, no attribute emitted. The warning mirrors `maybe_raise_label_warnings`, though the analogy stops there — an empty `label` is warned about but still forwarded. `st.pyplot` is excluded from the decorative reading because a plot is author data, so "decorative" is never a truthful claim about one           |
+| `""` anywhere else, including `st.pyplot` | **Treated as not provided**, with a warning. That wording matters: it preserves each element's existing fallback rather than stripping it, so a YouTube iframe keeps its URL-derived `title` and a mermaid diagram keeps its derived name. The warning mirrors `maybe_raise_label_warnings`, though the analogy stops there — an empty `label` is warned about but still forwarded. `st.pyplot` is excluded from the decorative reading because a plot is author data, so "decorative" is never a truthful claim about one           |
 | `[""]` inside an `st.image` list          | Decorative for that one image; the same rule applied per element                                                                                                                                                                        |
 | Non-string                                | Coerced with `to_str`, as `label` does, then stripped. Note this lets an author recreate the bug: `alt=0` becomes `"0"`, the F30 pattern we are removing. Author-chosen rather than Streamlit-imposed, so not validated, but worth a docstring warning |
 | List shorter than the images              | Trailing images get no `alt` — see the note below                                                                                                                                                                       |
@@ -438,15 +441,17 @@ they are the mistakes authors will actually make: write `alt` as a replacement f
 visual, not a label for it; keep it to about a sentence and put longer context in
 `caption` or nearby markdown; do not open with "Image of…", since assistive tech already
 announces the role; never make `caption` and `alt` identical; describe a chart's takeaway
-rather than its data points; name a dataframe rather than pasting it; and remember
-`subtitles` is still what satisfies WCAG
-1.2 for video — `alt` only names the player.
+rather than its data points; name a dataframe rather than pasting it; and remember that
+`subtitles`, not `alt`, is what addresses SC 1.2.2 for video — `alt` only names the player.
 
 ### Conformance scope
 
-`alt` closes **SC 1.1.1 Non-text Content** (Level A) for images, charts, maps, and
-diagrams _when an author provides it_, and **SC 4.1.2 Name, Role, Value** (Level A) for
-the interactive case, `st.data_editor`.
+`alt` **enables** authors to meet **SC 1.1.1 Non-text Content** (Level A) for images, charts, maps
+and diagrams, and **SC 4.1.2 Name, Role, Value** (Level A) for the interactive case,
+`st.data_editor`. It does not close either on its own: 1.1.1 requires the text to serve the
+visual's equivalent purpose, so a complex chart or map may still need a longer description or the
+underlying data. Shipping the parameter removes the blocker; whether a given app conforms depends
+on what its author writes.
 
 It closes **neither** for `st.dataframe` or `st.table`: 1.1.1 covers non-text content and a table of
 text is text, while 4.1.2 is scoped to interface components rather than static output. Naming a grid
@@ -493,20 +498,26 @@ risk and most of the user-visible value.** The `st.image` index alt is a defect 
 sign-off and could ship ahead of the parameter, benefiting every existing app whether or
 not its author adopts `alt`.
 
-One implementation note worth stating once so it is not rediscovered per phase: **`alt` belongs in
-the element-ID parameter hash but must be excluded from `key_as_main_identity`.** Excluding it
-entirely would make two otherwise-identical selection-enabled grids collide as duplicate IDs;
-including it in the keyed identity would reset a user's selection when an author edits a
-description. `st.audio` and `st.video` are not an exception to that rule so much as a different mechanism: their
-`id` is not an identity that keys state, it is the dedup key for the one-shot autoplay flag
-(`Audio.tsx` reads `preventAutoplay` from it). So `alt` stays out of it entirely, as #16568 does.
-That leaves a tension worth naming rather than hiding: because the same field also raises
-`StreamlitDuplicateElementId`, excluding `alt` means two autoplaying players differing only in
-their description still collide — and neither command accepts `key`, so an author cannot
-differentiate them. That collision pre-dates this spec; the real fix is separating autoplay dedup
-from element identity, which is out of scope here. Note also that these
-IDs exist only where `on_select` is set, so the four simple chart commands and `st.map` are
-unaffected.
+One implementation note worth stating once so it is not rediscovered per phase: **editing `alt`
+must never reset state a user has built up.** It only arises for commands that compute an element
+ID — most in scope compute none, and `st.dataframe`'s is conditional on selections or button
+columns — but three need care beyond simply keeping `alt` out of the keyed identity:
+
+- **`st.plotly_chart`** computes an ID unconditionally, not just under `on_select`, and always
+  passes `key_as_main_identity=False`, so there is no allowlist to exclude `alt` from. Hashing it
+  would discard exactly the frontend chart state that unconditional ID exists to preserve.
+- **`st.data_editor`** uses an allowlist only when it is keyed *and* `num_rows="fixed"`. A keyed
+  editor with `num_rows="dynamic"` passes `False`, so a description-only edit would discard rows
+  the user added.
+- **`st.audio` and `st.video`** are a different mechanism again: their `id` is not an identity that
+  keys state but the dedup key for the one-shot autoplay flag (`Audio.tsx` reads `preventAutoplay`
+  from it), so `alt` stays out of it, as #16568 does. Worth naming rather than hiding: because the
+  same field also raises `StreamlitDuplicateElementId`, excluding `alt` means two autoplaying players
+  differing only in their description still collide, and neither command accepts `key`. That
+  collision pre-dates this spec; the real fix is separating autoplay dedup from element identity,
+  which is out of scope.
+
+The exact mechanics belong to implementation; what needs sign-off here is the invariant.
 
 Each phase gets Python and frontend unit tests plus an e2e test asserting the _computed_
 accessible name rather than the presence of an attribute. Automated tests confirm a name
@@ -543,8 +554,8 @@ unlikely to be covered at all.
 - **Images Streamlit renders that authors cannot reach** — `st.column_config.ImageColumn`,
   `st.chat_message(avatar=…)`, camera input, uploaded-file thumbnails. Author-supplied
   content rendered by our chrome, so #12873 does not cover it either
-- `**st.iframe(title=…)**` — HTML uses `title`; already in the iframe spec
-- `**st.pdf` / `st.html` / custom components\*\* — authors control the inner content
+- **`st.iframe(title=…)`** — HTML uses `title`; already in the iframe spec
+- **`st.pdf` / `st.html` / custom components** — authors control the inner content
 - **Decorative chrome** — [#12873](https://github.com/streamlit/streamlit/issues/12873)
 - **A fully accessible dataframe canvas, and map viewport announcements** — separate and
   much larger projects, neither with an issue of its own yet
