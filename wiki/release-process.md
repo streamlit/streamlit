@@ -47,9 +47,10 @@ as the release candidate.
 1. Confirm the selected nightly workflow completed successfully, including
    Python, JavaScript, and Playwright tests.
 2. Confirm that same nightly succeeded in the Streamlit in Snowflake (SiS) e2e
-   test environment. Those tests run daily against the latest nightly. Check
-   the Snowflake-internal
-   [E2E Test History](https://app.datadoghq.com/dashboard/mxw-tig-4xn/e2e-test-history?fromUser=true&refresh_mode=sliding&tpl_var_test.name%5B0%5D=%2AOSS%2A&tpl_var_test.owner%5B0%5D=Streamlit&from_ts=1788808803786&to_ts=1789413603786&live=true)
+   test environment. Those tests run daily against that day's nightly. If you
+   check later, use the dashboard history for the cutoff date rather than the
+   most recent run. Check the Snowflake-internal
+   [E2E Test History](https://app.datadoghq.com/dashboard/mxw-tig-4xn/e2e-test-history?refresh_mode=sliding&tpl_var_test.name%5B0%5D=%2AOSS%2A&tpl_var_test.owner%5B0%5D=Streamlit&from_ts=now-7d&to_ts=now&live=true)
    Datadog dashboard (filtered to Streamlit-owned `*OSS*` tests) and verify
    the cutoff nightly passed.
 3. Record its full tag. A cutoff for a `1.60.0` release typically has a nightly
