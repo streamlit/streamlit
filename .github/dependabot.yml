@@ -66,6 +66,12 @@ updates:
           - "deck.gl"
           - "@loaders.gl/*"
           - "mapbox-gl"
+          # deck.gl 9.3 pins luma.gl ~9.3.x. A lone luma.gl 9.4 bump
+          # installs two copies and luma.gl throws "multiple versions
+          # detected", which also leaves the CanvasContext resize patch
+          # on the unused 9.4 copy. Raise these only together with deck.gl.
+          - "@luma.gl/*"
+          - "luma.gl"
       vega:
         patterns:
           - "vega"
