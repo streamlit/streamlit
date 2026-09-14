@@ -27,6 +27,32 @@ from streamlit.util import repr_
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+# Dedent at definition time so interpolating a multi-line deprecation_text
+# (already flush-left from __init__) cannot make textwrap.dedent() a no-op.
+_UNSUPPORTED_OPTION_BANNER = textwrap.dedent(
+    """
+    ════════════════════════════════════════════════
+    {key} IS NO LONGER SUPPORTED.
+
+    {deprecation_text}
+
+    Please update {where_defined}.
+    ════════════════════════════════════════════════
+    """
+)
+_DEPRECATED_OPTION_BANNER = textwrap.dedent(
+    """
+    ════════════════════════════════════════════════
+    {key} IS DEPRECATED.
+    {deprecation_text}
+
+    This option will be removed on or after {expiration_date}.
+
+    Please update {where_defined}.
+    ════════════════════════════════════════════════
+    """
+)
+
 
 class ConfigOption:
     '''Stores a Streamlit configuration option.
@@ -260,39 +286,25 @@ class ConfigOption:
         self.is_default = value == self.default_val
 
         if self.deprecated and self.where_defined != ConfigOption.DEFAULT_DEFINITION:
+            # Import here to avoid circular imports
+            from streamlit.logger import get_logger
+
+            logger = get_logger(__name__)
             if self.is_expired():
-                # Import here to avoid circular imports
-                from streamlit.logger import get_logger
-
-                get_logger(__name__).error(
-                    textwrap.dedent(
-                        f"""
-                    ════════════════════════════════════════════════
-                    {self.key} IS NO LONGER SUPPORTED.
-
-                    {self.deprecation_text}
-
-                    Please update {self.where_defined}.
-                    ════════════════════════════════════════════════
-                    """
+                logger.error(
+                    _UNSUPPORTED_OPTION_BANNER.format(
+                        key=self.key,
+                        deprecation_text=self.deprecation_text,
+                        where_defined=self.where_defined,
                     )
                 )
             else:
-                # Import here to avoid circular imports
-                from streamlit.logger import get_logger
-
-                get_logger(__name__).warning(
-                    textwrap.dedent(
-                        f"""s
-                    ════════════════════════════════════════════════
-                    {self.key} IS DEPRECATED.
-                    {self.deprecation_text}
-
-                    This option will be removed on or after {self.expiration_date}.
-
-                    Please update {self.where_defined}.
-                    ════════════════════════════════════════════════
-                    """
+                logger.warning(
+                    _DEPRECATED_OPTION_BANNER.format(
+                        key=self.key,
+                        deprecation_text=self.deprecation_text,
+                        expiration_date=self.expiration_date,
+                        where_defined=self.where_defined,
                     )
                 )
 

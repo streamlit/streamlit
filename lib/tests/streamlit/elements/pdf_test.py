@@ -23,7 +23,11 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitMissingRequiredParameterError,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -214,7 +218,10 @@ class PdfTest(DeltaGeneratorTestCase):
 
     def test_pdf_with_none_data(self):
         """Test PDF with None data."""
-        with pytest.raises(StreamlitAPIException, match="The PDF data cannot be None"):
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match=r"`data` parameter is required",
+        ):
             st.pdf(None)
 
     def test_pdf_with_unsupported_data_type(self):
@@ -222,7 +229,8 @@ class PdfTest(DeltaGeneratorTestCase):
         unsupported_data = {"not": "supported"}
 
         with pytest.raises(
-            StreamlitAPIException, match="Unsupported data type for PDF"
+            StreamlitInvalidParameterTypeError,
+            match=r"Invalid `data` type",
         ):
             st.pdf(unsupported_data)
 

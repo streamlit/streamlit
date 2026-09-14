@@ -94,7 +94,6 @@ export const JsonViewer: React.FC<JsonViewerProps> = ({
         displayObjectSize={false}
         name={false}
         enableClipboard={true}
-        // @ts-expect-error showComma prop exists at runtime but is missing from type definitions
         showComma={false}
         style={{
           fontFamily: theme.fontFamily,

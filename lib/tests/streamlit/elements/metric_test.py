@@ -21,7 +21,11 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.lib.policies import _LOGGER
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -346,14 +350,12 @@ class MetricTest(DeltaGeneratorTestCase):
 
         assert metric_proto.label == "Column 5"
 
-    def test_invalid_label(self):
-        with pytest.raises(TypeError) as exc:
-            st.metric(123, "-321")
+    def test_non_str_label_is_coerced(self):
+        """Non-string labels are coerced so protobuf assignment does not TypeError."""
+        st.metric(123, "-321")
 
-        assert str(exc.value) == (
-            "'123' is of type <class 'int'>, which is not an accepted type. "
-            "label only accepts: str. Please convert the label to an accepted type."
-        )
+        metric_proto = self.get_delta_from_queue().new_element.metric
+        assert metric_proto.label == "123"
 
     def test_invalid_label_visibility(self):
         with pytest.raises(StreamlitValueError) as e:
@@ -377,22 +379,19 @@ class MetricTest(DeltaGeneratorTestCase):
         assert logs.records[0].stack_info is not None
 
     def test_invalid_value(self):
-        with pytest.raises(TypeError) as exc:
+        with pytest.raises(StreamlitInvalidParameterTypeError) as exc:
             st.metric("Testing", [1, 2, 3])
 
-        assert str(exc.value) == (
-            "'[1, 2, 3]' is of type <class 'list'>, which is not an accepted type. "
-            "Please convert the value to an accepted number type."
-        )
+        assert exc.value.exec_kwargs["parameter"] == "value"
+        assert "Invalid `value` type" in str(exc.value)
+        assert "Expected one of: int, float, Decimal, NumPy number." in str(exc.value)
 
     def test_invalid_delta(self):
-        with pytest.raises(TypeError) as exc:
+        with pytest.raises(StreamlitInvalidParameterTypeError) as exc:
             st.metric("Testing", "123", [123])
 
-        assert str(exc.value) == (
-            "'[123]' is of type <class 'list'>, which is not an accepted type. "
-            "Please convert the value to an accepted number type."
-        )
+        assert exc.value.exec_kwargs["parameter"] == "delta"
+        assert "Invalid `delta` type" in str(exc.value)
 
     def test_invalid_delta_color(self):
         with pytest.raises(StreamlitValueError) as exc:

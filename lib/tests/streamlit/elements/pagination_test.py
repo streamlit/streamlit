@@ -19,10 +19,16 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.widgets.pagination import PaginationSerde
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+    StreamlitValueOutOfRangeError,
+)
 from streamlit.runtime.state.session_state import get_script_run_ctx
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -127,14 +133,27 @@ class TestPaginationValidation(DeltaGeneratorTestCase):
         assert "`num_pages` must be an integer of at least 1" in str(e.value)
 
     def test_default_must_be_in_range(self):
-        """Test that default must be between 1 and num_pages."""
-        with pytest.raises(StreamlitAPIException) as e:
+        """Values outside [1, num_pages] raise StreamlitValueOutOfRangeError."""
+        with pytest.raises(StreamlitValueOutOfRangeError) as e:
             st.pagination(10, default=0)
-        assert "`default` must be between 1 and `num_pages`" in str(e.value)
+        assert "required range [1, 10]" in str(e.value)
 
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueOutOfRangeError) as e:
             st.pagination(10, default=11)
-        assert "`default` must be between 1 and `num_pages`" in str(e.value)
+        assert "required range [1, 10]" in str(e.value)
+
+    def test_default_must_be_int(self):
+        """Non-int values raise StreamlitInvalidParameterTypeError.
+
+        True is a subclass of int and would otherwise be treated as page 1.
+        """
+        with pytest.raises(StreamlitInvalidParameterTypeError) as e:
+            st.pagination(10, default=True)
+        assert e.value.exec_kwargs["parameter"] == "default"
+
+        with pytest.raises(StreamlitInvalidParameterTypeError) as e:
+            st.pagination(10, default="1")
+        assert e.value.exec_kwargs["parameter"] == "default"
 
     def test_max_visible_pages_negative(self):
         """Test that negative max_visible_pages raises exception."""
@@ -208,6 +227,39 @@ class TestPaginationSessionState(DeltaGeneratorTestCase):
         metadata = session_state._new_widget_state.widget_metadata.get(widget_id)
         assert metadata is not None
         assert metadata.callback is not None
+
+    @parameterized.expand(
+        [
+            ("string", "bogus", True),
+            ("zero", 0, True),
+            ("above_max", 11, True),
+            ("bool", True, False),
+        ]
+    )
+    def test_invalid_widget_value_resets_to_default(
+        self, _case: str, invalid_value: object, expect_proto_update: bool
+    ) -> None:
+        """Invalid widget values that bypass serde fall back to the default page.
+
+        For most invalid values the widget rewrites the proto to page 1. ``True``
+        is an exception: Python treats ``1 == True``, so the proto is left
+        unchanged.
+        """
+        widget_state = MagicMock()
+        widget_state.value = invalid_value
+        widget_state.value_changed = False
+        with patch(
+            "streamlit.elements.widgets.pagination.register_widget",
+            return_value=widget_state,
+        ):
+            val = st.pagination(10, key="pag_invalid")
+        assert val == 1
+        proto = self.get_delta_from_queue().new_element.pagination
+        if expect_proto_update:
+            assert proto.value == 1
+            assert proto.set_value is True
+        else:
+            assert proto.set_value is False
 
 
 class TestPaginationFormIntegration(DeltaGeneratorTestCase):

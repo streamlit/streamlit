@@ -112,8 +112,8 @@ class ImageMixin:
             Whether to clamp image pixel values to a valid range (0-255 per
             channel). This is only used for byte array images; the parameter is
             ignored for image URLs and files. If this is ``False`` (default)
-            and an image has an out-of-range value, a ``RuntimeError`` will be
-            raised.
+            and an image has an out-of-range value, a ``StreamlitAPIException``
+            will be raised.
         channels : "RGB" or "BGR"
             The color format when ``image`` is an ``nd.array``. This is ignored
             for other image types. If this is ``"RGB"`` (default),
@@ -199,7 +199,8 @@ class ImageMixin:
             if len(image_list_proto.imgs) > 1:
                 raise StreamlitAPIException(
                     "The `link` parameter is only supported when displaying a single image. "
-                    f"You passed {len(image_list_proto.imgs)} images."
+                    f"You passed {len(image_list_proto.imgs)} images.",
+                    error_id="image-link-requires-single-image",
                 )
             image_list_proto.link = link
 

@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement, useContext, useMemo } from "react"
-
-import classNames from "classnames"
+import { type JSX, ReactElement, useContext, useMemo } from "react"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
@@ -25,6 +23,7 @@ import {
   FlexContext,
   FlexContextProvider,
 } from "~lib/components/core/Layout/FlexContext"
+import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
 import {
   extractLayoutSubElement,
   useLayoutStyles,
@@ -66,6 +65,7 @@ import {
   isComponentStale,
   shouldActivateScrollToBottom,
   shouldComponentBeEnabled,
+  shouldHideStaleDialog,
 } from "./utils"
 
 const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
@@ -135,6 +135,12 @@ export const ContainerContentsWrapper = (
     <FlexContextProvider
       direction={Direction.VERTICAL}
       isRoot={props.isRoot}
+      // True only when this node is itself an `st.columns` column, so auto wrap
+      // stays compact for the column's direct children. Deliberately not inherited
+      // from parentContext. Nested providers that use this wrapper (form, expander,
+      // tabs, …) are not columns, so the flag resets to false. Nested st.container
+      // resets the same way because FlexBoxContainer omits this prop.
+      isDirectlyInColumn={notNullOrUndefined(props.node.deltaBlock.column)}
       parentContext={parentContext}
     >
       <StyledFlexContainerBlock
@@ -166,6 +172,14 @@ export const FlexBoxContainer = (
     subElement: extractLayoutSubElement(props.node.deltaBlock),
   })
 
+  // Absent wrap on a FlexContainer message means nowrap. This is also
+  // backwards compatible, since older messages did not set wrap.
+  const wrap = props.node.deltaBlock.flexContainer?.wrap ?? false
+  // A horizontal container with `wrap=false` (including st.columns(wrap=False))
+  // keeps its elements in a single row and scrolls horizontally when they
+  // don't fit, instead of wrapping.
+  const enableHorizontalScroll = direction === Direction.HORIZONTAL && !wrap
+
   const styles = {
     gap:
       // This is backwards compatible with old proto messages since previously
@@ -174,10 +188,9 @@ export const FlexBoxContainer = (
         gapSize: streamlit.GapSize.SMALL,
       },
     direction: direction,
-    // This is also backwards compatible since previously wrap was not added
-    // to the flex container.
-    $wrap: props.node.deltaBlock.flexContainer?.wrap ?? false,
+    $wrap: wrap,
     overflow: layout_styles.overflow,
+    overflowX: enableHorizontalScroll ? ("auto" as const) : undefined,
     border: getBorderBackwardsCompatible(props.node.deltaBlock),
     // We need the height on the container for scrolling.
     height: layout_styles.height,
@@ -203,6 +216,7 @@ export const FlexBoxContainer = (
   return (
     <FlexContextProvider
       direction={direction}
+      wrap={wrap}
       parentWidth={parentWidth}
       hasContentWidth={hasContentWidth}
       hasFixedWidth={hasFixedWidth}
@@ -210,11 +224,14 @@ export const FlexBoxContainer = (
     >
       <StyledFlexContainerBlock
         {...styles}
-        className={classNames(
+        className={[
           getClassnamePrefix(direction),
-          convertKeyToClassName(userKey)
-        )}
+          convertKeyToClassName(userKey),
+        ]
+          .filter(Boolean)
+          .join(" ")}
         data-testid={getClassnamePrefix(direction)}
+        data-test-wrap={String(wrap)}
         ref={scrollContainerRef as React.RefObject<HTMLDivElement>}
         data-test-scroll-behavior={
           activateScrollToBottom ? "scroll-to-bottom" : "normal"
@@ -239,6 +256,7 @@ export const BlockNodeRenderer = (
   const { node } = props
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
+  const flexContext = useContext(FlexContext)
 
   let minStretchBehavior: MinFlexElementWidth
   if (LARGE_STRETCH_BEHAVIOR.includes(node.deltaBlock.type ?? "")) {
@@ -306,6 +324,14 @@ export const BlockNodeRenderer = (
   // and popover only.
   let keyClassOnWrapper = false
 
+  // Marks the wrapper as a timeline step so the parent flex container can let
+  // the step's connector line bridge the gap to an adjacent step. Empty steps
+  // must be marked too: they draw no connector of their own, but the preceding
+  // step extends its line to whatever step follows it, which is how a trailing
+  // empty step terminates a timeline at its icon.
+  const isStepBlock =
+    node.deltaBlock.expandable?.type === BlockProto.Expandable.Type.STEP
+
   const userKey = getKeyFromId(node.deltaBlock.id)
   const child: ReactElement = (
     <ContainerContentsWrapper
@@ -320,6 +346,24 @@ export const BlockNodeRenderer = (
   }
 
   if (node.deltaBlock.dialog) {
+    // Hide leftover dialogs from a previous full-app run as soon as the next
+    // full-app run starts. Stale-node cleanup waits until the run finishes,
+    // which would leave the overlay up during blocking work (issue #9405).
+    // Same unmount as that later prune. Do not go through Dialog's onClose:
+    // that path is user dismiss and would newly fire on_dismiss.
+    // Re-opening the same dialog in this run remounts it when the new delta
+    // arrives; keeping a dialog open across st.rerun() is not supported.
+    if (
+      shouldHideStaleDialog(
+        node,
+        scriptRunState,
+        scriptRunId,
+        fragmentIdsThisRun
+      )
+    ) {
+      return <></>
+    }
+
     return (
       <Dialog
         element={node.deltaBlock.dialog as BlockProto.Dialog}
@@ -338,6 +382,7 @@ export const BlockNodeRenderer = (
       <Expander
         isStale={isStale}
         element={node.deltaBlock.expandable as BlockProto.Expandable}
+        empty={node.isEmpty}
         widgetMgr={props.widgetMgr}
         blockId={node.deltaBlock.id || undefined}
         fragmentId={node.fragmentId}
@@ -400,6 +445,8 @@ export const BlockNodeRenderer = (
           node.deltaBlock.column.verticalAlignment ?? undefined
         }
         showBorder={node.deltaBlock.column.showBorder ?? false}
+        // Inherit parent row wrap; default true when FlexContext is absent.
+        $wrap={flexContext?.wrap ?? true}
         className="stColumn"
         data-testid="stColumn"
       >
@@ -448,6 +495,7 @@ export const BlockNodeRenderer = (
     return (
       <StyledLayoutWrapper
         data-testid="stLayoutWrapper"
+        {...{ [STEP_BLOCK_ATTRIBUTE]: isStepBlock ? "true" : undefined }}
         className={convertKeyToClassName(
           keyClassOnWrapper ? userKey : undefined
         )}

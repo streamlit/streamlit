@@ -37,8 +37,11 @@ from streamlit.elements.lib.column_types import (
 from streamlit.elements.lib.dicttools import remove_none_values
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import compute_and_register_element_id
-from streamlit.errors import StreamlitAPIException
-from streamlit.runtime.state import register_widget
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+)
+from streamlit.runtime.state import register_widget, validate_on_change_mode
 from streamlit.util import ReadOnlyAttributeDictionary
 
 if TYPE_CHECKING:
@@ -496,14 +499,16 @@ class ButtonClickSerde:
             or not isinstance(parsed.get("label"), str)
         ):
             raise StreamlitAPIException(
-                "Invalid button click state: expected {row: int, label: str}."
+                "Invalid button click state: expected {row: int, label: str}.",
+                error_id="button-column-invalid-click-state",
             )
 
         # Validate row is non-negative (bounds check - row < num_rows is
         # checked downstream when accessing the data)
         if parsed["row"] < 0:
             raise StreamlitAPIException(
-                f"Invalid button click row index: {parsed['row']}. Row must be >= 0."
+                f"Invalid button click row index: {parsed['row']}. Row must be >= 0.",
+                error_id="button-column-invalid-click-row",
             )
 
         return ButtonColumnClickState(parsed)
@@ -544,10 +549,15 @@ def register_button_column_widgets(
     """Register widgets for interactive button columns and attach them to a dataframe proto."""
     button_serde = ButtonClickSerde()
     for col_name, button_col in button_columns.items():
+        on_click = validate_on_change_mode(
+            button_col.on_click,
+            supported_modes=(),
+            param_name="on_click",
+        )
         check_widget_policies(
             dg,
             button_col.key,
-            on_change=button_col.on_click,
+            on_change=on_click,
             default_value=None,
             writes_allowed=False,
         )
@@ -559,7 +569,7 @@ def register_button_column_widgets(
         )
         register_widget(
             widget_id,
-            on_change_handler=button_col.on_click,
+            on_change_handler=on_click,
             args=button_col.args,
             kwargs=button_col.kwargs,
             deserializer=button_serde.deserialize,
@@ -605,9 +615,11 @@ def process_config_mapping(
             # since we will apply in-place changes to it.
             transformed_column_config[column] = copy.deepcopy(config)
         else:
-            raise StreamlitAPIException(
-                f"Invalid column config for column `{column}`. "
-                f"Expected `None`, `str` or `dict`, but got `{type(config)}`."
+            raise StreamlitInvalidParameterTypeError(
+                "column_config",
+                type(config).__name__,
+                ["None", "str", "dict"],
+                detail=f"Invalid configuration for column `{column}`.",
             )
     return transformed_column_config
 
@@ -691,7 +703,8 @@ def _convert_column_config_to_json(column_config_mapping: ColumnConfigMapping) -
         )
     except ValueError as ex:
         raise StreamlitAPIException(
-            f"The provided column config cannot be serialized into JSON: {ex}"
+            f"The provided column config cannot be serialized into JSON: {ex}",
+            error_id="column-config-json-serialize-failed",
         ) from ex
 
 

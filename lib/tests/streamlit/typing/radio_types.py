@@ -31,11 +31,13 @@ if TYPE_CHECKING:
         WALLACE = 2
         GREENE = 3
 
-    assert_type(radio("foo", []), None)
+    # ty infers `Unknown` for empty options.
+    assert_type(radio("foo", []), None)  # ty: ignore[type-assertion-failure]
 
     assert_type(radio("foo", [1, 2, 3]), int)
     assert_type(radio("foo", [1, 2, 3], index=None), int | None)
-    assert_type(radio("foo", [1.0, 2.0, 3.0]), float)
+    # ty infers `float*` (not equivalent to `float`).
+    assert_type(radio("foo", [1.0, 2.0, 3.0]), float)  # ty: ignore[type-assertion-failure]
     assert_type(radio("foo", [1.0, 2.0, 3.0], index=None), float | None)
     assert_type(radio("foo", [1.0, 2, 3.0]), float)
     assert_type(radio("foo", [1.0, 2, 3.0], index=None), float | None)
@@ -44,10 +46,34 @@ if TYPE_CHECKING:
     assert_type(radio("foo", Alfred), Alfred)
     assert_type(radio("foo", [Alfred.HITCHCOCK, Alfred.GREENE]), Alfred)
     assert_type(radio("foo", Alfred, index=None), Alfred | None)
-    assert_type(radio("foo", [1, Alfred.HITCHCOCK, "five"], index=None), object)
+    # ty infers `int | Alfred | str | None` rather than `object`.
+    assert_type(radio("foo", [1, Alfred.HITCHCOCK, "five"], index=None), object)  # ty: ignore[type-assertion-failure]
 
     # Check bind parameter
     assert_type(radio("foo", ["a", "b"], bind="query-params"), str)
     assert_type(radio("foo", [1, 2, 3], bind="query-params"), int)
     assert_type(radio("foo", ["a", "b"], bind=None), str)
     assert_type(radio("foo", ["a", "b"], index=None, bind="query-params"), str | None)
+
+    def on_radio_change(prefix: str) -> None: ...
+
+    # Common parameters combined
+    assert_type(
+        radio(
+            "foo",
+            [1, 2, 3],
+            format_func=lambda value: f"Option {value}",
+            key="choice",
+            help="Choose one",
+            on_change=on_radio_change,
+            args=("choice",),
+            kwargs={},
+            disabled=False,
+            horizontal=True,
+            captions=["First", "Second", "Third"],
+            label_visibility="visible",
+            width="stretch",
+            persist_state="session",
+        ),
+        int,
+    )

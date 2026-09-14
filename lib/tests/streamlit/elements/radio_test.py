@@ -25,7 +25,12 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.widgets.radio import RadioSerde
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+    StreamlitValueOutOfRangeError,
+)
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
@@ -153,13 +158,16 @@ class RadioTest(DeltaGeneratorTestCase):
 
     def test_invalid_value(self):
         """Test that value must be an int."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.radio("the label", ("m", "f"), "1")
 
-    def test_invalid_value_range(self):
-        """Test that value must be within the length of the options."""
-        with pytest.raises(StreamlitAPIException):
+    def test_index_out_of_range(self):
+        """Out-of-range index names the closed interval in StreamlitValueOutOfRangeError."""
+        with pytest.raises(StreamlitValueOutOfRangeError) as ex:
             st.radio("the label", ("m", "f"), 2)
+        assert str(ex.value) == (
+            "The `index` parameter, set to 2, is outside the required range [0, 1]."
+        )
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""

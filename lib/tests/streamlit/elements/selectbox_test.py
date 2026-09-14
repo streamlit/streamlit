@@ -27,8 +27,11 @@ from streamlit.elements.lib.options_selector_utils import create_mappings
 from streamlit.elements.widgets.selectbox import SelectboxSerde
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
     StreamlitValueError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
@@ -175,32 +178,31 @@ class SelectboxTest(DeltaGeneratorTestCase):
 
     def test_filter_mode_none_with_accept_new_options_raises_exception(self):
         """Test that filter_mode=None is incompatible with accept_new_options=True."""
-        with pytest.raises(
-            StreamlitAPIException,
-            match=r"cannot be None when `accept_new_options=True`",
-        ):
+        with pytest.raises(StreamlitIncompatibleParametersError):
             st.selectbox(
                 "the label", ("m", "f"), filter_mode=None, accept_new_options=True
             )
 
     def test_invalid_value(self):
         """Test that value must be an int."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError,
+            match=r"Expected one of: int, None\. Provided type: str\.",
+        ):
             st.selectbox("the label", ("m", "f"), "1")
 
     def test_invalid_value_range(self):
         """Test that value must be within the length of the options."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueOutOfRangeError):
             st.selectbox("the label", ("m", "f"), 2)
 
-    def test_raises_exception_of_index_larger_than_options(self):
-        """Test that it raises an exception if index is larger than options."""
-        with pytest.raises(StreamlitAPIException) as ex:
+    def test_index_out_of_range_error_message(self):
+        """Out-of-range index names the closed interval in StreamlitValueOutOfRangeError."""
+        with pytest.raises(StreamlitValueOutOfRangeError) as ex:
             st.selectbox("Test box", ["a"], index=1)
 
-        assert (
-            str(ex.value)
-            == "Selectbox index must be greater than or equal to 0 and less than the length of options."
+        assert str(ex.value) == (
+            "The `index` parameter, set to 1, is outside the required range [0, 0]."
         )
 
     def test_outside_form(self):
@@ -1074,3 +1076,50 @@ class SelectboxBindQueryParamsTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.selectbox
         assert c.query_param_key == "my_key"
         assert c.accept_new_options
+
+
+class SelectboxOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ) -> None:
+        """Test that on_change modes correctly set the ignore_rerun proto field."""
+        st.selectbox("the label", ("a", "b"), on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self) -> None:
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.selectbox("the label", ("a", "b"), on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_non_string_value_raises_exception(self) -> None:
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.selectbox("the label", ("a", "b"), on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(self) -> None:
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            st.selectbox("the label", ("a", "b"), on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.selectbox
+        assert c.ignore_rerun is True

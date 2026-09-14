@@ -51,6 +51,7 @@ from streamlit.errors import (
     BidiComponentInvalidDefaultKeyError,
     BidiComponentInvalidIdError,
     BidiComponentUnserializableDataError,
+    StreamlitAPIException,
 )
 from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
 from streamlit.proto.BidiComponent_pb2 import BidiComponent as BidiComponentProto
@@ -323,11 +324,10 @@ class BidiComponentMixin:
 
         Raises
         ------
-        ValueError
-            If the component name is not found in the registry.
         StreamlitAPIException
-            If the component does not have the required JavaScript or HTML
-            content, or if the provided data cannot be serialized.
+            If the component name is not found in the registry.
+        BidiComponentUnserializableDataError
+            If the provided data cannot be serialized.
 
         """
         check_cache_replay_rules()
@@ -346,7 +346,10 @@ class BidiComponentMixin:
         component_def = registry.get(component_name)
 
         if component_def is None:
-            raise ValueError(f"Component '{component_name}' is not registered")
+            raise StreamlitAPIException(
+                f"Component '{component_name}' is not registered.",
+                error_id="bidi-component-not-registered",
+            )
 
         # ------------------------------------------------------------------
         # 1. Parse user-supplied callbacks

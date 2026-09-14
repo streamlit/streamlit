@@ -62,10 +62,9 @@ describe("Radio widget", () => {
 
     // Widget uses string values - the default option string at index 0 is "a"
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       "a",
-      { fromUi: false },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 
@@ -75,10 +74,13 @@ describe("Radio widget", () => {
     render(<Radio {...props} />)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       "a",
-      { fromUi: false },
-      "myFragmentId"
+      {
+        formId: props.element.formId,
+        fragmentId: "myFragmentId",
+        fromUser: false,
+      }
     )
   })
 
@@ -145,12 +147,14 @@ describe("Radio widget", () => {
     })
   })
 
-  it("renders non-blank captions", () => {
+  it("skips blank captions", () => {
     const props = getProps({ captions: ["caption1", "", ""] })
     render(<Radio {...props} />)
 
-    expect(screen.getAllByTestId("stCaptionContainer")).toHaveLength(3)
-    expect(screen.getByText("caption1")).toBeInTheDocument()
+    // Blank captions render nothing, so they cannot claim the description slot
+    // and point aria-describedby at empty content.
+    expect(screen.getAllByTestId("stRadioCaption")).toHaveLength(1)
+    expect(screen.getByText("caption1")).toBeVisible()
   })
 
   it("shows a message when there are no options to be shown", () => {
@@ -176,10 +180,9 @@ describe("Radio widget", () => {
 
     // Widget uses string values - selecting index 1 sends option "b"
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "b",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     expect(secondOption).toBeChecked()
   })
@@ -201,10 +204,9 @@ describe("Radio widget", () => {
     expect(secondOption).toBeChecked()
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "b",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
 
     // "Submit" the form
@@ -219,12 +221,9 @@ describe("Radio widget", () => {
 
     // Reset sends the default option string "a"
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "a",
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 })

@@ -16,7 +16,7 @@
 
 import { describe, expect, it } from "vitest"
 
-import { IAppPage } from "@streamlit/protobuf"
+import { type AppPage } from "@streamlit/protobuf"
 
 import {
   filterVisiblePages,
@@ -30,7 +30,7 @@ import {
 
 describe("shouldShowNavigation", () => {
   it("returns false when there is only one page", () => {
-    const appPages: IAppPage[] = [
+    const appPages: AppPage.$Properties[] = [
       { pageName: "page1", pageScriptHash: "hash1" },
     ]
 
@@ -38,7 +38,7 @@ describe("shouldShowNavigation", () => {
   })
 
   it("returns false when there is one section with one page", () => {
-    const appPages: IAppPage[] = [
+    const appPages: AppPage.$Properties[] = [
       {
         pageName: "page1",
         pageScriptHash: "hash1",
@@ -50,7 +50,7 @@ describe("shouldShowNavigation", () => {
   })
 
   it("returns true when there are multiple pages without sections", () => {
-    const appPages: IAppPage[] = [
+    const appPages: AppPage.$Properties[] = [
       { pageName: "page1", pageScriptHash: "hash1" },
       { pageName: "page2", pageScriptHash: "hash2" },
     ]
@@ -59,7 +59,7 @@ describe("shouldShowNavigation", () => {
   })
 
   it("returns true when there is one section with multiple pages", () => {
-    const appPages: IAppPage[] = [
+    const appPages: AppPage.$Properties[] = [
       {
         pageName: "page1",
         pageScriptHash: "hash1",
@@ -76,7 +76,7 @@ describe("shouldShowNavigation", () => {
   })
 
   it("returns true when there are multiple sections", () => {
-    const appPages: IAppPage[] = [
+    const appPages: AppPage.$Properties[] = [
       {
         pageName: "page1",
         pageScriptHash: "hash1",
@@ -93,7 +93,7 @@ describe("shouldShowNavigation", () => {
   })
 
   it("returns true when there are multiple sections with multiple pages each", () => {
-    const appPages: IAppPage[] = [
+    const appPages: AppPage.$Properties[] = [
       {
         pageName: "page1",
         pageScriptHash: "hash1",
@@ -120,14 +120,14 @@ describe("shouldShowNavigation", () => {
   })
 
   it("returns false when there are no pages", () => {
-    const appPages: IAppPage[] = []
+    const appPages: AppPage.$Properties[] = []
 
     expect(shouldShowNavigation(appPages)).toBe(false)
   })
 
   describe("with hidden pages", () => {
     it("returns false when there is 1 visible page and multiple hidden pages", () => {
-      const appPages: IAppPage[] = [
+      const appPages: AppPage.$Properties[] = [
         { pageName: "visible", pageScriptHash: "hash1", isHidden: false },
         { pageName: "hidden1", pageScriptHash: "hash2", isHidden: true },
         { pageName: "hidden2", pageScriptHash: "hash3", isHidden: true },
@@ -137,7 +137,7 @@ describe("shouldShowNavigation", () => {
     })
 
     it("returns false when all pages are hidden", () => {
-      const appPages: IAppPage[] = [
+      const appPages: AppPage.$Properties[] = [
         { pageName: "hidden1", pageScriptHash: "hash1", isHidden: true },
         { pageName: "hidden2", pageScriptHash: "hash2", isHidden: true },
       ]
@@ -146,7 +146,7 @@ describe("shouldShowNavigation", () => {
     })
 
     it("returns true when there are multiple visible pages with some hidden", () => {
-      const appPages: IAppPage[] = [
+      const appPages: AppPage.$Properties[] = [
         { pageName: "visible1", pageScriptHash: "hash1", isHidden: false },
         { pageName: "visible2", pageScriptHash: "hash2", isHidden: false },
         { pageName: "hidden", pageScriptHash: "hash3", isHidden: true },
@@ -156,7 +156,7 @@ describe("shouldShowNavigation", () => {
     })
 
     it("returns false when only 1 visible page in a section with hidden pages", () => {
-      const appPages: IAppPage[] = [
+      const appPages: AppPage.$Properties[] = [
         {
           pageName: "visible",
           pageScriptHash: "hash1",
@@ -175,7 +175,7 @@ describe("shouldShowNavigation", () => {
     })
 
     it("returns true when multiple visible pages in sections with hidden pages", () => {
-      const appPages: IAppPage[] = [
+      const appPages: AppPage.$Properties[] = [
         {
           pageName: "visible1",
           pageScriptHash: "hash1",
@@ -200,7 +200,7 @@ describe("shouldShowNavigation", () => {
     })
 
     it("ignores sections where all pages are hidden", () => {
-      const appPages: IAppPage[] = [
+      const appPages: AppPage.$Properties[] = [
         {
           pageName: "visible1",
           pageScriptHash: "hash1",
@@ -235,7 +235,7 @@ describe("shouldShowNavigation", () => {
 
 describe("groupPagesBySection", () => {
   it("groups pages by section header", () => {
-    const appPages: IAppPage[] = [
+    const appPages: AppPage.$Properties[] = [
       { pageName: "page1", pageScriptHash: "hash1", sectionHeader: "Admin" },
       { pageName: "page2", pageScriptHash: "hash2", sectionHeader: "Admin" },
       { pageName: "page3", pageScriptHash: "hash3", sectionHeader: "Reports" },
@@ -261,7 +261,7 @@ describe("groupPagesBySection", () => {
   })
 
   it("handles all pages with empty sections", () => {
-    const appPages: IAppPage[] = [
+    const appPages: AppPage.$Properties[] = [
       { pageName: "page1", pageScriptHash: "hash1" },
       { pageName: "page2", pageScriptHash: "hash2" },
     ]
@@ -277,7 +277,7 @@ describe("groupPagesBySection", () => {
   })
 
   it("normalizes missing section headers to the empty section key", () => {
-    const appPages: IAppPage[] = [
+    const appPages: AppPage.$Properties[] = [
       { pageName: "page1", pageScriptHash: "hash1", sectionHeader: undefined },
       { pageName: "page2", pageScriptHash: "hash2", sectionHeader: null },
     ]
@@ -290,7 +290,7 @@ describe("groupPagesBySection", () => {
   })
 
   it('preserves a literal "undefined" section name', () => {
-    const appPages: IAppPage[] = [
+    const appPages: AppPage.$Properties[] = [
       {
         pageName: "page1",
         pageScriptHash: "hash1",
@@ -493,7 +493,7 @@ describe("filterVisiblePages", () => {
 
 describe("external destination helpers", () => {
   it("detects external pages and returns their destination URL", () => {
-    const page: IAppPage = {
+    const page: AppPage.$Properties = {
       pageName: "docs",
       pageScriptHash: "hash",
       externalUrl: "https://docs.streamlit.io",
@@ -504,7 +504,7 @@ describe("external destination helpers", () => {
   })
 
   it("treats pages with an empty external URL as external", () => {
-    const page: IAppPage = {
+    const page: AppPage.$Properties = {
       pageName: "docs",
       pageScriptHash: "hash",
       externalUrl: "",
@@ -515,7 +515,7 @@ describe("external destination helpers", () => {
   })
 
   it("treats internal pages as non-external with no URL", () => {
-    const page: IAppPage = {
+    const page: AppPage.$Properties = {
       pageName: "internal",
       pageScriptHash: "hash",
     }

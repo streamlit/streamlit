@@ -15,9 +15,9 @@
  */
 import { ReactElement, ReactNode, useEffect, useRef, useState } from "react"
 
-import Hotkeys from "react-hot-keys"
 import { CSSTransition } from "react-transition-group"
 
+import { GlobalHotkeys } from "@streamlit/app/src/components/GlobalHotkeys/GlobalHotkeys"
 import { ConnectionState } from "@streamlit/connection"
 import {
   BaseButton,
@@ -191,7 +191,7 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   const renderRerunScriptPrompt = (): ReactNode => {
     const rerunRequested = scriptRunState === ScriptRunState.RERUN_REQUESTED
     return (
-      <Hotkeys keyName="a" onKeyDown={handleKeyDown}>
+      <GlobalHotkeys keyName="a" onKeyDown={handleKeyDown}>
         <StyledAppStatus>
           <DynamicIcon
             size="lg"
@@ -212,7 +212,7 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
             />
           )}
         </StyledAppStatus>
-      </Hotkeys>
+      </GlobalHotkeys>
     )
   }
 

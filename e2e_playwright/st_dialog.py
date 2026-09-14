@@ -381,3 +381,67 @@ def dialog_with_popover() -> None:
 
 if st.button("Open Dialog with Popover"):
     dialog_with_popover()
+
+
+# Regression coverage for #16538: a color picker palette opened inside an
+# st.dialog must stay interactive without dismissing the dialog.
+@st.dialog("Dialog with color picker")
+def dialog_with_color_picker() -> None:
+    color = st.color_picker("Dialog color picker")
+    st.write(f"Selected color: {color}")
+
+
+if st.button("Open Dialog with Color Picker"):
+    dialog_with_color_picker()
+
+
+# Regression coverage (#16005): a menu button dropdown opened inside an
+# st.dialog must stay interactive without dismissing the dialog.
+@st.dialog("Dialog with menu button")
+def dialog_with_menu_button() -> None:
+    selected = st.menu_button(
+        "Dialog menu",
+        options=["Alpha", "Beta", "Gamma"],
+    )
+    st.write(f"menu selected: {selected}")
+
+
+if st.button("Open Dialog with Menu Button"):
+    dialog_with_menu_button()
+
+
+# Regression coverage (#16005): a JSON path tooltip opened inside an
+# st.dialog must stay interactive without dismissing the dialog.
+@st.dialog("Dialog with JSON path tooltip")
+def dialog_with_json_path_tooltip() -> None:
+    st.json({"level1": {"level2": "value"}}, expanded=True)
+
+
+if st.button("Open Dialog with JSON Path Tooltip"):
+    dialog_with_json_path_tooltip()
+
+
+# Regression coverage for #9405: a dialog closed via st.rerun() must disappear
+# as soon as the next full-app run starts, even if that run then blocks.
+# Keep this longer than the hide-assertion window in
+# test_dialog_closes_before_blocking_follow_up_work. If the sleep finishes
+# first, clearStaleNodes can unmount the leftover dialog and the test would
+# pass without the early-hide fix.
+_BLOCKING_AFTER_DIALOG_CLOSE_SECONDS = 4
+
+
+@st.dialog("Dialog closed before blocking work")
+def dialog_closed_before_blocking() -> None:
+    st.write("Submit to close this dialog, then the app will block.")
+    if st.button("Submit then block", key="dialog-submit-then-block"):
+        st.session_state.block_after_dialog_close = True
+        st.rerun()
+
+
+if st.session_state.get("block_after_dialog_close"):
+    st.write("Blocking operation started")
+    time.sleep(_BLOCKING_AFTER_DIALOG_CLOSE_SECONDS)
+    st.write("Blocking operation done")
+    st.session_state.block_after_dialog_close = False
+elif st.button("Open dialog that blocks after close"):
+    dialog_closed_before_blocking()

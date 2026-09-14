@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import functools
 import json
 import pickle  # noqa: S403
 from collections.abc import (
@@ -36,8 +37,10 @@ from typing import (
 )
 
 from streamlit import config, util
-from streamlit.delta_generator_singletons import get_dg_singleton_instance
-from streamlit.errors import StreamlitAPIException, UnserializableSessionStateError
+from streamlit.errors import (
+    StreamlitWidgetAlreadyInstantiatedError,
+    UnserializableSessionStateError,
+)
 from streamlit.logger import get_logger
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
@@ -45,8 +48,15 @@ from streamlit.runtime.runtime_util import (
     WidgetStateSizeError,
     get_max_widget_state_size_bytes,
 )
+from streamlit.runtime.scriptrunner_utils.script_requests import (
+    _TRIGGER_PROTO_FIELDS,
+    _coalesce_replay_trigger_states,
+    _coalesce_replay_trigger_values,
+    _has_active_trigger_value,
+)
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     RunLocation,
+    ScriptRunContext,
     ThreadState,
     get_script_run_ctx,
 )
@@ -77,6 +87,7 @@ from streamlit.runtime.stats import (
 _LOGGER: Final = get_logger(__name__)
 
 if TYPE_CHECKING:
+    from streamlit.runtime.scriptrunner import RerunData
     from streamlit.runtime.session_manager import SessionManager
 
 
@@ -183,7 +194,7 @@ class WStates(MutableMapping[str, Any]):
         )
         value = (
             wstate.value.__getattribute__(value_field_name)
-            if value_field_name  # Field name is None if the widget value was cleared
+            if value_field_name is not None  # None if the widget value was cleared
             else None
         )
 
@@ -584,6 +595,48 @@ class PersistedWidgetTracker:
         self._pending_resets.discard(widget_id)
 
 
+def _interaction_default_is_app_wide(ctx: ScriptRunContext | None) -> bool:
+    """Whether the interaction's default rerun covers the whole app, not one fragment.
+
+    A fragment is running (``ctx.fragment_ids_this_run`` is non-empty) exactly when the
+    interacting widget lives inside it, and such a widget defaults to rerunning only
+    that fragment. With no context, assume app-wide.
+    """
+    return not (ctx and ctx.fragment_ids_this_run)
+
+
+def _navigation_is_pending(
+    pending_reruns: list[RerunData], ctx: ScriptRunContext | None
+) -> bool:
+    """Whether any pending request runs a page other than the one running now.
+
+    Only ``st.switch_page()`` builds such a request from a callback. With no context
+    there is no current page to compare against, so nothing counts as navigation.
+    """
+    return ctx is not None and any(
+        rerun_data.page_script_hash != ctx.page_script_hash
+        for rerun_data in pending_reruns
+    )
+
+
+@dataclass(slots=True)
+class _CallbackRerunVotes:
+    """What the callbacks of one interaction asked for, collected during dispatch.
+
+    ``SessionState._call_callbacks`` reads this once every callback has run, to queue
+    the requests and decide the interaction's rerun scope.
+    """
+
+    # A callback requested specific fragment targets (non-empty fragment_id_queue),
+    # whether via scope="fragment" or a keyed scope like scope="charts".
+    requested_targeted: bool = False
+    # A callback explicitly expects the interaction's default rerun: it returned
+    # normally or called plain st.rerun().
+    wants_interaction_default: bool = False
+    # Requests raised by st.rerun(), in call order, held until the last callback returns.
+    pending_reruns: list[RerunData] = field(default_factory=list)
+
+
 @dataclass(slots=True)
 class SessionState:
     """SessionState allows users to store values that persist between app
@@ -630,6 +683,12 @@ class SessionState:
     # rerun sequencing of a page transition.
     _persist_tracker: PersistedWidgetTracker = field(
         default_factory=PersistedWidgetTracker
+    )
+
+    # Preserve fresh browser state through callback dispatch so a targeted rerun can
+    # replay consumed triggers whenever it preempts this body. Cleared after callbacks.
+    _current_interaction_widget_states: WidgetStatesProto | None = field(
+        default=None, repr=False
     )
 
     def __repr__(self) -> str:
@@ -787,7 +846,8 @@ class SessionState:
         """Set the value of the session_state entry with the given user_key.
 
         If the key corresponds to a widget or form that's been instantiated
-        during the current script run, raise a StreamlitAPIException instead.
+        during the current script run, raise a StreamlitWidgetAlreadyInstantiatedError
+        instead.
         """
         ctx = get_script_run_ctx()
 
@@ -797,10 +857,7 @@ class SessionState:
             form_ids = ctx.shared.form_ids_this_run
 
             if widget_id in widget_ids or user_key in form_ids:
-                raise StreamlitAPIException(
-                    f"`st.session_state.{user_key}` cannot be modified after the widget"
-                    f" with key `{user_key}` is instantiated."
-                )
+                raise StreamlitWidgetAlreadyInstantiatedError(user_key)
 
         self._new_session_state[user_key] = value
 
@@ -834,21 +891,58 @@ class SessionState:
         for state in widget_states.widgets:
             self._new_widget_state.set_widget_from_proto(state)
 
-    def on_script_will_rerun(self, latest_widget_states: WidgetStatesProto) -> None:
-        """Called by ScriptRunner before its script re-runs.
+    def on_script_will_rerun(
+        self,
+        fresh_widget_states: WidgetStatesProto | None,
+        *,
+        replay_trigger_states: WidgetStatesProto | None = None,
+        replay_trigger_values: Mapping[str, Any] | None = None,
+    ) -> None:
+        """Prepare widget state before a script rerun.
 
-        Update widget data and call callbacks on widgets whose value changed
-        between the previous and current script runs.
+        Dispatch callbacks for fresh browser input, then overlay replay triggers whose
+        callbacks already ran so the script body can still observe them.
+
+        Parameters
+        ----------
+        fresh_widget_states : WidgetStatesProto | None
+            Browser-provided widget states for this interaction. Changes in these
+            states are eligible for callback dispatch.
+        replay_trigger_states : WidgetStatesProto | None
+            Active trigger states whose callbacks already ran. These are applied after
+            fresh callbacks without dispatching their callbacks again.
+        replay_trigger_values : Mapping[str, Any] | None
+            Hydrated chat-input values for replay trigger states, keyed by widget ID.
+            They preserve uploaded files and audio because chat deserialization
+            consumes their records and cannot safely be repeated.
         """
-        # Clear any triggers that weren't reset because the script was disconnected
         self._reset_triggers()
         self._compact_state()
-        self.set_widgets_from_proto(latest_widget_states)
-        self._call_callbacks()
+        if fresh_widget_states is not None:
+            self.set_widgets_from_proto(fresh_widget_states)
+            self._current_interaction_widget_states = fresh_widget_states
+            try:
+                self._call_callbacks(
+                    incoming_replay_trigger_states=replay_trigger_states,
+                    incoming_replay_trigger_values=replay_trigger_values,
+                )
+            finally:
+                self._current_interaction_widget_states = None
+        if replay_trigger_states is not None:
+            self._overlay_replay_trigger_states(
+                replay_trigger_states,
+                replay_trigger_values,
+                fresh_widget_states,
+            )
 
-    def _call_callbacks(self) -> None:
-        """Call callbacks for widgets whose value changed or whose trigger fired."""
-        from streamlit.runtime.scriptrunner import RerunException
+    def _call_callbacks(
+        self,
+        *,
+        incoming_replay_trigger_states: WidgetStatesProto | None = None,
+        incoming_replay_trigger_values: Mapping[str, Any] | None = None,
+    ) -> None:
+        """Run changed-widget callbacks, collect rerun votes, and submit reruns atomically."""
+        votes = _CallbackRerunVotes()
 
         # Skip callbacks for disabled widgets: a reported change can only come
         # from a stale UI or a forged message. Callbacks run before widgets
@@ -861,75 +955,255 @@ class SessionState:
         # construction. Either way, a disabled widget's forged change is
         # suppressed.
 
-        # Path 1: single callback.
-        changed_widget_ids_for_single_callback = [
-            wid
-            for wid in self._new_widget_state
-            if self._widget_changed(wid)
-            and (metadata := self._new_widget_state.widget_metadata.get(wid))
-            is not None
-            and metadata.callback is not None
-            and not metadata.disabled
-        ]
+        # Changed widgets, split by which dispatch path (if any) will handle them.
+        changed_widget_ids_for_single_callback: list[str] = []
 
+        for wid in self._new_widget_state:
+            if not self._widget_changed(wid):
+                continue
+            metadata = self._new_widget_state.widget_metadata.get(wid)
+            if metadata is None or metadata.disabled:
+                continue
+            if metadata.callback is not None:
+                changed_widget_ids_for_single_callback.append(wid)
+            # Widgets with neither `callback` nor `callbacks` (e.g. form fields)
+            # are skipped: their values are already in session state and they do
+            # not influence rerun scope.  Widgets with `callbacks` are handled by
+            # Path 2 below.
+
+        # Path 1: single callback.
         for wid in changed_widget_ids_for_single_callback:
-            try:
-                self._new_widget_state.call_callback(wid)
-            except RerunException:  # noqa: PERF203
-                get_dg_singleton_instance().main_dg.warning(
-                    "Calling st.rerun() within a callback is a no-op."
-                )
+            self._run_callback_and_record_rerun(
+                votes,
+                functools.partial(self._new_widget_state.call_callback, wid),
+            )
 
         # Path 2: multiple callbacks.
         widget_ids_to_process = list(self._new_widget_state.states.keys())
 
         for wid in widget_ids_to_process:
             metadata = self._new_widget_state.widget_metadata.get(wid)
-            if not metadata or metadata.callbacks is None or metadata.disabled:
+            if metadata is None or metadata.callbacks is None or metadata.disabled:
                 continue
 
             args = metadata.callback_args or ()
             kwargs = metadata.callback_kwargs or {}
 
             # 1) Trigger dispatch: bool + JSON trigger aggregator
-            self._dispatch_trigger_callbacks(wid, metadata, args, kwargs)
+            self._dispatch_trigger_callbacks(votes, wid, metadata, args, kwargs)
 
             # 2) JSON value change dispatch
             if metadata.value_type == "json_value":
-                self._dispatch_json_change_callbacks(wid, metadata, args, kwargs)
+                self._dispatch_json_change_callbacks(votes, wid, metadata, args, kwargs)
+
+        ctx = get_script_run_ctx()
+
+        # Queue the callbacks' reruns only now that every callback has run. Queued
+        # mid-dispatch, the next callback's first st.* call would pick the request up
+        # at a yield point and raise; _run_callback_and_record_rerun cannot tell that
+        # from the callback's own st.rerun(), so it would swallow it and that callback
+        # would die.
+        #
+        # No try/finally: if a callback raised, the interaction errored and queueing a
+        # rerun anyway would clear the exception element on the next SCRIPT_STARTED.
+        rerun_batch: list[RerunData] = []
+        if ctx and ctx.script_requests:
+            # Queue a navigating request last: request_rerun takes page_script_hash
+            # (and query_string) from the newest request, so an st.rerun() coalesced
+            # after an st.switch_page() would point the rerun back at the page the
+            # user asked to leave.
+            current_page = ctx.page_script_hash
+            rerun_batch.extend(
+                sorted(
+                    votes.pending_reruns,
+                    key=lambda data: data.page_script_hash != current_page,
+                )
+            )
+
+        if (
+            votes.requested_targeted
+            and votes.wants_interaction_default
+            and ctx
+            and ctx.script_requests
+            and _interaction_default_is_app_wide(ctx)
+            and not _navigation_is_pending(votes.pending_reruns, ctx)
+        ):
+            # An app-wide default trumps the targeted requests, so queue it explicitly:
+            # the callbacks that returned normally raised nothing, so no request in
+            # pending_reruns stands for them, and this run's body is about to be
+            # preempted before it can serve as their rerun.
+            #
+            # A pending navigation already reruns the whole app, so this request would
+            # add nothing but its own page — the one being navigated away from.
+            rerun_batch.append(self._build_full_app_rerun(ctx))
+
+        if ctx and ctx.script_requests and rerun_batch:
+            replay_trigger_states = incoming_replay_trigger_states
+            replay_trigger_values = incoming_replay_trigger_values
+            # Include current-interaction triggers only for targeted reruns: they
+            # preempt this body, whose follow-up reset would lose dispatched triggers.
+            # Attach replay only to the first batch item; _request_rerun_locked unions
+            # it while folding the batch.
+            if votes.requested_targeted:
+                current_replay_trigger_states = (
+                    self._filter_active_trigger_widget_states(
+                        self._current_interaction_widget_states
+                    )
+                )
+                current_replay_trigger_values = self._capture_replay_trigger_values(
+                    current_replay_trigger_states
+                )
+                coalesced_replay_states = _coalesce_replay_trigger_states(
+                    replay_trigger_states,
+                    current_replay_trigger_states,
+                )
+                replay_trigger_values = _coalesce_replay_trigger_values(
+                    new_states=current_replay_trigger_states,
+                    old_values=replay_trigger_values,
+                    new_values=current_replay_trigger_values,
+                    coalesced_states=coalesced_replay_states,
+                )
+                replay_trigger_states = coalesced_replay_states
+            if replay_trigger_states is not None:
+                coalesced_replay_states = _coalesce_replay_trigger_states(
+                    rerun_batch[0].replay_trigger_states,
+                    replay_trigger_states,
+                )
+                rerun_batch[0] = replace(
+                    rerun_batch[0],
+                    replay_trigger_states=coalesced_replay_states,
+                    replay_trigger_values=_coalesce_replay_trigger_values(
+                        new_states=replay_trigger_states,
+                        old_values=rerun_batch[0].replay_trigger_values,
+                        new_values=replay_trigger_values,
+                        coalesced_states=coalesced_replay_states,
+                    ),
+                )
+            ctx.script_requests.request_rerun_batch(rerun_batch)
 
     def _execute_widget_callback(
         self,
+        votes: _CallbackRerunVotes,
         callback_fn: WidgetCallback,
         cb_metadata: WidgetMetadata[Any],
         cb_args: WidgetArgs,
         cb_kwargs: dict[str, Any],
     ) -> None:
-        """Execute a widget callback in callback run context.
+        """Run a widget callback with ``run_location=CALLBACK`` and the widget's ``fragment_id``."""
 
-        Sets ``run_location=RunLocation.CALLBACK`` and binds ``fragment_id``
-        from the widget's metadata for the duration of the callback. The
-        derived ``in_fragment_callback`` property gates fragment-specific
-        behavior when ``fragment_id`` is non-None.
+        def run() -> None:
+            with ThreadState.scoped(
+                run_location=RunLocation.CALLBACK,
+                fragment_id=cb_metadata.fragment_id,
+            ):
+                callback_fn(*cb_args, **cb_kwargs)
 
-        Attempts to call ``st.rerun()`` inside a widget callback are converted
-        to a user-visible warning and treated as a no-op.
+        self._run_callback_and_record_rerun(votes, run)
+
+    def _run_callback_and_record_rerun(
+        self, votes: _CallbackRerunVotes, run: Callable[[], None]
+    ) -> None:
+        """Run one widget callback and record what it asked for on ``votes``.
+
+        ``st.rerun()`` interrupts the callback with a ``RerunException``. Every such
+        request lands in ``votes.pending_reruns``, which ``_call_callbacks`` queues once
+        the last callback has run (see the comment there for why it waits), and the
+        callback's rerun scope is recorded as:
+
+        - a targeted rerun (non-empty ``fragment_id_queue``) → ``requested_targeted``
+        - a plain ``st.rerun()``, or a normal return → ``wants_interaction_default``
         """
         from streamlit.runtime.scriptrunner import RerunException
 
-        with ThreadState.scoped(
-            run_location=RunLocation.CALLBACK,
-            fragment_id=cb_metadata.fragment_id,
-        ):
-            try:
-                callback_fn(*cb_args, **cb_kwargs)
-            except RerunException:
-                get_dg_singleton_instance().main_dg.warning(
-                    "Calling st.rerun() within a callback is a no-op."
+        try:
+            run()
+        except RerunException as e:
+            rerun_data = e.rerun_data
+            if rerun_data.fragment_id_queue:
+                votes.requested_targeted = True
+            else:
+                votes.wants_interaction_default = True
+            votes.pending_reruns.append(rerun_data)
+        else:
+            votes.wants_interaction_default = True
+
+    def _build_full_app_rerun(self, ctx: ScriptRunContext) -> RerunData:
+        """Build the full-app escalation entry for a mixed main-script rerun batch.
+
+        This entry carries no widget state. Trigger replay is attached separately to
+        ``rerun_batch[0]`` and folded by ``request_rerun_batch``.
+        """
+        from streamlit.runtime.scriptrunner import RerunData
+
+        return RerunData(
+            query_string=ctx.query_string,
+            page_script_hash=ctx.page_script_hash,
+            widget_states=None,
+            cached_message_hashes=ctx.cached_message_hashes,
+            context_info=ctx.context_info,
+        )
+
+    def _filter_active_trigger_widget_states(
+        self, widget_states: WidgetStatesProto | None
+    ) -> WidgetStatesProto | None:
+        """Return only active trigger entries from ``widget_states``.
+
+        Inactive triggers need not be replayed, and non-trigger values already persist
+        in session state; replaying either could overwrite callback mutations.
+        """
+        if widget_states is None:
+            return None
+
+        filtered = WidgetStatesProto()
+        for widget in widget_states.widgets:
+            if _has_active_trigger_value(widget):
+                filtered.widgets.append(widget)
+        return filtered if filtered.widgets else None
+
+    def _overlay_replay_trigger_states(
+        self,
+        replay_trigger_states: WidgetStatesProto,
+        replay_trigger_values: Mapping[str, Any] | None,
+        fresh_widget_states: WidgetStatesProto | None,
+    ) -> None:
+        """Apply replay triggers without replacing an active fresh trigger."""
+        active_fresh_states = self._filter_active_trigger_widget_states(
+            fresh_widget_states
+        )
+        active_fresh_ids = (
+            {widget.id for widget in active_fresh_states.widgets}
+            if active_fresh_states is not None
+            else set()
+        )
+        for widget in replay_trigger_states.widgets:
+            if widget.id in active_fresh_ids or not _has_active_trigger_value(widget):
+                continue
+            if replay_trigger_values is not None and widget.id in replay_trigger_values:
+                self._new_widget_state.set_from_value(
+                    widget.id, replay_trigger_values[widget.id]
                 )
+            else:
+                self._new_widget_state.set_widget_from_proto(widget)
+
+    def _capture_replay_trigger_values(
+        self, replay_trigger_states: WidgetStatesProto | None
+    ) -> Mapping[str, Any] | None:
+        """Snapshot hydrated chat inputs whose uploaded files were consumed."""
+        if replay_trigger_states is None:
+            return None
+
+        values: dict[str, Any] = {}
+        for widget in replay_trigger_states.widgets:
+            if widget.WhichOneof("value") != "chat_input_value":
+                continue
+            state = self._new_widget_state.states.get(widget.id)
+            if isinstance(state, Value) and state.value is not None:
+                values[widget.id] = state.value
+        return values or None
 
     def _dispatch_trigger_callbacks(
         self,
+        votes: _CallbackRerunVotes,
         wid: str,
         metadata: WidgetMetadata[Any],
         args: WidgetArgs,
@@ -944,6 +1218,8 @@ class SessionState:
 
         Parameters
         ----------
+        votes : _CallbackRerunVotes
+            Accumulator that each dispatched callback records its rerun request on.
         wid : str
             The widget ID.
         metadata : WidgetMetadata[Any]
@@ -990,10 +1266,13 @@ class SessionState:
                     if isinstance(event_name, str) and metadata.callbacks:
                         cb = metadata.callbacks.get(event_name)
                         if cb is not None:
-                            self._execute_widget_callback(cb, metadata, args, kwargs)
+                            self._execute_widget_callback(
+                                votes, cb, metadata, args, kwargs
+                            )
 
     def _dispatch_json_change_callbacks(
         self,
+        votes: _CallbackRerunVotes,
         wid: str,
         metadata: WidgetMetadata[Any],
         args: WidgetArgs,
@@ -1006,6 +1285,8 @@ class SessionState:
 
         Parameters
         ----------
+        votes : _CallbackRerunVotes
+            Accumulator that each dispatched callback records its rerun request on.
         wid : str
             The widget ID.
         metadata : WidgetMetadata[Any]
@@ -1046,7 +1327,7 @@ class SessionState:
             for key in changed_keys:
                 cb = metadata.callbacks.get(key)
                 if cb is not None:
-                    self._execute_widget_callback(cb, metadata, args, kwargs)
+                    self._execute_widget_callback(votes, cb, metadata, args, kwargs)
 
     def _widget_changed(self, widget_id: str) -> bool:
         """True if the given widget's value changed between the previous
@@ -1057,9 +1338,14 @@ class SessionState:
         changed: bool = new_value != old_value
         return changed
 
-    def on_script_finished(self, widget_ids_this_run: frozenset[str]) -> None:
-        """Called by ScriptRunner after its script finishes running.
-         Updates widgets to prepare for the next script run.
+    def on_script_finished(
+        self,
+        widget_ids_this_run: frozenset[str],
+        *,
+        remove_stale_widgets: bool = True,
+    ) -> None:
+        """Called by ScriptRunner when a script run ends, whether or not its body ran.
+        Updates widgets to prepare for the next script run.
 
         Parameters
         ----------
@@ -1067,34 +1353,37 @@ class SessionState:
             The IDs of the widgets that were accessed during the script
             run. Any widget state whose ID does *not* appear in this set
             is considered "stale" and will be removed.
+        remove_stale_widgets: bool
+            Whether to drop stale widget state. Pass False when
+            ``widget_ids_this_run`` is incomplete:
+
+            - the body never ran, or
+            - ``st.rerun()`` interrupted the run before later widgets registered.
+
+            The next completed run removes stale widgets instead. SessionState
+            still resets triggers either way, so a fired callback's event is
+            never delivered twice.
         """
         self._reset_triggers()
-        self._remove_stale_widgets(widget_ids_this_run)
+        if remove_stale_widgets:
+            self._remove_stale_widgets(widget_ids_this_run)
 
     def _reset_triggers(self) -> None:
         """Set all trigger values in our state dictionary to False."""
         for state_id in self._new_widget_state:
             metadata = self._new_widget_state.widget_metadata.get(state_id)
-            if metadata is not None:
+            if metadata is not None and metadata.value_type in _TRIGGER_PROTO_FIELDS:
                 if metadata.value_type == "trigger_value":
                     self._new_widget_state[state_id] = Value(False)
-                elif metadata.value_type in {
-                    "string_trigger_value",
-                    "chat_input_value",
-                    "json_trigger_value",
-                }:
+                else:
                     self._new_widget_state[state_id] = Value(None)
 
         for state_id in self._old_state:
             metadata = self._new_widget_state.widget_metadata.get(state_id)
-            if metadata is not None:
+            if metadata is not None and metadata.value_type in _TRIGGER_PROTO_FIELDS:
                 if metadata.value_type == "trigger_value":
                     self._old_state[state_id] = False
-                elif metadata.value_type in {
-                    "string_trigger_value",
-                    "chat_input_value",
-                    "json_trigger_value",
-                }:
+                else:
                     self._old_state[state_id] = None
 
     def _remove_stale_widgets(self, active_widget_ids: frozenset[str]) -> None:

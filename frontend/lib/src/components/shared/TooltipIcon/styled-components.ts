@@ -70,6 +70,7 @@ export const StyledLabelHelpWrapper = styled.div<StyledLabelHelpWrapperProps>(
     // For LaTeX, use fit-content to keep icon close, but constrain with maxWidth
     // so long formulas can scroll. Center using margin-inline: auto
     width: isLatex ? "fit-content" : "100%",
+    minWidth: 0,
     ...(isLatex ? { maxWidth: "100%", marginInline: "auto" } : {}),
   })
 )
@@ -79,4 +80,5 @@ export const StyledLabelHelpInline = styled.label(({ theme }) => ({
   position: "relative",
   display: "flex",
   flexDirection: "row",
+  flexShrink: 0,
 }))

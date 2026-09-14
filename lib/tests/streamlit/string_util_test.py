@@ -15,15 +15,35 @@
 from __future__ import annotations
 
 import decimal
+import sys
 import unittest
+from contextlib import contextmanager
 from fractions import Fraction
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 from parameterized import parameterized
 
 from streamlit import string_util
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+
+@contextmanager
+def _without_modules(*module_names: str) -> Iterator[None]:
+    """Temporarily remove modules from ``sys.modules`` to detect unexpected imports."""
+    saved = {name: sys.modules.pop(name, None) for name in module_names}
+    try:
+        yield
+    finally:
+        for name, mod in saved.items():
+            if mod is not None:
+                sys.modules[name] = mod
+            else:
+                sys.modules.pop(name, None)
 
 
 class StringUtilTest(unittest.TestCase):
@@ -45,6 +65,18 @@ class StringUtilTest(unittest.TestCase):
     def test_is_emoji(self, text: str, expected: bool):
         """Test streamlit.string_util.is_emoji."""
         assert string_util.is_emoji(text) == expected
+
+    def test_to_str(self):
+        """``to_str`` leaves strings unchanged and stringifies other values."""
+        assert string_util.to_str("already") == "already"
+        assert string_util.to_str(123) == "123"
+        assert string_util.to_str(None) == "None"
+
+    def test_to_help_str(self):
+        """``to_help_str`` stringifies and dedents help text."""
+        assert string_util.to_help_str("already") == "already"
+        assert string_util.to_help_str(123) == "123"
+        assert string_util.to_help_str("    indented") == "indented"
 
     @parameterized.expand(
         [
@@ -109,29 +141,6 @@ class StringUtilTest(unittest.TestCase):
     def test_extract_leading_icon(self, text, expected):
         """Test streamlit.string_util.extract_leading_icon."""
         assert string_util.extract_leading_icon(text) == expected
-
-    @parameterized.expand(
-        [
-            ("A", False),
-            ("hello", False),
-            ("1_foo", False),
-            ("1.foo", False),
-            ("1-foo", False),
-            ("foo bar", False),
-            ("foo.bar", False),
-            ("foo&bar", False),
-            ("", False),
-            ("a 😃bc", True),
-            ("X😃", True),
-            ("%", True),
-            ("😃", True),
-            ("😃 page name", True),
-            ("👨‍👨‍👧‍👦_page name", True),
-            ("何_is_this", True),
-        ]
-    )
-    def test_contains_special_chars(self, text: str, expected: bool):
-        assert string_util._contains_special_chars(text) == expected
 
     def test_simplify_number(self):
         """Test streamlit.string_util.simplify_number."""
@@ -231,25 +240,102 @@ class StringUtilTest(unittest.TestCase):
     @parameterized.expand(
         [
             (None, ""),
+            ("", ""),
+            ("   ", ""),
             ("spinner", "spinner"),
+            (" spinner ", "spinner"),
             ("😃", "😃"),
+            (" 😃 ", "😃"),
+            ("👨‍👨‍👧‍👦", "👨‍👨‍👧‍👦"),
+            ("👍🏽", "👍🏽"),
+            ("️🚨", "️🚨"),
             (":material/thumb_up:", ":material/thumb_up:"),
+            (" :material/thumb_up: ", ":material/thumb_up:"),
+            ("🇺🇸", "🇺🇸"),
+            ("1️⃣", "1️⃣"),
         ]
     )
-    def test_validate_icon_or_emoji(self, icon, expected):
-        """Test streamlit.string_util.validate_icon_or_emoji."""
+    def test_validate_icon_or_emoji(self, icon: str | None, expected: str) -> None:
+        """Valid icons are returned in normalized form; None and whitespace mean no icon."""
         assert string_util.validate_icon_or_emoji(icon) == expected
 
     @parameterized.expand(
         [
-            ("invalid"),
-            (":material/invalid:"),
+            (":material/invalid:", "invalid-material-icon"),
+            (":material/thumb_up", "invalid-material-icon"),
+            (":Material/thumb_up:", "invalid-material-icon"),
+            (":rocket:", "invalid-emoji-shortcode"),
+            (":+1:", "invalid-emoji-shortcode"),
+            ("invalid", "invalid-icon"),
+            ("😃😃", "invalid-emoji"),
+            ("https://example.com/icon.png", "invalid-image"),
+            ("data:image/png;base64,abc", "invalid-image"),
+            ("//cdn.example.com/icon.png", "invalid-image"),
+            ("logo.png", "invalid-icon"),
         ]
     )
-    def test_validate_icon_or_emoji_raises(self, icon):
-        """Test that validate_icon_or_emoji raises StreamlitAPIException on invalid inputs."""
-        with pytest.raises(StreamlitAPIException):
+    def test_validate_icon_or_emoji_classifies_invalid_values(
+        self, icon: str, error_id: str
+    ) -> None:
+        """Invalid values raise with a specific error_id rather than a catch-all."""
+        with pytest.raises(StreamlitAPIException) as e:
             string_util.validate_icon_or_emoji(icon)
+        assert e.value.error_id == error_id
+
+    def test_validate_icon_or_emoji_truncates_long_invalid_image_values(self) -> None:
+        """Long URL-shaped values must not dump their full contents into the exception."""
+        icon = "data:image/png;base64," + "A" * 200
+        with pytest.raises(StreamlitAPIException) as e:
+            string_util.validate_icon_or_emoji(icon)
+        assert e.value.error_id == "invalid-image"
+        message = str(e.value)
+        assert icon not in message
+        assert "A" * 200 not in message
+        assert "…" in message
+
+    def test_validate_icon_or_emoji_rejects_non_string(self) -> None:
+        """Non-string values raise StreamlitInvalidParameterTypeError, not AttributeError."""
+        with pytest.raises(StreamlitInvalidParameterTypeError) as e:
+            string_util.validate_icon_or_emoji(123)  # type: ignore[arg-type]
+        assert e.value.exec_kwargs["parameter"] == "icon"
+        assert "int" in str(e.value)
+
+    def test_validate_icon_or_emoji_emoji_error_says_single_emoji(self) -> None:
+        """Invalid emoji-like values mention a single emoji, not a single character."""
+        with pytest.raises(StreamlitAPIException) as e:
+            string_util.validate_icon_or_emoji("😃😃")
+        assert "single emoji" in str(e.value)
+        assert "single character" not in str(e.value)
+
+    def test_validate_icon_or_emoji_does_not_load_catalogs_for_non_emoji_values(
+        self,
+    ) -> None:
+        """Non-emoji values must not import the emoji or Material icon catalogs."""
+        catalog_modules = ("streamlit.emojis", "streamlit.material_icon_names")
+        with _without_modules(*catalog_modules):
+            assert string_util.validate_icon_or_emoji("spinner") == "spinner"
+            assert string_util.validate_icon_or_emoji("") == ""
+            with pytest.raises(StreamlitAPIException) as e:
+                string_util.validate_icon_or_emoji("home")
+            assert e.value.error_id == "invalid-icon"
+            with pytest.raises(StreamlitAPIException) as e:
+                string_util.validate_icon_or_emoji(":rocket:")
+            assert e.value.error_id == "invalid-emoji-shortcode"
+            with pytest.raises(StreamlitAPIException) as e:
+                string_util.validate_icon_or_emoji("https://example.com/icon.png")
+            assert e.value.error_id == "invalid-image"
+            for name in catalog_modules:
+                assert name not in sys.modules
+
+    def test_validate_icon_or_emoji_does_not_load_emoji_catalog_for_material(
+        self,
+    ) -> None:
+        """Malformed Material syntax must not load the emoji catalog."""
+        with _without_modules("streamlit.emojis"):
+            with pytest.raises(StreamlitAPIException) as e:
+                string_util.validate_icon_or_emoji(":material/not_a_real_icon:")
+            assert e.value.error_id == "invalid-material-icon"
+            assert "streamlit.emojis" not in sys.modules
 
     def test_validate_emoji_none(self):
         """Test that validate_emoji returns empty string for None input."""
@@ -271,6 +357,30 @@ class StringUtilTest(unittest.TestCase):
         """Test that is_binary_string correctly identifies binary vs text data."""
         assert string_util.is_binary_string(inp) == expected
 
+    @parameterized.expand(
+        [
+            ("<foo blarg at 0x15ee6f9a0>", True),  # glibc: lowercase hex
+            ("<__main__.Foo object at 0x0000027B0C1B1550>", True),  # MSVC instance
+            ("<property object at 0x000002500A1F3240>", True),  # MSVC property
+            # The "at" and "0x" literals stay case-sensitive: CPython normalizes
+            # the prefix to a lowercase "0x" no matter how the C runtime cased
+            # the digits.
+            ("<foo blarg AT 0X15EE6F9A0>", False),
+            ("<module 'os' from '/usr/lib/os.py'>", False),  # Repr with no address
+            ("<foo blarg at 0xdeadbeefg>", False),  # Non-hex character
+            ("<foo blarg at 15ee6f9a0>", False),  # Missing the 0x prefix
+            ("", False),
+        ]
+    )
+    def test_is_mem_address_str(self, string: str, expected: bool) -> None:
+        """``is_mem_address_str`` matches default object reprs in either hex casing."""
+        assert string_util.is_mem_address_str(string) == expected
+
+    def test_is_mem_address_str_matches_this_host(self) -> None:
+        """This host's default object repr matches, whatever hex casing its C
+        runtime emits."""
+        assert string_util.is_mem_address_str(repr(object()))
+
     def test_from_number_with_invalid_item_method(self):
         """Test from_number with object that has item() but returns non-numeric."""
 
@@ -290,3 +400,29 @@ class StringUtilTest(unittest.TestCase):
 
         with pytest.raises(TypeError):
             string_util.from_number(FakeNumpyValue())  # type: ignore[arg-type]
+
+
+def test_validate_icon_or_emoji_skips_url_and_path_helpers() -> None:
+    """Validation must not import URL or path-security helpers."""
+    modules = ("streamlit.url_util", "streamlit.path_security")
+    with _without_modules(*modules):
+        assert string_util.validate_icon_or_emoji("spinner") == "spinner"
+        assert string_util.validate_icon_or_emoji("😃") == "😃"
+        assert (
+            string_util.validate_icon_or_emoji(":material/thumb_up:")
+            == ":material/thumb_up:"
+        )
+        with pytest.raises(StreamlitAPIException) as e:
+            string_util.validate_icon_or_emoji("home")
+        assert e.value.error_id == "invalid-icon"
+        with pytest.raises(StreamlitAPIException) as e:
+            string_util.validate_icon_or_emoji(":rocket:")
+        assert e.value.error_id == "invalid-emoji-shortcode"
+        with pytest.raises(StreamlitAPIException) as e:
+            string_util.validate_icon_or_emoji("https://example.com/icon.png")
+        assert e.value.error_id == "invalid-image"
+        with pytest.raises(StreamlitAPIException) as e:
+            string_util.validate_icon_or_emoji("logo.png")
+        assert e.value.error_id == "invalid-icon"
+        for name in modules:
+            assert name not in sys.modules

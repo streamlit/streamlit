@@ -30,11 +30,16 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import file_util
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitIncompatibleParametersError,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.runtime.caching.cache_data_api import (
+    DataCache,
     _data_caches,
     get_data_cache_stats_provider,
 )
@@ -50,6 +55,7 @@ from streamlit.runtime.caching.storage import (
     CacheStorageManager,
 )
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
+    CacheStorageError,
     InvalidCacheStorageContextError,
 )
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
@@ -71,11 +77,18 @@ from tests.streamlit.element_mocks import (
 from tests.streamlit.runtime.caching.common_cache_test import (
     as_cached_result as _as_cached_result,
 )
-from tests.testutil import create_mock_script_run_ctx
+from tests.testutil import create_mock_script_run_ctx, patch_config_options
 
 
 def as_cached_result(value: Any) -> CachedResult:
     return _as_cached_result(value)
+
+
+class _Unpicklable:
+    """Value whose pickle serialization always fails with PicklingError."""
+
+    def __getstate__(self) -> object:
+        raise pickle.PicklingError("intentionally unpicklable")
 
 
 def as_replay_test_data() -> CachedResult:
@@ -616,6 +629,21 @@ class CacheDataStatsProviderTest(unittest.TestCase):
         assert CACHE_MEMORY_FAMILY in stats_dict
         assert set(expected) == set(stats_dict[CACHE_MEMORY_FAMILY])
 
+    def test_data_cache_get_stats_delegates_to_stats_provider_storage(self) -> None:
+        """DataCache.get_stats returns storage stats when storage is a StatsProvider."""
+        cache = _data_caches.get_cache(
+            key="stats_key",
+            persist=None,
+            max_entries=None,
+            ttl=None,
+            display_name="stats_fn",
+        )
+        cache.write_result("vk", 123, [])
+        stats = cache.get_stats()
+        family_stats = stats[CACHE_MEMORY_FAMILY]
+        assert family_stats
+        assert all(stat.byte_length > 0 for stat in family_stats)
+
 
 class CacheDataValidateParamsTest(DeltaGeneratorTestCase):
     """st.cache_data disk persistence tests"""
@@ -884,45 +912,69 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
     def tearDown(self) -> None:
         st.cache_data.clear()
 
+    def _cache(self, key: str, **kwargs: Any) -> DataCache[Any]:
+        params: dict[str, Any] = {
+            "key": key,
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": key,
+        }
+        params.update(kwargs)
+        return _data_caches.get_cache(**params)
+
+    def _background_cache(self, key: str) -> DataCache[Any]:
+        """Return a background-mode cache that already has ``vk`` stored."""
+        cache = self._cache(key, ttl=100, refresh_mode="background")
+        cache.write_result("vk", 123, [])
+        return cache
+
+    def _write_background(self, cache: DataCache[Any], value: object = 456) -> None:
+        cache.write_background_refresh_result(
+            "vk",
+            value,
+            expected_generation=cache.generation,
+            expected_key_generation=cache.key_generation("vk"),
+        )
+
     def test_background_without_ttl_raises(self) -> None:
-        """refresh_mode="background" without a ttl raises a StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        """refresh_mode="background" without a ttl requires a positive ttl."""
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match=r'Set a positive `ttl` \(for example `ttl="1h"`\)',
+        ):
 
             @st.cache_data(refresh_mode="background")
             def foo() -> int:
                 return 1
 
-        assert "requires a 'ttl' value" in str(exc.value)
-
     def test_background_with_zero_ttl_raises(self) -> None:
-        """A non-positive ttl is treated as no ttl for background refresh."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        """A non-positive ttl is an invalid value for background refresh."""
+        with pytest.raises(
+            StreamlitValueError,
+            match=r"Background refresh requires a positive `ttl`",
+        ):
 
             @st.cache_data(ttl=0, refresh_mode="background")
             def foo() -> int:
                 return 1
 
-        assert "requires a 'ttl' value" in str(exc.value)
+    @parameterized.expand(
+        [
+            ("disk",),
+            (True,),
+        ]
+    )
+    def test_background_with_persist_raises(self, persist: str | bool) -> None:
+        """refresh_mode="background" with persist raises an incompatibility error."""
+        with pytest.raises(
+            StreamlitIncompatibleParametersError,
+            match=rf"persist={persist!r}",
+        ):
 
-    def test_background_with_persist_disk_raises(self) -> None:
-        """refresh_mode="background" with persist="disk" raises a StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as exc:
-
-            @st.cache_data(ttl="1h", persist="disk", refresh_mode="background")
+            @st.cache_data(ttl="1h", persist=persist, refresh_mode="background")
             def foo() -> int:
                 return 1
-
-        assert "not compatible with 'persist'" in str(exc.value)
-
-    def test_background_with_persist_true_raises(self) -> None:
-        """refresh_mode="background" with persist=True raises a StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as exc:
-
-            @st.cache_data(ttl="1h", persist=True, refresh_mode="background")
-            def foo() -> int:
-                return 1
-
-        assert "not compatible with 'persist'" in str(exc.value)
 
     def test_invalid_refresh_mode_raises(self) -> None:
         """An unknown refresh_mode value raises a StreamlitValueError."""
@@ -938,7 +990,7 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         )
 
     def test_hard_ttl_is_double_fresh_ttl(self) -> None:
-        """In background mode the underlying storage ttl is 2x the user-facing ttl."""
+        """The default hard TTL is twice the user-facing freshness TTL."""
         cache = _data_caches.get_cache(
             key="bg_key",
             persist=None,
@@ -949,6 +1001,32 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         )
         assert cache.fresh_ttl_seconds == 100
         assert cache.ttl_seconds == 200
+
+    @parameterized.expand(
+        [
+            ("custom", 3.5, 350),
+            ("overflow_fallback", 1e308, 200),
+        ]
+    )
+    # Each case needs a distinct key so it builds a fresh cache rather than reusing one.
+    def test_configured_multiplier_sets_background_hard_ttl(
+        self, case: str, multiplier: float, expected_hard_ttl: float
+    ) -> None:
+        """The configured multiplier sets background hard TTL; overflow falls back."""
+        with patch_config_options(
+            {"runner.cacheBackgroundRefreshTTLMultiplier": multiplier}
+        ):
+            cache = _data_caches.get_cache(
+                key=f"multiplier_{case}",
+                persist=None,
+                max_entries=None,
+                ttl=100,
+                display_name=f"multiplier_{case}",
+                refresh_mode="background",
+            )
+
+        assert cache.fresh_ttl_seconds == 100
+        assert cache.ttl_seconds == expected_hard_ttl
 
     def test_stored_at_set_only_in_background_mode(self) -> None:
         """stored_at is set (and survives pickling) in background mode, and None otherwise."""
@@ -1023,3 +1101,66 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         assert cache_bg is not cache_fg
         # The replaced cache is detached so an in-flight refresh would be discarded.
         assert cache_fg.is_active is False
+
+    def test_write_result_if_current_reraises_pickle_error_when_still_current(
+        self,
+    ) -> None:
+        """A pickle failure is re-raised if the cache was not invalidated during it."""
+        cache = self._cache("pickle_still_current")
+        token = cache.capture_invalidation_token("vk")
+        with (
+            patch.object(cache, "_pickle_result", side_effect=CacheError("nope")),
+            pytest.raises(CacheError, match="nope"),
+        ):
+            cache.write_result_if_current("vk", 1, [], invalidation_token=token)
+
+    def test_write_result_if_current_returns_false_if_invalidated_during_pickle(
+        self,
+    ) -> None:
+        """A pickle failure is ignored when a clear landed while serializing."""
+        cache = self._cache("pickle_invalidated")
+        token = cache.capture_invalidation_token("vk")
+
+        def _pickle_then_clear(*_args: object, **_kwargs: object) -> bytes:
+            cache.clear()
+            raise CacheError("nope")
+
+        with patch.object(cache, "_pickle_result", side_effect=_pickle_then_clear):
+            assert (
+                cache.write_result_if_current("vk", 1, [], invalidation_token=token)
+                is False
+            )
+
+    def test_background_writeback_raises_on_unpicklable_value(self) -> None:
+        """Unpicklable background refresh results surface as CacheError."""
+        cache = self._background_cache("bg_unpicklable")
+        with pytest.raises(CacheError, match="Failed to pickle"):
+            self._write_background(cache, _Unpicklable())
+
+    @parameterized.expand(
+        [
+            ("missing_entry", {"return_value": False}),
+            ("storage_error", {"side_effect": CacheStorageError("boom")}),
+        ]
+    )
+    def test_background_writeback_skips_when_presence_check_fails(
+        self, case: str, has_kwargs: dict[str, object]
+    ) -> None:
+        """A failed presence check discards the refresh write-back."""
+        cache = self._background_cache(f"bg_{case}")
+        with (
+            patch.object(cache.storage, "has", **has_kwargs),
+            patch.object(cache.storage, "set") as mock_set,
+        ):
+            self._write_background(cache)
+            mock_set.assert_not_called()
+
+    def test_background_writeback_skips_when_orphaned_under_lock(self) -> None:
+        """A refresh that becomes orphaned after pickling is not written."""
+        cache = self._background_cache("bg_orphaned_lock")
+        with (
+            patch.object(cache, "_refresh_is_orphaned", side_effect=[False, True]),
+            patch.object(cache.storage, "set") as mock_set,
+        ):
+            self._write_background(cache)
+            mock_set.assert_not_called()

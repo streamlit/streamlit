@@ -42,9 +42,9 @@ import { useDropzone } from "react-dropzone"
 import { useWindowDimensionsContext } from "@streamlit/lib"
 import {
   ChatInput as ChatInputProto,
+  type ChatInputValue,
   FileUploaderState as FileUploaderStateProto,
-  IChatInputValue,
-  IFileURLs,
+  type FileURLs,
   streamlit,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
@@ -132,7 +132,7 @@ export interface Props {
   widgetMgr: WidgetStateManager
   uploadClient: FileUploadClient
   fragmentId?: string
-  heightConfig?: streamlit.IHeightConfig | null
+  heightConfig?: streamlit.HeightConfig.$Properties | null
 }
 
 const updateFile = (
@@ -587,7 +587,7 @@ function ChatInput({
           )
         })
       },
-      onUploadComplete: (id: number, fileUrls: IFileURLs) => {
+      onUploadComplete: (id: number, fileUrls: FileURLs.$Properties) => {
         setFiles(prevFiles => {
           const curFile = getFile(id, prevFiles)
           if (
@@ -683,18 +683,18 @@ function ChatInput({
 
       const filesValue = createChatInputWidgetFilesValue()
 
-      const composedValue: IChatInputValue = {
+      const composedValue: ChatInputValue.$Properties = {
         data: value,
         fileUploaderState: filesValue,
         audioFileInfo: audioInfo,
       }
 
-      widgetMgr.setChatInputValue(
-        element,
-        composedValue,
-        { fromUi: true },
-        fragmentId
-      )
+      widgetMgr.setChatInputValue(element.id, composedValue, {
+        // Chat input cannot be placed inside a form.
+        formId: undefined,
+        fragmentId,
+        fromUser: true,
+      })
 
       // Track submission for submit_mode behavior
       if (submitMode !== ChatInputProto.SubmitMode.SUBMIT_MODE_SUBMIT) {
@@ -744,7 +744,7 @@ function ChatInput({
     // eslint-disable-next-line react-hooks/preserve-manual-memoization -- chatInputRef and uploadAbortControllerRef are refs; setAudioUploading and setRecordingError are stable setters
     async (wav: Blob): Promise<void> => {
       // Convert blob to File
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
+      const timestamp = new Date().toISOString().replaceAll(/[:.]/g, "-")
       const audioFile = new File([wav], `audio-${timestamp}.wav`, {
         type: "audio/wav",
       })

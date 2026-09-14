@@ -26,14 +26,82 @@ import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementStat
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
+  StepIconTone,
   StyledDetails,
   StyledDetailsPanel,
   StyledExpandableContainer,
+  StyledStepChevron,
+  StyledStepConnector,
+  StyledStepHeader,
+  StyledStepIcon,
+  StyledStepIconColumn,
   StyledSummary,
   StyledSummaryHeading,
   StyledSummaryLabelWrapper,
+  StyledVisuallyHidden,
 } from "./styled-components"
 import { useDetailsAnimation } from "./useDetailsAnimation"
+
+const STATUS_ICON_TEST_IDS: Record<string, string> = {
+  ":material/check:": "stExpanderIconCheck",
+  ":material/error:": "stExpanderIconError",
+  spinner: "stExpanderIconSpinner",
+}
+
+const { State, Type } = BlockProto.Expandable
+
+interface StepIcon {
+  iconValue: string
+  tone: StepIconTone
+}
+
+interface StepState extends StepIcon {
+  /** Progress state as announced to screen readers. */
+  stateLabel: string
+}
+
+/** How a step renders each progress state of an st.status. */
+const STEP_STATES: Partial<Record<BlockProto.Expandable.State, StepState>> = {
+  [State.RUNNING]: {
+    iconValue: "spinner",
+    tone: "muted",
+    stateLabel: "running",
+  },
+  [State.COMPLETE]: {
+    iconValue: ":material/check_circle:",
+    tone: "muted",
+    stateLabel: "complete",
+  },
+  [State.ERROR]: {
+    iconValue: ":material/error:",
+    tone: "error",
+    stateLabel: "error",
+  },
+}
+
+/** Neutral placeholder for a step that has neither a state nor a user icon. */
+const DEFAULT_STEP_ICON = ":material/circle:"
+
+/**
+ * Resolves the icon and tone a step shows while it is neither hovered nor
+ * focused.
+ *
+ * The state wins over `icon` because only `st.status` sets a state and it has
+ * no `icon` parameter, while only `st.expander` accepts an `icon`. `st.status`
+ * additionally encodes its state into `icon` for the default and compact
+ * styles, so reading `icon` first would pin steps to that icon set.
+ */
+function resolveStepIcon(
+  stepState: StepState | undefined,
+  icon: string
+): StepIcon {
+  if (stepState) {
+    return stepState
+  }
+  return icon
+    ? { iconValue: icon, tone: "default" }
+    : { iconValue: DEFAULT_STEP_ICON, tone: "muted" }
+}
 
 interface ExpanderIconProps {
   icon?: string
@@ -52,17 +120,11 @@ interface ExpanderIconProps {
 const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
   const { icon } = props
 
-  const statusIconTestIds: Record<string, string> = {
-    ":material/check:": "stExpanderIconCheck",
-    ":material/error:": "stExpanderIconError",
-    spinner: "stExpanderIconSpinner",
-  }
-
   return icon ? (
     <DynamicIcon
       size="base"
       iconValue={icon}
-      testid={statusIconTestIds[icon] || "stExpanderIcon"}
+      testid={STATUS_ICON_TEST_IDS[icon] || "stExpanderIcon"}
     />
   ) : (
     <></>
@@ -72,6 +134,8 @@ const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
 export interface ExpanderProps {
   element: BlockProto.Expandable
   isStale: boolean
+  /** True when the block has no children; a step without content can't collapse. */
+  empty: boolean
   widgetMgr: WidgetStateManager
   /** Block-level ID for CSS key styling (may be set without widget mode). */
   blockId?: string
@@ -81,12 +145,13 @@ export interface ExpanderProps {
 const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   element,
   isStale,
+  empty,
   widgetMgr,
   blockId,
   fragmentId,
   children,
 }): ReactElement => {
-  const { label, icon, type } = element
+  const { label, icon, type, state } = element
   const [isHovered, setIsHovered] = useState(false)
 
   // element.id is only set when the backend registers the expander as a
@@ -117,24 +182,22 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
     if (!widgetId || !notNullOrUndefined(element.expanded)) {
       return
     }
-    widgetMgr.setBoolValue(
-      { id: widgetId },
-      element.expanded,
-      { fromUi: false },
-      fragmentId
-    )
+    widgetMgr.setBoolValue(widgetId, element.expanded, {
+      formId: undefined,
+      fragmentId,
+      fromUser: false,
+    })
   }, [widgetId, element.expanded])
 
   // Callback to notify backend of toggle (only used in widget mode)
   const handleWidgetToggle = useCallback(
     (newOpen: boolean): void => {
       if (widgetMgr && widgetId) {
-        widgetMgr.setBoolValue(
-          { id: widgetId },
-          newOpen,
-          { fromUi: true },
-          fragmentId
-        )
+        widgetMgr.setBoolValue(widgetId, newOpen, {
+          formId: undefined,
+          fragmentId,
+          fromUser: true,
+        })
       }
     },
     [widgetMgr, widgetId, fragmentId]
@@ -154,19 +217,33 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
       ? handlePersistToggle
       : undefined
 
-  const isCompact = type === BlockProto.Expandable.Type.COMPACT
+  const isCompact = type === Type.COMPACT
+  const isStep = type === Type.STEP
+  // Only the default style draws a border, which also counts towards the
+  // height the expand/collapse animation targets.
+  const hasBorder = type === Type.DEFAULT
+  // A step without content has nothing to reveal, so it stays a plain header.
+  const isCollapsible = !isStep || !empty
+
+  // Compact + shimmer: the sweep is the in-progress cue (see compact summary
+  // styles). A leading spinner next to it is a second loading indicator on an
+  // already-minimal header.
+  const hideCompactSpinnerForShimmer =
+    isCompact && icon === "spinner" && label.includes(":shimmer[")
 
   // Leading icon logic: normal mode swaps between chevron and user icon on hover;
   // compact mode always shows user icon (if any) since the chevron is trailing.
   const showLeadingChevron = !isCompact && (!icon || isHovered)
-  const showLeadingUserIcon = isCompact ? Boolean(icon) : icon && !isHovered
+  const showLeadingUserIcon = isCompact
+    ? Boolean(icon) && !hideCompactSpinnerForShimmer
+    : icon && !isHovered
 
   const { isOpen, detailsRef, summaryRef, contentRef, handleToggle } =
     useDetailsAnimation({
       backendExpanded: initialExpanded,
       label,
       onToggle,
-      isCompact,
+      hasBorder,
     })
 
   const handleMouseEnter = (): void => {
@@ -177,56 +254,125 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
     setIsHovered(false)
   }
 
-  return (
-    <StyledExpandableContainer className="stExpander" data-testid="stExpander">
-      <StyledDetails
-        isStale={isStale}
-        isCompact={isCompact}
-        ref={detailsRef}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-      >
-        <StyledSummary
-          onClick={handleToggle}
-          ref={summaryRef}
-          isStale={isStale}
-          expanded={isOpen}
-          isCompact={isCompact}
-        >
-          <StyledSummaryHeading>
-            {showLeadingChevron && (
+  const stepState = STEP_STATES[state]
+  const stepIcon = resolveStepIcon(stepState, icon)
+  const stepStateLabel = isStep ? stepState?.stateLabel : undefined
+
+  const summaryHeading = (
+    <StyledSummaryHeading expanderType={type}>
+      {isStep ? (
+        // The icon and chevron only restate what the hidden state text and
+        // aria-expanded already convey, and Material icons would otherwise leak
+        // their ligature name into the accessible name.
+        <StyledStepIconColumn aria-hidden="true">
+          <StyledStepIcon
+            tone={stepIcon.tone}
+            data-testid="stExpanderStepIcon"
+          >
+            <DynamicIcon iconValue={stepIcon.iconValue} size="lg" />
+          </StyledStepIcon>
+          {isCollapsible && (
+            <StyledStepChevron data-testid="stExpanderStepChevron">
               <DynamicIcon
                 iconValue={
                   isOpen
                     ? ":material/keyboard_arrow_down:"
                     : ":material/keyboard_arrow_right:"
                 }
-                size="base"
-              />
-            )}
-            {showLeadingUserIcon && <ExpanderIcon icon={icon} />}
-
-            <StyledSummaryLabelWrapper isCompact={isCompact}>
-              <StreamlitMarkdown source={label} allowHTML={false} isLabel />
-            </StyledSummaryLabelWrapper>
-
-            {/* Trailing chevron for compact mode (uses chevron_right for tighter appearance) */}
-            {isCompact && (
-              <DynamicIcon
-                iconValue={
-                  isOpen
-                    ? ":material/keyboard_arrow_down:"
-                    : ":material/chevron_right:"
-                }
                 size="lg"
               />
-            )}
-          </StyledSummaryHeading>
+            </StyledStepChevron>
+          )}
+        </StyledStepIconColumn>
+      ) : (
+        <>
+          {showLeadingChevron && (
+            <DynamicIcon
+              iconValue={
+                isOpen
+                  ? ":material/keyboard_arrow_down:"
+                  : ":material/keyboard_arrow_right:"
+              }
+              size="base"
+            />
+          )}
+          {showLeadingUserIcon && <ExpanderIcon icon={icon} />}
+        </>
+      )}
+
+      <StyledSummaryLabelWrapper expanderType={type}>
+        <StreamlitMarkdown source={label} allowHTML={false} isLabel />
+      </StyledSummaryLabelWrapper>
+
+      {/* Append the state as hidden text rather than setting an aria-label:
+          this keeps the rendered markdown label as the accessible name, and it
+          also reaches non-collapsible steps, which ignore aria-label. */}
+      {stepStateLabel && (
+        <StyledVisuallyHidden>{` — ${stepStateLabel}`}</StyledVisuallyHidden>
+      )}
+
+      {/* Trailing chevron for compact mode (uses chevron_right for tighter appearance) */}
+      {isCompact && (
+        <DynamicIcon
+          iconValue={
+            isOpen
+              ? ":material/keyboard_arrow_down:"
+              : ":material/chevron_right:"
+          }
+          size="lg"
+        />
+      )}
+    </StyledSummaryHeading>
+  )
+
+  if (!isCollapsible) {
+    return (
+      <StyledExpandableContainer
+        className="stExpander"
+        data-testid="stExpander"
+        expanderType={type}
+      >
+        <StyledStepHeader isStale={isStale}>{summaryHeading}</StyledStepHeader>
+      </StyledExpandableContainer>
+    )
+  }
+
+  return (
+    <StyledExpandableContainer
+      className="stExpander"
+      data-testid="stExpander"
+      expanderType={type}
+    >
+      {isStep && <StyledStepConnector data-testid="stExpanderStepConnector" />}
+      <StyledDetails
+        isStale={isStale}
+        hasBorder={hasBorder}
+        ref={detailsRef}
+        // A step swaps its icon for the chevron in CSS, so tracking hover in
+        // state would only cost it a render per pointer enter and leave.
+        onMouseEnter={isStep ? undefined : handleMouseEnter}
+        onMouseLeave={isStep ? undefined : handleMouseLeave}
+      >
+        <StyledSummary
+          onClick={handleToggle}
+          ref={summaryRef}
+          isStale={isStale}
+          expanded={isOpen}
+          expanderType={type}
+          // Only steps set aria-expanded explicitly: a step shows a status icon
+          // and swaps in a chevron only on hover or focus, so its open state has
+          // no persistent visual indicator. The value also reports the state the
+          // user just asked for, ahead of `details.open`, which lags by the
+          // collapse animation. Default and compact keep the native <details>
+          // mapping.
+          aria-expanded={isStep ? isOpen : undefined}
+        >
+          {summaryHeading}
         </StyledSummary>
         <StyledDetailsPanel
           data-testid="stExpanderDetails"
           ref={contentRef}
-          isCompact={isCompact}
+          expanderType={type}
           // Exclude collapsed content from browser find-in-page (Cmd+F) searches.
           // Using "" instead of true for consistent behavior in jsdom tests.
           inert={!isOpen ? "" : undefined}

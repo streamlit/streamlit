@@ -12,7 +12,7 @@ This file provides guidance to AI coding agents (Claude Code, Cursor, Copilot, e
 
 This directory contains Agent Skills for developing the Streamlit library. Skills are instruction sets that enhance AI coding assistants' capabilities for specific tasks in the Streamlit codebase.
 
-These skills are for **Streamlit library development** (backend, frontend, protobufs), not for building Streamlit applications.
+These skills are for **Streamlit library development** (backend, frontend, protobufs), not for building Streamlit applications. User-facing skills that ship with the library live under `lib/streamlit/.agents/skills/`; follow that directory's `AGENTS.md` when editing them.
 
 ## Skill structure
 

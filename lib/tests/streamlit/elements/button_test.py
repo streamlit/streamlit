@@ -119,6 +119,15 @@ class ButtonTest(DeltaGeneratorTestCase):
         assert not c.is_form_submitter
         assert not c.disabled
 
+    @parameterized.expand(get_button_command_matrix([123]))
+    def test_non_string_label_is_coerced(
+        self, name: str, command: Callable[..., Any], label: int
+    ) -> None:
+        """Non-string labels are coerced to strings for protobuf assignment."""
+        command(label=label)
+        c = getattr(self.get_delta_from_queue().new_element, name)
+        assert c.label == "123"
+
     @parameterized.expand(
         [
             (name, command, type_)
@@ -259,6 +268,15 @@ class ButtonTest(DeltaGeneratorTestCase):
         """Test that invalid shortcuts raise an exception."""
         with pytest.raises(StreamlitAPIException):
             st.button("invalid", shortcut="A+B")
+
+    @parameterized.expand([("ignore",), ("rerun",)])
+    def test_on_click_mode_not_supported(self, mode: str) -> None:
+        """st.button only accepts a callback, and the error names on_click."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=f'`on_click="{mode}"` is not supported on this widget',
+        ):
+            st.button("the label", on_click=mode)  # type: ignore[arg-type]
 
     def test_stable_id_button_with_key(self):
         """Test that the button ID is stable when a stable key is provided."""
@@ -665,6 +683,31 @@ class ButtonTest(DeltaGeneratorTestCase):
                     assert c.page_script_hash == "hash123"
                     assert c.label == "Page 1"
 
+    def test_page_link_missing_url_pathname_does_not_raise_keyerror(self):
+        """Pages without ``url_pathname`` (default registry payload) still resolve."""
+        ctx = MagicMock()
+        ctx.main_script_path = "/app/main.py"
+        ctx.pages_manager.get_pages.return_value = {
+            "page1": {
+                "script_path": "/app/pages/page1.py",
+                "page_name": "Page 1",
+                "page_script_hash": "hash123",
+            }
+        }
+
+        with patch(
+            "streamlit.elements.widgets.button.get_script_run_ctx", return_value=ctx
+        ):
+            with patch(
+                "streamlit.file_util.get_main_script_directory", return_value="/app"
+            ):
+                with patch("os.path.realpath", return_value="/app/pages/page1.py"):
+                    st.page_link("pages/page1.py")
+                    c = self.get_delta_from_queue().new_element.page_link
+                    assert c.page == ""
+                    assert c.page_script_hash == "hash123"
+                    assert c.label == "Page 1"
+
     def test_page_link_page_not_found(self):
         """Test page_link with non-existent page."""
         ctx = MagicMock()
@@ -852,3 +895,35 @@ class ButtonTest(DeltaGeneratorTestCase):
         st.download_button("test", data="data", on_click=callback)
         c = self.get_delta_from_queue().new_element.download_button
         assert c.ignore_rerun is False
+
+    def test_download_button_on_click_invalid_value_names_on_click(self) -> None:
+        """Invalid on_click values report on_click, not on_change."""
+        with pytest.raises(StreamlitValueError, match="Invalid `on_click` value"):
+            st.download_button("test", data="data", on_click=123)  # type: ignore[arg-type]
+
+    def test_download_button_on_click_typo_lists_supported_modes(self) -> None:
+        """Typos on download_button list ignore/rerun, not only a callback."""
+        with pytest.raises(
+            StreamlitValueError, match="Invalid `on_click` value"
+        ) as exc:
+            st.download_button("test", data="data", on_click="ignroe")  # type: ignore[arg-type]
+        message = str(exc.value)
+        assert "'ignore'" in message
+        assert "'rerun'" in message
+        assert "a callback function" in message
+
+    def test_link_button_on_click_typo_lists_supported_modes(self) -> None:
+        """Typos on link_button list ignore/rerun, not only a callback."""
+        with pytest.raises(
+            StreamlitValueError, match="Invalid `on_click` value"
+        ) as exc:
+            st.link_button("test", url="https://example.com", on_click="ignroe")  # type: ignore[arg-type]
+        message = str(exc.value)
+        assert "'ignore'" in message
+        assert "'rerun'" in message
+        assert "a callback function" in message
+
+    def test_link_button_on_click_invalid_value_names_on_click(self) -> None:
+        """Invalid on_click values report on_click, not on_change."""
+        with pytest.raises(StreamlitValueError, match="Invalid `on_click` value"):
+            st.link_button("test", url="https://example.com", on_click=123)  # type: ignore[arg-type]

@@ -723,7 +723,6 @@ class ConfigTest(unittest.TestCase):
                 "global",
                 "logger",
                 "magic",
-                "mapbox",
                 "runner",
                 "secrets",
                 "server",
@@ -785,6 +784,7 @@ class ConfigTest(unittest.TestCase):
                 "logger.level",
                 "logger.messageFormat",
                 "runner.cacheBackgroundRefreshMaxWorkers",
+                "runner.cacheBackgroundRefreshTTLMultiplier",
                 "runner.cacheHashSeed",
                 "runner.enforceSerializableSessionState",
                 "runner.magicEnabled",
@@ -794,7 +794,6 @@ class ConfigTest(unittest.TestCase):
                 "runner.enumCoercion",
                 "magic.displayRootDocString",
                 "magic.displayLastExprIfNoSemicolon",
-                "mapbox.token",
                 "secrets.files",
                 "server.address",
                 "server.allowedHosts",
@@ -831,6 +830,18 @@ class ConfigTest(unittest.TestCase):
         )
         keys = sorted(config._config_options.keys())
         assert config_options == keys
+
+    def test_no_expired_deprecated_config_options(self) -> None:
+        """Deprecated config options must be removed once expiration_date has passed."""
+        expired = [
+            opt.key
+            for opt in config._config_options_template.values()
+            if opt.deprecated and opt.is_expired()
+        ]
+        assert expired == [], (
+            "Deprecated config options whose expiration_date has passed "
+            f"must be removed: {expired}"
+        )
 
     def test_check_conflicts_server_port(self):
         config._set_option("global.developmentMode", True, "test")
@@ -1062,6 +1073,14 @@ class ConfigTest(unittest.TestCase):
         assert option.default_val == []
         assert option.visibility == "hidden"
         assert config.get_option("server.unsafeMetricsUserAttributes") == []
+
+    def test_cache_background_refresh_ttl_multiplier_option_attrs(self) -> None:
+        """The background-refresh TTL multiplier is visible and defaults to 2.0."""
+        option = config._config_options["runner.cacheBackgroundRefreshTTLMultiplier"]
+        assert option.default_val == 2.0
+        assert option.type is float
+        assert option.visibility == "visible"
+        assert config.get_option("runner.cacheBackgroundRefreshTTLMultiplier") == 2.0
 
     def test_unsafe_metrics_user_attributes_parses_from_toml(self):
         toml_content = """

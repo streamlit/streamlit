@@ -179,14 +179,13 @@ describe("useVegaLiteSelections", () => {
 
     // The or array is assigned to the "param1" key
     expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-      { id: "chartId", formId: "formId" },
+      "chartId",
       JSON.stringify({
         selection: {
           param1: [{ data: "A" }, { data: "B" }],
         },
       }),
-      { fromUi: true },
-      undefined // fragmentId not passed in this test
+      { formId: "formId", fragmentId: undefined, fromUser: true } // fragmentId not passed in this test
     )
   })
 
@@ -270,15 +269,14 @@ describe("useVegaLiteSelections", () => {
 
     // Expect empty selection state
     expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-      { id: "chartId", formId: "formId" },
+      "chartId",
       JSON.stringify({
         selection: {
           param1: {},
           param2: {},
         },
       }),
-      { fromUi: true },
-      undefined
+      { formId: "formId", fragmentId: undefined, fromUser: true }
     )
   })
 })

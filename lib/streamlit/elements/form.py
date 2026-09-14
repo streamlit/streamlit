@@ -13,7 +13,6 @@
 # limitations under the License.
 from __future__ import annotations
 
-import textwrap
 from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit.elements.lib.form_utils import FormData, current_form_id, is_in_form
@@ -34,7 +33,11 @@ from streamlit.elements.widgets.button import (
     IconPosition,
     _normalize_icon_position,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitDuplicateElementKey,
+    StreamlitInvalidLayoutContextError,
+    StreamlitValueError,
+)
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -42,33 +45,6 @@ from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
-
-
-def _build_duplicate_form_message(user_key: str | None = None) -> str:
-    if user_key is not None:
-        message = textwrap.dedent(
-            f"""
-            There are multiple identical forms with `key='{user_key}'`.
-
-            To fix this, please make sure that the `key` argument is unique for
-            each `st.form` you create.
-            """
-        )
-    else:
-        message = textwrap.dedent(
-            """
-            There are multiple identical forms with the same generated key.
-
-            When a form is created, it's assigned an internal key based on
-            its structure. Multiple forms with an identical structure will
-            result in the same internal key, which causes this error.
-
-            To fix this error, please pass a unique `key` argument to
-            `st.form`.
-            """
-        )
-
-    return message.strip("\n")
 
 
 class FormMixin:
@@ -214,7 +190,9 @@ class FormMixin:
 
         """
         if is_in_form(self.dg):
-            raise StreamlitAPIException("Forms cannot be nested in other forms.")
+            raise StreamlitInvalidLayoutContextError(
+                "Forms cannot be nested in other forms."
+            )
 
         check_cache_replay_rules()
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
@@ -224,7 +202,7 @@ class FormMixin:
 
         ctx = get_script_run_ctx()
         if ctx is not None and not ctx.shared.form_ids_this_run.check_and_add(form_id):
-            raise StreamlitAPIException(_build_duplicate_form_message(key))
+            raise StreamlitDuplicateElementKey(key)
 
         block_proto = Block_pb2.Block()
         block_proto.form.form_id = form_id
@@ -427,10 +405,13 @@ class FormMixin:
             one of the following:
 
             - ``None`` (default): Streamlit decides based on the surrounding
-              layout. Inside a horizontal container, the button keeps its
+              layout. Inside a horizontal container or when the button is a
+              direct child of an ``st.columns`` column, the button keeps its
               standard, single-row height and truncates an overflowing label
               with an ellipsis; in other layouts, the label wraps onto
-              additional lines.
+              additional lines. A form is a layout boundary, so placing the
+              form itself in a column does not make the submit button a
+              direct column child.
             - ``True``: If the label is too wide for the button, it wraps onto
               additional lines and the button grows taller.
             - ``False``: The button keeps its standard, single-row height. A

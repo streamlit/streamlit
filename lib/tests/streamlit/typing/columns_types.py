@@ -44,9 +44,29 @@ if TYPE_CHECKING:
     assert_type(columns(3, gap=20), list[DeltaGenerator])
     assert_type(columns(3, gap=100), list[DeltaGenerator])
 
+    # st.columns accepts wrap for controlling responsive stacking.
+    assert_type(columns(3, wrap=True), list[DeltaGenerator])
+    assert_type(columns(3, wrap=False), list[DeltaGenerator])
+
     # st.container accepts the same range of gap values.
     assert_type(container(gap="small"), DeltaGenerator)
     assert_type(container(gap="medium"), DeltaGenerator)
     assert_type(container(gap=None), DeltaGenerator)
     assert_type(container(gap=0), DeltaGenerator)
     assert_type(container(gap=20), DeltaGenerator)
+
+    # st.container accepts layout parameters together.
+    assert_type(
+        container(
+            border=True,
+            key="scrolling-row",
+            width=640,
+            height=320,
+            horizontal=True,
+            wrap=False,
+            horizontal_alignment="center",
+            vertical_alignment="bottom",
+            autoscroll=True,
+        ),
+        DeltaGenerator,
+    )

@@ -20,7 +20,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from streamlit import env_util
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitMissingRequiredParameterError,
+    StreamlitPageNotFoundError,
+    StreamlitValueError,
+)
 from streamlit.path_security import is_windows_unc_path
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -45,6 +51,20 @@ def _sanitize_url_path(title: str) -> str:
     # Replace multiple consecutive underscores with a single one
     path = re.sub(r"_+", "_", path)
     return path
+
+
+def _raise_if_nested_url_path(url_path: str) -> None:
+    """Reject nested URL pathnames until they are supported."""
+    # Browsers would resolve static assets relative to the nested page URL,
+    # so a path like foo/bar would look for assets under /foo/ instead of the app root.
+    if "/" in url_path:
+        raise StreamlitAPIException(
+            f"The `url_path` `{url_path}` cannot include `/`. "
+            "Streamlit does not support nested URL pathnames yet, so use a single "
+            "path segment (e.g. `foo_bar`). To upvote support for nested pathnames, "
+            "see GitHub issue [#8971](https://github.com/streamlit/streamlit/issues/8971).",
+            error_id="page-nested-url-path",
+        )
 
 
 if TYPE_CHECKING:
@@ -105,10 +125,14 @@ class Page:
 
     icon : str or None
         An optional emoji or icon to display next to the page title and label.
-        If ``icon`` is ``None`` (default), no icon is displayed next to the
-        page label in the navigation menu, and a Streamlit icon is displayed
-        next to the title (in the browser tab). If ``icon`` is a string, the
-        following options are valid:
+        If ``icon`` is ``None`` (default) and the page is defined by a file,
+        Streamlit uses a leading emoji in the filename, if present. Otherwise,
+        no icon is displayed next to the page label in the navigation menu,
+        and the default Streamlit icon is displayed next to the title (in the
+        browser tab). Pass ``icon=""`` to show no icon next to the page label
+        and keep the default browser-tab icon, even when the filename contains
+        an emoji. If ``icon`` is a non-empty string, the following options
+        are valid:
 
         - A single-character emoji. For example, you can set ``icon="🚨"``
             or ``icon="🔥"``. Emoji short codes are not supported.
@@ -138,8 +162,10 @@ class Page:
 
         The default page will have a pathname of ``""``, indicating the root
         URL of the app. If you set ``default=True``, ``url_path`` is ignored.
-        ``url_path`` can't include forward slashes; paths can't include
-        subdirectories.
+        ``url_path`` can't include forward slashes because Streamlit doesn't
+        support nested URL pathnames yet. To upvote support for nested
+        pathnames, see GitHub issue
+        `#8971 <https://github.com/streamlit/streamlit/issues/8971>`_.
 
     default : bool
         Whether this page is the default page to be shown when the app is
@@ -260,26 +286,24 @@ class Page:
 
         # Check if page is an external URL
         if isinstance(page, str) and is_url(page):
-            if title is None:
-                raise StreamlitAPIException(
-                    "External URL pages require a `title` parameter. "
-                    f"Please provide a title for the URL: {page}"
-                )
-            if title.strip() == "":
-                raise StreamlitAPIException(
-                    "External URL pages require a non-empty `title` parameter. "
-                    f"Please provide a title for the URL: {page}"
+            if title is None or title.strip() == "":
+                raise StreamlitMissingRequiredParameterError(
+                    "title",
+                    detail=(
+                        "External URL pages require a non-empty title. "
+                        f"Please provide a title for the URL: {page}"
+                    ),
                 )
             if default:
-                raise StreamlitAPIException(
-                    "External URL pages cannot be set as the default page."
+                raise StreamlitIncompatibleParametersError(
+                    "page=<external URL>",
+                    "default=True",
+                    explanation="External URL pages cannot be set as the default page.",
                 )
             self._external_url = page
             self._page: Path | Callable[[], None] | None = None
             self._title: str = title
-            if icon is not None:
-                validate_icon_or_emoji(icon)
-            self._icon: str = icon or ""
+            self._icon: str = validate_icon_or_emoji(icon)
             # For external URLs, use a sanitized version of title as url_path if not provided
             self._url_path: str = (
                 _sanitize_url_path(title) if url_path is None else url_path
@@ -288,14 +312,14 @@ class Page:
             # Validate url_path for external URLs (same constraints as internal pages)
             self._url_path = self._url_path.strip().strip("/")
             if self._url_path == "":
-                raise StreamlitAPIException(
-                    "The URL path cannot be empty. Please provide a valid `url_path` "
-                    "or a `title` that can be converted to a valid URL path."
+                raise StreamlitMissingRequiredParameterError(
+                    "url_path",
+                    detail=(
+                        "Provide a non-empty `url_path`, or omit it and provide a "
+                        "`title` that can be converted to a valid URL path."
+                    ),
                 )
-            if "/" in self._url_path:
-                raise StreamlitAPIException(
-                    "The URL path cannot contain a nested path (e.g. foo/bar)."
-                )
+            _raise_if_nested_url_path(self._url_path)
 
             self._can_be_called: bool = False
             return
@@ -304,7 +328,8 @@ class Page:
             page_path = str(page)
             if "\x00" in page_path:
                 raise StreamlitAPIException(
-                    "Unable to create Page. Page paths must not contain null bytes."
+                    "Unable to create Page. Page paths must not contain null bytes.",
+                    error_id="page-path-contains-null-bytes",
                 )
 
             # Reject UNC paths before resolve/is_file can initiate an SMB connection
@@ -313,7 +338,8 @@ class Page:
             # passing an absolute page path is part of the public st.Page contract.
             if env_util.IS_WINDOWS and is_windows_unc_path(page_path):
                 raise StreamlitAPIException(
-                    "Unable to create Page. Network paths are not supported."
+                    "Unable to create Page. Network paths are not supported.",
+                    error_id="page-network-path-not-supported",
                 )
 
         main_path = ctx.pages_manager.main_script_parent
@@ -323,9 +349,7 @@ class Page:
             page = (main_path / page).resolve()
 
             if not page.is_file():
-                raise StreamlitAPIException(
-                    f"Unable to create Page. The file `{page.name}` could not be found."
-                )
+                raise StreamlitPageNotFoundError(page.name)
 
         inferred_name = ""
         inferred_icon = ""
@@ -339,21 +363,24 @@ class Page:
             # but in special cases (e.g. a callable class instance), one may
             # not exist. In that case, we should inform the user the title is
             # mandatory.
-            raise StreamlitAPIException(
-                "Cannot infer page title for Callable. Set the `title=` keyword argument."
+            raise StreamlitMissingRequiredParameterError(
+                "title",
+                detail="Streamlit cannot infer a title from this callable.",
             )
 
         self._page = page
         self._title = title or inferred_name.replace("_", " ")
 
         if icon is not None:
-            # validate user provided icon.
-            validate_icon_or_emoji(icon)
-        self._icon = icon or inferred_icon
+            # An explicit icon wins, including icon="", which means no icon.
+            self._icon = validate_icon_or_emoji(icon)
+        else:
+            self._icon = validate_icon_or_emoji(inferred_icon)
 
         if self._title.strip() == "":
-            raise StreamlitAPIException(
-                "The title of the page cannot be empty or consist of underscores/spaces only"
+            raise StreamlitMissingRequiredParameterError(
+                "title",
+                detail="It cannot be empty or consist of underscores/spaces only.",
             )
 
         self._url_path = inferred_name
@@ -361,18 +388,13 @@ class Page:
             url_path_trimmed = url_path.strip()
             stripped_url_path = url_path_trimmed.strip("/")
             if stripped_url_path.strip() == "" and not default:
-                raise StreamlitAPIException(
-                    "The URL path cannot be an empty string unless the page is the default page."
+                raise StreamlitMissingRequiredParameterError(
+                    "url_path",
+                    detail="It can only be empty for the default page.",
                 )
 
             self._url_path = stripped_url_path
-            if "/" in self._url_path:
-                raise StreamlitAPIException(
-                    "The URL path cannot contain a nested path (e.g. foo/bar)."
-                )
-
-        if self._icon:
-            validate_icon_or_emoji(self._icon)
+            _raise_if_nested_url_path(self._url_path)
 
         # used by st.navigation to ordain a page as runnable
         self._can_be_called = False
@@ -457,7 +479,8 @@ class Page:
         """
         if not self._can_be_called:
             raise StreamlitAPIException(
-                "This page cannot be called directly. Only the page returned from st.navigation can be called once."
+                "This page cannot be called directly. Only the page returned from st.navigation can be called once.",
+                error_id="page-cannot-be-called-directly",
             )
 
         self._can_be_called = False
@@ -535,7 +558,8 @@ def _validate_registered_page(page: Page) -> None:
                 f"registered with `st.navigation` for URL pathname "
                 f"`/{page.url_path}` (`{registered_source}`). Pass the page "
                 "object returned by `st.navigation` or re-create the page "
-                "with the matching source."
+                "with the matching source.",
+                error_id="page-source-mismatch-file",
             )
     elif callable(page._page) and registered_script_path:
         raise StreamlitAPIException(
@@ -543,7 +567,8 @@ def _validate_registered_page(page: Page) -> None:
             f"(`{registered_script_path}`) is registered with `st.navigation` "
             f"for URL pathname `/{page.url_path}`. Pass the page object "
             "returned by `st.navigation` or re-create the page with the "
-            "matching source."
+            "matching source.",
+            error_id="page-source-mismatch-callable",
         )
     # Callable-vs-callable collisions fall through intentionally: PageInfo
     # only stores an empty script_path for callables, so we have no identity

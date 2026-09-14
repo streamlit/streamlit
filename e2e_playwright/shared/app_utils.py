@@ -377,6 +377,44 @@ def get_date_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Loc
     return element
 
 
+def type_date(date_input_field: Locator, *parts: str, commit: bool = True) -> None:
+    """Type digits into a DateInput's segments and optionally commit.
+
+    For React Aria segmented ``st.date_input`` fields (single and range),
+    values are typed segment-by-segment into ``role="spinbutton"`` segments
+    rather than a single free-text ``<input>``.
+
+    Segment edits are buffered locally until the popover closes (the
+    commit-on-close pattern). By default this helper closes the popover via
+    Escape after typing so the value is committed to widget state — matching
+    ``type_time``'s blur-to-commit behavior. Pass ``commit=False`` to keep
+    the popover open (e.g. for error-state tests that inspect UI before commit).
+
+    Parameters
+    ----------
+    date_input_field : Locator
+        The ``stDateInputField`` locator (the segmented field container).
+
+    *parts : str
+        Digit strings for each segment, in the same left-to-right order the
+        segments are rendered in (which follows the widget's ``format``).
+        Pass 3 parts for a single-date field, 6 for a range field (start +
+        end segments), e.g.
+        ``type_date(field, "1970", "01", "02")`` for a `YYYY/MM/DD` field.
+
+    commit : bool
+        If True (default), press Escape after typing to close the popover and
+        commit the buffered value to widget state. Set to False when you need
+        the popover to remain open (e.g. to test real-time error feedback
+        during editing).
+    """
+    spinbuttons = date_input_field.get_by_role("spinbutton")
+    for i, part in enumerate(parts):
+        spinbuttons.nth(i).press_sequentially(part)
+    if commit:
+        date_input_field.page.keyboard.press("Escape")
+
+
 def get_slider(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a slider with the given label.
 
@@ -1082,10 +1120,15 @@ def expect_label_truncated(element: Locator) -> None:
     Parameters
     ----------
     element : Locator
-        A locator whose subtree contains a single label markdown container
-        (e.g. a button, popover trigger, or menu-button trigger).
+        A locator whose subtree contains a single label markdown or caption
+        container (e.g. a button, popover trigger, or ``st.caption``).
     """
-    label = element.get_by_test_id("stMarkdownContainer").locator("p").first
+    # Ellipsis is applied on the markdown/caption container (and may also be
+    # on nested paragraphs). Measure the container so this stays valid when
+    # wrap=False flattens leftover block remnants into inline siblings.
+    label = element.locator(
+        '[data-testid="stMarkdownContainer"], [data-testid="stCaptionContainer"]'
+    ).first
     expect(label).to_be_visible()
     # Retry until layout is stable — a one-shot evaluate can race with flex
     # sizing even after the label is visible.
@@ -1495,6 +1538,102 @@ def get_button_group(app: Page, key: str) -> Locator:
     return get_element_by_key(app, key).get_by_test_id("stButtonGroup").first
 
 
+def get_button_group_options(app: Page, key: str) -> Locator:
+    """Get the option list inside a button group (pills / segmented control).
+
+    This is the horizontal scrollport when ``wrap`` is false.
+
+    Parameters
+    ----------
+    app : Page
+        The page to search for the button group.
+
+    key : str
+        The key of the button group.
+
+    Returns
+    -------
+    Locator
+        The option list (``group`` or ``radiogroup`` role).
+    """
+    button_group = get_button_group(app, key)
+    return (
+        button_group.get_by_role("group")
+        .or_(button_group.get_by_role("radiogroup"))
+        .first
+    )
+
+
+def expect_button_group_overflows(options: Locator) -> None:
+    """Wait until the option list has local horizontal overflow and an edge fade.
+
+    The fade attributes (``data-can-scroll-start`` / ``data-can-scroll-end``)
+    prove the group itself is the scrollport, not the page.
+
+    Parameters
+    ----------
+    options : Locator
+        The option list from :func:`get_button_group_options`.
+    """
+    wait_until(
+        options.page,
+        lambda: (
+            options.evaluate(
+                """el => {
+              if (el.scrollWidth <= el.clientWidth) return false
+              return (
+                el.hasAttribute("data-can-scroll-start")
+                || el.hasAttribute("data-can-scroll-end")
+              )
+            }"""
+            )
+            is True
+        ),
+    )
+
+
+def expect_selected_option_in_view(options: Locator) -> None:
+    """Wait until the selected option is fully visible in the option list.
+
+    When an edge is fading (``data-can-scroll-start`` / ``end``), honors
+    ``scroll-padding-inline`` so an option sitting in that fade is not
+    treated as in view. First/last options can sit flush with a non-fading
+    edge because max scroll cannot inset them.
+
+    Parameters
+    ----------
+    options : Locator
+        The option list from :func:`get_button_group_options`.
+    """
+    expect(options.locator("button[data-selected]").first).to_be_visible()
+    wait_until(
+        options.page,
+        lambda: (
+            options.evaluate(
+                """el => {
+              const selected = el.querySelector('[data-selected]');
+              if (!selected) return false;
+              const group = el.getBoundingClientRect();
+              const sel = selected.getBoundingClientRect();
+              const cs = getComputedStyle(el);
+              const padStart = el.hasAttribute('data-can-scroll-start')
+                ? parseFloat(cs.scrollPaddingInlineStart) || 0
+                : 0;
+              const padEnd = el.hasAttribute('data-can-scroll-end')
+                ? parseFloat(cs.scrollPaddingInlineEnd) || 0
+                : 0;
+              // ±1px absorbs sub-pixel rounding across browsers.
+              return (
+                sel.left >= group.left + padStart - 1 &&
+                sel.right <= group.right - padEnd + 1
+              );
+            }"""
+            )
+            is True
+        ),
+    )
+
+
 def get_feedback(app: Page, key: str) -> Locator:
     """Get a feedback widget with the given key.
 
@@ -1613,38 +1752,22 @@ def wait_for_images_loaded(locator: Locator, timeout: int = 5000) -> None:
     )
 
 
-def wait_for_datepicker_popover_animation(app: Page, calendar: Locator) -> None:
-    """Wait until a BaseWeb datepicker popover open animation has finished.
+def open_json_path_tooltip(page: Page, json_element: Locator) -> Locator:
+    """Click a JSON string value and wait for the path tooltip.
 
-    ``to_be_visible()`` can pass while the popover body still has opacity 0 and
-    a ``translateY`` start offset (``popoverMargin * 2``). Snapshotting
-    mid-animation causes intermittent ~8px vertical shifts (seen on dark-theme
-    Chromium as ~8% pixel diffs).
-
-    Waiting only for ``opacity: 1`` is not enough on Chromium: opacity and
-    transform share the 0.1s open transition, but a subsequent Popper
-    reposition can still nudge the calendar after opacity settles. Require a
-    stable calendar bounding box before screenshotting.
+    react-json-view puts a collapse-toggle on ``.string-value`` and the
+    path-select handler on the parent ``.variable-value``. On webkit, the
+    child re-render can swallow the bubbled click so the tooltip never
+    opens. If that happens, click the parent to fire ``onSelect`` directly.
     """
-    expect(calendar).to_be_visible()
-    popover = app.locator('[data-baseweb="popover"]').filter(has=calendar)
-    expect(popover).to_have_css("opacity", "1")
+    string_value = json_element.locator(".string-value").first
+    expect(string_value).to_be_visible()
+    string_value.click()
 
-    previous: tuple[float, float, float, float] | None = None
-
-    def _calendar_box_is_stable() -> bool:
-        nonlocal previous
-        box = calendar.bounding_box()
-        if box is None:
-            return False
-        current = (box["x"], box["y"], box["width"], box["height"])
-        if previous is None:
-            previous = current
-            return False
-        stable = all(
-            abs(prev - curr) < 0.5 for prev, curr in zip(previous, current, strict=True)
-        )
-        previous = current
-        return stable
-
-    wait_until(app, _calendar_box_is_stable)
+    tooltip = page.get_by_test_id("stJsonPathTooltip")
+    try:
+        expect(tooltip).to_be_visible(timeout=1000)
+    except AssertionError:
+        json_element.locator(".variable-value").first.evaluate("el => el.click()")
+        expect(tooltip).to_be_visible()
+    return tooltip

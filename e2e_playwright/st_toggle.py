@@ -65,6 +65,29 @@ st.toggle("toggle with content width", width="content")
 st.toggle("toggle with stretch width", width="stretch")
 st.toggle("toggle with 150px width", width=150)
 
+# wrap=False keeps the toggle on one row and ellipsizes an overflowing label,
+# exposing the full label via a native title on the label (help lives on a
+# separate icon, so both coexist). A narrow fixed width forces the long label to
+# overflow, so the auto default (wrap=None) in a vertical layout wraps and grows
+# taller while wrap=False stays single-row.
+_WRAP_LABEL = "Enable live updates for every connected data source right now"
+with st.container(key="wrap_toggles"):
+    st.toggle(_WRAP_LABEL, width=200, wrap=False, key="wrap_false_toggle")
+    st.toggle(_WRAP_LABEL, width=200, key="wrap_auto_vertical_toggle")
+    st.toggle(
+        _WRAP_LABEL,
+        width=200,
+        wrap=False,
+        help="wrap help text",
+        key="wrap_help_toggle",
+    )
+
+# Default (auto) wrap: inside a horizontal container the label does not wrap; it
+# ellipsizes and exposes the full label via a native title. A fixed container
+# width narrower than the label forces the overflow.
+with st.container(horizontal=True, width=250, key="wrap_auto_horizontal_toggle"):
+    st.toggle(_WRAP_LABEL, key="wrap_auto_toggle")
+
 st.markdown("Dynamic toggle props:")
 
 if st.toggle("Update toggle props"):

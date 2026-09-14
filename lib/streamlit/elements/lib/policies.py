@@ -28,6 +28,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 )
 from streamlit.runtime.state import WidgetCallback, get_session_state
 from streamlit.runtime.state.common import require_valid_user_key
+from streamlit.string_util import to_str
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -120,9 +121,11 @@ def check_cache_replay_rules() -> None:
     if in_cached_function.get():
         from streamlit import exception
 
-        # We use an exception here to show a proper stack trace
-        # that indicates to the user where the issue is.
-        exception(CachedWidgetWarning())
+        # st.exception renders the warning at the widget call site; the log
+        # makes it visible to CLI users and agents.
+        warning = CachedWidgetWarning()
+        _LOGGER.warning("%s", warning, stack_info=True)
+        exception(warning)
 
 
 def check_widget_policies(
@@ -145,8 +148,24 @@ def check_widget_policies(
     )
 
 
-def maybe_raise_label_warnings(label: str | None, label_visibility: str | None) -> None:
-    if not label:
+def validate_label_visibility(label_visibility: str | None) -> None:
+    """Raise if ``label_visibility`` is not a supported value."""
+    if label_visibility not in {"visible", "hidden", "collapsed"}:
+        raise errors.StreamlitValueError(
+            "label_visibility", ["'visible'", "'hidden'", "'collapsed'"]
+        )
+
+
+def maybe_raise_label_warnings(
+    label: object | None, label_visibility: str | None
+) -> str:
+    """Coerce ``label`` to ``str``, warn if empty, and validate ``label_visibility``.
+
+    Returns the coerced label so callers can assign it to protobuf string
+    fields without raising a protobuf ``TypeError``.
+    """
+    coerced = "" if label is None else to_str(label)
+    if not coerced:
         _LOGGER.warning(
             "`label` got an empty value. This is discouraged for accessibility "
             "reasons and may be disallowed in the future by raising an exception. "
@@ -154,7 +173,5 @@ def maybe_raise_label_warnings(label: str | None, label_visibility: str | None) 
             "if needed.",
             stack_info=True,
         )
-    if label_visibility not in {"visible", "hidden", "collapsed"}:
-        raise errors.StreamlitValueError(
-            "label_visibility", ["'visible'", "'hidden'", "'collapsed'"]
-        )
+    validate_label_visibility(label_visibility)
+    return coerced

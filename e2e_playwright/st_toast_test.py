@@ -12,89 +12,137 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page, expect
+import pytest
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
-from e2e_playwright.shared.app_utils import click_button, reset_hovering
+from e2e_playwright.shared.app_utils import click_button, expect_font, reset_hovering
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
+# Startup script emits two default-duration emoji toasts used by rendering tests.
+_STARTUP_TOAST_COUNT = 2
 
+
+def _prepare_toast_snapshots(page: Page) -> None:
+    """Wait for fonts used by toast icons/text before screenshot assertions."""
+    expect_font(page, "Material Symbols Rounded")
+    expect_font(page, "Source Sans")
+    page.wait_for_timeout(250)
+
+
+def _wait_for_stable_toast_size(toast: Locator, timeout_ms: int = 3000) -> None:
+    """Wait until the toast bounding box height stops changing (font/layout settle)."""
+    page = toast.page
+    expect(toast).to_be_visible()
+    last_height: float | None = None
+    stable_iters = 0
+    deadline = page.evaluate("Date.now()") + timeout_ms
+    while page.evaluate("Date.now()") < deadline:
+        box = toast.bounding_box()
+        height = None if box is None else box["height"]
+        if (
+            height is not None
+            and last_height is not None
+            and abs(height - last_height) < 0.5
+        ):
+            stable_iters += 1
+            if stable_iters >= 4:
+                return
+        else:
+            stable_iters = 0
+        last_height = height
+        page.wait_for_timeout(50)
+
+
+@pytest.mark.skip_browser("firefox")  # Firefox runs into sub-pixel height flakiness
 def test_default_toast_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that toasts are correctly rendered."""
-    themed_app.keyboard.press("r")
-    wait_for_app_loaded(themed_app)
-    themed_app.wait_for_timeout(250)
-
+    # Snapshot against the initial-load toasts. Do not press "r" first: with toast
+    # lifetime decoupled from the element tree, a rerun keeps the original timer
+    # running and can leave the toast mid-dismiss when we screenshot.
+    _prepare_toast_snapshots(themed_app)
     toasts = themed_app.get_by_test_id("stToast")
-    expect(toasts).to_have_count(3)
-    toasts.nth(2).hover()
+    expect(toasts).to_have_count(_STARTUP_TOAST_COUNT)
+    # Locate by content rather than index; with toast lifetime decoupled from
+    # the element tree, stacking order is not a stable contract.
+    default_toast = toasts.filter(has_text="This is a default toast message")
+    default_toast.hover()
+    _wait_for_stable_toast_size(default_toast)
 
-    expect(toasts.nth(2)).to_contain_text("🐶This is a default toast message")
+    expect(default_toast).to_contain_text("🐶This is a default toast message")
     # Verify close button is accessible
-    close_button = toasts.nth(2).get_by_role("button", name="Close")
+    close_button = default_toast.get_by_role("button", name="Close")
     expect(close_button).to_be_visible()
-    assert_snapshot(toasts.nth(2), name="toast-default")
+    assert_snapshot(default_toast, name="toast-default")
 
 
+@pytest.mark.skip_browser("firefox")  # Firefox runs into sub-pixel height flakiness
 def test_collapsed_toast_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test collapsed long toasts are correctly rendered."""
-    themed_app.keyboard.press("r")
-    wait_for_app_loaded(themed_app)
-    themed_app.wait_for_timeout(250)
-
+    _prepare_toast_snapshots(themed_app)
     toasts = themed_app.get_by_test_id("stToast")
-    expect(toasts).to_have_count(3)
-    toasts.nth(1).hover()
+    expect(toasts).to_have_count(_STARTUP_TOAST_COUNT)
+    # Locate by content rather than index; with toast lifetime decoupled from
+    # the element tree, stacking order is not a stable contract.
+    long_toast = toasts.filter(has_text="Random toast message")
+    long_toast.hover()
+    _wait_for_stable_toast_size(long_toast)
 
-    expect(toasts.nth(1)).to_contain_text(
+    expect(long_toast).to_contain_text(
         "🦄Random toast message that is a really really really really really really "
         "really long message, going way past the 3 line limitview more"
     )
-    assert_snapshot(toasts.nth(1), name="toast-collapsed")
+    assert_snapshot(long_toast, name="toast-collapsed")
 
 
+@pytest.mark.skip_browser("firefox")  # Firefox runs into sub-pixel height flakiness
 def test_expanded_toast_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test expanded long toasts are correctly rendered."""
-    themed_app.keyboard.press("r")
-    wait_for_app_loaded(themed_app)
-    themed_app.wait_for_timeout(250)
-
+    _prepare_toast_snapshots(themed_app)
     toasts = themed_app.get_by_test_id("stToast")
-    expect(toasts).to_have_count(3)
-    toasts.nth(1).hover()
+    expect(toasts).to_have_count(_STARTUP_TOAST_COUNT)
+    # Locate by content rather than index; with toast lifetime decoupled from
+    # the element tree, stacking order is not a stable contract.
+    long_toast = toasts.filter(has_text="Random toast message")
+    long_toast.hover()
 
-    expand = toasts.nth(1).get_by_text("view more")
+    expand = long_toast.get_by_text("view more")
     expect(expand).to_be_visible()
     expand.click()
 
-    expect(toasts.nth(1)).to_contain_text(
+    expect(long_toast).to_contain_text(
         "🦄Random toast message that is a really really really really really really "
         "really long message, going way past the 3 line limitview less"
     )
     reset_hovering(themed_app)
-    assert_snapshot(toasts.nth(1), name="toast-expanded")
+    _wait_for_stable_toast_size(long_toast)
+    assert_snapshot(long_toast, name="toast-expanded")
 
 
+@pytest.mark.skip_browser("firefox")  # Firefox runs into sub-pixel height flakiness
 def test_toast_with_material_icon_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that toasts with material icons are correctly rendered."""
-    themed_app.keyboard.press("r")
-    wait_for_app_loaded(themed_app)
-    themed_app.wait_for_timeout(250)
+    # Wait for the icon font, then emit the toast so layout uses the loaded face.
+    _prepare_toast_snapshots(themed_app)
+    click_button(themed_app, "Show material icon toast")
 
-    toasts = themed_app.get_by_test_id("stToast")
-    expect(toasts).to_have_count(3)
-    toasts.nth(0).hover()
+    material_icon_toast = themed_app.get_by_test_id("stToast").filter(
+        has_text="Your edited image was saved!"
+    )
+    expect(material_icon_toast).to_be_visible()
+    material_icon_toast.hover()
+    _wait_for_stable_toast_size(material_icon_toast)
 
-    expect(toasts.nth(0)).to_contain_text("cabinYour edited image was saved!")
-    assert_snapshot(toasts.nth(0), name="toast-material-icon")
+    expect(material_icon_toast).to_contain_text("cabinYour edited image was saved!")
+    assert_snapshot(material_icon_toast, name="toast-material-icon")
 
 
 def test_toast_above_dialog(app: Page, assert_snapshot: ImageCompareFunction):
@@ -102,13 +150,9 @@ def test_toast_above_dialog(app: Page, assert_snapshot: ImageCompareFunction):
     # Set viewport size to better show dialog/toast interaction
     app.set_viewport_size({"width": 650, "height": 958})
 
-    app.keyboard.press("r")
-    wait_for_app_loaded(app)
-    app.wait_for_timeout(250)
-
     # Trigger dialog
     app.get_by_text("Trigger dialog").click()
-    # Ensure previous toasts have timed out
+    # Ensure previous (default-duration) toasts have timed out
     app.wait_for_timeout(4500)
 
     # Trigger toast from dialog
@@ -142,6 +186,22 @@ def test_toast_duration(app: Page):
     expect(persistent_toast).to_be_visible()
 
 
+def test_toast_persists_through_rerun(app: Page):
+    """Test that a toast emitted right before st.rerun() still appears (#7740)."""
+    click_button(app, "Toast and rerun")
+
+    toast = app.get_by_test_id("stToast").filter(has_text="Toast survives rerun")
+    # The toast survives the immediately-following st.rerun()...
+    expect(toast).to_be_visible()
+    # ...and is not duplicated by the rerun re-processing the delta.
+    expect(toast).to_have_count(1)
+
+    # It still auto-hides after its (default 4s) duration rather than lingering.
+    # Extra slack beyond 4s covers post-rerun mount + exit animation.
+    expect(toast).not_to_be_visible(timeout=7000)
+
+
+@pytest.mark.skip_browser("firefox")  # Firefox runs into sub-pixel height flakiness
 def test_toast_adjusts_for_custom_theme(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -154,12 +214,13 @@ def test_toast_adjusts_for_custom_theme(
     # Reload to apply the theme
     app.reload()
     wait_for_app_loaded(app)
-    app.wait_for_timeout(250)
+    _prepare_toast_snapshots(app)
 
     toasts = app.get_by_test_id("stToast")
-    expect(toasts).to_have_count(3)
+    expect(toasts).to_have_count(_STARTUP_TOAST_COUNT)
     toast = toasts.filter(has_text="🐶This is a default toast message")
     expect(toast).to_be_visible()
     toast.hover()
+    _wait_for_stable_toast_size(toast)
 
     assert_snapshot(toast, name="toast-custom-theme")

@@ -14,21 +14,69 @@
  * limitations under the License.
  */
 
-import isPropValid from "@emotion/is-prop-valid"
 import styled from "@emotion/styled"
-import { StyledDropdownListItem } from "baseui/select"
+import { getLuminance } from "color2k"
+import { DateInput, DateSegment, TimeField } from "react-aria-components"
 
-export const StyledTimeDropdownListItem = styled(StyledDropdownListItem, {
-  shouldForwardProp: isPropValid,
-})(({ theme }) => ({
-  position: "relative",
+// Reuse DateInput's quick-select row/label for the popover Time row (shared
+// divider + muted-label styling). Changes to DateInput's quick-select will
+// propagate here intentionally.
+export {
+  StyledCalendarCell,
+  StyledCalendarGrid,
+  StyledCalendarHeaderCell,
+  StyledCalendarPopover,
+  StyledCalendarRoot,
+  StyledClearButton,
+  StyledDateField,
+  StyledDateFieldContainer,
+  StyledDateInputWrapper,
+  StyledErrorIconContainer,
+  StyledQuickSelectLabel as StyledPopoverTimeLabel,
+  StyledQuickSelectRow as StyledPopoverTimeRow,
+  StyledTrailingIcons,
+  StyledVisuallyHidden,
+} from "../DateInput/styled-components"
+
+export const StyledPopoverTimeField = styled(TimeField)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  padding: theme.spacing.none,
-  margin: theme.spacing.none,
-  height: theme.sizes.dropdownItemHeight,
-  marginLeft: theme.sizes.tagMarginInsideBorder,
-  marginRight: `max(0px, calc(${theme.sizes.tagMarginInsideBorder} - var(--scrollbar-gutter-size, 0px)))`,
-  background: "transparent",
-  fontWeight: theme.fontWeights.normal,
+  "&[data-disabled]": {
+    color: theme.colors.fadedText40,
+    cursor: "not-allowed",
+  },
 }))
+
+export const StyledPopoverTimeFieldInput = styled(DateInput)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  padding: `${theme.spacing.twoXS} 0`,
+  outline: "none",
+}))
+
+export const StyledPopoverTimeSegment = styled(DateSegment)(({ theme }) => {
+  const isLightPrimary = getLuminance(theme.colors.primary) > 0.5
+  return {
+    paddingLeft: theme.spacing.threeXS,
+    paddingRight: theme.spacing.threeXS,
+    borderRadius: theme.radii.sm,
+    color: theme.colors.bodyText,
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.normal,
+    whiteSpace: "pre" as const,
+    caretColor: "transparent",
+    outline: "none",
+    "&[data-type=literal]": { color: theme.colors.fadedText60, padding: 0 },
+    "&[data-placeholder]": { color: theme.colors.fadedText60 },
+    "&:hover:not([data-type=literal]):not([data-focused])": {
+      backgroundColor: theme.colors.secondaryBg,
+    },
+    "&[data-focused]": {
+      backgroundColor: theme.colors.primary,
+      color: isLightPrimary ? theme.colors.black : theme.colors.white,
+    },
+    "&[data-disabled]": {
+      color: "inherit",
+    },
+  }
+})

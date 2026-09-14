@@ -68,8 +68,6 @@ describe("createSidebarTheme", () => {
   ): ThemeConfig =>
     ({
       name: "mockTheme",
-      basewebTheme: {},
-      primitives: {},
       themeInput: {},
       emotion: {
         colors: {

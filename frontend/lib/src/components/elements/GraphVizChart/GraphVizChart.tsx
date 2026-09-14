@@ -41,8 +41,8 @@ import { StyledGraphVizChart } from "./styled-components"
 export interface GraphVizChartProps {
   element: GraphVizChartProto
   disableFullscreenMode?: boolean
-  widthConfig?: streamlit.IWidthConfig | null
-  heightConfig?: streamlit.IHeightConfig | null
+  widthConfig?: streamlit.WidthConfig.$Properties | null
+  heightConfig?: streamlit.HeightConfig.$Properties | null
 }
 export const LOG = getLogger("GraphVizChart")
 

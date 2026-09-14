@@ -58,10 +58,9 @@ describe("ColorPicker widget", () => {
     render(<ColorPicker {...props} />)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       props.element.default,
-      { fromUi: false },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 
@@ -72,10 +71,13 @@ describe("ColorPicker widget", () => {
     render(<ColorPicker {...props} />)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       props.element.default,
-      { fromUi: false },
-      "myFragmentId"
+      {
+        formId: props.element.formId,
+        fragmentId: "myFragmentId",
+        fromUser: false,
+      }
     )
   })
 
@@ -117,10 +119,9 @@ describe("ColorPicker widget", () => {
 
     // And the WidgetMgr should also be updated.
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       newColor,
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -152,10 +153,9 @@ describe("ColorPicker widget", () => {
     expect(colorInput).toHaveValue(newColor.toUpperCase())
     expect(colorBlock).toHaveStyle(`background-color: ${newColor}`)
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       newColor,
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
 
     act(() => {
@@ -166,12 +166,9 @@ describe("ColorPicker widget", () => {
     // Our widget should be reset, and the widgetMgr should be updated
     expect(colorBlock).toHaveStyle("background-color: #000000")
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       props.element.default,
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 })

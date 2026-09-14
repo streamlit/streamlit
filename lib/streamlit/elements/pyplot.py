@@ -25,7 +25,7 @@ from streamlit.deprecation_util import (
 )
 from streamlit.elements.lib.image_utils import marshall_images
 from streamlit.elements.lib.layout_utils import create_layout_config
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitMissingRequiredParameterError
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -64,8 +64,8 @@ st.image(buf)
 """
 
 _FIG_REQUIRED: Final[str] = """
-`st.pyplot` requires a Matplotlib figure. Passing `None` is not supported
-because Matplotlib's global figure object is not thread-safe.
+Passing `None` is not supported because Matplotlib's global figure object
+is not thread-safe.
 
 Pass a figure explicitly:
 
@@ -179,7 +179,10 @@ class PyplotMixin:
         """
 
         if fig is None:
-            raise StreamlitAPIException(_FIG_REQUIRED)
+            raise StreamlitMissingRequiredParameterError(
+                "fig",
+                detail=_FIG_REQUIRED.strip(),
+            )
 
         if use_container_width is not None:
             show_deprecation_warning(
@@ -233,8 +236,8 @@ def marshall(
         import matplotlib.pyplot as plt
 
         plt.ioff()
-    except ImportError:  # pragma: no cover - optional dep
-        raise ImportError("pyplot() command requires matplotlib")
+    except ImportError as e:  # pragma: no cover - optional dep
+        raise ImportError("pyplot() command requires matplotlib") from e
 
     # Apply Streamlit defaults, then let deprecated kwargs override them.
     savefig_kwargs = {**_DEFAULT_SAVEFIG_OPTIONS, **kwargs}

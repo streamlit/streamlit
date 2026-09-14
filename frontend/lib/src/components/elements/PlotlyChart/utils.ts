@@ -63,10 +63,16 @@ interface PlotlySelectionEventWithSelections
  * with additional properties that exist at runtime.
  */
 interface PlotlySelectionPoint extends Plotly.PlotDatum {
-  data: Plotly.PlotData & { legendgroup?: string }
   fullData?: unknown
   pointIndices?: number[]
   legendgroup?: string
+}
+
+function getLegendGroup(data: unknown): string | undefined {
+  if (typeof data !== "object" || data === null) {
+    return undefined
+  }
+  return (data as { legendgroup?: string }).legendgroup || undefined
 }
 
 /**
@@ -244,7 +250,7 @@ export function handleSelection(
     points.forEach(function (point: PlotlySelectionPoint) {
       selectedPoints.push({
         ...point,
-        legendgroup: point.data.legendgroup || undefined,
+        legendgroup: getLegendGroup(point.data),
         // Remove data and full data as they have been deemed to be unnecessary data overhead
         data: undefined,
         fullData: undefined,
@@ -323,12 +329,11 @@ export function handleSelection(
   const newSelectionState = JSON.stringify(selectionState)
   if (currentSelectionState !== newSelectionState) {
     // Only update the widget state if it has changed
-    widgetMgr.setStringValue(
-      element,
-      newSelectionState,
-      { fromUi: true },
-      fragmentId
-    )
+    widgetMgr.setStringValue(element.id, newSelectionState, {
+      formId: element.formId,
+      fragmentId,
+      fromUser: true,
+    })
   }
 }
 
@@ -353,12 +358,11 @@ export function sendEmptySelection(
     },
   }
 
-  widgetMgr.setStringValue(
-    element,
-    JSON.stringify(emptySelectionState),
-    { fromUi: true },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, JSON.stringify(emptySelectionState), {
+    formId: element.formId,
+    fragmentId,
+    fromUser: true,
+  })
 }
 
 /**
@@ -417,11 +421,10 @@ export function handleClickEvent(
   const currentSelectionState = widgetMgr.getStringValue(element)
   const newSelectionState = JSON.stringify(selectionState)
   if (currentSelectionState !== newSelectionState) {
-    widgetMgr.setStringValue(
-      element,
-      newSelectionState,
-      { fromUi: true },
-      fragmentId
-    )
+    widgetMgr.setStringValue(element.id, newSelectionState, {
+      formId: element.formId,
+      fragmentId,
+      fromUser: true,
+    })
   }
 }

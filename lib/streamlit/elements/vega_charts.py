@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
+    Final,
     Literal,
     TypeAlias,
     Union,
@@ -52,13 +53,21 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.proto.VegaLiteChart_pb2 import (
     VegaLiteChart as VegaLiteChartProto,
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import WidgetCallback, register_widget
+from streamlit.runtime.state import (
+    WidgetCallback,
+    register_widget,
+    validate_on_change_mode,
+)
 from streamlit.util import ReadOnlyAttributeDictionary, calc_hash
 
 if TYPE_CHECKING:
@@ -316,7 +325,10 @@ def _prepare_vega_lite_spec(
     spec = dict(spec)
 
     if len(spec) == 0:
-        raise StreamlitAPIException("Vega-Lite charts require a non-empty spec dict.")
+        raise StreamlitMissingRequiredParameterError(
+            "spec",
+            detail="Vega-Lite charts require a non-empty spec dict.",
+        )
 
     if "autosize" not in spec:
         # type fit does not work for many chart types. This change focuses
@@ -364,21 +376,76 @@ def _prepare_vega_lite_spec(
     return spec
 
 
+_GEOJSON_GEOMETRY_TYPES: Final[frozenset[str]] = frozenset(
+    {
+        "Point",
+        "MultiPoint",
+        "LineString",
+        "MultiLineString",
+        "Polygon",
+        "MultiPolygon",
+    }
+)
+
+
+def _is_geojson_or_topojson_payload(data: Any) -> bool:
+    """Return True when data is GeoJSON/TopoJSON geometry, not a table."""
+    if isinstance(data, dict):
+        geo_type = data.get("type")
+        if geo_type == "FeatureCollection" and "features" in data:
+            return True
+        if geo_type == "Feature" and "geometry" in data:
+            return True
+        if geo_type == "GeometryCollection" and "geometries" in data:
+            return True
+        if geo_type in _GEOJSON_GEOMETRY_TYPES and "coordinates" in data:
+            return True
+        # TopoJSON may omit type: Topology. Require a Topology-compatible
+        # shape so a columnar table with arcs/objects columns is not treated
+        # as geometry. Every other dict falls through as tabular.
+        if geo_type is None or geo_type == "Topology":
+            return isinstance(data.get("arcs"), list) and isinstance(
+                data.get("objects"), dict
+            )
+        return False
+
+    if isinstance(data, list) and data:
+        # Only inspect the first element: Vega-Lite requires a homogeneous
+        # array, so a leading Feature means the whole array is GeoJSON.
+        first = data[0]
+        return (
+            isinstance(first, dict)
+            and first.get("type") == "Feature"
+            and "geometry" in first
+        )
+
+    return False
+
+
 def _marshall_chart_data(
     proto: VegaLiteChartProto,
     spec: VegaLiteSpec,
     data: Data = None,
 ) -> None:
-    """Adds the data to the proto and removes it from the spec dict.
-    These operations will happen in-place.
+    """Move chart data onto the proto, in place.
+
+    Named tabular datasets are copied to ``proto.datasets`` as Arrow IPC bytes
+    and removed from the spec. Named GeoJSON/TopoJSON datasets stay in
+    ``spec["datasets"]`` so Vega-Lite can compile them on embed. Top-level
+    ``data.values`` / raw ``data`` are moved to ``proto.data`` unless the
+    values are GeoJSON/TopoJSON, which stay in the spec with their format.
     """
 
-    # Pull data out of spec dict when it's in a 'datasets' key:
-    #   datasets: {foo: df1_bytes, bar: df2_bytes}, ...}
     if "datasets" in spec:
+        remaining_datasets: dict[str, Any] = {}
         for dataset_name, dataset_data in spec["datasets"].items():
+            name = str(dataset_name)
+            if _is_geojson_or_topojson_payload(dataset_data):
+                remaining_datasets[name] = dataset_data
+                continue
+
             dataset = proto.datasets.add()
-            dataset.name = str(dataset_name)
+            dataset.name = name
             dataset.has_name = True
             # The ID transformer (_to_arrow_dataset function registered before conversion to dict)
             # already serializes the data into Arrow IPC format (bytes) when the Altair object
@@ -393,7 +460,11 @@ def _marshall_chart_data(
                 if isinstance(dataset_data, bytes)
                 else dataframe_util.convert_anything_to_arrow_bytes(dataset_data)
             )
-        del spec["datasets"]
+
+        if remaining_datasets:
+            spec["datasets"] = remaining_datasets
+        else:
+            del spec["datasets"]
 
     # Pull data out of spec dict when it's in a top-level 'data' key:
     # > {data: df}
@@ -405,9 +476,11 @@ def _marshall_chart_data(
 
         if isinstance(data_spec, dict):
             if "values" in data_spec:
-                data = data_spec["values"]
-                del spec["data"]
-        else:
+                values = data_spec["values"]
+                if not _is_geojson_or_topojson_payload(values):
+                    data = values
+                    del spec["data"]
+        elif not _is_geojson_or_topojson_payload(data_spec):
             data = data_spec
             del spec["data"]
 
@@ -553,7 +626,8 @@ def _parse_selection_mode(
             "have any selections defined. To add selections to `st.altair_chart`, check out the documentation "
             "[here](https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions)."
             " For adding selections to `st.vega_lite_chart`, take a look "
-            "at the specification [here](https://vega.github.io/vega-lite/docs/selection.html)."
+            "at the specification [here](https://vega.github.io/vega-lite/docs/selection.html).",
+            error_id="vega-on-select-without-spec-selections",
         )
 
     if selection_mode is None:
@@ -569,7 +643,8 @@ def _parse_selection_mode(
         if selection_name not in all_selection_params:
             raise StreamlitAPIException(
                 f"Selection parameter '{selection_name}' is not defined in the chart "
-                f"spec. Available selection parameters are: {all_selection_params}."
+                f"spec. Available selection parameters are: {all_selection_params}.",
+                error_id="vega-selection-parameter-not-defined",
             )
     return sorted(selection_mode)
 
@@ -610,6 +685,9 @@ def _reset_counter_pattern(prefix: str, vega_spec: str) -> str:
     return vega_spec
 
 
+_STABILIZE_UNSET: Final[Any] = object()
+
+
 def _stabilize_vega_json_spec(vega_spec: str) -> str:
     """Makes the chart spec stay stable across reruns and sessions.
 
@@ -640,6 +718,30 @@ def _stabilize_vega_json_spec(vega_spec: str) -> str:
        between sessions
     """
 
+    # Geometry in datasets / data.values must not participate in param_/view_
+    # rewrites: a property named param_1 can break lookup joins, and a TopoJSON
+    # objects layer named "layer" would otherwise trip the composite-chart scan.
+    extracted_datasets: Any = _STABILIZE_UNSET
+    extracted_geo_values: Any = _STABILIZE_UNSET
+    try:
+        parsed_spec = json.loads(vega_spec)
+    except json.JSONDecodeError:
+        parsed_spec = None
+
+    if isinstance(parsed_spec, dict):
+        if "datasets" in parsed_spec:
+            extracted_datasets = parsed_spec.pop("datasets")
+        data_spec = parsed_spec.get("data")
+        if isinstance(data_spec, dict) and "values" in data_spec:
+            values = data_spec["values"]
+            if _is_geojson_or_topojson_payload(values):
+                extracted_geo_values = data_spec.pop("values")
+        if (
+            extracted_datasets is not _STABILIZE_UNSET
+            or extracted_geo_values is not _STABILIZE_UNSET
+        ):
+            vega_spec = json.dumps(parsed_spec)
+
     # We only want to apply these replacements if it is really necessary
     # since there is a risk that we replace names that where chosen by the user
     # and thereby introduce unwanted side effects.
@@ -657,6 +759,20 @@ def _stabilize_vega_json_spec(vega_spec: str) -> str:
     # so its better to not replace this pattern.
     if re.search(r'"(vconcat|hconcat|facet|layer|concat|repeat)"', vega_spec):
         vega_spec = _reset_counter_pattern("view_", vega_spec)
+
+    if (
+        extracted_datasets is not _STABILIZE_UNSET
+        or extracted_geo_values is not _STABILIZE_UNSET
+    ):
+        restored_spec = json.loads(vega_spec)
+        if extracted_datasets is not _STABILIZE_UNSET:
+            restored_spec["datasets"] = extracted_datasets
+        if extracted_geo_values is not _STABILIZE_UNSET:
+            restored_data = restored_spec.setdefault("data", {})
+            if isinstance(restored_data, dict):
+                restored_data["values"] = extracted_geo_values
+        vega_spec = json.dumps(restored_spec)
+
     return vega_spec
 
 
@@ -762,7 +878,7 @@ class VegaChartsMixin:
               for three lines). You can also use built-in color names in the
               list (e.g. ``color=["red", "blue", "green"]``).
 
-            You can set the default colors in the ``theme.chartCategoryColors``
+            You can set the default colors in the ``theme.chartCategoricalColors``
             configuration option.
 
         width : "stretch", "content", or int
@@ -836,7 +952,7 @@ class VegaChartsMixin:
         directly and the series will be unlabeled. If the column contains other
         values, those values will label each line, and the line colors will be
         selected from the default color palette. You can configure this color
-        palette in the ``theme.chartCategoryColors`` configuration option.
+        palette in the ``theme.chartCategoricalColors`` configuration option.
 
         >>> import pandas as pd
         >>> import streamlit as st
@@ -999,7 +1115,7 @@ class VegaChartsMixin:
               for three lines). You can also use built-in color names in the
               list (e.g. ``color=["red", "blue", "green"]``).
 
-            You can set the default colors in the ``theme.chartCategoryColors``
+            You can set the default colors in the ``theme.chartCategoricalColors``
             configuration option.
 
         stack : bool, "normalize", "center", or None
@@ -1085,7 +1201,7 @@ class VegaChartsMixin:
         directly and the series will be unlabeled. If the column contains other
         values, those values will label each area, and the area colors will be
         selected from the default color palette. You can configure this color
-        palette in the ``theme.chartCategoryColors`` configuration option.
+        palette in the ``theme.chartCategoricalColors`` configuration option.
 
         >>> import pandas as pd
         >>> import streamlit as st
@@ -1287,7 +1403,7 @@ class VegaChartsMixin:
               for three lines). You can also use built-in color names in the
               list (e.g. ``color=["red", "blue", "green"]``).
 
-            You can set the default colors in the ``theme.chartCategoryColors``
+            You can set the default colors in the ``theme.chartCategoricalColors``
             configuration option.
 
         horizontal : bool
@@ -1393,7 +1509,7 @@ class VegaChartsMixin:
         directly and the series will be unlabeled. If the column contains other
         values, those values will label each series, and the bar colors will be
         selected from the default color palette. You can configure this color
-        palette in the ``theme.chartCategoryColors`` configuration option.
+        palette in the ``theme.chartCategoricalColors`` configuration option.
 
         >>> import pandas as pd
         >>> import streamlit as st
@@ -1486,7 +1602,8 @@ class VegaChartsMixin:
         if type_util.is_altair_version_less_than("5.0.0") and stack is False:
             raise StreamlitAPIException(
                 "Streamlit does not support non-stacked (grouped) bar charts with "
-                "Altair 4.x. Please upgrade to Version 5."
+                "Altair 4.x. Please upgrade to Version 5.",
+                error_id="altair4-grouped-bar-not-supported",
             )
 
         bar_chart_type = (
@@ -1692,7 +1809,7 @@ class VegaChartsMixin:
         directly and each color group will be unlabeled. If the column contains
         other values, those values will label each group, and the scatter point
         colors will be selected from the default color palette. You can
-        configure this color palette in the ``theme.chartCategoryColors``
+        configure this color palette in the ``theme.chartCategoricalColors``
         configuration option.
 
         >>> import pandas as pd
@@ -2255,7 +2372,8 @@ class VegaChartsMixin:
                 "Streamlit does not support selections with Altair 4.x. Please upgrade "
                 "to Version 5. "
                 "If you would like to use Altair 4.x with selections, please upvote "
-                "this [Github issue](https://github.com/streamlit/streamlit/issues/8516)."
+                "this [Github issue](https://github.com/streamlit/streamlit/issues/8516).",
+                error_id="altair4-selections-not-supported",
             )
 
         vega_lite_spec = _convert_altair_to_vega_lite_spec(altair_chart)
@@ -2290,10 +2408,12 @@ class VegaChartsMixin:
         if theme not in {"streamlit", None}:
             raise StreamlitValueError("theme", ["'streamlit'", "None"])
 
-        if on_select not in {"ignore", "rerun"} and not callable(on_select):
-            raise StreamlitValueError(
-                "on_select", ["'rerun'", "'ignore'", "a callback function"]
-            )
+        on_select_callback = validate_on_change_mode(
+            on_select,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+            param_name="on_select",
+        )
 
         key = to_key(key)
         is_selection_activated = on_select != "ignore"
@@ -2301,13 +2421,11 @@ class VegaChartsMixin:
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
 
-            is_callback = callable(on_select)
+            is_callback = on_select_callback is not None
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_select)  # ty: ignore[redundant-cast]
-                if is_callback
-                else None,
+                on_change=on_select_callback,
                 default_value=None,
                 writes_allowed=False,
                 enable_check_callback_rules=is_callback,
@@ -2425,7 +2543,7 @@ class VegaChartsMixin:
 
             widget_state = register_widget(
                 vega_lite_proto.id,
-                on_change_handler=on_select if callable(on_select) else None,
+                on_change_handler=on_select_callback,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,
                 ctx=ctx,
@@ -2456,16 +2574,22 @@ class VegaChartsMixin:
 
 
 def _to_arrow_dataset(data: Any, datasets: dict[str, Any]) -> dict[str, str]:
-    """Altair data transformer that serializes the data,
-    creates a stable name based on the hash of the data,
-    stores the bytes into the datasets mapping and
-    returns this name to have it be used in Altair.
-    """
-    # Already serialize the data to be able to create a stable
-    # dataset name:
-    data_bytes = dataframe_util.convert_anything_to_arrow_bytes(data)
-    # Use the content hash of the data as the name:
-    name = calc_hash(str(data_bytes))
+    """Altair data transformer that stores chart data under a stable hashed name.
 
-    datasets[name] = data_bytes
+    Tabular data is serialized to Arrow IPC bytes. GeoJSON/TopoJSON dicts are
+    stored as-is so geometry is not flattened. Returns ``{"name": name}`` for
+    Altair to reference the dataset.
+    """
+    # GeoPandas / ``__geo_interface__`` objects are not dict/list, so they
+    # still go through Arrow flattening (#1002).
+    if _is_geojson_or_topojson_payload(data):
+        # Match spec transport (json.dumps without default) so non-JSON
+        # values fail here instead of later when the spec is encoded.
+        name = calc_hash(json.dumps(data, sort_keys=True))
+        datasets[name] = data
+    else:
+        # Serialize first so the dataset name is a stable content hash.
+        data_bytes = dataframe_util.convert_anything_to_arrow_bytes(data)
+        name = calc_hash(str(data_bytes))
+        datasets[name] = data_bytes
     return {"name": name}

@@ -22,4 +22,8 @@ message Text {
   string body = 1;
 
   string help = 2;
+
+  // If false, the text stays on one line and ellipsizes instead of wrapping.
+  // Absent or true means the text wraps.
+  optional bool wrap = 3;
 }

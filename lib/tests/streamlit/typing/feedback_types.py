@@ -28,3 +28,19 @@ if TYPE_CHECKING:
     assert_type(feedback("thumbs"), Literal[0, 1] | None)
     assert_type(feedback("faces"), Literal[0, 1, 2, 3, 4] | None)
     assert_type(feedback("stars"), Literal[0, 1, 2, 3, 4] | None)
+
+    def on_feedback(value: int, label: str) -> None: ...
+
+    assert_type(
+        feedback(
+            "stars",
+            key="rating",
+            default=4,
+            disabled=False,
+            on_change=on_feedback,
+            args=(4,),
+            kwargs={"label": "excellent"},
+            width="stretch",
+        ),
+        Literal[0, 1, 2, 3, 4] | None,
+    )

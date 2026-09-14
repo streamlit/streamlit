@@ -23,13 +23,17 @@ from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_cache_replay_rules
 from streamlit.elements.lib.utils import compute_and_register_element_id
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
 from streamlit.proto.Components_pb2 import SpecialArg
 from streamlit.proto.Element_pb2 import Element
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import register_widget
+from streamlit.runtime.state import register_widget, validate_on_change_mode
 from streamlit.type_util import is_bytes_like, to_bytes
 
 if TYPE_CHECKING:
@@ -107,15 +111,23 @@ class CustomComponent(BaseCustomComponent):
         if len(args) > 0:
             raise MarshallComponentException(f"Argument '{args[0]}' needs a label")
 
-        # Validate tab_index according to web specifications
-        if tab_index is not None and not (
-            isinstance(tab_index, int)
-            and not isinstance(tab_index, bool)
-            and tab_index >= -1
-        ):
-            raise StreamlitAPIException(
-                "tab_index must be None, -1, or a non-negative integer."
-            )
+        on_change = validate_on_change_mode(
+            on_change,
+            supported_modes=(),
+        )
+
+        # -1 is valid per the HTML tabindex spec: focusable, but not tab-reachable.
+        if tab_index is not None:
+            if isinstance(tab_index, bool) or not isinstance(tab_index, int):
+                raise StreamlitInvalidParameterTypeError(
+                    "tab_index",
+                    type(tab_index).__name__,
+                    ["int"],
+                )
+            if tab_index < -1:
+                raise StreamlitValueError(
+                    "tab_index", ["None", "-1", "a non-negative integer"]
+                )
 
         try:
             import pyarrow  # noqa: F401, ICN001
@@ -128,7 +140,8 @@ PyArrow. To do so locally:
 
 `pip install pyarrow`
 
-And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
+And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt.""",
+                error_id="custom-component-missing-pyarrow",
             )
 
         check_cache_replay_rules()

@@ -13,7 +13,6 @@
 # limitations under the License.
 from __future__ import annotations
 
-from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -51,22 +50,26 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueOutOfRangeError,
+)
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    OnChangeMode,
     PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
     get_session_state,
     register_widget,
+    validate_on_change_mode,
 )
-from streamlit.type_util import (
-    check_python_comparable,
-)
+from streamlit.string_util import to_help_str
+from streamlit.type_util import check_python_comparable
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -97,7 +100,6 @@ class SelectboxSerde(Generic[T]):
         We do not store an option_to_formatted_option mapping because the generic
         options might not be hashable, which would raise a RuntimeError. So we do
         two lookups: option -> index -> formatted_option[index].
-
 
         Parameters
         ----------
@@ -180,7 +182,7 @@ class SelectboxMixin:
         format_func: Callable[[Any], str] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -203,7 +205,7 @@ class SelectboxMixin:
         format_func: Callable[[Any], str] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -226,7 +228,7 @@ class SelectboxMixin:
         format_func: Callable[[Any], str] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -249,7 +251,7 @@ class SelectboxMixin:
         format_func: Callable[[Any], str] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -272,7 +274,7 @@ class SelectboxMixin:
         format_func: Callable[[Any], str] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -286,6 +288,11 @@ class SelectboxMixin:
         persist_state: PersistStateOption = None,
     ) -> T | str | None: ...
 
+    # A dynamic index: int | None with default accept_new_options=False
+    # returns T | None. This sits before the bool catch-all so checkers
+    # that do not expand int | None (e.g. pyrefly) do not pick up a
+    # spurious | str. mypy expands the union, so CI cannot catch deleting
+    # this overload. See #16630.
     @overload
     def selectbox(
         self,
@@ -295,7 +302,30 @@ class SelectboxMixin:
         format_func: Callable[[Any], str] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        placeholder: str | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        accept_new_options: Literal[False] = False,
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
+        width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> T | None: ...
+
+    @overload
+    def selectbox(
+        self,
+        label: str,
+        options: OptionSequence[T],
+        index: int | None = 0,
+        format_func: Callable[[Any], str] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -318,7 +348,7 @@ class SelectboxMixin:
         format_func: Callable[[Any], str] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -402,8 +432,30 @@ class SelectboxMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change : callable
-            An optional callback invoked when this selectbox's value changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the selectbox should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the selectbox. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a new value (clicking an option, confirming with
+              Enter, adding a new option when ``accept_new_options=True``,
+              or clearing the value).
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits a new value. The selectbox still updates in the UI.
+              The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. Ignored
+              commits are held in the browser and are lost if the page is
+              refreshed before that rerun, unless ``bind="query-params"``
+              is set (see ``bind``). Inside ``st.form``, this has no
+              effect: the form already defers all commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -488,6 +540,14 @@ class SelectboxMixin:
             Invalid query parameter values are ignored and removed
             from the URL. If ``index`` is ``None``, an empty query
             parameter (e.g., ``?my_key=``) clears the widget.
+
+            When ``on_change="ignore"``, the URL is updated as soon as the
+            value is committed (clicking an option, confirming with Enter,
+            adding a new option, or clearing the value); typing or filtering
+            alone does not update it. As with widgets inside a form, the
+            URL can show a value that Python hasn't received yet. Python
+            receives the new value on the next rerun, so a page load or
+            share uses the updated URL value.
 
         persist_state : "page", "session", or None
             How long to preserve the widget's value when it isn't rendered.
@@ -602,7 +662,7 @@ class SelectboxMixin:
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -617,28 +677,31 @@ class SelectboxMixin:
         ctx: ScriptRunContext | None = None,
     ) -> T | str | None:
         key = to_key(key)
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
+        )
 
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=None if index == 0 else index,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         opt = convert_anything_to_list(options)
         check_python_comparable(opt)
 
         if not isinstance(index, int) and index is not None:
-            raise StreamlitAPIException(
-                f"Selectbox Value has invalid type: {type(index).__name__}"
+            raise StreamlitInvalidParameterTypeError(
+                "index",
+                type(index).__name__,
+                ["int", "None"],
             )
 
         if index is not None and len(opt) > 0 and not 0 <= index < len(opt):
-            raise StreamlitAPIException(
-                "Selectbox index must be greater than or equal to 0 "
-                "and less than the length of options."
-            )
+            raise StreamlitValueOutOfRangeError("index", index, 0, len(opt) - 1)
 
         # Convert empty string to single space to distinguish from None:
         # - None (default) → "" → Frontend shows contextual placeholders
@@ -650,7 +713,6 @@ class SelectboxMixin:
         proto_filter_mode = validate_select_widget_filter_mode(
             filter_mode,
             accept_new_options=accept_new_options,
-            command="st.selectbox",
         )
 
         formatted_options, formatted_option_to_option_index = create_mappings(
@@ -695,11 +757,14 @@ class SelectboxMixin:
         selectbox_proto.filter_mode = proto_filter_mode
 
         if help is not None:
-            selectbox_proto.help = dedent(help)
+            selectbox_proto.help = to_help_str(help)
 
         # Set query param key if bound
         if bind == "query-params" and key is not None:
             selectbox_proto.query_param_key = str(key)
+
+        if isinstance(on_change, str) and on_change == "ignore":
+            selectbox_proto.ignore_rerun = True
 
         serde = SelectboxSerde(
             opt,
@@ -710,7 +775,7 @@ class SelectboxMixin:
         )
         widget_state = register_widget(
             selectbox_proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,

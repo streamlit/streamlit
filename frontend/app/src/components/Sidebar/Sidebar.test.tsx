@@ -734,4 +734,36 @@ describe("Sidebar Component", () => {
       expect(mockOnToggleCollapse).not.toHaveBeenCalled()
     })
   })
+
+  describe("Resize handle", () => {
+    beforeEach(() => {
+      window.localStorage.clear()
+    })
+
+    it("resets to the default width on double-click and persists it", async () => {
+      const user = userEvent.setup()
+      window.localStorage.setItem("sidebarWidth", "450")
+      renderSidebar()
+
+      expect(screen.getByTestId("stSidebar")).toHaveStyle("width: 450px")
+
+      await user.dblClick(screen.getByTestId("stSidebarResizeHandle"))
+
+      expect(screen.getByTestId("stSidebar")).toHaveStyle("width: 300px")
+      expect(window.localStorage.getItem("sidebarWidth")).toBe("300")
+    })
+
+    it("resets to the configured initial width on double-click", async () => {
+      const user = userEvent.setup()
+      window.localStorage.setItem("sidebarWidth", "500")
+      renderSidebar({}, { sidebarConfigContext: { initialSidebarWidth: 400 } })
+
+      expect(screen.getByTestId("stSidebar")).toHaveStyle("width: 500px")
+
+      await user.dblClick(screen.getByTestId("stSidebarResizeHandle"))
+
+      expect(screen.getByTestId("stSidebar")).toHaveStyle("width: 400px")
+      expect(window.localStorage.getItem("sidebarWidth")).toBe("400")
+    })
+  })
 })

@@ -120,3 +120,37 @@ st.subheader(
     text_alignment="justify",
     help="This is a help tooltip!",
 )
+
+# Icon parameter examples (distinct from body-markdown icons above)
+with st.container(key="heading_icons"):
+    st.title("Title with icon param", icon=":material/star:")
+    st.header("Header with emoji icon", icon="🚀", divider="blue")
+    st.subheader("Subheader with icon", icon=":material/bolt:")
+
+# Icon + text_alignment: icon headings must still honor center/right alignment
+with st.container(key="heading_icons_alignment"):
+    st.title(
+        "Centered title with icon",
+        icon=":material/star:",
+        text_alignment="center",
+    )
+    st.header(
+        "Right header with icon",
+        icon="🚀",
+        text_alignment="right",
+    )
+
+_WRAP_TEXT = "Quarterly revenue versus plan for the complete fiscal year dashboard"
+
+with st.container(key="wrap_false_headings", width=200):
+    st.title(_WRAP_TEXT, wrap=False)
+    st.header(_WRAP_TEXT, wrap=False)
+    st.subheader(_WRAP_TEXT, wrap=False)
+
+with st.container(key="wrap_true_headings", width=200):
+    st.title(_WRAP_TEXT, wrap=True)
+    st.header(_WRAP_TEXT, wrap=True)
+    st.subheader(_WRAP_TEXT, wrap=True)
+
+with st.container(key="wrap_false_heading_extra_lines", width=200):
+    st.title("First line\nSecond line that must not appear", wrap=False)

@@ -46,7 +46,7 @@ const LOG = getLogger("ImageList")
 export interface ImageListProps {
   endpoints: StreamlitEndpoints
   element: ImageListProto
-  widthConfig?: streamlit.IWidthConfig | null
+  widthConfig?: streamlit.WidthConfig.$Properties | null
   disableFullscreenMode?: boolean
 }
 
@@ -58,7 +58,7 @@ export interface ImageListProps {
  * @returns The width to use for images, or undefined for original size
  */
 function getImageWidth(
-  widthConfig: streamlit.IWidthConfig | null | undefined,
+  widthConfig: streamlit.WidthConfig.$Properties | null | undefined,
   containerWidth: number
 ): number | undefined {
   if (widthConfig) {

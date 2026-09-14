@@ -1510,6 +1510,7 @@ describe("AppRoot", () => {
 
   describe("AppRoot.debug", () => {
     it("prints labeled child sections with tree output", () => {
+      // eslint-disable-next-line testing-library/no-debugging-utils -- AppRoot.debug() is a tree printer, not Testing Library's screen.debug().
       const out = ROOT.debug()
       // Header
       expect(out.startsWith("AppRoot\n")).toBe(true)

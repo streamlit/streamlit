@@ -31,7 +31,11 @@ const ContextConsumer: FC = () => {
       <div data-testid="isInHorizontalLayout">
         {String(context?.isInHorizontalLayout)}
       </div>
+      <div data-testid="isDirectlyInColumn">
+        {String(context?.isDirectlyInColumn)}
+      </div>
       <div data-testid="isInRoot">{String(context?.isInRoot)}</div>
+      <div data-testid="wrap">{String(context?.wrap)}</div>
       <div data-testid="parentWidth">
         {context?.parentWidth ?? "undefined"}
       </div>
@@ -78,6 +82,10 @@ describe("FlexContextProvider", () => {
         "true"
       )
       expect(screen.getByTestId("isInRoot").textContent).toBe("false")
+      expect(screen.getByTestId("isDirectlyInColumn").textContent).toBe(
+        "false"
+      )
+      expect(screen.getByTestId("wrap").textContent).toBe("true")
       expect(screen.getByTestId("parentWidth").textContent).toBe("undefined")
     })
 
@@ -94,6 +102,17 @@ describe("FlexContextProvider", () => {
       expect(screen.getByTestId("isInHorizontalLayout").textContent).toBe(
         "false"
       )
+      expect(screen.getByTestId("wrap").textContent).toBe("true")
+    })
+
+    it("should set wrap when provided", () => {
+      render(
+        <FlexContextProvider direction={Direction.HORIZONTAL} wrap={false}>
+          <ContextConsumer />
+        </FlexContextProvider>
+      )
+
+      expect(screen.getByTestId("wrap").textContent).toBe("false")
     })
 
     it("should set isInRoot when provided", () => {
@@ -104,6 +123,19 @@ describe("FlexContextProvider", () => {
       )
 
       expect(screen.getByTestId("isInRoot").textContent).toBe("true")
+    })
+
+    it("should set isDirectlyInColumn when provided", () => {
+      render(
+        <FlexContextProvider
+          direction={Direction.VERTICAL}
+          isDirectlyInColumn={true}
+        >
+          <ContextConsumer />
+        </FlexContextProvider>
+      )
+
+      expect(screen.getByTestId("isDirectlyInColumn").textContent).toBe("true")
     })
 
     it("should provide parentWidth when specified", () => {
@@ -170,6 +202,7 @@ describe("FlexContextProvider", () => {
       const parentContext: IFlexContext = {
         direction: Direction.VERTICAL,
         isInHorizontalLayout: false,
+        isDirectlyInColumn: false,
         isInRoot: false,
         isInContentWidthContainer: true,
       }
@@ -192,6 +225,7 @@ describe("FlexContextProvider", () => {
       const parentContext: IFlexContext = {
         direction: Direction.VERTICAL,
         isInHorizontalLayout: false,
+        isDirectlyInColumn: false,
         isInRoot: false,
         isInContentWidthContainer: false,
       }
@@ -214,6 +248,7 @@ describe("FlexContextProvider", () => {
       const parentContext: IFlexContext = {
         direction: Direction.VERTICAL,
         isInHorizontalLayout: false,
+        isDirectlyInColumn: false,
         isInRoot: false,
         isInContentWidthContainer: true,
       }
@@ -237,6 +272,7 @@ describe("FlexContextProvider", () => {
       const parentContext: IFlexContext = {
         direction: Direction.VERTICAL,
         isInHorizontalLayout: false,
+        isDirectlyInColumn: false,
         isInRoot: false,
         isInContentWidthContainer: false,
       }
@@ -258,6 +294,23 @@ describe("FlexContextProvider", () => {
   })
 
   describe("nested contexts", () => {
+    it("should reset direct column placement in a nested provider", () => {
+      render(
+        <FlexContextProvider
+          direction={Direction.VERTICAL}
+          isDirectlyInColumn={true}
+        >
+          <NestedProvider direction={Direction.VERTICAL}>
+            <ContextConsumer />
+          </NestedProvider>
+        </FlexContextProvider>
+      )
+
+      expect(screen.getByTestId("isDirectlyInColumn").textContent).toBe(
+        "false"
+      )
+    })
+
     it("should handle multiple levels of nesting with content-width propagation", () => {
       render(
         <FlexContextProvider

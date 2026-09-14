@@ -28,6 +28,14 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import TimeInput, { Props } from "./TimeInput"
 
+function lastItem<T>(items: T[]): T {
+  const last = items.at(-1)
+  if (last === undefined) {
+    throw new Error("Expected a last item")
+  }
+  return last
+}
+
 const getProps = (
   elementProps: Partial<TimeInputProto> = {},
   disabled = false
@@ -93,10 +101,9 @@ describe("TimeInput widget", () => {
     render(<TimeInput {...props} />)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       props.element.default,
-      { fromUi: false },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 
@@ -106,10 +113,13 @@ describe("TimeInput widget", () => {
     render(<TimeInput {...props} />)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       props.element.default,
-      { fromUi: false },
-      "myFragmentId"
+      {
+        formId: props.element.formId,
+        fragmentId: "myFragmentId",
+        fromUser: false,
+      }
     )
   })
 
@@ -197,10 +207,9 @@ describe("TimeInput widget", () => {
     await user.keyboard("{ArrowDown}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "11:45",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -219,10 +228,9 @@ describe("TimeInput widget", () => {
     await user.keyboard("{ArrowDown}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "11:45",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
 
     // Submit the form
@@ -232,10 +240,9 @@ describe("TimeInput widget", () => {
 
     // Widget should reset to the default value
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       props.element.default,
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
 
     // Segments should reflect the reset value
@@ -280,10 +287,9 @@ describe("TimeInput widget", () => {
     await user.keyboard("{ArrowUp}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "13:00",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -300,10 +306,9 @@ describe("TimeInput widget", () => {
     await user.keyboard("{ArrowDown}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "12:30",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -320,10 +325,9 @@ describe("TimeInput widget", () => {
     await user.keyboard("{ArrowUp}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "12:15",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -340,10 +344,9 @@ describe("TimeInput widget", () => {
     await user.keyboard("{ArrowDown}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "12:00",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -360,10 +363,9 @@ describe("TimeInput widget", () => {
     await user.keyboard("{ArrowUp}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "00:00",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -380,10 +382,9 @@ describe("TimeInput widget", () => {
     await user.keyboard("{ArrowDown}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "23:45",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -400,10 +401,9 @@ describe("TimeInput widget", () => {
     await user.keyboard("{ArrowDown}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "12:44",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -420,10 +420,9 @@ describe("TimeInput widget", () => {
     await user.keyboard("{ArrowDown}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "11:45",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -440,10 +439,9 @@ describe("TimeInput widget", () => {
     await user.keyboard("{ArrowUp}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "14:00",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -460,10 +458,9 @@ describe("TimeInput widget", () => {
     await user.keyboard("{ArrowDown}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "10:00",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -480,10 +477,9 @@ describe("TimeInput widget", () => {
     await user.keyboard("{ArrowUp}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "00:00",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -500,10 +496,9 @@ describe("TimeInput widget", () => {
     await user.keyboard("{ArrowDown}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "23:20",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -520,10 +515,9 @@ describe("TimeInput widget", () => {
     await user.keyboard("{ArrowUp}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "00:00",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -540,10 +534,9 @@ describe("TimeInput widget", () => {
     await user.keyboard("{ArrowDown}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "20:00",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -588,10 +581,9 @@ describe("TimeInput widget", () => {
     await user.click(clearButton)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       null,
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
 
     // Segments should show placeholders after clearing
@@ -609,7 +601,7 @@ describe("TimeInput widget", () => {
 
     // Focus the last segment and tab out of the entire wrapper
     const segments = screen.getAllByRole("spinbutton")
-    const lastSegment = segments[segments.length - 1]
+    const lastSegment = lastItem(segments)
     await user.click(lastSegment)
     await user.tab()
 
@@ -631,10 +623,9 @@ describe("TimeInput widget", () => {
     await user.click(minuteSegment)
     await user.keyboard("{ArrowDown}")
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "12:30",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     vi.mocked(props.widgetMgr.setStringValue).mockClear()
 
@@ -644,10 +635,9 @@ describe("TimeInput widget", () => {
 
     await user.keyboard("{Enter}")
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "12:10",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -660,7 +650,7 @@ describe("TimeInput widget", () => {
 
     // Focus the last segment (minute) so a single Tab leaves the wrapper entirely
     const segments = screen.getAllByRole("spinbutton")
-    const minuteSegment = segments[segments.length - 1]
+    const minuteSegment = lastItem(segments)
     await user.click(minuteSegment)
 
     // Type a new value — displayValue updates but commit is deferred to blur.
@@ -670,10 +660,9 @@ describe("TimeInput widget", () => {
     // Tab out from the last segment to blur the entire wrapper — triggers commit.
     await user.tab()
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       "12:30",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -686,7 +675,7 @@ describe("TimeInput widget", () => {
     vi.mocked(props.widgetMgr.setStringValue).mockClear()
 
     const segments = screen.getAllByRole("spinbutton")
-    const minuteSegment = segments[segments.length - 1]
+    const minuteSegment = lastItem(segments)
     await user.click(minuteSegment)
     await user.keyboard("30")
 
@@ -696,10 +685,9 @@ describe("TimeInput widget", () => {
     // Blur triggers both the deferred path AND the synchronous form write
     await user.tab()
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       "12:30",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     // Synchronous write ensures value is available before form submit runs
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(2)
@@ -713,7 +701,7 @@ describe("TimeInput widget", () => {
     vi.mocked(props.widgetMgr.setStringValue).mockClear()
 
     const segments = screen.getAllByRole("spinbutton")
-    const minuteSegment = segments[segments.length - 1]
+    const minuteSegment = lastItem(segments)
     await user.click(minuteSegment)
     await user.keyboard("30")
     await user.tab()
@@ -730,17 +718,16 @@ describe("TimeInput widget", () => {
     vi.mocked(props.widgetMgr.setStringValue).mockClear()
 
     const segments = screen.getAllByRole("spinbutton")
-    const minuteSegment = segments[segments.length - 1]
+    const minuteSegment = lastItem(segments)
     await user.click(minuteSegment)
 
     // Arrow key commits immediately
     await user.keyboard("{ArrowUp}")
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       "13:00",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     vi.mocked(props.widgetMgr.setStringValue).mockClear()
 
@@ -761,10 +748,9 @@ describe("TimeInput widget", () => {
     await user.paste("08:30")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "08:30",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -780,10 +766,9 @@ describe("TimeInput widget", () => {
     await user.paste("0830")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "08:30",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -799,10 +784,9 @@ describe("TimeInput widget", () => {
     await user.paste("930")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "09:30",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -861,10 +845,9 @@ describe("TimeInput widget", () => {
     await user.paste("22")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "12:22",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -880,10 +863,9 @@ describe("TimeInput widget", () => {
     await user.paste("8")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "08:45",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -931,10 +913,9 @@ describe("TimeInput widget", () => {
     expect(hourSegment).toHaveTextContent("08")
     expect(minuteSegment).toHaveTextContent("30")
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       "08:30",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -1004,10 +985,9 @@ describe("TimeInput widget", () => {
     expect(screen.queryByTestId("stTimeInputError")).not.toBeInTheDocument()
     // Value committed as null (cleared)
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       null,
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -1191,10 +1171,9 @@ describe("TimeInput widget", () => {
     await user.paste("16:45")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "16:45",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     expect(hourSegment).toHaveTextContent("16")
     expect(minuteSegment).toHaveTextContent("45")
@@ -1303,10 +1282,9 @@ describe("TimeInput widget", () => {
     expect(screen.queryByTestId("stTimeInputError")).not.toBeInTheDocument()
     // The typed value (11:45) was committed
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       "11:45",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -1383,7 +1361,7 @@ describe("TimeInput widget", () => {
       render(<TimeInput {...props} />)
 
       const segments = screen.getAllByRole("spinbutton")
-      const minuteSegment = segments[segments.length - 1]
+      const minuteSegment = lastItem(segments)
       await user.click(minuteSegment)
       await user.keyboard("3")
       expect(screen.getByTestId("InputInstructions")).toBeInTheDocument()
@@ -1601,10 +1579,9 @@ describe("TimeInput clearable behavior", () => {
     await user.click(clearButton)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       null,
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -1700,10 +1677,9 @@ describe("TimeInput seconds granularity", () => {
     await user.keyboard("{ArrowUp}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "12:44:30",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -1721,10 +1697,9 @@ describe("TimeInput seconds granularity", () => {
     await user.keyboard("{ArrowUp}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "00:00:00",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -1775,10 +1750,9 @@ describe("TimeInput seconds granularity", () => {
       await user.keyboard(`{${key}}`)
 
       expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-        props.element,
+        props.element.id,
         expected,
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     }
   )
@@ -1874,10 +1848,9 @@ describe("TimeInput paste with seconds granularity", () => {
     await user.paste(paste)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       expected,
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -1929,10 +1902,9 @@ describe("TimeInput paste with seconds granularity", () => {
       await user.paste(paste)
 
       expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-        props.element,
+        props.element.id,
         expected,
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
       expect(screen.queryByTestId("stTimeInputError")).not.toBeInTheDocument()
     }

@@ -33,7 +33,7 @@ import {
   NavigationContext,
   SidebarConfigContext,
 } from "@streamlit/lib"
-import { IAppPage } from "@streamlit/protobuf"
+import { type AppPage } from "@streamlit/protobuf"
 import { localStorageAvailable, notNullOrUndefined } from "@streamlit/utils"
 
 import NavSection from "./NavSection"
@@ -67,7 +67,7 @@ const LOG = getLogger("SidebarNav")
 
 interface NavLinkProps {
   pageUrl: string
-  page: IAppPage
+  page: AppPage.$Properties
   isActive: boolean
   onClick: (e: MouseEvent) => void
   widgetsDisabled: boolean
@@ -100,9 +100,9 @@ function NavLink({
 }
 
 function generateNavSections(
-  sections: Record<string, IAppPage[]>,
+  sections: Record<string, AppPage.$Properties[]>,
   needsCollapse: boolean,
-  generateNavLink: (page: IAppPage, index: number) => ReactElement,
+  generateNavLink: (page: AppPage.$Properties, index: number) => ReactElement,
   expandedSections: Record<string, boolean>,
   toggleSection: (section: string) => void,
   currentPageCount: number,
@@ -275,7 +275,7 @@ const SidebarNav = ({
   }, [expanded])
 
   const generateNavLink = useCallback(
-    (page: IAppPage, index: number) => {
+    (page: AppPage.$Properties, index: number) => {
       const pageUrl = endpoints.buildAppPageURL(pageLinkBaseUrl, page)
       const isActive = page.pageScriptHash === currentPageScriptHash
       const isExternal = isExternalPage(page)

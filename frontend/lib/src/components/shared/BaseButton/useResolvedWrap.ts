@@ -19,19 +19,21 @@ import { useContext } from "react"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 
 /**
- * Resolves the effective `wrap` for a button-like control from the tri-state
- * `wrap` proto field.
+ * Resolves the effective `wrap` for a button or option group from the
+ * tri-state `wrap` proto field.
  *
  * - `true` / `false`: use the explicit value.
- * - `null` / `undefined` (auto, the default): don't wrap inside a horizontal
- *   container — so the control keeps its single-row height and stays aligned
- *   with its neighbors — and wrap in any other layout.
+ * - `null` / `undefined` (auto, the default): keep the control on one row
+ *   inside a horizontal container or as a direct column child, so neighbors
+ *   stay aligned; wrap in any other layout.
  *
  * @param wrap The `wrap` value from the element proto (nullable).
- * @returns The resolved boolean: whether the label may wrap.
+ * @returns Whether wrapping is allowed.
  */
 export function useResolvedWrap(wrap: boolean | null | undefined): boolean {
   const flexContext = useContext(FlexContext)
-  const isInHorizontalLayout = flexContext?.isInHorizontalLayout ?? false
-  return wrap ?? !isInHorizontalLayout
+  const shouldStayOnOneRow =
+    (flexContext?.isInHorizontalLayout ?? false) ||
+    (flexContext?.isDirectlyInColumn ?? false)
+  return wrap ?? !shouldStayOnOneRow
 }

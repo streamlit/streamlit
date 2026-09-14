@@ -15,12 +15,14 @@
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING, Literal, TypeAlias, cast
+from typing import TYPE_CHECKING, Final, Literal, TypeAlias, cast
 
 from typing_extensions import Self
 
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.elements.lib.layout_utils import (
+    EXPANDABLE_TYPE_TO_PROTO_MAPPING,
+    ExpandableType,
     WidthWithoutContent,
     get_width_config,
     validate_width,
@@ -37,6 +39,23 @@ if TYPE_CHECKING:
 
 States: TypeAlias = Literal["running", "complete", "error"]
 
+# Maps each state to the icon the default and compact styles render. Also
+# defines the valid `state` values, which both validation sites check against.
+_STATE_ICONS: Final[dict[States, str]] = {
+    "running": "spinner",
+    "complete": ":material/check:",
+    "error": ":material/error:",
+}
+
+# Semantic progress state sent with every status container. The step style uses
+# it for the icon and the screen-reader announcement; AppTest reads it instead
+# of inferring the state from the icon.
+_STATE_PROTO_VALUES: Final[dict[States, BlockProto.Expandable.State.ValueType]] = {
+    "running": BlockProto.Expandable.State.RUNNING,
+    "complete": BlockProto.Expandable.State.COMPLETE,
+    "error": BlockProto.Expandable.State.ERROR,
+}
+
 
 class StatusContainer(DeltaGenerator):
     @staticmethod
@@ -45,29 +64,23 @@ class StatusContainer(DeltaGenerator):
         label: str,
         expanded: bool = False,
         state: States = "running",
-        type: Literal["default", "compact"] = "default",
+        type: ExpandableType = "default",
         width: WidthWithoutContent = "stretch",
     ) -> StatusContainer:
-        if type not in {"default", "compact"}:
-            raise StreamlitValueError("type", ["'default'", "'compact'"])
+        if type not in EXPANDABLE_TYPE_TO_PROTO_MAPPING:
+            raise StreamlitValueError(
+                "type", [repr(name) for name in EXPANDABLE_TYPE_TO_PROTO_MAPPING]
+            )
+
+        if state not in _STATE_ICONS:
+            raise StreamlitValueError("state", [repr(name) for name in _STATE_ICONS])
 
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = expanded
         expandable_proto.label = label or ""
-        expandable_proto.type = (
-            BlockProto.Expandable.Type.COMPACT
-            if type == "compact"
-            else BlockProto.Expandable.Type.DEFAULT
-        )
-
-        if state == "running":
-            expandable_proto.icon = "spinner"
-        elif state == "complete":
-            expandable_proto.icon = ":material/check:"
-        elif state == "error":
-            expandable_proto.icon = ":material/error:"
-        else:
-            raise StreamlitValueError("state", ["'running'", "'complete'", "'error'"])
+        expandable_proto.type = EXPANDABLE_TYPE_TO_PROTO_MAPPING[type]
+        expandable_proto.icon = _STATE_ICONS[state]
+        expandable_proto.state = _STATE_PROTO_VALUES[state]
 
         block_proto = BlockProto()
         block_proto.allow_empty = True
@@ -155,16 +168,12 @@ class StatusContainer(DeltaGenerator):
             msg.delta.add_block.expandable.label = label
 
         if state is not None:
-            if state == "running":
-                msg.delta.add_block.expandable.icon = "spinner"
-            elif state == "complete":
-                msg.delta.add_block.expandable.icon = ":material/check:"
-            elif state == "error":
-                msg.delta.add_block.expandable.icon = ":material/error:"
-            else:
+            if state not in _STATE_ICONS:
                 raise StreamlitValueError(
-                    "state", ["'running'", "'complete'", "'error'"]
+                    "state", [repr(name) for name in _STATE_ICONS]
                 )
+            msg.delta.add_block.expandable.icon = _STATE_ICONS[state]
+            msg.delta.add_block.expandable.state = _STATE_PROTO_VALUES[state]
             self._current_state = state
 
         self._current_proto = msg.delta.add_block

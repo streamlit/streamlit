@@ -14,6 +14,7 @@
 
 """number_input unit test."""
 
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -21,15 +22,16 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.lib.js_number import JSNumber
-from streamlit.elements.widgets.number_input import NumberInputSerde
+from streamlit.elements.widgets.number_input import _LOGGER, NumberInputSerde
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidMinMaxError,
     StreamlitInvalidWidthError,
     StreamlitMixedNumericTypesError,
     StreamlitValueAboveMaxError,
+    StreamlitValueBelowMinError,
     StreamlitValueError,
 )
-from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.WidgetStates_pb2 import WidgetState
@@ -219,25 +221,39 @@ class NumberInputTest(DeltaGeneratorTestCase):
             c = self.get_delta_from_queue().new_element.number_input
             assert c.format == "%" + char
 
-    def test_warns_on_float_type_with_int_format(self):
-        st.number_input("the label", value=5.0, format="%d")
+    def test_logs_warning_on_float_type_with_int_format(self):
+        """Integer format with a float value logs a warning and still uses that format."""
+        with self.assertLogs(_LOGGER) as logs:
+            st.number_input("the label", value=5.0, format="%d")
 
-        c = self.get_delta_from_queue(-2).new_element.alert
-        assert c.format == AlertProto.WARNING
         assert (
-            c.body
-            == "Warning: NumberInput value below has type float, but format %d displays as integer."
+            "st.number_input value has type float, but format %d displays as integer."
+            in logs.records[0].getMessage()
         )
+        assert logs.records[0].stack_info is not None
+        assert not any(
+            delta.new_element.WhichOneof("type") == "alert"
+            for delta in self.get_all_deltas_from_queue()
+        )
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.format == "%d"
 
-    def test_warns_on_int_type_with_float_format(self):
-        st.number_input("the label", value=5, format="%0.2f")
+    def test_logs_warning_on_int_type_with_float_format(self):
+        """Float format with an int value logs a warning and still uses that format."""
+        with self.assertLogs(_LOGGER) as logs:
+            st.number_input("the label", value=5, format="%0.2f")
 
-        c = self.get_delta_from_queue(-2).new_element.alert
-        assert c.format == AlertProto.WARNING
         assert (
-            c.body
-            == "Warning: NumberInput value below has type int so is displayed as int despite format string %0.2f."
+            "st.number_input value has type int so is displayed as int despite "
+            "format string %0.2f." in logs.records[0].getMessage()
         )
+        assert logs.records[0].stack_info is not None
+        assert not any(
+            delta.new_element.WhichOneof("type") == "alert"
+            for delta in self.get_all_deltas_from_queue()
+        )
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.format == "%0.2f"
 
     def test_error_on_unsupported_formatters(self):
         UNSUPPORTED = "pAn"
@@ -483,17 +499,17 @@ class NumberInputTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             # Integer tests
-            (6, -10, 0),
-            (-11, -10, 0),
+            (6, -10, 0, StreamlitValueAboveMaxError),
+            (-11, -10, 0, StreamlitValueBelowMinError),
             # Float tests
-            (-11.0, -10.0, 0.0),
-            (6.0, -10.0, 0.0),
+            (6.0, -10.0, 0.0, StreamlitValueAboveMaxError),
+            (-11.0, -10.0, 0.0, StreamlitValueBelowMinError),
         ]
     )
     def test_should_raise_exception_when_default_out_of_bounds_min_and_max_defined(
-        self, value, min_value, max_value
+        self, value, min_value, max_value, expected_error
     ):
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(expected_error):
             st.number_input(
                 "My Label", value=value, min_value=min_value, max_value=max_value
             )
@@ -501,7 +517,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
     def test_should_raise_exception_when_default_lt_min_and_max_is_none(self):
         value = -11.0
         min_value = -10.0
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueBelowMinError):
             st.number_input("My Label", value=value, min_value=min_value)
 
     def test_should_raise_exception_when_default_gt_max_and_min_is_none(self):
@@ -509,6 +525,45 @@ class NumberInputTest(DeltaGeneratorTestCase):
         max_value = 10
         with pytest.raises(StreamlitValueAboveMaxError):
             st.number_input("My Label", value=value, max_value=max_value)
+
+    @parameterized.expand(
+        [
+            # Integer: value="min", an in-range-looking value, and None.
+            (10, 1, "min"),
+            (10, 1, 5),
+            (10, 1, None),
+            # Float: same value variants.
+            (10.5, 1.0, "min"),
+            (10.5, 1.0, 5.0),
+            (10.5, 1.0, None),
+        ]
+    )
+    def test_min_max_exception(self, min_value, max_value, value):
+        """Inverted bounds raise StreamlitInvalidMinMaxError."""
+        with pytest.raises(StreamlitInvalidMinMaxError, match="cannot be greater than"):
+            st.number_input(
+                "the label", min_value=min_value, max_value=max_value, value=value
+            )
+
+    @parameterized.expand(
+        [
+            (10, 10, "min"),
+            (10, 10, 10),
+            (10, 10, None),
+            (1.5, 1.5, "min"),
+            (1.5, 1.5, 1.5),
+            (1.5, 1.5, None),
+        ]
+    )
+    def test_min_equals_max_is_allowed(self, min_value, max_value, value):
+        """Equal bounds remain a valid single-value range."""
+        st.number_input(
+            "the label", min_value=min_value, max_value=max_value, value=value
+        )
+
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.min == min_value
+        assert c.max == max_value
 
     def test_session_state_value_out_of_range_resets_to_default(self):
         """Test that out of range session_state values reset to default.
@@ -846,6 +901,53 @@ class NumberInputBindQueryParamsTest(DeltaGeneratorTestCase):
         assert c.min == 0
         assert c.has_max
         assert c.max == 100
+
+
+class NumberInputOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ):
+        """Test that on_change modes correctly set the ignore_rerun proto field."""
+        st.number_input("the label", on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self):
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(st.errors.StreamlitValueError) as exc_info:
+            st.number_input("the label", on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_non_string_value_raises_exception(self):
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
+        with pytest.raises(st.errors.StreamlitValueError) as exc_info:
+            st.number_input("the label", on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(self):
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            st.number_input("the label", on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.number_input
+        assert c.ignore_rerun is True
 
 
 @pytest.mark.parametrize(

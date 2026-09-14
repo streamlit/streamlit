@@ -108,8 +108,8 @@ function getNonEmptyString(
 
 export interface IFrameProps {
   element: IFrameProto
-  widthConfig?: streamlit.IWidthConfig | null
-  heightConfig?: streamlit.IHeightConfig | null
+  widthConfig?: streamlit.WidthConfig.$Properties | null
+  heightConfig?: streamlit.HeightConfig.$Properties | null
 }
 
 interface ContentDimensions {
@@ -219,6 +219,10 @@ function IFrame({
       disableScrolling={!element.scrolling}
       src={src}
       srcDoc={srcDoc}
+      // Keep the deprecated scrolling attribute: CSS overflow on the iframe
+      // does not reliably disable inner-document scrolling, especially
+      // cross-origin.
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       scrolling={element.scrolling ? "auto" : "no"}
       sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
       title="st.iframe"

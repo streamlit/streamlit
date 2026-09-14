@@ -87,7 +87,7 @@ export const getPopoverContainerStyle = (
 }
 
 /**
- * Helper function to handle the border color for baseweb input widgets
+ * Helper function to handle the border color for input widgets
  * @see Selectbox
  * @see Multiselect
  * @see DateInput

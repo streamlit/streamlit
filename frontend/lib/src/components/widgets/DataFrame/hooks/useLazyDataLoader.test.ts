@@ -19,7 +19,7 @@ import { act, renderHook, waitFor } from "@testing-library/react"
 import { Field, Utf8 } from "apache-arrow"
 import { describe, expect, it, vi } from "vitest"
 
-import { IDataframeChunkResponsePayload } from "@streamlit/protobuf"
+import { type DataframeChunkResponsePayload } from "@streamlit/protobuf"
 
 import { BackendOperationClient } from "~lib/BackendOperationClient"
 import {
@@ -84,7 +84,7 @@ const SOURCE_ID = "source-1"
 const PAGE_SIZE = 2
 
 function makeClient(
-  requestImpl: () => Promise<IDataframeChunkResponsePayload>
+  requestImpl: () => Promise<DataframeChunkResponsePayload.$Properties>
 ): { client: BackendOperationClient; request: ReturnType<typeof vi.fn> } {
   const request = vi.fn(requestImpl)
   // Only requestDataframeChunk is used by the hook.
@@ -175,7 +175,9 @@ describe("useLazyDataLoader", () => {
     // Wait once for the debounce to flush (re-polling would keep resetting it).
     result.current.getCellContent([0, 2])
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 300))
+      await new Promise(resolve => {
+        setTimeout(resolve, 300)
+      })
     })
     expect(isErrorCell(result.current.getCellContent([0, 2]))).toBe(true)
   })
@@ -281,7 +283,10 @@ describe("useLazyDataLoader", () => {
 
   it("bounds concurrent requests for a large visible range", async () => {
     const { client, request } = makeClient(
-      () => new Promise<IDataframeChunkResponsePayload>(() => undefined)
+      () =>
+        new Promise<DataframeChunkResponsePayload.$Properties>(() => {
+          // Never resolves; used to keep in-flight requests outstanding.
+        })
     )
     const { result } = renderLoader(client, PAGE_SIZE, 200)
 

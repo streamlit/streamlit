@@ -27,11 +27,14 @@ export const SELECT_ALL_ID = "__select_all__"
 export const SELECT_MATCHES_ID = "__select_matches__"
 export const CREATABLE_ID = "__creatable__"
 
+/** Sentinel for Python `select_all=True`: always show the bulk action. */
+export const SELECT_ALL_ALWAYS = -1
 /**
- * Disables bulk actions ("Select all" / "Select X matches") to avoid browser
- * freezes and large serialization payloads on very large option lists.
+ * Default Python `select_all` threshold, and the fallback when the proto field
+ * is unset (legacy messages). Bulk-selecting more than this many options at
+ * once can freeze the browser and produce very large widget-state payloads.
  */
-const SELECT_ALL_THRESHOLD = 1000
+export const SELECT_ALL_DEFAULT_THRESHOLD = 1000
 
 export interface MultiselectOption {
   id: string
@@ -49,11 +52,35 @@ interface UseMultiselectFilteringProps {
   filterMode?: streamlit.SelectWidgetFilterMode | null
   acceptNewOptions: boolean
   maxSelections: number
+  selectAll?: number | null
 }
 
 interface UseMultiselectFilteringResult {
   displayOptions: MultiselectOption[]
   resolvedFilterMode: streamlit.SelectWidgetFilterMode
+}
+
+/**
+ * Whether the dropdown should include "Select all" / "Select X matches".
+ *
+ * `selectAll` is the encoded proto value:
+ * - `-1`: always show when 2+ options are selectable
+ * - `0`: never show
+ * - `>0`: show when 2+ selectable options are at or below this threshold
+ * - `null`/`undefined`: use `SELECT_ALL_DEFAULT_THRESHOLD` (legacy messages)
+ */
+export function shouldShowBulkAction(
+  selectableCount: number,
+  selectAll?: number | null
+): boolean {
+  if (selectableCount < 2) {
+    return false
+  }
+  const threshold = selectAll ?? SELECT_ALL_DEFAULT_THRESHOLD
+  if (threshold === SELECT_ALL_ALWAYS) {
+    return true
+  }
+  return threshold > 0 && selectableCount <= threshold
 }
 
 /** Computes the filtered and decorated option list including bulk actions and creatable entries. */
@@ -65,6 +92,7 @@ export function useMultiselectFiltering({
   filterMode: filterModeProp,
   acceptNewOptions,
   maxSelections,
+  selectAll,
 }: UseMultiselectFilteringProps): UseMultiselectFilteringResult {
   const resolvedFilterMode = useMemo(
     () => getSelectFilterMode(filterModeProp),
@@ -112,8 +140,7 @@ export function useMultiselectFiltering({
 
     const result: MultiselectOption[] = []
 
-    // Add a bulk action to select all currently displayed options.
-    if (filteredOptions.length > 1 && options.length < SELECT_ALL_THRESHOLD) {
+    if (shouldShowBulkAction(filteredOptions.length, selectAll)) {
       if (filterActive && inputValue.trim()) {
         result.push({
           id: SELECT_MATCHES_ID,
@@ -157,6 +184,7 @@ export function useMultiselectFiltering({
     inputValue,
     acceptNewOptions,
     overMaxSelections,
+    selectAll,
   ])
 
   return { displayOptions, resolvedFilterMode }

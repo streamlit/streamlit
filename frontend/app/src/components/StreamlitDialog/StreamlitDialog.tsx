@@ -27,7 +27,7 @@ import {
   StreamlitErrorCodeBlock,
   StreamlitMarkdown,
 } from "@streamlit/lib"
-import { IException } from "@streamlit/protobuf"
+import { type Exception } from "@streamlit/protobuf"
 
 import { DeployDialog, DeployDialogProps } from "./DeployDialog/DeployDialog"
 import { StyledDeployErrorContent } from "./styled-components"
@@ -141,7 +141,7 @@ function ClearCacheDialog(props: ClearCacheProps): ReactElement {
 
 export interface ScriptCompileErrorProps {
   type: DialogType.SCRIPT_COMPILE_ERROR
-  exception: IException | null | undefined
+  exception: Exception.$Properties | null | undefined
   onClose: PlainEventHandler
 }
 

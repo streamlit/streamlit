@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { useContext } from "react"
+
 import "@testing-library/jest-dom"
 import { screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -26,7 +28,10 @@ import { renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import BidiComponent from "./BidiComponent"
+import { BidiComponentContext } from "./BidiComponentContext"
+import { BidiComponentContextProvider } from "./BidiComponentContextProvider"
 import { blobUrlManager } from "./utils/blobUrl"
+import { LOG } from "./utils/logger"
 
 vi.mock("@streamlit/utils", async () => {
   const actual = await vi.importActual("@streamlit/utils")
@@ -40,6 +45,17 @@ vi.mock("@streamlit/utils", async () => {
 
 // Mock WidgetStateManager
 vi.mock("~lib/WidgetStateManager")
+
+function WidgetValueProbe({
+  onValue,
+}: {
+  onValue: (value: unknown) => void
+}): null {
+  const ctx = useContext(BidiComponentContext)
+  // Synchronous because getWidgetValue is a pure getter, not an effect.
+  onValue(ctx?.getWidgetValue())
+  return null
+}
 
 describe("BidiComponent", () => {
   let mockWidgetMgr: WidgetStateManager
@@ -201,6 +217,51 @@ describe("BidiComponent", () => {
         expect(testContent).toBeTruthy()
         expect(testContent?.textContent).toBe("Isolated HTML")
       })
+    })
+
+    it("reuses an existing shadow root when the isolated component id changes", async () => {
+      const htmlContent =
+        "<div data-testid='test-isolated-html'>Isolated HTML</div>"
+      const { rerenderWithContexts } = renderWithContexts(
+        <BidiComponent
+          element={createMockElement({ isolateStyles: true, htmlContent })}
+          widgetMgr={mockWidgetMgr}
+          fragmentId={mockFragmentId}
+          componentRegistry={mockComponentRegistry}
+        />
+      )
+
+      const container = screen.getByTestId("stBidiComponentIsolated")
+      await waitFor(() => {
+        expect(container.shadowRoot).toBeTruthy()
+      })
+      const originalShadowRoot = container.shadowRoot
+
+      const attachSpy = vi.spyOn(Element.prototype, "attachShadow")
+      rerenderWithContexts(
+        <BidiComponent
+          element={createMockElement({
+            isolateStyles: true,
+            htmlContent:
+              "<div data-testid='test-isolated-html'>Updated HTML</div>",
+            id: "new-isolated-id",
+          })}
+          widgetMgr={mockWidgetMgr}
+          fragmentId={mockFragmentId}
+          componentRegistry={mockComponentRegistry}
+        />
+      )
+
+      expect(attachSpy).not.toHaveBeenCalled()
+      expect(container.shadowRoot).toBe(originalShadowRoot)
+      await waitFor(() => {
+        expect(
+          originalShadowRoot?.querySelector(
+            "[data-testid='test-isolated-html']"
+          )?.textContent
+        ).toBe("Updated HTML")
+      })
+      attachSpy.mockRestore()
     })
 
     it("should handle complex HTML with nested elements", async () => {
@@ -648,6 +709,34 @@ describe("BidiComponent", () => {
 
       // Component should handle malformed widget JSON gracefully
     })
+
+    it.each([
+      ["without saved state", undefined],
+      ["with unparseable widget JSON", '{"invalid": true'],
+    ])(
+      "returns an empty object when getWidgetValue is called %s",
+      (_label, jsonValue) => {
+        vi.spyOn(mockWidgetMgr, "getJsonValue").mockReturnValue(jsonValue)
+        let widgetValue: unknown
+
+        renderWithContexts(
+          <BidiComponentContextProvider
+            element={createMockElement({ id: "widget-value", formId: "" })}
+            widgetMgr={mockWidgetMgr}
+            fragmentId={mockFragmentId}
+            componentRegistry={mockComponentRegistry}
+          >
+            <WidgetValueProbe
+              onValue={value => {
+                widgetValue = value
+              }}
+            />
+          </BidiComponentContextProvider>
+        )
+
+        expect(widgetValue).toEqual({})
+      }
+    )
   })
 
   describe("Error Handling", () => {
@@ -838,10 +927,9 @@ describe("BidiComponent", () => {
       // Verify setStateValue was called
       await waitFor(() => {
         expect(mockWidgetMgr.setJsonValue).toHaveBeenCalledWith(
-          { id: "test-js-component", formId: undefined },
+          "test-js-component",
           { testKey: "testValue" },
-          { fromUi: true },
-          mockFragmentId
+          { formId: undefined, fragmentId: mockFragmentId, fromUser: true }
         )
       })
     })
@@ -879,10 +967,9 @@ describe("BidiComponent", () => {
       // Verify setJsonValue was called with merged state
       await waitFor(() => {
         expect(mockWidgetMgr.setJsonValue).toHaveBeenCalledWith(
-          { id: "test-state-component", formId: "test-form" },
+          "test-state-component",
           { existing: "value", counter: 42 },
-          { fromUi: true },
-          mockFragmentId
+          { formId: "test-form", fragmentId: mockFragmentId, fromUser: true }
         )
       })
     })
@@ -920,10 +1007,9 @@ describe("BidiComponent", () => {
       // This demonstrates that the error was caught and the fallback path was taken
       await waitFor(() => {
         expect(mockWidgetMgr.setJsonValue).toHaveBeenCalledWith(
-          { id: "error-component", formId: undefined },
+          "error-component",
           { newKey: "newValue" },
-          { fromUi: true },
-          mockFragmentId
+          { formId: undefined, fragmentId: mockFragmentId, fromUser: true }
         )
       })
     })
@@ -957,12 +1043,8 @@ describe("BidiComponent", () => {
       // Format: $$STREAMLIT_INTERNAL_KEY_<base>__events
       await waitFor(() => {
         expect(mockWidgetMgr.setTriggerValue).toHaveBeenCalledWith(
-          {
-            id: "$$STREAMLIT_INTERNAL_KEY_trigger-component__events",
-            formId: undefined,
-          },
-          { fromUi: true },
-          mockFragmentId,
+          "$$STREAMLIT_INTERNAL_KEY_trigger-component__events",
+          { formId: undefined, fragmentId: mockFragmentId, fromUser: true },
           { event: "onClick", value: { buttonId: "btn1" } }
         )
       })
@@ -994,7 +1076,9 @@ describe("BidiComponent", () => {
       )
 
       // Wait for the module to execute
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => {
+        setTimeout(resolve, 100)
+      })
 
       // Verify setTriggerValue was NOT called
       expect(mockWidgetMgr.setTriggerValue).not.toHaveBeenCalled()
@@ -1027,7 +1111,9 @@ describe("BidiComponent", () => {
       )
 
       // Wait a bit to ensure the module is loaded
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => {
+        setTimeout(resolve, 100)
+      })
 
       // Unmount the component
       unmount()
@@ -1039,6 +1125,53 @@ describe("BidiComponent", () => {
 
       // Clean up
       delete (globalThis as Record<string, unknown>).__test_cleanup__
+    })
+
+    it("logs when unmount cleanup returns a rejected Promise", async () => {
+      const cleanupError = new Error("async cleanup failed")
+      const cleanupFn = vi.fn(() => Promise.reject(cleanupError))
+      ;(globalThis as Record<string, unknown>).__test_cleanup__ = cleanupFn
+      const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+
+      try {
+        const jsContent = `
+          export default function(args) {
+            return globalThis.__test_cleanup__;
+          }
+        `
+
+        const element = createMockElement({
+          isolateStyles: false,
+          jsContent,
+          componentName: "AsyncCleanupComponent",
+        })
+
+        const { unmount } = renderWithContexts(
+          <BidiComponent
+            element={element}
+            widgetMgr={mockWidgetMgr}
+            fragmentId={mockFragmentId}
+            componentRegistry={mockComponentRegistry}
+          />
+        )
+
+        await new Promise(resolve => {
+          setTimeout(resolve, 100)
+        })
+
+        unmount()
+
+        await waitFor(() => {
+          expect(logErrorSpy).toHaveBeenCalledWith(
+            "Failed to run custom component cleanup",
+            cleanupError
+          )
+        })
+        expect(cleanupFn).toHaveBeenCalled()
+      } finally {
+        logErrorSpy.mockRestore()
+        delete (globalThis as Record<string, unknown>).__test_cleanup__
+      }
     })
 
     it("should handle errors in module execution", async () => {

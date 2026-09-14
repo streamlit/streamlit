@@ -165,7 +165,7 @@ const AudioInput: React.FC<Props> = ({
         const timestamp = new Date()
           .toISOString()
           .slice(0, 16)
-          .replace(/:/g, "-")
+          .replaceAll(":", "-")
         const file = new File([wavBlob], `${timestamp}_audio.wav`, {
           type: wavBlob.type,
         })
@@ -322,10 +322,13 @@ const AudioInput: React.FC<Props> = ({
 
       if (updateWidgetManager) {
         widgetMgr.setFileUploaderStateValue(
-          element,
+          element.id,
           {},
-          { fromUi: true },
-          fragmentId
+          {
+            formId: element.formId,
+            fragmentId,
+            fromUser: true,
+          }
         )
       }
 

@@ -82,12 +82,11 @@ const updateWidgetMgrState = (
   valueWithSource: ValueWithSource<TextAreaValue>,
   fragmentId: string | undefined
 ): void => {
-  widgetMgr.setStringValue(
-    element,
-    valueWithSource.value,
-    { fromUi: valueWithSource.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, valueWithSource.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: valueWithSource.fromUser,
+  })
 }
 
 const TextArea: FC<Props> = ({
@@ -195,7 +194,7 @@ const TextArea: FC<Props> = ({
 
   const commitWidgetValue = useCallback((): void => {
     setDirty(false)
-    setValueWithSource({ value: uiValue, fromUi: true })
+    setValueWithSource({ value: uiValue, fromUser: true })
   }, [uiValue, setValueWithSource])
 
   const onBlur = useCallback(() => {

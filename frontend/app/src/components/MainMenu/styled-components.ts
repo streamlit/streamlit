@@ -326,8 +326,8 @@ export const StyledToggleKnob = styled.div<StyledToggleProps>(
  * Footer container for the version string.
  * Lives outside the role="menu" container (as a sibling within the
  * popover) so the CopyButton is not an invalid child of role="menu".
- * Keyboard users reach the CopyButton via Tab; focus-lock keeps
- * focus within the popover.
+ * Keyboard users reach the CopyButton via Tab; explicit handlers in
+ * MenuContent keep focus cycling within the popover.
  */
 export const StyledMenuVersionFooter = styled.div(({ theme }) => ({
   paddingLeft: theme.spacing.sm,

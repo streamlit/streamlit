@@ -94,6 +94,7 @@ if TYPE_CHECKING:
             label_visibility="visible",
             width="stretch",
             bind=None,
+            persist_state="session",
         ),
         str,
     )

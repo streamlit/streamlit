@@ -147,12 +147,11 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     // on subsequent reruns. Without this, a programmatic close (e.g.
     // st.session_state.key = False) would leave a stale "true" in the widget
     // state, causing the popover to reopen when another widget triggers a rerun.
-    widgetMgr?.setBoolValue(
-      { id: widgetId },
-      element.open,
-      { fromUi: false },
-      fragmentId
-    )
+    widgetMgr?.setBoolValue(widgetId, element.open, {
+      formId: undefined,
+      fragmentId,
+      fromUser: false,
+    })
   }, [widgetId, element.open])
 
   // Measure the trigger container's width so the portalled popover body can
@@ -160,9 +159,8 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // the popover is portalled to document.body (no CSS parent-child sizing).
   const { width: calculatedWidth, elementRef } = useCalculatedDimensions()
 
-  // wrap defaults to auto (no wrap in horizontal layouts, wrap otherwise). When
-  // wrap resolves to no-wrap, reveal the full label on hover via a native title,
-  // skipped when help is set since help provides the tooltip.
+  // When wrap resolves to no-wrap, reveal the full label on hover via a native
+  // title, skipped when help is set since help provides the tooltip.
   const wrap = useResolvedWrap(element.wrap)
   const addTitleTooltip = !wrap && !element.help
 
@@ -183,12 +181,11 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     setOpen(newOpen)
 
     if (widgetId) {
-      widgetMgr?.setBoolValue(
-        { id: widgetId },
-        newOpen,
-        { fromUi: true },
-        fragmentId
-      )
+      widgetMgr?.setBoolValue(widgetId, newOpen, {
+        formId: undefined,
+        fragmentId,
+        fromUser: true,
+      })
     } else if (isPassivelyKeyed) {
       setStoredOpen(newOpen)
     }
@@ -198,12 +195,11 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     setOpen(false)
 
     if (widgetId) {
-      widgetMgr?.setBoolValue(
-        { id: widgetId },
-        false,
-        { fromUi: true },
-        fragmentId
-      )
+      widgetMgr?.setBoolValue(widgetId, false, {
+        formId: undefined,
+        fragmentId,
+        fromUser: true,
+      })
     } else if (isPassivelyKeyed) {
       setStoredOpen(false)
     }
@@ -337,11 +333,10 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     // can't cause the next outside click to be misclassified as inside.
     interactionInsideRef.current = false
 
-    // True when a node belongs to this popover, its trigger, or any Streamlit
-    // overlay surface (BaseWeb dropdowns/calendars, dataframe portals, and —
-    // via `data-st-overlay-root` on the popover body — nested popovers). Clicks
-    // on these must not dismiss the popover, matching the same contract the
-    // modal dialog uses (see Modal's shouldCloseOnInteractOutside).
+    // Do not dismiss when the click target belongs to this popover, its trigger,
+    // or any Streamlit overlay (dropdowns, calendars, dataframe portals, and —
+    // via `data-st-overlay-root` on the popover body — nested popovers). This
+    // matches the modal dialog contract (see Modal's shouldCloseOnInteractOutside).
     const isInsidePopoverOrOverlay = (target: Node | null): boolean => {
       if (!target) return false
       const targetElement =

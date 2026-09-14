@@ -73,3 +73,17 @@ st.text(
     width="stretch",
     help="This is a help tooltip!",
 )
+
+_WRAP_TEXT = "Quarterly revenue versus plan for the complete fiscal year dashboard"
+
+with st.container(key="wrap_false_text", width=200):
+    st.text(_WRAP_TEXT, wrap=False, width="stretch")
+with st.container(key="wrap_true_text", width=200):
+    st.text(_WRAP_TEXT, wrap=True, width="stretch")
+
+_WRAP_NEWLINE_TEXT = "Line one\nLine two\nLine three extra"
+
+with st.container(key="wrap_false_text_newlines", width=240):
+    st.text(_WRAP_NEWLINE_TEXT, wrap=False, width="stretch")
+with st.container(key="wrap_true_text_newlines", width=240):
+    st.text(_WRAP_NEWLINE_TEXT, wrap=True, width="stretch")

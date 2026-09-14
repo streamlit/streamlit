@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { type ReactNode } from "react"
+import { type JSX, type ReactNode } from "react"
 
 import { act, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"

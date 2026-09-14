@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-import { MutableRefObject, ReactElement, useCallback } from "react"
+import {
+  DependencyList,
+  MutableRefObject,
+  ReactElement,
+  useCallback,
+} from "react"
 
 import { act, screen } from "@testing-library/react"
 
@@ -26,17 +31,29 @@ const mockDisconnect = vi.fn()
 const mockObserve = vi.fn()
 let resizeCallback: ((entries: ResizeObserverEntry[]) => void) | null = null
 
+// Stable empty list so the default is not a new `[]` each render
+// (`@eslint-react/no-unstable-default-props`).
+const EMPTY_DEPENDENCIES: DependencyList = []
+
 // Helper component that uses the hook and displays values
 function TestComponent({
   properties,
   throttleMs,
   dimensionsRef,
+  dependencies = EMPTY_DEPENDENCIES,
+  mounted = true,
 }: {
   properties: DOMRectKeys[]
   throttleMs: number
   dimensionsRef: MutableRefObject<{ width: number; height: number }>
-}): ReactElement {
-  const { values, elementRef } = useResizeObserver(properties, [], throttleMs)
+  dependencies?: DependencyList
+  mounted?: boolean
+}): ReactElement | null {
+  const { values, elementRef } = useResizeObserver(
+    properties,
+    dependencies,
+    throttleMs
+  )
 
   // Use a ref callback to set up getBoundingClientRect before ResizeObserver is attached
   const setRef = useCallback(
@@ -59,6 +76,10 @@ function TestComponent({
     },
     [elementRef, dimensionsRef]
   )
+
+  if (!mounted) {
+    return null
+  }
 
   return (
     <div ref={setRef} data-testid="observed-element">
@@ -184,5 +205,47 @@ describe("useResizeObserver", () => {
       resizeCallback?.([{} as ResizeObserverEntry])
     })
     expect(screen.getByTestId("values")).toHaveTextContent("[250,350]")
+  })
+
+  it("reobserves when dependencies change after the element remounts", () => {
+    const properties: DOMRectKeys[] = ["width"]
+    const dimensionsRef = { current: { width: 100, height: 50 } }
+
+    const { rerender } = render(
+      <TestComponent
+        mounted
+        dependencies={[true]}
+        properties={properties}
+        throttleMs={0}
+        dimensionsRef={dimensionsRef}
+      />
+    )
+
+    expect(mockObserve).toHaveBeenCalledTimes(1)
+    expect(screen.getByTestId("observed-element")).toBeVisible()
+
+    rerender(
+      <TestComponent
+        mounted={false}
+        dependencies={[false]}
+        properties={properties}
+        throttleMs={0}
+        dimensionsRef={dimensionsRef}
+      />
+    )
+    expect(mockDisconnect).toHaveBeenCalled()
+    expect(screen.queryByTestId("observed-element")).not.toBeInTheDocument()
+
+    rerender(
+      <TestComponent
+        mounted
+        dependencies={[true]}
+        properties={properties}
+        throttleMs={0}
+        dimensionsRef={dimensionsRef}
+      />
+    )
+    expect(mockObserve).toHaveBeenCalledTimes(2)
+    expect(screen.getByTestId("observed-element")).toBeVisible()
   })
 })

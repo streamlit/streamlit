@@ -152,9 +152,9 @@ def test_keyboard_activates_menu_item(app: Page):
 
 
 # WebKit (Safari) does not allow programmatic .focus() on buttons outside a
-# user-activation context. Our focus-return fires from react-focus-lock's
-# returnFocus callback (during FocusLock's unmount cleanup), which
-# Chromium/Firefox accept but WebKit silently ignores.
+# user-activation context. Our focus-return fires from a useLayoutEffect
+# (synchronously after the popover unmounts), which Chromium/Firefox accept
+# but WebKit silently ignores.
 @pytest.mark.skip_browser("webkit")
 def test_focus_returns_to_menu_button_after_close(app: Page):
     """Test that focus returns to the menu button after the popover closes."""
@@ -175,7 +175,7 @@ def test_tab_closes_menu(app: Page):
     """Test that pressing Tab from the menu eventually closes the popover.
 
     The first Tab moves focus from the menu items to the version CopyButton
-    (which lives outside role="menu" but inside the popover's focus-lock).
+    (which lives outside role="menu" but inside the popover's focus cycle).
     The second Tab closes the popover and advances focus.
     """
     menu_button = app.get_by_test_id("stMainMenuButton")

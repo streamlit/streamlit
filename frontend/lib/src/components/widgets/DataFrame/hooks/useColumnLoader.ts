@@ -307,7 +307,7 @@ function useColumnLoader(
   data: Quiver,
   disabled: boolean,
   columnOrder: string[],
-  widthConfig?: streamlit.IWidthConfig | null
+  widthConfig?: streamlit.WidthConfig.$Properties | null
 ): ColumnLoaderReturn {
   const theme = useEmotionTheme()
 
@@ -375,7 +375,7 @@ function useColumnLoader(
 
       if (
         element.editingMode !== DataframeProto.EditingMode.READ_ONLY &&
-        updatedColumn.isEditable == true
+        updatedColumn.isEditable
       ) {
         // Set editable icon for all editable columns:
         updatedColumn = {
@@ -433,7 +433,7 @@ function useColumnLoader(
 
         if (
           element.editingMode !== DataframeProto.EditingMode.READ_ONLY &&
-          updatedColumn.isEditable == true
+          updatedColumn.isEditable
         ) {
           // Set editable icon for all editable columns:
           updatedColumn = {

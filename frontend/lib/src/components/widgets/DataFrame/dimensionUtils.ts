@@ -20,7 +20,7 @@ import { streamlit } from "@streamlit/protobuf"
  * Helper function to determine if we should use container width based on the widthConfig.
  */
 export function shouldUseContainerWidth(
-  widthConfig?: streamlit.IWidthConfig | null
+  widthConfig?: streamlit.WidthConfig.$Properties | null
 ): boolean {
   return widthConfig?.useStretch ?? false
 }
@@ -29,7 +29,7 @@ export function shouldUseContainerWidth(
  * Helper function to get the configured width from the widthConfig.
  */
 export function getConfiguredWidth(
-  widthConfig?: streamlit.IWidthConfig | null
+  widthConfig?: streamlit.WidthConfig.$Properties | null
 ): number | undefined {
   if (widthConfig?.pixelWidth) {
     return widthConfig.pixelWidth
@@ -41,7 +41,7 @@ export function getConfiguredWidth(
  * Helper function to determine if the element is configured to use content width.
  */
 export function shouldUseContentWidth(
-  widthConfig?: streamlit.IWidthConfig | null
+  widthConfig?: streamlit.WidthConfig.$Properties | null
 ): boolean {
   return widthConfig?.useContent ?? false
 }
@@ -53,7 +53,7 @@ export function shouldUseContentWidth(
  * up collapsed to minimum height to so we use auto height mode instead.
  */
 export function shouldUseStretchHeight(
-  heightConfig?: streamlit.IHeightConfig | null,
+  heightConfig?: streamlit.HeightConfig.$Properties | null,
   isInRoot?: boolean
 ): boolean {
   if (isInRoot) {
@@ -66,7 +66,7 @@ export function shouldUseStretchHeight(
  * Helper function to determine if the element is configured to use content height.
  */
 export function shouldUseContentHeight(
-  heightConfig?: streamlit.IHeightConfig | null
+  heightConfig?: streamlit.HeightConfig.$Properties | null
 ): boolean {
   return heightConfig?.useContent ?? false
 }
@@ -75,7 +75,7 @@ export function shouldUseContentHeight(
  * Helper function to get the configured height from the heightConfig.
  */
 export function getConfiguredHeight(
-  heightConfig?: streamlit.IHeightConfig | null
+  heightConfig?: streamlit.HeightConfig.$Properties | null
 ): number | undefined {
   if (heightConfig?.pixelHeight) {
     return heightConfig.pixelHeight

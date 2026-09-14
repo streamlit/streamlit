@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { vi } from "vitest"
 
@@ -42,6 +42,7 @@ const getProps = (
     ...elementProps,
   }),
   isStale: false,
+  empty: false,
   widgetMgr: createWidgetMgr(),
   ...props,
 })
@@ -238,12 +239,11 @@ describe("widget mode (widgetMgr + element.id)", () => {
 
     await user.click(screen.getByText("hi"))
 
-    expect(setBoolValueSpy).toHaveBeenCalledWith(
-      { id: "expander-123" },
-      true,
-      { fromUi: true },
-      "frag-1"
-    )
+    expect(setBoolValueSpy).toHaveBeenCalledWith("expander-123", true, {
+      formId: undefined,
+      fragmentId: "frag-1",
+      fromUser: true,
+    })
   })
 
   it("does not call setBoolValue when element.id is not set", async () => {
@@ -318,14 +318,13 @@ describe("widget mode (widgetMgr + element.id)", () => {
       </Expander>
     )
 
-    // The widget manager should be updated with fromUi: false so that
+    // The widget manager should be updated with fromUser: false so that
     // subsequent reruns send the correct value back to the backend
-    expect(setBoolValueSpy).toHaveBeenCalledWith(
-      { id: widgetId },
-      true,
-      { fromUi: false },
-      fragmentId
-    )
+    expect(setBoolValueSpy).toHaveBeenCalledWith(widgetId, true, {
+      formId: undefined,
+      fragmentId,
+      fromUser: false,
+    })
   })
 
   it("syncs widget manager state on programmatic collapse to prevent stale reopens", () => {
@@ -363,12 +362,11 @@ describe("widget mode (widgetMgr + element.id)", () => {
 
     // The widget manager must be updated with false so that the next rerun
     // (triggered by e.g. another widget) does not send stale "true" back
-    expect(setBoolValueSpy).toHaveBeenCalledWith(
-      { id: widgetId },
-      false,
-      { fromUi: false },
-      fragmentId
-    )
+    expect(setBoolValueSpy).toHaveBeenCalledWith(widgetId, false, {
+      formId: undefined,
+      fragmentId,
+      fromUser: false,
+    })
   })
 })
 
@@ -550,5 +548,281 @@ describe("compact mode (type=COMPACT)", () => {
     )
     expect(screen.getByTestId("stExpanderIcon")).toBeVisible()
     expect(screen.getByText("psychology")).toBeVisible()
+  })
+
+  it("hides the compact spinner when the label uses :shimmer[]", () => {
+    const props = getProps({
+      icon: "spinner",
+      label: ":shimmer[Thinking]",
+      type: BlockProto.Expandable.Type.COMPACT,
+    })
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+    expect(
+      screen.queryByTestId("stExpanderIconSpinner")
+    ).not.toBeInTheDocument()
+    expect(screen.getByText("Thinking")).toBeVisible()
+  })
+
+  it("keeps the compact spinner when the label does not shimmer", () => {
+    const props = getProps({
+      icon: "spinner",
+      label: "Thinking",
+      type: BlockProto.Expandable.Type.COMPACT,
+    })
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+    expect(screen.getByTestId("stExpanderIconSpinner")).toBeVisible()
+  })
+})
+
+describe("step mode (type=STEP)", () => {
+  const { State, Type } = BlockProto.Expandable
+
+  const getStepProps = (
+    elementProps: Partial<BlockProto.Expandable> = {},
+    props: Partial<ExpanderProps> = {}
+  ): ExpanderProps =>
+    getProps({ type: Type.STEP, expanded: false, ...elementProps }, props)
+
+  /** The <summary> disclosure control, or null for a non-collapsible step. */
+  const getSummary = (): HTMLElement | null =>
+    screen.getByTestId("stExpander").querySelector("summary")
+
+  it("renders a step without the bordered expander chrome", () => {
+    render(
+      <Expander {...getStepProps()}>
+        <div>test</div>
+      </Expander>
+    )
+
+    const details = screen.getByTestId("stExpander").querySelector("details")
+    expect(details).not.toHaveStyle("border-style: solid")
+    expect(screen.getByTestId("stExpanderDetails")).toHaveStyle(
+      "border-top: none"
+    )
+  })
+
+  it("keeps the bordered chrome for a default expander", () => {
+    render(
+      <Expander {...getProps()}>
+        <div>test</div>
+      </Expander>
+    )
+
+    const details = screen.getByTestId("stExpander").querySelector("details")
+    expect(details).toHaveStyle("border-style: solid")
+    expect(
+      screen.queryByTestId("stExpanderStepConnector")
+    ).not.toBeInTheDocument()
+  })
+
+  it("renders a connector and toggles aria-expanded for a step with content", async () => {
+    const user = userEvent.setup()
+    render(
+      <Expander {...getStepProps()}>
+        <div>step content</div>
+      </Expander>
+    )
+
+    expect(screen.getByTestId("stExpanderStepConnector")).toBeVisible()
+    expect(getSummary()).toHaveAttribute("aria-expanded", "false")
+
+    await user.click(screen.getByText("hi"))
+
+    expect(getSummary()).toHaveAttribute("aria-expanded", "true")
+    expect(screen.getByText("step content")).toBeVisible()
+  })
+
+  it("does not make a step without content collapsible", async () => {
+    const user = userEvent.setup()
+    render(
+      <Expander {...getStepProps({}, { empty: true })}>
+        <div>step content</div>
+      </Expander>
+    )
+
+    expect(screen.getByText("hi")).toBeVisible()
+    expect(
+      screen.queryByTestId("stExpanderStepConnector")
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stExpanderStepChevron")
+    ).not.toBeInTheDocument()
+    expect(getSummary()).toBeNull()
+    expect(screen.queryByText("step content")).not.toBeInTheDocument()
+
+    await user.click(screen.getByText("hi"))
+
+    expect(getSummary()).toBeNull()
+    expect(screen.queryByText("step content")).not.toBeInTheDocument()
+  })
+
+  it("stays expanded when its content only arrives on a later render", () => {
+    const { rerender } = render(
+      <Expander {...getStepProps({ expanded: true }, { empty: true })}>
+        <div>late content</div>
+      </Expander>
+    )
+
+    expect(screen.queryByText("late content")).not.toBeInTheDocument()
+
+    // The step swaps its plain header for a <details> as soon as the first
+    // child arrives, which must not reset the expanded state.
+    rerender(
+      <Expander {...getStepProps({ expanded: true })}>
+        <div>late content</div>
+      </Expander>
+    )
+
+    expect(screen.getByText("late content")).toBeVisible()
+  })
+
+  it.each([
+    [
+      "a complete status shows a filled check",
+      { state: State.COMPLETE },
+      "check_circle",
+    ],
+    ["an errored status shows an error icon", { state: State.ERROR }, "error"],
+    ["a stateless step shows a neutral placeholder", {}, "circle"],
+    [
+      "a user icon is used when there is no state",
+      { icon: ":material/bolt:" },
+      "bolt",
+    ],
+  ])("%s", (_description, elementProps, expectedIcon) => {
+    render(
+      <Expander {...getStepProps(elementProps)}>
+        <div>test</div>
+      </Expander>
+    )
+
+    const stepIcon = screen.getByTestId("stExpanderStepIcon")
+    expect(within(stepIcon).getByText(expectedIcon)).toBeVisible()
+  })
+
+  it.each([
+    ["a running status shows a spinner", { state: State.RUNNING }],
+    [
+      "the state wins over a user icon",
+      { icon: ":material/bolt:", state: State.RUNNING },
+    ],
+  ])("%s", (_description, elementProps) => {
+    render(
+      <Expander {...getStepProps(elementProps)}>
+        <div>test</div>
+      </Expander>
+    )
+
+    const stepIcon = screen.getByTestId("stExpanderStepIcon")
+    expect(within(stepIcon).getByTestId("stSpinnerIcon")).toBeVisible()
+    expect(within(stepIcon).queryByText("bolt")).not.toBeInTheDocument()
+  })
+
+  it("announces the status state as part of the accessible name", () => {
+    render(
+      <Expander
+        {...getStepProps({ label: "Loading data", state: State.RUNNING })}
+      >
+        <div>test</div>
+      </Expander>
+    )
+
+    expect(getSummary()).toHaveAccessibleName("Loading data — running")
+  })
+
+  it("announces the status state for a step without content", () => {
+    render(
+      <Expander
+        {...getStepProps(
+          { label: "Loading data", state: State.RUNNING },
+          { empty: true }
+        )}
+      >
+        <div>test</div>
+      </Expander>
+    )
+
+    expect(screen.getByTestId("stExpander")).toHaveTextContent(
+      "Loading data — running"
+    )
+  })
+
+  it("omits the state from the accessible name of a stateless step", () => {
+    render(
+      <Expander {...getStepProps({ label: "Loading data" })}>
+        <div>test</div>
+      </Expander>
+    )
+
+    expect(getSummary()).toHaveAccessibleName("Loading data")
+  })
+
+  it("rounds the step header so its focus ring matches the other styles", () => {
+    const summaryRadius = (): string => {
+      const summary = getSummary()
+      if (!summary) {
+        throw new Error("expected the expander to render a summary")
+      }
+      return getComputedStyle(summary).borderRadius
+    }
+
+    // Compact is the reference because it rounds uniformly, while the default
+    // style rounds only its top corners once expanded.
+    const { unmount } = render(
+      <Expander {...getProps({ type: Type.COMPACT })}>
+        <div>test</div>
+      </Expander>
+    )
+    const compactRadius = summaryRadius()
+    unmount()
+
+    render(
+      <Expander {...getStepProps()}>
+        <div>test</div>
+      </Expander>
+    )
+
+    expect(summaryRadius()).toBe(compactRadius)
+  })
+
+  it("keeps the chevron hidden until the header is hovered or focused", () => {
+    render(
+      <Expander {...getStepProps()}>
+        <div>test</div>
+      </Expander>
+    )
+
+    // The chevron is always mounted and revealed purely via CSS, so that
+    // keyboard focus swaps it in without a re-render. jsdom does not evaluate
+    // :hover / :focus-visible, so the reveal itself is covered by the E2E test.
+    expect(screen.getByTestId("stExpanderStepChevron")).not.toBeVisible()
+    expect(screen.getByTestId("stExpanderStepIcon")).toBeVisible()
+  })
+
+  it.each([
+    ["default", Type.DEFAULT],
+    ["compact", Type.COMPACT],
+  ])("leaves the %s style free of step markup", (_description, type) => {
+    render(
+      <Expander {...getProps({ type, state: State.RUNNING })}>
+        <div>test</div>
+      </Expander>
+    )
+
+    expect(
+      screen.queryByTestId("stExpanderStepConnector")
+    ).not.toBeInTheDocument()
+    expect(screen.queryByTestId("stExpanderStepIcon")).not.toBeInTheDocument()
+    expect(getSummary()).not.toHaveAttribute("aria-expanded")
+    // Only the step style appends the state to the accessible name.
+    expect(screen.queryByText("— running")).not.toBeInTheDocument()
   })
 })

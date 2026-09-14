@@ -79,3 +79,45 @@ if st.button("#8599 - Bug"):
 
     del st.session_state["foo"]
     st.rerun()
+
+
+# A callback-queued st.rerun() preempts this run before the body registers any
+# widget, so the values below have to survive a run that rendered nothing.
+if "callback_count" not in st.session_state:
+    st.session_state.callback_count = 0
+
+
+def rerun_from_callback():
+    st.session_state.callback_count += 1
+    st.rerun()
+    # Must stay dead: st.rerun() interrupts the callback instead of returning.
+    st.session_state.resumed_after_rerun = True  # type: ignore[unreachable]
+
+
+callback_text = st.text_input(
+    "rerun from callback", key="callback_text", on_change=rerun_from_callback
+)
+untouched_text = st.text_input("untouched by callbacks", key="untouched_text")
+button_value_in_body = st.button(
+    "rerun from button callback", on_click=rerun_from_callback
+)
+
+st.write(f"callback text: {callback_text}")
+st.write(f"untouched text: {untouched_text}")
+st.write(f"callback count: {st.session_state.callback_count}")
+st.write(f"button in body: {button_value_in_body}")
+st.write(f"resumed after rerun: {'resumed_after_rerun' in st.session_state}")
+
+# Widgets after a body-level st.rerun() must keep their values (GitHub issue #3533).
+select1 = st.radio("Select1", ["Egg", "Spam", "Bacon", "Sausage"], key="select1_after")
+st.write(f"Select1 write: {select1}")
+
+if st.button("body-level rerun"):
+    st.rerun()
+
+select2 = st.radio("Select2", ["Egg", "Spam", "Bacon", "Sausage"], key="select2_after")
+st.write(f"Select2 write: {select2}")
+select3 = st.radio("Select3", ["Egg", "Spam", "Bacon", "Sausage"], key="select3_after")
+st.write(f"Select3 write: {select3}")
+toggle_after = st.toggle("Toggle after rerun", key="toggle_after")
+st.write(f"toggle after write: {toggle_after}")

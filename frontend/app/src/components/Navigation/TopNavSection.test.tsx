@@ -19,7 +19,7 @@ import { userEvent } from "@testing-library/user-event"
 
 import { mockEndpoints } from "@streamlit/lib"
 import { renderWithContexts } from "@streamlit/lib/testing"
-import { IAppPage } from "@streamlit/protobuf"
+import { type AppPage } from "@streamlit/protobuf"
 
 import TopNavSection from "./TopNavSection"
 
@@ -36,7 +36,7 @@ const getDefaultProps = (
   ...overrides,
 })
 
-const MIXED_SECTIONS: IAppPage[][] = [
+const MIXED_SECTIONS: AppPage.$Properties[][] = [
   [
     {
       pageScriptHash: "internal_hash",

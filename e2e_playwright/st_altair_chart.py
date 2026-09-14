@@ -12,12 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+from pathlib import Path
+
 import altair as alt
 import numpy as np
 import pandas as pd
 from vega_datasets import data
 
 import streamlit as st
+
+STATIC_DIR = Path(__file__).parent / "static"
 
 np.random.seed(0)
 
@@ -257,3 +262,89 @@ issue_14050_chart = (
     .properties(title="Issue #14050 regression chart")
 )
 st.altair_chart(issue_14050_chart, width="stretch")
+
+# Parameter-binding widgets (range, select, radio, checkbox, text) render as
+# native HTML controls inside the chart. The frontend themes them because
+# vega-embed's default CSS is disabled.
+st.write("Altair chart with parameter bindings")
+df_bindings = pd.DataFrame(
+    {
+        "Horsepower": [130, 165, 150, 88, 95, 113],
+        "Miles_per_Gallon": [18, 15, 18, 24, 27, 21],
+        "Origin": ["USA", "USA", "USA", "Europe", "Europe", "Japan"],
+    }
+)
+bindings_chart = (
+    alt.Chart(df_bindings)
+    .mark_point()
+    .encode(
+        x="Horsepower:Q",
+        y="Miles_per_Gallon:Q",
+        color="Origin:N",
+    )
+    .add_params(
+        alt.param(
+            name="year",
+            value=1975,
+            bind=alt.binding_range(min=1970, max=1980, step=1, name="Year"),
+        ),
+        alt.param(
+            name="origin",
+            value="USA",
+            bind=alt.binding_select(options=["USA", "Europe", "Japan"], name="Origin"),
+        ),
+        alt.param(
+            name="cylinders",
+            value=4,
+            bind=alt.binding_radio(options=[4, 6, 8], name="Cylinders"),
+        ),
+        alt.param(
+            name="filled",
+            value=True,
+            bind=alt.binding_checkbox(name="Filled"),
+        ),
+        alt.param(
+            name="search",
+            value="",
+            bind=alt.binding(input="text", name="Search"),
+        ),
+    )
+    .properties(width=400, height=200)
+)
+with st.container(key="altair_chart_bindings"):
+    st.altair_chart(bindings_chart, theme="streamlit", width="content")
+
+# Local GeoJSON assets only — URL data must not fetch a CDN.
+GEOJSON_PATH = STATIC_DIR / "two_polygons.geo.json"
+GEOJSON_URL = "./app/static/two_polygons.geo.json"
+GEO_FORMAT = alt.DataFormat(property="features", type="json")
+
+with st.container(key="altair_geoshape_lookup"):
+    population = pd.DataFrame({"id": [1, 2], "population": [100, 200]})
+    lookup_chart = (
+        alt.Chart(alt.Data(url=GEOJSON_URL, format=GEO_FORMAT))
+        .mark_geoshape()
+        .encode(color="population:Q")
+        .transform_lookup(
+            lookup="id",
+            from_=alt.LookupData(population, "id", list(population.columns)),
+        )
+        .project(type="identity", reflectY=True)
+        .properties(width=400, height=200)
+    )
+    st.altair_chart(lookup_chart, width="content")
+
+with st.container(key="altair_geoshape_inline"):
+    inline_chart = (
+        alt.Chart(
+            alt.InlineData(
+                values=json.loads(GEOJSON_PATH.read_text()),
+                format=GEO_FORMAT,
+            )
+        )
+        .mark_geoshape()
+        .encode(color="properties.name:N")
+        .project(type="identity", reflectY=True)
+        .properties(width=400, height=200)
+    )
+    st.altair_chart(inline_chart, width="content")

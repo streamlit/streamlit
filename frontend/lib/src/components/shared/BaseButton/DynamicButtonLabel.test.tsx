@@ -112,9 +112,14 @@ describe("DynamicButtonLabel", () => {
 
   it("applies truncate styles to the label when wrap is false", () => {
     render(<DynamicButtonLabel {...getProps({ wrap: false })} />)
-    expect(screen.getByTestId("stMarkdownContainer")).toHaveStyle({
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container).toHaveStyle({
       "text-overflow": "ellipsis",
       "white-space": "nowrap",
+      "line-height": "inherit",
+    })
+    expect(screen.getByText("Button Label")).toHaveStyle({
+      "line-height": "inherit",
     })
   })
 

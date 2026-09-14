@@ -97,7 +97,7 @@ assert_snapshot(element, name="snapshot")
 For popups/modals/calendars that animate:
 
 ```python
-calendar = page.locator('[data-baseweb="calendar"]').first
+calendar = page.get_by_test_id("stDateInputCalendar").first
 expect(calendar).to_be_visible()  # Wait for animation to complete
 assert_snapshot(calendar, name="calendar-snapshot")
 ```

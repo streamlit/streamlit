@@ -19,7 +19,7 @@ import shutil
 import subprocess
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
@@ -233,6 +233,46 @@ def test_public_git_queries_contain_unexpected_failures() -> None:
             assert repo.uncommitted_files is None
             assert repo.ahead_commits is None
             assert repo.get_tracking_branch_remote() is None
+            assert repo.get_repo_info() is None
+
+
+def test_ahead_commits_contains_unexpected_rev_list_failures() -> None:
+    """Unexpected errors after the upstream is resolved return an empty list."""
+    with _mock_git_repo() as repo:
+        with (
+            patch.object(
+                repo, "get_tracking_branch_remote", return_value=("origin", "main")
+            ),
+            patch("streamlit.git_util._run_git", side_effect=RuntimeError("boom")),
+        ):
+            assert repo.ahead_commits == []
+
+
+def test_get_tracking_branch_remote_contains_unexpected_failures() -> None:
+    """Unexpected errors while reading the upstream are contained."""
+    with _mock_git_repo() as repo:
+        with patch.object(
+            GitRepo,
+            "tracking_branch",
+            new_callable=PropertyMock,
+            side_effect=RuntimeError("boom"),
+        ):
+            assert repo.get_tracking_branch_remote() is None
+
+
+def test_get_remote_urls_contains_unexpected_failures() -> None:
+    """Unexpected Git errors while listing remote URLs return an empty list."""
+    with _mock_git_repo() as repo:
+        with patch("streamlit.git_util._run_git", side_effect=RuntimeError("boom")):
+            assert repo._get_remote_urls("origin") == []
+
+
+def test_get_repo_info_contains_unexpected_failures() -> None:
+    """Unexpected errors while assembling repo info are contained."""
+    with _mock_git_repo() as repo:
+        with patch.object(
+            repo, "get_tracking_branch_remote", side_effect=RuntimeError("boom")
+        ):
             assert repo.get_repo_info() is None
 
 

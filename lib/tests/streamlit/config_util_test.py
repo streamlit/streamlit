@@ -161,11 +161,11 @@ class ConfigUtilTest(unittest.TestCase):
             # Nothing changed.
             (
                 {
-                    "mapbox.token": "shhhhhhh",
+                    "browser.gatherUsageStats": True,
                     "server.address": "localhost",
                 },
                 {
-                    "mapbox.token": "shhhhhhh",
+                    "browser.gatherUsageStats": True,
                     "server.address": "localhost",
                 },
                 False,
@@ -173,11 +173,11 @@ class ConfigUtilTest(unittest.TestCase):
             # A non-server config option changed.
             (
                 {
-                    "mapbox.token": "shhhhhhh",
+                    "browser.gatherUsageStats": True,
                     "server.address": "localhost",
                 },
                 {
-                    "mapbox.token": "SHHHHHHH!!!!!! >:(",
+                    "browser.gatherUsageStats": False,
                     "server.address": "localhost",
                 },
                 False,
@@ -185,11 +185,11 @@ class ConfigUtilTest(unittest.TestCase):
             # A server config option changed.
             (
                 {
-                    "mapbox.token": "shhhhhhh",
+                    "browser.gatherUsageStats": True,
                     "server.address": "localhost",
                 },
                 {
-                    "mapbox.token": "shhhhhhh",
+                    "browser.gatherUsageStats": True,
                     "server.address": "streamlit.io",
                 },
                 True,

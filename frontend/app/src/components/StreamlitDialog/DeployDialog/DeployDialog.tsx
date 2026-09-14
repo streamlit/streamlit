@@ -34,7 +34,7 @@ import {
   STREAMLIT_DEPLOY_TUTORIAL_URL,
 } from "@streamlit/app/src/urls"
 import { BaseButton, BaseButtonKind } from "@streamlit/lib"
-import { GitInfo, IGitInfo } from "@streamlit/protobuf"
+import { GitInfo } from "@streamlit/protobuf"
 
 import ListElement from "./DeployListElement"
 import Modal from "./DeployModal"
@@ -53,7 +53,7 @@ const openUrl = (url: string): void => {
   window.open(url, "_blank")
 }
 
-const getDeployAppUrl = (gitInfo: IGitInfo | null): string => {
+const getDeployAppUrl = (gitInfo: GitInfo.$Properties | null): string => {
   if (gitInfo) {
     // If the app was run inside a GitHub repo, autofill for a one-click deploy.
     // E.g.: https://share.streamlit.io/deploy?repository=melon&branch=develop&mainModule=streamlit_app.py
@@ -69,7 +69,7 @@ const getDeployAppUrl = (gitInfo: IGitInfo | null): string => {
 }
 
 export interface DeployDialogProps {
-  gitInfo: IGitInfo | null
+  gitInfo: GitInfo.$Properties | null
   type: DialogType.DEPLOY_DIALOG
   onClose: PlainEventHandler
   showDeployError: (

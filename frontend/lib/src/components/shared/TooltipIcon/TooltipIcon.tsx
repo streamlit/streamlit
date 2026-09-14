@@ -38,6 +38,7 @@ interface TooltipIconCommonProps {
   markdownProps?: Partial<StreamlitMarkdownProps>
   onMouseEnterDelay?: number
   containerWidth?: boolean
+  constrainWidth?: boolean
 }
 
 /**
@@ -83,6 +84,7 @@ const TooltipIcon = memo(function TooltipIcon(
     markdownProps,
     onMouseEnterDelay,
     containerWidth = false,
+    constrainWidth = false,
   } = props
   const theme = useEmotionTheme()
 
@@ -147,6 +149,7 @@ const TooltipIcon = memo(function TooltipIcon(
         onMouseEnterDelay={onMouseEnterDelay}
         inline
         containerWidth={containerWidth}
+        constrainWidth={constrainWidth}
       >
         {renderTrigger()}
       </Tooltip>
@@ -160,7 +163,7 @@ export function getHelpTooltipAriaLabel(label?: string | null): string {
   // label), so we fall back to a generic "Help" label rather than returning an
   // empty accessible name.
   const trimmed = label?.trim()
-  const normalized = trimmed ? trimmed.replace(/\s+/g, " ") : null
+  const normalized = trimmed ? trimmed.replaceAll(/\s+/g, " ") : null
   return normalized ? `Help for ${normalized}` : "Help"
 }
 
@@ -182,6 +185,7 @@ export const InlineTooltipIcon = ({
   markdownProps,
   onMouseEnterDelay,
   containerWidth,
+  constrainWidth,
   ariaLabel = "Help",
 }: InlineTooltipIconProps): ReactElement => {
   return (
@@ -193,6 +197,7 @@ export const InlineTooltipIcon = ({
         markdownProps={markdownProps}
         onMouseEnterDelay={onMouseEnterDelay}
         containerWidth={containerWidth}
+        constrainWidth={constrainWidth}
         ariaLabel={ariaLabel}
       />
     </StyledLabelHelpInline>

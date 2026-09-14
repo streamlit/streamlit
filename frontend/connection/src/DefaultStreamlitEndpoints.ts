@@ -21,7 +21,7 @@ import type {
 } from "axios"
 import { getLogger } from "loglevel"
 
-import { IAppPage } from "@streamlit/protobuf"
+import { type AppPage } from "@streamlit/protobuf"
 import {
   buildHttpUri,
   getCookie,
@@ -244,7 +244,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
   /** Construct a URL for an app page in a multi-page app. */
   public buildAppPageURL(
     pageLinkBaseURL: string | undefined,
-    page: IAppPage
+    page: AppPage.$Properties
   ): string {
     const urlPath = page.urlPathname as string
     const navigateTo = page.isDefault ? "" : urlPath

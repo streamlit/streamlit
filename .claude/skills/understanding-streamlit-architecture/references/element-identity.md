@@ -48,6 +48,8 @@ The user-facing `key` is the main stable identity anchor for many elements.
 
 This is used to avoid resetting state for harmless parameter changes while still allowing some commands to keep a small whitelist of identity-affecting fields. Current examples include interactive charts/dataframes that still include fields like `selection_mode` to avoid reusing incompatible old state.
 
+Do not omit a new identity kwarg (or skip hashing `None`) so existing unkeyed widgets keep their ID across a Streamlit upgrade. Upgrading Streamlit already wipes session state, so matching pre-upgrade hashes is not a goal. Always pass identity-affecting kwargs, including `None` when the feature is off. Omit a kwarg only when it must not affect identity at all.
+
 ## State categories
 
 ### Widgets

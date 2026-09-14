@@ -20,14 +20,14 @@ from typing_extensions import Self
 
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.elements.lib.utils import compute_and_register_element_id
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import StreamlitInvalidLayoutContextError
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     enqueue_message,
     get_script_run_ctx,
 )
-from streamlit.runtime.state import register_widget
+from streamlit.runtime.state import register_widget, validate_on_change_mode
 from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
@@ -63,7 +63,7 @@ def _assert_first_dialog_to_be_opened(should_open: bool) -> None:
 
     Raises
     ------
-    StreamlitAPIException
+    StreamlitInvalidLayoutContextError
         Raised when a dialog has already been opened in the current script run.
     """
     script_run_ctx = get_script_run_ctx()
@@ -72,7 +72,7 @@ def _assert_first_dialog_to_be_opened(should_open: bool) -> None:
     # this might need to change.
     if should_open and script_run_ctx:
         if script_run_ctx.has_dialog_opened:
-            raise StreamlitAPIException(
+            raise StreamlitInvalidLayoutContextError(
                 "Only one dialog is allowed to be opened at the same time. "
                 "Please make sure to not call a dialog-decorated function more than once in a script run."
             )
@@ -90,11 +90,12 @@ class Dialog(DeltaGenerator):
         icon: str | None = None,
         on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     ) -> Dialog:
-        # Validation for on_dismiss parameter
-        if on_dismiss not in {"ignore", "rerun"} and not callable(on_dismiss):
-            raise StreamlitValueError(
-                "on_dismiss", ["'ignore'", "'rerun'", "a callback function"]
-            )
+        on_dismiss_callback = validate_on_change_mode(
+            on_dismiss,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+            param_name="on_dismiss",
+        )
 
         block_proto = BlockProto()
         block_proto.dialog.title = title
@@ -139,7 +140,7 @@ class Dialog(DeltaGenerator):
 
             register_widget(
                 element_id,
-                on_change_handler=on_dismiss if callable(on_dismiss) else None,
+                on_change_handler=on_dismiss_callback,
                 deserializer=lambda x: x,  # Simple passthrough for trigger values
                 serializer=lambda x: x,  # Simple passthrough for trigger values
                 ctx=ctx,

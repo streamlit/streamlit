@@ -27,7 +27,9 @@ from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
     convert_arrow_table_to_arrow_bytes,
 )
+from streamlit.elements.table import marshall_table
 from streamlit.errors import (
+    StreamlitAPIException,
     StreamlitInvalidHeightError,
     StreamlitInvalidWidthError,
     StreamlitValueError,
@@ -386,3 +388,22 @@ class HideIndexHideHeaderTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.table
         assert proto.hide_index is True
         assert proto.hide_header is True
+
+    def test_unevaluated_data_auto_hides_index(self) -> None:
+        """Unevaluated inputs collect a preview and hide the synthetic RangeIndex."""
+        df = pd.DataFrame({"a": [1, 2, 3]}, index=["x", "y", "z"])
+        with patch(
+            "streamlit.elements.table.dataframe_util.is_unevaluated_data_object",
+            return_value=True,
+        ):
+            st.table(df)
+        proto = self.get_delta_from_queue().new_element.table
+        assert proto.hide_index is True
+
+
+def test_marshall_table_styler_requires_string_uuid() -> None:
+    """Styler marshalling raises when ``default_uuid`` is not a string."""
+    proto = TableProto()
+    styler = pd.DataFrame({"a": [1]}).style
+    with pytest.raises(StreamlitAPIException, match="Default UUID"):
+        marshall_table(proto.arrow_data, styler, default_uuid=None)

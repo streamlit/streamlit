@@ -418,7 +418,7 @@ describe("Multi Select Editor", () => {
 
     await selectOption(user, cellEditor, "Option 1")
     expect(mockCellOnChange).toHaveBeenCalledTimes(1)
-    expect(mockCellOnChange).toBeCalledWith({
+    expect(mockCellOnChange).toHaveBeenCalledWith({
       ...mockCell,
       data: { ...mockCell.data, values: ["option1"] },
     })
@@ -427,7 +427,7 @@ describe("Multi Select Editor", () => {
 
     await selectOption(user, cellEditor, "Option 2")
     expect(mockCellOnChange).toHaveBeenCalledTimes(2)
-    expect(mockCellOnChange).toBeCalledWith({
+    expect(mockCellOnChange).toHaveBeenCalledWith({
       ...mockCell,
       data: { ...mockCell.data, values: ["option1", "option2"] },
     })
@@ -475,21 +475,21 @@ describe("Multi Select Editor", () => {
 
     await selectOption(user, cellEditor, "Option 1")
     expect(mockCellOnChange).toHaveBeenCalledTimes(1)
-    expect(mockCellOnChange).toBeCalledWith({
+    expect(mockCellOnChange).toHaveBeenCalledWith({
       ...mockCell,
       data: { ...mockCell.data, values: ["option1"] },
     })
 
     await selectOption(user, cellEditor, "Option 2")
     expect(mockCellOnChange).toHaveBeenCalledTimes(2)
-    expect(mockCellOnChange).toBeCalledWith({
+    expect(mockCellOnChange).toHaveBeenCalledWith({
       ...mockCell,
       data: { ...mockCell.data, values: ["option1", "option2"] },
     })
 
     await selectOption(user, cellEditor, "Option 1")
     expect(mockCellOnChange).toHaveBeenCalledTimes(3)
-    expect(mockCellOnChange).toBeCalledWith({
+    expect(mockCellOnChange).toHaveBeenCalledWith({
       ...mockCell,
       data: { ...mockCell.data, values: ["option1", "option2", "option1"] },
     })

@@ -16,7 +16,7 @@
 
 import { Suspense } from "react"
 
-import type { IconSize } from "~lib/theme/types"
+import type { IconSizeProp } from "~lib/theme/types"
 
 import { EmojiIcon } from "./Icon"
 import MaterialFontIcon from "./Material/MaterialFontIcon"
@@ -122,7 +122,11 @@ export function getFilledStarIconSrc(): string {
 
 export interface DynamicIconProps {
   iconValue: string
-  size?: IconSize
+  /**
+   * Icon size token, or `"inherit"` to match the parent font-size (`1em`).
+   * Use inherit for inline contexts such as heading icons.
+   */
+  size?: IconSizeProp
   testid?: string
   color?: string
 }
