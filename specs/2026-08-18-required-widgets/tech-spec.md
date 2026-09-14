@@ -12,8 +12,8 @@ path that `st.text_input(..., validate=...)` already uses. See the
 [product spec](./product-spec.md) for API, UX, and widget coverage. This spec covers proto
 plumbing, how empty is defined, how `required` composes with `validate`, and how that
 extends from text inputs to selection and file widgets. First implementation is
-[wave 1](#implementation-order) (typed widgets + selectbox/multiselect); radio,
-pills/segmented gaps, and file-like widgets are a follow-up.
+[wave 1](#implementation-order) (typed widgets + `st.selectbox`); radio,
+`st.multiselect`, pills/segmented gaps, and file-like widgets are a follow-up.
 
 ## Problem
 
@@ -96,7 +96,7 @@ Reuse what already exists; do not wrap it:
   `useFormSubmitValidator` unless the register/unregister effect becomes
   actually painful to copy.
 - Typed-widget error chrome: write the required message into the existing
-  `displayedError` / `validationError` slot. Selectbox/multiselect copy the
+  `displayedError` / `validationError` slot. Selectbox copies the
   text-input icon + `role="alert"` pattern; do not add a shared
   `WidgetValidationError` component.
 
@@ -129,8 +129,8 @@ Enter / submit. `handleClear` (search X) must call the same `validateBeforeCommi
 path — today's empty skip that commits `""` is the hole.
 
 `on_change="ignore"` composition applies only where that mode already exists
-(`st.text_input`, `st.number_input`, `st.selectbox`, `st.multiselect` in wave 1).
-Do not add ignore-mode proto/runtime plumbing on `st.text_area` /
+(`st.text_input`, `st.number_input`, `st.selectbox` in wave 1; `st.multiselect`
+when it ships). Do not add ignore-mode proto/runtime plumbing on `st.text_area` /
 `st.date_input` / `st.time_input` / `st.datetime_input` as part of `required`.
 
 Show `This field is required.` only while `element.required` is true **and** the
@@ -198,12 +198,12 @@ pattern as `validate`.
 ### Implementation order
 
 The API is specified for all empty-able input widgets. Do not leave a permanently
-partial implementation, but **do not block wave 1** on radio, pills/segmented gaps,
-or file-like widgets. See the product spec [Rollout](./product-spec.md#rollout).
+partial implementation, but **do not block wave 1** on radio, `st.multiselect`,
+pills/segmented gaps, or file-like widgets. See the product spec [Rollout](./product-spec.md#rollout).
 
 `(required)` on `WidgetLabel` lands in wave 1 so later widgets only opt in.
 
-**Wave 1 — typed widgets and clearable selects**
+**Wave 1 — typed widgets and `st.selectbox`**
 
 Reuse existing invalid-field chrome (`text_input` `validate`, `number_input` /
 date-time range errors) and a straightforward empty-commit + form-submit gate.
@@ -237,11 +237,8 @@ date-time range errors) and a straightforward empty-commit + form-submit gate.
      or callback) so the validator can read the displayed bounds. Submit fails
      required if either bound is missing and must not serialize a previously
      committed `(start, end)` even when the user has not blurred.
-4. **`st.selectbox` / `st.multiselect`** — lock last value (hide/disable clear X /
-   last remaining chip), add the same error chrome typed widgets already have,
-   form-submit gate when still empty. Cover every last-value remove path on
-   multiselect (clear-all, chip remove, Backspace/Delete, option toggle) —
-   they are separate handlers in `Multiselect.tsx`.
+4. **`st.selectbox`** — lock last value (hide/disable the clear X), add the same
+   error chrome typed widgets already have, form-submit gate when still empty.
 
 Wave 1 unblocks #13497 and most of #7165 (text/select form fields). Wave-1
 docstrings match the `st.text_input` `required` contract: submit gate; form vs
@@ -249,23 +246,29 @@ outside (outside: clearing does not rerun, last committed value kept; inside:
 submit blocked until the field has a value); the widget still returns its default
 until the user provides input; empty skips `validate`; browser-bypass note. Do
 not expand later widgets with `on_change="ignore"` composition. Widget-specific
-extras (last-value lock on selectbox/multiselect) stay. Do **not** copy the
+extras (last-value lock on selectbox) stay. Do **not** copy the
 current `st.pills` docstring (single-select deselect locking; `required=True` +
 `selection_mode="multi"` raises). Reuse that wording only as a starting point
 for the pills/segmented follow-up, and update those docs when multi-select
 `required` becomes legal.
 
-**Follow-up — option groups and file-like**
+**Follow-up — option groups, `st.multiselect`, and file-like**
 
 5. **`st.radio`** — same selection semantics as pills (no clear X; form gate +
    marker + error if still empty). Does not share text-field error chrome.
-6. **`st.pills` / `st.segmented_control`** — form gate, label, error if still empty,
+6. **`st.multiselect`** — last-chip lock on every remove path (clear-all, chip
+   remove, Backspace/Delete, option toggle — separate handlers in
+   `Multiselect.tsx`), error chrome, form-submit gate when still empty. Copy
+   selectbox chrome. `max_selections=1` + `required=True` ships the documented
+   deadlock unless a product call lands first.
+7. **`st.pills` / `st.segmented_control`** — form gate, label, error if still empty,
    allow multi-select `required`. Behavior extension of an existing parameter, not
    a new one.
-7. **`st.file_uploader` / `st.camera_input` / `st.audio_input`** — form gate, marker,
+8. **`st.file_uploader` / `st.camera_input` / `st.audio_input`** — form gate, marker,
    last-file lock, camera/audio Clear that does not commit empty.
 
-Follow-up closes #14900, the 1.56 pills form-gating gap, and file-like empty-commit.
+Follow-up closes #14900, the 1.56 pills form-gating gap, `st.multiselect`, and
+file-like empty-commit.
 
 ### File-like widgets (follow-up)
 
@@ -359,8 +362,7 @@ include `(required)` in the accessible name.
   required error while focused; `handleClear` does not bypass `validateBeforeCommit`;
   keyed widget `required` `True → False` or `st.session_state[key] = "hello"`
   after a failed empty commit clears the required error and `aria-invalid`;
-  selectbox/multiselect last value is locked on every remove path (clear-all, chip
-  remove, Backspace/Delete, option toggle); range `st.date_input` first bound is visible with no rerun and
+  selectbox last value is locked (clear X hidden); range `st.date_input` first bound is visible with no rerun and
   no required error until outside-form blur/close or form submit; re-edit a complete
   required range and submit after only the first bound with **no prior blur** fails
   required and does not send the previous bounds; `required=False` range still
@@ -400,13 +402,15 @@ include `(required)` in the accessible name.
   `submitForm`, not only `FormSubmitButton`); first-file in-flight on an empty
   required `st.file_uploader` blocks submit without a required-empty error;
   empty required radio/pills blocks form submit; multi-select pills `required`
-  does not raise and locks the last key.
-- Python: pills multi-select no longer raises.
-- Public typing tests for radio, pills / segmented_control overloads (new
+  does not raise and locks the last key; `st.multiselect` last chip is locked on
+  every remove path (clear-all, chip remove, Backspace/Delete, option toggle).
+- Python: pills multi-select no longer raises; proto field set on remaining widgets.
+- Public typing tests for radio, `st.multiselect`, pills / segmented_control overloads (new
   keyword-only arg and newly legal multi-select + `required`), and file-like
   widgets.
 - E2E: pills required still cannot deselect; empty required pills blocks form
-  submit; file/camera/audio required empty-commit and form-gate cases above.
+  submit; empty required `st.multiselect` blocks form submit and last chip cannot
+  be removed; file/camera/audio required empty-commit and form-gate cases above.
 
 ## Alternatives considered
 

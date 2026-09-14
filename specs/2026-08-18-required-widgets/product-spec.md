@@ -92,9 +92,9 @@ values**:
 [`specs/2026-04-14-on-change-modes`](../2026-04-14-on-change-modes/product-spec.md)
 is a rerun policy, not an emptiness check. `required` only blocks **empty** commits.
 
-They compose on widgets that already accept `on_change="ignore"` (wave 1:
-`st.text_input`, `st.number_input`, `st.selectbox`, `st.multiselect`). This spec
-does not add `"ignore"` plumbing to `st.text_area`, `st.date_input`,
+They compose on widgets that already accept `on_change="ignore"` (`st.text_input`,
+`st.number_input`, `st.selectbox` in wave 1; `st.multiselect` when it ships). This
+spec does not add `"ignore"` plumbing to `st.text_area`, `st.date_input`,
 `st.time_input`, or `st.datetime_input`.
 
 `required` and `validate` run first. A blocked empty value must not replace an
@@ -134,7 +134,7 @@ omitted — a no-op `required` is worse than leaving the parameter off.
 | `st.text_input`, `st.text_area` | `None` or whitespace-only (`str.strip() == ""`) for **required**. `validate` skip remains `""` / `None` only (see [`required` and `validate`](#required-and-validate)). | No | 1 |
 | `st.number_input`, `st.date_input`, `st.time_input`, `st.datetime_input` | `None` | No | 1 |
 | `st.selectbox` | `None` (`index=None`) | No | 1 |
-| `st.multiselect` | `[]` | No | 1 |
+| `st.multiselect` | `[]` | No | Follow-up |
 | `st.radio` | `None` (`index=None`) | No | Follow-up |
 | `st.pills`, `st.segmented_control` | `None` / `[]` | Yes (single-select only) | Follow-up |
 | `st.file_uploader`, `st.camera_input`, `st.audio_input` | `None` or `[]` | No | Follow-up |
@@ -156,7 +156,7 @@ have `required`). See [Out of scope](#out-of-scope-future-work).
 ### Rollout
 
 The table above is the full API. Ship the Wave 1 column first (typed widgets plus
-clearable selects — unblocks #13497 and most of #7165). Follow-up stays in this spec,
+`st.selectbox` — unblocks #13497 and most of #7165). Follow-up stays in this spec,
 not out of scope. Implementation order is in the [tech spec](./tech-spec.md).
 
 ### Core behavior
@@ -386,12 +386,12 @@ with st.form("upload"):
   is set stay as they are. Multi-select `required` still returns `list[V]` with no
   non-empty guarantee.
 - **`disabled=True`.** Do not raise (disabled is often toggled dynamically).
-- **`st.multiselect(..., max_selections=1, required=True)`.** Last-chip lock plus
-  the existing "Remove an option first" cap can deadlock (the user cannot change
-  the only selected option). Wave 1 ships this known limitation: the uniform
-  last-chip lock applies; no swap/replace hatch and no API reject. Changelog
-  should call it out. A later product call can add a swap hatch or reject the
-  combo. `st.selectbox(..., required=True)` still allows replacing the selection.
+- **`st.multiselect(..., max_selections=1, required=True)`.** [Follow-up](#rollout).
+  Last-chip lock plus the existing "Remove an option first" cap can deadlock
+  (the user cannot change the only selected option). When `st.multiselect` ships
+  `required`, the uniform last-chip lock applies; no swap/replace hatch and no
+  API reject unless a product call lands first. Changelog should call it out.
+  `st.selectbox(..., required=True)` still allows replacing the selection.
 - **`label_visibility`.** `(required)` is omitted when the label is hidden or
   collapsed; `aria-required` remains.
 - **`bind="query-params"`.** Same caveat as `validate`: inside a form, keystrokes may
@@ -464,7 +464,7 @@ control; clearable-without-required stays "has an empty default."
 field. Select-all + delete already empties it. The X's job is to commit `""`.
 
 **Only ship on `st.text_input`.** Too narrow given #7165 and the pills precedent.
-Wave 1 is typed widgets + selectbox/multiselect, not text_input alone.
+Wave 1 is typed widgets + `st.selectbox`, not text_input alone.
 
 **Skip `required` when `disabled=True` (HTML constraint-validation precedent).**
 Rejected for v1: `validate` does not skip disabled widgets either.
