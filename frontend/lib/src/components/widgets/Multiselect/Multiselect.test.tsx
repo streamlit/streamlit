@@ -1826,3 +1826,296 @@ describe("Multiselect tag accessibility", () => {
     })
   })
 })
+
+describe("on_change='ignore' mode", () => {
+  beforeEach(() => {
+    vi.spyOn(Utils, "convertRemToPx").mockImplementation(mockConvertRemToPx)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Let a scheduled rerun flush before asserting whether one was sent.
+  async function flushScheduledRerun(): Promise<void> {
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+  }
+
+  const pickOption = async (value: string): Promise<void> => {
+    const user = userEvent.setup()
+    await user.click(screen.getByRole("button", { name: "Open" }))
+    await user.click(screen.getByRole("option", { name: value }))
+  }
+
+  it("passes triggerRerun: false when ignoreRerun is true", async () => {
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true, default: [] }, { widgetMgr })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<Multiselect {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await pickOption("b")
+
+    expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      ["b"],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("does not pass triggerRerun when ignoreRerun is false", async () => {
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: false, default: [] }, { widgetMgr })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<Multiselect {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await pickOption("b")
+
+    expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      ["b"],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).toHaveBeenCalled()
+  })
+
+  it("does not change form batching when ignoreRerun is true", async () => {
+    const sendRerunBackMsg = vi.fn()
+    let pendingFormIds = new Set<string>()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(newData => {
+        pendingFormIds = newData.formsWithPendingChanges
+      }),
+    })
+    const props = getProps(
+      {
+        ignoreRerun: true,
+        formId: "testForm",
+        default: [],
+      },
+      { widgetMgr }
+    )
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<Multiselect {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await pickOption("b")
+
+    expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      ["b"],
+      {
+        formId: "testForm",
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(pendingFormIds).toEqual(new Set(["testForm"]))
+  })
+
+  it("does not commit on keystroke outside a form when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ ignoreRerun: true, default: [] })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<Multiselect {...props} />)
+    setStringArrayValueSpy.mockClear()
+
+    const combobox = screen.getByRole("combobox")
+    await user.click(combobox)
+    await user.type(combobox, "b")
+
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when clear is clicked", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true, default: [0] }, { widgetMgr })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<Multiselect {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("button", { name: "Clear all" }))
+
+    expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      [],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when a chip is removed", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true, default: [0] }, { widgetMgr })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<Multiselect {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("button", { name: "Remove a" }))
+
+    expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      [],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when select-all is committed with Enter", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true, default: [] }, { widgetMgr })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<Multiselect {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("button", { name: "Open" }))
+    await user.keyboard("{Enter}")
+
+    expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      ["a", "b", "c"],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when a new option is committed with Enter", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps(
+      {
+        ignoreRerun: true,
+        acceptNewOptions: true,
+        // Hide Select all so Enter commits the typed option, not bulk-select.
+        selectAll: 0,
+        default: [],
+      },
+      { widgetMgr }
+    )
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<Multiselect {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const combobox = screen.getByRole("combobox")
+    await user.type(combobox, "hello world!")
+    await user.keyboard("{Enter}")
+
+    expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      ["hello world!"],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+})
