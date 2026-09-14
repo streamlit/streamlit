@@ -267,10 +267,17 @@ boundary; app code that cares must still check the Python value after submit.
 Widgets differ in whether an empty UI is a reasonable in-progress state.
 
 **Typed widgets** (`text_input`, `text_area`, `number_input`, `date_input`, `time_input`,
-`datetime_input`): the user must be able to clear the field while editing. Empty UI is
-allowed. Empty *commit* is not. Matches `validate`.
+`datetime_input`): the user must be able to empty the field **while editing**
+(backspace, select-all + delete). Empty UI is allowed. Empty *commit* is not.
+Matches `validate`.
 
-- Clear / search-X / backspace-to-empty updates the local field only.
+Hide every **explicit empty-commit control** when `required=True`. That includes
+the search X (`type="search"`) and the None-default X on number/date/time/datetime.
+Those buttons exist to commit empty; showing them and then failing required is a
+trap. Search is not a trigger widget (`st.chat_input` is). Select-all + delete
+already empties a search field. Keyboard emptying stays; the dedicated X does not.
+
+- Backspace / select-all-to-empty updates the local field only.
 - Outside a form, on blur / Enter / change: if empty, show the error and do not send a
   value. Inside a form, blur/Enter stages into form pending state without running the
   required check (same as `validate`); the error is shown at submit.
@@ -281,13 +288,6 @@ allowed. Empty *commit* is not. Matches `validate`.
   Inside a form, that error waits until submit (same as other typed empty
   fields). Re-editing a complete range down to one bound must not submit the
   previous `(start, end)`.
-- `type="search"` **keeps** the clear X when `required=True`. Search is a typed widget:
-  emptying the field is how the user starts a new query. The X must **not** immediately
-  commit `""` (today it does, because empty bypasses `validate`). Outside a form, X
-  is an empty-commit gesture: local UI + required error, no `""` write. Inside a
-  form, X matches backspace: stage into form pending, no error until submit.
-  Hiding the X would mix this up with selection widgets, where clear means "no
-  choice."
 
 **Selection widgets** (`selectbox`, `radio`, `multiselect`, `pills`, `segmented_control`):
 empty is "no choice," not an in-progress edit. Once a value is selected,
@@ -316,10 +316,12 @@ These **do** commit empty today (file delete, Clear photo, clear recording).
 `required=True` must block a later empty commit, same as typed/selection widgets —
 not only add a label and form gate.
 
-- **Camera / audio:** treat Clear as a typed-widget empty edit. Clear updates local UI,
-  shows the required error, and does **not** commit `None`. A new capture commits.
-  Users must be able to recapture. Inside a form: Clear then submit fails required
-  (does not send the previous capture); recapture then submit sends the new capture.
+- **Camera / audio:** keep Clear. Unlike search, there is no select-all / backspace
+  path — Clear is how the user recaptures. Treat it as a typed-widget empty edit:
+  Clear updates local UI, shows the required error, and does **not** commit `None`.
+  A new capture commits. Users must be able to recapture. Inside a form: Clear then
+  submit fails required (does not send the previous capture); recapture then submit
+  sends the new capture.
   While a recapture is still uploading, submit stays blocked and the required error
   is not shown. A failed or cancelled recapture stays uncommittable (do not restore
   or submit the prior capture). Implementation details (staged local state vs widget
@@ -535,8 +537,14 @@ learn *why* they can't submit. Click-then-error is the standard pattern.
 self-explanatory. `(required)` is explicit.
 
 **`required="auto"` mixing clear-button policy with requiredness.** Rejected: keep
-`required` a boolean. Clearable remains "has an empty default" as today, with
-selection widgets additionally locking the last value when `required=True`.
+`required` a boolean. When `required=True`, hide every explicit empty-commit
+control (search X, None-default number/date/time X, selectbox X, last
+multiselect chip). Clearable-without-required stays "has an empty default" as
+today.
+
+**Keep the `type="search"` clear X when `required=True`.** Rejected: search is
+still a text field, not a trigger widget. Select-all + delete already empties
+it. The X's job is to commit `""`, which required forbids.
 
 **Only ship on `st.text_input`.** Too narrow given #7165 (forms) and the pills
 precedent. Specify the full input-widget API. First implementation is wave 1

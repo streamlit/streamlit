@@ -131,10 +131,10 @@ widgets without a separate `uiValue` lose the user's edit if the form-pending
 write is skipped.
 
 `type="search"` `handleClear` currently commits `""` immediately because empty bypasses
-`validate`. When `required=True`, keep the clear X (typed-widget empty-while-editing)
-but do not commit `""`. Outside a form, update local UI and set the required error.
-Inside a form, stage into form pending with no error until submit (same as
-backspace).
+`validate`. When `required=True`, **hide** the clear X (same as the None-default X
+on number/date/time). Search is not a trigger widget; select-all + delete already
+empties the field. If `handleClear` still runs, do not commit `""` — treat it like
+a blocked empty commit.
 
 Register a form-submit validator when `required || hasValidationConfig`, not only when
 a regex is set. The validator calls the same `validateBeforeCommit`. `submitForm`
@@ -245,14 +245,15 @@ Reuse existing invalid-field chrome (`text_input` `validate`, `number_input` /
 date-time range errors) and a straightforward empty-commit + form-submit gate.
 
 1. **`st.text_input`** — extend `validateBeforeCommit`, `WidgetLabel` marker,
-   `REQUIRED_FIELD_MESSAGE` / `isRequiredEmptyText`, search-clear. Proves
-   composition with `validate`. Later wave-1 widgets reuse the label prop and
-   the message constant.
+   `REQUIRED_FIELD_MESSAGE` / `isRequiredEmptyText`, hide the search X when
+   `required=True`. Proves composition with `validate`. Later wave-1 widgets reuse
+   the label prop and the message constant.
 2. **`st.text_area`** — same commit path, no `validate` yet; copy the error chrome
    from text_input.
 3. **`st.number_input` / `st.date_input` / `st.time_input` / `st.datetime_input`** —
    empty/`None` commit already exists for clearable instances; add the required gate
-   next to range errors. For range `st.date_input` (stays in wave 1: same widget):
+   next to range errors. Hide the None-default clear X when `required=True` (keyboard
+   emptying while editing stays). For range `st.date_input` (stays in wave 1: same widget):
 
    - Keep the incomplete range in DateInput local state. Today's calendar `value`
      is the committed widget state, so skipping the `setValueWithSource` write
@@ -291,8 +292,8 @@ Follow-up closes #14900, the 1.56 pills form-gating gap, and file-like empty-com
   `null` when `required=False`; whitespace-only still runs `validate` when
   `required=False` and is a required error when `required=True`; required error vs
   validate error; form submit runs all validators; `clear_on_submit` not invoked on
-  failure; search clear does not commit when required; selectbox/multiselect last
-  value is locked; range `st.date_input` first bound is visible with no rerun and
+  failure; search X and None-default number/date/time X are hidden when required;
+  selectbox/multiselect last value is locked; range `st.date_input` first bound is visible with no rerun and
   no required error until outside-form blur/close or form submit; re-edit a complete
   required range and submit after only the first bound fails required and does not
   send the previous bounds; `on_change="ignore"` + `required=True`: a passing
