@@ -736,14 +736,19 @@ Two consequences of that framing are worth stating, because both were mistakes f
   `st.plotly_chart` and `st.echarts_chart` carry their values inside the specification, so
   there is no table to serve and a client should stop looking for one. This is different
   from having no data contract at all. It does not mean the specification is worth its
-  weight: about nine tenths of a Plotly figure is `layout.template`, the theme, and a page
-  of them measured 549 KB on a live app while answering nothing. Report the figure with
-  the theme dropped, name what was dropped so a trimmed figure is distinguishable from one
-  the app never configured, and omit a specification that is still oversized rather than
-  letting it dominate the response. Note what that last case implies: for these charts the
-  specification *is* the data, so a dropped specification is not a complete element with a
-  missing picture — it reports `complete: false` and `unavailable`, the same as an
-  unfetchable table. A 20,000-point scatter is 548 KB and lands there.
+  weight: about nine tenths of a small Plotly figure is `layout.template`, the theme, and
+  a page of them measured 549 KB on a live app while answering nothing. Report the figure
+  with the theme dropped and name what was dropped, so a trimmed figure is
+  distinguishable from one the app never configured.
+
+  **Nothing that holds data is dropped, at any size.** A first attempt capped the inlined
+  specification and reported an oversized figure as unavailable, which is the wrong trade:
+  the traces are the only part worth reading, and a figure is large precisely because it
+  plots a lot of points — the same bytes the app already sends its own client. So a
+  20,000-point scatter reports its full 541 KB of traces. Whether *that* needs a response
+  budget is a real question, and it belongs with the other budget questions rather than
+  being settled by silently discarding data; if it does, the answer is serving the
+  specification behind `data.url` the way a table's Arrow is served, not truncating it.
 - **A rendering specification is not a data contract.** `st.map` compiles its points into
   a Deck.gl layer, and an agent should not be mining coordinates out of layer JSON, so the
   plotted table is externalized like any other dataframe's.
@@ -1206,12 +1211,16 @@ apply.
 7. Which exact JSON encodings should be standardized for dates, datetimes, decimals,
    large integers, non-finite numbers, ranges, and object-valued options? These must be
    settled before v1 ships, with or without per-action schemas.
-8. **How should an option list be bounded?** A production page's selectbox carried 497
-   options, another 591, and every snapshot of that page pays for them. Truncating an
-   option list is worse than truncating table rows, because the omitted options are
-   exactly the values a request may legally send. Candidates: report a count plus a
-   bounded sample and accept anything the server can validate; or keep them whole and
-   treat the response budget as the app author's problem.
+8. **What is actually unbounded, and which of those need bounding?** Three things now
+   dominate a large response, and truncation is the wrong answer to all of them because
+   each omission would remove something a client legitimately needs. A production page's
+   selectbox carried 497 options and another 591, and the omitted options would be exactly
+   the values a request may legally send. A figure's specification carries its traces, so a
+   20,000-point scatter is half a megabyte. And table previews are already capped, which
+   is the one case where a `url` makes truncation safe. The candidate answer is to extend
+   that pattern — serve oversized option lists and figure specifications behind
+   `data.url` — rather than to cap and discard. Worth deciding with measurements from real
+   apps rather than in the abstract.
 9. **Should a browser-only affordance be declared where the app tells a human to use it?**
    A live app's captions said "click on a bar" and "select a row" for charts and dataframes
    whose selection this interface does not support. `actions` correctly omits them, so the

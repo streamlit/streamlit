@@ -918,12 +918,19 @@ relying on the header.
 
 Three other findings were only visible at production scale:
 
-- **A Plotly figure is mostly theme.** `layout.template` is about nine tenths of a figure —
-  7.1 KB of a 7.6 KB bar chart — and one page measured 549 KB of specifications that answer
-  no question, because traces arrive as base64. Reporting `complete: true` was correct and
-  not sufficient: the payload is now trimmed of the theme, names what it dropped, and omits
-  a specification that is still oversized. That cut the figure block in the repro from
-  7,673 to 619 bytes.
+- **A Plotly figure is mostly theme.** `layout.template` is about nine tenths of a small
+  figure — 7.1 KB of a 7.6 KB bar chart — and one page measured 549 KB. Reporting
+  `complete: true` was correct and not sufficient: the payload is now trimmed of the theme
+  and names what it dropped, which cut the figure block in a repro from 7,673 to 619 bytes.
+
+  The first attempt went further and capped the inlined specification, reporting an
+  oversized figure as `unavailable`. That was wrong, and the correction is the sharper
+  lesson: **a figure's traces are the only part worth reading, so a size limit there buys a
+  smaller response by discarding the answer.** A figure is large precisely because it plots
+  a lot of points, and those are the same bytes the app already sends its own client, so
+  the boundary argument that justifies serving a dataframe's Arrow justifies this too. If a
+  response budget is eventually needed, the shape is serving the specification behind
+  `data.url` like a table's Arrow — never truncating it.
 - **`query_params` is session-global, so citing it as "the filters" is wrong.** A bound
   `label=type:bug` set on one page was still reported on two unrelated pages after
   navigation. Streamlit's own behavior, but the snapshot has to say so.

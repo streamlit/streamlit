@@ -843,7 +843,25 @@ def _schemas() -> dict[str, Any]:
                     ),
                 },
                 "spec": {
-                    "description": "A chart's native specification.",
+                    "description": (
+                        "A chart's native specification. For a chart given a "
+                        "figure or an option object rather than a dataframe, "
+                        "this holds the plotted values, so it can be large when "
+                        "the chart plots a lot of points -- the same bytes the "
+                        "app sends its own browser client."
+                    ),
+                },
+                "spec_omitted": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "Paths removed from `spec` because they carry no "
+                        "meaning without a browser, currently Plotly's "
+                        "`layout.template`, which is the theme and most of a "
+                        "figure's size. Nothing that holds data is removed. "
+                        "Named so a trimmed figure is distinguishable from one "
+                        "the app never configured."
+                    ),
                 },
             },
         },
