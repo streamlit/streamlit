@@ -505,30 +505,16 @@ class TextWidgetsMixin:
 
             Outside a form, clearing the field does not rerun the app, and
             the last submitted value is kept. Inside a form, submission is
-            blocked until the field has a value.
-
-            The widget still returns its default value until the user
-            provides input, so check the returned value in your app if
-            empty input is not valid for your logic.
+            blocked until the field has a value. The widget still returns
+            its default value until the user provides input.
 
             When used with ``validate``, empty values fail this check and
-            skip validation. Non-empty values are checked against
-            ``validate``. Visible labels show a ``(required)`` marker.
-            For ``type="search"``, the clear button is hidden.
-
-            Inside a form with ``bind="query-params"``, keystrokes still
-            stage into the URL before submit-time checks run. A blocked
-            empty commit outside a form does not write an empty value
-            into the URL.
+            skip validation.
 
             .. note::
                This check runs in the user's browser and can be bypassed.
                If requiredness is security-relevant, you must also check the
                value on the server (in your app code) after it is submitted.
-
-            .. note::
-               A disabled empty required field can trap a form: submit stays
-               blocked and the user cannot fill the field.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
