@@ -157,12 +157,12 @@ class CachedFunctionReturnedAwaitableError(StreamlitAPIException):
         super().__init__(
             f"{func_name} is a synchronous function decorated with "
             f"`st.{decorator_name}`, but it returned an awaitable of type "
-            f"{get_return_value_type(value)}. The function may have returned an "
+            f"`{type_util.get_fqn_type(value)}`. The function may have returned an "
             "asynchronous operation without awaiting it, or the returned object may "
             "itself be awaitable.\n\n"
             "Return a non-awaitable value instead. Prefer defining the cached function "
-            "with `async def` and `await` the operation. If you use "
-            '`refresh_mode="background"`, switch to `"foreground"` first. In a '
+            "with `async def` and `await` the operation; note that `async def` cached "
+            'functions require `refresh_mode="foreground"`. In a '
             "synchronous script context without an active event loop, you can instead "
             "run the operation to completion with `asyncio.run` before returning."
         )

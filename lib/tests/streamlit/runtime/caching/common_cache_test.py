@@ -1407,7 +1407,7 @@ class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
     def test_background_refresh_rejects_awaitable(
         self, _, cache_decorator, timer_patch: Mock
     ):
-        """A rejected coroutine is closed, keeps stale data, and starts cooldown."""
+        """Streamlit closes the rejected coroutine, serves stale data, and starts cooldown."""
         call_count = [0]
         created_coroutines = []
 

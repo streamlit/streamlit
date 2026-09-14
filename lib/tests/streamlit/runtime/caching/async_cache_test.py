@@ -746,6 +746,7 @@ def test_sync_function_returning_coroutine_raises_without_caching(
             message = str(exc_info.value)
             assert "synchronous function" in message
             assert "returned an awaitable" in message
+            assert "`builtins.coroutine`" in message
             assert f"`st.{name}`" in message
             assert "`async def`" in message
             assert "`await`" in message
