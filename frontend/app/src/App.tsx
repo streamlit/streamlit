@@ -937,7 +937,7 @@ export class App extends PureComponent<Props, State> {
         notNullOrUndefined(environmentInfo) &&
         notNullOrUndefined(environmentInfo.streamlitVersion)
       ) {
-        return currentStreamlitVersion != environmentInfo.streamlitVersion
+        return currentStreamlitVersion !== environmentInfo.streamlitVersion
       }
     }
 
@@ -1980,11 +1980,18 @@ export class App extends PureComponent<Props, State> {
       status ===
         ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
     ) {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-      Promise.resolve().then(() => {
-        // Notify any subscribers of this event (and do it on the next cycle of
-        // the event loop)
-        this.state.scriptFinishedHandlers.forEach(handler => handler())
+      // Notify subscribers on the next microtask so this finish handler can
+      // return before widgets react to the completion of this run. Isolate
+      // handler failures so one throw does not skip later handlers or surface
+      // as an uncaught error.
+      queueMicrotask(() => {
+        this.state.scriptFinishedHandlers.forEach(handler => {
+          try {
+            handler()
+          } catch (error) {
+            LOG.error("Script finished handler failed", error)
+          }
+        })
       })
 
       if (
@@ -2631,7 +2638,7 @@ export class App extends PureComponent<Props, State> {
         ? queryParams
         : document.location.search
 
-    return queryString.startsWith("?") ? queryString.substring(1) : queryString
+    return queryString.startsWith("?") ? queryString.slice(1) : queryString
   }
 
   getThemeColorScheme = (): string => {
@@ -2897,7 +2904,9 @@ export class App extends PureComponent<Props, State> {
             className={outerDivClass}
             data-testid="stApp"
             data-test-script-state={
-              scriptRunId == INITIAL_SCRIPT_RUN_ID ? "initial" : scriptRunState
+              scriptRunId === INITIAL_SCRIPT_RUN_ID
+                ? "initial"
+                : scriptRunState
             }
             data-test-connection-state={connectionState}
           >

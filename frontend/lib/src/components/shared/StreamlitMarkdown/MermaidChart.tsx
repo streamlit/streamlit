@@ -124,7 +124,7 @@ function extractAccessibilityInfo(source: string): {
     const multiLineDescr = /^\s*accDescr\s*\{([^}]*)\}/m.exec(source)
     if (multiLineDescr) {
       // Normalize whitespace in multi-line descriptions
-      result.description = multiLineDescr[1].trim().replace(/\s+/g, " ")
+      result.description = multiLineDescr[1].trim().replaceAll(/\s+/g, " ")
     }
   }
 
@@ -503,7 +503,7 @@ const MermaidChart = memo(function MermaidChart({
         // Generate a unique ID for this render. Includes render counter to prevent
         // conflicts when multiple renders overlap (e.g., rapid source changes).
         // Remove colons since mermaid uses it as a CSS selector.
-        const diagramId = `mermaid-${uniqueId.replace(/:/g, "")}-${renderNum}`
+        const diagramId = `mermaid-${uniqueId.replaceAll(":", "")}-${renderNum}`
         const { svg } = await mermaid.render(diagramId, source)
 
         if (isCancelled) return

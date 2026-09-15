@@ -255,7 +255,7 @@ export function parsePastedDate(
   format: string
 ): CalendarDate | null {
   const { order, separator } = parseFormatOrder(format)
-  const escapedSep = separator.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  const escapedSep = separator.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")
   const re = new RegExp(
     `^(\\d{1,4})${escapedSep}(\\d{1,4})${escapedSep}(\\d{1,4})$`
   )

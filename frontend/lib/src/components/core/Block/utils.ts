@@ -209,7 +209,7 @@ export function convertKeyToClassName(key: string | undefined | null): string {
   if (!key) {
     return ""
   }
-  const className = key.trim().replace(/[^a-zA-Z0-9_-]/g, "-")
+  const className = key.trim().replaceAll(/[^a-zA-Z0-9_-]/g, "-")
   return "st-key-" + className
 }
 

@@ -405,7 +405,11 @@ function getStoredValue<T>(
   Type: unknown
 ): T {
   const mocked = vi.mocked(Type as (...args: unknown[]) => T)
-  return mocked.mock.results[mocked.mock.results.length - 1].value as T
+  const last = mocked.mock.results.at(-1)
+  if (!last) {
+    throw new Error("Expected a mock result")
+  }
+  return last.value as T
 }
 
 function getMockConnectionManager(isConnected = false): ConnectionManager {
@@ -3403,6 +3407,55 @@ describe("App", () => {
           screen.queryByText("Here is some other text")
         ).not.toBeInTheDocument()
       })
+    })
+
+    it("logs a throwing script-finished handler and still runs later handlers", async () => {
+      const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+      try {
+        let appInstance: App | null = null
+
+        render(
+          <RootStyleProvider theme={getDefaultTheme()}>
+            <WindowDimensionsProvider>
+              <App
+                {...getProps()}
+                ref={instance => {
+                  appInstance = instance
+                }}
+              />
+            </WindowDimensionsProvider>
+          </RootStyleProvider>
+        )
+
+        expect(appInstance).not.toBeNull()
+
+        const handlerError = new Error("handler boom")
+        const throwingHandler = vi.fn(() => {
+          throw handlerError
+        })
+        const laterHandler = vi.fn()
+
+        act(() => {
+          appInstance?.addScriptFinishedHandler(throwingHandler)
+          appInstance?.addScriptFinishedHandler(laterHandler)
+        })
+
+        sendForwardMessage(
+          "scriptFinished",
+          ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+        )
+
+        await waitFor(() => {
+          expect(laterHandler).toHaveBeenCalledTimes(1)
+        })
+        expect(throwingHandler).toHaveBeenCalledTimes(1)
+        expect(logErrorSpy).toHaveBeenCalledWith(
+          "Script finished handler failed",
+          handlerError
+        )
+      } finally {
+        logErrorSpy.mockRestore()
+      }
     })
   })
 

@@ -271,6 +271,7 @@ export function useLazyPlugin<T>(config: PluginLoaderConfig): PluginState<T> {
           // Wrap in arrow function to prevent React from calling the plugin
           setLoadingResult(() => p as PluginState<T>)
         }
+        return p
       })
       return () => {
         isCancelled = true

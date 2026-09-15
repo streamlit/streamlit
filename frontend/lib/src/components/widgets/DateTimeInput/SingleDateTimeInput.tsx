@@ -444,7 +444,7 @@ function SingleDateTimeInput({
     } else {
       const segments =
         triggerRef.current?.querySelectorAll<HTMLElement>(SEGMENT_SELECTOR)
-      const lastSegment = segments?.[segments.length - 1]
+      const lastSegment = segments ? Array.from(segments).at(-1) : undefined
       if (lastSegment) {
         lastSegment.focus()
       } else {
@@ -633,9 +633,10 @@ function SingleDateTimeInput({
       const wrapper = triggerRef.current
       if (!wrapper) return
       const segments = wrapper.querySelectorAll<HTMLElement>(SEGMENT_SELECTOR)
+      const segmentList = Array.from(segments)
       const isLeavingField =
-        (!e.shiftKey && e.target === segments[segments.length - 1]) ||
-        (e.shiftKey && e.target === segments[0])
+        (!e.shiftKey && e.target === segmentList.at(-1)) ||
+        (e.shiftKey && e.target === segmentList[0])
       if (isLeavingField) {
         // Commit before closing, as the popover's own Tab handler does. Leaving
         // it to the blur that follows would run the commit after the popover has
@@ -850,7 +851,7 @@ function SingleDateTimeInput({
         </StyledTrailingIcons>
         {error && (
           <StyledVisuallyHidden id={errorId} role="alert">
-            {error.replace(/\*\*/g, "")}
+            {error.replaceAll("**", "")}
           </StyledVisuallyHidden>
         )}
       </StyledDateInputWrapper>

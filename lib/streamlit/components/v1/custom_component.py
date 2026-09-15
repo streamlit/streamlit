@@ -33,7 +33,7 @@ from streamlit.proto.Components_pb2 import SpecialArg
 from streamlit.proto.Element_pb2 import Element
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import register_widget
+from streamlit.runtime.state import register_widget, validate_on_change_mode
 from streamlit.type_util import is_bytes_like, to_bytes
 
 if TYPE_CHECKING:
@@ -110,6 +110,11 @@ class CustomComponent(BaseCustomComponent):
         """
         if len(args) > 0:
             raise MarshallComponentException(f"Argument '{args[0]}' needs a label")
+
+        on_change = validate_on_change_mode(
+            on_change,
+            supported_modes=(),
+        )
 
         # -1 is valid per the HTML tabindex spec: focusable, but not tab-reachable.
         if tab_index is not None:

@@ -30,7 +30,7 @@ vi.mock("~lib/hooks/useRegisterShortcut", () => ({
   useRegisterShortcut: vi.fn(),
   formatShortcutForDisplay: vi.fn(
     (shortcut: string | null | undefined) =>
-      shortcut?.replace(/\+/g, " + ") || undefined
+      shortcut?.replaceAll("+", " + ") || undefined
   ),
 }))
 

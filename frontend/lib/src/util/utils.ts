@@ -684,18 +684,18 @@ function decamelizePreservingUppercase(value: string): string {
   }
 
   // Insert `_` between a lowercase letter or digit and an uppercase letter.
-  const separated = value.replace(
+  const separated = value.replaceAll(
     /([\p{Lowercase_Letter}\d])(\p{Uppercase_Letter})/gu,
     "$1_$2"
   )
   // Lowercase isolated uppercase letters/digits so they are not treated as abbreviations.
-  const lowercasedSingleLetters = separated.replace(
+  const lowercasedSingleLetters = separated.replaceAll(
     /((?<![\p{Uppercase_Letter}\d])[\p{Uppercase_Letter}\d](?![\p{Uppercase_Letter}\d]))/gu,
     character => character.toLowerCase()
   )
 
   // Split an abbreviation from the capitalized word that follows it (`XMLHttp` → `XML_http`).
-  return lowercasedSingleLetters.replace(
+  return lowercasedSingleLetters.replaceAll(
     /(?<!\p{Uppercase_Letter})(\p{Uppercase_Letter}+)(\p{Uppercase_Letter}\p{Lowercase_Letter}+)/gu,
     (_, uppercase: string, trailingWord: string) =>
       `${uppercase}_${trailingWord.toLowerCase()}`

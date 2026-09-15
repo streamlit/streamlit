@@ -76,6 +76,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.runtime.state.session_state_proxy import get_session_state
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
@@ -370,7 +371,7 @@ def _pop_audio_file(
     # Only MemoryUploadedFileManager implements remove_file (not part of the
     # UploadedFileManager Protocol). This explicit type check ensures we only
     # use this cleanup logic with manager types we've explicitly approved.
-    if audio_file_info and isinstance(ctx.uploaded_file_mgr, MemoryUploadedFileManager):
+    if isinstance(ctx.uploaded_file_mgr, MemoryUploadedFileManager):
         ctx.uploaded_file_mgr.remove_file(
             session_id=ctx.session_id,
             file_id=audio_file_info.file_id,
@@ -976,6 +977,11 @@ class ChatMixin:
 
         """
         key = to_key(key)
+        on_submit = validate_on_change_mode(
+            on_submit,
+            supported_modes=(),
+            param_name="on_submit",
+        )
 
         check_widget_policies(
             self.dg,

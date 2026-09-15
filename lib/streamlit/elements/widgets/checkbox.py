@@ -43,6 +43,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.string_util import to_help_str
 
@@ -462,6 +463,10 @@ class CheckboxMixin:
         persist_state: PersistStateOption = None,
     ) -> bool:
         key = to_key(key)
+        on_change = validate_on_change_mode(
+            on_change,
+            supported_modes=(),
+        )
 
         check_widget_policies(
             self.dg,

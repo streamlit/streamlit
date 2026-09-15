@@ -49,7 +49,7 @@
     "typed-signals": "^3.0.0"
   },
   "devDependencies": {
-    "@swc/plugin-emotion": "^15.0.0",
+    "@swc/plugin-emotion": "^16.0.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
