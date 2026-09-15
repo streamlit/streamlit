@@ -62,7 +62,7 @@ export const StyledDateField = styled("div", {
   }),
 }))
 
-/** Outer border wrapper for date/datetime fields. */
+/** Outer field border. Clips content so the inner scroller absorbs overflow. */
 export const StyledDateInputWrapper = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
@@ -92,7 +92,10 @@ export const StyledDateInputWrapper = styled.div(({ theme }) => ({
   },
 }))
 
-/** Scrolls date fields while keeping trailing controls pinned. */
+/**
+ * Horizontal scrollport for date and time segments. Sibling trailing controls
+ * stay outside it, and the hidden scrollbar does not add height to the field.
+ */
 export const StyledDateFieldsScroller = styled.div({
   display: "flex",
   alignItems: "center",
@@ -100,6 +103,7 @@ export const StyledDateFieldsScroller = styled.div({
   minWidth: 0,
   overflowX: "auto",
   overflowY: "hidden",
+  overscrollBehaviorX: "contain",
   scrollbarWidth: "none",
   "&::-webkit-scrollbar": { display: "none" },
 })
@@ -177,7 +181,6 @@ export const StyledErrorIconContainer = styled.div(({ theme }) => ({
 export const StyledTrailingIcons = styled.div({
   display: "flex",
   alignItems: "center",
-  marginLeft: "auto",
   flexShrink: 0,
 })
 

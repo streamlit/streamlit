@@ -79,6 +79,7 @@ import {
   StyledClearButton,
   StyledDateField,
   StyledDateFieldContainer,
+  StyledDateFieldsScroller,
   StyledDateInputWrapper,
   StyledErrorIconContainer,
   StyledPopoverTimeField,
@@ -795,32 +796,34 @@ function SingleDateTimeInput({
         onPaste={handlePaste}
         onKeyDownCapture={handleFieldKeyDown}
       >
-        <I18nProvider locale="en-US">
-          <StyledDateField>
-            <DateField<CalendarDateTime>
-              // Remount on form clear. React Aria keeps its own display state
-              // for segments the user has typed but not completed, and with
-              // `value` already null there is no prop change to re-seed it — so a
-              // time typed before `clear_on_submit` would stay on screen, and
-              // because dismissal completes a value from what is visible, it would
-              // also commit.
-              key={formResetKey}
-              aria-label={label}
-              aria-describedby={error ? errorId : undefined}
-              isInvalid={!!error}
-              value={displayValue}
-              onChange={handleFieldChange}
-              minValue={minDateTime ?? undefined}
-              maxValue={maxDateTime ?? undefined}
-              granularity="minute"
-              hourCycle={24}
-              shouldForceLeadingZeros
-              isDisabled={disabled}
-            >
-              <ReorderedSegments format={format} includeTime />
-            </DateField>
-          </StyledDateField>
-        </I18nProvider>
+        <StyledDateFieldsScroller data-testid="stDateTimeInputFieldsScroller">
+          <I18nProvider locale="en-US">
+            <StyledDateField>
+              <DateField<CalendarDateTime>
+                // Remount on form clear. React Aria keeps its own display state
+                // for segments the user has typed but not completed, and with
+                // `value` already null there is no prop change to re-seed it — so a
+                // time typed before `clear_on_submit` would stay on screen, and
+                // because dismissal completes a value from what is visible, it would
+                // also commit.
+                key={formResetKey}
+                aria-label={label}
+                aria-describedby={error ? errorId : undefined}
+                isInvalid={!!error}
+                value={displayValue}
+                onChange={handleFieldChange}
+                minValue={minDateTime ?? undefined}
+                maxValue={maxDateTime ?? undefined}
+                granularity="minute"
+                hourCycle={24}
+                shouldForceLeadingZeros
+                isDisabled={disabled}
+              >
+                <ReorderedSegments format={format} includeTime />
+              </DateField>
+            </StyledDateField>
+          </I18nProvider>
+        </StyledDateFieldsScroller>
         <StyledTrailingIcons>
           {error && (
             <StyledErrorIconContainer data-testid="stDateTimeInputError">

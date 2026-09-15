@@ -37,7 +37,7 @@ from e2e_playwright.shared.app_utils import (
     type_date,
 )
 
-NUM_DATE_INPUTS = 26
+NUM_DATE_INPUTS = 27
 
 
 def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -129,6 +129,29 @@ def test_date_input_narrow_rendering(app: Page, assert_snapshot: ImageCompareFun
         assert container_box is not None
         assert field_box is not None
         assert field_box["width"] <= container_box["width"]
+
+
+def test_narrow_date_input_keeps_trailing_controls_visible(app: Page):
+    """Keep clear and error controls inside a constrained-width field."""
+    date_input = get_element_by_key(app, "narrow_clearable_bounded")
+    field = date_input.get_by_test_id("stDateInputField")
+    type_date(field, "2021", "01", "01", commit=False)
+
+    error_icon = date_input.get_by_test_id("stDateInputError")
+    clear_button = date_input.get_by_test_id("stDateInputClearButton")
+    expect(error_icon).to_be_visible()
+    expect(clear_button).to_be_visible()
+
+    field_box = field.bounding_box()
+    assert field_box is not None
+    field_left = field_box["x"]
+    field_right = field_left + field_box["width"]
+
+    for control in (error_icon, clear_button):
+        control_box = control.bounding_box()
+        assert control_box is not None
+        assert control_box["x"] >= field_left - 1
+        assert control_box["x"] + control_box["width"] <= field_right + 1
 
 
 def test_help_tooltip_works(app: Page):

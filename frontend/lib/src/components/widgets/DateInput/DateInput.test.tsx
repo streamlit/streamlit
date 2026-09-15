@@ -218,9 +218,13 @@ describe("DateInput", () => {
   })
 
   it.each([
-    { isRange: false, value: ["2020-01-10"] },
-    { isRange: true, value: ["2020-01-10", "2020-01-20"] },
-  ])("keeps trailing controls outside the $isRange field scroller", config => {
+    { name: "single", isRange: false, value: ["2020-01-10"] },
+    {
+      name: "range",
+      isRange: true,
+      value: ["2020-01-10", "2020-01-20"],
+    },
+  ])("keeps trailing controls outside the $name field scroller", config => {
     const props = getProps({
       isRange: config.isRange,
       default: [],
@@ -236,7 +240,7 @@ describe("DateInput", () => {
     expect(field).toHaveStyle("overflow: hidden")
     expect(scroller).toHaveStyle("overflow-x: auto")
     expect(scroller.parentElement).toBe(field)
-    expect(clearButton.parentElement?.parentElement).toBe(field)
+    expect(field).toContainElement(clearButton)
     expect(scroller).not.toContainElement(clearButton)
   })
 
@@ -297,6 +301,9 @@ describe("DateInput", () => {
 
     const errorIcon = await screen.findByTestId("stTooltipErrorHoverTarget")
     expect(errorIcon).toBeVisible()
+    expect(
+      screen.getByTestId("stDateInputFieldsScroller")
+    ).not.toContainElement(screen.getByTestId("stDateInputError"))
 
     // Hover over the error icon to trigger the tooltip
     act(() => setInteractionModality("pointer"))
