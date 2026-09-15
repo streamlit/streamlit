@@ -310,11 +310,11 @@ describe("DateInput", () => {
 
     const tooltip = await screen.findByTestId("stTooltipErrorContent")
     expect(tooltip).toHaveTextContent(
-      "Error: Date set outside allowed range. Please select a date after 2020/01/01."
+      "Error: Date set outside allowed range. Please select a date on or after 2020/01/01."
     )
   })
 
-  it("displays correct error tooltip when the entered date for range input above max date", async () => {
+  it("displays correct error tooltip when the range start date is above max date", async () => {
     const user = userEvent.setup()
     const props = getProps({
       default: ["2020-02-01", "2020-02-07"],
@@ -324,11 +324,11 @@ describe("DateInput", () => {
     })
     render(<DateInput {...props} />)
     const region = screen.getByTestId("stDateInput")
-    const end = getRangeDateSegments(region, "end")
+    const start = getRangeDateSegments(region, "start")
 
-    await typeIntoSegment(user, end.year, "2021")
-    await typeIntoSegment(user, end.month, "02")
-    await typeIntoSegment(user, end.day, "07")
+    await typeIntoSegment(user, start.year, "2021")
+    await typeIntoSegment(user, start.month, "02")
+    await typeIntoSegment(user, start.day, "07")
 
     const errorIcon = await screen.findByTestId("stTooltipErrorHoverTarget")
     expect(errorIcon).toBeVisible()
@@ -339,7 +339,7 @@ describe("DateInput", () => {
 
     const tooltip = await screen.findByTestId("stTooltipErrorContent")
     expect(tooltip).toHaveTextContent(
-      "Error: Date set outside allowed range. Please select a date before 2020/12/31."
+      "Error: Date set outside allowed range. Please select a date on or before 2020/12/31."
     )
   })
 

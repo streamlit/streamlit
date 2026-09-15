@@ -280,7 +280,7 @@ describe("createDateErrorMessage", () => {
     expect(
       createDateErrorMessage("beforeMin", true, "2020/01/01", "2020/12/31")
     ).toBe(
-      "**Error**: Date set outside allowed range. Please select a date after 2020/01/01."
+      "**Error**: Date set outside allowed range. Please select a date on or after 2020/01/01."
     )
   })
 
@@ -288,7 +288,7 @@ describe("createDateErrorMessage", () => {
     expect(
       createDateErrorMessage("afterMax", true, "2020/01/01", "2020/12/31")
     ).toBe(
-      "**Error**: Date set outside allowed range. Please select a date before 2020/12/31."
+      "**Error**: Date set outside allowed range. Please select a date on or before 2020/12/31."
     )
   })
 })
