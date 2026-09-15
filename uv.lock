@@ -4492,7 +4492,7 @@ wheels = [
 
 [[package]]
 name = "streamlit"
-version = "1.63.0"
+version = "1.64.0"
 source = { editable = "lib" }
 dependencies = [
     { name = "altair" },
