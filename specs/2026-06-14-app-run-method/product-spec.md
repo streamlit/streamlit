@@ -53,10 +53,10 @@ for the launcher only under `python app.py`, so there is no risk of double-start
 server under the other launcher modes.
 
 This proposal intentionally focuses on launcher modules such as `app = st.App("dashboard.py")`.
-A true same-file pattern such as `app = st.App(__file__)` needs additional protection:
-Streamlit's script runner executes user scripts in a fake `__main__` module, so the
-`if __name__ == "__main__": app.run()` guard would otherwise run again during app
-execution.
+Same-file apps use a callable entrypoint (`st.App(main)`), specified on
+[`st.App`](../2025-12-23-st-app/product-spec.md). `st.App(__file__)` is not supported:
+file-based scripts execute in a fake `__main__` module, so
+`if __name__ == "__main__": app.run()` would run again during app execution.
 
 ## Proposal
 
@@ -228,10 +228,10 @@ the `uvicorn`/FastAPI mental model (`app` object + `.run()`), so it reads as idi
 - **Explicit `args=` parameter** — positional args are auto-forwarded from `sys.argv`;
   add an explicit override only if a launcher needs to consume some of its own arguments
   before handing the rest to the app.
-- **Same-file `st.App(__file__)` launchers** — out of scope for v1 unless the
-  implementation adds an explicit re-entry guard for Streamlit's fake `__main__` script
-  execution. Without that guard, the app script would call `app.run()` again when the
-  runtime executes it.
+- **Same-file `st.App(__file__)` launchers** — out of scope. File-based scripts run in a
+  fake `__main__` module, so `if __name__ == "__main__": app.run()` would re-enter.
+  Same-file apps use a callable entrypoint (`st.App(main)`); see
+  [`st.App`](../2025-12-23-st-app/product-spec.md).
 - **Auto-start without `if __name__ == "__main__": app.run()`** — implicitly starting a
   server whenever a script defining `st.App` is run with `python app.py` is more magical
   and risks firing in notebooks, tests, subprocesses, and mounting setups. Could be added
@@ -252,4 +252,4 @@ the `uvicorn`/FastAPI mental model (`app` object + `.run()`), so it reads as idi
 | Metrics collected | Reuses existing `server_mode` tracking (`starlette-app`). Could add a flag to distinguish direct `python app.py` launches. |
 | Any security/legal impact? | ✅ None beyond existing `st.App` / `streamlit run`. |
 | Any docs changes needed? | Add to the "Advanced Deployment with st.App" docs: a "Run with `python app.py`" subsection. |
-| Any other risks? | Clear errors are needed for existing runtimes and invalid `config` keys; same-file launchers need an explicit re-entry guard or must remain out of scope. |
+| Any other risks? | Clear errors are needed for existing runtimes and invalid `config` keys. Same-file path launchers (`st.App(__file__)`) remain out of scope; use a callable entrypoint instead. |
