@@ -286,8 +286,11 @@ function RangeDateInput({
     setDisplayStart(startValue)
     setDisplayEnd(endValue)
     inAnchorModeRef.current = false
-    // A discarded render retries this condition and recomputes against live
-    // focus, while Strict Mode's synchronous double render sees the same focus.
+    activeOriginRef.current = null
+    // Reading the DOM during render is safe here because this write sits inside
+    // the same condition that advances `prevResetKey`: a discarded render
+    // retries against live focus rather than keeping a stale `true`. Strict
+    // Mode's double render sees the same focus.
     shouldRestoreFocusRef.current = !!triggerRef.current?.contains(
       document.activeElement
     )
@@ -360,7 +363,8 @@ function RangeDateInput({
   }, [isOpen, startValue, endValue])
 
   // Restore focus to the first editable segment after the form-reset remount.
-  // Keep the guard synchronous with focusin so the calendar does not reopen.
+  // Suppress handleFocus while focusin dispatches synchronously so the calendar
+  // does not reopen; clearing the guard after a frame could stall in hidden tabs.
   useEffect(() => {
     if (!shouldRestoreFocusRef.current) return
     shouldRestoreFocusRef.current = false

@@ -189,8 +189,11 @@ function SingleDateInput({
   if (prevResetKey !== formResetKey) {
     setPrevResetKey(formResetKey)
     setDisplayValue(value)
-    // A discarded render retries this condition and recomputes against live
-    // focus, while Strict Mode's synchronous double render sees the same focus.
+    activeOriginRef.current = null
+    // Reading the DOM during render is safe here because this write sits inside
+    // the same condition that advances `prevResetKey`: a discarded render
+    // retries against live focus rather than keeping a stale `true`. Strict
+    // Mode's double render sees the same focus.
     shouldRestoreFocusRef.current = !!triggerRef.current?.contains(
       document.activeElement
     )
@@ -586,7 +589,7 @@ function SingleDateInput({
           <StyledDateField>
             <DateField
               // Remount on form clear because React Aria retains incomplete
-              // segment text when the controlled value is already null.
+              // segment text when the controlled value has not changed.
               key={formResetKey}
               aria-label={label}
               aria-describedby={error ? errorId : undefined}

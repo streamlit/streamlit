@@ -31,7 +31,10 @@ import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
 type FormatToken = "Y" | "M" | "D"
 
-/** Selects editable React Aria segments across desktop and iOS roles. */
+/**
+ * Editable segments. Matched on `data-type` rather than `role`, which React Aria
+ * replaces with `textbox` on iOS. Literals are the separators between segments.
+ */
 export const SEGMENT_SELECTOR = '[data-type]:not([data-type="literal"])'
 
 const TOKEN_TO_SEGMENT_TYPE: Record<FormatToken, "year" | "month" | "day"> = {

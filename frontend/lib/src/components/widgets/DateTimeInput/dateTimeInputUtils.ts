@@ -18,9 +18,14 @@ import { CalendarDate, CalendarDateTime, Time } from "@internationalized/date"
 
 import { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
 
-import { parseFormatOrder } from "~lib/components/widgets/DateInput/dateInputUtils"
+import {
+  parseFormatOrder,
+  SEGMENT_SELECTOR,
+} from "~lib/components/widgets/DateInput/dateInputUtils"
 import { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
+
+export { SEGMENT_SELECTOR }
 
 function pad(value: number, length: number): string {
   return String(Math.abs(value)).padStart(length, "0")
@@ -214,10 +219,6 @@ export interface SegmentState {
   isPartiallyTyped: boolean
   isFullyCleared: boolean
 }
-
-/** Editable segments. Matched on `data-type` rather than `role`, which React Aria
- * replaces with `textbox` on iOS. Literals are the separators between segments. */
-export const SEGMENT_SELECTOR = '[data-type]:not([data-type="literal"])'
 
 /** Query the editable segments in a container to determine their placeholder state. */
 export function getSegmentState(container: HTMLElement): SegmentState {

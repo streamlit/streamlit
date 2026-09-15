@@ -229,7 +229,7 @@ def test_empty_date_input_behaves_correctly(
 
 
 def test_form_clear_empties_segments_and_restores_focus(app: Page):
-    """Verify form-clear remount and focus behavior in a browser."""
+    """Incomplete segments clear on reset; focus returns only if previously focused."""
     range_field = get_date_input(app, "Range date in form").get_by_test_id(
         "stDateInputField"
     )
@@ -239,6 +239,7 @@ def test_form_clear_empties_segments_and_restores_focus(app: Page):
 
     app.get_by_role("button", name="Submit date form").click()
     wait_for_app_run(app)
+    expect_markdown(app, "Range date form value: ()")
 
     reset_range_start = range_field.get_by_role("spinbutton").first
     expect(reset_range_start).to_have_attribute("data-placeholder", "true")
@@ -251,12 +252,13 @@ def test_form_clear_empties_segments_and_restores_focus(app: Page):
     single_year.press_sequentially("2020")
     expect(single_year).to_have_text("2020")
 
-    # A DOM click submits without moving focus first, reproducing the
-    # Enter-to-submit timing where the reset arrives while the field is focused.
+    # Submit without moving focus first, so the reset arrives while the field
+    # is still focused (a Playwright click would focus the button).
     app.get_by_role("button", name="Submit date form").evaluate(
         "button => button.click()"
     )
     wait_for_app_run(app)
+    expect_markdown(app, "Single date form value: None")
 
     reset_single_year = single_field.get_by_role("spinbutton").first
     expect(reset_single_year).to_have_attribute("data-placeholder", "true")
