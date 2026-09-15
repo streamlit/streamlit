@@ -228,12 +228,11 @@ export function createDateErrorMessage(
   if (!errorType) return null
 
   if (isRange) {
-    const label = errorType === "afterMax" ? "End" : "Start"
     const messageEnding =
       errorType === "afterMax"
         ? `before ${maxDateString}`
         : `after ${minDateString}`
-    return `**Error**: ${label} date set outside allowed range. Please select a date ${messageEnding}.`
+    return `**Error**: Date set outside allowed range. Please select a date ${messageEnding}.`
   }
 
   if (errorType === "afterMax") {
