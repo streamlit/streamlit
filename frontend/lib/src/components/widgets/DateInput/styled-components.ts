@@ -62,7 +62,7 @@ export const StyledDateField = styled("div", {
   }),
 }))
 
-/** Outer border wrapper for date/datetime fields. Scrolls in narrow layouts. */
+/** Outer field border. Clips content so the inner scroller absorbs overflow. */
 export const StyledDateInputWrapper = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
@@ -73,12 +73,7 @@ export const StyledDateInputWrapper = styled.div(({ theme }) => ({
   borderStyle: "solid",
   borderColor: getBorderColor(theme.colors, false),
   backgroundColor: theme.colors.secondaryBg,
-  // Scroll horizontally in narrow layouts instead of overflowing the border.
-  // Hidden scrollbar avoids stealing height (same pattern as Tabs/Multiselect).
-  overflowX: "auto" as const,
-  overflowY: "hidden" as const,
-  scrollbarWidth: "none",
-  "&::-webkit-scrollbar": { display: "none" },
+  overflow: "hidden",
   cursor: "text",
   fontSize: theme.fontSizes.sm,
   lineHeight: theme.lineHeights.inputWidget,
@@ -96,6 +91,22 @@ export const StyledDateInputWrapper = styled.div(({ theme }) => ({
     cursor: "not-allowed",
   },
 }))
+
+/**
+ * Horizontal scrollport for date and time segments. Sibling trailing controls
+ * stay outside it, and the hidden scrollbar does not add height to the field.
+ */
+export const StyledDateFieldsScroller = styled.div({
+  display: "flex",
+  alignItems: "center",
+  flex: 1,
+  minWidth: 0,
+  overflowX: "auto",
+  overflowY: "hidden",
+  overscrollBehaviorX: "contain",
+  scrollbarWidth: "none",
+  "&::-webkit-scrollbar": { display: "none" },
+})
 
 /** Uses RAC `Group` instead of `DateInput` to allow custom segment ordering. */
 export const StyledDateFieldInput = styled(Group, {
@@ -170,7 +181,6 @@ export const StyledErrorIconContainer = styled.div(({ theme }) => ({
 export const StyledTrailingIcons = styled.div({
   display: "flex",
   alignItems: "center",
-  marginLeft: "auto",
   flexShrink: 0,
 })
 
