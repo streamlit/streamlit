@@ -283,11 +283,33 @@ describe("ComponentInstance", () => {
     expect(iframe).toHaveAttribute("height", "100")
   })
 
-  it("treats a string height kwarg as unspecified", () => {
+  it("uses a numeric string height kwarg as the initial iframe height", () => {
     const componentRegistry = getComponentRegistry()
     renderWithContexts(
       <ComponentInstance
         element={createElementProp({ height: "100" })}
+        disabled={false}
+        widgetMgr={
+          new WidgetStateManager({
+            sendRerunBackMsg: vi.fn(),
+            formsDataChanged: vi.fn(),
+          })
+        }
+        componentRegistry={componentRegistry}
+      />
+    )
+    const skeleton = screen.getByTestId("stSkeleton")
+    expect(skeleton).toHaveStyle("height: 100px")
+
+    const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
+    expect(iframe).toHaveAttribute("height", "100")
+  })
+
+  it("treats a non-numeric string height kwarg as unspecified", () => {
+    const componentRegistry = getComponentRegistry()
+    renderWithContexts(
+      <ComponentInstance
+        element={createElementProp({ height: "stretch" })}
         disabled={false}
         widgetMgr={
           new WidgetStateManager({
