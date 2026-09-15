@@ -65,7 +65,6 @@ import {
   StyledAppViewBlockContainer,
   StyledAppViewBlockSpacer,
   StyledAppViewContainer,
-  StyledAppViewMain,
   StyledBottomBlockContainer,
   StyledEventBlockContainer,
   StyledIFrameResizerAnchor,
@@ -100,6 +99,26 @@ function containsChatInput(node: AppNode): boolean {
 
   // Unknown AppNode subtypes are assumed to not contain a chat input.
   // Update this function if a new node type is added that could contain one.
+  return false
+}
+
+/**
+ * Recursively checks whether the node contains an `st.chat_message` block.
+ * Transient nodes only need their anchor walked: chat messages are blocks,
+ * not transient elements.
+ */
+function containsChatMessage(node: AppNode): boolean {
+  if (node instanceof BlockNode) {
+    return (
+      node.deltaBlock.type === "chatMessage" ||
+      node.children.some(containsChatMessage)
+    )
+  }
+
+  if (node instanceof TransientNode) {
+    return node.anchor ? containsChatMessage(node.anchor) : false
+  }
+
   return false
 }
 
@@ -265,14 +284,17 @@ function AppView(props: AppViewProps): ReactElement {
     removeScriptFinishedHandler,
   ])
 
-  // Activate scroll to bottom only when there's a chat input in the bottom container:
-  const hasBottomChatInput = useMemo(
-    () => hasBottomElements && containsChatInput(elements.bottom),
-    [hasBottomElements, elements.bottom]
+  // Activate app-level scroll-to-bottom only for chat-style pages: a chat input
+  // in the bottom container plus chat messages in the main area. A bottom chat
+  // input alone is not enough, otherwise dashboards with a persistent assistant
+  // input would jump to the bottom on initial load.
+  const shouldScrollToBottom = useMemo(
+    () =>
+      hasBottomElements &&
+      containsChatInput(elements.bottom) &&
+      containsChatMessage(elements.main),
+    [hasBottomElements, elements.bottom, elements.main]
   )
-  const Component = hasBottomChatInput
-    ? ScrollToBottomContainer
-    : StyledAppViewMain
 
   const renderBlock = (node: BlockNode): ReactElement => (
     <ContainerContentsWrapper
@@ -420,12 +442,12 @@ function AppView(props: AppViewProps): ReactElement {
           logoComponent={logoElement}
           showToolbar={showToolbar}
         />
-        <Component
+        <ScrollToBottomContainer
           tabIndex={0}
           isEmbedded={embedded}
           disableScrolling={disableScrolling}
           className="stMain"
-          data-testid="stMain"
+          active={shouldScrollToBottom}
         >
           <Profiler id="Main">
             <StyledAppViewBlockContainer
@@ -477,7 +499,7 @@ function AppView(props: AppViewProps): ReactElement {
               </StyledStickyBottomContainer>
             </Profiler>
           )}
-        </Component>
+        </ScrollToBottomContainer>
       </StyledMainContent>
       {hasSkillsNudge && (
         <StyledSkillsNudgeAnchor
