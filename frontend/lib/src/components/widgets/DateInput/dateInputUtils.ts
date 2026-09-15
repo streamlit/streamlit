@@ -31,6 +31,9 @@ import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
 type FormatToken = "Y" | "M" | "D"
 
+/** Selects editable React Aria segments across desktop and iOS roles. */
+export const SEGMENT_SELECTOR = '[data-type]:not([data-type="literal"])'
+
 const TOKEN_TO_SEGMENT_TYPE: Record<FormatToken, "year" | "month" | "day"> = {
   Y: "year",
   M: "month",

@@ -37,7 +37,7 @@ from e2e_playwright.shared.app_utils import (
     type_date,
 )
 
-NUM_DATE_INPUTS = 26
+NUM_DATE_INPUTS = 28
 
 
 def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -226,6 +226,41 @@ def test_empty_date_input_behaves_correctly(
 
     # Should be empty again:
     expect_markdown(app, "Value 13: None")
+
+
+def test_form_clear_empties_segments_and_restores_focus(app: Page):
+    """Verify form-clear remount and focus behavior in a browser."""
+    range_field = get_date_input(app, "Range date in form").get_by_test_id(
+        "stDateInputField"
+    )
+    range_start_year = range_field.get_by_role("spinbutton").first
+    range_start_year.press_sequentially("2020")
+    expect(range_start_year).to_have_text("2020")
+
+    app.get_by_role("button", name="Submit date form").click()
+    wait_for_app_run(app)
+
+    reset_range_start = range_field.get_by_role("spinbutton").first
+    expect(reset_range_start).to_have_attribute("data-placeholder", "true")
+    expect(reset_range_start).not_to_be_focused()
+
+    single_field = get_date_input(app, "Single date in form").get_by_test_id(
+        "stDateInputField"
+    )
+    single_year = single_field.get_by_role("spinbutton").first
+    single_year.press_sequentially("2020")
+    expect(single_year).to_have_text("2020")
+
+    # A DOM click submits without moving focus first, reproducing the
+    # Enter-to-submit timing where the reset arrives while the field is focused.
+    app.get_by_role("button", name="Submit date form").evaluate(
+        "button => button.click()"
+    )
+    wait_for_app_run(app)
+
+    reset_single_year = single_field.get_by_role("spinbutton").first
+    expect(reset_single_year).to_have_attribute("data-placeholder", "true")
+    expect(reset_single_year).to_be_focused()
 
 
 def test_handles_range_end_date_changes(app: Page):

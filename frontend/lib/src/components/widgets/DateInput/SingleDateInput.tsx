@@ -63,6 +63,7 @@ import {
   isValidSegmentValue,
   parsePartialSegmentPaste,
   parsePastedDate,
+  SEGMENT_SELECTOR,
 } from "./dateInputUtils"
 import { ReorderedSegments } from "./ReorderedSegments"
 import {
@@ -177,8 +178,8 @@ function SingleDateInput({
     setDisplayValue(value)
   }
 
-  // React Aria keeps incomplete segment text internally, so form clear must
-  // remount the field even when the controlled value was already null.
+  // Capture whether the remount must restore focus. By effect time, the
+  // previously focused segment has already been removed.
   const shouldRestoreFocusRef = useRef(false)
 
   // Form clear: displayValue may have diverged (uncommitted typing) while
@@ -188,6 +189,8 @@ function SingleDateInput({
   if (prevResetKey !== formResetKey) {
     setPrevResetKey(formResetKey)
     setDisplayValue(value)
+    // A discarded render retries this condition and recomputes against live
+    // focus, while Strict Mode's synchronous double render sees the same focus.
     shouldRestoreFocusRef.current = !!triggerRef.current?.contains(
       document.activeElement
     )
@@ -249,13 +252,14 @@ function SingleDateInput({
     wasOpenRef.current = isOpen
   }, [isOpen, value, clearable])
 
-  // Preserve focus when form clear remounts the field to reset React Aria's
-  // internal segment state.
+  // Restore focus to the first editable segment after the form-reset remount.
+  // Suppress handleFocus while focusin dispatches synchronously so the calendar
+  // does not reopen; clearing the guard after a frame could stall in hidden tabs.
   useEffect(() => {
     if (!shouldRestoreFocusRef.current) return
     shouldRestoreFocusRef.current = false
     isRestoringFocusRef.current = true
-    triggerRef.current?.querySelector<HTMLElement>("[data-type]")?.focus()
+    triggerRef.current?.querySelector<HTMLElement>(SEGMENT_SELECTOR)?.focus()
     isRestoringFocusRef.current = false
   }, [formResetKey])
 
@@ -581,6 +585,8 @@ function SingleDateInput({
         <I18nProvider locale="en-US">
           <StyledDateField>
             <DateField
+              // Remount on form clear because React Aria retains incomplete
+              // segment text when the controlled value is already null.
               key={formResetKey}
               aria-label={label}
               aria-describedby={error ? errorId : undefined}
