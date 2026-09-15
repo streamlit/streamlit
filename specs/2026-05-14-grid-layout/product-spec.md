@@ -95,7 +95,7 @@ st.grid(
     *,
     min_column_width: Literal["auto"] | int = "auto",
     wrap: bool = True,
-    gap: Gap | tuple[Gap | None, Gap | None] | None = "small",
+    gap: Gap | tuple[Gap | None, Gap | None] | list[Gap | None] | None = "small",
     vertical_alignment: Literal["top", "center", "bottom"] = "top",
     border: bool = False,
     row_height: Literal["content", "equal"] | int = "content",
@@ -133,14 +133,16 @@ one use case.
 | `key` | `str` or `None` | `None` | Stable identity (`st-key-<key>`), matching `st.container`. |
 | `dense` | `bool` | `False` | When `True`, backfill gaps left by spanning cells (can reorder visual vs DOM order). See [Accessibility](#accessibility). |
 
-Invalid arguments fail immediately (Principle 23):
+Invalid arguments fail immediately (Principle 23). Use the shared catalog in
+`lib/streamlit/AGENTS.md` — not widget `value`/`min_value` types:
 
 | Invalid input | Error |
 | --- | --- |
-| `columns` integer `< 1` | `StreamlitValueBelowMinError` |
-| `min_column_width` integer `< 1`, or a string other than `"auto"` | `StreamlitValueBelowMinError` / `StreamlitValueError` |
-| `columns="auto"` with `wrap=False` | `StreamlitAPIException`: auto mode is defined by wrapping; use `wrap=True` or an integer `columns` |
-| `row_height` integer `< 1`, or a string other than `"content"` / `"equal"` | `StreamlitValueBelowMinError` / `StreamlitValueError` |
+| `columns` integer `< 1`, or a string other than `"auto"` | `StreamlitValueError` |
+| `columns` / `min_column_width` / `row_height` wrong type | `StreamlitInvalidParameterTypeError` |
+| `min_column_width` integer `< 1`, or a string other than `"auto"` | `StreamlitValueError` |
+| `columns="auto"` with `wrap=False` | `StreamlitIncompatibleParametersError` (`columns="auto"`, `wrap=False`) |
+| `row_height` integer `< 1`, or a string other than `"content"` / `"equal"` | `StreamlitValueError` |
 | `height` outside the shared `Height` contract | Same errors as `st.container` |
 | `gap` outside the shared scale | Same errors as `st.columns` |
 | `gap` sequence whose length is not 2 | `StreamlitValueError`: a pair must be `(row_gap, column_gap)` |
@@ -162,9 +164,8 @@ The span arguments are keyword-only (Principle 17): spanning is an enhancement, 
 positional slots stay reserved. The names keep `st.grid(columns=…)` meaning "how many
 tracks" rather than overloading `columns` as "tracks this cell occupies."
 
-Both arguments must be integers `>= 1`; `0`, negatives, and non-integers raise
-`StreamlitValueBelowMinError` / `StreamlitValueError` at call time, matching `st.columns`
-(Principle 23).
+Both arguments must be integers `>= 1`. `0` and negatives raise `StreamlitValueError`;
+non-integers raise `StreamlitInvalidParameterTypeError` (Principle 23).
 
 A column span is **clamped to the resolved column count**, so
 `grid.cell(column_span=4)` is two columns wide when only two tracks fit. Passing a span
@@ -176,11 +177,6 @@ is the declared `columns`.
 Docs recommend `grid.cell()` for placement, especially multi-element or spanning cells.
 Use `grid.container(...)` when you need container parameters `cell()` does not have
 (horizontal layout, its own height, its own border).
-
-Do not ship `grid.span()`. A span is still a cell, so two constructors would overlap
-(Principle 11), and `span(columns=…)` would reuse `columns` for a different meaning
-(Principle 35). Do not ship `grid.cells(n)`: a predeclared count reintroduces
-[Fixed Cell List](#alternative-api-fixed-cell-list).
 
 ### Behavior
 
@@ -211,9 +207,9 @@ for item in metrics:
         st.caption(item.caption)
 ```
 
-The surprising case, coming from `with st.container():`, is a section header: a bare
-`st.header(...)` inside the grid takes one cell and leaves a ragged first row. Keep the
-heading outside the grid, or give it a full-width `grid.cell(column_span=...)`.
+The surprising case, coming from `with st.container():`, is a section heading: a bare
+`st.header(...)` inside the grid takes one cell and leaves a ragged first row. Keep
+section headings outside the grid. Per-cell titles belong in the cell (or on `st.card`).
 
 #### Panel Chrome Comes From `st.card`
 
@@ -232,9 +228,12 @@ a panel needs a title, icon, or background.
 #### Wrapping: `wrap` Plus `min_column_width`
 
 The [wrap spec](../2026-07-23-horizontal-wrap-control/product-spec.md) gives layout
-containers a shared promise: `wrap=False` keeps the collection in one row and scrolls
-locally. `st.grid` is the same kind of container, so it takes the same parameter instead of
-encoding "never wrap" as `None` on a different knob (Principles 10 and 11).
+containers a shared `wrap` name: `wrap=False` keeps the horizontal collection in one row
+and scrolls locally. For `st.grid` that collection is the **column tracks**, not the
+cells — cells still occupy additional grid rows. `st.grid` takes the same parameter
+instead of encoding "never wrap" as `None` on a different knob (Principles 10 and 11).
+When this spec merges, add `st.grid` to that spec's command table so docs cannot claim
+`wrap=False` keeps grid *cells* in a single row.
 
 The two parameters answer different questions:
 
@@ -259,10 +258,13 @@ happen at an opaque width — the `st.columns` limitation this feature exists to
 Default `"auto"`, not a Python pixel literal and not `None` (`None` reads as "no minimum,"
 which is `wrap=False`).
 
-`st.grid` does **not** use the adaptive `wrap: bool | None = None` default that the wrap
-spec gives to controls. A single row of tracks needs an explicit `wrap=False`. Widgets
-inside a cell also do not inherit that auto default: a cell is a vertical region, like a
-column.
+`st.grid` itself does **not** use the adaptive `wrap: bool | None = None` default the wrap
+spec gives to controls. A single row of tracks needs an explicit `wrap=False`.
+
+Widgets that are direct layout children of a grid cell **do** use that auto default, and
+it resolves to `False`: a cell is a vertical region, like a column. Nested vertical
+containers inside a cell reset it to `True`, matching the wrap spec. When this spec
+merges, add a grid-cell row to that spec's resolution table.
 
 #### Asymmetric Gaps: Tuple Versus Explicit Parameters
 
@@ -278,7 +280,10 @@ length-error must say `(row_gap, column_gap)` (Principle 35).
 **Option 3: `row_gap` / `column_gap` parameters.** Unambiguous, but two more parameters,
 and three spellings if a tuple also exists (Principle 11).
 
-**Recommendation:** Ship Option 2. Accept a tuple or list of length 2.
+**Recommendation:** Ship Option 2. Accept a tuple or list of length 2. The pair form is
+grid-only in the MVP; `st.container` and `st.columns` keep a scalar `gap` until a
+follow-up extends it (Principle 10). A wrapped horizontal container has the same
+row-versus-column spacing problem; that follow-up should cover it.
 
 ```python
 st.grid(3, gap=("medium", "small"))  # (row_gap, column_gap)
@@ -326,8 +331,8 @@ empty last-row tracks (leftover items stretch) and cannot clamp `span N`. The MV
 `N` with the same resize-observer pattern other layout containers use, then sets
 `repeat(N, …)`.
 
-`st.grid("auto")` fits as many columns as possible, with no max. Useful for galleries;
-most dashboards should pass an integer cap.
+`st.grid("auto")` fits as many columns as the container allows, with no user-facing max.
+Useful for galleries; most dashboards should pass an integer cap.
 
 When `wrap=True` and the container is itself narrower than the minimum (a 180px sidebar
 against a ~12.5rem floor), the grid renders one column at the container's width. The
@@ -335,7 +340,11 @@ minimum is a wrapping threshold, not a floor that forces horizontal overflow.
 
 **Last row:** no placeholder cells, so no stray borders where the row runs out. Unused
 tracks still reserve width, so leftover items stay the same width as the rows above.
-That is why wrapping uses an explicit track template rather than `auto-fit`.
+That is why wrapping uses an explicit track template rather than `auto-fit`. The same
+look applies to `columns="auto"`: `N` comes from container capacity, not item count, so
+eight cards where twelve tracks fit keep card-sized tracks and empty space rather than
+stretching. Cap resolved `N` at an implementation-defined maximum so a tiny explicit
+`min_column_width` cannot explode the track count as children are added or removed.
 
 #### No-Wrap Behavior
 
@@ -361,11 +370,13 @@ then inside the cell.
 `st.grid("auto", wrap=False)` raises. `st.grid(4, wrap=False, min_column_width=280)`
 starts scrolling once cells would drop below 280px.
 
-**Open decision: the auto floor and high track counts.** The auto floor is tuned for
-galleries and makes a 12-track dashboard unusable: `st.grid(12, wrap=False)` demands
-~2400px plus gaps. The only workaround is `min_column_width=1`, which reads like a bug
-(Principle 35). A 12-track grid is the familiar way to express asymmetric regions with
-spans.
+The auto floor is tuned for galleries and makes a 12-track dashboard unusable:
+`st.grid(12, wrap=False)` demands ~2400px plus gaps. The only workaround is
+`min_column_width=1`, which reads like a bug (Principle 35). A 12-track grid is the
+familiar way to express asymmetric regions with spans. That is not unresolved MVP scope:
+keep the auto floor; small track counts plus spans are the dashboard shape; weighted
+tracks are the follow-up. Options 2 and 3 would change documented behavior if adopted
+after ship.
 
 **Option 1: Keep the auto floor; small track counts are the dashboard shape** ✅ PREFERRED.
 One rule for both wrap modes; unreadably narrow cells never render; `st.grid(4)` with
@@ -380,6 +391,8 @@ the outcome `wrap=False` exists to avoid.
 **Option 3: Document `min_column_width=1` as the high-track recipe.** No semantic change;
 the main dashboard recipe is then a magic "ignore this parameter" argument.
 
+**Recommendation:** Ship Option 1.
+
 #### Height And Space Division
 
 **Grids scroll by default.** Rows accumulate and the page grows. What dashboards need
@@ -392,14 +405,17 @@ The name is `row_height` rather than `cell_height` because these modes size **ro
 | `row_height` | Rows |
 | --- | --- |
 | `"content"` (default) | Each row is as tall as its tallest cell. Borders stretch to that row, so cards in a row still align. |
-| `"equal"` | Every row has the same height. In a scrolling grid that height is the tallest row, **measured from content**. In a bounded grid the same name divides the definite height. |
+| `"equal"` | Every row has the same height. In a scrolling grid that height is the tallest row's content. In a bounded grid the same name divides the definite height. |
 | `<int>` | Every row is that many pixels. `cell(row_span=2)` is `2 * row_height + row_gap`. Overflow scrolls inside the cell. |
 
-`"equal"` is not free CSS in a scrolling grid. CSS `1fr` only divides leftover space; in
-`height="content"` there is none, so each `1fr` row sizes to its own content. Cross-row
-equalization needs a measurement of the tallest row. Stretch children must not feed that
-measurement. After first paint, `"equal"` must not silently fall back to `"content"`. In a
-height-bounded grid, `1fr` *does* divide leftover space.
+In a height-bounded grid, CSS `1fr` divides leftover space. In a scrolling
+(`height="content"`) grid, prototype `grid-auto-rows: 1fr` first — including spanning
+cells and stretch-only children — before committing to a measurement loop. The used
+flex-fraction algorithm can equalize implicit `1fr` rows to the largest max-content
+contribution even without leftover space. If observation is still required: spanning
+cells contribute intrinsic height across the rows they occupy; a stretch-only cell still
+needs an intrinsic size; observers must clean up; stretch children must not feed the
+measurement; `"equal"` must not fall back to `"content"` after first paint.
 
 **Option 1: `"equal"` on scrolling and bounded grids** ✅ PREFERRED. Names the card-wall
 case; `st.grid(4, row_height="equal")` works without a pixel height.
@@ -416,9 +432,9 @@ child in leftover vertical space.
 
 #### Filling A Definite-Height Cell
 
-Whenever a row has a definite height (`row_height=<int>`, `"equal"` after measurement, or
-`"equal"` inside a bounded grid), the cell is height-bounded and content can resolve
-`height="stretch"`:
+Whenever a row has a definite height (`row_height=<int>`, `"equal"` once rows have a
+definite size, or `"equal"` inside a bounded grid), the cell is height-bounded and content
+can resolve `height="stretch"`:
 
 ```python
 grid = st.grid(3, row_height=260, border=True)
@@ -447,9 +463,19 @@ output in one cell, wrap it in `grid.cell()` inside the fragment.
 
 #### Accessibility
 
+This is a visual layout, not an interactive data grid. Do not use ARIA `grid` / `row` /
+`gridcell` roles: those promise a two-dimensional keyboard model that `st.grid` does not
+provide. Ordinary sequential container semantics preserve the reading and tab order
+below.
+
 Wrapping changes only the column count, not source order. `wrap=False` also leaves source
 order unchanged; keyboard focus must scroll a horizontally off-screen cell into view, as
 in the wrap spec.
+
+A definite-height row (`row_height=<int>`, and `"equal"` once rows have a definite size)
+can overflow inside the cell. That overflow must be keyboard-scrollable, and focused
+descendants must be brought into view — the same contract as horizontal no-wrap
+scrolling. Include this in the pre-ship a11y checks.
 
 `dense` is a boolean (Principle 16): the user-facing choice is whether to backfill gaps,
 not which CSS auto-placement axis to use. `dense=False` is the default. Dense packing has
@@ -578,14 +604,14 @@ with grid.cell():
 ## API Evaluation
 
 The MVP is the signature and `grid.cell()` above. This section records alternatives and
-follow-ups; `grid.span()` and `grid.cells(n)` are rejected in
-[GridContainer Methods](#gridcontainer-methods).
+follow-ups.
 
 | Idea | Verdict | Why |
 | --- | --- | --- |
 | Auto-placement + `grid.cell()` | **MVP** | Dynamic lists, grouping, and spans without a second constructor. |
 | `key` | **MVP** | Every other container has it; cheaper to ship than to explain its absence. |
-| `gap=(row_gap, column_gap)` | **MVP** | One parameter; scalar still matches `st.columns`. |
+| `gap=(row_gap, column_gap)` | **MVP** | One parameter; scalar still matches `st.columns`. Pair form is grid-only until a follow-up extends `st.container` / `st.columns`. |
+| `dense` | **MVP** (opt-in `False`) | Two user states (backfill gaps or don't). CSS `row`/`column` pick the axis, which `st.grid` fixes. Packing is a no-op until spans create holes. |
 | `grid.span()` | Reject | Same object as `cell()`; `columns` would mean two things. |
 | `grid.cells(n)` | Reject | Predeclared count; see [Fixed Cell List](#alternative-api-fixed-cell-list). |
 | Weighted tracks `columns=[2, 1, 1]` | **Top follow-up**, `wrap=False` only | Asymmetric dashboards and the 12-track floor problem. |
@@ -690,10 +716,11 @@ where the demand is:
 
 ## Risks
 
-- **`"equal"` on a scrolling grid needs a measurement.** CSS `1fr` does not equalize
-  content-height rows. Measure the tallest row from intrinsic content; stretch children
-  must not feed that measurement. After the first paint, `"equal"` must not degrade to
-  `"content"`. The value stays in the public `Literal` either way.
+- **`"equal"` on a scrolling grid may need a measurement.** Prototype `grid-auto-rows: 1fr`
+  first (spanning cells and stretch-only children included). If observation is required,
+  measure the tallest row from intrinsic content; stretch children must not feed that
+  measurement. After the first paint, `"equal"` must not degrade to `"content"`. The value
+  stays in the public `Literal` either way.
 - **`height="stretch"` has no bounded ancestor at the app root.** `shouldUseStretchHeight`
   in `frontend/lib/src/components/widgets/DataFrame/dimensionUtils.ts` returns `false` at
   the app root, so `st.grid(height="stretch")` at page top behaves like `"content"`.
@@ -737,11 +764,14 @@ where the demand is:
 
 Lead with scrolling grids. Include examples for metric cards, galleries, dashboard cards,
 nested flex controls, and a no-wrap dashboard. Cross-link `wrap` on container/columns.
+When this spec merges, add `st.grid` to the wrap spec's command table (`wrap=False` keeps
+column tracks in one row, not cells) and a grid-cell row to its `wrap=None` table
+(resolves to `False`, like a column).
 
 Call out the gotchas in [Direct children](#direct-children-become-cells),
 [Filling a definite-height cell](#filling-a-definite-height-cell), and [Risks](#risks):
-headings consume a cell; content needs `height="stretch"` to fill a definite cell;
-`height="stretch"` on the grid does nothing at page top.
+section headings go outside the grid; content needs `height="stretch"` to fill a definite
+cell; `height="stretch"` on the grid does nothing at page top.
 
 ## Checklist
 
@@ -753,5 +783,5 @@ headings consume a cell; content needs `height="stretch"` to fill a definite cel
 | Metrics collected | ✅ Add `gather_metrics("grid")`; optionally track coarse non-content options such as `columns` mode, `wrap`, `border`, `dense`, and `height` / `row_height` mode. Height modes tell us whether the dashboard use case is being adopted. |
 | Any security/legal impact? | None expected. Layout-only feature; no new content execution path. |
 | Any docs changes needed? | ✅ Add API docs and update layout guide/examples. |
-| Accessibility verified? | Before ship: keyboard tab order and screen-reader reading order on a grid with spanning cells under both `dense=False` (default) and `dense=True` (WCAG 2.1 SC 1.3.2 and SC 2.4.3). |
-| Depends on other work? | `st.card` is a separate spec and not a blocker. Plotly ignoring `height="stretch"` is a known chart gap, not a grid ship gate; dataframe/Vega/DeckGL already fill a definite cell. |
+| Accessibility verified? | Before ship: keyboard tab order and screen-reader reading order on a grid with spanning cells under both `dense=False` (default) and `dense=True` (WCAG 2.1 SC 1.3.2 and SC 2.4.3). No ARIA `grid`/`row`/`gridcell` roles. Integer `row_height` overflow is keyboard-scrollable (focused descendants scrolled into view), matching no-wrap horizontal scrolling. |
+| Depends on other work? | `st.card` is a separate spec and not a blocker. Plotly ignoring `height="stretch"` is a known chart gap, not a grid ship gate; dataframe/Vega/DeckGL already fill a definite cell. On merge: add `st.grid` to the wrap spec's command table and a grid-cell row to its `wrap=None` resolution table. |
