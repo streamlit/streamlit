@@ -12,12 +12,10 @@ supply an accessible name: images, media players, charts, maps, dataframes, and 
 Authors provide a short, plain-text accessible name, and Streamlit maps it to whichever
 attribute is correct for that element.
 
-Four of the 19 have a partial mechanism today, none of it a parameter: `st.mermaid_chart`
-honors `accTitle` / `accDescr` directives written into the diagram source, `st.altair_chart` /
-`st.vega_lite_chart` surface a `description` set inside the Vega spec, and `st.echarts_chart` is a
-case of its own — ECharts *generates* an `aria-label` from the data whenever `aria.enabled` is on,
-which is its default, so those charts already have an automatic name. None of the four is a
-parameter, and none is discoverable from a command signature — see [Commands in
+Four of the 19 expose something today, but none of it is a parameter and none of it is discoverable
+from a command signature: `st.mermaid_chart` honors `accTitle` / `accDescr` directives written into
+the diagram source, `st.altair_chart` and `st.vega_lite_chart` surface a `description` set inside the
+Vega spec, and `st.echarts_chart` generates an `aria-label` from the data by default — see [Commands in
 scope](#commands-in-scope) for what each command exposes today.
 
 ```python
@@ -70,7 +68,8 @@ Three smaller choices are made inline rather than listed:
 Streamlit apps are often the UI for internal tools, public dashboards, and government or
 healthcare workflows that must meet [WCAG 2.1](https://www.w3.org/TR/WCAG21/) Level AA,
 Section 508 in the US, or EN 301 549 for European public-sector procurement. The latter
-two incorporate WCAG AA by reference, so one target covers all three. [SC 1.1.1 Non-text
+two lean on WCAG by reference — Section 508 on 2.0 AA, and EN 301 549 on WCAG plus requirements of its
+own — so targeting WCAG 2.1 AA covers most of what all three ask for. [SC 1.1.1 Non-text
 Content](https://www.w3.org/TR/WCAG21/#non-text-content) (Level A) requires a text
 alternative for non-text content. Streamlit offers authors no parameter for one on any of
 the 19 commands, and no mechanism at all on 15 of them — see the Summary for the four
@@ -190,7 +189,7 @@ st.image("chart.png", alt_text="Line chart of monthly revenue")
 - Cons: Actively misleading. Assistive technology treats a short **name** and a long
   **description** as different things, announcing the first immediately and unskippably
   and the second last and deferrably. What we are adding is a name.
-  Note that principle 8 (Semantic Names Over Geeky Names) actually favours this option — its own
+  Note that principle 8 (Semantic Names Over Geeky Names) actually favors this option — its own
   bad examples are HTML-derived names like `st.h1`. The counter is principle 7: `alt` is the term
   authors and WCAG already use, so it is the standardized vocabulary rather than the geeky one
 
@@ -259,7 +258,7 @@ Matching `caption`'s strictness is the point: two list-valued parameters on one 
 differently is the inconsistency principle 11 exists to prevent. Leniency also buys nothing here,
 because `caption` already accepts `None` per entry, so a deliberate gap is expressible either way —
 all a short list would add is tolerance for a **miscount**, which silently leaves an image
-unlabelled, the exact failure this feature exists to fix. Strict pairing separates "I skipped this
+unlabeled, the exact failure this feature exists to fix. Strict pairing separates "I skipped this
 one" from "I lost count". The lenient alternative is a reasonable landing too, and
 relaxing to it later would not break existing calls.
 
@@ -327,7 +326,7 @@ intended for the user" on it is precisely the undetectable failure this spec rej
 | `st.image` | `<img alt="0">` — the array index, announced as "0, image". **Worse than no alt.** For a *linked* image the caption already names the anchor, so the two are not fully independent today | The image's HTML `alt` attribute |
 | `st.pyplot` | Renders through the image path — the same `ImageList` proto — so it inherits the index bug, and its fix | Same |
 | `st.mermaid_chart` | A name derived from the diagram type — `"Mermaid flowchart"`, falling back to `"Mermaid diagram"` for an unrecognized type — unless the author writes diagram directives | Same, since the diagram renders as an image. It has no proto of its own, so phase 4 picks the wiring route — and a mermaid fence written directly inside `st.markdown`, which the [mermaid spec](../2026-05-02-mermaid-chart/product-spec.md) treats as the primary interface, **cannot be named by `alt` at all**. Where `alt` is set it replaces the author's `accTitle` / `accDescr` rather than joining them |
-| `st.audio`, `st.video` | No accessible name. YouTube embeds fall back to the raw URL as the iframe `title` | An accessible label on the player, and the frame title for YouTube embeds — which `alt` replaces only when set, since an iframe must have a title |
+| `st.audio`, `st.video` | No accessible name. `st.video`'s YouTube embeds fall back to the raw URL as the iframe `title`; `st.audio` has no iframe path | An accessible label on the player, and the frame title for YouTube embeds — which `alt` replaces only when set, since an iframe must have a title |
 | `st.line_chart`, `st.bar_chart`, `st.area_chart`, `st.scatter_chart` | Per-datapoint labels from Vega, but no chart-level name and no way to set one — these commands build the spec themselves | Vega's own chart-description field |
 | `st.altair_chart`, `st.vega_lite_chart` | Same, except an author who hand-writes `description` into the spec does get a chart-level name | Same. Where the author already set `description`, `alt` wins as the documented parameter, and Streamlit logs the override |
 | `st.echarts_chart` | The only command that names itself by default: ECharts sets `role="img"` and generates an `aria-label` from the data whenever `aria.enabled` is on, which Streamlit injects when the author's option dict omits it. The generated label is conditional — an empty series can yield `role="img"` with no label, which Streamlit then strips — and an author can already write `aria.label.description` into the option dict, the same escape hatch Vega's `description` offers | ECharts' `aria.label.description`. `alt` overrides both the generated label and an author-set one, and Streamlit logs the override |
@@ -353,15 +352,20 @@ One interaction does need a decision, and it is narrower than it looks: it appli
 `ImageList.tsx` already names the anchor by the caption, else the raw link URL, so a linked image is
 named today while the `<img>` carries the index. **The anchor should be named by `caption`, else a
 non-empty `alt`, else the URL** — putting `alt` ahead of the URL so an authored description outranks
-a raw link. Two consequences worth recording rather than rediscovering: an uncaptioned linked
+a raw link. `caption` stays first because it is the visible text a sighted user associates with that
+link, and an accessible name that omits the visible label is its own problem. But `caption` accepts
+markdown and `ImageList.tsx` currently copies the raw source into `aria-label`, so a caption of
+`**Revenue**` would name the link with its asterisks: the anchor must take the caption's rendered
+plain text, not its source. Two consequences worth recording rather than rediscovering: an uncaptioned linked
 image must still leave the anchor named. Today the blocked-link path is named only
 incidentally: `ImageList.tsx` sets the anchor's `aria-label` to `undefined` there and the child
 `<img alt="0">` names the control instead, while a non-blocked link still falls back to the URL.
 Dropping the index `alt` therefore leaves **the blocked-link case shipping a focusable `href` with no
 accessible name — an SC 4.1.2 regression** unless the anchor gets a non-empty name of its own or
-stops being focusable. **Recommend the latter:** the blocked anchor already calls `preventDefault`,
-so it does nothing when activated, and making it non-focusable with no `aria-label` is the smaller
-change and needs no new user-facing string. Settling it here is what keeps phase 0 free of a product
+stops existing. **Recommend the latter, and completely:** `ImageList.tsx` already renders that anchor
+with `preventDefault` and an `href` pointing at a placeholder, so it does nothing when activated. Not
+rendering the wrapper at all when the link is blocked removes the nameless control rather than merely
+hiding it from the tab order, and needs no new user-facing string either. Settling it here is what keeps phase 0 free of a product
 call.
 
 ### What an image gets with no `alt`
@@ -463,16 +467,20 @@ rather than an improvement there; and remember that
 ### Conformance scope
 
 `alt` **enables** authors to meet **SC 1.1.1 Non-text Content** (Level A) for images, charts, maps
-and diagrams, and **SC 4.1.2 Name, Role, Value** (Level A) for the interactive cases —
+and diagrams, and its descriptive-identification requirement for `st.audio` and `st.video` — where a
+name identifies the media but captions and transcripts are what actually satisfy 1.2.x. It also
+enables **SC 4.1.2 Name, Role, Value** (Level A) for the interactive cases —
 `st.data_editor`, and `st.dataframe`, `st.plotly_chart`, `st.pydeck_chart` and the Vega charts
 whenever `on_select` makes them widgets. It does not close either on its own: 1.1.1 requires the text to serve the
 visual's equivalent purpose, so a complex chart or map may still need a longer description or the
 underlying data. Shipping the parameter removes the blocker; whether a given app conforms depends
 on what its author writes.
 
-It closes **neither** for `st.dataframe` or `st.table`: 1.1.1 covers non-text content and a table of
-text is text, while 4.1.2 is scoped to interface components rather than static output. Naming a grid
-aids findability; it is not a conformance fix. Nor does any of this make an app AA-conformant, so
+It closes **1.1.1 for neither** `st.dataframe` nor `st.table`, since that criterion covers non-text
+content and a table of text is text — naming a grid aids findability rather than supplying a text
+alternative. For 4.1.2 the two part company: `st.table` is static output and sits outside
+it, while `st.dataframe` is a keyboard-navigable, sortable grid whether or not `on_select` is set, so
+naming it addresses that criterion's *name* portion — role and value remain the grid's own problem. Nor does any of this make an app AA-conformant, so
 release notes should say "add alt text to your images and charts" — not "Streamlit is now
 accessible", and certainly not "accessible media".
 
@@ -487,9 +495,9 @@ and phase 0 needs no API decision at all.
 
 | Phase | Commands                                                            | Why here                                                                                                                                                                                                                          |
 | ----- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0     | `st.image`, `st.pyplot` — index `alt` removal only                  | The one change needing no API sign-off, and the best insurance against a fourth stalled attempt. It helps every existing app whether or not its author adopts `alt`, so it should not wait on the parameter |
+| 0     | `st.image`, `st.pyplot` — remove the index `alt`, and stop rendering the wrapper anchor for a blocked image link | Needs no new API, and helps every existing app whether or not its author adopts `alt`. **Sequencing is a maintainer call:** shipping this before phase 6 leaves images with no accessible name *and* no parameter to supply one until the parameter lands, so it may be better released alongside phase 6 than ahead of it |
 | 1     | `st.audio`, `st.video`                                              | Nothing unresolved, and the code exists — though only in [#16568](https://github.com/streamlit/streamlit/pull/16568), which was approved and then closed, so no proto in the tree carries `alt` yet. Reopening it lands 2 of the 19 first and fixes the parameter name in the codebase |
-| 2     | The six simple and Vega charts, plus `st.echarts_chart`             | Each library already supports a chart-level description natively — Vega's `description`, ECharts' `aria.label.description` — so this is the least work for the most commands. Confirmed rather than assumed: `vega-view` sets `role="graphics-document"` on the container and maps `view.description()` to its `aria-label`, fed from `spec.description`, so an Altair `description` reaches assistive tech today. `st.echarts_chart`'s scope is [decision 4](#outstanding-decisions) |
+| 2     | The six simple and Vega charts, plus `st.echarts_chart`             | Each library already supports a chart-level description natively — Vega's `description`, ECharts' `aria.label.description` — so this is the least work for the most commands. Confirmed rather than assumed: Streamlit renders through **vega-embed** (`useVegaEmbed.ts`), which applies `role="graphics-document"` and maps the view description to `aria-label`, fed from `spec.description` — so an Altair `description` reaches assistive tech today. `st.echarts_chart`'s scope is [decision 4](#outstanding-decisions) |
 | 3     | `st.plotly_chart`, `st.graphviz_chart`, `st.map`, `st.pydeck_chart` | All four need the same new wiring; decide once, apply four times                                                                                                                                                                  |
 | 4     | `st.table`, `st.mermaid_chart`                                      | `st.table` is natively nameable. Mermaid is not as easy as it looks — no proto of its own, and its name is derived on the frontend, so this phase picks a wiring route                                                            |
 | 5     | `st.dataframe`, `st.data_editor`                                    | One component covers both                                                                                                                                                                                                         |
@@ -506,7 +514,10 @@ The phases are very unevenly sized: 1 and 2 are close to free, and **phase 6 car
 risk and most of the user-visible value**, which is the argument for splitting phase 0 out of it.
 
 Two constraints carry across every phase. **Setting or changing `alt` must never reset state a user
-has built up**, so `alt` never participates in element identity — it is not an identity kwarg, and it
+has built up**, so `alt` never participates in element identity. That is a deliberate departure from
+`label` and `help`, which are passed into `compute_and_register_element_id` today: those name a widget
+whose state belongs to that name, whereas `alt` describes an element without changing what it is. So
+`alt` is not an identity kwarg, and it
 is never written into a chart spec that is hashed into one. For the Vega commands that means
 carrying `alt` as its own proto field and applying it to the view after the element ID is computed,
 rather than writing it into the spec JSON that gets hashed. And **an author's `alt` names an ECharts
