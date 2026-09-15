@@ -82,6 +82,7 @@ import {
   StyledClearButton,
   StyledDateField,
   StyledDateFieldContainer,
+  StyledDateFieldsScroller,
   StyledDateInputWrapper,
   StyledDropdownListBox,
   StyledDropdownListBoxItem,
@@ -820,43 +821,45 @@ function RangeDateInput({
         onClickCapture={handleClickCapture}
         onKeyDown={handleFieldKeyDown}
       >
-        <I18nProvider locale="en-US">
-          <StyledDateField $isRange data-range-field="start">
-            <div onPaste={handleStartPaste}>
-              <DateField
-                aria-label={`${label} start date`}
-                aria-describedby={error ? errorId : undefined}
-                isInvalid={!!error}
-                value={displayStart}
-                onChange={handleStartFieldChange}
-                minValue={minDate}
-                maxValue={maxDate}
-                shouldForceLeadingZeros
-                isDisabled={disabled}
-              >
-                <ReorderedSegments format={format} isRange />
-              </DateField>
-            </div>
-          </StyledDateField>
-          <StyledRangeSeparator aria-hidden="true">–</StyledRangeSeparator>
-          <StyledDateField $isRange data-range-field="end">
-            <div onPaste={handleEndPaste}>
-              <DateField
-                aria-label={`${label} end date`}
-                aria-describedby={error ? errorId : undefined}
-                isInvalid={!!error}
-                value={displayEnd}
-                onChange={handleEndFieldChange}
-                minValue={minDate}
-                maxValue={maxDate}
-                shouldForceLeadingZeros
-                isDisabled={disabled}
-              >
-                <ReorderedSegments format={format} isRange />
-              </DateField>
-            </div>
-          </StyledDateField>
-        </I18nProvider>
+        <StyledDateFieldsScroller data-testid="stDateInputFieldsScroller">
+          <I18nProvider locale="en-US">
+            <StyledDateField $isRange data-range-field="start">
+              <div onPaste={handleStartPaste}>
+                <DateField
+                  aria-label={`${label} start date`}
+                  aria-describedby={error ? errorId : undefined}
+                  isInvalid={!!error}
+                  value={displayStart}
+                  onChange={handleStartFieldChange}
+                  minValue={minDate}
+                  maxValue={maxDate}
+                  shouldForceLeadingZeros
+                  isDisabled={disabled}
+                >
+                  <ReorderedSegments format={format} isRange />
+                </DateField>
+              </div>
+            </StyledDateField>
+            <StyledRangeSeparator aria-hidden="true">–</StyledRangeSeparator>
+            <StyledDateField $isRange data-range-field="end">
+              <div onPaste={handleEndPaste}>
+                <DateField
+                  aria-label={`${label} end date`}
+                  aria-describedby={error ? errorId : undefined}
+                  isInvalid={!!error}
+                  value={displayEnd}
+                  onChange={handleEndFieldChange}
+                  minValue={minDate}
+                  maxValue={maxDate}
+                  shouldForceLeadingZeros
+                  isDisabled={disabled}
+                >
+                  <ReorderedSegments format={format} isRange />
+                </DateField>
+              </div>
+            </StyledDateField>
+          </I18nProvider>
+        </StyledDateFieldsScroller>
         <StyledTrailingIcons>
           {error && (
             <StyledErrorIconContainer data-testid="stDateInputError">

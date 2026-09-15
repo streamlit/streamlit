@@ -217,6 +217,29 @@ describe("DateInput", () => {
     expect(day).toHaveTextContent("20")
   })
 
+  it.each([
+    { isRange: false, value: ["2020-01-10"] },
+    { isRange: true, value: ["2020-01-10", "2020-01-20"] },
+  ])("keeps trailing controls outside the $isRange field scroller", config => {
+    const props = getProps({
+      isRange: config.isRange,
+      default: [],
+      value: config.value,
+      setValue: true,
+    })
+    render(<DateInput {...props} />)
+
+    const field = screen.getByTestId("stDateInputField")
+    const scroller = screen.getByTestId("stDateInputFieldsScroller")
+    const clearButton = screen.getByTestId("stDateInputClearButton")
+
+    expect(field).toHaveStyle("overflow: hidden")
+    expect(scroller).toHaveStyle("overflow-x: auto")
+    expect(scroller.parentElement).toBe(field)
+    expect(clearButton.parentElement?.parentElement).toBe(field)
+    expect(scroller).not.toContainElement(clearButton)
+  })
+
   it("can be disabled", () => {
     const props = getProps()
     render(<DateInput {...props} disabled={true} />)
