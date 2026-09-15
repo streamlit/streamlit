@@ -320,3 +320,20 @@ from streamlit.starlette import App as App
 from streamlit import components as components
 import streamlit.components.v1  # noqa: F401
 import streamlit.components.v2  # noqa: F401
+
+# Runtime-only module ``__getattr__``. Hide it from type checkers so unknown
+# ``st.*`` names stay type errors. mypy only honors the unaliased
+# ``TYPE_CHECKING`` name here; an alias made unknown names type-check as
+# valid. Deleting it afterward keeps it off the public ``st`` surface.
+from typing import TYPE_CHECKING
+
+if not TYPE_CHECKING:
+
+    def __getattr__(name: str) -> object:
+        from streamlit.command_suggestions import raise_missing_streamlit_attribute
+
+        raise_missing_streamlit_attribute(name)
+
+
+# Drop TYPE_CHECKING so it is not a public ``st`` name.
+del TYPE_CHECKING
