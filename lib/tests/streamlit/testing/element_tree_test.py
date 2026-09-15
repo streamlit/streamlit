@@ -2190,6 +2190,126 @@ def test_form_key_and_get_by_key() -> None:
     assert form.key == "form-key"
 
 
+def test_form_values_apply_only_on_submit() -> None:
+    """Form widget values stay uncommitted until the submit button is clicked.
+
+    Regression for wiki queue P1.1 / finding F5. Staged ``.value`` before
+    ``.run()`` may still show the uncommitted input.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("name-form"):
+            name = st.text_input("Name")
+            flagged = st.checkbox("Flag")
+            st.form_submit_button("Submit")
+        st.text(f"submitted={name!r}|{flagged}")
+
+    at = AppTest.from_function(script).run()
+    assert at.text[0].value == "submitted=''|False"
+
+    at.text_input[0].set_value("Ada")
+    at.checkbox[0].check()
+    assert at.text_input[0].value == "Ada"
+    assert at.checkbox[0].value is True
+
+    at = at.run()
+    assert at.text[0].value == "submitted=''|False"
+    assert at.text_input[0].value == ""
+    assert at.checkbox[0].value is False
+
+    at.text_input[0].set_value("Ada")
+    at.checkbox[0].check()
+    at.button[0].click().run()
+    assert at.text[0].value == "submitted='Ada'|True"
+    assert at.text_input[0].value == "Ada"
+    assert at.checkbox[0].value is True
+
+
+def test_widgets_outside_form_still_apply_without_submit() -> None:
+    """Widgets outside a form commit on any rerun, even if a form is pending."""
+
+    def script() -> None:
+        import streamlit as st
+
+        outside = st.text_input("Outside")
+        with st.form("inside-form"):
+            inside = st.text_input("Inside")
+            st.form_submit_button("Go")
+        st.text(f"outside={outside!r}")
+        st.text(f"inside={inside!r}")
+
+    at = AppTest.from_function(script).run()
+    at.text_input[0].set_value("now")
+    at.text_input[1].set_value("later")
+    at.run()
+    assert at.text[0].value == "outside='now'"
+    assert at.text[1].value == "inside=''"
+
+
+def test_submitting_one_form_does_not_commit_another() -> None:
+    """Each form batches independently; submitting A must not apply B."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("form-a"):
+            a = st.text_input("A")
+            st.form_submit_button("Submit A")
+        with st.form("form-b"):
+            b = st.text_input("B")
+            st.form_submit_button("Submit B")
+        st.text(f"a={a!r}")
+        st.text(f"b={b!r}")
+
+    at = AppTest.from_function(script).run()
+    at.text_input[0].set_value("Ada")
+    at.text_input[1].set_value("Bob")
+    at.button[0].click().run()
+    assert at.text[0].value == "a='Ada'"
+    assert at.text[1].value == "b=''"
+
+
+def test_form_keeps_committed_value_on_unrelated_rerun() -> None:
+    """A non-form rerun keeps the last submitted form values."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("name-form"):
+            name = st.text_input("Name")
+            st.form_submit_button("Submit")
+        st.button("Outside")
+        st.text(f"submitted={name!r}")
+
+    at = AppTest.from_function(script).run()
+    at.text_input[0].set_value("Ada")
+    at.button[0].click().run()
+    at.button[1].click().run()
+    assert at.text[0].value == "submitted='Ada'"
+
+
+def test_form_clear_on_submit_sends_defaults_on_next_submit() -> None:
+    """clear_on_submit resets form widgets for the next submit, like the frontend."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("name-form", clear_on_submit=True):
+            name = st.text_input("Name")
+            st.form_submit_button("Submit")
+        st.text(f"submitted={name!r}")
+
+    at = AppTest.from_function(script).run()
+    at.text_input[0].set_value("Ada")
+    at.button[0].click().run()
+    assert at.text[0].value == "submitted='Ada'"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "submitted=''"
+
+
 def test_get_by_key_rejects_ambiguous_key() -> None:
     """A form ID can match a widget key, so get_by_key must reject the clash."""
 

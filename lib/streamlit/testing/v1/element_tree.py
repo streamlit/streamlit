@@ -2611,6 +2611,83 @@ class Tab(Block):
 Node: TypeAlias = Element | Block
 
 
+def _widget_form_id(node: Widget) -> str:
+    """Return the widget's form id, or ``""`` if it is not in a form."""
+    return getattr(node.proto, "form_id", "") or ""
+
+
+def _submitted_form_ids(tree: ElementTree) -> set[str]:
+    """Form ids whose submit button is triggered for this ``.run()``."""
+    submitted: set[str] = set()
+    for node in tree:
+        if isinstance(node, Button) and node._value:
+            form_id = _widget_form_id(node)
+            if form_id:
+                submitted.add(form_id)
+    return submitted
+
+
+def _form_clears_on_submit(tree: ElementTree, form_id: str) -> bool:
+    """Return True if the form block was created with ``clear_on_submit=True``."""
+    for node in tree:
+        if getattr(node, "type", None) != "form":
+            continue
+        proto = getattr(node, "proto", None)
+        form = getattr(proto, "form", None)
+        if form is not None and form.form_id == form_id:
+            return bool(form.clear_on_submit)
+    return False
+
+
+def _proto_default(proto: Any) -> Any:
+    """The widget proto's default value, or ``None`` when it is unset."""
+    fields = getattr(getattr(proto, "DESCRIPTOR", None), "fields_by_name", None)
+    if not fields or "default" not in fields:
+        return None
+    field = fields["default"]
+    if getattr(field, "has_presence", False) and not proto.HasField("default"):
+        return None
+    return proto.default
+
+
+def _has_pending_value(node: Widget) -> bool:
+    """Return True if the test staged a value on this widget since the last run."""
+    if isinstance(node, FileUploader):
+        return not isinstance(node._files, InitialValue)
+    value = node._value
+    if isinstance(value, InitialValue):
+        return False
+    return value is not None
+
+
+def _committed_serialize_sentinel(node: Widget) -> tuple[str, Any]:
+    """Attribute and unset sentinel so serialization uses the committed value.
+
+    Each widget class uses a different "not staged" marker: ``InitialValue``,
+    ``None``, or ``False`` for buttons.
+    """
+    if isinstance(node, FileUploader):
+        return ("_files", InitialValue())
+    if isinstance(node, Button):
+        return ("_value", False)
+    if isinstance(
+        node,
+        (
+            DateInput,
+            DateTimeInput,
+            Feedback,
+            NumberInput,
+            Radio,
+            Selectbox,
+            TextArea,
+            TextInput,
+            TimeInput,
+        ),
+    ):
+        return ("_value", InitialValue())
+    return ("_value", None)
+
+
 def get_widget_state(node: Node) -> WidgetState | None:
     if isinstance(node, Widget):
         return node._widget_state
@@ -2670,11 +2747,52 @@ class ElementTree(Block):
         return self._runner._session_state
 
     def get_widget_states(self) -> WidgetStates:
+        """Serialize widget values for the next script run.
+
+        Form widgets are included so a new ScriptRunner does not cull them, but
+        uncommitted ``set_value`` / ``click`` is ignored until that form's
+        submit button is triggered. After ``clear_on_submit``, the next submit
+        serializes proto defaults for widgets the test has not set again.
+        """
+        submitted = _submitted_form_ids(self)
+        runner = self._runner
+        cleared: set[str] = runner._cleared_form_ids if runner is not None else set()
+
         ws = WidgetStates()
         for node in self:
-            w = get_widget_state(node)
+            if not isinstance(node, Widget):
+                continue
+            form_id = _widget_form_id(node)
+
+            restore: tuple[str, Any] | None = None
+            if form_id and form_id not in submitted:
+                attr, sentinel = _committed_serialize_sentinel(node)
+                restore = (attr, getattr(node, attr))
+                setattr(node, attr, sentinel)
+            elif (
+                form_id
+                and form_id in cleared
+                and not isinstance(node, Button)
+                and not _has_pending_value(node)
+            ):
+                if isinstance(node, FileUploader):
+                    restore = ("_files", node._files)
+                    node._files = None
+                else:
+                    restore = ("_value", node._value)
+                    node._value = _proto_default(node.proto)
+            try:
+                w = get_widget_state(node)
+            finally:
+                if restore is not None:
+                    setattr(node, restore[0], restore[1])
             if w is not None:
                 ws.widgets.append(w)
+
+        if runner is not None:
+            for form_id in submitted:
+                if _form_clears_on_submit(self, form_id):
+                    runner._cleared_form_ids.add(form_id)
 
         return ws
 
