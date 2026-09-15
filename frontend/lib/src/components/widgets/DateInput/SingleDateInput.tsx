@@ -177,6 +177,10 @@ function SingleDateInput({
     setDisplayValue(value)
   }
 
+  // React Aria keeps incomplete segment text internally, so form clear must
+  // remount the field even when the controlled value was already null.
+  const shouldRestoreFocusRef = useRef(false)
+
   // Form clear: displayValue may have diverged (uncommitted typing) while
   // the widget state stayed at default. The value prop won't change in that
   // case, so watch the resetKey separately.
@@ -184,6 +188,9 @@ function SingleDateInput({
   if (prevResetKey !== formResetKey) {
     setPrevResetKey(formResetKey)
     setDisplayValue(value)
+    shouldRestoreFocusRef.current = !!triggerRef.current?.contains(
+      document.activeElement
+    )
   }
 
   // Ref so the close-detection effect always reads the latest displayValue
@@ -241,6 +248,16 @@ function SingleDateInput({
     }
     wasOpenRef.current = isOpen
   }, [isOpen, value, clearable])
+
+  // Preserve focus when form clear remounts the field to reset React Aria's
+  // internal segment state.
+  useEffect(() => {
+    if (!shouldRestoreFocusRef.current) return
+    shouldRestoreFocusRef.current = false
+    isRestoringFocusRef.current = true
+    triggerRef.current?.querySelector<HTMLElement>("[data-type]")?.focus()
+    isRestoringFocusRef.current = false
+  }, [formResetKey])
 
   // When entering active mode, move focus to the focused calendar cell.
   useEffect(() => {
@@ -564,6 +581,7 @@ function SingleDateInput({
         <I18nProvider locale="en-US">
           <StyledDateField>
             <DateField
+              key={formResetKey}
               aria-label={label}
               aria-describedby={error ? errorId : undefined}
               isInvalid={!!error}

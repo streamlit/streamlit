@@ -493,14 +493,47 @@ describe("DateInput", () => {
     })
 
     // Our widget should be reset, and the widgetMgr should be updated
-    expect(year).toHaveTextContent(originalDateWire.split("-")[0])
-    expect(month).toHaveTextContent(originalDateWire.split("-")[1])
-    expect(day).toHaveTextContent(originalDateWire.split("-")[2])
+    const resetSegments = getSingleDateSegments(region)
+    expect(resetSegments.year).toHaveTextContent(
+      originalDateWire.split("-")[0]
+    )
+    expect(resetSegments.month).toHaveTextContent(
+      originalDateWire.split("-")[1]
+    )
+    expect(resetSegments.day).toHaveTextContent(originalDateWire.split("-")[2])
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
       props.element.id,
       [originalDateWire],
       { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
+  })
+
+  it("clears incomplete segments and preserves focus when form is cleared", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      formId: "form",
+      default: [],
+    })
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
+
+    render(<DateInput {...props} />)
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getSingleDateSegments(region)
+
+    await typeIntoSegment(user, year, "2020")
+    expect(year).toHaveTextContent("2020")
+    expect(getSingleDateSegments(region).month).toHaveFocus()
+
+    act(() => {
+      props.widgetMgr.submitForm("form", undefined)
+    })
+
+    const resetSegments = getSingleDateSegments(region)
+    expect(resetSegments.year).toHaveTextContent("yyyy")
+    expect(resetSegments.month).toHaveTextContent("mm")
+    expect(resetSegments.day).toHaveTextContent("dd")
+    expect(resetSegments.month).not.toHaveFocus()
+    expect(resetSegments.year).toHaveFocus()
   })
 
   it("clears validation error state when form is cleared", async () => {
@@ -534,9 +567,10 @@ describe("DateInput", () => {
         screen.queryByTestId("stTooltipErrorHoverTarget")
       ).not.toBeInTheDocument()
     })
-    expect(year).toHaveTextContent("2026")
-    expect(month).toHaveTextContent("01")
-    expect(day).toHaveTextContent("15")
+    const resetSegments = getSingleDateSegments(region)
+    expect(resetSegments.year).toHaveTextContent("2026")
+    expect(resetSegments.month).toHaveTextContent("01")
+    expect(resetSegments.day).toHaveTextContent("15")
   })
 
   it("commits pending value on blur when inside a form (form-submit race fix)", async () => {
