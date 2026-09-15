@@ -121,8 +121,8 @@ export type ColumnCreator = {
 }
 
 // See pydantic for inspiration: https://pydantic-docs.helpmanual.io/usage/types/#booleans
-const BOOLEAN_TRUE_VALUES = ["true", "t", "yes", "y", "on", "1"]
-const BOOLEAN_FALSE_VALUES = ["false", "f", "no", "n", "off", "0"]
+const BOOLEAN_TRUE_VALUES = new Set(["true", "t", "yes", "y", "on", "1"])
+const BOOLEAN_FALSE_VALUES = new Set(["false", "f", "no", "n", "off", "0"])
 
 /**
  * Interface used for indicating if a cell contains an error.
@@ -457,9 +457,9 @@ export function toSafeBoolean(value: unknown): boolean | null | undefined {
   const cleanedValue = toSafeString(value).toLowerCase().trim()
   if (cleanedValue === "") {
     return null
-  } else if (BOOLEAN_TRUE_VALUES.includes(cleanedValue)) {
+  } else if (BOOLEAN_TRUE_VALUES.has(cleanedValue)) {
     return true
-  } else if (BOOLEAN_FALSE_VALUES.includes(cleanedValue)) {
+  } else if (BOOLEAN_FALSE_VALUES.has(cleanedValue)) {
     return false
   }
   // The value cannot be interpreted as boolean
@@ -483,7 +483,7 @@ export function toSafeNumber(value: unknown): number | null {
   }
 
   if (Array.isArray(value)) {
-    return NaN
+    return Number.NaN
   }
 
   if (typeof value === "string") {
@@ -578,7 +578,7 @@ export function toSafeDate(value: unknown): Date | null | undefined {
 
   // Return the value as-is if it is already a date
   if (value instanceof Date) {
-    if (!isNaN(value.getTime())) {
+    if (!Number.isNaN(value.getTime())) {
       return value
     }
     return undefined
@@ -591,7 +591,7 @@ export function toSafeDate(value: unknown): Date | null | undefined {
 
   try {
     const parsedTimestamp = Number(value)
-    if (!isNaN(parsedTimestamp)) {
+    if (!Number.isNaN(parsedTimestamp)) {
       // Unix timestamps can be have different units.
       // As default, we handle the unit as second, but
       // if it larger than a certain threshold, we assume

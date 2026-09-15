@@ -247,8 +247,8 @@ export interface BlockPropsWithoutWidth extends BaseBlockProps {
   node: BlockNode
 }
 
-const LARGE_STRETCH_BEHAVIOR = ["tabContainer"]
-const MEDIUM_STRETCH_BEHAVIOR = ["chatInput"]
+const LARGE_STRETCH_BEHAVIOR = new Set(["tabContainer"])
+const MEDIUM_STRETCH_BEHAVIOR = new Set(["chatInput"])
 
 export const BlockNodeRenderer = (
   props: BlockPropsWithoutWidth
@@ -259,9 +259,9 @@ export const BlockNodeRenderer = (
   const flexContext = useContext(FlexContext)
 
   let minStretchBehavior: MinFlexElementWidth
-  if (LARGE_STRETCH_BEHAVIOR.includes(node.deltaBlock.type ?? "")) {
+  if (LARGE_STRETCH_BEHAVIOR.has(node.deltaBlock.type ?? "")) {
     minStretchBehavior = "14rem"
-  } else if (MEDIUM_STRETCH_BEHAVIOR.includes(node.deltaBlock.type ?? "")) {
+  } else if (MEDIUM_STRETCH_BEHAVIOR.has(node.deltaBlock.type ?? "")) {
     minStretchBehavior = "8rem"
   } else if (node.deltaBlock.type === "chatMessage") {
     if (node.isEmpty) {

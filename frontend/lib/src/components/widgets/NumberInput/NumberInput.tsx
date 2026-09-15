@@ -342,11 +342,11 @@ const NumberInput: React.FC<Props> = ({
       return null
     }
     if (element.dataType === NumberInputProto.DataType.INT) {
-      const parsed = parseInt(formattedValue, 10)
-      return isNaN(parsed) ? null : parsed
+      const parsed = Number.parseInt(formattedValue, 10)
+      return Number.isNaN(parsed) ? null : parsed
     }
-    const parsed = parseFloat(formattedValue)
-    return isNaN(parsed) ? null : parsed
+    const parsed = Number.parseFloat(formattedValue)
+    return Number.isNaN(parsed) ? null : parsed
   }, [formattedValue, element.dataType])
 
   // Calculate button enabled states based on the currently displayed value, not the committed value

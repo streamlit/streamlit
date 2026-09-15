@@ -181,11 +181,11 @@ function Video({
   const getYoutubeSrc = (urlArg: string): string => {
     const youtubeUrl = new URL(urlArg)
 
-    if (startTime && !isNaN(startTime)) {
+    if (startTime && !Number.isNaN(startTime)) {
       youtubeUrl.searchParams.append("start", startTime.toString())
     }
 
-    if (endTime && !isNaN(endTime)) {
+    if (endTime && !Number.isNaN(endTime)) {
       youtubeUrl.searchParams.append("end", endTime.toString())
     }
 

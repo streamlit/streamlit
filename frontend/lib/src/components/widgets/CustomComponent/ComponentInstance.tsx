@@ -232,7 +232,9 @@ function ComponentInstance(props: Props): ReactElement {
   // was specified, but will be set to the default height of 0.
   const [frameHeight, setFrameHeight] = useState<number | undefined>(() => {
     const height = parsedNewArgs.height as number | undefined
-    return height === undefined || isNaN(height) ? undefined : height
+    return typeof height !== "number" || Number.isNaN(height)
+      ? undefined
+      : height
   })
 
   // Use a ref for the ready-state so that we can differentiate between sending renderMessages due to props-changes

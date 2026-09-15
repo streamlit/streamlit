@@ -92,10 +92,10 @@ export type UseLayoutStylesArgs = {
 }
 
 const isPositiveNumber = (value: unknown): value is number =>
-  typeof value === "number" && value >= 0 && !isNaN(value)
+  typeof value === "number" && value >= 0 && !Number.isNaN(value)
 
 const isNonZeroPositiveNumber = (value: unknown): value is number =>
-  typeof value === "number" && value > 0 && !isNaN(value)
+  typeof value === "number" && value > 0 && !Number.isNaN(value)
 
 enum DimensionType {
   PIXEL = "pixel",

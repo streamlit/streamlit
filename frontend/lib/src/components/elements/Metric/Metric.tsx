@@ -151,7 +151,7 @@ export function getMetricChartSpec(
           }),
           ...(chartType === MetricProto.ChartType.BAR && {
             type: "bar",
-            cornerRadius: parseFloat(theme.radii.full),
+            cornerRadius: Number.parseFloat(theme.radii.full),
           }),
           ...(chartType === MetricProto.ChartType.AREA && {
             type: "area",
