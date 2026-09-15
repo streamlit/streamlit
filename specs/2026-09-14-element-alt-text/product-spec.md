@@ -16,7 +16,9 @@ Four of the 19 have a partial mechanism today, none of it a parameter: `st.merma
 honors `accTitle` / `accDescr` directives written into the diagram source, `st.altair_chart` /
 `st.vega_lite_chart` surface a `description` set inside the Vega spec, and `st.echarts_chart` is a
 case of its own — ECharts *generates* an `aria-label` from the data whenever `aria.enabled` is on,
-which is its default, so those charts already have an automatic name. The other 15 have nothing.
+which is its default, so those charts already have an automatic name. None of the four is a
+parameter, and none is discoverable from a command signature — see [Commands in
+scope](#commands-in-scope) for what each command exposes today.
 
 ```python
 st.image("q3-revenue.png", alt="Bar chart showing Q3 revenue up 15% year over year")
@@ -59,7 +61,7 @@ Three smaller choices are made inline rather than listed:
 - `alt` overwrites an author's Vega-spec `description` when both are set
 - A list on `st.image` needs exactly one entry per image, matching `caption` — see [API](#api). It sits
   here rather than above because it is the reversible one: relaxing strict to lenient later would not
-  break existing calls, where tightening would
+  break existing calls, where tightening lenient to strict would break them
 - `alt` takes plain text rather than markdown, the one deliberate exception to how markdown is handled
   elsewhere
 
@@ -277,7 +279,9 @@ relaxing to it later would not break existing calls.
 
 `None` and `""` mean different things here, so they have to stay distinguishable all the way to the
 DOM. A plain proto3 `string` cannot carry that difference — unset and empty are the same on the wire —
-so every route needs a presence-preserving field (`optional string alt`), including mermaid's, and
+so wherever `alt` travels in a proto it needs a presence-preserving field (`optional string alt`) —
+and mermaid, which has no proto of its own, needs whatever route phase 4 picks to preserve the same
+distinction. Both cases want a test rather than each phase inventing its own sentinel, and
 both cases want a test rather than each phase inventing its own sentinel.
 
 One failure no validation can catch: a list of the right length in the wrong order mislabels every
@@ -312,7 +316,8 @@ nominal — it reads the same everywhere and behaves the same nowhere, because t
 empty. Worth an explicit call rather than an inline note because reversing it after release would
 break apps relying on either reading.
 
-Whitespace-only is checked before stripping and never counts as decorative under either option:
+Whitespace-only is never decorative under either option. The check runs before stripping, so
+`alt=" "` cannot become `alt=""`:
 `alt=" "` is almost always a mistake — an empty f-string, a stripped variable — and asserting "not
 intended for the user" on it is precisely the undetectable failure this spec rejects elsewhere.
 
@@ -326,7 +331,7 @@ intended for the user" on it is precisely the undetectable failure this spec rej
 | `st.audio`, `st.video` | No accessible name. YouTube embeds fall back to the raw URL as the iframe `title` | An accessible label on the player, and the frame title for YouTube embeds — which `alt` replaces only when set, since an iframe must have a title |
 | `st.line_chart`, `st.bar_chart`, `st.area_chart`, `st.scatter_chart` | Per-datapoint labels from Vega, but no chart-level name and no way to set one — these commands build the spec themselves | Vega's own chart-description field |
 | `st.altair_chart`, `st.vega_lite_chart` | Same, except an author who hand-writes `description` into the spec does get a chart-level name | Same. Where the author already set `description`, `alt` wins as the documented parameter, and Streamlit logs the override |
-| `st.echarts_chart` | The only command that names itself by default: ECharts sets `role="img"` and generates an `aria-label` from the data whenever `aria.enabled` is on, which Streamlit's own defaults pass injects when the author's option dict omits it. The generated label is conditional — an empty series can yield `role="img"` with no label, which Streamlit then strips — and an author can already write `aria.label.description` into the option dict, the same escape hatch Vega's `description` offers | ECharts' `aria.label.description`. `alt` overrides both the generated label and an author-set one, and Streamlit logs the override |
+| `st.echarts_chart` | The only command that names itself by default: ECharts sets `role="img"` and generates an `aria-label` from the data whenever `aria.enabled` is on, which Streamlit injects when the author's option dict omits it. The generated label is conditional — an empty series can yield `role="img"` with no label, which Streamlit then strips — and an author can already write `aria.label.description` into the option dict, the same escape hatch Vega's `description` offers | ECharts' `aria.label.description`. `alt` overrides both the generated label and an author-set one, and Streamlit logs the override |
 | `st.plotly_chart`, `st.graphviz_chart` | Nothing — an unlabeled region | An accessible label on the chart |
 | `st.map`, `st.pydeck_chart` | Nothing, and no text alternative of any kind behind the canvas | An accessible label on the map |
 | `st.dataframe`, `st.data_editor` | Cells are navigable, but nothing says what the data _is_ | An accessible label on the grid |
@@ -355,8 +360,10 @@ incidentally: `ImageList.tsx` sets the anchor's `aria-label` to `undefined` ther
 `<img alt="0">` names the control instead, while a non-blocked link still falls back to the URL.
 Dropping the index `alt` therefore leaves **the blocked-link case shipping a focusable `href` with no
 accessible name — an SC 4.1.2 regression** unless the anchor gets a non-empty name of its own or
-stops being focusable. That is the one place the index removal is not purely a
-fix, and it needs settling in phase 0 rather than phase 6.
+stops being focusable. **Recommend the latter:** the blocked anchor already calls `preventDefault`,
+so it does nothing when activated, and making it non-focusable with no `aria-label` is the smaller
+change and needs no new user-facing string. Settling it here is what keeps phase 0 free of a product
+call.
 
 ### What an image gets with no `alt`
 
@@ -457,8 +464,9 @@ rather than an improvement there; and remember that
 ### Conformance scope
 
 `alt` **enables** authors to meet **SC 1.1.1 Non-text Content** (Level A) for images, charts, maps
-and diagrams, and **SC 4.1.2 Name, Role, Value** (Level A) for the interactive case,
-`st.data_editor`. It does not close either on its own: 1.1.1 requires the text to serve the
+and diagrams, and **SC 4.1.2 Name, Role, Value** (Level A) for the interactive cases —
+`st.data_editor`, and `st.dataframe`, `st.plotly_chart`, `st.pydeck_chart` and the Vega charts
+whenever `on_select` makes them widgets. It does not close either on its own: 1.1.1 requires the text to serve the
 visual's equivalent purpose, so a complex chart or map may still need a longer description or the
 underlying data. Shipping the parameter removes the blocker; whether a given app conforms depends
 on what its author writes.
@@ -500,7 +508,9 @@ risk and most of the user-visible value**, which is the argument for splitting p
 
 Two constraints carry across every phase. **Setting or changing `alt` must never reset state a user
 has built up**, so `alt` never participates in element identity — it is not an identity kwarg, and it
-is never written into a chart spec that is hashed into one. And **an author's `alt` names an ECharts
+is never written into a chart spec that is hashed into one. For the Vega commands that means
+carrying `alt` as its own proto field and applying it to the view after the element ID is computed,
+rather than writing it into the spec JSON that gets hashed. And **an author's `alt` names an ECharts
 chart even when the option dict sets `aria: {enabled: false}`**, the same precedence by which `alt`
 beats a Vega `description`; that option requests silence only when `alt` is omitted. Both are
 sign-off gates on the implementation PRs rather than blockers for agreeing the direction here.
@@ -551,7 +561,9 @@ unlikely to be covered at all.
 - **Images Streamlit renders that authors cannot reach** — `st.column_config.ImageColumn`,
   `st.chat_message(avatar=…)`, camera input, uploaded-file thumbnails. Author-supplied
   content rendered by our chrome, so #12873 does not cover it either
-- **`st.iframe(title=…)`** — HTML uses `title`; already in the iframe spec
+- **Naming `st.iframe`** — an iframe's name is its `title` attribute, which `IFrame.tsx` currently
+  hardcodes to `"st.iframe"` with no author-facing parameter. The iframe spec already tracks that as
+  its own future work, so it stays there rather than being absorbed here
 - **`st.pdf` / `st.html` / custom components** — authors control the inner content
 - **Decorative chrome** — [#12873](https://github.com/streamlit/streamlit/issues/12873)
 - **A fully accessible dataframe canvas, and map viewport announcements** — separate and
