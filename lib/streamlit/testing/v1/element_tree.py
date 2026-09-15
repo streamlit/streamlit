@@ -935,7 +935,7 @@ class Metric(Element):
 class ButtonGroup(Widget, Generic[T]):
     """A representation of ``st.pills`` and ``st.segmented_control``."""
 
-    _value: T | list[T] | None
+    _value: T | list[T] | InitialValue | None
 
     proto: ButtonGroupProto = field(repr=False)
     options: list[str]
@@ -943,6 +943,7 @@ class ButtonGroup(Widget, Generic[T]):
 
     def __init__(self, proto: ButtonGroupProto, root: ElementTree) -> None:
         super().__init__(proto, root)
+        self._value = InitialValue()
         self.type = "button_group"
         # Store formatted content strings for value serialization
         self.options = [opt.content for opt in proto.options]
@@ -970,7 +971,7 @@ class ButtonGroup(Widget, Generic[T]):
         For single-select mode, returns a single value (or None if nothing selected).
         For multi-select mode, returns a list of values.
         """
-        if self._value is not None:
+        if not isinstance(self._value, InitialValue):
             return self._value
         state = self.root.session_state
         assert state
@@ -2679,6 +2680,7 @@ def _unset_value_marker(node: Widget) -> tuple[str, Any]:
             TextArea,
             TextInput,
             TimeInput,
+            ButtonGroup,
         ),
     ):
         return ("_value", InitialValue())
@@ -2705,7 +2707,12 @@ def _use_form_clear_defaults(
     cleared: set[str],
     form_clears: dict[str, bool],
 ) -> bool:
-    """Return True if this widget should serialize its form's proto default."""
+    """Return True if this widget should serialize its form's proto default.
+
+    Gating on the form's *current* ``clear_on_submit`` is an AppTest
+    approximation: the frontend stages cleared defaults into the form's pending
+    widget states even if the next render sets ``clear_on_submit=False``.
+    """
     form_id = _widget_form_id(node)
     return bool(
         form_id
@@ -2844,7 +2851,11 @@ class ElementTree(Block):
         # dict-like wrapper testers use.
         return self._runner._session_state
 
-    def get_widget_states(self) -> WidgetStates:
+    def get_widget_states(
+        self,
+        submitted: set[str] | None = None,
+        form_clears: dict[str, bool] | None = None,
+    ) -> WidgetStates:
         """Serialize widget values for the next script run.
 
         Form widgets are included so a new ScriptRunner does not cull them, but
@@ -2852,8 +2863,8 @@ class ElementTree(Block):
         submit button is triggered. After ``clear_on_submit``, the next submit
         serializes proto defaults for widgets the test has not set again.
         """
-        submitted = _submitted_form_ids(self)
-        form_clears = _form_clear_flags(self)
+        submitted = _submitted_form_ids(self) if submitted is None else submitted
+        form_clears = _form_clear_flags(self) if form_clears is None else form_clears
         runner = self._runner
         cleared: set[str] = runner._cleared_form_ids if runner is not None else set()
 
@@ -2900,7 +2911,9 @@ class ElementTree(Block):
 
         submitted = _submitted_form_ids(self)
         form_clears = _form_clear_flags(self)
-        widget_states = self.get_widget_states()
+        widget_states = self.get_widget_states(
+            submitted=submitted, form_clears=form_clears
+        )
         result = self._runner._run(widget_states, timeout=timeout)
         _record_submitted_form_clears(self._runner, submitted, form_clears)
         return result

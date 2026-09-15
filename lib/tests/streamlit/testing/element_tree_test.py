@@ -2371,12 +2371,12 @@ def test_form_clear_on_submit_follows_current_form_config() -> None:
         st.text(f"submitted={name!r}")
 
     at = AppTest.from_function(script).run()
-    at.checkbox[0].check()
+    at.checkbox[0].check().run()
     at.text_input[0].set_value("Ada")
     at.button[0].click().run()
     assert at.text[0].value == "submitted='Ada'"
 
-    at.checkbox[0].uncheck()
+    at.checkbox[0].uncheck().run()
     at.button[0].click().run()
     assert at.text[0].value == "submitted='Ada'"
 
@@ -2445,6 +2445,27 @@ def test_form_clear_on_submit_pills_default_none() -> None:
     at.button[0].click().run()
     assert at.text[0].value == "choice='a'"
 
+    at.button[0].click().run()
+    assert at.text[0].value == "choice=None"
+
+
+def test_form_clear_on_submit_pills_keeps_explicit_none() -> None:
+    """set_value(None) after a clearing submit must not fall back to the pills default."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("choice-form", clear_on_submit=True):
+            choice = st.pills("Choice", ["a", "b"], default="a")
+            st.form_submit_button("Submit")
+        st.text(f"choice={choice!r}")
+
+    at = AppTest.from_function(script).run()
+    at.pills[0].select("b")
+    at.button[0].click().run()
+    assert at.text[0].value == "choice='b'"
+
+    at.pills[0].set_value(None)
     at.button[0].click().run()
     assert at.text[0].value == "choice=None"
 
