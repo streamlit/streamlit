@@ -408,8 +408,10 @@ def test_embedded_app_with_bottom_chat_input(
 
     # There shouldn't be an iframe resizer anchor:
     expect(themed_app.get_by_test_id("stAppIframeResizerAnchor")).to_be_hidden()
-    # The scroll container should be switched to scroll to bottom:
-    expect(themed_app.get_by_test_id("stAppScrollToBottomContainer")).to_be_attached()
+    # A chat input without chat messages should not activate scroll-to-bottom:
+    expect(
+        themed_app.get_by_test_id("stAppScrollToBottomContainer")
+    ).not_to_be_attached()
 
     assert_snapshot(
         themed_app.get_by_test_id("stAppViewContainer"),
@@ -436,8 +438,10 @@ def test_app_with_bottom_chat_input(
 
     # There shouldn't be an iframe resizer anchor:
     expect(themed_app.get_by_test_id("stAppIframeResizerAnchor")).to_be_hidden()
-    # The scroll container should be switched to scroll to bottom:
-    expect(themed_app.get_by_test_id("stAppScrollToBottomContainer")).to_be_attached()
+    # A chat input without chat messages should not activate scroll-to-bottom:
+    expect(
+        themed_app.get_by_test_id("stAppScrollToBottomContainer")
+    ).not_to_be_attached()
 
     assert_snapshot(
         themed_app.get_by_test_id("stBottom"), name="st_chat_input-app_bottom"

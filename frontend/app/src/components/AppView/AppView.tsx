@@ -103,6 +103,21 @@ function containsChatInput(node: AppNode): boolean {
   return false
 }
 
+function containsChatMessage(node: AppNode): boolean {
+  if (node instanceof BlockNode) {
+    return (
+      node.deltaBlock.type === "chatMessage" ||
+      node.children.some(containsChatMessage)
+    )
+  }
+
+  if (node instanceof TransientNode) {
+    return node.anchor ? containsChatMessage(node.anchor) : false
+  }
+
+  return false
+}
+
 export interface AppViewProps {
   elements: AppRoot
 
@@ -265,12 +280,15 @@ function AppView(props: AppViewProps): ReactElement {
     removeScriptFinishedHandler,
   ])
 
-  // Activate scroll to bottom only when there's a chat input in the bottom container:
-  const hasBottomChatInput = useMemo(
-    () => hasBottomElements && containsChatInput(elements.bottom),
-    [hasBottomElements, elements.bottom]
+  // Preserve the initial position of non-chat pages that use a bottom chat input.
+  const shouldScrollToBottom = useMemo(
+    () =>
+      hasBottomElements &&
+      containsChatInput(elements.bottom) &&
+      containsChatMessage(elements.main),
+    [hasBottomElements, elements.bottom, elements.main]
   )
-  const Component = hasBottomChatInput
+  const Component = shouldScrollToBottom
     ? ScrollToBottomContainer
     : StyledAppViewMain
 
