@@ -33,8 +33,11 @@ from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.element_tree import (
     AppTestError,
     UnknownElement,
+    _form_clear_flags,
     _format_value_for_widget,
     _has_pending_value,
+    _submitted_form_ids,
+    _use_form_clear_defaults,
     parse_tree_from_messages,
 )
 from streamlit.typing import ChatInputValue
@@ -2034,6 +2037,24 @@ def test_button_group_multi_select_and_unselect_edge_cases():
     assert at.pills[0].value == ["X"]
 
 
+def test_button_group_multi_set_value_none():
+    """Multi-select pills treat set_value(None) as an empty selection, not a crash."""
+
+    def script():
+        import streamlit as st
+
+        choice = st.pills(
+            "p", options=["a", "b"], selection_mode="multi", default=["a"]
+        )
+        st.text(repr(choice))
+
+    at = AppTest.from_function(script).run()
+    assert at.pills[0].value == ["a"]
+    at.pills[0].set_value(None).run()
+    assert at.pills[0].value == []
+    assert at.text[0].value == "[]"
+
+
 def test_button_group_single_unselect():
     """ButtonGroup (single) clears the value only when it matches."""
 
@@ -2332,7 +2353,15 @@ def test_form_clear_on_submit_selectbox_uses_option_default() -> None:
 
 
 def test_form_clear_on_submit_keeps_explicit_none() -> None:
-    """set_value(None) after a clearing submit is a real value, not 'untouched'."""
+    """select_index(None) after a clearing submit is pending, not 'untouched'.
+
+    A selectbox with ``index=0`` snaps ``None`` back to the first option on
+    run, so the script cannot observe the staged clear. Pin that the value
+    is pending (so the cleared-default path is skipped) and that
+    ``get_widget_states()`` does not consume the clear flag. Widgets that
+    allow ``None`` cover the observable case in
+    ``test_form_clear_on_submit_pills_keeps_explicit_none``.
+    """
 
     def script() -> None:
         import streamlit as st
@@ -2351,11 +2380,12 @@ def test_form_clear_on_submit_keeps_explicit_none() -> None:
     at.selectbox[0].select_index(None)
     at.button[0].click()
     assert _has_pending_value(at.selectbox[0])
-
-    select_state = next(
-        w for w in at._tree.get_widget_states().widgets if w.id == at.selectbox[0].id
+    assert not _use_form_clear_defaults(
+        at.selectbox[0],
+        submitted=_submitted_form_ids(at._tree),
+        cleared=at._cleared_form_ids,
+        form_clears=_form_clear_flags(at._tree),
     )
-    assert select_state.string_value != "a"
 
 
 def test_form_clear_on_submit_follows_current_form_config() -> None:

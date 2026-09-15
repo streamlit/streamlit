@@ -987,12 +987,10 @@ class ButtonGroup(Widget, Generic[T]):
         """The formatted string values for the current selection."""
         format_func = self.format_func
         value = self.value
+        if value is None:
+            return []
         if self._is_single_select:
-            # Single-select: value is a single item or None
-            if value is None:
-                return []
             return [_format_value_for_widget(format_func, value)]
-        # Multi-select: value is a list
         return [
             _format_value_for_widget(format_func, v) for v in cast("list[T]", value)
         ]
@@ -1019,8 +1017,7 @@ class ButtonGroup(Widget, Generic[T]):
         """
         if self._is_single_select:
             return self.set_value(v)
-        # Multi-select: add to list
-        current = cast("list[T]", self.value)
+        current = list(cast("list[T]", self.value) or [])
         if v in current:
             return self
         new = current.copy()
@@ -1037,8 +1034,7 @@ class ButtonGroup(Widget, Generic[T]):
             if self.value == v:
                 return self.set_value(None)
             return self
-        # Multi-select: remove from list
-        current = cast("list[T]", self.value)
+        current = list(cast("list[T]", self.value) or [])
         if v not in current:
             return self
         new = current.copy()
@@ -2641,23 +2637,6 @@ def _form_clear_flags(tree: ElementTree) -> dict[str, bool]:
     return flags
 
 
-def _has_proto_field(proto: Any, name: str) -> bool:
-    """Return True if ``proto`` has ``name`` set (or the field has no presence)."""
-    fields = getattr(getattr(proto, "DESCRIPTOR", None), "fields_by_name", None)
-    if not fields or name not in fields:
-        return False
-    field = fields[name]
-    if getattr(field, "has_presence", False):
-        return bool(proto.HasField(name))
-    return True
-
-
-def _options_at(node: Any, indexes: Sequence[int]) -> list[Any]:
-    """Return ``node.options`` entries for in-range indexes."""
-    options = getattr(node, "options", [])
-    return [options[i] for i in indexes if 0 <= i < len(options)]
-
-
 def _unset_value_marker(node: Widget) -> tuple[str, Any]:
     """Attribute name and unset marker so serialization uses the committed value.
 
@@ -2736,60 +2715,13 @@ def _record_submitted_form_clears(
 
 
 def _cleared_widget_state(node: Widget) -> WidgetState:
-    """``WidgetState`` for a ``clear_on_submit`` default, in frontend wire format.
+    """``WidgetState`` that deserializes to the widget's declared default.
 
-    ``node.options`` is already formatted, so this does not run ``format_func``.
-    Building the proto directly also avoids ``_value is None`` falling through
-    to session state for pills / sliders whose unset marker is ``None``.
+    An unset value oneof makes ``session_state`` call ``deserializer(None)``,
+    which is the canonical default path and does not re-run ``format_func``.
     """
     ws = WidgetState()
     ws.id = node.id
-    proto = node.proto
-    if isinstance(node, FileUploader):
-        return ws
-    if isinstance(node, (Checkbox, Toggle)):
-        ws.bool_value = bool(proto.default)
-        return ws
-    if isinstance(node, (ColorPicker, TextArea, TextInput)):
-        if _has_proto_field(proto, "default"):
-            ws.string_value = proto.default
-        return ws
-    if isinstance(node, NumberInput):
-        if _has_proto_field(proto, "default"):
-            ws.double_value = proto.default
-        return ws
-    if isinstance(node, (Radio, Selectbox)):
-        if _has_proto_field(proto, "default"):
-            selected = _options_at(node, [proto.default])
-            if selected:
-                ws.string_value = selected[0]
-        return ws
-    if isinstance(node, (ButtonGroup, Multiselect)):
-        ws.string_array_value.data[:] = _options_at(node, list(proto.default))
-        return ws
-    if isinstance(node, Feedback):
-        ws.string_value = (
-            str(proto.default) if _has_proto_field(proto, "default") else ""
-        )
-        return ws
-    if isinstance(node, DateInput):
-        ws.string_array_value.data[:] = list(proto.default)
-        return ws
-    if isinstance(node, TimeInput):
-        if _has_proto_field(proto, "default") and proto.default:
-            ws.string_value = proto.default
-        return ws
-    if isinstance(node, DateTimeInput):
-        ws.string_array_value.data[:] = list(proto.default)
-        return ws
-    if isinstance(node, Slider):
-        ws.double_array_value.data[:] = list(proto.default)
-        return ws
-    if isinstance(node, SelectSlider):
-        ws.string_array_value.data[:] = _options_at(
-            node, [int(i) for i in proto.default]
-        )
-        return ws
     return ws
 
 
@@ -2851,11 +2783,7 @@ class ElementTree(Block):
         # dict-like wrapper testers use.
         return self._runner._session_state
 
-    def get_widget_states(
-        self,
-        submitted: set[str] | None = None,
-        form_clears: dict[str, bool] | None = None,
-    ) -> WidgetStates:
+    def get_widget_states(self) -> WidgetStates:
         """Serialize widget values for the next script run.
 
         Form widgets are included so a new ScriptRunner does not cull them, but
@@ -2863,8 +2791,8 @@ class ElementTree(Block):
         submit button is triggered. After ``clear_on_submit``, the next submit
         serializes proto defaults for widgets the test has not set again.
         """
-        submitted = _submitted_form_ids(self) if submitted is None else submitted
-        form_clears = _form_clear_flags(self) if form_clears is None else form_clears
+        submitted = _submitted_form_ids(self)
+        form_clears = _form_clear_flags(self)
         runner = self._runner
         cleared: set[str] = runner._cleared_form_ids if runner is not None else set()
 
@@ -2911,9 +2839,7 @@ class ElementTree(Block):
 
         submitted = _submitted_form_ids(self)
         form_clears = _form_clear_flags(self)
-        widget_states = self.get_widget_states(
-            submitted=submitted, form_clears=form_clears
-        )
+        widget_states = self.get_widget_states()
         result = self._runner._run(widget_states, timeout=timeout)
         _record_submitted_form_clears(self._runner, submitted, form_clears)
         return result

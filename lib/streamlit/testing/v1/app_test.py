@@ -544,7 +544,8 @@ class AppTest:
             form_id = _widget_form_id(widget)
             saved_files = widget._files
             if form_id and form_id not in submitted:
-                # Unsubmitted form uploads stay local until submit.
+                # Re-register only the files committed by the last submit;
+                # newly staged uploads wait for this form's submit button.
                 widget._files = InitialValue()
             elif _use_form_clear_defaults(
                 widget,
