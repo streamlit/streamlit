@@ -265,11 +265,16 @@ function RangeDateInput({
 
   // Sync from parent when values change externally
   const [prevStart, setPrevStart] = useState(startValue)
+  const [prevEnd, setPrevEnd] = useState(endValue)
+  if (prevStart !== startValue || prevEnd !== endValue) {
+    // An externally supplied range starts a new interaction and invalidates
+    // any first-click state retained from the previous range.
+    inAnchorModeRef.current = false
+  }
   if (prevStart !== startValue) {
     setPrevStart(startValue)
     setDisplayStart(startValue)
   }
-  const [prevEnd, setPrevEnd] = useState(endValue)
   if (prevEnd !== endValue) {
     setPrevEnd(endValue)
     setDisplayEnd(endValue)
