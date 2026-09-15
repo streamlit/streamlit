@@ -66,6 +66,7 @@ from streamlit.testing.v1.element_tree import (
     Header,
     Image,
     Info,
+    InitialValue,
     Json,
     Latex,
     Markdown,
@@ -92,6 +93,10 @@ from streamlit.testing.v1.element_tree import (
     Toggle,
     Warning,  # noqa: A004
     WidgetList,
+    _form_clear_flags,
+    _submitted_form_ids,
+    _use_form_clear_defaults,
+    _widget_form_id,
     repr_,
 )
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
@@ -278,6 +283,10 @@ class AppTest:
         # still resolvable by callbacks that fire before the script body
         # re-registers them in the next run.
         self._fragment_storage = MemoryFragmentStorage()
+        # Form ids whose last submit used clear_on_submit. The next submit of
+        # those forms serializes proto defaults for widgets the test has not
+        # set, matching frontend pending-clear without an extra rerun.
+        self._cleared_form_ids: set[str] = set()
 
         tree = ElementTree()
         tree._runner = self
@@ -529,13 +538,32 @@ class AppTest:
         """Register files from FileUploader widgets with the file manager."""
         from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 
+        submitted = _submitted_form_ids(self._tree)
+        form_clears = _form_clear_flags(self._tree)
         for widget in self._tree.file_uploader:
+            form_id = _widget_form_id(widget)
+            saved_files = widget._files
+            if form_id and form_id not in submitted:
+                # Re-register only the files committed by the last submit;
+                # newly staged uploads wait for this form's submit button.
+                widget._files = InitialValue()
+            elif _use_form_clear_defaults(
+                widget,
+                submitted=submitted,
+                cleared=self._cleared_form_ids,
+                form_clears=form_clears,
+            ):
+                continue
+            try:
+                files_to_register = widget._get_files_to_register()
+            finally:
+                widget._files = saved_files
             for (
                 file_id,
                 filename,
                 content,
                 mime_type,
-            ) in widget._get_files_to_register():
+            ) in files_to_register:
                 file_rec = UploadedFileRec(
                     file_id=file_id,
                     name=filename,
