@@ -134,7 +134,7 @@ assert not at.exception
 
 ### Reading and seeding session state
 
-`at.session_state` behaves like `st.session_state`. Seed it before a run, or read it after:
+`at.session_state` behaves like `st.session_state`, including mapping methods such as `get`, `keys`, `items`, and iteration. Seed it before a run, or read it after:
 
 ```python
 at.session_state["user"] = "alice"  # seed before running

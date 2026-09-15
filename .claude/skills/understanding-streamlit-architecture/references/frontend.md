@@ -57,7 +57,7 @@ Central orchestrator managing everything.
 **ForwardMsg handling by type** (essential types shown):
 - `newSession`: Initializes session metadata and script-run context; clears transients or page state as needed
 - `delta`: Updates tree via `AppRoot.applyDelta()`
-- `scriptFinished`: Clears stale nodes, removes inactive widget state, increments message cache run count
+- `scriptFinished`: Clears stale nodes, removes inactive widget state, increments message cache run count. Leftover `st.dialog` overlays are hidden earlier, when the next full-app run starts (fragment reruns leave them open).
 - `sessionStatusChanged`: Updates script run state
 - `navigation`: Handles MPA page changes
 - `pageConfigChanged`: Updates page title, icon, layout
@@ -74,7 +74,7 @@ Immutable root with 4 top-level containers:
 
 **Key methods**:
 - `applyDelta()`: Processes Delta messages
-- `clearStaleNodes()`: Removes elements from previous runs
+- `clearStaleNodes()`: Removes elements from previous runs. Dialog overlays from the previous full-app run are unmounted at run start rather than waiting for this cleanup.
 - `filterMainScriptElements()`: Filters by script hash (MPA)
 
 ### Node types

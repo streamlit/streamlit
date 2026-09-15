@@ -122,6 +122,10 @@ them — that loop may already be closed on a later rerun, and the object will r
 `Event loop closed`. Cache results that stay valid across loops, such as API payloads,
 dataframes, and config.
 
+`st.cache_resource`'s `validate` and `on_release` callbacks must be synchronous. An
+`async def` callback is rejected at decoration time; wrap coroutine work in a sync
+function instead.
+
 ### Prevent unbounded cache growth
 
 **Important:** Caches without `ttl` or `max_entries` can grow indefinitely and cause memory issues. For any cached function that stores changing objects (user-specific data, parameterized queries), set limits:
@@ -321,12 +325,13 @@ with st.form("invite", border=False):
 
 ## Skip reruns on individual widgets
 
-Some input widgets accept `on_change="ignore"` instead of a callback or `"rerun"`. The widget still updates in the UI, but Streamlit does not rerun the script. Python sees the new value only on the next rerun triggered by something else (a button, another widget, and so on).
+Some input widgets accept `on_change="ignore"` instead of a callback or `"rerun"`. The widget still updates in the UI, but Streamlit does not rerun the script. Python sees the new value only on the next rerun triggered by something else (a button, another widget, and so on). Widgets that do not support `"ignore"` raise if you pass it.
 
 ```python
 threshold = st.slider("Threshold", 0.0, 1.0, 0.5, on_change="ignore")
+region = st.selectbox("Region", ["All", "North", "South"], on_change="ignore")
 if st.button("Apply"):
-    run_model(threshold)
+    run_model(threshold, region)
 ```
 
 Use this when a single control should not rerun the app until the user applies it. Use a form when several related inputs should commit together.

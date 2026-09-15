@@ -55,6 +55,7 @@ st.altair_chart(chart)
 - Multiple series with legends
 - Interactive tooltips
 - Layered visualizations
+- Geographic maps with `mark_geoshape`
 
 ## Apache ECharts
 

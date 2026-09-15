@@ -199,6 +199,8 @@ if st.button("Delete item"):
     confirm_delete("My Document")
 ```
 
+A full-app `st.rerun()` closes an open dialog. Fragment reruns leave it open so widgets inside it still work. Do not keep a dialog open across `st.rerun()`; remount it from session state if it should reappear.
+
 **When to use dialogs:**
 
 - Confirmation prompts

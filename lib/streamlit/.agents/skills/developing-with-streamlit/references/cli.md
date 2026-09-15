@@ -166,8 +166,8 @@ streamlit skills --global --yes
 
 The `streamlit skills` command installs bundled Streamlit skills that help AI coding assistants (Claude Code, Cursor, etc.) build better Streamlit applications.
 
-- **Project mode (default):** Installs skills via symlinks for the current project.
-- **Global mode (`--global`):** Installs a meta skill that gets applied for all projects.
+- **Project mode (default):** Installs skills via symlinks for the current project, always to `.agents/skills/`. Claude Code reads `.claude/skills/` rather than `.agents/skills/`, so the installer also writes `.claude/skills/` when Claude Code is detected (`claude` on `PATH`, `~/.claude`, or `~/.claude.json`). If you install Claude Code later, run `streamlit skills` again.
+- **Global mode (`--global`):** Installs a meta skill into the user directory (and into `~/.claude/skills/` when Claude Code is detected) so it applies across projects.
 
 ## Configuration precedence
 
