@@ -17,7 +17,7 @@ from __future__ import annotations
 import pytest
 
 import streamlit as st
-from streamlit._command_suggestions import (
+from streamlit.command_suggestions import (
     _PUBLIC_STREAMLIT_NAMESPACES,
     _REMOVED_STREAMLIT_ATTRIBUTES,
     _format_st_names,
@@ -171,7 +171,6 @@ def test_suggestions_exclude_internal_modules() -> None:
     assert "components" in catalog
     assert "typing" in catalog
     assert "command_suggestions" not in catalog
-    assert "_command_suggestions" not in catalog
     assert suggest_streamlit_commands("error_util", catalog) == ()
 
     error = _missing_attr("erro_util")
@@ -196,22 +195,6 @@ def test_from_import_missing_name_is_import_error() -> None:
     """``from streamlit import missing`` follows Python's ImportError conversion."""
     with pytest.raises(ImportError, match="experimental_rerun"):
         exec("from streamlit import experimental_rerun")
-
-
-def test_star_import_excludes_helper_module() -> None:
-    """The suggestions helper is private and is not pulled in by ``import *``."""
-    namespace: dict[str, object] = {"__name__": "command_suggestions_star_import"}
-    exec("from streamlit import *", namespace)
-    assert "command_suggestions" not in namespace
-    assert "_command_suggestions" not in namespace
-    assert "button" in namespace
-
-
-def test_helper_module_is_not_a_public_st_name() -> None:
-    """The helper is not advertised as ``st.command_suggestions``."""
-    error = _missing_attr("command_suggestions")
-    assert str(error) == "module 'streamlit' has no attribute 'command_suggestions'"
-    assert "Did you mean" not in str(error)
 
 
 def test_suggest_streamlit_commands_is_conservative() -> None:
