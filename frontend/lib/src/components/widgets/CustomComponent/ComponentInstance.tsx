@@ -226,10 +226,10 @@ function ComponentInstance(props: Props): ReactElement {
   parsedArgsRef.current.dataframeArgs = parsedDataframeArgs
 
   const [isReadyTimeout, setIsReadyTimeout] = useState<boolean>()
-  // By passing the args.height here, we can derive the initial height for
-  // custom components that define a height property, e.g. in Python
-  // my_custom_component(height=100). undefined means no explicit height
-  // was specified, but will be set to the default height of 0.
+  // Initial iframe height comes from a numeric args.height kwarg, e.g.
+  // my_custom_component(height=100). Only a JS number is used: strings
+  // (height="100"), NaN, and missing values are unspecified and the iframe
+  // falls back to height 0 until setFrameHeight.
   const [frameHeight, setFrameHeight] = useState<number | undefined>(() => {
     const height = parsedNewArgs.height as number | undefined
     return typeof height !== "number" || Number.isNaN(height)
