@@ -19,8 +19,6 @@ sequence position, and hands ordered, coalesced work to successive runners under
 lease. The goal is a single testable invariant — **session-scoped serial equivalence** — while
 keeping fast reruns responsive everywhere except a small protected callback/state boundary.
 
-This is a design-only document. No production behavior is changed by merging it.
-
 ## Problem
 
 ### Where rerun state lives today
@@ -113,30 +111,24 @@ This creates three timing-dependent hazards:
    under the `RLock`. The new runner is created immediately and can begin applying the newer
    interaction's widget states before the earlier callback batch has finished mutating state.
 
-### Prior art
+### Recent fixes to single-runner coalescing
 
-- [#16158](https://github.com/streamlit/streamlit/pull/16158) — *Make `st.rerun()` work in
-  widget callbacks*. Landed the **same-run** fixes: defer rerun requests until after the last
-  callback returns (so one callback's rerun no longer aborts its siblings), skip stale-widget
-  cleanup for a body that never ran (so widget values survive a preempting rerun), reset triggers
-  so a click fires its callback exactly once, and make `ScriptRequests.request_rerun` coalescing
-  order-independent (full-app wins whenever it appears; otherwise fragment targets union with
-  dedup).
-- [#16161](https://github.com/streamlit/streamlit/pull/16161) — *Event-scoped fragment reruns*.
-  Built `st.rerun(scope=<key>)` on top of #16158 and explicitly listed the remaining gap as a
-  follow-up:
+[PR #16765](https://github.com/streamlit/streamlit/pull/16765) ("Prevent callback rerun
+coalescing races"), a follow-up to #16161, landed the single-runner coalescing fix:
 
-  > **`suppress_callbacks` coalescing race**: there is a narrow window where concurrent
-  > interactions could interleave coalescing. Planned to be addressed by a batching fix.
+- Replaced `suppress_callbacks` on `RerunData` with `replay_trigger_states` and
+  `replay_trigger_values`, decoupling "skip callback dispatch" from "safe to discard in
+  coalescing."
+- Added `_coalesce_replay_trigger_states` and `_coalesce_replay_trigger_values` to handle replay
+  triggers independently of fresh widget states.
+- Added `request_rerun_batch` on `ScriptRequests` to fold an ordered batch of callback-generated
+  reruns under one lock, preventing fresh interactions from observing a partial batch.
 
-  That "batching fix" is the design in this spec.
-- Issue [#10501](https://github.com/streamlit/streamlit/issues/10501) — original report that
-  `st.rerun()` in a callback was silently a no-op.
-
-Everything #16158 fixed is scoped to a *single* runner's replay loop. The moment `fastReruns`
-replaces the runner, that same-run reasoning no longer holds, because the coalescing latch and
-the deferred-rerun votes were runner-owned and are thrown away. This spec moves the coordination
-point up to the session so the guarantees hold *across* runner replacement.
+These changes close the single-runner coalescing race documented in #16161. The remaining open
+problem is exclusively the **cross-runner** gap: when `fastReruns` replaces a runner, the new
+runner's `ScriptRequests` starts empty, any pending coalesced state on the old runner is
+abandoned, and two runners can briefly interleave writes to the shared `SessionState`. The
+mailbox proposed below addresses that cross-runner gap.
 
 ## Goals
 
@@ -266,26 +258,25 @@ callback observations or the settled state.
   interaction is carried forward so a rapid second click is not lost. This is exactly the
   carry-forward already implemented:
 
-```117:141:lib/streamlit/runtime/scriptrunner_utils/script_requests.py
+```python
 def _coalesce_widget_states(
-    old_states: WidgetStates | None,
-    new_states: WidgetStates | None,
-    *,
-    old_suppress_callbacks: bool = False,
+    old_states: WidgetStates | None, new_states: WidgetStates | None
 ) -> WidgetStates | None:
-    """Merge an older WidgetStates into a newer one, returning the result.
+    """Coalesce an older WidgetStates into a newer one, and return a new
+    WidgetStates containing the result.
 
-    For most widgets the newer value wins.  Button and chat-input triggers are
-    special: an active trigger in ``old_states`` carries forward so rapid clicks
-    aren't lost — unless ``old_suppress_callbacks`` is True, in which case the
-    older trigger belonged to a callback batch that already ran and must not be
-    replayed.
+    For most widget values, we just take the latest version.
+
+    However, any trigger_values (which are set by buttons) that are True in
+    old_states will be set to True in the coalesced result, so that button
+    presses don't go missing.
     """
 ```
 
-  Once a trigger's callback has run, that trigger is spent and must reset (never replay). The
-  mailbox tracks "callbacks already dispatched for this batch" so a coalesced follow-on cannot
-  re-fire a spent trigger — this is the durable version of `suppress_callbacks`.
+  Once a trigger's callback has run, that trigger is spent and must reset (never replay).
+  `replay_trigger_states` on `RerunData` already tracks spent triggers separately from fresh
+  widget states so they are never re-fired. The mailbox extends this by making the spent-trigger
+  bookkeeping durable across runner replacement.
 - **Callback execution.** Callbacks are dispatched in interaction order. Two interactions may be
   merged into one *run* only if neither has an unspent callback, or if all their callbacks are
   dispatched in order within the same protected batch with the earlier batch's mutations visible
@@ -415,7 +406,8 @@ class InteractionBatch:
 
     ``callbacks_dispatched`` records which triggers in this batch have already
     fired their callbacks, so a superseding coalesce cannot replay a spent
-    trigger (the durable form of ``suppress_callbacks``).
+    trigger. This is the cross-runner extension of the ``replay_trigger_states``
+    mechanism introduced in PR #16765.
     """
 
     lowest_seq: int
@@ -514,35 +506,25 @@ semantics:
 
 ```python
 def on_script_will_rerun(
-    self,
-    latest_widget_states: WidgetStatesProto,
-    *,
-    suppress_callbacks: bool = False,
+    self, latest_widget_states: WidgetStatesProto
 ) -> None:
     self._yield_callback()
     with self._lock:
-        self._state.on_script_will_rerun(
-            latest_widget_states, suppress_callbacks=suppress_callbacks
-        )
+        self._state.on_script_will_rerun(latest_widget_states)
 ```
 
    After (proposed):
 
 ```python
 def on_script_will_rerun(
-    self,
-    latest_widget_states: WidgetStatesProto,
-    *,
-    suppress_callbacks: bool = False,
+    self, latest_widget_states: WidgetStatesProto
 ) -> None:
     # Yield first so a superseded runner observes STOP before touching state.
     self._yield_callback()
     # Only the runner holding the live lease may install widget states and run
     # callbacks. A superseded runner returns without mutating shared state.
     with self._lease.acquire_or_stop():
-        self._state.on_script_will_rerun(
-            latest_widget_states, suppress_callbacks=suppress_callbacks
-        )
+        self._state.on_script_will_rerun(latest_widget_states)
 ```
 
 3. **Events are still filtered by identity.** `AppSession` already ignores events from a
@@ -559,19 +541,19 @@ respect to supersession.** When a runner begins dispatching a batch's callbacks 
   but it returns `ABSORBED_DEFERRED` — it will not `SUPERSEDE` until the guard is released.
 - When the guard releases, the coordinator publishes the *next* batch. If a full-app interaction
   arrived during dispatch, the newly published batch carries `callbacks_dispatched=True` for the
-  triggers already fired (so they are replayed as values, not re-fired) — exactly the
-  `suppress_callbacks` + trigger-only-replay behavior from #16158, but now computed by the
-  session and handed to whichever runner (old, continuing, or freshly superseding) picks it up.
+  triggers already fired (so they are replayed as values, not re-fired) — extending the
+  `replay_trigger_states` mechanism from #16765 to the cross-runner case, and handed to whichever
+  runner (old, continuing, or freshly superseding) picks it up.
 
 This is what makes coalescing legal under the contract: the "batch of callbacks already ran"
-fact is durable session state, not a flag on a runner that is about to be discarded. The narrow
-`suppress_callbacks` coalescing race noted in #16161 disappears because the merge and the
-"already dispatched" bookkeeping happen under one lock on one thread (the event loop), and the
-publication to the next generation is atomic.
+fact is durable session state, not a flag on a runner that is about to be discarded. #16765
+closed the single-runner coalescing race by separating replay triggers from fresh widget states;
+the mailbox extends that guarantee across runner replacement by keeping the "already dispatched"
+bookkeeping on the session-owned coordinator under one lock on one thread (the event loop), with
+publication to the next generation being atomic.
 
-Publication hands the successor runner an `InteractionBatch` whose `rerun_data.widget_states`
-already went through `_coalesce_widget_states` with the correct `old_suppress_callbacks`. No
-replay state lives on the retired runner.
+Publication hands the successor runner an `InteractionBatch` whose `rerun_data` already contains
+the correct `replay_trigger_states`. No replay state lives on the retired runner.
 
 ### Serializing mutations without waiting for an obsolete body
 
@@ -641,7 +623,7 @@ behavior is identical to today's fast path.
   run at the next ready point exactly as today (`_fragment_run_should_not_preempt_script`
   unchanged). The lease still governs `SessionState` writes.
 - **Keyed-fragment reruns** (`st.rerun(scope=<key>)`). Derived requests folded into the servicing
-  interaction; the "already dispatched" bookkeeping is what #16161's follow-up needed.
+  interaction; the `replay_trigger_states` bookkeeping handles the cross-runner case.
 - **Periodic / `run_every`.** Auto-rerun interactions accepted and coalescible; never carry
   unspent triggers, so dropping under coalescing is safe.
 - **Parallel-fragment reruns.** Orthogonal: parallelism is *within* a run (worker threads under
@@ -737,24 +719,27 @@ stateDiagram-v2
 The proposal above.
 
 - **Pros.** Coordination point matches the lifetime of the state it protects; the invariant holds
-  by construction across replacement; coalescing/"already dispatched" bookkeeping is durable, which
-  is precisely what #16161's follow-up needs; O(1) memory; free-threaded-safe; naturally
-  supersedes the narrower fixes below.
+  by construction across replacement; coalescing/"already dispatched" bookkeeping is durable,
+  extending #16765's `replay_trigger_states` mechanism to the cross-runner case; O(1) memory;
+  free-threaded-safe; naturally supersedes the remaining runner-owned handoff.
 - **Cons.** Largest change surface (new session-owned object, lease plumbing through
   `SafeSessionState` and `ScriptRunner`); introduces a generation concept that must be threaded
   through event filtering.
 
-### B. Narrow atomic handoff of pending/current `RerunData` during fast replacement
+### B. Narrow atomic handoff of pending/current `RerunData` during fast replacement — **partially landed**
 
-Keep the runner-owned `ScriptRequests`, but when `SUPERSEDE` happens, atomically copy the old
-runner's pending `RerunData` (and any deferred rerun votes) into the new runner's initial data.
+[PR #16765](https://github.com/streamlit/streamlit/pull/16765) landed the single-runner portion
+of this approach: `replay_trigger_states` replaced `suppress_callbacks`, `request_rerun_batch`
+folds callback-generated reruns atomically, and coalescing no longer drops active triggers. What
+remains unaddressed is the cross-runner handoff itself — when `SUPERSEDE` happens, the old
+runner's pending `RerunData` (and any deferred rerun votes) are still abandoned.
 
-- **Pros.** Much smaller; localized to `app_session.py` + `script_requests.py`; fixes the
-  *abandoned interaction state* symptom directly.
+- **Pros.** Much smaller; localized to `app_session.py` + `script_requests.py`; the single-runner
+  coalescing portion is already shipped.
 - **Cons.** Does not fix overlapping writers (both runners can still mutate `SessionState`), so it
-  does not deliver the callback-completion boundary; the handoff must snapshot mid-callback state,
-  which is exactly the race #16161 flagged; ordering guarantee remains implicit and hard to test.
-  A good *first* PR, not a complete solution (see PR split).
+  does not deliver the callback-completion boundary; the cross-runner handoff must snapshot
+  mid-callback state, which remains the gap the mailbox addresses; ordering guarantee remains
+  implicit and hard to test. The landed portion is a good foundation, not a complete solution.
 
 ### C. Defer fast replacement while callback dispatch or replay handoff is active
 
@@ -807,7 +792,8 @@ supersede in-flight interaction state and that callback ordering is best-effort.
 - `lib/streamlit/runtime/state/session_state.py`
   - No semantic change to callback dispatch, but the "callbacks already dispatched / suppress
     replay" signal is sourced from the batch's `callbacks_dispatched` rather than recomputed
-    per-runner.
+    per-runner. #16765 already decoupled replay triggers from fresh widget states via
+    `replay_trigger_states`; the coordinator takes over ownership of that bookkeeping.
 - `lib/streamlit/runtime/websocket_session_manager.py`
   - No structural change; the reconnect path already revives the same `AppSession`, so the mailbox
     persists automatically. Add an assertion/test that the coordinator survives reconnect.
@@ -876,26 +862,24 @@ supersede in-flight interaction state and that callback ordering is best-effort.
 
 ### Suggested PR split
 
-1. **Same-run replay/coalescing hardening (independent).** Lands the smaller fix on the existing
-   runner-owned structure — Alternative B's atomic handoff of pending `RerunData` plus deferred
-   rerun votes during `SUPERSEDE`, and folding #16161's `suppress_callbacks` coalescing so the
-   documented narrow race is closed for the single-runner-to-successor handoff. No lease/generation
-   model. This is shippable on its own, reduces lost-interaction symptoms immediately, and is
-   test-covered by extending `script_requests_test.py` and `session_state_test.py`. It does **not**
-   claim the full serial-equivalence invariant.
+1. ~~**Same-run replay/coalescing hardening (independent).**~~ **Landed as
+   [PR #16765](https://github.com/streamlit/streamlit/pull/16765).** Separated replay triggers
+   from fresh widget states via `replay_trigger_states`, added `request_rerun_batch` for atomic
+   callback-generated rerun folding, and removed `suppress_callbacks`. The single-runner
+   coalescing race from #16161 is closed. The remaining PRs build on this baseline.
 2. **Introduce `SessionRerunCoordinator` (no behavior change).** Add the mailbox, lease, and batch
    types; have `AppSession` assign `seq` and coalesce through it while still driving the current
-   runner exactly as PR 1 does. Pure plumbing + unit tests; the coordinator is authoritative for
-   ordering but supersession still uses the PR 1 handoff.
+   runner exactly as #16765 does. Pure plumbing + unit tests; the coordinator is authoritative for
+   ordering but supersession still uses the existing handoff.
 3. **Lease-gate `SessionState` and move supersession onto the coordinator.** Wire the lease through
    `SafeSessionState` and `ScriptRunner`, add the dispatch guard, and switch `request_rerun` to the
    `accept()` decisions. This is where the overlapping-writer window closes and the invariant
    becomes enforceable; shorten the `RLock` to `Lock`.
 4. **Observability + free-threaded validation.** Counters/logs/debug dump, and PEP 703 test runs.
 
-PR 1 lands and helps users independently; PRs 2–4 build on it and PR 3 **supersedes** PR 1's
-narrow handoff (the coordinator becomes the single source of truth, and the ad-hoc handoff is
-removed). If the larger design stalls, PR 1 still stands on its own.
+PR 1 is landed; PRs 2–4 build on it and PR 3 **supersedes** the remaining runner-owned handoff
+(the coordinator becomes the single source of truth). If the larger design stalls, #16765 still
+stands on its own.
 
 ## Out of scope (future work)
 
