@@ -285,7 +285,7 @@ describe("DateInput", () => {
     )
   })
 
-  it("displays correct error tooltip when the entered date for range input below min date", async () => {
+  it("displays correct error tooltip when the range start date is below min date", async () => {
     const user = userEvent.setup()
     const props = getProps({
       default: ["2020-02-01", "2020-02-07"],
