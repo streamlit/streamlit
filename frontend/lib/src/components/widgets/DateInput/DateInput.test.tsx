@@ -492,15 +492,109 @@ describe("DateInput", () => {
       props.widgetMgr.submitForm("form", undefined)
     })
 
-    // Our widget should be reset, and the widgetMgr should be updated
-    expect(year).toHaveTextContent(originalDateWire.split("-")[0])
-    expect(month).toHaveTextContent(originalDateWire.split("-")[1])
-    expect(day).toHaveTextContent(originalDateWire.split("-")[2])
+    // Re-query because form clear remounts DateField and detaches the old nodes.
+    const resetSegments = getSingleDateSegments(region)
+    expect(resetSegments.year).toHaveTextContent(
+      originalDateWire.split("-")[0]
+    )
+    expect(resetSegments.month).toHaveTextContent(
+      originalDateWire.split("-")[1]
+    )
+    expect(resetSegments.day).toHaveTextContent(originalDateWire.split("-")[2])
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
       props.element.id,
       [originalDateWire],
       { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
+  })
+
+  it("clears incomplete segments and restores focus to the first segment after a form clear", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      formId: "form",
+      default: [],
+    })
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
+
+    render(<DateInput {...props} />)
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getSingleDateSegments(region)
+
+    await typeIntoSegment(user, year, "2020")
+    expect(year).toHaveTextContent("2020")
+    expect(getSingleDateSegments(region).month).toHaveFocus()
+
+    act(() => {
+      props.widgetMgr.submitForm("form", undefined)
+    })
+
+    const resetSegments = getSingleDateSegments(region)
+    expect(resetSegments.year).toHaveTextContent("yyyy")
+    expect(resetSegments.month).toHaveTextContent("mm")
+    expect(resetSegments.day).toHaveTextContent("dd")
+    expect(resetSegments.month).not.toHaveFocus()
+    expect(resetSegments.year).toHaveFocus()
+  })
+
+  it("does not steal focus when an unfocused field is cleared by a form", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      formId: "form",
+      default: [],
+    })
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
+
+    render(
+      <>
+        <DateInput {...props} />
+        <button>Submit</button>
+      </>
+    )
+    const region = screen.getByTestId("stDateInput")
+    await typeIntoSegment(user, getSingleDateSegments(region).year, "2020")
+    const submitButton = screen.getByRole("button", { name: "Submit" })
+    await user.click(submitButton)
+
+    act(() => {
+      props.widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(submitButton).toHaveFocus()
+    expect(getSingleDateSegments(region).year).not.toHaveFocus()
+  })
+
+  it("clears incomplete range segments and restores focus after a form clear", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      formId: "form",
+      default: [],
+    })
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
+
+    render(<DateInput {...props} />)
+    const region = screen.getByTestId("stDateInput")
+    const start = getRangeDateSegments(region, "start")
+    await typeIntoSegment(user, start.year, "2020")
+    await typeIntoSegment(user, start.month, "02")
+    await typeIntoSegment(user, start.day, "06")
+    const end = getRangeDateSegments(region, "end")
+    await typeIntoSegment(user, end.year, "2021")
+    expect(end.year).toHaveTextContent("2021")
+
+    act(() => {
+      props.widgetMgr.submitForm("form", undefined)
+    })
+
+    const resetStart = getRangeDateSegments(region, "start")
+    const resetEnd = getRangeDateSegments(region, "end")
+    for (const segment of [
+      ...Object.values(resetStart),
+      ...Object.values(resetEnd),
+    ]) {
+      expect(segment).toHaveAttribute("data-placeholder", "true")
+    }
+    expect(resetStart.year).toHaveFocus()
   })
 
   it("clears validation error state when form is cleared", async () => {
@@ -534,9 +628,11 @@ describe("DateInput", () => {
         screen.queryByTestId("stTooltipErrorHoverTarget")
       ).not.toBeInTheDocument()
     })
-    expect(year).toHaveTextContent("2026")
-    expect(month).toHaveTextContent("01")
-    expect(day).toHaveTextContent("15")
+    // Re-query because form clear remounts DateField and detaches the old nodes.
+    const resetSegments = getSingleDateSegments(region)
+    expect(resetSegments.year).toHaveTextContent("2026")
+    expect(resetSegments.month).toHaveTextContent("01")
+    expect(resetSegments.day).toHaveTextContent("15")
   })
 
   it("commits pending value on blur when inside a form (form-submit race fix)", async () => {
