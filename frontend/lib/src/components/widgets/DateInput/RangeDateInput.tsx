@@ -260,10 +260,10 @@ function RangeDateInput({
   // The anchor VALUE is always `displayStartRef.current` — never stored
   // separately, so it can't go stale when the user edits via keyboard/paste.
   const inAnchorModeRef = useRef(false)
-  // The partial range this widget committed itself, which comes back through
-  // the value props as an echo that must not be mistaken for a new range. Only
-  // ever compared during render, never consumed there, so a re-run of the same
-  // render reaches the same conclusion.
+  // First-click start this widget last committed. That commit echoes back
+  // through the value props and must not cancel the in-progress selection.
+  // The echo path only reads this ref, so a re-run with the same props
+  // (including Strict Mode) reaches the same conclusion.
   const selfCommittedAnchorRef = useRef<CalendarDate | null>(null)
 
   // --- Two-layer state (matches SingleDateInput pattern) ---
@@ -272,16 +272,22 @@ function RangeDateInput({
   )
   const [displayEnd, setDisplayEnd] = useState<CalendarDate | null>(endValue)
 
-  // Sync when the committed range changes.
+  // Sync display state when the committed range changes, and cancel an
+  // in-progress selection unless this widget's first-click commit is echoing.
   const [prevStart, setPrevStart] = useState(startValue)
   const [prevEnd, setPrevEnd] = useState(endValue)
   if (prevStart !== startValue || prevEnd !== endValue) {
+    // A first-click commit returns as [start] with no end. Any other change,
+    // including a complete range with the same start, begins a new interaction.
     const isAnchorCommitEcho =
       selfCommittedAnchorRef.current !== null &&
       endValue === null &&
       datesEqual(startValue, selfCommittedAnchorRef.current)
     if (!isAnchorCommitEcho) {
+      // Render-time ref writes survive a discarded render. Clearing is the
+      // fail-safe outcome: handlers cannot retain a superseded interaction.
       inAnchorModeRef.current = false
+      selfCommittedAnchorRef.current = null
     }
   }
   if (prevStart !== startValue) {
@@ -338,6 +344,7 @@ function RangeDateInput({
   useEffect(() => {
     if (wasOpenRef.current && !isOpen) {
       inAnchorModeRef.current = false
+      selfCommittedAnchorRef.current = null
       if (skipCloseCommitRef.current) {
         skipCloseCommitRef.current = false
       } else {
@@ -594,6 +601,7 @@ function RangeDateInput({
           // Second click — complete the range using the current start as anchor
           const anchor = displayStartRef.current
           inAnchorModeRef.current = false
+          selfCommittedAnchorRef.current = null
           const [start, end] =
             anchor.compare(range.start) <= 0
               ? [anchor, range.start]
@@ -611,6 +619,7 @@ function RangeDateInput({
       // Normal completed range (two distinct dates, or single-day when not
       // in anchor mode)
       inAnchorModeRef.current = false
+      selfCommittedAnchorRef.current = null
       setDisplayStart(range.start)
       setDisplayEnd(range.end)
       onChange([range.start, range.end])
@@ -723,6 +732,7 @@ function RangeDateInput({
 
   const handleClear = useCallback((): void => {
     inAnchorModeRef.current = false
+    selfCommittedAnchorRef.current = null
     setDisplayStart(null)
     setDisplayEnd(null)
     onChange([])
@@ -733,6 +743,7 @@ function RangeDateInput({
       const preset = quickSelectPresets.find(p => p.id === presetId)
       if (!preset) return
       inAnchorModeRef.current = false
+      selfCommittedAnchorRef.current = null
       setDisplayStart(preset.start)
       setDisplayEnd(preset.end)
       onChange([preset.start, preset.end])

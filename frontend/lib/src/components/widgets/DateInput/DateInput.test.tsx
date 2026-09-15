@@ -1502,7 +1502,7 @@ describe("DateInput", () => {
       })
     })
 
-    it("uses an externally updated partial range as the active calendar anchor", async () => {
+    it("completes the range against an externally updated start date", async () => {
       const user = userEvent.setup()
       vi.setSystemTime(new Date(2024, 2, 15))
 
@@ -1544,6 +1544,64 @@ describe("DateInput", () => {
         expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
           props.element.id,
           ["2024-03-10", "2024-03-20"],
+          expect.objectContaining({ fromUser: true })
+        )
+      })
+      expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["2024-03-06", "2024-03-10"],
+        expect.anything()
+      )
+    })
+
+    it("starts a new range when the externally updated start date is clicked", async () => {
+      const user = userEvent.setup()
+      vi.setSystemTime(new Date(2024, 2, 15))
+
+      const props = getProps({
+        isRange: true,
+        default: [],
+        min: "2019-07-01",
+      })
+      const { rerender } = render(<DateInput {...props} />)
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      const region = screen.getByTestId("stDateInput")
+      await user.click(getRangeDateSegments(region, "start").year)
+      await user.click(
+        await screen.findByLabelText("Wednesday, March 6, 2024")
+      )
+
+      await waitFor(() => {
+        expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+          props.element.id,
+          ["2024-03-06"],
+          expect.objectContaining({ fromUser: true })
+        )
+      })
+
+      const updatedElement = DateInputProto.create({
+        ...props.element,
+        value: ["2024-03-20", "2024-03-25"],
+        setValue: true,
+      })
+      rerender(<DateInput {...props} element={updatedElement} />)
+
+      expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+      vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+      // userEvent.click hangs on already-selected React Aria range cells in JSDOM.
+      const updatedStart = screen.getByLabelText(/Wednesday, March 20, 2024/)
+      /* eslint-disable testing-library/prefer-user-event */
+      fireEvent.pointerDown(updatedStart, { pointerType: "mouse", button: 0 })
+      fireEvent.pointerUp(updatedStart, { pointerType: "mouse", button: 0 })
+      fireEvent.click(updatedStart)
+      /* eslint-enable testing-library/prefer-user-event */
+
+      await waitFor(() => {
+        expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+          props.element.id,
+          ["2024-03-20"],
           expect.objectContaining({ fromUser: true })
         )
       })
