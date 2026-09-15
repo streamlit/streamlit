@@ -24,8 +24,7 @@ if TYPE_CHECKING:
 # Exact former public names and the current public ``st.*`` successors they
 # map to. Ambiguous retired APIs (for example ``st.cache``) list every valid
 # successor rather than picking one alias. Removals whose replacement is not
-# an ``st.*`` name (for example ``st.bokeh_chart`` → the ``streamlit-bokeh``
-# component) stay on the default AttributeError.
+# an ``st.*`` name are handled separately (for example ``st.bokeh_chart``).
 _REMOVED_STREAMLIT_ATTRIBUTES: Final[Mapping[str, tuple[str, ...]]] = {
     "beta_color_picker": ("color_picker",),
     "beta_columns": ("columns",),
@@ -111,6 +110,14 @@ def missing_streamlit_attribute_message(name: str, module: ModuleType) -> str:
         return (
             f"{prefix}. {_st_name(name)} has been removed. "
             f"Use {_format_st_names(replacements)} instead."
+        )
+
+    # Official successor is the ``streamlit-bokeh`` component, not an ``st.*``
+    # command, so it cannot live in ``_REMOVED_STREAMLIT_ATTRIBUTES``.
+    if name == "bokeh_chart":
+        return (
+            f"{prefix}. {_st_name(name)} has been removed. "
+            "Use the streamlit-bokeh component instead."
         )
 
     catalog = public_streamlit_names(module)

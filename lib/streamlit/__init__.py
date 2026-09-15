@@ -330,7 +330,7 @@ from typing import TYPE_CHECKING
 if not TYPE_CHECKING:
 
     def __getattr__(name: str) -> object:
-        from streamlit.command_suggestions import raise_missing_streamlit_attribute
+        from streamlit._command_suggestions import raise_missing_streamlit_attribute
 
         raise_missing_streamlit_attribute(name)
 
