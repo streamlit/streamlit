@@ -39,6 +39,7 @@ import {
 } from "@streamlit/lib/testing"
 import {
   Block as BlockProto,
+  ChatInput as ChatInputProto,
   Element,
   ForwardMsgMetadata,
   Logo as LogoProto,
@@ -149,12 +150,13 @@ function createAllowEmptyBlock(
 function createChatInputNode(id: string): ElementNode {
   return new ElementNode(
     new Element({
-      chatInput: {
+      chatInput: ChatInputProto.create({
         id,
         placeholder: "Enter Text Here",
         disabled: false,
         default: "",
-      },
+        acceptFile: ChatInputProto.AcceptFile.NONE,
+      }),
     }),
     ForwardMsgMetadata.create({}),
     "no script run id",
@@ -989,6 +991,33 @@ describe("AppView element", () => {
     expect(
       screen.queryByTestId("stAppScrollToBottomContainer")
     ).not.toBeInTheDocument()
+  })
+
+  it("does not remount the main area or chat input when the first chat message appears", async () => {
+    const chatInputNode = createChatInputNode("123")
+    const props = getProps({
+      elements: createAppRootWithBottom([chatInputNode]),
+    })
+    const { rerender } = render(<AppView {...props} />)
+    const mainContainer = screen.getByTestId("stMain")
+    const chatInput = await screen.findByPlaceholderText("Enter Text Here")
+
+    rerender(
+      <AppView
+        {...props}
+        elements={createAppRootWithBottom(
+          [chatInputNode],
+          [createChatMessageNode()]
+        )}
+      />
+    )
+
+    expect(screen.getByTestId("stAppScrollToBottomContainer")).toBe(
+      mainContainer
+    )
+    expect(await screen.findByPlaceholderText("Enter Text Here")).toBe(
+      chatInput
+    )
   })
 
   it.each([

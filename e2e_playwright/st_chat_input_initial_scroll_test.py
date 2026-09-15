@@ -16,18 +16,30 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import build_app_url
+from e2e_playwright.conftest import build_app_url, wait_until
 from e2e_playwright.shared.app_utils import goto_app
 
 
 def test_bottom_chat_input_without_messages_starts_at_top(app: Page):
-    """Verify a persistent assistant input does not scroll a dashboard."""
-    app.set_viewport_size({"width": 1280, "height": 720})
+    """Verify a bottom chat input alone does not scroll a dashboard to the bottom."""
+    expect(app.get_by_test_id("stAppScrollToBottomContainer")).not_to_be_attached()
 
     main = app.get_by_test_id("stMain")
-    expect(main).to_have_js_property("scrollTop", 0)
-    expect(app.get_by_text("Dashboard heading")).to_be_visible()
+    expect(app.get_by_text("Dashboard heading")).to_be_in_viewport()
     expect(app.get_by_text("Dashboard row 29")).not_to_be_in_viewport()
+
+    consecutive_zero_reads = 0
+
+    def scroll_stayed_at_top() -> bool:
+        nonlocal consecutive_zero_reads
+        if main.evaluate("(element) => element.scrollTop") != 0:
+            consecutive_zero_reads = 0
+            return False
+
+        consecutive_zero_reads += 1
+        return consecutive_zero_reads >= 5
+
+    wait_until(app, scroll_stayed_at_top, timeout=2000, interval=100)
 
 
 def test_bottom_chat_input_with_messages_starts_at_bottom(app: Page, app_base_url: str):
