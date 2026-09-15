@@ -40,8 +40,8 @@ default-groups = ["dev"]
 # consumers that create environments from this repository.
 # Check their compatibility before raising it.
 required-version = ">=0.11.8"
-# Resolve the development lock only for the currently supported Python range.
-environments = ["python_version < '3.15'"]
+# Resolve the development lock only for supported Python and runtime environments.
+environments = ["python_version < '3.15' and sys_platform != 'emscripten'"]
 # Exclude packages published in the last 24 hours to lower risk from supply chain attacks
 exclude-newer = "24 hours"
 # Explicit pandas version constraints by Python version:
