@@ -51,6 +51,10 @@ ACCEPTABLE_LICENSES = {
     "Zlib",  # https://opensource.org/licenses/Zlib
     "Unlicense",  # https://unlicense.org/
     "WTFPL",  # http://www.wtfpl.net/about/
+    # Weak copyleft. mermaid 12 bundles elkjs (EPL-2.0) as a code-split
+    # optional layout engine; we pin dagre at runtime so elk is unused
+    # unless a diagram opts in.
+    "EPL-2.0",  # https://opensource.org/licenses/EPL-2.0
     # Multi-licenses are acceptable if at least one of the licenses is acceptable.
     "(MIT OR Apache-2.0)",
     "(MPL-2.0 OR Apache-2.0)",

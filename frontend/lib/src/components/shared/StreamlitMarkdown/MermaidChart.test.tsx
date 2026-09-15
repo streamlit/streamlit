@@ -188,6 +188,9 @@ describe("MermaidChart", () => {
 
     const config = initialize.mock.calls[0][0]
     expect(config.securityLevel).toBe("strict")
+    // Mermaid 12 defaults some diagrams to ELK + neo; keep prior rendering.
+    expect(config.layout).toBe("dagre")
+    expect(config.look).toBe("classic")
     // Locked set must include Mermaid defaults plus Streamlit hardening keys.
     expect(config.secure).toEqual([
       // Mermaid defaults

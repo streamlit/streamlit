@@ -294,6 +294,12 @@ function getMermaidThemeConfig(theme: EmotionTheme): Record<string, unknown> {
     flowchart: {
       htmlLabels: false,
     },
+    // Mermaid 12 defaults flowchart, state, class, and ER diagrams to ELK
+    // layout and the neo look. Pin dagre + classic so existing Streamlit
+    // diagrams keep the previous rendering. ELK plus htmlLabels: false
+    // (required for <img> output) also overlaps subgraph labels.
+    layout: "dagre",
+    look: "classic",
     themeVariables: {
       // Core theme variables - Mermaid derives many others from these
       darkMode: !isLightTheme,
