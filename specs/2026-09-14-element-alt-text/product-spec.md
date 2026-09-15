@@ -281,8 +281,7 @@ relaxing to it later would not break existing calls.
 DOM. A plain proto3 `string` cannot carry that difference — unset and empty are the same on the wire —
 so wherever `alt` travels in a proto it needs a presence-preserving field (`optional string alt`) —
 and mermaid, which has no proto of its own, needs whatever route phase 4 picks to preserve the same
-distinction. Both cases want a test rather than each phase inventing its own sentinel, and
-both cases want a test rather than each phase inventing its own sentinel.
+distinction. Both cases want a test rather than each phase inventing its own sentinel.
 
 One failure no validation can catch: a list of the right length in the wrong order mislabels every
 image. That is the one failure this feature can still introduce, and a docstring warning is the only
