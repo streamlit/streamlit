@@ -2409,6 +2409,73 @@ def test_form_file_uploader_applies_only_on_submit() -> None:
     assert at.text[0].value == "no"
 
 
+def test_form_clear_on_submit_selectbox_format_func() -> None:
+    """Cleared option defaults must not run format_func a second time."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("choice-form", clear_on_submit=True):
+            choice = st.selectbox("Choice", [1, 2], format_func=lambda x: f"#{x}")
+            st.form_submit_button("Submit")
+        st.text(f"choice={choice!r}")
+
+    at = AppTest.from_function(script).run()
+    at.selectbox[0].set_value(2)
+    at.button[0].click().run()
+    assert at.text[0].value == "choice=2"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "choice=1"
+
+
+def test_form_clear_on_submit_pills_default_none() -> None:
+    """Pills with default=None must clear on the next submit, not keep the last pick."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("choice-form", clear_on_submit=True):
+            choice = st.pills("Choice", ["a", "b"])
+            st.form_submit_button("Submit")
+        st.text(f"choice={choice!r}")
+
+    at = AppTest.from_function(script).run()
+    at.pills[0].select("a")
+    at.button[0].click().run()
+    assert at.text[0].value == "choice='a'"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "choice=None"
+
+
+def test_form_file_uploader_clear_after_enabling_clear_on_submit() -> None:
+    """First clearing submit still sends committed files; the next submit drops them."""
+
+    def script() -> None:
+        import streamlit as st
+
+        should_clear = st.checkbox("Clear")
+        with st.form("upload-form", clear_on_submit=should_clear):
+            uploaded = st.file_uploader("File")
+            st.form_submit_button("Submit")
+        st.text("yes" if uploaded is not None else "no")
+
+    at = AppTest.from_function(script).run()
+    at.file_uploader[0].set_value([("a.txt", b"hi", "text/plain")])
+    at.button[0].click().run()
+    assert at.text[0].value == "yes"
+
+    at.checkbox[0].check().run()
+    assert at.text[0].value == "yes"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "yes"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "no"
+
+
 def test_get_by_key_rejects_ambiguous_key() -> None:
     """A form ID can match a widget key, so get_by_key must reject the clash."""
 

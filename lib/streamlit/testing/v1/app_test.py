@@ -93,7 +93,9 @@ from streamlit.testing.v1.element_tree import (
     Toggle,
     Warning,  # noqa: A004
     WidgetList,
+    _form_clear_flags,
     _submitted_form_ids,
+    _use_form_clear_defaults,
     _widget_form_id,
     repr_,
 )
@@ -537,16 +539,18 @@ class AppTest:
         from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 
         submitted = _submitted_form_ids(self._tree)
+        form_clears = _form_clear_flags(self._tree)
         for widget in self._tree.file_uploader:
             form_id = _widget_form_id(widget)
             saved_files = widget._files
             if form_id and form_id not in submitted:
                 # Unsubmitted form uploads stay local until submit.
                 widget._files = InitialValue()
-            elif (
-                form_id
-                and form_id in self._cleared_form_ids
-                and isinstance(saved_files, InitialValue)
+            elif _use_form_clear_defaults(
+                widget,
+                submitted=submitted,
+                cleared=self._cleared_form_ids,
+                form_clears=form_clears,
             ):
                 continue
             try:
