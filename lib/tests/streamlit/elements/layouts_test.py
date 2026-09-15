@@ -487,8 +487,8 @@ class ExpanderTest(DeltaGeneratorTestCase):
             st.expander("label", icon="invalid")
         assert (
             str(e.value)
-            == 'The value "invalid" is not a valid emoji. Shortcodes are not allowed, '
-            "please use a single character instead."
+            == 'The value "invalid" is not a valid icon. Please use a single emoji '
+            "or a Material icon shortcode like `:material\u200b/thumb_up:`."
         )
 
     def test_invalid_material_icon(self):
@@ -613,7 +613,7 @@ class ExpanderTest(DeltaGeneratorTestCase):
         """Test that icon validation also applies to step-type expanders."""
         with pytest.raises(StreamlitAPIException) as e:
             st.expander("label", type="step", icon="not-a-valid-icon")
-        assert "is not a valid emoji" in str(e.value)
+        assert "is not a valid icon" in str(e.value)
 
     def test_on_change_callback_without_key_works(self):
         """Test that a callback works without an explicit key."""
@@ -1189,8 +1189,8 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
             st.popover("label", icon="invalid")
         assert (
             str(e.value)
-            == 'The value "invalid" is not a valid emoji. Shortcodes are not allowed, '
-            "please use a single character instead."
+            == 'The value "invalid" is not a valid icon. Please use a single emoji '
+            "or a Material icon shortcode like `:material\u200b/thumb_up:`."
         )
 
     def test_invalid_material_icon(self):

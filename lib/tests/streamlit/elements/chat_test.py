@@ -1148,17 +1148,29 @@ class ChatInputSerdeFilesAudioTest(DeltaGeneratorTestCase):
         )
 
         proto = ChatInputValueProto()
-        proto.data = "msg"
+        proto.data = ""
         info = proto.file_uploader_state.uploaded_file_info.add()
         info.file_id = "file1"
+        info.file_urls.file_id = "file1"
+        info.file_urls.upload_url = "upload"
+        info.file_urls.delete_url = "delete"
 
         serde = ChatInputSerde(accept_files=True, accept_audio=False)
         result = serde.deserialize(proto)
 
         assert isinstance(result, ChatInputValue)
-        assert result.text == "msg"
+        assert result.text == ""
         assert len(result.files) == 1
         assert result.files[0].name == "doc.txt"
+        assert result.files[0].type == "text/plain"
+        assert result.files[0].getvalue() == b"abc"
+        assert (
+            self.script_run_ctx.uploaded_file_mgr.get_files(
+                session_id=self.script_run_ctx.session_id,
+                file_ids=["file1"],
+            )
+            == []
+        )
         # Anti-regression: when accept_audio is False, audio access raises.
         with pytest.raises(AttributeError):
             _ = result.audio
@@ -1210,8 +1222,67 @@ class ChatInputValueExtraTest(DeltaGeneratorTestCase):
         """Test __contains__ returns False when the key is not a string."""
         value = ChatInputValue(text="hi")
         assert (42 in value) is False
+        assert ([] in value) is False
+        assert value.get([]) is None
         # Anti-regression: a valid string key should still report membership.
         assert "text" in value
+
+
+@pytest.mark.parametrize(
+    ("include_files", "include_audio", "expected"),
+    [
+        (False, False, "ChatInputValue(text='hi')"),
+        (True, False, "ChatInputValue(text='hi', files=[])"),
+        (False, True, "ChatInputValue(text='hi', audio=None)"),
+        (True, True, "ChatInputValue(text='hi', files=[], audio=None)"),
+    ],
+)
+def test_chat_input_value_repr_includes_only_enabled_keys(
+    include_files: bool, include_audio: bool, expected: str
+) -> None:
+    """repr omits files/audio unless those inputs were accepted."""
+    value = ChatInputValue(
+        text="hi",
+        files=[],
+        audio=None,
+        _include_files=include_files,
+        _include_audio=include_audio,
+    )
+    assert repr(value) == expected
+
+
+def test_chat_input_value_repr_skips_deleted_keys() -> None:
+    """repr does not raise after an included key is deleted."""
+    value = ChatInputValue(
+        text="hi",
+        files=[],
+        audio=None,
+        _include_files=True,
+        _include_audio=True,
+    )
+    del value["files"]
+    assert "files" not in value
+    assert list(value) == ["text", "audio"]
+    assert value.to_dict() == {"text": "hi", "audio": None}
+    assert repr(value) == "ChatInputValue(text='hi', audio=None)"
+
+
+def test_chat_input_value_setitem_after_delete() -> None:
+    """An accepted key can be set again after it is deleted."""
+    value = ChatInputValue(
+        text="hi",
+        files=[],
+        audio=None,
+        _include_files=True,
+        _include_audio=True,
+    )
+    del value["text"]
+    del value["files"]
+    value["text"] = "again"
+    value["files"] = []
+    assert value["text"] == "again"
+    assert value["files"] == []
+    assert "audio" in value
 
 
 class AvatarProcessingTest(DeltaGeneratorTestCase):

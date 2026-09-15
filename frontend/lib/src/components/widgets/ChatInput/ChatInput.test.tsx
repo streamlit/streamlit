@@ -145,10 +145,10 @@ const createRecordingController = (): WaveformController => ({
 
 /** Returns the controller events from the most recent useWaveformController call. */
 const getWaveformEvents = (): WaveformControllerEvents => {
-  const lastCall =
-    useWaveformControllerMock.mock.calls[
-      useWaveformControllerMock.mock.calls.length - 1
-    ]
+  const lastCall = useWaveformControllerMock.mock.calls.at(-1)
+  if (!lastCall) {
+    throw new Error("Expected useWaveformController to have been called")
+  }
   return lastCall[0].events as WaveformControllerEvents
 }
 
@@ -428,6 +428,46 @@ describe("ChatInput widget", () => {
 
       const button = screen.getByTestId("stChatInputSubmitButton")
       expect(button).not.toBeDisabled()
+    })
+
+    it("submits an attachment with explicit empty text", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        acceptFile: ChatInputProto.AcceptFile.SINGLE,
+        maxUploadSizeMb: 50,
+      })
+      const spy = vi.spyOn(props.widgetMgr, "setChatInputValue")
+      render(<ChatInput {...props} />)
+
+      const file = new File(["attachment contents"], "attachment.txt", {
+        type: "text/plain",
+      })
+      const uploadButton = screen.getByTestId("stChatInputFileUploadButton")
+      const fileInput = uploadButton.querySelector("input") as HTMLInputElement
+      await user.upload(fileInput, file)
+
+      const submitButton = screen.getByTestId("stChatInputSubmitButton")
+      await waitFor(() => {
+        expect(submitButton).toBeEnabled()
+      })
+      await user.click(submitButton)
+
+      expect(spy).toHaveBeenCalledWith(
+        props.element.id,
+        expect.objectContaining({
+          data: "",
+          fileUploaderState: expect.objectContaining({
+            uploadedFileInfo: [
+              expect.objectContaining({
+                fileId: "attachment.txt",
+                name: "attachment.txt",
+                size: file.size,
+              }),
+            ],
+          }),
+        }),
+        { formId: undefined, fragmentId: undefined, fromUser: true }
+      )
     })
 
     it("disables submit button when files are uploading", async () => {
@@ -806,15 +846,12 @@ describe("ChatInput widget", () => {
 
     // Wait for files to be displayed (order-agnostic check)
     await waitFor(() => {
-      const fileNames = screen.getAllByTestId("stFileChipName")
-      expect(fileNames).toHaveLength(2)
-
-      // Check that both files are present using title attribute (full filename)
-      const fileTitles = Array.from(fileNames).map(el =>
-        el.getAttribute("title")
-      )
-      expect(fileTitles).toContain("folder/file1.txt")
-      expect(fileTitles).toContain("folder/file2.txt")
+      expect(
+        screen
+          .getAllByTestId("stFileChipName")
+          .map(el => el.getAttribute("title"))
+          .toSorted()
+      ).toEqual(["folder/file1.txt", "folder/file2.txt"])
     })
 
     // Find and delete file1

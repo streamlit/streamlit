@@ -752,12 +752,11 @@ class TextWidgetsMixin:
     ) -> str | None:
         key = to_key(key)
 
-        validate_on_change_mode(on_change)
-        live_debounce_ms = _parse_text_input_live(live)
-
-        on_change_callback: WidgetCallback | None = (
-            on_change if callable(on_change) else None
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
         )
+        live_debounce_ms = _parse_text_input_live(live)
 
         type_defaults = _TEXT_INPUT_TYPE_DEFAULTS.get(type)
         if type_defaults is None:
@@ -809,10 +808,6 @@ class TextWidgetsMixin:
         # Precedence per property: explicit user value -> type default -> off.
         if icon is None:
             icon = type_defaults.icon
-        elif icon == "":
-            # `icon=""` opts out of the icon. Map it to None so it isn't passed
-            # to `validate_icon_or_emoji`, which raises on an empty string.
-            icon = None
 
         if placeholder is None:
             placeholder = type_defaults.placeholder
@@ -1196,6 +1191,10 @@ class TextWidgetsMixin:
         ctx: ScriptRunContext | None = None,
     ) -> str | None:
         key = to_key(key)
+        on_change = validate_on_change_mode(
+            on_change,
+            supported_modes=(),
+        )
 
         check_widget_policies(
             self.dg,

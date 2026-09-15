@@ -92,7 +92,7 @@ export function sortThemeInputKeys(obj: unknown): unknown {
   if (typeof obj === "object") {
     const sorted: Record<string, unknown> = {}
     Object.keys(obj)
-      .sort()
+      .toSorted()
       .forEach(key => {
         sorted[key] = sortThemeInputKeys((obj as Record<string, unknown>)[key])
       })

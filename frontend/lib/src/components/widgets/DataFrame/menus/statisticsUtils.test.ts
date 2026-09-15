@@ -493,15 +493,15 @@ describe("statisticsUtils", () => {
 
     it("formats integers without fraction digits", () => {
       // Strip grouping/decimal separators so the assertion is locale-independent.
-      expect(formatNumber(1000).replace(/\D/g, "")).toBe("1000")
-      expect(formatNumber(42, 0).replace(/\D/g, "")).toBe("42")
+      expect(formatNumber(1000).replaceAll(/\D/g, "")).toBe("1000")
+      expect(formatNumber(42, 0).replaceAll(/\D/g, "")).toBe("42")
     })
 
     it("rounds to the requested precision", () => {
       // Separators vary by locale, so match digits around an arbitrary separator.
       expect(formatNumber(3.14159, 2)).toMatch(/^3\D14$/)
       expect(formatNumber(2.5)).toMatch(/^2\D5$/)
-      expect(formatNumber(2.6, 0).replace(/\D/g, "")).toBe("3")
+      expect(formatNumber(2.6, 0).replaceAll(/\D/g, "")).toBe("3")
     })
   })
 
@@ -552,8 +552,8 @@ describe("statisticsUtils", () => {
       const [countPart, percentPart] = result.split(" (")
 
       expect(result.endsWith("%)")).toBe(true)
-      expect(countPart.replace(/\D/g, "")).toBe("1234")
-      expect(percentPart.replace(/\D/g, "")).toBe("50")
+      expect(countPart.replaceAll(/\D/g, "")).toBe("1234")
+      expect(percentPart.replaceAll(/\D/g, "")).toBe("50")
     })
   })
 
@@ -587,7 +587,7 @@ describe("statisticsUtils", () => {
 
   describe("formatTooltipNumber", () => {
     it("formats integers without decimals", () => {
-      expect(formatTooltipNumber(1000).replace(/\D/g, "")).toBe("1000")
+      expect(formatTooltipNumber(1000).replaceAll(/\D/g, "")).toBe("1000")
       expect(formatTooltipNumber(0)).toBe("0")
     })
 
@@ -598,7 +598,7 @@ describe("statisticsUtils", () => {
 
   describe("formatChartCount", () => {
     it("rounds to a whole number", () => {
-      expect(formatChartCount(1234.6).replace(/\D/g, "")).toBe("1235")
+      expect(formatChartCount(1234.6).replaceAll(/\D/g, "")).toBe("1235")
       expect(formatChartCount(0)).toBe("0")
     })
   })
@@ -612,7 +612,7 @@ describe("statisticsUtils", () => {
       const result = formatChartPercent(33.33)
       expect(result.endsWith("%")).toBe(true)
       // 33.33 -> "33.3%"; digits only (separator-agnostic) are "333".
-      expect(result.replace(/\D/g, "")).toBe("333")
+      expect(result.replaceAll(/\D/g, "")).toBe("333")
     })
   })
 

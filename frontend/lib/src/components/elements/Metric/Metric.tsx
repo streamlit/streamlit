@@ -399,6 +399,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
         } else {
           finalizeEmbed = result.finalize
         }
+        return
       })
       .catch((error: unknown) => {
         // Ignore embed rejections so teardown races do not throw. LOG.debug

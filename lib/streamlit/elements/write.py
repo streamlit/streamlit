@@ -366,11 +366,10 @@ class WriteMixin:
             HTML expressions within ``body`` will be rendered.
 
             Adding custom HTML to your app impacts safety, styling, and
-            maintainability.
-
-            .. note::
-                If you only want to insert HTML or CSS without Markdown text,
-                we recommend using ``st.html`` instead.
+            maintainability. Don't use ``unsafe_allow_html`` to recreate UI
+            or inject CSS. Prefer native Streamlit features and theming
+            instead. If you need HTML or CSS without Markdown, use
+            ``st.html``.
 
         Examples
         --------

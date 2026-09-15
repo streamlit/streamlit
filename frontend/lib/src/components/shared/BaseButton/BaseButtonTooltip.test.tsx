@@ -57,6 +57,7 @@ describe("BaseButtonTooltip", () => {
     beforeAll(() => {
       // Register React Aria's document pointer listener so hover counts as
       // pointer modality. See Tooltip.test.tsx for the full setup.
+      // eslint-disable-next-line testing-library/no-render-in-lifecycle -- useFocusVisible must run once so React Aria registers the document pointer listener that hover tests depend on.
       renderHook(() => useFocusVisible())
     })
 

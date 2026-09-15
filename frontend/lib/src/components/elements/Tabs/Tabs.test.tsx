@@ -559,10 +559,12 @@ describe("st.tabs", () => {
       rerender(<Tabs {...getProps({ node: replacement, widgetMgr })} />)
 
       await waitFor(() => {
-        const tabs = screen.getAllByRole("tab")
-        expect(tabs[0]).toHaveAttribute("aria-selected", "true")
-        expect(tabs[0]).toHaveTextContent("Alpha")
+        expect(screen.getAllByRole("tab")[0]).toHaveAttribute(
+          "aria-selected",
+          "true"
+        )
       })
+      expect(screen.getAllByRole("tab")[0]).toHaveTextContent("Alpha")
       expect(widgetMgr.getElementState(blockId, "activeTabLabel")).toBe(
         "Alpha"
       )
@@ -622,10 +624,12 @@ describe("st.tabs", () => {
       rerender(<Tabs {...getProps({ node: longerList, widgetMgr })} />)
 
       await waitFor(() => {
-        const tabs = screen.getAllByRole("tab")
-        expect(tabs[1]).toHaveAttribute("aria-selected", "true")
-        expect(tabs[1]).toHaveTextContent("B")
+        expect(screen.getAllByRole("tab")[1]).toHaveAttribute(
+          "aria-selected",
+          "true"
+        )
       })
+      expect(screen.getAllByRole("tab")[1]).toHaveTextContent("B")
       expect(screen.getAllByRole("tab")[0]).toHaveAttribute(
         "aria-selected",
         "false"

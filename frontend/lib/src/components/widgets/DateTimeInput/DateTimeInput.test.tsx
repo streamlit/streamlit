@@ -1664,12 +1664,15 @@ describe("DateTimeInput widget", () => {
       await waitFor(() => {
         const calendar = screen.getByTestId("stDateTimeInputCalendar")
         expect(calendar).toHaveAttribute("role", "dialog")
-        expect(calendar).toHaveAttribute("aria-modal", "true")
         // Focus should be inside the calendar grid
         const focused = document.activeElement
         expect(calendar.contains(focused)).toBe(true)
         expect(focused?.getAttribute("tabindex")).toBe("0")
       })
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toHaveAttribute(
+        "aria-modal",
+        "true"
+      )
     })
 
     it("Escape from active calendar closes it and returns focus to the field", async () => {
@@ -1724,10 +1727,15 @@ describe("DateTimeInput widget", () => {
       await user.keyboard("{Alt>}{ArrowDown}{/Alt}")
 
       await waitFor(() => {
-        const calendar = screen.getByTestId("stDateTimeInputCalendar")
-        expect(calendar).toHaveAttribute("role", "dialog")
-        expect(calendar).toHaveAttribute("aria-modal", "true")
+        expect(screen.getByTestId("stDateTimeInputCalendar")).toHaveAttribute(
+          "role",
+          "dialog"
+        )
       })
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toHaveAttribute(
+        "aria-modal",
+        "true"
+      )
     })
   })
 
@@ -2481,7 +2489,11 @@ describe("DateTimeInput widget", () => {
       // Tab off the last segment closes the popover, so the merge has to happen
       // while it is still mounted — otherwise its half is unreadable and both
       // halves are discarded.
-      await user.click(inline[inline.length - 1])
+      const lastInline = inline.at(-1)
+      if (!lastInline) {
+        throw new Error("Expected a date-time segment")
+      }
+      await user.click(lastInline)
       await user.tab()
 
       await expectCommitted(spy, props, "2025-11-19T09:45")

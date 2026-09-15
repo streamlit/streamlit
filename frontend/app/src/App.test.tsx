@@ -405,7 +405,11 @@ function getStoredValue<T>(
   Type: unknown
 ): T {
   const mocked = vi.mocked(Type as (...args: unknown[]) => T)
-  return mocked.mock.results[mocked.mock.results.length - 1].value as T
+  const last = mocked.mock.results.at(-1)
+  if (!last) {
+    throw new Error("Expected a mock result")
+  }
+  return last.value as T
 }
 
 function getMockConnectionManager(isConnected = false): ConnectionManager {
@@ -1874,8 +1878,9 @@ describe("App", () => {
     it("does not override the pathname when resetting query params", () => {
       renderApp(getProps())
       const pathname = "/foo/bar/"
-      // Set the value of document.location.pathname to pathname.
-      window.history.pushState({}, "", pathname)
+      // Seed a query string so that resetting it is an actual URL change.
+      window.history.pushState({}, "", `${pathname}?flying=spaghetti`)
+      pushStateSpy.mockClear()
 
       sendForwardMessage("pageInfoChanged", {
         queryString: "",
@@ -1886,8 +1891,9 @@ describe("App", () => {
 
     it("resets query params as expected when at the root pathname", () => {
       renderApp(getProps())
-      // Note: One would typically set the value of document.location.pathname to '/' here,
-      // However, this is already taking place in beforeEach().
+      // Seed a query string so that resetting it is an actual URL change.
+      window.history.pushState({}, "", "/?flying=spaghetti")
+      pushStateSpy.mockClear()
 
       sendForwardMessage("pageInfoChanged", {
         queryString: "",
@@ -1909,6 +1915,50 @@ describe("App", () => {
 
       const expectedUrl = `/?${queryString}`
       expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", expectedUrl)
+    })
+
+    it("does not push history when the query string is unchanged", () => {
+      renderApp(getProps())
+      const queryString = "flying=spaghetti&monster=omg"
+      window.history.pushState({}, "", `/?${queryString}`)
+      pushStateSpy.mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString,
+      })
+
+      expect(pushStateSpy).not.toHaveBeenCalled()
+    })
+
+    it("does not push history when resetting already-empty query params", () => {
+      renderApp(getProps())
+      pushStateSpy.mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "",
+      })
+
+      expect(pushStateSpy).not.toHaveBeenCalled()
+    })
+
+    it("still sends SET_QUERY_PARAM to the host when the query string is unchanged", () => {
+      renderApp(getProps())
+      const queryString = "flying=spaghetti&monster=omg"
+      window.history.pushState({}, "", `/?${queryString}`)
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      ;(hostCommunicationMgr.sendMessageToHost as Mock).mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString,
+      })
+
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "SET_QUERY_PARAM",
+        queryParams: `?${queryString}`,
+      })
     })
   })
 
@@ -3357,6 +3407,55 @@ describe("App", () => {
           screen.queryByText("Here is some other text")
         ).not.toBeInTheDocument()
       })
+    })
+
+    it("logs a throwing script-finished handler and still runs later handlers", async () => {
+      const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+      try {
+        let appInstance: App | null = null
+
+        render(
+          <RootStyleProvider theme={getDefaultTheme()}>
+            <WindowDimensionsProvider>
+              <App
+                {...getProps()}
+                ref={instance => {
+                  appInstance = instance
+                }}
+              />
+            </WindowDimensionsProvider>
+          </RootStyleProvider>
+        )
+
+        expect(appInstance).not.toBeNull()
+
+        const handlerError = new Error("handler boom")
+        const throwingHandler = vi.fn(() => {
+          throw handlerError
+        })
+        const laterHandler = vi.fn()
+
+        act(() => {
+          appInstance?.addScriptFinishedHandler(throwingHandler)
+          appInstance?.addScriptFinishedHandler(laterHandler)
+        })
+
+        sendForwardMessage(
+          "scriptFinished",
+          ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+        )
+
+        await waitFor(() => {
+          expect(laterHandler).toHaveBeenCalledTimes(1)
+        })
+        expect(throwingHandler).toHaveBeenCalledTimes(1)
+        expect(logErrorSpy).toHaveBeenCalledWith(
+          "Script finished handler failed",
+          handlerError
+        )
+      } finally {
+        logErrorSpy.mockRestore()
+      }
     })
   })
 

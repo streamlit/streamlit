@@ -291,7 +291,9 @@ describe("useWaveformController", () => {
 
     // Wait for initialization
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0))
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
     })
 
     // Unmount the component
@@ -388,7 +390,9 @@ describe("useWaveformController", () => {
     )
 
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0))
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
     })
 
     act(() => {
@@ -609,7 +613,9 @@ describe("useWaveformController", () => {
         recordHandlers.get("record-end")?.(
           new Blob(["audio"], { type: "audio/webm" })
         )
-        await new Promise(resolve => setTimeout(resolve, 0))
+        await new Promise(resolve => {
+          setTimeout(resolve, 0)
+        })
       })
 
       // Signal that the loaded audio is ready for playback.

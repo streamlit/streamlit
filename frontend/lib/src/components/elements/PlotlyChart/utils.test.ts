@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { waitFor } from "@testing-library/dom"
+import { waitFor } from "@testing-library/react"
 import Plotly from "plotly.js"
 
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"

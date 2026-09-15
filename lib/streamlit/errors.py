@@ -24,6 +24,7 @@ from streamlit import util
 if TYPE_CHECKING:
     from collections.abc import Collection
     from datetime import date, time
+    from traceback import StackSummary
 
 
 class Error(Exception):  # pragma: no cover - trivial base class
@@ -165,6 +166,8 @@ class StreamlitAPIWarning(StreamlitAPIException, Warning):
     Note that this should not be "raised", but passed to st.exception
     instead.
     """
+
+    tacked_on_stack: StackSummary | None
 
     def __init__(self, *args: Any) -> None:
         super().__init__(*args)
@@ -338,9 +341,10 @@ class StreamlitValueAboveMaxError(LocalizableStreamlitException):
 class StreamlitInvalidMinMaxError(LocalizableStreamlitException):
     """Raised when ``min_value`` is greater than ``max_value``.
 
-    ``st.slider`` also raises this for equal bounds. ``st.date_input`` and
-    ``st.datetime_input`` treat equal bounds as a valid single-day /
-    single-instant range.
+    - ``st.slider`` swaps reversed bounds and raises this only for equal
+      bounds.
+    - ``st.date_input``, ``st.datetime_input``, and ``st.number_input``
+      reject reversed bounds. Equal bounds stay valid.
     """
 
     def __init__(self, min_value: object, max_value: object) -> None:

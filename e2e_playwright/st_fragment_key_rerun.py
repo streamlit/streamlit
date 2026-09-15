@@ -12,16 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""E2E app for @st.fragment(key=...) and st.rerun(scope=<key>) scenarios."""
+"""E2E app for @st.fragment(key=...) and st.rerun(scope=<key>) use cases."""
 
+from time import monotonic, sleep
 from uuid import uuid4
 
 import streamlit as st
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequestType
 
 # ------------------------------------------------------------------ #
-# Scenario 1: Widget outside a keyed fragment triggers a fragment-only rerun.
+# A widget outside a keyed fragment triggers a fragment-only rerun.
 # ------------------------------------------------------------------ #
-st.header("Scenario 1: single-key rerun")
+st.header("Single-key fragment rerun")
 
 if "outside_counter" not in st.session_state:
     st.session_state.outside_counter = 0
@@ -46,9 +49,9 @@ st.button(
 )
 
 # ------------------------------------------------------------------ #
-# Scenario 2: Targeting a list of two fragment keys from one callback.
+# A callback targets a list of two fragment keys.
 # ------------------------------------------------------------------ #
-st.header("Scenario 2: multi-key rerun")
+st.header("Multi-key fragment rerun")
 
 
 @st.fragment(key="frag_alpha")
@@ -76,10 +79,10 @@ st.button(
 )
 
 # ------------------------------------------------------------------ #
-# Scenario 3: Fragment-to-fragment — widget inside fragment A targets B.
+# A widget inside one fragment targets another fragment.
 # Only the target fragment should rerun; source and outside stay stable.
 # ------------------------------------------------------------------ #
-st.header("Scenario 3: fragment-to-fragment targeting")
+st.header("Fragment-to-fragment targeting")
 
 
 @st.fragment(key="source_frag")
@@ -106,12 +109,102 @@ with st.container(key="compose_stable_text"):
     st.write(f"Compose stable text: {st.session_state.outside_counter}")
 
 # ------------------------------------------------------------------ #
-# Scenario 4: Unknown key raises a visible exception.
+# An unknown fragment key raises a visible exception.
 # ------------------------------------------------------------------ #
-st.header("Scenario 4: unknown key raises")
+st.header("Unknown fragment key raises")
 
 st.button(
     "Rerun unknown fragment",
     key="rerun_unknown_btn",
     on_click=lambda: st.rerun("nonexistent_key"),
 )
+
+# ------------------------------------------------------------------ #
+# A fragment interaction coalesces with a callback-generated replay.
+# ------------------------------------------------------------------ #
+st.header("Fragment callback replay coalescing")
+
+for key in (
+    "source_callbacks",
+    "fresh_callbacks",
+    "coalescing_source_runs",
+    "coalescing_fresh_runs",
+    "coalescing_result_runs",
+):
+    if key not in st.session_state:
+        st.session_state[key] = 0
+
+
+def record_fresh_callback() -> None:
+    st.session_state.fresh_callbacks += 1
+
+
+@st.fragment(key="source_fragment")
+def coalescing_source_fragment() -> None:
+    st.session_state.coalescing_source_runs += 1
+    with st.container(key="coalescing_source_uuid"):
+        st.write(str(uuid4()))
+    with st.container(key="coalescing_source_runs"):
+        st.write(f"Source runs: {st.session_state.coalescing_source_runs}")
+    callback_marker = st.empty()
+
+    def wait_for_fresh_fragment_request() -> None:
+        """Hold callback dispatch until the test queues a fresh interaction."""
+        st.session_state.source_callbacks += 1
+        st.session_state.normalized_value = st.session_state.source_value.strip()
+        callback_marker.write("Source callback waiting for fresh fragment input")
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        assert ctx.script_requests is not None
+        deadline = monotonic() + 10
+        # Poll private request state to keep callback dispatch blocked until the fresh
+        # browser interaction enqueues a rerun, deterministically creating the race.
+        while ctx.script_requests._state is ScriptRequestType.CONTINUE:
+            if monotonic() >= deadline:
+                raise RuntimeError("Fresh fragment interaction did not arrive")
+            sleep(0.01)
+        st.rerun("result_fragment")
+
+    with st.form("coalescing_source_form"):
+        st.text_input(
+            "Source value",
+            key="source_value",
+        )
+        st.form_submit_button(
+            "Submit source",
+            key="source_submit",
+            on_click=wait_for_fresh_fragment_request,
+        )
+
+
+@st.fragment(key="fresh_fragment")
+def coalescing_fresh_fragment() -> None:
+    st.session_state.coalescing_fresh_runs += 1
+    with st.container(key="coalescing_fresh_uuid"):
+        st.write(str(uuid4()))
+    with st.container(key="coalescing_fresh_runs"):
+        st.write(f"Fresh runs: {st.session_state.coalescing_fresh_runs}")
+    st.button(
+        "Fresh fragment interaction",
+        key="fresh_fragment_button",
+        on_click=record_fresh_callback,
+    )
+
+
+@st.fragment(key="result_fragment")
+def coalescing_result_fragment() -> None:
+    st.session_state.coalescing_result_runs += 1
+    with st.container(key="coalescing_result_uuid"):
+        st.write(str(uuid4()))
+    with st.container(key="coalescing_result_runs"):
+        st.write(f"Result runs: {st.session_state.coalescing_result_runs}")
+    with st.container(key="coalescing_results"):
+        st.write(f"Source callbacks: {st.session_state.source_callbacks}")
+        st.write(f"Fresh callbacks: {st.session_state.fresh_callbacks}")
+        st.write(f"Normalized value: {st.session_state.get('normalized_value', '')}")
+        st.write(f"Result saw submit: {st.session_state.get('source_submit', False)}")
+
+
+coalescing_source_fragment()
+coalescing_fresh_fragment()
+coalescing_result_fragment()

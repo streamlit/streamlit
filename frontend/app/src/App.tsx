@@ -937,7 +937,7 @@ export class App extends PureComponent<Props, State> {
         notNullOrUndefined(environmentInfo) &&
         notNullOrUndefined(environmentInfo.streamlitVersion)
       ) {
-        return currentStreamlitVersion != environmentInfo.streamlitVersion
+        return currentStreamlitVersion !== environmentInfo.streamlitVersion
       }
     }
 
@@ -1254,7 +1254,15 @@ export class App extends PureComponent<Props, State> {
     const { queryString } = pageInfo
     const targetUrl =
       document.location.pathname + (queryString ? `?${queryString}` : "")
-    window.history.pushState({}, "", targetUrl)
+    const currentSearch = document.location.search.replace(/^\?/, "")
+
+    // `pushState` always adds a history entry, even when the resulting URL is
+    // identical, so reruns that re-assign the same query params would otherwise
+    // fill the back stack with no-op entries. React state and the host message
+    // below are still updated so embeds stay in sync.
+    if (queryString !== currentSearch) {
+      window.history.pushState({}, "", targetUrl)
+    }
 
     this.setState({ queryParams: queryString })
 
@@ -1972,11 +1980,18 @@ export class App extends PureComponent<Props, State> {
       status ===
         ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
     ) {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-      Promise.resolve().then(() => {
-        // Notify any subscribers of this event (and do it on the next cycle of
-        // the event loop)
-        this.state.scriptFinishedHandlers.forEach(handler => handler())
+      // Notify subscribers on the next microtask so this finish handler can
+      // return before widgets react to the completion of this run. Isolate
+      // handler failures so one throw does not skip later handlers or surface
+      // as an uncaught error.
+      queueMicrotask(() => {
+        this.state.scriptFinishedHandlers.forEach(handler => {
+          try {
+            handler()
+          } catch (error) {
+            LOG.error("Script finished handler failed", error)
+          }
+        })
       })
 
       if (
@@ -2623,7 +2638,7 @@ export class App extends PureComponent<Props, State> {
         ? queryParams
         : document.location.search
 
-    return queryString.startsWith("?") ? queryString.substring(1) : queryString
+    return queryString.startsWith("?") ? queryString.slice(1) : queryString
   }
 
   getThemeColorScheme = (): string => {
@@ -2889,7 +2904,9 @@ export class App extends PureComponent<Props, State> {
             className={outerDivClass}
             data-testid="stApp"
             data-test-script-state={
-              scriptRunId == INITIAL_SCRIPT_RUN_ID ? "initial" : scriptRunState
+              scriptRunId === INITIAL_SCRIPT_RUN_ID
+                ? "initial"
+                : scriptRunState
             }
             data-test-connection-state={connectionState}
           >

@@ -161,7 +161,7 @@ describe("MainMenu", () => {
     const menuItems = screen.getAllByRole("menuitem")
 
     await user.keyboard("{End}")
-    expect(menuItems[menuItems.length - 1]).toHaveFocus()
+    expect(menuItems.at(-1)).toHaveFocus()
 
     await user.keyboard("{Home}")
     expect(menuItems[0]).toHaveFocus()
@@ -176,13 +176,13 @@ describe("MainMenu", () => {
     const menuItems = screen.getAllByRole("menuitem")
 
     await user.keyboard("{End}")
-    expect(menuItems[menuItems.length - 1]).toHaveFocus()
+    expect(menuItems.at(-1)).toHaveFocus()
 
     await user.keyboard("{ArrowDown}")
     expect(menuItems[0]).toHaveFocus()
 
     await user.keyboard("{ArrowUp}")
-    expect(menuItems[menuItems.length - 1]).toHaveFocus()
+    expect(menuItems.at(-1)).toHaveFocus()
   })
 
   it("focuses disabled items when navigating (WAI-ARIA: all menuitems are focusable)", async () => {
@@ -990,7 +990,7 @@ describe("MainMenu", () => {
 
     const labels = getMenuLabels()
     // Verify About is always the last item in minimal mode
-    expect(labels[labels.length - 1]).toBe("About")
+    expect(labels.at(-1)).toBe("About")
   })
 
   it("should track metrics when menu item is clicked", async () => {
@@ -1353,7 +1353,7 @@ describe("MainMenu", () => {
 
       // End should go to last action item
       await user.keyboard("{End}")
-      expect(actionItems[actionItems.length - 1]).toHaveFocus()
+      expect(actionItems.at(-1)).toHaveFocus()
 
       // Home should go to first radio item (System)
       await user.keyboard("{Home}")
@@ -1370,7 +1370,7 @@ describe("MainMenu", () => {
 
       // Go to last action item
       await user.keyboard("{End}")
-      expect(actionItems[actionItems.length - 1]).toHaveFocus()
+      expect(actionItems.at(-1)).toHaveFocus()
 
       // ArrowDown should wrap to first radio item
       await user.keyboard("{ArrowDown}")

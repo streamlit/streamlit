@@ -427,6 +427,12 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitValueError, match=r"Invalid `icon_position` value"):
             form.form_submit_button(icon_position="center")  # type: ignore[arg-type]
 
+    def test_submit_button_invalid_type(self) -> None:
+        """An unknown submit-button type raises StreamlitValueError."""
+        form = st.form("foo")
+        with pytest.raises(StreamlitValueError, match=r"Invalid `type` value"):
+            form.form_submit_button(type="magic")  # type: ignore[arg-type]
+
     def test_return_false_when_not_submitted(self):
         with st.form("form1"):
             submitted = st.form_submit_button("Submit")

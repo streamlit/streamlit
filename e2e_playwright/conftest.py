@@ -570,10 +570,17 @@ def app_server_extra_args() -> list[str]:
     return []
 
 
+@pytest.fixture(scope="module")
+def app_server_extra_env() -> dict[str, str]:
+    """Fixture that returns extra environment variables for the app server."""
+    return {}
+
+
 @pytest.fixture(scope="module", autouse=True)
 def app_server(
     app_port: int,
     app_server_extra_args: list[str],
+    app_server_extra_env: dict[str, str],
     request: pytest.FixtureRequest,
     external_app_url: str | None,
     external_host_url: str | None,
@@ -590,6 +597,7 @@ def app_server(
     streamlit_proc = start_app_server(
         app_port,
         request.module,
+        extra_env=app_server_extra_env,
         extra_args=app_server_extra_args,
     )
     yield streamlit_proc
@@ -1330,8 +1338,8 @@ def delete_output_dir(pytestconfig: Any) -> None:
     # To prevent this issue, we are not deleting the output dir when running with
     # reruns and xdist.
 
-    uses_xdist = (
-        pytestconfig.getoption("workerinput", None) or os.getenv("PYTEST_XDIST_WORKER"),
+    uses_xdist = pytestconfig.getoption("workerinput", None) or os.getenv(
+        "PYTEST_XDIST_WORKER"
     )
     uses_reruns = pytestconfig.getoption("reruns", None)
 

@@ -44,7 +44,7 @@ export class DebugVisitor implements AppNodeVisitor<string> {
 
     let result = `${this.prefix}${connector}BlockNode [${node.children.length} children]`
     if (node.scriptRunId !== NO_SCRIPT_RUN_ID) {
-      result += ` (run: ${node.scriptRunId.substring(0, MAX_HASH_LENGTH)})`
+      result += ` (run: ${node.scriptRunId.slice(0, MAX_HASH_LENGTH)})`
     }
     result += "\n"
 
@@ -70,13 +70,13 @@ export class DebugVisitor implements AppNodeVisitor<string> {
     }
 
     if (node.scriptRunId !== NO_SCRIPT_RUN_ID) {
-      result += ` (run: ${node.scriptRunId.substring(0, MAX_HASH_LENGTH)})`
+      result += ` (run: ${node.scriptRunId.slice(0, MAX_HASH_LENGTH)})`
     }
 
     if (node.fragmentId) {
-      result += ` (fragment: ${node.fragmentId.substring(0, MAX_HASH_LENGTH)})`
+      result += ` (fragment: ${node.fragmentId.slice(0, MAX_HASH_LENGTH)})`
     }
-    result += ` (activeScriptHash: ${node.activeScriptHash.substring(0, MAX_HASH_LENGTH)})`
+    result += ` (activeScriptHash: ${node.activeScriptHash.slice(0, MAX_HASH_LENGTH)})`
 
     result += "\n"
     return result
@@ -88,7 +88,7 @@ export class DebugVisitor implements AppNodeVisitor<string> {
 
     let result = `${this.prefix}${connector}TransientNode [${node.transientNodes.length} transient]`
     if (node.scriptRunId !== NO_SCRIPT_RUN_ID) {
-      result += ` (run: ${node.scriptRunId.substring(0, MAX_HASH_LENGTH)})`
+      result += ` (run: ${node.scriptRunId.slice(0, MAX_HASH_LENGTH)})`
     }
     result += "\n"
 

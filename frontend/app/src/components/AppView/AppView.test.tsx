@@ -938,7 +938,9 @@ describe("AppView element", () => {
 
   describe("when window.location.hash changes", () => {
     let originalLocation: Location
-    beforeEach(() => (originalLocation = window.location))
+    beforeEach(() => {
+      originalLocation = window.location
+    })
     afterEach(() => {
       Object.defineProperty(window, "location", {
         value: originalLocation,

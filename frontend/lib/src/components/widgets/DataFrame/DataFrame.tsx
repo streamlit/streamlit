@@ -928,9 +928,7 @@ function DataFrame({
   // which cannot be determined when the parent container has a fit-content width or when there are multiple siblings
   // in a nested container.
   const disableResize =
-    isInHorizontalLayout || (widthConfig?.useContent && !isInRoot)
-      ? true
-      : false
+    isInHorizontalLayout || Boolean(widthConfig?.useContent && !isInRoot)
 
   // The search overlay may only be open while search is actually enabled.
   // Deriving it from `canSearch` ensures the overlay is hidden (instead of
@@ -1120,7 +1118,7 @@ function DataFrame({
           bottom: false,
           left: false,
           topRight: false,
-          bottomRight: disableResize ? false : true,
+          bottomRight: !disableResize,
           bottomLeft: false,
           topLeft: false,
         }}

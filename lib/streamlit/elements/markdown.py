@@ -180,13 +180,12 @@ class MarkdownMixin:
             expressions within ``body`` will be rendered.
 
             Adding custom HTML to your app impacts safety, styling, and
-            maintainability.
+            maintainability. Don't use ``unsafe_allow_html`` to recreate UI
+            or inject CSS. Prefer native Streamlit features and theming
+            instead. If you need HTML or CSS without Markdown, use
+            ``st.html``.
 
             ``unsafe_allow_html=True`` cannot be combined with ``wrap=False``.
-
-            .. note::
-                If you only want to insert HTML or CSS without Markdown text,
-                we recommend using ``st.html`` instead.
 
         help : str or None
             A tooltip that gets displayed next to the Markdown. If this is
@@ -321,13 +320,12 @@ class MarkdownMixin:
             expressions within ``body`` will be rendered.
 
             Adding custom HTML to your app impacts safety, styling, and
-            maintainability.
+            maintainability. Don't use ``unsafe_allow_html`` to recreate UI
+            or inject CSS. Prefer native Streamlit features and theming
+            instead. If you need HTML or CSS without Markdown, use
+            ``st.html``.
 
             ``unsafe_allow_html=True`` cannot be combined with ``wrap=False``.
-
-            .. note::
-                If you only want to insert HTML or CSS without Markdown text,
-                we recommend using ``st.html`` instead.
 
         help : str or None
             A tooltip that gets displayed next to the caption. If this is
@@ -620,7 +618,8 @@ class MarkdownMixin:
             height: 220px
 
         """
-        icon_str = validate_icon_or_emoji(icon) + " " if icon is not None else ""
+        validated_icon = validate_icon_or_emoji(icon)
+        icon_str = f"{validated_icon} " if validated_icon else ""
 
         # Escape [ and ] characters in the label to prevent breaking the directive syntax
         escaped_label = label.replace("[", "\\[").replace("]", "\\]")

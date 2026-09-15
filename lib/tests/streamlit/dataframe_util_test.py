@@ -453,11 +453,43 @@ class DataframeUtilTest(unittest.TestCase):
             (pd.Series([1, 2.1, "3", True]), "string"),
             # Frozenset (converted to list, not string):
             (pd.Series([frozenset([1, 2]), frozenset([3, 4])]), "list"),
-            # Dicts:
+            # Dicts serialize fine in PyArrow, but are stringified because of
+            # Arrow JS issues (see comments in Quiver.ts). This check has to stay
+            # ahead of the trial conversion, which would let dicts through:
             (pd.Series([{"a": 1}, {"b": 2}]), "string"),
             # Complex types:
             (pd.Series([TestObject(), TestObject()]), "string"),
+            # Lists with inconsistent nesting levels are not serializable by
+            # PyArrow, in either order:
+            (pd.Series([[1, 2], [[1, 2], [3, 4]]]), "string"),
+            (pd.Series([[[1, 2], [3, 4]], [1, 2]]), "string"),
+            # Same, with a leading null so the first value is found via dropna():
+            (pd.Series([None, [1, 2], [[3, 4]]]), "string"),
+            # GeoJSON-shaped coordinates (Polygon next to MultiPolygon):
+            (
+                pd.Series(
+                    [
+                        [[[0, 0], [1, 0], [1, 1], [0, 0]]],
+                        [[[[0, 0], [1, 0], [1, 1], [0, 0]]]],
+                    ]
+                ),
+                "string",
+            ),
+            # A list next to a dict: the first value isn't dict-like, so only the
+            # trial conversion catches this:
+            (pd.Series([[1, 2], {"a": 1}]), "string"),
+            # Values PyArrow rejects without one of its own error types (an int
+            # that doesn't fit into int64 raises ``OverflowError``):
+            (pd.Series([[2**70], [1]]), "string"),
             # Supported types:
+            #
+            # Consistently nested lists are serializable by PyArrow:
+            (pd.Series([[[1, 2], [3, 4]], [[5, 6], [7, 8]]]), None),
+            (pd.Series([[[[1]]], [[[2]]]]), None),
+            # Tuples mix with lists, lengths may differ, and nulls are fine:
+            (pd.Series([(1, 2), [3, 4]]), None),
+            (pd.Series([[1, 2, 3], [4]]), None),
+            (pd.Series([[1, 2], None]), None),
             (pd.Series([1, 2, 3]), None),
             (pd.Series([1, 2, 3.0]), None),
             (pd.Series(["foo", "bar"]), None),
@@ -475,6 +507,28 @@ class DataframeUtilTest(unittest.TestCase):
         assert dataframe_util.determine_arrow_column_fix(column) == fix_type, (
             f"Expected {column} to have fix_type={fix_type!r}."
         )
+
+    @parameterized.expand(
+        [
+            (pd.Series([[1, 2], [[1, 2], [3, 4]]]),),
+            (pd.Series([[1, 2], {"a": 1}]),),
+            (pd.Series([[2**70], [1]]),),
+        ]
+    )
+    def test_determine_arrow_column_fix_without_trial_conversion(
+        self, column: pd.Series
+    ) -> None:
+        """Test that `trial_conversion=False` skips the trial PyArrow conversion.
+
+        Callers that serialize right after pass ``trial_conversion=False`` to keep
+        the check cheap (see `st.data_editor`), so these columns must stay
+        undetected here and be caught by the failing serialization instead.
+        """
+        assert (
+            dataframe_util.determine_arrow_column_fix(column, trial_conversion=False)
+            is None
+        ), f"Expected {column.tolist()} to require a trial conversion."
+        assert dataframe_util.determine_arrow_column_fix(column) == "string"
 
     @parameterized.expand(
         [
@@ -599,6 +653,36 @@ class DataframeUtilTest(unittest.TestCase):
                 "No exception should have been thrown here. "
                 f"Unsupported types of this dataframe should have been automatically fixed: {ex}"
             )
+
+    @parameterized.expand(
+        [
+            ("flat_and_nested_lists", [[1, 2], [[1, 2], [3, 4]]]),
+            (
+                "polygon_and_multipolygon",
+                [
+                    [[[0, 0], [1, 0], [1, 1], [0, 0]]],
+                    [[[[0, 0], [1, 0], [1, 1], [0, 0]]]],
+                ],
+            ),
+            # PyArrow raises OverflowError instead of one of its own errors here:
+            ("int_too_large_for_int64", [[2**70], [1]]),
+        ]
+    )
+    def test_arrow_conversion_stringifies_unserializable_list_columns(
+        self, _name: str, values: list[Any]
+    ) -> None:
+        """Test that columns of lists that PyArrow cannot serialize are stringified.
+
+        Regression test for https://github.com/streamlit/streamlit/issues/9380
+        """
+        df = pd.DataFrame({"c1": values})
+
+        converted_bytes = dataframe_util.convert_pandas_df_to_arrow_bytes(df)
+
+        reconstructed_df = dataframe_util.convert_arrow_bytes_to_pandas_df(
+            converted_bytes
+        )
+        assert reconstructed_df["c1"].tolist() == [str(value) for value in values]
 
     @pytest.mark.skipif(
         dataframe_util.is_pandas_version_less_than("3.0.0"),

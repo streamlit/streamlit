@@ -337,6 +337,8 @@ def test_mega_tester_app_renders_expected_content(app_target: AppTarget) -> None
         expect(plotly_charts).to_have_count(0)
     expect(app_target.get_by_test_id("stGraphVizChart").first).to_be_visible()
     expect(app_target.get_by_test_id("stMermaidChart").first).to_be_visible()
+    expect(app_target.get_by_test_id("stEChartsChart").first).to_be_visible()
+    expect(app_target.get_by_test_id("stEChartsChartError")).to_have_count(0)
 
     # Custom UI: verify HTML component iframe and unsafe markdown output.
     custom_html_iframe = app_target.locator(
