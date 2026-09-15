@@ -2639,25 +2639,104 @@ def _form_clears_on_submit(tree: ElementTree, form_id: str) -> bool:
     return False
 
 
-def _proto_default(proto: Any) -> Any:
-    """The widget proto's default value, or ``None`` when it is unset."""
+def _has_proto_field(proto: Any, name: str) -> bool:
+    """Return True if ``proto`` has ``name`` set (or the field has no presence)."""
     fields = getattr(getattr(proto, "DESCRIPTOR", None), "fields_by_name", None)
-    if not fields or "default" not in fields:
+    if not fields or name not in fields:
+        return False
+    field = fields[name]
+    if getattr(field, "has_presence", False):
+        return bool(proto.HasField(name))
+    return True
+
+
+def _options_at(node: Any, indexes: Sequence[int]) -> list[Any]:
+    """Return ``node.options`` entries for in-range indexes."""
+    options = getattr(node, "options", [])
+    return [options[i] for i in indexes if 0 <= i < len(options)]
+
+
+def _python_default_for_widget(node: Widget) -> Any:
+    """Python value ``_widget_state`` expects for this widget's proto default.
+
+    ``proto.default`` is a wire value (option index, ISO string, …), not the
+    object testers pass to ``set_value``.
+    """
+    proto = node.proto
+    if isinstance(node, FileUploader):
         return None
-    field = fields["default"]
-    if getattr(field, "has_presence", False) and not proto.HasField("default"):
-        return None
-    return proto.default
+    if isinstance(node, (Checkbox, Toggle)):
+        return bool(proto.default)
+    if isinstance(node, (ColorPicker, TextArea, TextInput)):
+        return proto.default if _has_proto_field(proto, "default") else ""
+    if isinstance(node, NumberInput):
+        return proto.default if _has_proto_field(proto, "default") else None
+    if isinstance(node, (Radio, Selectbox)):
+        if not _has_proto_field(proto, "default"):
+            return None
+        selected = _options_at(node, [proto.default])
+        return selected[0] if selected else None
+    if isinstance(node, Multiselect):
+        return _options_at(node, list(proto.default))
+    if isinstance(node, ButtonGroup):
+        selected = _options_at(node, list(proto.default))
+        if node._is_single_select:
+            return selected[0] if selected else None
+        return selected
+    if isinstance(node, Feedback):
+        return proto.default if _has_proto_field(proto, "default") else None
+    if isinstance(node, DateInput):
+        dates = [DateInputSerde._parse_date(v) for v in proto.default]
+        if not dates:
+            return () if node.is_range else None
+        return tuple(dates) if node.is_range else dates[0]
+    if isinstance(node, TimeInput):
+        if not _has_proto_field(proto, "default") or not proto.default:
+            return None
+        return TimeInputSerde(None, step=node.step).deserialize(proto.default)
+    if isinstance(node, DateTimeInput):
+        if not proto.default:
+            return None
+        raw = proto.default[0]
+        try:
+            return datetime.strptime(raw, "%Y-%m-%dT%H:%M")
+        except ValueError:
+            try:
+                return datetime.strptime(raw, "%Y/%m/%d, %H:%M")
+            except ValueError:
+                return None
+    if isinstance(node, Slider):
+        defaults = list(proto.default)
+        if not defaults:
+            return None
+        serde = SliderSerde(
+            defaults,
+            proto.data_type,
+            len(defaults) != 2,
+            None,
+            proto.min,
+            proto.max,
+        )
+        return serde.deserialize(defaults)
+    if isinstance(node, SelectSlider):
+        selected = _options_at(node, [int(i) for i in proto.default])
+        if len(selected) == 2:
+            return selected
+        return selected[0] if selected else None
+    return None
 
 
 def _has_pending_value(node: Widget) -> bool:
-    """Return True if the test staged a value on this widget since the last run."""
-    if isinstance(node, FileUploader):
-        return not isinstance(node._files, InitialValue)
-    value = node._value
-    if isinstance(value, InitialValue):
-        return False
-    return value is not None
+    """Return True if the test staged a value on this widget since the last run.
+
+    ``None`` is a real staged value for widgets whose unset marker is
+    ``InitialValue`` (for example ``selectbox.select_index(None)``).
+    """
+    attr, sentinel = _committed_serialize_sentinel(node)
+    current = getattr(node, attr)
+    if isinstance(sentinel, InitialValue):
+        return not isinstance(current, InitialValue)
+    return current is not sentinel
 
 
 def _committed_serialize_sentinel(node: Widget) -> tuple[str, Any]:
@@ -2668,7 +2747,7 @@ def _committed_serialize_sentinel(node: Widget) -> tuple[str, Any]:
     """
     if isinstance(node, FileUploader):
         return ("_files", InitialValue())
-    if isinstance(node, Button):
+    if isinstance(node, (Button, DownloadButton)):
         return ("_value", False)
     if isinstance(
         node,
@@ -2772,7 +2851,8 @@ class ElementTree(Block):
             elif (
                 form_id
                 and form_id in cleared
-                and not isinstance(node, Button)
+                and _form_clears_on_submit(self, form_id)
+                and not isinstance(node, (Button, DownloadButton))
                 and not _has_pending_value(node)
             ):
                 if isinstance(node, FileUploader):
@@ -2780,7 +2860,7 @@ class ElementTree(Block):
                     node._files = None
                 else:
                     restore = ("_value", node._value)
-                    node._value = _proto_default(node.proto)
+                    node._value = _python_default_for_widget(node)
             try:
                 w = get_widget_state(node)
             finally:
@@ -2788,11 +2868,6 @@ class ElementTree(Block):
                     setattr(node, restore[0], restore[1])
             if w is not None:
                 ws.widgets.append(w)
-
-        if runner is not None:
-            for form_id in submitted:
-                if _form_clears_on_submit(self, form_id):
-                    runner._cleared_form_ids.add(form_id)
 
         return ws
 
@@ -2808,6 +2883,11 @@ class ElementTree(Block):
         assert self._runner is not None
 
         widget_states = self.get_widget_states()
+        for form_id in _submitted_form_ids(self):
+            if _form_clears_on_submit(self, form_id):
+                self._runner._cleared_form_ids.add(form_id)
+            else:
+                self._runner._cleared_form_ids.discard(form_id)
         return self._runner._run(widget_states, timeout=timeout)
 
     def __repr__(self) -> str:

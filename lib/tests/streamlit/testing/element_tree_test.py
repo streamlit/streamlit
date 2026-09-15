@@ -34,6 +34,7 @@ from streamlit.testing.v1.element_tree import (
     AppTestError,
     UnknownElement,
     _format_value_for_widget,
+    _has_pending_value,
     parse_tree_from_messages,
 )
 from streamlit.typing import ChatInputValue
@@ -2193,8 +2194,8 @@ def test_form_key_and_get_by_key() -> None:
 def test_form_values_apply_only_on_submit() -> None:
     """Form widget values stay uncommitted until the submit button is clicked.
 
-    Regression for wiki queue P1.1 / finding F5. Staged ``.value`` before
-    ``.run()`` may still show the uncommitted input.
+    Staged ``.value`` remains visible for inspection but is not sent to the
+    script until that form's submit button is clicked.
     """
 
     def script() -> None:
@@ -2308,6 +2309,104 @@ def test_form_clear_on_submit_sends_defaults_on_next_submit() -> None:
 
     at.button[0].click().run()
     assert at.text[0].value == "submitted=''"
+
+
+def test_form_clear_on_submit_selectbox_uses_option_default() -> None:
+    """clear_on_submit must serialize the option value, not proto.default's index."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("choice-form", clear_on_submit=True):
+            choice = st.selectbox("Choice", ["a", "b"], index=0)
+            st.form_submit_button("Submit")
+        st.text(f"choice={choice!r}")
+
+    at = AppTest.from_function(script).run()
+    at.selectbox[0].select("b")
+    at.button[0].click().run()
+    assert at.text[0].value == "choice='b'"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "choice='a'"
+
+
+def test_form_clear_on_submit_keeps_explicit_none() -> None:
+    """set_value(None) after a clearing submit is a real value, not 'untouched'."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("choice-form", clear_on_submit=True):
+            st.selectbox("Choice", ["a", "b"], index=0)
+            st.form_submit_button("Submit")
+
+    at = AppTest.from_function(script).run()
+    at.selectbox[0].select("b")
+    at.button[0].click().run()
+    cleared = set(at._cleared_form_ids)
+    at._tree.get_widget_states()
+    assert at._cleared_form_ids == cleared
+
+    at.selectbox[0].select_index(None)
+    at.button[0].click()
+    assert _has_pending_value(at.selectbox[0])
+
+    select_state = next(
+        w for w in at._tree.get_widget_states().widgets if w.id == at.selectbox[0].id
+    )
+    assert select_state.string_value != "a"
+
+
+def test_form_clear_on_submit_follows_current_form_config() -> None:
+    """Stale cleared-form ids must not apply if the form no longer clears."""
+
+    def script() -> None:
+        import streamlit as st
+
+        should_clear = st.checkbox("Clear")
+        with st.form("name-form", clear_on_submit=should_clear):
+            name = st.text_input("Name")
+            st.form_submit_button("Submit")
+        st.text(f"submitted={name!r}")
+
+    at = AppTest.from_function(script).run()
+    at.checkbox[0].check()
+    at.text_input[0].set_value("Ada")
+    at.button[0].click().run()
+    assert at.text[0].value == "submitted='Ada'"
+
+    at.checkbox[0].uncheck()
+    at.button[0].click().run()
+    assert at.text[0].value == "submitted='Ada'"
+
+
+def test_form_file_uploader_applies_only_on_submit() -> None:
+    """Form uploads stay local until submit; clear_on_submit drops them next submit."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("upload-form", clear_on_submit=True):
+            uploaded = st.file_uploader("File")
+            st.form_submit_button("Submit")
+        st.button("Outside")
+        st.text("yes" if uploaded is not None else "no")
+
+    at = AppTest.from_function(script).run()
+    at.file_uploader[0].set_value([("a.txt", b"hi", "text/plain")])
+    at.run()
+    assert at.text[0].value == "no"
+
+    at.file_uploader[0].set_value([("a.txt", b"hi", "text/plain")])
+    at.button[0].click().run()
+    assert at.text[0].value == "yes"
+
+    at.button[1].click().run()
+    assert at.text[0].value == "yes"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "no"
 
 
 def test_get_by_key_rejects_ambiguous_key() -> None:
