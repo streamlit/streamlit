@@ -256,10 +256,11 @@ function RangeDateInput({
   // The anchor VALUE is always `displayStartRef.current` — never stored
   // separately, so it can't go stale when the user edits via keyboard/paste.
   const inAnchorModeRef = useRef(false)
-  // The first-click commit is echoed through the controlled value props. Keep
-  // anchor mode for that one expected echo; any other committed-range change
-  // invalidates the interaction.
-  const pendingAnchorCommitRef = useRef<CalendarDate | null>(null)
+  // The partial range this widget committed itself, which comes back through
+  // the value props as an echo that must not be mistaken for a new range. Only
+  // ever compared during render, never consumed there, so a re-run of the same
+  // render reaches the same conclusion.
+  const selfCommittedAnchorRef = useRef<CalendarDate | null>(null)
 
   // --- Two-layer state (matches SingleDateInput pattern) ---
   const [displayStart, setDisplayStart] = useState<CalendarDate | null>(
@@ -272,10 +273,9 @@ function RangeDateInput({
   const [prevEnd, setPrevEnd] = useState(endValue)
   if (prevStart !== startValue || prevEnd !== endValue) {
     const isAnchorCommitEcho =
-      pendingAnchorCommitRef.current !== null &&
+      selfCommittedAnchorRef.current !== null &&
       endValue === null &&
-      datesEqual(startValue, pendingAnchorCommitRef.current)
-    pendingAnchorCommitRef.current = null
+      datesEqual(startValue, selfCommittedAnchorRef.current)
     if (!isAnchorCommitEcho) {
       inAnchorModeRef.current = false
     }
@@ -296,7 +296,7 @@ function RangeDateInput({
     setDisplayStart(startValue)
     setDisplayEnd(endValue)
     inAnchorModeRef.current = false
-    pendingAnchorCommitRef.current = null
+    selfCommittedAnchorRef.current = null
   }
 
   const activePreset = useMemo(() => {
@@ -561,7 +561,7 @@ function RangeDateInput({
           // First click while a complete range is shown — enter anchor mode.
           // Calendar stays open for the second click (core two-click UX).
           inAnchorModeRef.current = true
-          pendingAnchorCommitRef.current = range.start
+          selfCommittedAnchorRef.current = range.start
           setDisplayStart(range.start)
           setDisplayEnd(null)
           onChange([range.start])
@@ -690,7 +690,7 @@ function RangeDateInput({
       if (inAnchorModeRef.current && datesEqual(displayStartRef.current, date))
         return
       inAnchorModeRef.current = true
-      pendingAnchorCommitRef.current = date
+      selfCommittedAnchorRef.current = date
       setDisplayStart(date)
       setDisplayEnd(null)
       onChange([date])
