@@ -486,7 +486,7 @@ describe("statisticsUtils", () => {
 
   describe("formatNumber", () => {
     it("returns '-' for non-finite values", () => {
-      expect(formatNumber(NaN)).toBe("-")
+      expect(formatNumber(Number.NaN)).toBe("-")
       expect(formatNumber(Infinity)).toBe("-")
       expect(formatNumber(-Infinity)).toBe("-")
     })

@@ -62,7 +62,7 @@ function Json({ element }: Readonly<JsonProps>): ReactElement {
     } catch {
       // If content fails to parse as Json, rebuild the error message
       // to show where the problem occurred.
-      const pos = parseInt(error.message.replaceAll(/[^0-9]/g, ""), 10)
+      const pos = Number.parseInt(error.message.replaceAll(/[^0-9]/g, ""), 10)
       error.message += `\n${element.body.slice(0, pos + 1)} ← here`
       return <ErrorElement name={"Json Parse Error"} message={error.message} />
     }
