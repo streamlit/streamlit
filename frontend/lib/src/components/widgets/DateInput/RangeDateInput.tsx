@@ -70,6 +70,7 @@ import {
   noop,
   parsePartialSegmentPaste,
   parsePastedDate,
+  SEGMENT_SELECTOR,
   validateDate,
 } from "./dateInputUtils"
 import { ReorderedSegments } from "./ReorderedSegments"
@@ -243,6 +244,9 @@ function RangeDateInput({
   // Guards against `handleFocus` reopening the popover during programmatic
   // focus restoration (see `restoreFocusToField` below).
   const isRestoringFocusRef = useRef(false)
+  // Capture whether form reset must restore focus before its remount removes
+  // the focused segment.
+  const shouldRestoreFocusRef = useRef(false)
 
   // Dual-mode state: passive (visual aid) vs active (keyboard-modal).
   const [isCalendarActive, setIsCalendarActive] = useState(false)
@@ -281,6 +285,15 @@ function RangeDateInput({
     setPrevResetKey(formResetKey)
     setDisplayStart(startValue)
     setDisplayEnd(endValue)
+    inAnchorModeRef.current = false
+    activeOriginRef.current = null
+    // Reading the DOM during render is safe here because this write sits inside
+    // the same condition that advances `prevResetKey`: a discarded render
+    // retries against live focus rather than keeping a stale `true`. Strict
+    // Mode's double render sees the same focus.
+    shouldRestoreFocusRef.current = !!triggerRef.current?.contains(
+      document.activeElement
+    )
   }
 
   const activePreset = useMemo(() => {
@@ -348,6 +361,17 @@ function RangeDateInput({
     }
     wasOpenRef.current = isOpen
   }, [isOpen, startValue, endValue])
+
+  // Restore focus to the first editable segment after the form-reset remount.
+  // Suppress handleFocus while focusin dispatches synchronously so the calendar
+  // does not reopen; clearing the guard after a frame could stall in hidden tabs.
+  useEffect(() => {
+    if (!shouldRestoreFocusRef.current) return
+    shouldRestoreFocusRef.current = false
+    isRestoringFocusRef.current = true
+    triggerRef.current?.querySelector<HTMLElement>(SEGMENT_SELECTOR)?.focus()
+    isRestoringFocusRef.current = false
+  }, [formResetKey])
 
   // When entering active mode, move focus to the focused calendar cell.
   useEffect(() => {
@@ -824,6 +848,9 @@ function RangeDateInput({
           <StyledDateField $isRange data-range-field="start">
             <div onPaste={handleStartPaste}>
               <DateField
+                // Remount on form clear because React Aria retains incomplete
+                // segment text when the controlled value has not changed.
+                key={formResetKey}
                 aria-label={`${label} start date`}
                 aria-describedby={error ? errorId : undefined}
                 isInvalid={!!error}
@@ -842,6 +869,7 @@ function RangeDateInput({
           <StyledDateField $isRange data-range-field="end">
             <div onPaste={handleEndPaste}>
               <DateField
+                key={formResetKey}
                 aria-label={`${label} end date`}
                 aria-describedby={error ? errorId : undefined}
                 isInvalid={!!error}

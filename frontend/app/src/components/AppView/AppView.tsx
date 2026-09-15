@@ -303,7 +303,7 @@ function AppView(props: AppViewProps): ReactElement {
     // No saved preference, use initial config + screen size logic
     return shouldCollapse(
       initialSidebarState,
-      parseInt(activeTheme.emotion.breakpoints.md, 10),
+      Number.parseInt(activeTheme.emotion.breakpoints.md, 10),
       innerWidth
     )
   })
@@ -325,7 +325,7 @@ function AppView(props: AppViewProps): ReactElement {
         setSidebarIsCollapsed(
           shouldCollapse(
             initialSidebarState,
-            parseInt(activeTheme.emotion.breakpoints.md, 10),
+            Number.parseInt(activeTheme.emotion.breakpoints.md, 10),
             innerWidth
           )
         )

@@ -170,8 +170,8 @@ interface StyledRadioInnerProps {
  */
 export const StyledRadioInner = styled.div<StyledRadioInnerProps>(
   ({ theme, $isSelected }) => {
-    const checkboxSize = parseFloat(theme.sizes.checkbox)
-    const threeXSSpacing = parseFloat(theme.spacing.threeXS)
+    const checkboxSize = Number.parseFloat(theme.sizes.checkbox)
+    const threeXSSpacing = Number.parseFloat(theme.spacing.threeXS)
 
     const outerPx = convertRemToPx(checkboxSize.toString())
     const checkedPx = Math.round(outerPx * 0.375)
