@@ -170,6 +170,18 @@ describe("DataFrame widget", () => {
       elementRef: { current: null },
       values: [250],
     })
+    // afterEach restoreAllMocks() resets vitest.setup.ts's matchMedia mock.
+    // Re-stub matches:false so cell-selection stays focus-gated (isTouchDevice).
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }))
     // DataFrame portals column menus into #portal (normally created by
     // PortalProvider); without this host, createPortal would target null.
     if (!document.getElementById(DATAFRAME_PORTAL_ID)) {
