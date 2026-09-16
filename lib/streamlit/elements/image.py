@@ -21,7 +21,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
@@ -42,6 +42,17 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import Width
 
+_USE_COLUMN_WIDTH_DEPRECATION_WARNING = make_deprecated_name_warning(
+    "use_column_width",
+    "width",
+    "2026-12-31",
+    extra_message=(
+        "`use_column_width` has no effect. Use `width='stretch'`, "
+        "`width='content'`, or an integer pixel value."
+    ),
+    include_st_prefix=False,
+)
+
 
 class ImageMixin:
     @gather_metrics("image")
@@ -58,6 +69,7 @@ class ImageMixin:
         *,
         use_container_width: bool | None = None,
         link: str | None = None,
+        use_column_width: Literal["auto", "always", "never"] | bool | None = None,
     ) -> DeltaGenerator:
         """Display an image or list of images.
 
@@ -159,6 +171,13 @@ class ImageMixin:
            height: 710px
 
         """
+        if use_column_width is not None:
+            # Ignore the value; width / use_container_width stay authoritative.
+            show_deprecation_warning(
+                _USE_COLUMN_WIDTH_DEPRECATION_WARNING,
+                show_in_browser=False,
+            )
+
         if use_container_width is not None:
             show_deprecation_warning(
                 make_deprecated_name_warning(

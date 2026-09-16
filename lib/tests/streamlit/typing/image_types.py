@@ -116,5 +116,13 @@ if TYPE_CHECKING:
         "https://example.com",
     )  # type: ignore[call-arg]
 
-    # Removed deprecated parameter
-    image("image.png", use_column_width=True)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
+    # Compatibility keyword still accepted (ignored at runtime)
+    assert_type(image("image.png", use_column_width=True), DeltaGenerator)
+    assert_type(image("image.png", use_column_width=False), DeltaGenerator)
+    assert_type(image("image.png", use_column_width="always"), DeltaGenerator)
+    assert_type(image("image.png", use_column_width="auto"), DeltaGenerator)
+    assert_type(image("image.png", use_column_width="never"), DeltaGenerator)
+    assert_type(image("image.png", use_column_width=None), DeltaGenerator)
+
+    # Unknown keyword still rejected
+    image("image.png", not_a_real_param=True)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
