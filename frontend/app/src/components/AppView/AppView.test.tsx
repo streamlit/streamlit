@@ -147,7 +147,10 @@ function createAllowEmptyBlock(
   )
 }
 
-function createChatInputNode(id: string): ElementNode {
+function createChatInputNode(
+  id: string,
+  isImplicitlyPinned = false
+): ElementNode {
   return new ElementNode(
     new Element({
       chatInput: ChatInputProto.create({
@@ -156,6 +159,7 @@ function createChatInputNode(id: string): ElementNode {
         disabled: false,
         default: "",
         acceptFile: ChatInputProto.AcceptFile.NONE,
+        isImplicitlyPinned,
       }),
     }),
     ForwardMsgMetadata.create({}),
@@ -981,22 +985,61 @@ describe("AppView element", () => {
     expect(stbContainer).not.toBeInTheDocument()
   })
 
-  it("does not render a Scroll To Bottom container for a bottom chat input without chat messages", () => {
+  it.each([
+    {
+      name: "without chat messages",
+      mainChildren: [],
+    },
+    {
+      name: "with chat messages",
+      mainChildren: [createChatMessageNode()],
+    },
+  ])(
+    "does not activate app autoscroll for explicit bottom placement $name",
+    ({ mainChildren }) => {
+      const props = getProps({
+        elements: createAppRootWithBottom(
+          [createChatInputNode("123")],
+          mainChildren
+        ),
+      })
+
+      render(<AppView {...props} />)
+
+      expect(
+        screen.queryByTestId("stAppScrollToBottomContainer")
+      ).not.toBeInTheDocument()
+    }
+  )
+
+  it.each([
+    {
+      name: "without chat messages",
+      mainChildren: [],
+    },
+    {
+      name: "with chat messages",
+      mainChildren: [createChatMessageNode()],
+    },
+  ])(
+    "activates app autoscroll for implicit bottom placement $name",
+    ({ mainChildren }) => {
+      const props = getProps({
+        elements: createAppRootWithBottom(
+          [createChatInputNode("123", true)],
+          mainChildren
+        ),
+      })
+
+      render(<AppView {...props} />)
+
+      expect(screen.getByTestId("stAppScrollToBottomContainer")).toBeVisible()
+    }
+  )
+
+  it("does not remount the main area when placement behavior changes", async () => {
     const props = getProps({
       elements: createAppRootWithBottom([createChatInputNode("123")]),
-    })
-
-    render(<AppView {...props} />)
-
-    expect(
-      screen.queryByTestId("stAppScrollToBottomContainer")
-    ).not.toBeInTheDocument()
-  })
-
-  it("does not remount the main area or chat input when the first chat message appears", async () => {
-    const chatInputNode = createChatInputNode("123")
-    const props = getProps({
-      elements: createAppRootWithBottom([chatInputNode]),
     })
     const { rerender } = render(<AppView {...props} />)
     const mainContainer = screen.getByTestId("stMain")
@@ -1005,10 +1048,7 @@ describe("AppView element", () => {
     rerender(
       <AppView
         {...props}
-        elements={createAppRootWithBottom(
-          [chatInputNode],
-          [createChatMessageNode()]
-        )}
+        elements={createAppRootWithBottom([createChatInputNode("123", true)])}
       />
     )
 
@@ -1022,41 +1062,10 @@ describe("AppView element", () => {
 
   it.each([
     {
-      name: "a direct main child",
-      mainChildren: [createChatMessageNode()],
-    },
-    {
-      name: "a nested main block",
-      mainChildren: [createAllowEmptyBlock([createChatMessageNode()])],
-    },
-    {
-      name: "a transient node's anchor",
-      mainChildren: [
-        new TransientNode("no script run id", createChatMessageNode(), []),
-      ],
-    },
-  ])(
-    "renders a Scroll To Bottom container when a chat message is $name",
-    ({ mainChildren }) => {
-      const props = getProps({
-        elements: createAppRootWithBottom(
-          [createChatInputNode("123")],
-          mainChildren
-        ),
-      })
-
-      render(<AppView {...props} />)
-
-      expect(screen.getByTestId("stAppScrollToBottomContainer")).toBeVisible()
-    }
-  )
-
-  it.each([
-    {
       name: "a transient node in the bottom holds a chat input",
       transient: () =>
         new TransientNode("no script run id", undefined, [
-          createChatInputNode("transient-chat"),
+          createChatInputNode("transient-chat", true),
         ]),
     },
     {
@@ -1064,7 +1073,7 @@ describe("AppView element", () => {
       transient: () =>
         new TransientNode(
           "no script run id",
-          createChatInputNode("anchor-chat"),
+          createChatInputNode("anchor-chat", true),
           []
         ),
     },
@@ -1072,10 +1081,7 @@ describe("AppView element", () => {
     render(
       <AppView
         {...getProps({
-          elements: createAppRootWithBottom(
-            [transient()],
-            [createChatMessageNode()]
-          ),
+          elements: createAppRootWithBottom([transient()]),
         })}
       />
     )
@@ -1099,10 +1105,7 @@ describe("AppView element", () => {
     render(
       <AppView
         {...getProps({
-          elements: createAppRootWithBottom(
-            [transient],
-            [createChatMessageNode()]
-          ),
+          elements: createAppRootWithBottom([transient]),
         })}
       />
     )

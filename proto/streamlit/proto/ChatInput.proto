@@ -57,5 +57,8 @@ message ChatInput {
   }
   SubmitMode submit_mode = 14;
 
+  // Whether st.chat_input was implicitly pinned from the main app body.
+  bool is_implicitly_pinned = 15;
+
   reserved 8;
 }

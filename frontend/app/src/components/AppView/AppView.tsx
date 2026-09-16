@@ -75,50 +75,33 @@ import {
   StyledStickyBottomContainer,
 } from "./styled-components"
 
-/**
- * Recursively checks if the given node contains a chat input element.
- */
-function containsChatInput(node: AppNode): boolean {
+/** Recursively checks for a chat input that opts into app-level autoscroll. */
+function containsAutoScrollingChatInput(node: AppNode): boolean {
   if (node instanceof ElementNode) {
-    return node.element.type === "chatInput"
+    return (
+      node.element.type === "chatInput" &&
+      node.element.chatInput?.isImplicitlyPinned === true
+    )
   }
 
   if (node instanceof BlockNode) {
-    return node.children.some(containsChatInput)
+    return node.children.some(containsAutoScrollingChatInput)
   }
 
   if (node instanceof TransientNode) {
     const anchorHasChatInput = node.anchor
-      ? containsChatInput(node.anchor)
+      ? containsAutoScrollingChatInput(node.anchor)
       : false
     const transientHasChatInput = node.transientNodes.some(
-      el => el.element.type === "chatInput"
+      el =>
+        el.element.type === "chatInput" &&
+        el.element.chatInput?.isImplicitlyPinned === true
     )
     return anchorHasChatInput || transientHasChatInput
   }
 
   // Unknown AppNode subtypes are assumed to not contain a chat input.
   // Update this function if a new node type is added that could contain one.
-  return false
-}
-
-/**
- * Recursively checks whether the node contains an `st.chat_message` block.
- * Transient nodes only need their anchor walked: chat messages are blocks,
- * not transient elements.
- */
-function containsChatMessage(node: AppNode): boolean {
-  if (node instanceof BlockNode) {
-    return (
-      node.deltaBlock.type === "chatMessage" ||
-      node.children.some(containsChatMessage)
-    )
-  }
-
-  if (node instanceof TransientNode) {
-    return node.anchor ? containsChatMessage(node.anchor) : false
-  }
-
   return false
 }
 
@@ -284,16 +267,12 @@ function AppView(props: AppViewProps): ReactElement {
     removeScriptFinishedHandler,
   ])
 
-  // Activate app-level scroll-to-bottom only for chat-style pages: a chat input
-  // in the bottom container plus chat messages in the main area. A bottom chat
-  // input alone is not enough, otherwise dashboards with a persistent assistant
-  // input would jump to the bottom on initial load.
+  // A chat input opts into app-level autoscroll when it is implicitly pinned
+  // from the main app body. Inputs explicitly placed in st.bottom remain fixed
+  // without changing the main area's scroll position.
   const shouldScrollToBottom = useMemo(
-    () =>
-      hasBottomElements &&
-      containsChatInput(elements.bottom) &&
-      containsChatMessage(elements.main),
-    [hasBottomElements, elements.bottom, elements.main]
+    () => hasBottomElements && containsAutoScrollingChatInput(elements.bottom),
+    [hasBottomElements, elements.bottom]
   )
 
   const renderBlock = (node: BlockNode): ReactElement => (

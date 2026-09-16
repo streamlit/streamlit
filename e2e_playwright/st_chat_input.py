@@ -36,8 +36,11 @@ if key == "initial_scroll":
         for number in range(30):
             st.write(f"Dashboard row {number}")
 
-    with st.bottom:
+    if st.query_params.get("placement") == "implicit":
         st.chat_input("Ask about the dashboard", key="initial_scroll")
+    else:
+        with st.bottom:
+            st.chat_input("Ask about the dashboard", key="initial_scroll")
 
 if key is None or key == "inline":
     inline_value = st.container().chat_input("Chat input (inline)", key="inline")

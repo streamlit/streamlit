@@ -189,10 +189,9 @@ class ChatTest(DeltaGeneratorTestCase):
         """Test that it selects inline position when nested in any of layout containers."""
         container_call().chat_input()
 
-        assert (
-            self.get_message_from_queue().metadata.delta_path[0]
-            != RootContainerProto.BOTTOM
-        )
+        message = self.get_message_from_queue()
+        assert message.metadata.delta_path[0] != RootContainerProto.BOTTOM
+        assert message.delta.new_element.chat_input.is_implicitly_pinned is False
 
     @parameterized.expand(
         [
@@ -204,10 +203,26 @@ class ChatTest(DeltaGeneratorTestCase):
         """Test that it selects bottom position when called in the main dg."""
         container_call().chat_input()
 
-        assert (
-            self.get_message_from_queue().metadata.delta_path[0]
-            == RootContainerProto.BOTTOM
-        )
+        message = self.get_message_from_queue()
+        assert message.metadata.delta_path[0] == RootContainerProto.BOTTOM
+        assert message.delta.new_element.chat_input.is_implicitly_pinned is True
+
+    def test_chat_input_in_explicit_bottom_does_not_activate_app_autoscroll(self):
+        """Test that explicit bottom placement does not opt into app autoscroll."""
+        with st.bottom:
+            st.chat_input()
+
+        message = self.get_message_from_queue()
+        assert message.metadata.delta_path[0] == RootContainerProto.BOTTOM
+        assert message.delta.new_element.chat_input.is_implicitly_pinned is False
+
+    def test_chat_input_called_on_bottom_does_not_activate_app_autoscroll(self):
+        """Test that bottom method calls do not opt into app autoscroll."""
+        st.bottom.chat_input()
+
+        message = self.get_message_from_queue()
+        assert message.metadata.delta_path[0] == RootContainerProto.BOTTOM
+        assert message.delta.new_element.chat_input.is_implicitly_pinned is False
 
     def test_supports_programmatic_value_assignment(self):
         """Test that it supports programmatically setting the value in session state."""
