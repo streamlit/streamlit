@@ -725,7 +725,7 @@ describe("DataFrame widget", () => {
         cell: [number, number]
       ) => GridCell
       const cell = getCellContent([1, row])
-      return "displayData" in cell ? cell.displayData : cell.data
+      return "displayData" in cell ? cell.displayData : cell.kind
     }
 
     expect(selectedDisplayRows()).toEqual([2])

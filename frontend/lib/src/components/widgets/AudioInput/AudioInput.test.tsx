@@ -1127,7 +1127,11 @@ describe("AudioInput Error Handling", () => {
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:load-fail")
     controller.playback.load = vi.fn().mockRejectedValue(new Error("bad wav"))
     // Keep upload pending so a successful upload cannot clear the load error.
-    uploadFilesMock.mockReturnValue(new Promise(() => undefined))
+    uploadFilesMock.mockReturnValue(
+      new Promise(resolve => {
+        void resolve
+      })
+    )
 
     render(<AudioInput {...createProps()} />)
     approveRecordedAudio()
