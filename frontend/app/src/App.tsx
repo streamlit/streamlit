@@ -114,6 +114,7 @@ import {
   lightTheme,
   mark,
   measure,
+  normalizeQueryString,
   notUndefined,
   preserveEmbedQueryParams,
   PresetThemeName,
@@ -1856,7 +1857,11 @@ export class App extends PureComponent<Props, State> {
     // navigating via browser history (back/forward buttons). This ensures that
     // query params present in the URL after history navigation are sent to the
     // server on the first script run.
-    this.onPageChange(targetAppPage.pageScriptHash as string, undefined, true)
+    this.onPageChange(
+      targetAppPage.pageScriptHash as string,
+      normalizeQueryString(document.location.search),
+      true
+    )
   }
 
   /**
@@ -2638,7 +2643,7 @@ export class App extends PureComponent<Props, State> {
         ? queryParams
         : document.location.search
 
-    return queryString.startsWith("?") ? queryString.slice(1) : queryString
+    return normalizeQueryString(queryString)
   }
 
   getThemeColorScheme = (): string => {
