@@ -62,7 +62,10 @@ export const StyledDateField = styled("div", {
   }),
 }))
 
-/** Clips overflow so the inner scroller, not this border, scrolls horizontally. */
+/**
+ * Outer border wrapper for date and datetime fields. Clips overflow so the
+ * inner scroller, not this border, scrolls horizontally.
+ */
 export const StyledDateInputWrapper = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
@@ -93,8 +96,9 @@ export const StyledDateInputWrapper = styled.div(({ theme }) => ({
 }))
 
 /**
- * Scrolls date and time segments independently so trailing error and clear
- * controls stay pinned. The hidden scrollbar does not add height to the field.
+ * Scrolls date and time segments so trailing error and clear controls stay
+ * pinned. Hiding the native scrollbar keeps it from adding height to the field.
+ * The shared overflow fade is omitted because it requires runtime scroll state.
  */
 export const StyledDateFieldsScroller = styled.div({
   display: "flex",

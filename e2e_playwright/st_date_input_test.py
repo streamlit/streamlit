@@ -23,6 +23,7 @@ from e2e_playwright.conftest import (
     build_app_url,
     wait_for_app_loaded,
     wait_for_app_run,
+    wait_until,
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
@@ -138,15 +139,19 @@ def test_date_input_narrow_rendering(app: Page, assert_snapshot: ImageCompareFun
     scroller = date_input.get_by_test_id("stDateInputFieldsScroller")
     error_icon = date_input.get_by_test_id("stDateInputError")
     clear_button = date_input.get_by_test_id("stDateInputClearButton")
-    assert scroller.evaluate("el => el.scrollWidth > el.clientWidth")
     expect(error_icon).to_be_visible()
     expect(clear_button).to_be_visible()
+    wait_until(
+        app,
+        lambda: bool(scroller.evaluate("el => el.scrollWidth > el.clientWidth")),
+    )
 
     field_box = field.bounding_box()
     assert field_box is not None
     field_left = field_box["x"]
     field_right = field_left + field_box["width"]
 
+    # Allow 1px for subpixel rounding in bounding boxes.
     for control in (error_icon, clear_button):
         control_box = control.bounding_box()
         assert control_box is not None
