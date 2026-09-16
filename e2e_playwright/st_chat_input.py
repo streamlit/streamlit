@@ -25,6 +25,20 @@ config.set_option("server.maxUploadSize", 1)
 # If no key is specified, show all chat inputs
 key = st.query_params.get("key")
 
+if key == "initial_scroll":
+    st.title("Dashboard heading")
+
+    if st.query_params.get("messages") == "true":
+        for number in range(30):
+            with st.chat_message("assistant"):
+                st.write(f"Transcript message {number}")
+    else:
+        for number in range(30):
+            st.write(f"Dashboard row {number}")
+
+    with st.bottom:
+        st.chat_input("Ask about the dashboard", key="initial_scroll")
+
 if key is None or key == "inline":
     inline_value = st.container().chat_input("Chat input (inline)", key="inline")
     st.write("inline - value:", inline_value)

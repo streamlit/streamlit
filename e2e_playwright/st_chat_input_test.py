@@ -448,6 +448,42 @@ def test_app_with_bottom_chat_input(
     )
 
 
+def test_bottom_chat_input_initial_scroll(app: Page, app_base_url: str):
+    """Test initial scrolling with and without an existing chat transcript."""
+    app.set_viewport_size({"width": 1280, "height": 720})
+    goto_chat_input(app, "initial_scroll")
+
+    expect(app.get_by_test_id("stAppScrollToBottomContainer")).not_to_be_attached()
+    expect(app.get_by_text("Dashboard heading", exact=True)).to_be_in_viewport()
+    expect(app.get_by_text("Dashboard row 29", exact=True)).not_to_be_in_viewport()
+
+    main = app.get_by_test_id("stMain")
+    consecutive_zero_reads = 0
+
+    def scroll_stayed_at_top() -> bool:
+        nonlocal consecutive_zero_reads
+        if main.evaluate("(element) => element.scrollTop") != 0:
+            consecutive_zero_reads = 0
+            return False
+
+        consecutive_zero_reads += 1
+        return consecutive_zero_reads >= 5
+
+    wait_until(app, scroll_stayed_at_top, timeout=2000, interval=100)
+
+    goto_app(
+        app,
+        build_app_url(
+            app_base_url,
+            query={"key": "initial_scroll", "messages": "true"},
+        ),
+    )
+
+    expect(app.get_by_test_id("stAppScrollToBottomContainer")).to_be_attached()
+    expect(app.get_by_text("Dashboard heading", exact=True)).not_to_be_in_viewport()
+    expect(app.get_by_text("Transcript message 29", exact=True)).to_be_in_viewport()
+
+
 @use_chat_input("bottom_max_chars")
 def test_submit_hover_state_with_input_value(
     themed_app: Page, assert_snapshot: ImageCompareFunction
