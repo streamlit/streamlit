@@ -276,6 +276,7 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         validate: str | tuple[str, str] | None = None,
@@ -304,6 +305,7 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         validate: str | tuple[str, str] | None = None,
@@ -332,6 +334,7 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         validate: str | tuple[str, str] | None = None,
@@ -494,6 +497,24 @@ class TextWidgetsMixin:
         disabled : bool
             An optional boolean that disables the text input if set to
             ``True``. The default is ``False``.
+
+        required : bool
+            An optional boolean that requires a non-empty value if set to
+            ``True``. The default is ``False``. If this is ``True``, empty
+            and whitespace-only values cannot be submitted.
+
+            Outside a form, clearing the field does not rerun the app, and
+            the last committed value is kept. Inside a form, submission is
+            blocked until the field has a value. The widget still returns
+            its default value until the user provides input.
+
+            When used with ``validate``, empty values fail this check and
+            skip validation.
+
+            .. note::
+               This check runs in the user's browser and can be bypassed.
+               If requiredness is security-relevant, you must also check the
+               value on the server (in your app code) after it is submitted.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -716,6 +737,7 @@ class TextWidgetsMixin:
             kwargs=kwargs,
             placeholder=placeholder,
             disabled=disabled,
+            required=required,
             label_visibility=label_visibility,
             icon=icon,
             validate=validate,
@@ -741,6 +763,7 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         validate: str | tuple[str, str] | None = None,
@@ -783,10 +806,12 @@ class TextWidgetsMixin:
         element_id = compute_and_register_element_id(
             "text_input",
             user_key=key,
-            # Explicitly whitelist max_chars and validate so the ID changes when
+            # Explicitly allowlist max_chars and validate so the ID changes when
             # they change, since the widget value might become invalid based on a
             # different max_chars or validation regex. Only the regex (not the
             # message) is used for identity, since the message is purely cosmetic.
+            # `required` is hashed for unkeyed widgets but is not on this
+            # allowlist: toggling it cannot make a stored value incompatible.
             key_as_main_identity={"max_chars", "validate"},
             dg=self.dg,
             label=label,
@@ -801,6 +826,7 @@ class TextWidgetsMixin:
             # Normalized milliseconds so `True` and `"250ms"` share an ID.
             live=live_debounce_ms,
             validate=identity_validate_regex,
+            required=required,
         )
 
         # Resolve the effective values from the type defaults now that the
@@ -835,6 +861,7 @@ class TextWidgetsMixin:
             text_input_proto.default = value
         text_input_proto.form_id = current_form_id(self.dg)
         text_input_proto.disabled = disabled
+        text_input_proto.required = required
         text_input_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
