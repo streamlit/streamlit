@@ -44,11 +44,6 @@ if TYPE_CHECKING:
     with echo(code_location="below") as result:
         assert_type(result, None)
 
-    # All public parameters combined
-    ctx = echo(code_location="above")
-    with echo(code_location="below") as result:
-        assert_type(result, None)
-
     # =====================================================================
     # Invalid usages - should NOT type check
     # =====================================================================
