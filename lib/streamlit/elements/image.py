@@ -21,7 +21,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Final, Literal, cast
 
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import Width
 
-_USE_COLUMN_WIDTH_DEPRECATION_WARNING = (
+_USE_COLUMN_WIDTH_REMOVED_WARNING: Final = (
     "`use_column_width` was removed and has no effect. "
     "Use `width='stretch'`, `width='content'`, or an integer pixel value instead."
 )
@@ -171,8 +171,9 @@ class ImageMixin:
             # Keep the keyword so pre-1.61 callers do not raise TypeError, but
             # ignore the value so width and use_container_width stay authoritative.
             show_deprecation_warning(
-                _USE_COLUMN_WIDTH_DEPRECATION_WARNING,
+                _USE_COLUMN_WIDTH_REMOVED_WARNING,
                 show_in_browser=False,
+                show_once=True,
             )
 
         if use_container_width is not None:

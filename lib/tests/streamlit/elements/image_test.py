@@ -525,7 +525,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
     @mock.patch("streamlit.elements.image.show_deprecation_warning")
     def test_st_image_use_column_width_is_ignored_noop(
         self, use_column_width: bool | str, show_warning_mock: mock.Mock
-    ):
+    ) -> None:
         """use_column_width is accepted, warned about, and does not change width."""
         img = Image.new("RGB", (64, 64), color="red")
 
@@ -538,6 +538,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         assert "stretch" in warning_message
         assert "content" in warning_message
         assert show_warning_mock.call_args.kwargs["show_in_browser"] is False
+        assert show_warning_mock.call_args.kwargs["show_once"] is True
 
         el = self.get_delta_from_queue().new_element
         assert el.width_config.use_content
@@ -545,7 +546,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
     @mock.patch("streamlit.elements.image.show_deprecation_warning")
     def test_st_image_use_column_width_does_not_override_width(
         self, show_warning_mock: mock.Mock
-    ):
+    ) -> None:
         """width remains authoritative when use_column_width is also passed."""
         img = Image.new("RGB", (64, 64), color="red")
 
@@ -558,7 +559,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
     @mock.patch("streamlit.elements.image.show_deprecation_warning")
     def test_st_image_use_container_width_remains_authoritative(
         self, show_warning_mock: mock.Mock
-    ):
+    ) -> None:
         """use_container_width still maps width when use_column_width is ignored."""
         img = Image.new("RGB", (64, 64), color="red")
 
@@ -571,7 +572,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
     @mock.patch("streamlit.elements.image.show_deprecation_warning")
     def test_st_image_omits_use_column_width_warning_when_unset(
         self, show_warning_mock: mock.Mock
-    ):
+    ) -> None:
         """Omitting use_column_width does not emit its deprecation warning."""
         img = Image.new("RGB", (64, 64), color="red")
 
@@ -579,7 +580,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
 
         show_warning_mock.assert_not_called()
 
-    def test_st_image_unknown_keyword_still_raises(self):
+    def test_st_image_unknown_keyword_still_raises(self) -> None:
         """Other unexpected keywords still raise TypeError."""
         img = Image.new("RGB", (64, 64), color="red")
 
