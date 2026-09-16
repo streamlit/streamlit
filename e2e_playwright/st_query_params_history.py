@@ -35,6 +35,5 @@ st.navigation(
     [
         st.Page(history_page, title="History", default=True),
         st.Page(query_params_page, title="Query Params", url_path="query-params"),
-        st.Page(lambda: st.write("Other page"), title="Other Page", url_path="other"),
     ]
 ).run()

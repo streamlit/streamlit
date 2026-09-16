@@ -135,8 +135,8 @@ export function preserveEmbedQueryParams(): string {
 }
 
 /**
- * Strips a leading "?" so callers can pass either `location.search` or a
- * bare query string without producing `embed=true&?foo=bar`.
+ * Accepts either `location.search` or a bare query string so combining with
+ * embed params cannot produce `embed=true&?foo=bar`.
  */
 export function normalizeQueryString(queryString: string): string {
   return queryString.startsWith("?") ? queryString.slice(1) : queryString

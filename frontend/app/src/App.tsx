@@ -456,7 +456,7 @@ export class App extends PureComponent<Props, State> {
       pageLinkBaseUrl: "",
       // Initialize from URL so bound widget params from shared links are
       // preserved on first page navigation (before handlePageInfoChanged fires).
-      queryParams: window.location?.search?.replace(/^\?/, "") ?? "",
+      queryParams: normalizeQueryString(window.location?.search ?? ""),
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
@@ -477,9 +477,7 @@ export class App extends PureComponent<Props, State> {
     })
 
     // Sync widget URL changes to App state for page navigation preservation.
-    this.widgetMgr.setQueryParamsChangeHandler(
-      this.handleQueryParamsFromWidget
-    )
+    this.widgetMgr.setQueryParamsChangeHandler(this.syncQueryParams)
 
     this.hostCommunicationMgr = new HostCommunicationManager({
       streamlitExecutionStartedAt: props.streamlitExecutionStartedAt,
@@ -1241,8 +1239,8 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  /** Callback for WidgetStateManager when bound widgets update URL params. */
-  handleQueryParamsFromWidget = (queryString: string): void => {
+  /** Update local query-param state and notify the host. */
+  syncQueryParams = (queryString: string): void => {
     this.setState({ queryParams: queryString })
 
     this.hostCommunicationMgr.sendMessageToHost({
@@ -1255,7 +1253,7 @@ export class App extends PureComponent<Props, State> {
     const { queryString } = pageInfo
     const targetUrl =
       document.location.pathname + (queryString ? `?${queryString}` : "")
-    const currentSearch = document.location.search.replace(/^\?/, "")
+    const currentSearch = normalizeQueryString(document.location.search)
 
     // `pushState` always adds a history entry, even when the resulting URL is
     // identical, so reruns that re-assign the same query params would otherwise
@@ -1855,10 +1853,11 @@ export class App extends PureComponent<Props, State> {
     }
 
     const queryString = normalizeQueryString(document.location.search)
-    // Pass the URL query string. After same-page back/forward, App state can
-    // still hold the last server-set params, which would be sent on the rerun.
+    // After popstate, the URL is the source of truth:
+    // - Resync App state and notify the host from the URL so later widget reruns stay aligned.
+    // - Pass that query string into onPageChange; setState is async, so this rerun cannot wait for it.
     // preserveQueryParams also keeps URL params when popstate changes pages.
-    this.handleQueryParamsFromWidget(queryString)
+    this.syncQueryParams(queryString)
     this.onPageChange(
       targetAppPage.pageScriptHash as string,
       queryString,
