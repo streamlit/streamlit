@@ -65,6 +65,7 @@ import {
   StyledAppViewBlockContainer,
   StyledAppViewBlockSpacer,
   StyledAppViewContainer,
+  StyledAppViewMain,
   StyledBottomBlockContainer,
   StyledEventBlockContainer,
   StyledIFrameResizerAnchor,
@@ -75,29 +76,34 @@ import {
   StyledStickyBottomContainer,
 } from "./styled-components"
 
-/** Recursively checks for a chat input that opts into app-level autoscroll. */
-function containsAutoScrollingChatInput(node: AppNode): boolean {
+/** Recursively checks for a chat input, optionally requiring implicit pinning. */
+function containsChatInput(
+  node: AppNode,
+  implicitlyPinnedOnly = false
+): boolean {
   if (node instanceof ElementNode) {
     return (
       node.element.type === "chatInput" &&
-      node.element.chatInput?.isImplicitlyPinned === true
+      (!implicitlyPinnedOnly ||
+        node.element.chatInput?.isImplicitlyPinned === true)
     )
   }
 
   if (node instanceof BlockNode) {
-    return node.children.some(containsAutoScrollingChatInput)
+    return node.children.some(child =>
+      containsChatInput(child, implicitlyPinnedOnly)
+    )
   }
 
   if (node instanceof TransientNode) {
-    const anchorHasChatInput = node.anchor
-      ? containsAutoScrollingChatInput(node.anchor)
-      : false
-    const transientHasChatInput = node.transientNodes.some(
-      el =>
-        el.element.type === "chatInput" &&
-        el.element.chatInput?.isImplicitlyPinned === true
+    return (
+      (node.anchor
+        ? containsChatInput(node.anchor, implicitlyPinnedOnly)
+        : false) ||
+      node.transientNodes.some(child =>
+        containsChatInput(child, implicitlyPinnedOnly)
+      )
     )
-    return anchorHasChatInput || transientHasChatInput
   }
 
   // Unknown AppNode subtypes are assumed to not contain a chat input.
@@ -270,10 +276,20 @@ function AppView(props: AppViewProps): ReactElement {
   // A chat input opts into app-level autoscroll when it is implicitly pinned
   // from the main app body. Inputs explicitly placed in st.bottom remain fixed
   // without changing the main area's scroll position.
-  const shouldScrollToBottom = useMemo(
-    () => hasBottomElements && containsAutoScrollingChatInput(elements.bottom),
+  const hasBottomChatInput = useMemo(
+    () => hasBottomElements && containsChatInput(elements.bottom),
     [hasBottomElements, elements.bottom]
   )
+  const shouldScrollToBottom = useMemo(
+    () => hasBottomElements && containsChatInput(elements.bottom, true),
+    [hasBottomElements, elements.bottom]
+  )
+  const Component = hasBottomChatInput
+    ? ScrollToBottomContainer
+    : StyledAppViewMain
+  const componentProps = hasBottomChatInput
+    ? { active: shouldScrollToBottom }
+    : { "data-testid": "stMain" }
 
   const renderBlock = (node: BlockNode): ReactElement => (
     <ContainerContentsWrapper
@@ -421,12 +437,12 @@ function AppView(props: AppViewProps): ReactElement {
           logoComponent={logoElement}
           showToolbar={showToolbar}
         />
-        <ScrollToBottomContainer
+        <Component
+          {...componentProps}
           tabIndex={0}
           isEmbedded={embedded}
           disableScrolling={disableScrolling}
           className="stMain"
-          active={shouldScrollToBottom}
         >
           <Profiler id="Main">
             <StyledAppViewBlockContainer
@@ -478,7 +494,7 @@ function AppView(props: AppViewProps): ReactElement {
               </StyledStickyBottomContainer>
             </Profiler>
           )}
-        </ScrollToBottomContainer>
+        </Component>
       </StyledMainContent>
       {hasSkillsNudge && (
         <StyledSkillsNudgeAnchor
