@@ -341,7 +341,7 @@ describe("migratePlotlyMapboxFigure", () => {
     })
   })
 
-  it("leaves non-string subplot ids, non-string styles, and non-object traces or frames unchanged", () => {
+  it("preserves non-string subplot ids and styles and skips non-object traces and frames", () => {
     const figure = migratePlotlyMapboxFigure({
       data: [{ type: "scattermapbox", subplot: 2 }, "not-a-trace"],
       layout: {

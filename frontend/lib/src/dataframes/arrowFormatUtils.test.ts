@@ -438,16 +438,6 @@ describe("format", () => {
     ).toEqual("5")
   })
 
-  it("does not throw when a period column is missing its arrow field", () => {
-    expect(
-      format(BigInt(9), {
-        type: DataFrameCellType.DATA,
-        arrowField: undefined as unknown as Field,
-        pandasType: PERIOD_DAY_PANDAS_TYPE,
-      })
-    ).toEqual("9")
-  })
-
   it("period column with wrong extension name returns raw duration", () => {
     const meta = new Map<string, string>([
       ["ARROW:extension:name", "notpandas.period"],

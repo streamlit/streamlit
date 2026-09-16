@@ -257,53 +257,49 @@ describe("TextArea widget", () => {
   })
 
   it("initializes auto-expand height once width is available", () => {
-    const scrollHeightDescriptor = Object.getOwnPropertyDescriptor(
-      HTMLElement.prototype,
-      "scrollHeight"
-    )
-    const offsetHeightDescriptor = Object.getOwnPropertyDescriptor(
-      HTMLElement.prototype,
-      "offsetHeight"
-    )
-    Object.defineProperty(HTMLElement.prototype, "scrollHeight", {
-      configurable: true,
-      get: () => 120,
-    })
-    Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
-      configurable: true,
-      get: () => 40,
-    })
-
-    try {
-      vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+    const resizeObserverSpy = vi
+      .spyOn(UseResizeObserver, "useResizeObserver")
+      .mockReturnValue({
         elementRef: { current: null },
-        values: [400],
+        values: [0],
       })
 
-      const props = getProps(
-        {},
-        {
-          outerElement: new Element({ heightConfig: { useContent: true } }),
-        }
-      )
-      render(<TextArea {...props} />)
+    const props = getProps(
+      {},
+      {
+        outerElement: new Element({ heightConfig: { useContent: true } }),
+      }
+    )
+    const { rerender } = render(<TextArea {...props} />)
 
-      expect(screen.getByRole("textbox")).toHaveStyle({ height: "121px" })
+    try {
+      expect(screen.getByRole("textbox")).toHaveStyle({ height: "2.5rem" })
+
+      // Install measurable heights only after the zero-width mount so this
+      // pins TextArea's width-gated layout effect, not the auto-expand hook's
+      // initial measurement.
+      const scrollHeightSpy = vi
+        .spyOn(HTMLElement.prototype, "scrollHeight", "get")
+        .mockReturnValue(120)
+      const offsetHeightSpy = vi
+        .spyOn(HTMLElement.prototype, "offsetHeight", "get")
+        .mockReturnValue(40)
+
+      try {
+        resizeObserverSpy.mockReturnValue({
+          elementRef: { current: null },
+          values: [400],
+        })
+        rerender(<TextArea {...props} />)
+
+        // 121px = scrollHeight 120 + ROUNDING_OFFSET 1
+        expect(screen.getByRole("textbox")).toHaveStyle({ height: "121px" })
+      } finally {
+        scrollHeightSpy.mockRestore()
+        offsetHeightSpy.mockRestore()
+      }
     } finally {
-      if (scrollHeightDescriptor) {
-        Object.defineProperty(
-          HTMLElement.prototype,
-          "scrollHeight",
-          scrollHeightDescriptor
-        )
-      }
-      if (offsetHeightDescriptor) {
-        Object.defineProperty(
-          HTMLElement.prototype,
-          "offsetHeight",
-          offsetHeightDescriptor
-        )
-      }
+      resizeObserverSpy.mockRestore()
     }
   })
 

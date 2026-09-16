@@ -1954,6 +1954,8 @@ describe("ChatInput widget", () => {
   ): void => {
     act(() => {
       const event = new Event(type, { bubbles: true, cancelable: true })
+      // jsdom's Event has no dataTransfer/clientX/clientY, and those fields
+      // are read-only on real drag events, so set them via defineProperty.
       for (const [key, value] of Object.entries(properties)) {
         Object.defineProperty(event, key, { value })
       }
@@ -1978,18 +1980,28 @@ describe("ChatInput widget", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("hides the drop overlay when the drag leaves the window", () => {
-    renderChatInputWithFileDrop()
-    startFileDrag()
+  it.each(["top-left", "bottom-right"] as const)(
+    "hides the drop overlay when the drag leaves the window at the %s",
+    corner => {
+      renderChatInputWithFileDrop()
+      startFileDrag()
 
-    expect(screen.getByText("Drag and drop a file here")).toBeVisible()
+      expect(screen.getByText("Drag and drop a file here")).toBeVisible()
 
-    dispatchWindowEvent("dragleave", { clientX: -1, clientY: -1 })
+      const coordinates =
+        corner === "top-left"
+          ? { clientX: 0, clientY: 0 }
+          : {
+              clientX: window.innerWidth,
+              clientY: window.innerHeight,
+            }
+      dispatchWindowEvent("dragleave", coordinates)
 
-    expect(
-      screen.queryByText("Drag and drop a file here")
-    ).not.toBeInTheDocument()
-  })
+      expect(
+        screen.queryByText("Drag and drop a file here")
+      ).not.toBeInTheDocument()
+    }
+  )
 
   it("keeps the drop overlay when dragleave stays inside the window", () => {
     renderChatInputWithFileDrop()

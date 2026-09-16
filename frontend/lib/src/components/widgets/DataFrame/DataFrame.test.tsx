@@ -120,7 +120,7 @@ describe("DataFrame widget", () => {
     callback(...args)
   }
 
-  const selectRows = (rowIndex: number): void => {
+  const selectRow = (rowIndex: number): void => {
     act(() => {
       invokeDataEditorCallback("onGridSelectionChange", {
         ...emptyGridSelection(),
@@ -166,20 +166,12 @@ describe("DataFrame widget", () => {
     dataEditorScrollToMock.mockClear()
     dataEditorRemeasureColumnsMock.mockClear()
     dataEditorUpdateCellsMock.mockClear()
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    }))
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
       elementRef: { current: null },
       values: [250],
     })
+    // DataFrame portals column menus into #portal (normally created by
+    // PortalProvider); without this host, createPortal would target null.
     if (!document.getElementById(DATAFRAME_PORTAL_ID)) {
       const portal = document.createElement("div")
       portal.id = DATAFRAME_PORTAL_ID
@@ -713,7 +705,7 @@ describe("DataFrame widget", () => {
 
     expect(screen.queryByLabelText("Clear selection")).not.toBeInTheDocument()
 
-    selectRows(2)
+    selectRow(2)
 
     expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
     await user.click(screen.getByLabelText("Clear selection"))
@@ -724,15 +716,39 @@ describe("DataFrame widget", () => {
     vi.useFakeTimers()
     renderRowSelectionDataFrame()
 
-    selectRows(2)
+    selectRow(2)
 
+    const selectedDisplayRows = (): number[] =>
+      (getDataEditorProps().gridSelection as GridSelection).rows.toArray()
+    const cellDataAtRow = (row: number): unknown => {
+      const getCellContent = getDataEditorProps().getCellContent as (
+        cell: [number, number]
+      ) => GridCell
+      const cell = getCellContent([1, row])
+      return "displayData" in cell ? cell.displayData : cell.data
+    }
+
+    expect(selectedDisplayRows()).toEqual([2])
     expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
+    const selectedCellData = cellDataAtRow(2)
 
+    // Row selection is remapped on a 0ms timeout after sort; flush it.
+    // First click sorts ascending (already ordered); second click reverses so
+    // original row 2 moves away from display index 2.
     act(() => {
       invokeDataEditorCallback("onHeaderClicked", 1, {})
+    })
+    act(() => {
+      invokeDataEditorCallback("onHeaderClicked", 1, {})
+    })
+    act(() => {
       vi.runAllTimers()
     })
 
+    const remappedRows = selectedDisplayRows()
+    expect(remappedRows).toHaveLength(1)
+    expect(remappedRows[0]).not.toBe(2)
+    expect(cellDataAtRow(remappedRows[0])).toEqual(selectedCellData)
     expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
   })
 
@@ -778,7 +794,7 @@ describe("DataFrame widget", () => {
     )
 
     expect(getDataEditorProps().rows).toBe(10)
-    selectRows(1)
+    selectRow(1)
 
     expect(screen.getByLabelText("Delete row(s)")).toBeInTheDocument()
     await user.click(screen.getByLabelText("Delete row(s)"))

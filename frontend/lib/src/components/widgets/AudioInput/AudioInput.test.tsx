@@ -1034,12 +1034,16 @@ describe("AudioInput Error Handling", () => {
       successfulUploads: [{ fileUrl: { deleteUrl: "delete-123" } }],
       failedUploads: [],
     })
+
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test-url")
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {})
   })
 
   afterEach(() => {
     useWaveformControllerMock.mockReset()
     uploadFilesMock.mockReset()
     FormClearHelperMock.mockReset()
+    vi.restoreAllMocks()
   })
 
   const approveRecordedAudio = (): void => {
@@ -1099,7 +1103,7 @@ describe("AudioInput Error Handling", () => {
   })
 
   it("shows an error when creating a blob URL fails", async () => {
-    global.URL.createObjectURL = vi.fn(() => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => {
       throw new Error("blob url failed")
     })
 
@@ -1120,8 +1124,10 @@ describe("AudioInput Error Handling", () => {
   })
 
   it("shows an error when playback loading fails", async () => {
-    global.URL.createObjectURL = vi.fn(() => "blob:load-fail")
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:load-fail")
     controller.playback.load = vi.fn().mockRejectedValue(new Error("bad wav"))
+    // Keep upload pending so a successful upload cannot clear the load error.
+    uploadFilesMock.mockReturnValue(new Promise(() => undefined))
 
     render(<AudioInput {...createProps()} />)
     approveRecordedAudio()
@@ -1135,7 +1141,7 @@ describe("AudioInput Error Handling", () => {
 
   it("shows an error when playback play fails", async () => {
     const user = userEvent.setup()
-    global.URL.createObjectURL = vi.fn(() => "blob:play-fail")
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:play-fail")
     controller.playback.play = vi
       .fn()
       .mockRejectedValue(new Error("play failed"))
