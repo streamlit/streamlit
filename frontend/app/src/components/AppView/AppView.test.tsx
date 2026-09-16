@@ -39,7 +39,6 @@ import {
 } from "@streamlit/lib/testing"
 import {
   Block as BlockProto,
-  ChatInput as ChatInputProto,
   Element,
   ForwardMsgMetadata,
   Logo as LogoProto,
@@ -153,13 +152,13 @@ function createChatInputNode(
 ): ElementNode {
   return new ElementNode(
     new Element({
-      chatInput: ChatInputProto.create({
+      chatInput: {
         id,
         placeholder: "Enter Text Here",
         disabled: false,
         default: "",
         isImplicitlyPinned,
-      }),
+      },
     }),
     ForwardMsgMetadata.create({}),
     "no script run id",
@@ -167,25 +166,16 @@ function createChatInputNode(
   )
 }
 
-function createChatMessageNode(): BlockNode {
-  return new BlockNode(
-    FAKE_SCRIPT_HASH,
-    [],
-    new BlockProto({ chatMessage: { name: "assistant" } })
-  )
-}
-
-function createAppRootWithBottom(
-  bottomChildren: Array<BlockNode | ElementNode | TransientNode>,
-  mainChildren: Array<BlockNode | ElementNode | TransientNode> = []
+function appRootWithBottom(
+  children: Array<BlockNode | ElementNode | TransientNode>
 ): AppRoot {
   return new AppRoot(
     FAKE_SCRIPT_HASH,
     new BlockNode(FAKE_SCRIPT_HASH, [
-      createAllowEmptyBlock(mainChildren),
       createAllowEmptyBlock(),
       createAllowEmptyBlock(),
-      createAllowEmptyBlock(bottomChildren),
+      createAllowEmptyBlock(),
+      createAllowEmptyBlock(children),
     ])
   )
 }
@@ -984,79 +974,26 @@ describe("AppView element", () => {
     expect(stbContainer).not.toBeInTheDocument()
   })
 
-  it.each([
-    {
-      name: "without chat messages",
-      mainChildren: [],
-    },
-    {
-      name: "with chat messages",
-      mainChildren: [createChatMessageNode()],
-    },
-  ])(
-    "does not activate app autoscroll for explicit bottom placement $name",
-    ({ mainChildren }) => {
-      const props = getProps({
-        elements: createAppRootWithBottom(
-          [createChatInputNode("123")],
-          mainChildren
-        ),
-      })
-
-      render(<AppView {...props} />)
-
-      expect(
-        screen.queryByTestId("stAppScrollToBottomContainer")
-      ).not.toBeInTheDocument()
-    }
-  )
-
-  it.each([
-    {
-      name: "without chat messages",
-      mainChildren: [],
-    },
-    {
-      name: "with chat messages",
-      mainChildren: [createChatMessageNode()],
-    },
-  ])(
-    "activates app autoscroll for implicit bottom placement $name",
-    ({ mainChildren }) => {
-      const props = getProps({
-        elements: createAppRootWithBottom(
-          [createChatInputNode("123", true)],
-          mainChildren
-        ),
-      })
-
-      render(<AppView {...props} />)
-
-      expect(screen.getByTestId("stAppScrollToBottomContainer")).toBeVisible()
-    }
-  )
-
-  it("does not remount the main area when placement behavior changes", async () => {
+  it("does not activate app autoscroll for explicit bottom placement", () => {
     const props = getProps({
-      elements: createAppRootWithBottom([createChatInputNode("123")]),
+      elements: appRootWithBottom([createChatInputNode("123")]),
     })
-    const { rerender } = render(<AppView {...props} />)
-    const mainContainer = screen.getByTestId("stMain")
-    const chatInput = await screen.findByPlaceholderText("Enter Text Here")
 
-    rerender(
-      <AppView
-        {...props}
-        elements={createAppRootWithBottom([createChatInputNode("123", true)])}
-      />
-    )
+    render(<AppView {...props} />)
 
-    expect(screen.getByTestId("stAppScrollToBottomContainer")).toBe(
-      mainContainer
-    )
-    expect(await screen.findByPlaceholderText("Enter Text Here")).toBe(
-      chatInput
-    )
+    expect(
+      screen.queryByTestId("stAppScrollToBottomContainer")
+    ).not.toBeInTheDocument()
+  })
+
+  it("activates app autoscroll for implicit bottom placement", () => {
+    const props = getProps({
+      elements: appRootWithBottom([createChatInputNode("123", true)]),
+    })
+
+    render(<AppView {...props} />)
+
+    expect(screen.getByTestId("stAppScrollToBottomContainer")).toBeVisible()
   })
 
   it.each([
@@ -1078,11 +1015,7 @@ describe("AppView element", () => {
     },
   ])("renders a Scroll To Bottom container when $name", ({ transient }) => {
     render(
-      <AppView
-        {...getProps({
-          elements: createAppRootWithBottom([transient()]),
-        })}
-      />
+      <AppView {...getProps({ elements: appRootWithBottom([transient()]) })} />
     )
 
     expect(screen.getByTestId("stAppScrollToBottomContainer")).toBeVisible()
@@ -1102,11 +1035,7 @@ describe("AppView element", () => {
     ])
 
     render(
-      <AppView
-        {...getProps({
-          elements: createAppRootWithBottom([transient]),
-        })}
-      />
+      <AppView {...getProps({ elements: appRootWithBottom([transient]) })} />
     )
 
     expect(

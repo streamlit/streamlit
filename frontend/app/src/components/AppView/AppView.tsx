@@ -76,33 +76,29 @@ import {
   StyledStickyBottomContainer,
 } from "./styled-components"
 
-/** Recursively checks for a chat input, optionally requiring implicit pinning. */
-function containsChatInput(
-  node: AppNode,
-  implicitlyPinnedOnly = false
-): boolean {
+/** Recursively checks for an implicitly pinned chat input. */
+function containsImplicitlyPinnedChatInput(node: AppNode): boolean {
   if (node instanceof ElementNode) {
     return (
       node.element.type === "chatInput" &&
-      (!implicitlyPinnedOnly ||
-        node.element.chatInput?.isImplicitlyPinned === true)
+      node.element.chatInput?.isImplicitlyPinned === true
     )
   }
 
   if (node instanceof BlockNode) {
-    return node.children.some(child =>
-      containsChatInput(child, implicitlyPinnedOnly)
-    )
+    return node.children.some(containsImplicitlyPinnedChatInput)
   }
 
   if (node instanceof TransientNode) {
+    const anchorHasImplicitlyPinnedChatInput = node.anchor
+      ? containsImplicitlyPinnedChatInput(node.anchor)
+      : false
+    const transientHasImplicitlyPinnedChatInput = node.transientNodes.some(
+      containsImplicitlyPinnedChatInput
+    )
     return (
-      (node.anchor
-        ? containsChatInput(node.anchor, implicitlyPinnedOnly)
-        : false) ||
-      node.transientNodes.some(child =>
-        containsChatInput(child, implicitlyPinnedOnly)
-      )
+      anchorHasImplicitlyPinnedChatInput ||
+      transientHasImplicitlyPinnedChatInput
     )
   }
 
@@ -276,20 +272,14 @@ function AppView(props: AppViewProps): ReactElement {
   // A chat input opts into app-level autoscroll when it is implicitly pinned
   // from the main app body. Inputs explicitly placed in st.bottom remain fixed
   // without changing the main area's scroll position.
-  const hasBottomChatInput = useMemo(
-    () => hasBottomElements && containsChatInput(elements.bottom),
+  const hasImplicitlyPinnedChatInput = useMemo(
+    () =>
+      hasBottomElements && containsImplicitlyPinnedChatInput(elements.bottom),
     [hasBottomElements, elements.bottom]
   )
-  const shouldScrollToBottom = useMemo(
-    () => hasBottomElements && containsChatInput(elements.bottom, true),
-    [hasBottomElements, elements.bottom]
-  )
-  const Component = hasBottomChatInput
+  const Component = hasImplicitlyPinnedChatInput
     ? ScrollToBottomContainer
     : StyledAppViewMain
-  const componentProps = hasBottomChatInput
-    ? { active: shouldScrollToBottom }
-    : { "data-testid": "stMain" }
 
   const renderBlock = (node: BlockNode): ReactElement => (
     <ContainerContentsWrapper
@@ -438,11 +428,11 @@ function AppView(props: AppViewProps): ReactElement {
           showToolbar={showToolbar}
         />
         <Component
-          {...componentProps}
           tabIndex={0}
           isEmbedded={embedded}
           disableScrolling={disableScrolling}
           className="stMain"
+          data-testid="stMain"
         >
           <Profiler id="Main">
             <StyledAppViewBlockContainer
