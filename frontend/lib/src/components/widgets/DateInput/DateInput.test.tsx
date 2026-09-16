@@ -297,6 +297,36 @@ describe("DateInput", () => {
     })
   })
 
+  describe("commit on blur", () => {
+    it("commits pending value on blur outside a form (calendar-select → adjust → blur)", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      render(<DateInput {...props} />)
+      vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+      const region = screen.getByTestId("stDateInput")
+      const { year, month, day } = getSingleDateSegments(region)
+
+      // Type a new date — edits are buffered locally in displayValue.
+      await typeIntoSegment(user, year, "2020")
+      await typeIntoSegment(user, month, "02")
+      await typeIntoSegment(user, day, "06")
+
+      // Before blur: no widget write yet.
+      expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+
+      // Blur commits the buffered value even outside a form.
+      await user.tab()
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element.id,
+        [newDateWire],
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
+      )
+    })
+  })
+
   describe("validation and error display", () => {
     it("displays an error tooltip when the entered date for single date input outside range", async () => {
       const user = userEvent.setup()
@@ -774,34 +804,6 @@ describe("DateInput", () => {
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element.id,
         [],
-        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
-      )
-    })
-
-    it("commits pending value on blur outside a form (calendar-select → adjust → blur)", async () => {
-      const user = userEvent.setup()
-      const props = getProps()
-      vi.spyOn(props.widgetMgr, "setStringArrayValue")
-
-      render(<DateInput {...props} />)
-      vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
-
-      const region = screen.getByTestId("stDateInput")
-      const { year, month, day } = getSingleDateSegments(region)
-
-      // Type a new date — edits are buffered locally in displayValue.
-      await typeIntoSegment(user, year, "2020")
-      await typeIntoSegment(user, month, "02")
-      await typeIntoSegment(user, day, "06")
-
-      // Before blur: no widget write yet.
-      expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
-
-      // Blur commits the buffered value even outside a form.
-      await user.tab()
-      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element.id,
-        [newDateWire],
         { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
