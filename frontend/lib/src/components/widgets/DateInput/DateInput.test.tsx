@@ -1353,6 +1353,34 @@ describe("DateInput", () => {
       expect(end.day).toHaveTextContent("dd")
     })
 
+    it("shows an error when the end date is before the start date", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2020-06-01", "2020-06-15"],
+        min: "2020-01-01",
+        max: "2020-12-31",
+        isRange: true,
+      })
+      render(<DateInput {...props} />)
+      const region = screen.getByTestId("stDateInput")
+      const end = getRangeDateSegments(region, "end")
+
+      await typeIntoSegment(user, end.year, "2020")
+      await typeIntoSegment(user, end.month, "05")
+      await typeIntoSegment(user, end.day, "01")
+
+      const errorIcon = await screen.findByTestId("stTooltipErrorHoverTarget")
+      expect(errorIcon).toBeVisible()
+
+      act(() => setInteractionModality("pointer"))
+      await user.hover(errorIcon)
+
+      const tooltip = await screen.findByTestId("stTooltipErrorContent")
+      expect(tooltip).toHaveTextContent(
+        "Error: Date set outside allowed range. Please select a date on or after 2020/06/01."
+      )
+    })
+
     it("does not revert to the default range when closed empty, unlike single mode", async () => {
       const user = userEvent.setup()
       const props = getProps({

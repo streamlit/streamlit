@@ -117,7 +117,7 @@ interface RangeDateInputProps {
   enableQuickSelect: boolean
   focusedValue: CalendarDate
   onFocusChange: (value: CalendarDate) => void
-  onValidate: (date: CalendarDate | null) => void
+  onValidate: (date: CalendarDate | null, minOverride?: CalendarDate) => void
   onClose: (hasPlaceholderSegments: boolean) => void
   /** When inside a form, writes the pending range to WidgetStateManager
    * synchronously on blur so a concurrent form submit reads the correct
@@ -535,10 +535,16 @@ function RangeDateInput({
   // clear a still-invalid sibling's error.
   const validateBothFields = useCallback(
     (start: CalendarDate | null, end: CalendarDate | null): void => {
-      const invalidDate =
-        (start && validateDate(start, minDate, maxDate) ? start : null) ??
-        (end && validateDate(end, minDate, maxDate) ? end : null)
-      onValidate(invalidDate)
+      if (start && validateDate(start, minDate, maxDate)) {
+        onValidate(start)
+        return
+      }
+      const endMin = start ?? minDate
+      if (end && validateDate(end, endMin, maxDate)) {
+        onValidate(end, start ?? undefined)
+        return
+      }
+      onValidate(null)
     },
     [minDate, maxDate, onValidate]
   )
@@ -905,7 +911,7 @@ function RangeDateInput({
                   isInvalid={!!error}
                   value={displayEnd}
                   onChange={handleEndFieldChange}
-                  minValue={minDate}
+                  minValue={displayStart ?? minDate}
                   maxValue={maxDate}
                   shouldForceLeadingZeros
                   isDisabled={disabled}

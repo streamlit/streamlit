@@ -150,11 +150,14 @@ function DateInput({
   )
 
   const buildErrorMessage = useCallback(
-    (errorType: DateValidationErrorType): string | null =>
+    (
+      errorType: DateValidationErrorType,
+      minOverride?: string
+    ): string | null =>
       createDateErrorMessage(
         errorType,
         element.isRange,
-        minDateString,
+        minOverride ?? minDateString,
         maxDateString
       ),
     [element.isRange, minDateString, maxDateString]
@@ -190,15 +193,28 @@ function DateInput({
   // Real-time validation during segment editing — shows error tooltip
   // without committing the value to widget state.
   const handleValidate = useCallback(
-    (date: CalendarDate | null): void => {
+    (date: CalendarDate | null, minOverride?: CalendarDate): void => {
       resetError()
       if (!date) return
-      const errorType = validateDate(date, minDateCalendar, maxDateCalendar)
+      const effectiveMin = minOverride ?? minDateCalendar
+      const errorType = validateDate(date, effectiveMin, maxDateCalendar)
       if (errorType) {
-        setError(buildErrorMessage(errorType))
+        setError(
+          buildErrorMessage(
+            errorType,
+            formatCalendarDate(effectiveMin, element.format)
+          )
+        )
       }
     },
-    [buildErrorMessage, maxDateCalendar, minDateCalendar, resetError, setError]
+    [
+      buildErrorMessage,
+      maxDateCalendar,
+      minDateCalendar,
+      resetError,
+      setError,
+      element.format,
+    ]
   )
 
   // Range mode's change handler — validates each date independently.
