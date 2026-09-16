@@ -52,7 +52,11 @@ from streamlit.errors import (
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.state import register_widget, validate_on_change_mode
+from streamlit.runtime.state import (
+    BindOption,
+    register_widget,
+    validate_on_change_mode,
+)
 from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
@@ -62,7 +66,11 @@ if TYPE_CHECKING:
     from streamlit.elements.lib.mutable_popover_container import PopoverContainer
     from streamlit.elements.lib.mutable_status_container import StatusContainer
     from streamlit.elements.lib.mutable_tab_container import TabContainer
-    from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
+    from streamlit.runtime.state import (
+        WidgetArgs,
+        WidgetCallback,
+        WidgetKwargs,
+    )
 
 SpecType: TypeAlias = int | Sequence[int | float]
 
@@ -738,6 +746,7 @@ class LayoutsMixin:
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        bind: BindOption = None,
     ) -> Sequence[TabContainer]:
         r"""Insert containers separated into tabs.
 
@@ -751,10 +760,11 @@ class LayoutsMixin:
 
         By default, all tab content is computed and sent to the frontend
         regardless of which tab is selected. To enable lazy execution where
-        only the selected tab's content runs, use ``on_change="rerun"`` or
-        pass a callable to ``on_change``. Each tab's ``.open`` property
-        indicates whether it is the currently selected tab, letting you
-        conditionally render expensive content.
+        only the selected tab's content runs, use ``on_change="rerun"``,
+        pass a callable to ``on_change``, or set ``bind="query-params"``
+        (with ``key``). Each tab's ``.open`` property indicates whether it
+        is the currently selected tab when state tracking is enabled, letting
+        you conditionally render expensive content.
 
         Parameters
         ----------
@@ -820,9 +830,10 @@ class LayoutsMixin:
             generated for the widget based on the values of the other
             parameters. No two widgets may have the same key.
 
-            When ``on_change`` is set to ``"rerun"`` or a callable, setting a
-            key lets you read or update the active tab label via
-            ``st.session_state[key]``. For more details, see `Widget behavior
+            When ``on_change`` is set to ``"rerun"`` or a callable, or when
+            ``bind="query-params"`` is set, setting a key lets you read or
+            update the active tab label via ``st.session_state[key]``. For
+            more details, see `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
             Additionally, if ``key`` is provided, it will be used as a
@@ -833,9 +844,10 @@ class LayoutsMixin:
             controls whether tabs track state and trigger reruns. ``on_change``
             can be one of the following values:
 
-            - ``"ignore"`` (default): The tabs don't track state. All tab content
-              runs regardless of which tab is selected. The ``.open`` attribute
-              of each tab container returns ``None`` for all tabs.
+            - ``"ignore"`` (default): Unless ``bind="query-params"`` is set,
+              the tabs don't track state. All tab content runs regardless of
+              which tab is selected. The ``.open`` attribute of each tab
+              container returns ``None`` when state tracking is disabled.
 
             - ``"rerun"``: The tabs track state. Streamlit reruns the app when
               the user switches tabs. The ``.open`` attribute of each tab
@@ -859,6 +871,23 @@ class LayoutsMixin:
 
         kwargs : dict or None
             An optional dict of kwargs to pass to the ``on_change`` callback.
+
+        bind : "query-params" or None
+            Binding mode for syncing the active tab with a URL query parameter.
+            If this is ``None`` (default), the active tab is not synced to the
+            URL. When this is set to ``"query-params"``, switching tabs updates
+            the URL, and the active tab can be initialized or updated through a
+            query parameter in the URL. This requires ``key`` to be set. The key
+            is used as the query parameter name, and the value is the active
+            tab's label.
+
+            When ``bind="query-params"`` is set, the tabs track state even if
+            ``on_change`` is ``"ignore"`` (the default). Switching tabs still
+            reruns the app, like ``on_change="rerun"``, so ``.open`` and Session
+            State stay in sync. When the active tab equals the default tab, the
+            query parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through ``st.query_params``;
+            it can only be programmatically changed through ``st.session_state``.
 
         Returns
         -------
@@ -948,8 +977,8 @@ class LayoutsMixin:
         **Example 4: Programmatically control the tab state**
 
         You can use a key to programmatically control the tab state or access
-        the state in callbacks. You must set the ``on_change`` parameter for
-        the tabs to track state.
+        the state in callbacks. Set ``on_change`` to ``"rerun"`` or a callable,
+        or set ``bind="query-params"``, for the tabs to track state.
 
         .. code-block:: python
             :filename: streamlit_app.py
@@ -1015,13 +1044,19 @@ class LayoutsMixin:
             none_supported=False,
         )
 
+        # register_widget validates bind too, but an invalid value leaves the
+        # tabs non-stateful, so that check is never reached. Validate up front.
+        if bind is not None and bind != "query-params":
+            raise StreamlitValueError("bind", ["'query-params'", "None"])
+
         key = to_key(key)
         default_index = tabs.index(default) if default else 0
-        is_stateful = on_change != "ignore"
+        default_label = tabs[default_index]
+        is_stateful = on_change != "ignore" or bind == "query-params"
 
         element_id: str | None = None
         block_id: str | None = None
-        current_tab_label = tabs[default_index]
+        current_tab_label = default_label
 
         if is_stateful:
             is_callback = on_change_callback is not None
@@ -1048,7 +1083,7 @@ class LayoutsMixin:
             )
             block_id = element_id
 
-            serde = _TabsSerde(default_label=tabs[default_index])
+            serde = _TabsSerde(default_label=default_label)
 
             tabs_state = register_widget(
                 element_id,
@@ -1059,11 +1094,14 @@ class LayoutsMixin:
                 on_change_handler=on_change_callback,
                 args=args if is_callback else None,
                 kwargs=kwargs if is_callback else None,
+                bind=bind,
+                clearable=False,
+                formatted_options=list(tabs),
             )
 
             current_tab_label = tabs_state.value
             if current_tab_label not in tabs:
-                current_tab_label = tabs[default_index]
+                current_tab_label = default_label
         elif key is not None:
             block_id = compute_and_register_element_id(
                 "tabs",
@@ -1100,6 +1138,12 @@ class LayoutsMixin:
 
         if is_stateful and element_id is not None:
             block_proto.tab_container.id = element_id
+
+        # register_widget already requires a key when bind="query-params"; keep
+        # the guard for symmetry with checkbox.py.
+        if bind == "query-params" and key is not None:
+            block_proto.tab_container.query_param_key = str(key)
+            block_proto.tab_container.default_tab_label = default_label
 
         if block_id is not None:
             block_proto.id = block_id

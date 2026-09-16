@@ -2208,6 +2208,85 @@ class TabsTest(DeltaGeneratorTestCase):
         assert second_id != ""
         assert first_id != second_id
 
+    def test_bind_invalid_value_raises(self) -> None:
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match="Invalid `bind` value"):
+            st.tabs(["A", "B"], key="my_tabs", bind="invalid")  # type: ignore[arg-type]
+
+    def test_bind_invalid_value_raises_without_key(self) -> None:
+        """Test that an invalid bind value raises even when key is also missing."""
+        with pytest.raises(StreamlitValueError, match="Invalid `bind` value"):
+            st.tabs(["A", "B"], bind="invalid")  # type: ignore[arg-type]
+
+    def test_bind_query_params_requires_key(self) -> None:
+        """Test that bind='query-params' without key raises StreamlitMissingRequiredParameterError."""
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError, match="'key' parameter"
+        ):
+            st.tabs(["A", "B"], bind="query-params")
+
+    def test_bind_query_params_sets_proto_fields(self) -> None:
+        """Test that bind='query-params' sets query_param_key and default_tab_label."""
+        st.tabs(["A", "B", "C"], key="my_tabs", bind="query-params")
+        tab_container_block = self.get_all_deltas_from_queue()[0]
+        tab_container = tab_container_block.add_block.tab_container
+        assert tab_container.query_param_key == "my_tabs"
+        assert tab_container.HasField("default_tab_label")
+        assert tab_container.default_tab_label == "A"
+
+    def test_bind_query_params_default_tab_label(self) -> None:
+        """Test that `default_tab_label` matches the `default=` argument."""
+        st.tabs(["A", "B", "C"], default="B", key="my_tabs", bind="query-params")
+        tab_container_block = self.get_all_deltas_from_queue()[0]
+        tab_container = tab_container_block.add_block.tab_container
+        assert tab_container.query_param_key == "my_tabs"
+        assert tab_container.HasField("default_tab_label")
+        assert tab_container.default_tab_label == "B"
+
+    def test_bind_query_params_activates_widget_registration(self) -> None:
+        """Test that bind='query-params' alone (on_change='ignore') activates widget registration."""
+        tabs = st.tabs(["A", "B", "C"], key="my_tabs", bind="query-params")
+        tab_container_block = self.get_all_deltas_from_queue()[0]
+        tab_container = tab_container_block.add_block.tab_container
+        assert tab_container.HasField("id")
+        assert tab_container.id != ""
+        assert tabs[0].open is True
+        assert tabs[1].open is False
+
+    def test_bind_query_params_with_on_change_rerun(self) -> None:
+        """Test that bind='query-params' and on_change='rerun' together work correctly."""
+        tabs = st.tabs(
+            ["A", "B", "C"],
+            key="my_tabs",
+            bind="query-params",
+            on_change="rerun",
+        )
+        tab_container_block = self.get_all_deltas_from_queue()[0]
+        tab_container = tab_container_block.add_block.tab_container
+        assert tab_container.query_param_key == "my_tabs"
+        assert tab_container.HasField("id")
+        assert tabs[0].open is True
+
+    def test_bind_query_params_session_state_accessible(self) -> None:
+        """Test that bind='query-params' makes tab state accessible via session_state."""
+        st.tabs(["A", "B", "C"], key="my_tabs", bind="query-params")
+        assert "my_tabs" in st.session_state
+        assert st.session_state.my_tabs == "A"
+
+    def test_bind_query_params_no_query_param_key_without_bind(self) -> None:
+        """Test that query_param_key is NOT set when bind is not specified."""
+        st.tabs(["A", "B"], key="my_tabs", on_change="rerun")
+        tab_container_block = self.get_all_deltas_from_queue()[0]
+        assert not tab_container_block.add_block.tab_container.HasField(
+            "query_param_key"
+        )
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_bind_query_params_inside_form_does_not_raise(self) -> None:
+        """Test that bind='query-params' inside st.form does not raise (no callable on_change)."""
+        with st.form("form"):
+            st.tabs(["A", "B"], key="my_tabs", bind="query-params")
+
 
 class DialogTest(DeltaGeneratorTestCase):
     """Run unit tests for the non-public delta-generator dialog and also the dialog

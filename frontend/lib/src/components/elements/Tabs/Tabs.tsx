@@ -40,6 +40,7 @@ import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import Icon from "~lib/components/shared/Icon/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useHorizontalScrollOverflow } from "~lib/hooks/useHorizontalScrollOverflow"
+import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
@@ -96,15 +97,17 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
   const defaultTabIndex = node.deltaBlock?.tabContainer?.defaultTabIndex ?? 0
+  const tabContainer = node.deltaBlock?.tabContainer
   // widgetId is only set when the backend registers tabs as a stateful widget
-  // (on_change="rerun"). blockId is set whenever key= is provided.
-  const widgetId = node.deltaBlock?.tabContainer?.id
+  // (on_change="rerun" or bind="query-params"). blockId is set whenever key= is provided.
+  const widgetId = tabContainer?.id
   const blockId = node.deltaBlock?.id ?? ""
   const isDynamic = Boolean(widgetId)
   // Passive keyed tabs: have a stable blockId (key= provided) but are NOT
-  // dynamic widgets (no on_change="rerun"). These persist the active tab label
-  // in elementStates so the selection survives component remounts. Dynamic tabs
-  // are excluded because the backend manages their state via session_state.
+  // dynamic widgets (no on_change="rerun" or bind="query-params"). These persist
+  // the active tab label in elementStates so the selection survives component
+  // remounts. Dynamic tabs are excluded because the backend manages their state
+  // via session_state.
   const isPassivelyKeyed = Boolean(blockId) && !isDynamic
   const userKey = getKeyFromId(blockId)
 
@@ -116,6 +119,15 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
         return tabNode?.deltaBlock?.tab?.label ?? index.toString()
       }),
     [node.children]
+  )
+
+  useQueryParamBinding(
+    widgetMgr,
+    widgetId ?? "",
+    isDynamic ? (tabContainer?.queryParamKey ?? null) : null,
+    "string_value",
+    tabContainer?.defaultTabLabel ?? allTabLabels[defaultTabIndex] ?? "",
+    false
   )
 
   // Memoize stale flags once so both the tab-button and tab-panel maps share
