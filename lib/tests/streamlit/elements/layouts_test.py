@@ -37,6 +37,7 @@ from streamlit.proto.GapSize_pb2 import GapSize
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
+from streamlit.runtime.state import get_session_state
 from streamlit.runtime.state.session_state import get_script_run_ctx
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -2238,7 +2239,18 @@ class TabsTest(DeltaGeneratorTestCase):
     def test_bind_query_params_invalid_session_state_resets(self) -> None:
         """Test that an invalid bound tab label in session state resets to default."""
         st.session_state["my_tabs"] = "Missing"
+        with get_session_state().query_params() as qp:
+            qp.set_initial_query_params("my_tabs=Missing")
         tabs = st.tabs(["A", "B", "C"], key="my_tabs", bind="query-params")
+        assert st.session_state.my_tabs == "A"
+        assert tabs[0].open is True
+        assert tabs[1].open is False
+        assert "my_tabs" not in st.query_params
+
+    def test_on_change_rerun_invalid_session_state_resets(self) -> None:
+        """Test that an invalid tab label in session state resets to default."""
+        st.session_state["my_tabs"] = "Missing"
+        tabs = st.tabs(["A", "B", "C"], key="my_tabs", on_change="rerun")
         assert st.session_state.my_tabs == "A"
         assert tabs[0].open is True
         assert tabs[1].open is False

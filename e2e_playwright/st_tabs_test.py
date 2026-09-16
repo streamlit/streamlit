@@ -549,8 +549,8 @@ QP_OWL_IN_URL = re.compile(r"[?&]qp_tabs=QP(\+|%20)Owl")
 QP_ALPHA_IN_URL = re.compile(r"[?&]qp_tabs_default=QP(\+|%20)Alpha")
 
 
-def test_tabs_query_param_binding_url_updates_on_switch(app: Page):
-    """Test that switching a bound tab updates the browser URL and session state."""
+def test_tabs_query_param_binding_url_sync(app: Page):
+    """Test bound-tab URL updates, default omission, and default= behavior."""
     qp_tabs = get_element_by_key(app, "qp_tabs")
 
     # Initially on default tab — URL must not have the param
@@ -571,26 +571,6 @@ def test_tabs_query_param_binding_url_updates_on_switch(app: Page):
     expect(app).not_to_have_url(re.compile(r"[?&]qp_tabs="))
     expect(app.get_by_text("Active tab: QP Cat", exact=True)).to_be_visible()
 
-
-def test_tabs_query_param_seeding_from_url(page: Page, app_base_url: str):
-    """Test that a bound tab starts selected when seeded from URL."""
-    page.goto(build_app_url(app_base_url, query={"qp_tabs": "QP Owl"}))
-    wait_for_app_loaded(page)
-
-    qp_tabs = get_element_by_key(page, "qp_tabs")
-    expect(qp_tabs.get_by_role("tab", name="QP Owl")).to_have_attribute(
-        "aria-selected", "true"
-    )
-    expect(qp_tabs.get_by_text("QP Owl tab content")).to_be_visible()
-    expect(page).to_have_url(QP_OWL_IN_URL)
-    expect(page.get_by_text("Active tab: QP Owl", exact=True)).to_be_visible()
-
-    # The other bound tabs stay at their default tab, so their params are omitted.
-    expect(page).not_to_have_url(re.compile(r"[?&]qp_tabs_default="))
-
-
-def test_tabs_query_param_omitted_in_default_tab_state(app: Page):
-    """Test that a bound tab with default= has no URL param in default state."""
     qp_default_tabs = get_element_by_key(app, "qp_tabs_default")
 
     expect(app).not_to_have_url(re.compile(r"[?&]qp_tabs_default="))
@@ -607,6 +587,23 @@ def test_tabs_query_param_omitted_in_default_tab_state(app: Page):
     wait_for_app_run(app)
 
     expect(app).not_to_have_url(re.compile(r"[?&]qp_tabs_default="))
+
+
+def test_tabs_query_param_seeding_from_url(page: Page, app_base_url: str):
+    """Test that a bound tab starts selected when seeded from URL."""
+    page.goto(build_app_url(app_base_url, query={"qp_tabs": "QP Owl"}))
+    wait_for_app_loaded(page)
+
+    qp_tabs = get_element_by_key(page, "qp_tabs")
+    expect(qp_tabs.get_by_role("tab", name="QP Owl")).to_have_attribute(
+        "aria-selected", "true"
+    )
+    expect(qp_tabs.get_by_text("QP Owl tab content")).to_be_visible()
+    expect(page).to_have_url(QP_OWL_IN_URL)
+    expect(page.get_by_text("Active tab: QP Owl", exact=True)).to_be_visible()
+
+    # The other bound tabs stay at their default tab, so their params are omitted.
+    expect(page).not_to_have_url(re.compile(r"[?&]qp_tabs_default="))
 
 
 def test_tabs_query_param_invalid_value(page: Page, app_base_url: str):

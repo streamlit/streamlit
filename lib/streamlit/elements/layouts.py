@@ -846,9 +846,9 @@ class LayoutsMixin:
             can be one of the following values:
 
             - ``"ignore"`` (default): The tabs don't track state, unless
-              ``bind="query-params"`` is set. All tab content runs regardless of
-              which tab is selected. The ``.open`` attribute of each tab
-              container returns ``None`` when state tracking is disabled.
+              ``bind="query-params"`` is set. Without state tracking, the
+              ``.open`` attribute of each tab container returns ``None`` and
+              all tab content runs regardless of which tab is selected.
 
             - ``"rerun"``: The tabs track state. Streamlit reruns the app when
               the user switches tabs. The ``.open`` attribute of each tab
@@ -880,7 +880,12 @@ class LayoutsMixin:
             the URL, and the active tab can be initialized or updated through a
             query parameter in the URL. This requires ``key`` to be set. The key
             is used as the query parameter name, and the value is the active
-            tab's label.
+            tab's label. The value is the label string verbatim, so Markdown
+            formatting in labels produces URLs with raw Markdown syntax and
+            renaming a tab invalidates existing links.
+
+            Invalid query parameter values are ignored and removed from the
+            URL.
 
             When ``bind="query-params"`` is set, the tabs track state even if
             ``on_change`` is ``"ignore"`` (the default). Switching tabs still
@@ -1121,6 +1126,9 @@ class LayoutsMixin:
             if current_tab_label not in tabs:
                 current_tab_label = default_label
                 if key is not None:
+                    # Keep session state and .open aligned (matches st.selectbox)
+                    # when the stored label is no longer valid. For bound tabs,
+                    # also drop a stale URL param that may still reference it.
                     get_session_state().reset_state_value(str(key), default_label)
                     if bind == "query-params":
                         with get_session_state().query_params() as qp:
@@ -1162,8 +1170,8 @@ class LayoutsMixin:
         if is_stateful and element_id is not None:
             block_proto.tab_container.id = element_id
 
-        # Set binding proto fields only when bind is on and key is present.
-        # register_widget already requires a user key for bind="query-params".
+        # Send the original default label because default_tab_index tracks the
+        # current selection.
         if bind == "query-params" and key is not None:
             block_proto.tab_container.query_param_key = str(key)
             block_proto.tab_container.default_tab_label = default_label

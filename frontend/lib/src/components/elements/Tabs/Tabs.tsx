@@ -121,6 +121,9 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     [node.children]
   )
 
+  // Bind against the original default label, not the active tab.
+  // defaultTabIndex is the current selection; using it as the omit-default
+  // target would leave the param in the URL after switching back to default=.
   useQueryParamBinding(
     widgetMgr,
     widgetId ?? "",
