@@ -68,6 +68,14 @@ if TYPE_CHECKING:
     assert_type(image("image.png", use_container_width=False), DeltaGenerator)
     assert_type(image("image.png", use_container_width=None), DeltaGenerator)
 
+    # Compatibility keyword still accepted (ignored at runtime)
+    assert_type(image("image.png", use_column_width=True), DeltaGenerator)
+    assert_type(image("image.png", use_column_width=False), DeltaGenerator)
+    assert_type(image("image.png", use_column_width="always"), DeltaGenerator)
+    assert_type(image("image.png", use_column_width="auto"), DeltaGenerator)
+    assert_type(image("image.png", use_column_width="never"), DeltaGenerator)
+    assert_type(image("image.png", use_column_width=None), DeltaGenerator)
+
     # Image with link parameter
     assert_type(image("image.png", link="https://streamlit.io"), DeltaGenerator)
     assert_type(image("image.png", link="/my_page"), DeltaGenerator)
@@ -116,13 +124,8 @@ if TYPE_CHECKING:
         "https://example.com",
     )  # type: ignore[call-arg]
 
-    # Compatibility keyword still accepted (ignored at runtime)
-    assert_type(image("image.png", use_column_width=True), DeltaGenerator)
-    assert_type(image("image.png", use_column_width=False), DeltaGenerator)
-    assert_type(image("image.png", use_column_width="always"), DeltaGenerator)
-    assert_type(image("image.png", use_column_width="auto"), DeltaGenerator)
-    assert_type(image("image.png", use_column_width="never"), DeltaGenerator)
-    assert_type(image("image.png", use_column_width=None), DeltaGenerator)
+    # Invalid use_column_width value (not bool or "auto"/"always"/"never")
+    image("image.png", use_column_width="foo")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Unknown keyword still rejected
     image("image.png", not_a_real_param=True)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
