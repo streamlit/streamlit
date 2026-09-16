@@ -2409,9 +2409,10 @@ class Block:
         """Return nodes for an AppTest collection name or a node type.
 
         Public names that differ from ``Node.type`` (for example
-        ``datetime_input`` vs ``date_time_input``) are accepted. Proto type
-        names keep working. ``pills`` / ``segmented_control`` / ``container``
-        use the same filtering as the matching attributes.
+        ``datetime_input`` vs ``date_time_input``) are accepted. Node type
+        names (usually the proto field name) keep working. ``pills`` /
+        ``segmented_control`` / ``container`` use the same filtering as the
+        matching attributes.
         """
         if element_type == "pills":
             return list(self.pills)

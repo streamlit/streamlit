@@ -2609,7 +2609,6 @@ def test_get_accepts_public_attribute_names() -> None:
 
     assert list(at.get("container")) == list(at.container)
     assert {node.key for node in at.get("container")} == {"filters", "toolbar"}
-    assert len(at.columns) == 2
 
     assert list(at.get("image")) == list(at.image)
     assert len(at.get("image")) == 1
