@@ -175,11 +175,14 @@ describe("DateTimeColumn", () => {
     }
   )
 
-  it.each([[NaN], ["foo"]])("%p results in error cell", (input: unknown) => {
-    const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_TEMPLATE)
-    const cell = mockColumn.getCell(input)
-    expect(isErrorCell(cell)).toEqual(true)
-  })
+  it.each([[Number.NaN], ["foo"]])(
+    "%p results in error cell",
+    (input: unknown) => {
+      const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_TEMPLATE)
+      const cell = mockColumn.getCell(input)
+      expect(isErrorCell(cell)).toEqual(true)
+    }
+  )
 
   it("respects min_value config option", () => {
     const MOCK_DATETIME_COLUMN_WITH_MIN: BaseColumnProps = {
@@ -352,7 +355,7 @@ describe("DateTimeColumn", () => {
   it("returns false for validateInput when value cannot be interpreted as date", () => {
     const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_TEMPLATE)
     expect(mockColumn.validateInput!("not-a-date")).toBe(false)
-    expect(mockColumn.validateInput!(NaN)).toBe(false)
+    expect(mockColumn.validateInput!(Number.NaN)).toBe(false)
   })
 
   describe("valuesEqual", () => {
@@ -526,11 +529,14 @@ describe("DateColumn", () => {
     }
   )
 
-  it.each([[NaN], ["foo"]])("%p results in error cell", (input: unknown) => {
-    const mockColumn = DateColumn(MOCK_DATE_COLUMN_TEMPLATE)
-    const cell = mockColumn.getCell(input)
-    expect(isErrorCell(cell)).toEqual(true)
-  })
+  it.each([[Number.NaN], ["foo"]])(
+    "%p results in error cell",
+    (input: unknown) => {
+      const mockColumn = DateColumn(MOCK_DATE_COLUMN_TEMPLATE)
+      const cell = mockColumn.getCell(input)
+      expect(isErrorCell(cell)).toEqual(true)
+    }
+  )
 
   it("respects min_value config option", () => {
     const MOCK_DATE_COLUMN_TEMPLATE_WITH_MIN: BaseColumnProps = {
@@ -717,11 +723,14 @@ describe("TimeColumn", () => {
     }
   )
 
-  it.each([[NaN], ["foo"]])("%p results in error cell", (input: unknown) => {
-    const mockColumn = TimeColumn(MOCK_TIME_COLUMN_TEMPLATE)
-    const cell = mockColumn.getCell(input)
-    expect(isErrorCell(cell)).toEqual(true)
-  })
+  it.each([[Number.NaN], ["foo"]])(
+    "%p results in error cell",
+    (input: unknown) => {
+      const mockColumn = TimeColumn(MOCK_TIME_COLUMN_TEMPLATE)
+      const cell = mockColumn.getCell(input)
+      expect(isErrorCell(cell)).toEqual(true)
+    }
+  )
 
   it("respects min_value config option", () => {
     const MOCK_TIME_COLUMN_TEMPLATE_WITH_MIN: BaseColumnProps = {

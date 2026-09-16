@@ -161,7 +161,9 @@ describe("Popover container", () => {
     expect(screen.queryByText("test")).toBeVisible()
 
     // Wait past the "just opened" guard that ignores the opening click.
-    await new Promise(resolve => setTimeout(resolve, 60))
+    await new Promise(resolve => {
+      setTimeout(resolve, 60)
+    })
 
     await user.click(screen.getByText("outside"))
     expect(screen.queryByText("test")).not.toBeInTheDocument()
@@ -194,7 +196,9 @@ describe("Popover container", () => {
 
       // Wait past the "just opened" guard so this click is treated as a real
       // outside interaction (which would otherwise close the popover).
-      await new Promise(resolve => setTimeout(resolve, 60))
+      await new Promise(resolve => {
+        setTimeout(resolve, 60)
+      })
 
       await user.click(screen.getByText("dropdown option"))
       // The popover must remain open after interacting with the overlay root.
@@ -232,7 +236,9 @@ describe("Popover container", () => {
       await user.click(screen.getByText("label"))
       expect(screen.queryByText("test")).toBeVisible()
 
-      await new Promise(resolve => setTimeout(resolve, 60))
+      await new Promise(resolve => {
+        setTimeout(resolve, 60)
+      })
 
       await user.click(screen.getByText("day 15"))
       // pointerdown captured the click as inside an overlay root before the
@@ -271,7 +277,9 @@ describe("Popover container", () => {
       await user.click(screen.getByText("label"))
       expect(screen.queryByText("test")).toBeVisible()
 
-      await new Promise(resolve => setTimeout(resolve, 60))
+      await new Promise(resolve => {
+        setTimeout(resolve, 60)
+      })
 
       // Enter keydown inside the overlay records the interaction origin before
       // the overlay detaches the option node...
@@ -489,7 +497,9 @@ describe("Dynamic popover (widget mode)", () => {
       name: "clicking outside",
       dismiss: async (user: ReturnType<typeof userEvent.setup>) => {
         // Wait past the "just opened" guard that ignores the opening click.
-        await new Promise(resolve => setTimeout(resolve, 60))
+        await new Promise(resolve => {
+          setTimeout(resolve, 60)
+        })
         await user.click(screen.getByText("outside"))
       },
       wrapOutside: true,

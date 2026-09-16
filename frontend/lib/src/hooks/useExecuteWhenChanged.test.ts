@@ -147,14 +147,14 @@ describe("#useExecuteWhenChanged", () => {
         description: "null vs undefined",
       },
       {
-        a: [NaN],
-        b: [NaN],
+        a: [Number.NaN],
+        b: [Number.NaN],
         expected: true,
         description: "arrays with NaN",
       },
       {
-        a: [NaN, 1],
-        b: [NaN, 1],
+        a: [Number.NaN, 1],
+        b: [Number.NaN, 1],
         expected: true,
         description: "arrays with NaN and numbers",
       },

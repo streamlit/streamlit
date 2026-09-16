@@ -194,7 +194,7 @@ class WStates(MutableMapping[str, Any]):
         )
         value = (
             wstate.value.__getattribute__(value_field_name)
-            if value_field_name  # Field name is None if the widget value was cleared
+            if value_field_name is not None  # None if the widget value was cleared
             else None
         )
 

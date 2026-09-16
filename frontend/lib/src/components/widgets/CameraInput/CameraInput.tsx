@@ -501,6 +501,7 @@ const CameraInput = ({
         .then(waitForMinShutterEffect)
         .then(() => {
           setMinShutterEffectPassed(true)
+          return
         })
         .catch(err => {
           LOG.error(err)

@@ -153,7 +153,7 @@ function ScriptCompileErrorDialog(
       <ModalHeader>Script execution error</ModalHeader>
       <ModalBody>
         <StreamlitErrorCodeBlock>
-          {props.exception?.message ? props.exception.message : "No message"}
+          {props.exception?.message || "No message"}
         </StreamlitErrorCodeBlock>
       </ModalBody>
       <ModalFooter>

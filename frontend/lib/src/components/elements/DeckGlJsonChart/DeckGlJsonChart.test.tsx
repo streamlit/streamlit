@@ -299,7 +299,9 @@ describe("DeckGlJsonChart", () => {
       // (that something does NOT appear). Unlike positive assertions where we can
       // wait for an element to appear, there's no reliable way to "wait for something
       // to not appear" - we need to give sufficient time for it to potentially render.
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => {
+        setTimeout(resolve, 100)
+      })
       expect(screen.queryByLabelText("Fullscreen")).not.toBeInTheDocument()
     })
   })
