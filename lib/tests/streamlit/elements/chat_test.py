@@ -191,7 +191,9 @@ class ChatTest(DeltaGeneratorTestCase):
 
         message = self.get_message_from_queue()
         assert message.metadata.delta_path[0] != RootContainerProto.BOTTOM
-        assert message.delta.new_element.chat_input.is_implicitly_pinned is False
+        assert (
+            message.delta.new_element.chat_input.is_auto_positioned_at_bottom is False
+        )
 
     @parameterized.expand(
         [
@@ -205,7 +207,7 @@ class ChatTest(DeltaGeneratorTestCase):
 
         message = self.get_message_from_queue()
         assert message.metadata.delta_path[0] == RootContainerProto.BOTTOM
-        assert message.delta.new_element.chat_input.is_implicitly_pinned is True
+        assert message.delta.new_element.chat_input.is_auto_positioned_at_bottom is True
 
     def test_chat_input_in_explicit_bottom_does_not_activate_app_autoscroll(self):
         """Test that explicit bottom placement does not opt into app autoscroll."""
@@ -214,7 +216,9 @@ class ChatTest(DeltaGeneratorTestCase):
 
         message = self.get_message_from_queue()
         assert message.metadata.delta_path[0] == RootContainerProto.BOTTOM
-        assert message.delta.new_element.chat_input.is_implicitly_pinned is False
+        assert (
+            message.delta.new_element.chat_input.is_auto_positioned_at_bottom is False
+        )
 
     def test_chat_input_called_on_bottom_does_not_activate_app_autoscroll(self):
         """Test that bottom method calls do not opt into app autoscroll."""
@@ -222,7 +226,9 @@ class ChatTest(DeltaGeneratorTestCase):
 
         message = self.get_message_from_queue()
         assert message.metadata.delta_path[0] == RootContainerProto.BOTTOM
-        assert message.delta.new_element.chat_input.is_implicitly_pinned is False
+        assert (
+            message.delta.new_element.chat_input.is_auto_positioned_at_bottom is False
+        )
 
     def test_supports_programmatic_value_assignment(self):
         """Test that it supports programmatically setting the value in session state."""

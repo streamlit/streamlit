@@ -76,29 +76,28 @@ import {
   StyledStickyBottomContainer,
 } from "./styled-components"
 
-/** Recursively checks for an implicitly pinned chat input. */
-function containsImplicitlyPinnedChatInput(node: AppNode): boolean {
+/** Recursively checks for a chat input auto-positioned at the bottom. */
+function containsAutoPositionedChatInput(node: AppNode): boolean {
   if (node instanceof ElementNode) {
     return (
       node.element.type === "chatInput" &&
-      node.element.chatInput?.isImplicitlyPinned === true
+      node.element.chatInput?.isAutoPositionedAtBottom === true
     )
   }
 
   if (node instanceof BlockNode) {
-    return node.children.some(containsImplicitlyPinnedChatInput)
+    return node.children.some(containsAutoPositionedChatInput)
   }
 
   if (node instanceof TransientNode) {
-    const anchorHasImplicitlyPinnedChatInput = node.anchor
-      ? containsImplicitlyPinnedChatInput(node.anchor)
+    const anchorHasAutoPositionedChatInput = node.anchor
+      ? containsAutoPositionedChatInput(node.anchor)
       : false
-    const transientHasImplicitlyPinnedChatInput = node.transientNodes.some(
-      containsImplicitlyPinnedChatInput
+    const transientHasAutoPositionedChatInput = node.transientNodes.some(
+      containsAutoPositionedChatInput
     )
     return (
-      anchorHasImplicitlyPinnedChatInput ||
-      transientHasImplicitlyPinnedChatInput
+      anchorHasAutoPositionedChatInput || transientHasAutoPositionedChatInput
     )
   }
 
@@ -269,15 +268,15 @@ function AppView(props: AppViewProps): ReactElement {
     removeScriptFinishedHandler,
   ])
 
-  // A chat input opts into app-level autoscroll when it is implicitly pinned
-  // from the main app body. Inputs explicitly placed in st.bottom remain fixed
-  // without changing the main area's scroll position.
-  const hasImplicitlyPinnedChatInput = useMemo(
+  // A chat input opts into app-level autoscroll when Streamlit automatically
+  // positions it at the bottom. Inputs explicitly placed in st.bottom remain
+  // fixed without changing the main area's scroll position.
+  const hasAutoPositionedChatInput = useMemo(
     () =>
-      hasBottomElements && containsImplicitlyPinnedChatInput(elements.bottom),
+      hasBottomElements && containsAutoPositionedChatInput(elements.bottom),
     [hasBottomElements, elements.bottom]
   )
-  const Component = hasImplicitlyPinnedChatInput
+  const Component = hasAutoPositionedChatInput
     ? ScrollToBottomContainer
     : StyledAppViewMain
 

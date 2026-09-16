@@ -445,7 +445,7 @@ def test_app_with_bottom_chat_input(
 
 
 def test_bottom_chat_input_initial_scroll(app: Page, app_base_url: str):
-    """Test that only implicit chat input placement activates app autoscroll."""
+    """Test that only automatic bottom positioning activates app autoscroll."""
     app.set_viewport_size({"width": 1280, "height": 720})
 
     def expect_main_to_stay_at_top(last_content: str) -> None:
@@ -491,7 +491,7 @@ def test_bottom_chat_input_initial_scroll(app: Page, app_base_url: str):
         app,
         build_app_url(
             app_base_url,
-            query={"key": "initial_scroll", "placement": "implicit"},
+            query={"key": "initial_scroll", "placement": "automatic"},
         ),
     )
     expect_main_to_start_at_bottom("Dashboard row 29")
@@ -503,7 +503,7 @@ def test_bottom_chat_input_initial_scroll(app: Page, app_base_url: str):
             query={
                 "key": "initial_scroll",
                 "messages": "true",
-                "placement": "implicit",
+                "placement": "automatic",
             },
         ),
     )

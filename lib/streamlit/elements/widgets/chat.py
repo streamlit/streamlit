@@ -1070,8 +1070,8 @@ class ChatMixin:
                 "`st.chat_input()` can't be used in a `st.form()`."
             )
 
-        # A chat input called directly in the main app body is implicitly pinned
-        # to the bottom. Inputs in any explicit container are rendered inline.
+        # A chat input called directly in the main app body is automatically
+        # positioned at the bottom. Inputs in explicit containers render inline.
         ancestor_block_types = set(self.dg._active_dg._ancestor_block_types)
         if (
             self.dg._active_dg._root_container == RootContainer.MAIN
@@ -1084,7 +1084,7 @@ class ChatMixin:
         chat_input_proto = ChatInputProto()
         chat_input_proto.id = element_id
         chat_input_proto.placeholder = str(placeholder)
-        chat_input_proto.is_implicitly_pinned = position == "bottom"
+        chat_input_proto.is_auto_positioned_at_bottom = position == "bottom"
 
         if max_chars is not None:
             chat_input_proto.max_chars = max_chars

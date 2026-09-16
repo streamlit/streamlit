@@ -189,8 +189,8 @@ follow-up work:
 Show a small "scroll to bottom" button when `autoscroll=True` and the user has scrolled away
 from the bottom, similar to ChatGPT's UI. This would provide a visual cue and quick way to
 resume auto-scrolling. This enhancement should also be applied to the existing main area
-scroll-to-bottom behavior when a top-level `st.chat_input` is implicitly pinned to the
-bottom.
+scroll-to-bottom behavior when Streamlit automatically positions a top-level
+`st.chat_input` at the bottom.
 
 **Support for `height="stretch"` containers**: Enable autoscroll for containers that fill
 their parent's available space (e.g., `st.container(height="stretch", autoscroll=True)`).

@@ -36,7 +36,7 @@ if key == "initial_scroll":
         for number in range(30):
             st.write(f"Dashboard row {number}")
 
-    if st.query_params.get("placement") == "implicit":
+    if st.query_params.get("placement") == "automatic":
         st.chat_input("Ask about the dashboard", key="initial_scroll")
     else:
         with st.bottom:

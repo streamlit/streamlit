@@ -148,7 +148,7 @@ function createAllowEmptyBlock(
 
 function createChatInputNode(
   id: string,
-  isImplicitlyPinned = false
+  isAutoPositionedAtBottom = false
 ): ElementNode {
   return new ElementNode(
     new Element({
@@ -157,7 +157,7 @@ function createChatInputNode(
         placeholder: "Enter Text Here",
         disabled: false,
         default: "",
-        isImplicitlyPinned,
+        isAutoPositionedAtBottom,
       },
     }),
     ForwardMsgMetadata.create({}),
@@ -986,7 +986,7 @@ describe("AppView element", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("activates app autoscroll for implicit bottom placement", () => {
+  it("activates app autoscroll for automatic bottom positioning", () => {
     const props = getProps({
       elements: appRootWithBottom([createChatInputNode("123", true)]),
     })
