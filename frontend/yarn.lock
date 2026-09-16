@@ -3525,7 +3525,7 @@ __metadata:
     vite: "npm:^8.2.2"
     vite-plugin-dts: "npm:^5.1.0"
     vitest: "npm:^5.0.0"
-    vitest-websocket-mock: "npm:^0.7.0"
+    vitest-websocket-mock: "npm:^0.8.0"
   languageName: unknown
   linkType: soft
 
@@ -15715,14 +15715,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vitest-websocket-mock@npm:^0.7.0":
-  version: 0.7.0
-  resolution: "vitest-websocket-mock@npm:0.7.0"
+"vitest-websocket-mock@npm:^0.8.0":
+  version: 0.8.0
+  resolution: "vitest-websocket-mock@npm:0.8.0"
   dependencies:
     mock-socket: "npm:^9.2.1"
   peerDependencies:
-    vitest: ">=4"
-  checksum: 10c0/fb742e33269a925ffe93b52bc8a1ba603da88f36091abbf2312e8381c8196666a6140aba4f170a203bcdf3e94f70cf3bab9acff5943f31992a702e89c330fafd
+    vitest: ">=5 <6"
+  checksum: 10c0/8fccad7a0f16da568b7f287973ed69f5f3e840c5047184d71f5d095170261efa8f4b6e72a4c4c98c2b4b4eb409f65d80604a390c3d370c7927d07a9086642015
   languageName: node
   linkType: hard
 
