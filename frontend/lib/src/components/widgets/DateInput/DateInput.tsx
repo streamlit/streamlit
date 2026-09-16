@@ -51,6 +51,7 @@ import {
   isoToCalendarDate,
   normalizeRangeOrder,
   validateDate,
+  validateRangeForCommit,
 } from "./dateInputUtils"
 import RangeDateInput from "./RangeDateInput"
 import SingleDateInput from "./SingleDateInput"
@@ -152,13 +153,14 @@ function DateInput({
   const buildErrorMessage = useCallback(
     (
       errorType: DateValidationErrorType,
-      minOverride?: string
+      referenceDateString?: string
     ): string | null =>
       createDateErrorMessage(
         errorType,
         element.isRange,
-        minOverride ?? minDateString,
-        maxDateString
+        minDateString,
+        maxDateString,
+        referenceDateString
       ),
     [element.isRange, minDateString, maxDateString]
   )
@@ -190,34 +192,52 @@ function DateInput({
     ]
   )
 
-  // Real-time validation during segment editing — shows error tooltip
-  // without committing the value to widget state.
+  // Real-time validation during segment editing — shows the error tooltip
+  // without committing. Range mode may pass an explicit error type when the
+  // violation is range ordering rather than the widget min/max.
   const handleValidate = useCallback(
-    (date: CalendarDate | null, minOverride?: CalendarDate): void => {
+    (
+      date: CalendarDate | null,
+      options?: {
+        errorType?: DateValidationErrorType
+        referenceDate?: CalendarDate
+      }
+    ): void => {
       resetError()
       if (!date) return
-      const effectiveMin = minOverride ?? minDateCalendar
-      const errorType = validateDate(date, effectiveMin, maxDateCalendar)
-      if (errorType) {
-        setError(
-          buildErrorMessage(
-            errorType,
-            formatCalendarDate(effectiveMin, element.format)
-          )
+
+      const errorType =
+        options?.errorType ??
+        validateDate(date, minDateCalendar, maxDateCalendar)
+      if (!errorType) return
+
+      let referenceDateString: string | undefined
+      if (options?.referenceDate) {
+        referenceDateString = formatCalendarDate(
+          options.referenceDate,
+          element.format
         )
+      } else if (errorType === "beforeMin") {
+        referenceDateString = minDateString
+      } else if (errorType === "afterMax") {
+        referenceDateString = maxDateString
       }
+
+      setError(buildErrorMessage(errorType, referenceDateString))
     },
     [
       buildErrorMessage,
       maxDateCalendar,
       minDateCalendar,
+      minDateString,
+      maxDateString,
       resetError,
       setError,
       element.format,
     ]
   )
 
-  // Range mode's change handler — validates each date independently.
+  // Range mode's change handler — validates each date and range order.
   const handleRangeChange = useCallback(
     (dates: CalendarDate[]): void => {
       resetError()
@@ -227,20 +247,23 @@ function DateInput({
         return
       }
 
-      let errorType: DateValidationErrorType = null
-      const newIsoDates: string[] = []
-      dates.forEach(d => {
-        const err = validateDate(d, minDateCalendar, maxDateCalendar)
-        if (err) errorType = err
-        newIsoDates.push(calendarDateToIso(d))
-      })
-
-      if (errorType) {
-        setError(buildErrorMessage(errorType))
+      const validationError = validateRangeForCommit(
+        dates,
+        minDateCalendar,
+        maxDateCalendar
+      )
+      if (validationError) {
+        const referenceDateString = validationError.referenceDate
+          ? formatCalendarDate(validationError.referenceDate, element.format)
+          : undefined
+        setError(
+          buildErrorMessage(validationError.errorType, referenceDateString)
+        )
         return
       }
+
       setValueWithSource({
-        value: normalizeRangeOrder(newIsoDates),
+        value: normalizeRangeOrder(dates.map(calendarDateToIso)),
         fromUser: true,
       })
     },
@@ -251,6 +274,7 @@ function DateInput({
       resetError,
       setError,
       setValueWithSource,
+      element.format,
     ]
   )
 
@@ -290,6 +314,12 @@ function DateInput({
   const handleRangeFormCommit = useCallback(
     (dates: CalendarDate[]): void => {
       if (!inForm) return
+      const validationError = validateRangeForCommit(
+        dates,
+        minDateCalendar,
+        maxDateCalendar
+      )
+      if (validationError) return
       updateWidgetMgrState(
         element,
         widgetMgr,
@@ -300,7 +330,7 @@ function DateInput({
         fragmentId
       )
     },
-    [inForm, element, widgetMgr, fragmentId]
+    [inForm, element, widgetMgr, fragmentId, minDateCalendar, maxDateCalendar]
   )
 
   const singleValue = useMemo(

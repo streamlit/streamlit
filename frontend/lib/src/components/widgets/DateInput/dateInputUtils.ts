@@ -193,7 +193,17 @@ export function getQuickSelectPresets(): QuickSelectPreset[] {
   ].map(({ id, label, start }) => ({ id, label, start, end }))
 }
 
-export type DateValidationErrorType = "beforeMin" | "afterMax" | null
+export type DateValidationErrorType =
+  | "beforeMin"
+  | "afterMax"
+  | "beforeStart"
+  | "afterEnd"
+  | null
+
+export type RangeValidationResult = {
+  errorType: DateValidationErrorType
+  referenceDate?: CalendarDate
+}
 
 export function validateDate(
   date: CalendarDate | null,
@@ -203,6 +213,24 @@ export function validateDate(
   if (!date) return null
   if (maxDate && date.compare(maxDate) > 0) return "afterMax"
   if (date.compare(minDate) < 0) return "beforeMin"
+  return null
+}
+
+/** Returns the first validation error for a range commit, or null if valid. */
+export function validateRangeForCommit(
+  dates: CalendarDate[],
+  minDate: CalendarDate,
+  maxDate: CalendarDate | undefined
+): RangeValidationResult | null {
+  for (const date of dates) {
+    const errorType = validateDate(date, minDate, maxDate)
+    if (errorType) {
+      return { errorType }
+    }
+  }
+  if (dates.length === 2 && dates[1].compare(dates[0]) < 0) {
+    return { errorType: "beforeStart", referenceDate: dates[0] }
+  }
   return null
 }
 
@@ -233,9 +261,17 @@ export function createDateErrorMessage(
   errorType: DateValidationErrorType,
   isRange: boolean,
   minDateString: string,
-  maxDateString: string
+  maxDateString: string,
+  referenceDateString?: string
 ): string | null {
   if (!errorType) return null
+
+  if (errorType === "beforeStart") {
+    return `**Error**: End date must be on or after the start date (${referenceDateString}).`
+  }
+  if (errorType === "afterEnd") {
+    return `**Error**: Start date must be on or before the end date (${referenceDateString}).`
+  }
 
   if (errorType === "afterMax") {
     return `**Error**: Date set outside allowed range. Please select a date on or before ${maxDateString}.`

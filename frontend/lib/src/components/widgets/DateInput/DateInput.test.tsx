@@ -1361,13 +1361,21 @@ describe("DateInput", () => {
         max: "2020-12-31",
         isRange: true,
       })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
       render(<DateInput {...props} />)
+      vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
       const region = screen.getByTestId("stDateInput")
       const end = getRangeDateSegments(region, "end")
 
       await typeIntoSegment(user, end.year, "2020")
       await typeIntoSegment(user, end.month, "05")
       await typeIntoSegment(user, end.day, "01")
+
+      expect(end.year).toHaveTextContent("2020")
+      expect(end.month).toHaveTextContent("05")
+      expect(end.day).toHaveTextContent("01")
+      expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
 
       const errorIcon = await screen.findByTestId("stTooltipErrorHoverTarget")
       expect(errorIcon).toBeVisible()
@@ -1377,8 +1385,121 @@ describe("DateInput", () => {
 
       const tooltip = await screen.findByTestId("stTooltipErrorContent")
       expect(tooltip).toHaveTextContent(
-        "Error: Date set outside allowed range. Please select a date on or after 2020/06/01."
+        "Error: End date must be on or after the start date (2020/06/01)."
       )
+    })
+
+    it("shows an error when the start date is after the end date", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2020-06-01", "2020-06-15"],
+        min: "2020-01-01",
+        max: "2020-12-31",
+        isRange: true,
+      })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<DateInput {...props} />)
+      vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+      const region = screen.getByTestId("stDateInput")
+      const start = getRangeDateSegments(region, "start")
+
+      await typeIntoSegment(user, start.year, "2020")
+      await typeIntoSegment(user, start.month, "07")
+      await typeIntoSegment(user, start.day, "01")
+
+      expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+
+      const errorIcon = await screen.findByTestId("stTooltipErrorHoverTarget")
+      expect(errorIcon).toBeVisible()
+
+      act(() => setInteractionModality("pointer"))
+      await user.hover(errorIcon)
+
+      const tooltip = await screen.findByTestId("stTooltipErrorContent")
+      expect(tooltip).toHaveTextContent(
+        "Error: Start date must be on or before the end date (2020/06/15)."
+      )
+    })
+
+    it("clears the inverted-range error when the end date is corrected", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2020-06-01", "2020-06-15"],
+        min: "2020-01-01",
+        max: "2020-12-31",
+        isRange: true,
+      })
+      render(<DateInput {...props} />)
+
+      const region = screen.getByTestId("stDateInput")
+      const end = getRangeDateSegments(region, "end")
+
+      await typeIntoSegment(user, end.year, "2020")
+      await typeIntoSegment(user, end.month, "05")
+      await typeIntoSegment(user, end.day, "01")
+      expect(
+        await screen.findByTestId("stTooltipErrorHoverTarget")
+      ).toBeVisible()
+
+      await typeIntoSegment(user, end.month, "06")
+      await typeIntoSegment(user, end.day, "20")
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stTooltipErrorHoverTarget")
+        ).not.toBeInTheDocument()
+      })
+    })
+
+    it("does not commit an inverted range on blur outside a form", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2020-06-01", "2020-06-15"],
+        min: "2020-01-01",
+        max: "2020-12-31",
+        isRange: true,
+      })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<DateInput {...props} />)
+      vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+      const region = screen.getByTestId("stDateInput")
+      const end = getRangeDateSegments(region, "end")
+
+      await typeIntoSegment(user, end.year, "2020")
+      await typeIntoSegment(user, end.month, "05")
+      await typeIntoSegment(user, end.day, "01")
+      await user.click(document.body)
+
+      expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+    })
+
+    it("reverts an inverted range when the popover closes", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2020-06-01", "2020-06-15"],
+        min: "2020-01-01",
+        max: "2020-12-31",
+        isRange: true,
+      })
+      render(<DateInput {...props} />)
+
+      const region = screen.getByTestId("stDateInput")
+      const end = getRangeDateSegments(region, "end")
+
+      await typeIntoSegment(user, end.year, "2020")
+      await typeIntoSegment(user, end.month, "05")
+      await typeIntoSegment(user, end.day, "01")
+      await user.keyboard("{Escape}")
+
+      await waitFor(() => {
+        expect(end.year).toHaveTextContent("2020")
+        expect(end.month).toHaveTextContent("06")
+        expect(end.day).toHaveTextContent("15")
+      })
+      expect(
+        screen.queryByTestId("stTooltipErrorHoverTarget")
+      ).not.toBeInTheDocument()
     })
 
     it("does not revert to the default range when closed empty, unlike single mode", async () => {
@@ -2637,7 +2758,7 @@ describe("DateInput single-mode paste handling", () => {
 })
 
 describe("DateInput range-mode paste handling", () => {
-  it("pasting a full date into the start field updates the value", async () => {
+  it("does not commit an inverted range when pasting into the start field", async () => {
     const user = userEvent.setup()
     const props = getProps({
       isRange: true,
@@ -2645,6 +2766,7 @@ describe("DateInput range-mode paste handling", () => {
     })
     vi.spyOn(props.widgetMgr, "setStringArrayValue")
     render(<DateInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
 
     const region = screen.getByTestId("stDateInput")
     const { year } = getRangeDateSegments(region, "start")
@@ -2652,14 +2774,10 @@ describe("DateInput range-mode paste handling", () => {
     await user.click(year)
     await user.paste("2024/03/15")
 
-    // Sorted: pasted start (2024-03-15) > existing end (2019-07-08)
-    await waitFor(() => {
-      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        "1",
-        ["2019-07-08", "2024-03-15"],
-        expect.objectContaining({ fromUser: true })
-      )
-    })
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+    expect(
+      await screen.findByTestId("stTooltipErrorHoverTarget")
+    ).toBeVisible()
   })
 
   it("pasting a full date into the end field updates the value", async () => {
@@ -2989,7 +3107,7 @@ describe("DateInput range-mode keyboard navigation", () => {
 })
 
 describe("DateInput range-mode commit-on-blur", () => {
-  it("commits pending range value on blur outside a form", async () => {
+  it("does not commit an inverted range on blur outside a form", async () => {
     const user = userEvent.setup()
     const props = getProps({
       isRange: true,
@@ -3007,22 +3125,12 @@ describe("DateInput range-mode commit-on-blur", () => {
     await typeIntoSegment(user, start.month, "03")
     await typeIntoSegment(user, start.day, "15")
 
-    // Before blur: segment edits are buffered — no widget write yet.
     expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
-
-    // Click outside the widget to trigger blur.
     await user.click(document.body)
-
-    // Sorted: typed start (2024-03-15) > existing end (2019-07-08), so
-    // the normalization layer swaps them.
-    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element.id,
-      ["2019-07-08", "2024-03-15"],
-      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
-    )
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
   })
 
-  it("commits pending range value on blur when inside a form", async () => {
+  it("does not commit an inverted range on blur when inside a form", async () => {
     const user = userEvent.setup()
     const props = getProps({
       isRange: true,
@@ -3055,13 +3163,7 @@ describe("DateInput range-mode commit-on-blur", () => {
     await user.tab()
     await user.tab()
 
-    // Sorted: typed start (2024-03-15) > existing end (2019-07-08), so
-    // the normalization layer swaps them.
-    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element.id,
-      ["2019-07-08", "2024-03-15"],
-      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
-    )
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
   })
 
   it("does not commit placeholder state on blur in a range form", async () => {

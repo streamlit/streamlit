@@ -291,6 +291,34 @@ describe("createDateErrorMessage", () => {
       "**Error**: Date set outside allowed range. Please select a date on or before 2020/12/31."
     )
   })
+
+  it("builds the range beforeStart message", () => {
+    expect(
+      createDateErrorMessage(
+        "beforeStart",
+        true,
+        "2020/01/01",
+        "2020/12/31",
+        "2020/06/01"
+      )
+    ).toBe(
+      "**Error**: End date must be on or after the start date (2020/06/01)."
+    )
+  })
+
+  it("builds the range afterEnd message", () => {
+    expect(
+      createDateErrorMessage(
+        "afterEnd",
+        true,
+        "2020/01/01",
+        "2020/12/31",
+        "2020/06/15"
+      )
+    ).toBe(
+      "**Error**: Start date must be on or before the end date (2020/06/15)."
+    )
+  })
 })
 
 describe("parsePastedDate", () => {

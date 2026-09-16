@@ -64,6 +64,7 @@ import {
 } from "./CalendarPopoverHeader"
 import {
   datesEqual,
+  DateValidationErrorType,
   getQuickSelectPresets,
   getSafeLocale,
   isValidSegmentValue,
@@ -72,6 +73,7 @@ import {
   parsePastedDate,
   SEGMENT_SELECTOR,
   validateDate,
+  validateRangeForCommit,
 } from "./dateInputUtils"
 import { ReorderedSegments } from "./ReorderedSegments"
 import {
@@ -117,7 +119,17 @@ interface RangeDateInputProps {
   enableQuickSelect: boolean
   focusedValue: CalendarDate
   onFocusChange: (value: CalendarDate) => void
-  onValidate: (date: CalendarDate | null, minOverride?: CalendarDate) => void
+  /**
+   * Validates a date and updates the parent's error tooltip without committing.
+   * Range ordering violations pass an explicit `errorType` and `referenceDate`.
+   */
+  onValidate: (
+    date: CalendarDate | null,
+    options?: {
+      errorType?: DateValidationErrorType
+      referenceDate?: CalendarDate
+    }
+  ) => void
   onClose: (hasPlaceholderSegments: boolean) => void
   /** When inside a form, writes the pending range to WidgetStateManager
    * synchronously on blur so a concurrent form submit reads the correct
@@ -376,7 +388,11 @@ function RangeDateInput({
           }
 
           const committed = compact([startValue, endValue])
-          if (!rangeEqual(pending, committed)) {
+          if (validateRangeForCommit(pending, minDate, maxDate)) {
+            setDisplayStart(startValue)
+            setDisplayEnd(endValue)
+            onCloseRef.current(true)
+          } else if (!rangeEqual(pending, committed)) {
             onChangeRef.current(pending)
           }
         }
@@ -461,7 +477,10 @@ function RangeDateInput({
             displayEndRef.current,
           ])
           const committed = compact([startValue, endValue])
-          if (!rangeEqual(pending, committed)) {
+          if (
+            !validateRangeForCommit(pending, minDate, maxDate) &&
+            !rangeEqual(pending, committed)
+          ) {
             formCommit(pending)
           }
         }
@@ -531,17 +550,35 @@ function RangeDateInput({
     [handleFocus]
   )
 
-  // Validates both range display values so editing one field doesn't
-  // clear a still-invalid sibling's error.
+  // Validates both endpoints so editing one field doesn't clear a still-invalid
+  // sibling. A filled start is the end field's minimum, so typing an inverted
+  // range shows an ordering error immediately and blocks commit on blur/close.
   const validateBothFields = useCallback(
-    (start: CalendarDate | null, end: CalendarDate | null): void => {
-      if (start && validateDate(start, minDate, maxDate)) {
-        onValidate(start)
-        return
+    (
+      start: CalendarDate | null,
+      end: CalendarDate | null,
+      editedField?: "start" | "end"
+    ): void => {
+      if (start) {
+        const startError = validateDate(start, minDate, maxDate)
+        if (startError) {
+          onValidate(start, { errorType: startError })
+          return
+        }
       }
-      const endMin = start ?? minDate
-      if (end && validateDate(end, endMin, maxDate)) {
-        onValidate(end, start ?? undefined)
+      if (end) {
+        const endError = validateDate(end, minDate, maxDate)
+        if (endError) {
+          onValidate(end, { errorType: endError })
+          return
+        }
+      }
+      if (start && end && end.compare(start) < 0) {
+        if (editedField === "start") {
+          onValidate(start, { errorType: "afterEnd", referenceDate: end })
+        } else {
+          onValidate(end, { errorType: "beforeStart", referenceDate: start })
+        }
         return
       }
       onValidate(null)
@@ -558,7 +595,7 @@ function RangeDateInput({
       if (!date) {
         setDisplayEnd(null)
       }
-      validateBothFields(date, date ? displayEndRef.current : null)
+      validateBothFields(date, date ? displayEndRef.current : null, "start")
       if (date) onFocusChange(date)
     },
     [onFocusChange, validateBothFields]
@@ -568,7 +605,7 @@ function RangeDateInput({
     (date: CalendarDate | null): void => {
       if (date && !displayStartRef.current) return
       setDisplayEnd(date)
-      validateBothFields(displayStartRef.current, date)
+      validateBothFields(displayStartRef.current, date, "end")
       if (date) onFocusChange(date)
     },
     [onFocusChange, validateBothFields]
@@ -800,12 +837,14 @@ function RangeDateInput({
         if (fullDate) {
           e.preventDefault()
           setDisplay(fullDate)
-          onChange(
-            compact([
-              isStartField ? fullDate : displayStartRef.current,
-              isStartField ? displayEndRef.current : fullDate,
-            ])
-          )
+          const start = isStartField ? fullDate : displayStartRef.current
+          const end = isStartField ? displayEndRef.current : fullDate
+          const dates = compact([start, end])
+          if (validateRangeForCommit(dates, minDate, maxDate)) {
+            validateBothFields(start, end, isStartField ? "start" : "end")
+            return
+          }
+          onChange(dates)
           return
         }
 
@@ -825,14 +864,16 @@ function RangeDateInput({
         const newDate = base.set({ [partial.segmentType]: partial.value })
         if (newDate[partial.segmentType] !== partial.value) return
         setDisplay(newDate)
-        onChange(
-          compact([
-            isStartField ? newDate : displayStartRef.current,
-            isStartField ? displayEndRef.current : newDate,
-          ])
-        )
+        const start = isStartField ? newDate : displayStartRef.current
+        const end = isStartField ? displayEndRef.current : newDate
+        const dates = compact([start, end])
+        if (validateRangeForCommit(dates, minDate, maxDate)) {
+          validateBothFields(start, end, isStartField ? "start" : "end")
+          return
+        }
+        onChange(dates)
       },
-    [disabled, format, minDate, onChange]
+    [disabled, format, minDate, maxDate, onChange, validateBothFields]
   )
 
   const handleStartPaste = useMemo(
@@ -855,10 +896,11 @@ function RangeDateInput({
       const pending = compact([displayStartRef.current, displayEndRef.current])
       const committed = compact([startValue, endValue])
       if (rangeEqual(pending, committed)) return
+      if (validateRangeForCommit(pending, minDate, maxDate)) return
       onChangeRef.current(pending)
       formCommit?.(pending)
     },
-    [formCommit, startValue, endValue]
+    [formCommit, minDate, maxDate, startValue, endValue]
   )
 
   const hasValue = displayStart !== null || displayEnd !== null
@@ -911,7 +953,7 @@ function RangeDateInput({
                   isInvalid={!!error}
                   value={displayEnd}
                   onChange={handleEndFieldChange}
-                  minValue={displayStart ?? minDate}
+                  minValue={minDate}
                   maxValue={maxDate}
                   shouldForceLeadingZeros
                   isDisabled={disabled}
