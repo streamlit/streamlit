@@ -537,14 +537,14 @@ def test_expander_query_param_binding_url_updates_on_toggle(app: Page):
     expect(app).not_to_have_url(re.compile(r"[?&]qp_exp="))
 
     # Expand it — URL should gain ?qp_exp=true
-    exp.locator("summary").click()
+    exp.locator(EXPANDER_HEADER_IDENTIFIER).click()
     wait_for_app_run(app)
 
     expect(app).to_have_url(re.compile(r"qp_exp=true"))
     expect(exp.get_by_text("Query param expander content")).to_be_visible()
 
     # Collapse it — URL param should be removed (default state = collapsed)
-    exp.locator("summary").click()
+    exp.locator(EXPANDER_HEADER_IDENTIFIER).click()
     wait_for_app_run(app)
 
     expect(app).not_to_have_url(re.compile(r"[?&]qp_exp="))
@@ -559,8 +559,9 @@ def test_expander_query_param_seeding_from_url(page: Page, app_base_url: str):
     exp = get_element_by_key(page, "qp_exp")
     expect(exp.get_by_text("Query param expander content")).to_be_visible()
     expect(page).to_have_url(re.compile(r"qp_exp=true"))
+    expect(page.get_by_text("QP expander state: True", exact=True)).to_be_visible()
 
-    # URL must NOT show the param for the other bound expander (it is collapsed by URL)
+    # The other bound expander stays at its expanded default, so its param is omitted.
     expect(page).not_to_have_url(re.compile(r"[?&]qp_exp_true="))
 
 
@@ -573,17 +574,15 @@ def test_expander_query_param_default_expanded_true_url_cleared(app: Page):
     expect(exp.get_by_text("Starts expanded, bind=query-params")).to_be_visible()
 
     # Collapse it — URL should gain the param (non-default state)
-    exp.locator("summary").click()
+    exp.locator(EXPANDER_HEADER_IDENTIFIER).click()
     wait_for_app_run(app)
 
     expect(app).to_have_url(re.compile(r"qp_exp_true=false"))
     expect(exp.get_by_text("Starts expanded, bind=query-params")).not_to_be_visible()
 
+    # Reopen it — URL param should be removed (back to default expanded state)
+    exp.locator(EXPANDER_HEADER_IDENTIFIER).click()
+    wait_for_app_run(app)
 
-def test_expander_query_param_session_state_reflects_url(page: Page, app_base_url: str):
-    """Test that session_state reflects the URL-seeded expander value."""
-    page.goto(build_app_url(app_base_url, query={"qp_exp": "true"}))
-    wait_for_app_loaded(page)
-
-    # The app writes st.session_state.get('qp_exp') to the page
-    expect(page.get_by_text("QP expander state: True", exact=True)).to_be_visible()
+    expect(app).not_to_have_url(re.compile(r"[?&]qp_exp_true="))
+    expect(exp.get_by_text("Starts expanded, bind=query-params")).to_be_visible()

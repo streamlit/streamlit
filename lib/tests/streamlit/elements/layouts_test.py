@@ -751,14 +751,16 @@ class ExpanderTest(DeltaGeneratorTestCase):
         expander_block = self.get_delta_from_queue()
         expandable = expander_block.add_block.expandable
         assert expandable.query_param_key == "my_exp"
+        assert expandable.HasField("default_expanded")
         assert expandable.default_expanded is False
 
     def test_bind_query_params_default_expanded_true(self) -> None:
-        """Test that default_expanded reflects the expanded= param, not URL-seeded state."""
+        """Test that `default_expanded` matches the `expanded=` argument."""
         st.expander("label", expanded=True, key="my_exp", bind="query-params")
         expander_block = self.get_delta_from_queue()
         expandable = expander_block.add_block.expandable
         assert expandable.query_param_key == "my_exp"
+        assert expandable.HasField("default_expanded")
         assert expandable.default_expanded is True
 
     def test_bind_query_params_activates_widget_registration(self) -> None:

@@ -129,8 +129,8 @@ message Block {
     State state = 6;
     // If set, widget value is bound to this query parameter key.
     optional string query_param_key = 7;
-    // The original default expanded state (the `expanded=` param, not current state).
-    // Used by the frontend for default-collapse URL behavior when query_param_key is set.
+    // Original `expanded=` default. The frontend omits the query param when the
+    // expander matches this value. Distinct from `expanded`, which is current state.
     optional bool default_expanded = 8;
   }
 

@@ -38,9 +38,9 @@ class ExpanderContainer(DeltaGenerator):
     Attributes
     ----------
     open : bool or None
-        Whether the expander is open. This is ``True`` if the expander is open
-        and ``False`` if it's collapsed, or ``None`` if state tracking isn't
-        enabled.
+        Whether the expander is open. This is ``True`` if the expander is open,
+        ``False`` if it's collapsed, or ``None`` when neither ``on_change`` nor
+        ``bind`` enables state tracking.
 
     Examples
     --------
@@ -102,9 +102,8 @@ class ExpanderContainer(DeltaGenerator):
         Returns
         -------
         bool or None
-            ``True`` if expanded, ``False`` if collapsed, or ``None`` if
-            state tracking is not enabled (``on_change`` was not set or
-            set to ``"ignore"``).
+            ``True`` if expanded, ``False`` if collapsed, or ``None`` when
+            neither ``on_change`` nor ``bind`` enables state tracking.
         """
         return self._open
 

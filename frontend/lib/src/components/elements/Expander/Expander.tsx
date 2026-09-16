@@ -162,14 +162,13 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   const isWidget = Boolean(widgetMgr && widgetId)
   const isPassivelyKeyed = Boolean(blockId) && !isWidget
 
-  // Register URL query param binding when bind="query-params" is set on the expander.
-  // Uses element.defaultExpanded (the original `expanded=` param) — not element.expanded
-  // (which is the current backend state) — so default-collapse works correctly even
-  // when the URL seeds a non-default value on initial load.
+  // Bind using the original `expanded=` default, not the current backend state.
+  // Otherwise a URL-seeded non-default value is treated as the default and
+  // stripped from the URL on load.
   useQueryParamBinding(
     widgetMgr,
     widgetId ?? "",
-    element.queryParamKey ?? null,
+    isWidget ? (element.queryParamKey ?? null) : null,
     "bool_value",
     element.defaultExpanded ?? false,
     false

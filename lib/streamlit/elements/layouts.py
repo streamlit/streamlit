@@ -1153,8 +1153,9 @@ class LayoutsMixin:
         frontend, even if the expander is closed. To enable lazy execution
         where content only runs when the expander is open, use
         ``on_change="rerun"`` or pass a callable to ``on_change``. The ``.open``
-        property indicates whether the expander is currently open, letting you
-        conditionally render expensive content.
+        property indicates whether the expander is currently open when state
+        tracking is enabled (via ``on_change`` or ``bind="query-params"``),
+        letting you conditionally render expensive content.
 
         .. note::
 
@@ -1190,9 +1191,10 @@ class LayoutsMixin:
             generated for the widget based on the values of the other
             parameters. No two widgets may have the same key.
 
-            When ``on_change`` is set to ``"rerun"`` or a callable, setting a
-            key lets you read or update the expanded state via
-            ``st.session_state[key]``. For more details, see `Widget behavior
+            When ``on_change`` is set to ``"rerun"`` or a callable, or when
+            ``bind="query-params"`` is set, setting a key lets you read or update
+            the expanded state via ``st.session_state[key]``. For more details,
+            see `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
             Additionally, if ``key`` is provided, it will be used as a
@@ -1249,10 +1251,11 @@ class LayoutsMixin:
             collapses it. This controls whether the expander tracks state
             and triggers reruns. ``on_change`` can be one of the following:
 
-            - ``"ignore"`` (default): The expander doesn't track state. All
-              expander content runs regardless of whether the expander is open
-              or closed. The ``.open`` attribute of the expander container
-              returns ``None``.
+            - ``"ignore"`` (default): Unless ``bind="query-params"`` is set,
+              the expander doesn't track state. All expander content runs
+              regardless of whether the expander is open or closed. The
+              ``.open`` attribute of the expander container returns ``None``
+              when state tracking is disabled.
 
             - ``"rerun"``: The expander tracks state. Streamlit reruns the app
               when the user expands or collapses the expander. The ``.open``
@@ -1351,8 +1354,9 @@ class LayoutsMixin:
         **Example 3: Programmatically control the expander state**
 
         You can use a key to programmatically control the expander state or
-        access the state in callbacks. You must set the ``on_change`` parameter
-        for the expander to track state.
+        access the state in callbacks. Set ``on_change`` to ``"rerun"`` or a
+        callable, or set ``bind="query-params"``, for the expander to track
+        state.
 
         .. code-block:: python
             :filename: streamlit_app.py
