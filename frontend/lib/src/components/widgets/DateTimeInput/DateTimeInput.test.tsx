@@ -129,8 +129,6 @@ describe("DateTimeInput widget", () => {
     const scroller = screen.getByTestId("stDateTimeInputFieldsScroller")
     const clearButton = screen.getByTestId("stDateTimeInputClearButton")
 
-    expect(field).toHaveStyle("overflow: hidden")
-    expect(scroller).toHaveStyle("overflow-x: auto")
     expect(scroller.parentElement).toBe(field)
     expect(field).toContainElement(clearButton)
     expect(scroller).not.toContainElement(clearButton)

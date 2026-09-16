@@ -70,6 +70,7 @@ import {
   noop,
   parsePartialSegmentPaste,
   parsePastedDate,
+  SEGMENT_SELECTOR,
   validateDate,
 } from "./dateInputUtils"
 import { ReorderedSegments } from "./ReorderedSegments"
@@ -244,6 +245,9 @@ function RangeDateInput({
   // Guards against `handleFocus` reopening the popover during programmatic
   // focus restoration (see `restoreFocusToField` below).
   const isRestoringFocusRef = useRef(false)
+  // Capture whether form reset must restore focus before its remount removes
+  // the focused segment.
+  const shouldRestoreFocusRef = useRef(false)
 
   // Dual-mode state: passive (visual aid) vs active (keyboard-modal).
   const [isCalendarActive, setIsCalendarActive] = useState(false)
@@ -257,6 +261,11 @@ function RangeDateInput({
   // The anchor VALUE is always `displayStartRef.current` — never stored
   // separately, so it can't go stale when the user edits via keyboard/paste.
   const inAnchorModeRef = useRef(false)
+  // First-click start this widget last committed. That commit echoes back
+  // through the value props and must not cancel the in-progress selection.
+  // The echo path only reads this ref, so a re-run with the same props
+  // (including Strict Mode) reaches the same conclusion.
+  const selfCommittedAnchorRef = useRef<CalendarDate | null>(null)
 
   // --- Two-layer state (matches SingleDateInput pattern) ---
   const [displayStart, setDisplayStart] = useState<CalendarDate | null>(
@@ -264,13 +273,28 @@ function RangeDateInput({
   )
   const [displayEnd, setDisplayEnd] = useState<CalendarDate | null>(endValue)
 
-  // Sync from parent when values change externally
+  // Sync display state when the committed range changes, and cancel an
+  // in-progress selection unless this widget's first-click commit is echoing.
   const [prevStart, setPrevStart] = useState(startValue)
+  const [prevEnd, setPrevEnd] = useState(endValue)
+  if (prevStart !== startValue || prevEnd !== endValue) {
+    // A first-click commit returns as [start] with no end. Any other change,
+    // including a complete range with the same start, begins a new interaction.
+    const isAnchorCommitEcho =
+      selfCommittedAnchorRef.current !== null &&
+      endValue === null &&
+      datesEqual(startValue, selfCommittedAnchorRef.current)
+    if (!isAnchorCommitEcho) {
+      // Render-time ref writes survive a discarded render. Clearing is the
+      // fail-safe outcome: handlers cannot retain a superseded interaction.
+      inAnchorModeRef.current = false
+      selfCommittedAnchorRef.current = null
+    }
+  }
   if (prevStart !== startValue) {
     setPrevStart(startValue)
     setDisplayStart(startValue)
   }
-  const [prevEnd, setPrevEnd] = useState(endValue)
   if (prevEnd !== endValue) {
     setPrevEnd(endValue)
     setDisplayEnd(endValue)
@@ -282,6 +306,16 @@ function RangeDateInput({
     setPrevResetKey(formResetKey)
     setDisplayStart(startValue)
     setDisplayEnd(endValue)
+    inAnchorModeRef.current = false
+    selfCommittedAnchorRef.current = null
+    activeOriginRef.current = null
+    // Reading the DOM during render is safe here because this write sits inside
+    // the same condition that advances `prevResetKey`: a discarded render
+    // retries against live focus rather than keeping a stale `true`. Strict
+    // Mode's double render sees the same focus.
+    shouldRestoreFocusRef.current = !!triggerRef.current?.contains(
+      document.activeElement
+    )
   }
 
   const activePreset = useMemo(() => {
@@ -311,6 +345,7 @@ function RangeDateInput({
   useEffect(() => {
     if (wasOpenRef.current && !isOpen) {
       inAnchorModeRef.current = false
+      selfCommittedAnchorRef.current = null
       if (skipCloseCommitRef.current) {
         skipCloseCommitRef.current = false
       } else {
@@ -349,6 +384,17 @@ function RangeDateInput({
     }
     wasOpenRef.current = isOpen
   }, [isOpen, startValue, endValue])
+
+  // Restore focus to the first editable segment after the form-reset remount.
+  // Suppress handleFocus while focusin dispatches synchronously so the calendar
+  // does not reopen; clearing the guard after a frame could stall in hidden tabs.
+  useEffect(() => {
+    if (!shouldRestoreFocusRef.current) return
+    shouldRestoreFocusRef.current = false
+    isRestoringFocusRef.current = true
+    triggerRef.current?.querySelector<HTMLElement>(SEGMENT_SELECTOR)?.focus()
+    isRestoringFocusRef.current = false
+  }, [formResetKey])
 
   // When entering active mode, move focus to the focused calendar cell.
   useEffect(() => {
@@ -546,6 +592,7 @@ function RangeDateInput({
           // First click while a complete range is shown — enter anchor mode.
           // Calendar stays open for the second click (core two-click UX).
           inAnchorModeRef.current = true
+          selfCommittedAnchorRef.current = range.start
           setDisplayStart(range.start)
           setDisplayEnd(null)
           onChange([range.start])
@@ -555,6 +602,7 @@ function RangeDateInput({
           // Second click — complete the range using the current start as anchor
           const anchor = displayStartRef.current
           inAnchorModeRef.current = false
+          selfCommittedAnchorRef.current = null
           const [start, end] =
             anchor.compare(range.start) <= 0
               ? [anchor, range.start]
@@ -572,6 +620,7 @@ function RangeDateInput({
       // Normal completed range (two distinct dates, or single-day when not
       // in anchor mode)
       inAnchorModeRef.current = false
+      selfCommittedAnchorRef.current = null
       setDisplayStart(range.start)
       setDisplayEnd(range.end)
       onChange([range.start, range.end])
@@ -674,6 +723,7 @@ function RangeDateInput({
       if (inAnchorModeRef.current && datesEqual(displayStartRef.current, date))
         return
       inAnchorModeRef.current = true
+      selfCommittedAnchorRef.current = date
       setDisplayStart(date)
       setDisplayEnd(null)
       onChange([date])
@@ -683,6 +733,7 @@ function RangeDateInput({
 
   const handleClear = useCallback((): void => {
     inAnchorModeRef.current = false
+    selfCommittedAnchorRef.current = null
     setDisplayStart(null)
     setDisplayEnd(null)
     onChange([])
@@ -693,6 +744,7 @@ function RangeDateInput({
       const preset = quickSelectPresets.find(p => p.id === presetId)
       if (!preset) return
       inAnchorModeRef.current = false
+      selfCommittedAnchorRef.current = null
       setDisplayStart(preset.start)
       setDisplayEnd(preset.end)
       onChange([preset.start, preset.end])
@@ -826,6 +878,9 @@ function RangeDateInput({
             <StyledDateField $isRange data-range-field="start">
               <div onPaste={handleStartPaste}>
                 <DateField
+                  // Remount on form clear because React Aria retains incomplete
+                  // segment text when the controlled value has not changed.
+                  key={formResetKey}
                   aria-label={`${label} start date`}
                   aria-describedby={error ? errorId : undefined}
                   isInvalid={!!error}
@@ -844,6 +899,7 @@ function RangeDateInput({
             <StyledDateField $isRange data-range-field="end">
               <div onPaste={handleEndPaste}>
                 <DateField
+                  key={formResetKey}
                   aria-label={`${label} end date`}
                   aria-describedby={error ? errorId : undefined}
                   isInvalid={!!error}

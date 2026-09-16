@@ -63,6 +63,7 @@ import {
   isValidSegmentValue,
   parsePartialSegmentPaste,
   parsePastedDate,
+  SEGMENT_SELECTOR,
 } from "./dateInputUtils"
 import { ReorderedSegments } from "./ReorderedSegments"
 import {
@@ -178,6 +179,10 @@ function SingleDateInput({
     setDisplayValue(value)
   }
 
+  // Capture whether the remount must restore focus. By effect time, the
+  // previously focused segment has already been removed.
+  const shouldRestoreFocusRef = useRef(false)
+
   // Form clear: displayValue may have diverged (uncommitted typing) while
   // the widget state stayed at default. The value prop won't change in that
   // case, so watch the resetKey separately.
@@ -185,6 +190,14 @@ function SingleDateInput({
   if (prevResetKey !== formResetKey) {
     setPrevResetKey(formResetKey)
     setDisplayValue(value)
+    activeOriginRef.current = null
+    // Reading the DOM during render is safe here because this write sits inside
+    // the same condition that advances `prevResetKey`: a discarded render
+    // retries against live focus rather than keeping a stale `true`. Strict
+    // Mode's double render sees the same focus.
+    shouldRestoreFocusRef.current = !!triggerRef.current?.contains(
+      document.activeElement
+    )
   }
 
   // Ref so the close-detection effect always reads the latest displayValue
@@ -242,6 +255,17 @@ function SingleDateInput({
     }
     wasOpenRef.current = isOpen
   }, [isOpen, value, clearable])
+
+  // Restore focus to the first editable segment after the form-reset remount.
+  // Suppress handleFocus while focusin dispatches synchronously so the calendar
+  // does not reopen; clearing the guard after a frame could stall in hidden tabs.
+  useEffect(() => {
+    if (!shouldRestoreFocusRef.current) return
+    shouldRestoreFocusRef.current = false
+    isRestoringFocusRef.current = true
+    triggerRef.current?.querySelector<HTMLElement>(SEGMENT_SELECTOR)?.focus()
+    isRestoringFocusRef.current = false
+  }, [formResetKey])
 
   // When entering active mode, move focus to the focused calendar cell.
   useEffect(() => {
@@ -566,6 +590,9 @@ function SingleDateInput({
           <I18nProvider locale="en-US">
             <StyledDateField>
               <DateField
+                // Remount on form clear because React Aria retains incomplete
+                // segment text when the controlled value has not changed.
+                key={formResetKey}
                 aria-label={label}
                 aria-describedby={error ? errorId : undefined}
                 isInvalid={!!error}

@@ -37,7 +37,7 @@ from e2e_playwright.shared.app_utils import (
     type_date,
 )
 
-NUM_DATE_INPUTS = 27
+NUM_DATE_INPUTS = 29
 
 
 def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -130,15 +130,15 @@ def test_date_input_narrow_rendering(app: Page, assert_snapshot: ImageCompareFun
         assert field_box is not None
         assert field_box["width"] <= container_box["width"]
 
-
-def test_narrow_date_input_keeps_trailing_controls_visible(app: Page):
-    """Keep clear and error controls inside a constrained-width field."""
+    # Trailing controls stay pinned while the wider segments scroll separately.
     date_input = get_element_by_key(app, "narrow_clearable_bounded")
     field = date_input.get_by_test_id("stDateInputField")
     type_date(field, "2021", "01", "01", commit=False)
 
+    scroller = date_input.get_by_test_id("stDateInputFieldsScroller")
     error_icon = date_input.get_by_test_id("stDateInputError")
     clear_button = date_input.get_by_test_id("stDateInputClearButton")
+    assert scroller.evaluate("el => el.scrollWidth > el.clientWidth")
     expect(error_icon).to_be_visible()
     expect(clear_button).to_be_visible()
 
@@ -249,6 +249,43 @@ def test_empty_date_input_behaves_correctly(
 
     # Should be empty again:
     expect_markdown(app, "Value 13: None")
+
+
+def test_form_clear_empties_segments_and_restores_focus(app: Page):
+    """Incomplete segments clear on reset; focus returns only if previously focused."""
+    range_field = get_date_input(app, "Range date in form").get_by_test_id(
+        "stDateInputField"
+    )
+    range_start_year = range_field.get_by_role("spinbutton").first
+    range_start_year.press_sequentially("2020")
+    expect(range_start_year).to_have_text("2020")
+
+    app.get_by_role("button", name="Submit date form").click()
+    wait_for_app_run(app)
+    expect_markdown(app, "Range date form value: ()")
+
+    reset_range_start = range_field.get_by_role("spinbutton").first
+    expect(reset_range_start).to_have_attribute("data-placeholder", "true")
+    expect(reset_range_start).not_to_be_focused()
+
+    single_field = get_date_input(app, "Single date in form").get_by_test_id(
+        "stDateInputField"
+    )
+    single_year = single_field.get_by_role("spinbutton").first
+    single_year.press_sequentially("2020")
+    expect(single_year).to_have_text("2020")
+
+    # Submit without moving focus first, so the reset arrives while the field
+    # is still focused (a Playwright click would focus the button).
+    app.get_by_role("button", name="Submit date form").evaluate(
+        "button => button.click()"
+    )
+    wait_for_app_run(app)
+    expect_markdown(app, "Single date form value: None")
+
+    reset_single_year = single_field.get_by_role("spinbutton").first
+    expect(reset_single_year).to_have_attribute("data-placeholder", "true")
+    expect(reset_single_year).to_be_focused()
 
 
 def test_handles_range_end_date_changes(app: Page):
@@ -497,10 +534,10 @@ def test_range_date_input_start_error_state(
     # Hover over the error tooltip target
     reset_hovering(themed_app)
     error_icon.hover()
-    # Check that the expected error tooltip message for start date error is shown
+    # Check the error tooltip when the start date is below the allowed minimum
     tooltip = themed_app.get_by_test_id("stTooltipErrorContent")
     expect(tooltip).to_have_text(
-        "Error: Start date set outside allowed range. Please select a date after 2009/07/06.",
+        "Error: Date set outside allowed range. Please select a date on or after 2009/07/06.",
         use_inner_text=True,
     )
 
@@ -535,10 +572,10 @@ def test_range_date_input_end_error_state(themed_app: Page):
     # Hover over the error tooltip target
     reset_hovering(themed_app)
     error_icon.hover()
-    # Check that the expected error tooltip message for end date error is shown
+    # Check the error tooltip when the end date is above the allowed maximum
     tooltip = themed_app.get_by_test_id("stTooltipErrorContent")
     expect(tooltip).to_have_text(
-        "Error: End date set outside allowed range. Please select a date before 2029/07/08.",
+        "Error: Date set outside allowed range. Please select a date on or before 2029/07/08.",
         use_inner_text=True,
     )
 
