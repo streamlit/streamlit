@@ -158,7 +158,6 @@ function createChatInputNode(
         placeholder: "Enter Text Here",
         disabled: false,
         default: "",
-        acceptFile: ChatInputProto.AcceptFile.NONE,
         isImplicitlyPinned,
       }),
     }),
