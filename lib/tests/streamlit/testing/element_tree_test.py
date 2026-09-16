@@ -2582,6 +2582,9 @@ def test_get_accepts_public_attribute_names() -> None:
         left, right = st.columns(2)
         left.text("left")
         right.text("right")
+        tab_one, tab_two = st.tabs(["One", "Two"])
+        tab_one.text("tab-one")
+        tab_two.text("tab-two")
 
     at = AppTest.from_function(script).run()
 
@@ -2608,6 +2611,11 @@ def test_get_accepts_public_attribute_names() -> None:
 
     assert list(at.get("image")) == list(at.image)
     assert len(at.get("image")) == 1
+
+    assert list(at.get("tabs")) == list(at.tabs)
+    assert list(at.get("tab")) == list(at.tabs)
+    assert len(at.get("tabs")) == 2
+    assert list(at.get("not_an_element")) == []
 
 
 def test_expander_key_and_get_by_key() -> None:

@@ -104,6 +104,7 @@ _GET_TYPE_ALIASES: dict[str, str] = {
     "datetime_input": "date_time_input",
     "columns": "column",
     "help": "help_info",
+    "tabs": "tab",
 }
 
 
