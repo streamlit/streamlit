@@ -2562,6 +2562,54 @@ def test_container_excludes_columns_row() -> None:
     assert len(at.columns) == 2
 
 
+def test_get_accepts_public_attribute_names() -> None:
+    """``AppTest.get()`` accepts public collection names, not only proto types.
+
+    Testers following the docstring pass attribute names such as
+    ``datetime_input`` and ``pills``. Proto names remain valid.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        st.datetime_input("When", key="when")
+        st.pills("Pills", options=["A", "B"], key="pills")
+        st.segmented_control("Seg", options=["X", "Y"], key="seg")
+        st.help("Hello")
+        st.image("https://example.com/image.png")
+        with st.container(key="filters"):
+            st.text("inside")
+        left, right = st.columns(2)
+        left.text("left")
+        right.text("right")
+
+    at = AppTest.from_function(script).run()
+
+    assert list(at.get("datetime_input")) == list(at.datetime_input)
+    assert list(at.get("date_time_input")) == list(at.datetime_input)
+
+    assert list(at.get("pills")) == list(at.pills)
+    assert list(at.get("segmented_control")) == list(at.segmented_control)
+    assert len(at.get("button_group")) == 2
+    assert at.get("pills")[0].key == "pills"
+    assert at.get("segmented_control")[0].key == "seg"
+
+    assert list(at.get("columns")) == list(at.columns)
+    assert list(at.get("column")) == list(at.columns)
+    assert len(at.get("columns")) == 2
+
+    assert list(at.get("help")) == list(at.get("help_info"))
+    assert len(at.get("help")) == 1
+    assert at.get("help")[0].type == "help_info"
+
+    assert list(at.get("container")) == list(at.container)
+    assert len(at.get("container")) == 1
+    assert at.get("container")[0].key == "filters"
+
+    assert list(at.get("image")) == list(at.image)
+    assert len(at.get("image")) == 1
+
+
 def test_expander_key_and_get_by_key() -> None:
     """Keyed expanders expose .key even though the tree stores the sub-proto."""
 

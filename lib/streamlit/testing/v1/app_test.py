@@ -1442,8 +1442,9 @@ class AppTest:
         Parameters
         ----------
         element_type: str
-            An element attribute of ``AppTest``. For example, "button",
-            "caption", or "chat_input".
+            An element attribute of ``AppTest``. For example, ``"button"``,
+            ``"datetime_input"``, or ``"pills"``. Proto type names such as
+            ``"date_time_input"`` and ``"help_info"`` also work.
 
         Returns
         -------

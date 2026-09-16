@@ -99,6 +99,13 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 
+# Public AppTest collection names that are not the node ``type`` string.
+_GET_TYPE_ALIASES: dict[str, str] = {
+    "datetime_input": "date_time_input",
+    "columns": "column",
+    "help": "help_info",
+}
+
 
 def _unknown_element_content(proto: Any) -> Any:
     """Best-effort payload for an unimplemented element's proto.
@@ -2398,7 +2405,21 @@ class Block:
         return ElementList(self.get("warning"))  # type: ignore
 
     def get(self, element_type: str) -> Sequence[Node]:
-        return [e for e in self if e.type == element_type]
+        """Return nodes for an AppTest collection name or a node type.
+
+        Public names that differ from ``Node.type`` (for example
+        ``datetime_input`` vs ``date_time_input``) are accepted. Proto type
+        names keep working. ``pills`` / ``segmented_control`` / ``container``
+        use the same filtering as the matching attributes.
+        """
+        if element_type == "pills":
+            return list(self.pills)
+        if element_type == "segmented_control":
+            return list(self.segmented_control)
+        if element_type == "container":
+            return list(self.container)
+        resolved = _GET_TYPE_ALIASES.get(element_type, element_type)
+        return [e for e in self if e.type == resolved]
 
     def run(self, *, timeout: float | None = None) -> AppTest:
         """Run the script with updated widget values.
