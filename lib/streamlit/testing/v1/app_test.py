@@ -1442,19 +1442,19 @@ class AppTest:
         Parameters
         ----------
         element_type: str
-            An element attribute of ``AppTest``. For example, ``"button"``,
+            An ``AppTest`` collection name such as ``"button"``,
             ``"datetime_input"``, ``"pills"``, or ``"tabs"``. Proto type names
-            such as ``"date_time_input"`` and ``"help_info"`` also work.
+            such as ``"date_time_input"`` also work. ``"help"`` maps to
+            ``st.help`` (``help_info``); there is no ``at.help`` attribute yet.
 
         Returns
         -------
         Sequence of Elements
             Sequence of elements of the given type. Individual elements can
-            be accessed from a Sequence by index (order on the page). When
-            getting and ``element_type`` that is a widget, individual widgets
-            can be accessed by key. For example, ``at.get("text")[0]`` for the
-            first ``st.text`` element or ``at.get("slider")(key="my_key")`` for
-            the ``st.slider`` widget with a given key.
+            be accessed from a Sequence by index (order on the page). For
+            example, ``at.get("text")[0]`` for the first ``st.text`` element
+            or ``at.slider(key="my_key")`` for the ``st.slider`` widget with
+            a given key.
         """
         return self._tree.get(element_type)
 

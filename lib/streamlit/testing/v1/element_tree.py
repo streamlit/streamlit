@@ -99,7 +99,7 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 
-# Public AppTest collection names that are not the node ``type`` string.
+# Public ``get()`` names that are not the node ``type`` string.
 _GET_TYPE_ALIASES: dict[str, str] = {
     "datetime_input": "date_time_input",
     "columns": "column",
