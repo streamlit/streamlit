@@ -511,10 +511,10 @@ def test_range_date_input_start_error_state(
     # Hover over the error tooltip target
     reset_hovering(themed_app)
     error_icon.hover()
-    # Check that the expected error tooltip message for start date error is shown
+    # Check the error tooltip when the start date is below the allowed minimum
     tooltip = themed_app.get_by_test_id("stTooltipErrorContent")
     expect(tooltip).to_have_text(
-        "Error: Start date set outside allowed range. Please select a date after 2009/07/06.",
+        "Error: Date set outside allowed range. Please select a date on or after 2009/07/06.",
         use_inner_text=True,
     )
 
@@ -549,10 +549,10 @@ def test_range_date_input_end_error_state(themed_app: Page):
     # Hover over the error tooltip target
     reset_hovering(themed_app)
     error_icon.hover()
-    # Check that the expected error tooltip message for end date error is shown
+    # Check the error tooltip when the end date is above the allowed maximum
     tooltip = themed_app.get_by_test_id("stTooltipErrorContent")
     expect(tooltip).to_have_text(
-        "Error: End date set outside allowed range. Please select a date before 2029/07/08.",
+        "Error: Date set outside allowed range. Please select a date on or before 2029/07/08.",
         use_inner_text=True,
     )
 

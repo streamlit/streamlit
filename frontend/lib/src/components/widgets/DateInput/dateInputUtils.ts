@@ -224,7 +224,11 @@ export function formatCalendarDate(
     .join(separator)
 }
 
-/** Builds the user-facing error message for out-of-range dates. */
+/**
+ * Builds the out-of-range tooltip. In range mode, the message identifies the
+ * violated bound rather than the edited field because either endpoint can
+ * violate either bound.
+ */
 export function createDateErrorMessage(
   errorType: DateValidationErrorType,
   isRange: boolean,
@@ -233,19 +237,10 @@ export function createDateErrorMessage(
 ): string | null {
   if (!errorType) return null
 
-  if (isRange) {
-    const label = errorType === "afterMax" ? "End" : "Start"
-    const messageEnding =
-      errorType === "afterMax"
-        ? `before ${maxDateString}`
-        : `after ${minDateString}`
-    return `**Error**: ${label} date set outside allowed range. Please select a date ${messageEnding}.`
-  }
-
   if (errorType === "afterMax") {
     return `**Error**: Date set outside allowed range. Please select a date on or before ${maxDateString}.`
   }
-  if (!maxDateString) {
+  if (isRange || !maxDateString) {
     return `**Error**: Date set outside allowed range. Please select a date on or after ${minDateString}.`
   }
   return `**Error**: Date set outside allowed range. Please select a date between ${minDateString} and ${maxDateString}.`
