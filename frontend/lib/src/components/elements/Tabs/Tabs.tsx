@@ -126,7 +126,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     widgetId ?? "",
     isDynamic ? (tabContainer?.queryParamKey ?? null) : null,
     "string_value",
-    tabContainer?.defaultTabLabel ?? allTabLabels[defaultTabIndex] ?? "",
+    tabContainer?.defaultTabLabel ?? "",
     false
   )
 

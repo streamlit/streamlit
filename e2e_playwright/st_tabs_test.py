@@ -544,6 +544,10 @@ def test_tabs_stretch_height_fills_parent(
 
 # --- bind="query-params" Tests ---
 
+QP_DOG_IN_URL = re.compile(r"[?&]qp_tabs=QP(\+|%20)Dog")
+QP_OWL_IN_URL = re.compile(r"[?&]qp_tabs=QP(\+|%20)Owl")
+QP_ALPHA_IN_URL = re.compile(r"[?&]qp_tabs_default=QP(\+|%20)Alpha")
+
 
 def test_tabs_query_param_binding_url_updates_on_switch(app: Page):
     """Test that switching a bound tab updates the browser URL and session state."""
@@ -556,7 +560,7 @@ def test_tabs_query_param_binding_url_updates_on_switch(app: Page):
     qp_tabs.get_by_role("tab", name="QP Dog").click()
     wait_for_app_run(app)
 
-    expect(app).to_have_url(re.compile(r"qp_tabs=QP"))
+    expect(app).to_have_url(QP_DOG_IN_URL)
     expect(qp_tabs.get_by_text("QP Dog tab content")).to_be_visible()
     expect(app.get_by_text("Active tab: QP Dog", exact=True)).to_be_visible()
 
@@ -578,7 +582,7 @@ def test_tabs_query_param_seeding_from_url(page: Page, app_base_url: str):
         "aria-selected", "true"
     )
     expect(qp_tabs.get_by_text("QP Owl tab content")).to_be_visible()
-    expect(page).to_have_url(re.compile(r"qp_tabs=QP"))
+    expect(page).to_have_url(QP_OWL_IN_URL)
     expect(page.get_by_text("Active tab: QP Owl", exact=True)).to_be_visible()
 
     # The other bound tabs stay at their default tab, so their params are omitted.
@@ -597,7 +601,7 @@ def test_tabs_query_param_omitted_in_default_tab_state(app: Page):
     qp_default_tabs.get_by_role("tab", name="QP Alpha").click()
     wait_for_app_run(app)
 
-    expect(app).to_have_url(re.compile(r"qp_tabs_default=QP"))
+    expect(app).to_have_url(QP_ALPHA_IN_URL)
 
     qp_default_tabs.get_by_role("tab", name="QP Beta").click()
     wait_for_app_run(app)

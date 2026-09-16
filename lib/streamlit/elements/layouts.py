@@ -52,11 +52,7 @@ from streamlit.errors import (
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.state import (
-    BindOption,
-    register_widget,
-    validate_on_change_mode,
-)
+from streamlit.runtime.state import BindOption, register_widget, validate_on_change_mode
 from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
@@ -844,8 +840,8 @@ class LayoutsMixin:
             controls whether tabs track state and trigger reruns. ``on_change``
             can be one of the following values:
 
-            - ``"ignore"`` (default): Unless ``bind="query-params"`` is set,
-              the tabs don't track state. All tab content runs regardless of
+            - ``"ignore"`` (default): The tabs don't track state, unless
+              ``bind="query-params"`` is set. All tab content runs regardless of
               which tab is selected. The ``.open`` attribute of each tab
               container returns ``None`` when state tracking is disabled.
 
@@ -1139,8 +1135,8 @@ class LayoutsMixin:
         if is_stateful and element_id is not None:
             block_proto.tab_container.id = element_id
 
-        # register_widget already requires a key when bind="query-params"; keep
-        # the guard for symmetry with checkbox.py.
+        # Set binding proto fields only when bind is on and key is present.
+        # register_widget already requires a user key for bind="query-params".
         if bind == "query-params" and key is not None:
             block_proto.tab_container.query_param_key = str(key)
             block_proto.tab_container.default_tab_label = default_label
