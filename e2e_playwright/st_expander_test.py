@@ -542,6 +542,7 @@ def test_expander_query_param_binding_url_updates_on_toggle(app: Page):
 
     expect(app).to_have_url(re.compile(r"qp_exp=true"))
     expect(exp.get_by_text("Query param expander content")).to_be_visible()
+    expect(app.get_by_text("QP expander state: True", exact=True)).to_be_visible()
 
     # Collapse it — URL param should be removed (default state = collapsed)
     exp.locator(EXPANDER_HEADER_IDENTIFIER).click()
@@ -549,6 +550,7 @@ def test_expander_query_param_binding_url_updates_on_toggle(app: Page):
 
     expect(app).not_to_have_url(re.compile(r"[?&]qp_exp="))
     expect(exp.get_by_text("Query param expander content")).not_to_be_visible()
+    expect(app.get_by_text("QP expander state: False", exact=True)).to_be_visible()
 
 
 def test_expander_query_param_seeding_from_url(page: Page, app_base_url: str):
@@ -565,7 +567,7 @@ def test_expander_query_param_seeding_from_url(page: Page, app_base_url: str):
     expect(page).not_to_have_url(re.compile(r"[?&]qp_exp_true="))
 
 
-def test_expander_query_param_default_expanded_true_url_cleared(app: Page):
+def test_expander_query_param_omitted_in_default_expanded_state(app: Page):
     """Test that a bound expander with expanded=True has no URL param in default state."""
     exp = get_element_by_key(app, "qp_exp_true")
 

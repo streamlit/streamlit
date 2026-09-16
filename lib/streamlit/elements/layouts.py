@@ -1152,10 +1152,10 @@ class LayoutsMixin:
         By default, all content within the expander is computed and sent to the
         frontend, even if the expander is closed. To enable lazy execution
         where content only runs when the expander is open, use
-        ``on_change="rerun"`` or pass a callable to ``on_change``. The ``.open``
-        property indicates whether the expander is currently open when state
-        tracking is enabled (via ``on_change`` or ``bind="query-params"``),
-        letting you conditionally render expensive content.
+        ``on_change="rerun"``, pass a callable to ``on_change``, or set
+        ``bind="query-params"`` (with ``key``). The ``.open`` property
+        indicates whether the expander is currently open when state tracking is
+        enabled, letting you conditionally render expensive content.
 
         .. note::
 
@@ -1291,12 +1291,14 @@ class LayoutsMixin:
             requires ``key`` to be set. The key is used as the query parameter
             name.
 
-            When ``bind="query-params"`` is set, the expander tracks state
-            (equivalent to setting ``on_change="rerun"`` if not already set).
-            When the expander's state equals its default, the query parameter
-            is removed from the URL to keep it clean. A bound query parameter
-            can't be set or deleted through ``st.query_params``; it can only
-            be programmatically changed through ``st.session_state``.
+            When ``bind="query-params"`` is set, the expander tracks state even
+            if ``on_change`` is ``"ignore"`` (the default). Toggling still
+            reruns the app, like ``on_change="rerun"``, so ``.open`` and Session
+            State stay in sync. When the expander's state equals its default,
+            the query parameter is removed from the URL to keep it clean. A
+            bound query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed through
+            ``st.session_state``.
 
         Returns
         -------
@@ -1421,6 +1423,8 @@ class LayoutsMixin:
                 "type", [repr(name) for name in EXPANDABLE_TYPE_TO_PROTO_MAPPING]
             )
 
+        # register_widget validates bind too, but an invalid value leaves the
+        # expander non-stateful, so that check is never reached. Validate up front.
         if bind is not None and bind != "query-params":
             raise StreamlitValueError("bind", ["'query-params'", "None"])
 
@@ -1491,6 +1495,8 @@ class LayoutsMixin:
         if is_stateful and element_id is not None:
             expandable_proto.id = element_id
 
+        # register_widget already requires a key when bind="query-params"; keep
+        # the guard for symmetry with checkbox.py.
         if bind == "query-params" and key is not None:
             expandable_proto.query_param_key = str(key)
             expandable_proto.default_expanded = expanded

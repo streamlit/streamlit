@@ -39,8 +39,8 @@ class ExpanderContainer(DeltaGenerator):
     ----------
     open : bool or None
         Whether the expander is open. This is ``True`` if the expander is open,
-        ``False`` if it's collapsed, or ``None`` when neither ``on_change`` nor
-        ``bind`` enables state tracking.
+        ``False`` if it's collapsed, or ``None`` if the expander doesn't track
+        state (``on_change="ignore"`` without ``bind="query-params"``).
 
     Examples
     --------
@@ -102,8 +102,9 @@ class ExpanderContainer(DeltaGenerator):
         Returns
         -------
         bool or None
-            ``True`` if expanded, ``False`` if collapsed, or ``None`` when
-            neither ``on_change`` nor ``bind`` enables state tracking.
+            ``True`` if expanded, ``False`` if collapsed, or ``None`` if the
+            expander doesn't track state (``on_change="ignore"`` without
+            ``bind="query-params"``).
         """
         return self._open
 

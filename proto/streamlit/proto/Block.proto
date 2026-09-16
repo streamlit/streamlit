@@ -127,7 +127,8 @@ message Block {
     // Progress state, only set by st.status. The frontend uses it to pick the
     // step icon and to announce the state to screen readers.
     State state = 6;
-    // If set, widget value is bound to this query parameter key.
+    // Query parameter name the expander's open state syncs with. Only set when
+    // bind="query-params".
     optional string query_param_key = 7;
     // Original `expanded=` default. The frontend omits the query param when the
     // expander matches this value. Distinct from `expanded`, which is current state.
