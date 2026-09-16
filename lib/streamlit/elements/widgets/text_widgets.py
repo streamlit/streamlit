@@ -948,7 +948,7 @@ class TextWidgetsMixin:
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -970,7 +970,7 @@ class TextWidgetsMixin:
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -992,7 +992,7 @@ class TextWidgetsMixin:
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -1084,8 +1084,29 @@ class TextWidgetsMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change : callable
-            An optional callback invoked when this text_area's value changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the text area should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the text area. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a new value (blurring the field, or pressing
+              Ctrl+Enter / Cmd+Enter).
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits a new value. The text area still updates in the UI.
+              The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. Ignored
+              commits are held in the browser and are lost if the page is
+              refreshed before that rerun, unless ``bind="query-params"``
+              is set (see ``bind``). Inside ``st.form``, this has no
+              effect: the form already defers all commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -1135,6 +1156,13 @@ class TextWidgetsMixin:
 
             An empty query parameter (e.g., ``?my_key=``) clears the
             widget.
+
+            When ``on_change="ignore"``, the URL is updated as soon as the
+            value is committed (blur, or Ctrl+Enter / Cmd+Enter); typing
+            alone does not update it. As with widgets inside a form, the URL can
+            show a value that Python hasn't received yet. Python receives
+            the new value on the next rerun, so a page load or share uses
+            the updated URL value.
 
         persist_state : "page", "session", or None
             How long to preserve the widget's value when it isn't rendered.
@@ -1205,7 +1233,7 @@ class TextWidgetsMixin:
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -1218,15 +1246,15 @@ class TextWidgetsMixin:
         ctx: ScriptRunContext | None = None,
     ) -> str | None:
         key = to_key(key)
-        on_change = validate_on_change_mode(
+        on_change_callback = validate_on_change_mode(
             on_change,
-            supported_modes=(),
+            supported_modes=("rerun", "ignore"),
         )
 
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=None if value == "" else value,
         )
         label = maybe_raise_label_warnings(label, label_visibility)
@@ -1277,10 +1305,13 @@ class TextWidgetsMixin:
         if bind == "query-params" and key is not None:
             text_area_proto.query_param_key = str(key)
 
+        if isinstance(on_change, str) and on_change == "ignore":
+            text_area_proto.ignore_rerun = True
+
         serde = TextAreaSerde(value, max_chars)
         widget_state = register_widget(
             text_area_proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
