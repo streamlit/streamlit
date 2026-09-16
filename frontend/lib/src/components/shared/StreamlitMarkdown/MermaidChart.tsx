@@ -191,6 +191,17 @@ interface MermaidChartProps {
 }
 
 /**
+ * Mermaid 12 defaults these diagram types to ELK layout and the neo look.
+ * Pin dagre + classic so existing Streamlit diagrams keep the previous
+ * rendering. Do not set a top-level `layout`: that is an explicit request
+ * and would switch mindmaps from cose-bilkent to dagre.
+ */
+const MERMAID_12_CLASSIC_DAGRE = {
+  layout: "dagre",
+  look: "classic",
+} as const
+
+/**
  * Prepares the rendered SVG for responsive display inside an <img>.
  *
  * Mermaid emits SVGs with `width="100%"` plus an inline `max-width` style, which
@@ -291,9 +302,19 @@ function getMermaidThemeConfig(theme: EmotionTheme): Record<string, unknown> {
     // HTML labels can extend beyond the calculated viewBox, causing
     // text clipping when rendered as an image.
     htmlLabels: false,
+    // Restore classic look for types that Mermaid 12 switched to neo
+    // (sequence, venn, swimlane) without requesting a layout globally.
+    look: "classic",
     flowchart: {
       htmlLabels: false,
+      ...MERMAID_12_CLASSIC_DAGRE,
     },
+    state: { ...MERMAID_12_CLASSIC_DAGRE },
+    class: { ...MERMAID_12_CLASSIC_DAGRE },
+    er: { ...MERMAID_12_CLASSIC_DAGRE },
+    requirement: { ...MERMAID_12_CLASSIC_DAGRE },
+    usecase: { ...MERMAID_12_CLASSIC_DAGRE },
+    agentflow: { ...MERMAID_12_CLASSIC_DAGRE },
     themeVariables: {
       // Core theme variables - Mermaid derives many others from these
       darkMode: !isLightTheme,
