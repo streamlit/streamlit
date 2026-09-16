@@ -399,7 +399,7 @@ function RangeDateInput({
       }
     }
     wasOpenRef.current = isOpen
-  }, [isOpen, startValue, endValue])
+  }, [isOpen, startValue, endValue, minDate, maxDate])
 
   // Restore focus to the first editable segment after the form-reset remount.
   // Suppress handleFocus while focusin dispatches synchronously so the calendar
