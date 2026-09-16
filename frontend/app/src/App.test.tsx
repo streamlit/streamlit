@@ -1838,8 +1838,13 @@ describe("App", () => {
       })
 
       const connectionManager = getMockConnectionManager()
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
       // @ts-expect-error
       connectionManager.sendMessage.mockClear()
+      // @ts-expect-error
+      hostCommunicationMgr.sendMessageToHost.mockClear()
 
       // Simulate browser back/forward changing URL query params on same page.
       window.history.pushState({}, "", "/?fresh=newvalue")
@@ -1851,6 +1856,10 @@ describe("App", () => {
         expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
       })
 
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "SET_QUERY_PARAM",
+        queryParams: "?fresh=newvalue",
+      })
       expect(
         // @ts-expect-error
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString

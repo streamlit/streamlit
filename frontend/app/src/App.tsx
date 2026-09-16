@@ -1853,13 +1853,15 @@ export class App extends PureComponent<Props, State> {
     if (isNullOrUndefined(targetAppPage) || (hasAnchor && isSamePage)) {
       return
     }
-    // Pass preserveQueryParams=true to preserve query params from the URL when
-    // navigating via browser history (back/forward buttons). This ensures that
-    // query params present in the URL after history navigation are sent to the
-    // server on the first script run.
+
+    const queryString = normalizeQueryString(document.location.search)
+    // Pass the URL query string. After same-page back/forward, App state can
+    // still hold the last server-set params, which would be sent on the rerun.
+    // preserveQueryParams also keeps URL params when popstate changes pages.
+    this.handleQueryParamsFromWidget(queryString)
     this.onPageChange(
       targetAppPage.pageScriptHash as string,
-      normalizeQueryString(document.location.search),
+      queryString,
       true
     )
   }
