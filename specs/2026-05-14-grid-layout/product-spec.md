@@ -121,7 +121,7 @@ one use case.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
-| `columns` | `"auto"` or `int >= 1` | `"auto"` | Number of equal-width columns. `"auto"` fits as many as the container allows. With `wrap=True`, an integer is the maximum count and the grid wraps earlier when cells would fall below `min_column_width`. With `wrap=False`, the grid always keeps this count. |
+| `columns` | `"auto"` or `int >= 1` | `"auto"` | Number of equal-width columns. `"auto"` fits as many as the container allows. With `wrap=True`, an integer is the maximum count and the grid wraps earlier when cells would fall below `min_column_width`. With `wrap=False`, the grid always keeps this count. Integer `columns` is `1`…`24`; above that raises. |
 | `min_column_width` | `"auto"` or `int >= 1` | `"auto"` | Preferred cell floor. `"auto"` is a frontend rem token (border-aware). An explicit int is the outer cell width. Wrap threshold when `wrap=True`; shrink-then-scroll floor when `wrap=False`. See [Auto minimum width](#auto-minimum-width). |
 | `wrap` | `bool` | `True` | Whether the column count may decrease. Same name and default as [`st.container` / `st.columns`](../2026-07-23-horizontal-wrap-control/product-spec.md). `False` keeps the declared count and scrolls locally. Invalid with `columns="auto"`. |
 | `gap` | gap size, `(row_gap, column_gap)`, or `None` | `"small"` | Space between cells. A scalar matches `st.columns`. A 2-tuple or 2-list is `(row_gap, column_gap)`. See [Asymmetric gaps](#asymmetric-gaps-tuple-versus-explicit-parameters). |
@@ -130,7 +130,7 @@ one use case.
 | `row_height` | `"content"`, `"equal"`, or `int >= 1` | `"content"` | Height of each **row**. `"content"` sizes to the row's tallest cell. `"equal"` makes every row the same height. An integer is pixels. See [Height and space division](#height-and-space-division). |
 | `width` | `"stretch"` or `int` | `"stretch"` | Grid container width, matching `st.columns`. |
 | `height` | `"content"`, `"stretch"`, or `int` | `"content"` | Grid container height, matching `st.container`. `"content"` grows and the page scrolls. An integer bounds the grid. `"stretch"` fills a height-bounded ancestor; without one it behaves like `"content"` (see [Risks](#risks)). |
-| `key` | `str` or `None` | `None` | Stable identity (`st-key-<key>`), matching `st.container`. |
+| `key` | `str`, `int`, or `None` | `None` | Stable identity (`st-key-<key>`). `Key` is `str | int`, matching `st.container`. |
 | `dense` | `bool` | `False` | When `True`, backfill gaps left by spanning cells (can reorder visual vs DOM order). See [Accessibility](#accessibility). |
 
 Invalid arguments fail immediately (Principle 23). Use the shared catalog in
@@ -138,15 +138,15 @@ Invalid arguments fail immediately (Principle 23). Use the shared catalog in
 
 | Invalid input | Error |
 | --- | --- |
-| `columns` integer `< 1`, or a string other than `"auto"` | `StreamlitValueError` |
-| `columns` / `min_column_width` / `row_height` wrong type | `StreamlitInvalidParameterTypeError` |
+| `columns` integer outside `1`…`24` | `StreamlitValueOutOfRangeError` (`1` … `24`) |
+| `columns` string other than `"auto"` | `StreamlitValueError` |
+| `columns` / `min_column_width` / `row_height` / `column_span` / `row_span` wrong type (including `None`, float, or `bool`) | `StreamlitInvalidParameterTypeError` |
 | `min_column_width` integer `< 1`, or a string other than `"auto"` | `StreamlitValueError` |
-| `columns="auto"` with `wrap=False` | `StreamlitIncompatibleParametersError` (`columns="auto"`, `wrap=False`) |
+| `columns="auto"` with `wrap=False` | `StreamlitIncompatibleParametersError` (`columns="auto"`, `wrap=False`): "`wrap=False` requires an explicit column count. Pass an integer, such as `st.grid(3, wrap=False)`." |
 | `row_height` integer `< 1`, or a string other than `"content"` / `"equal"` | `StreamlitValueError` |
 | `column_span` integer `< 1`, or a string other than `"all"` | `StreamlitValueError` |
 | `column_span` integer greater than a declared integer `columns` | `StreamlitValueOutOfRangeError` (`1` … `columns`) |
 | `row_span` integer `< 1` | `StreamlitValueError` |
-| `row_span` wrong type (including a string) | `StreamlitInvalidParameterTypeError` |
 | `height` outside the shared `Height` contract | Same errors as `st.container` |
 | `width` outside the shared `WidthWithoutContent` contract | Same errors as `st.columns` (`StreamlitInvalidWidthError`) |
 | `gap` outside the shared scale | Same errors as `st.columns` |
@@ -330,6 +330,20 @@ than the auto minimum." With an explicit `min_column_width=200` at default font 
 - 440px: 2
 - 320px: 1
 
+At the default (non-`wide`) content width — `theme.sizes.contentMaxWidth` = `736px` —
+with `gap="small"` (1rem):
+
+- `st.grid(4)` → `(736 - 3*16) / 4 = 172px` per track, below the ~`12.5rem` (200px) auto
+  floor, so it wraps to **3 columns**.
+- `st.grid(4, border=True)`: the floor is `200 + 2 * theme.spacing.lg` (232px); 3 tracks
+  land at ~234px.
+
+An integer `columns` is a **maximum**, not a guarantee. `st.grid(4)` yields 3 columns for
+most users on the default layout. That is the shipped rule; "I asked for 4 and got 3" is
+documented wrapping, not a bug. Lowering the auto floor so four tracks fit at 736px, or
+making an explicit integer count authoritative down to a smaller hard floor, would change
+this and is left as a product follow-up.
+
 Thresholds account for the **column** gap and, when `"auto"`, for root font size and
 `border`. The calculation uses actual container width — sidebar, nested container, or
 embed — not the `st.columns` 640px viewport breakpoint.
@@ -339,6 +353,12 @@ span clamping. CSS `auto-fit` / `minmax` can wrap without measuring, but it coll
 empty last-row tracks (leftover items stretch) and cannot clamp `span N`. The MVP computes
 `N` with the same resize-observer pattern other layout containers use, then sets
 `repeat(N, …)`.
+
+Before that observer has a width, first paint must not flash a different track count.
+`st.grid(4)` starts at 4 (or fewer if the first layout width already requires wrapping).
+`columns="auto"` starts from a guess using the parent block's last known width, or the
+app's content width (`736px`) when none exists. Cells must not remount when `N` changes
+(`frontend/AGENTS.md`: keep element identity stable across width-driven template updates).
 
 `st.grid("auto")` fits as many columns as the container allows, with no user-facing max.
 Useful for galleries; most dashboards should pass an integer cap.
@@ -352,10 +372,10 @@ tracks still reserve width, so leftover items stay the same width as the rows ab
 That is why wrapping uses an explicit track template rather than `auto-fit`. The same
 look applies to `columns="auto"`: `N` comes from container capacity, not item count, so
 eight cards where twelve tracks fit keep card-sized tracks and empty space rather than
-stretching. Cap resolved `N` at an internal safety bound so a tiny explicit
-`min_column_width` cannot explode the track count. That bound must not change any
-documented `min_column_width` recipe. An explicit `columns` above the cap is clamped to
-it, not rejected.
+stretching. Cap auto-resolved `N` at **24** so a tiny explicit `min_column_width` cannot
+explode the track count. That bound must not change any documented `min_column_width`
+recipe. An explicit integer `columns` above 24 raises `StreamlitValueOutOfRangeError`;
+it is not silently clamped. `st.grid(12, wrap=False)` is therefore 12 tracks.
 
 #### No-Wrap Behavior
 
@@ -409,7 +429,7 @@ The name is `row_height` rather than `cell_height` because these modes size **ro
 
 | `row_height` | Rows |
 | --- | --- |
-| `"content"` (default) | Each row is as tall as its tallest cell. Borders stretch to that row, so cards in a row still align. |
+| `"content"` (default) | Each row is as tall as its tallest cell. Borders stretch to that row, so cards in a row still align. A `row_span=N` cell's height is distributed across the N rows it covers (CSS Grid default), so it can grow unrelated cells in those rows. Use a definite `row_height` when row-span math must stay predictable. |
 | `"equal"` | Every row has the same height. In a scrolling grid that height is the tallest row's intrinsic content. In a height-bounded grid the same name divides the definite height. A `row_span=N` cell is `N` of those rows plus the gaps between them. |
 | `<int>` | Every row is that many pixels. `cell(row_span=2)` is `2 * row_height + row_gap`. Overflow scrolls inside the cell. |
 
@@ -493,7 +513,7 @@ metrics = [
     ("Retention", "96%", "-0.4%", "Monthly"),
 ]
 
-grid = st.grid(4, border=True, row_height="equal")
+grid = st.grid(4, border=True, row_height="equal")  # max 4; 3 at default 736px width
 
 for label, value, delta, caption in metrics:
     with grid.cell():
@@ -618,6 +638,7 @@ follow-ups.
 | `grid.cells(n)` | Reject | Predeclared count; see [Fixed Cell List](#alternative-api-fixed-cell-list). |
 | Weighted tracks `columns=[2, 1, 1]` | **Top follow-up**, `wrap=False` only | Asymmetric dashboards and the 12-track floor problem. |
 | Per-cell `horizontal_alignment` / `vertical_alignment` | Follow-up after usage | Nested containers cover most cases. If added, use `"start"` / `"end"` (RTL), not `"left"` / `"right"`. |
+| `vertical_alignment="distribute"` on `st.grid` | Reject (follow `st.columns`) | `st.container` has it; a grid cell is a vertical region like a column. Spread a title/chart/footer with a nested `container(vertical_alignment="distribute")` inside the cell. |
 | Named mosaic templates | Follow-up after ship | Best for hand-designed dashboards; second mental model. |
 | Slice-addressed cells `grid[r, c]` | Compatible extension | Expressive, but needs explicit dimensions and must not mix with auto-placement. |
 | Breakpoint maps `{"sm": 1, "md": 4}` | Defer | Viewport breakpoints fail in sidebars, nests, and embeds. |
