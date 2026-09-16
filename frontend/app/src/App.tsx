@@ -235,8 +235,6 @@ interface State {
   sidebarChevronDownshift: number
   pageLinkBaseUrl: string
   queryParams: string
-  // True while processing a rerun triggered by browser back/forward.
-  historyNavigationRerun: boolean
   deployedAppMetadata: DeployedAppMetadata
   libConfig: LibConfig
   appConfig: AppConfig
@@ -336,6 +334,11 @@ export class App extends PureComponent<Props, State> {
   // we have received a NewSession message after the latest rerun request.
   // This will allow us to ignore finished messages from previous script runs.
   private hasReceivedNewSession: boolean = false
+
+  // Set when a popstate rerun is sent; cleared before any other rerun is sent
+  // or after its PageInfo is handled. Used to skip pushState (not replaceState)
+  // so history entries are not polluted.
+  private historyNavigationRerunPending: boolean = false
 
   // Active `run_every` auto-rerun timers, keyed by fragment id. These are
   // imperative resources (setInterval handles), so they live outside of React
@@ -459,7 +462,6 @@ export class App extends PureComponent<Props, State> {
       // Initialize from URL so bound widget params from shared links are
       // preserved on first page navigation (before handlePageInfoChanged fires).
       queryParams: normalizeQueryString(window.location?.search ?? ""),
-      historyNavigationRerun: false,
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
@@ -1276,19 +1278,14 @@ export class App extends PureComponent<Props, State> {
     // identical, so reruns that re-assign the same query params would otherwise
     // fill the back stack with no-op entries. React state and the host message
     // below are still updated so embeds stay in sync.
-    const { historyNavigationRerun } = this.state
-    if (queryString !== currentSearch) {
-      if (historyNavigationRerun) {
-        window.history.replaceState({}, "", targetUrl)
-      } else {
-        window.history.pushState({}, "", targetUrl)
-      }
+    const historyNavigationRerun = this.historyNavigationRerunPending
+    // During browser back/forward the URL is already correct from popstate.
+    if (queryString !== currentSearch && !historyNavigationRerun) {
+      window.history.pushState({}, "", targetUrl)
     }
 
-    this.setState({
-      queryParams: queryString,
-      historyNavigationRerun: false,
-    })
+    this.historyNavigationRerunPending = false
+    this.setState({ queryParams: queryString })
 
     this.hostCommunicationMgr.sendMessageToHost({
       type: "SET_QUERY_PARAM",
@@ -2431,7 +2428,9 @@ export class App extends PureComponent<Props, State> {
       this.connectionManager?.getCachedMessageHashes() ?? []
 
     if (isHistoryNavigation) {
-      this.setState({ historyNavigationRerun: true })
+      this.historyNavigationRerunPending = true
+    } else {
+      this.historyNavigationRerunPending = false
     }
 
     this.sendBackMsg(
