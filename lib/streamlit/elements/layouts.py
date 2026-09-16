@@ -52,7 +52,12 @@ from streamlit.errors import (
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.state import BindOption, register_widget, validate_on_change_mode
+from streamlit.runtime.state import (
+    BindOption,
+    get_session_state,
+    register_widget,
+    validate_on_change_mode,
+)
 from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
@@ -885,6 +890,9 @@ class LayoutsMixin:
             query parameter can't be set or deleted through ``st.query_params``;
             it can only be programmatically changed through ``st.session_state``.
 
+            Tab labels must be non-empty and unique when ``bind="query-params"``
+            is set, so each label maps unambiguously to a query-parameter value.
+
         Returns
         -------
         Sequence of TabContainers
@@ -1045,6 +1053,20 @@ class LayoutsMixin:
         if bind is not None and bind != "query-params":
             raise StreamlitValueError("bind", ["'query-params'", "None"])
 
+        if bind == "query-params":
+            if any(not label for label in tabs):
+                raise StreamlitValueError(
+                    "tabs",
+                    ["non-empty labels"],
+                    detail="Tab labels must be non-empty when bind='query-params'.",
+                )
+            if len(set(tabs)) != len(tabs):
+                raise StreamlitValueError(
+                    "tabs",
+                    ["unique labels"],
+                    detail="Tab labels must be unique when bind='query-params'.",
+                )
+
         key = to_key(key)
         default_index = tabs.index(default) if default else 0
         default_label = tabs[default_index]
@@ -1098,6 +1120,11 @@ class LayoutsMixin:
             current_tab_label = tabs_state.value
             if current_tab_label not in tabs:
                 current_tab_label = default_label
+                if key is not None:
+                    get_session_state().reset_state_value(str(key), default_label)
+                    if bind == "query-params":
+                        with get_session_state().query_params() as qp:
+                            qp.remove_param(str(key))
         elif key is not None:
             block_id = compute_and_register_element_id(
                 "tabs",

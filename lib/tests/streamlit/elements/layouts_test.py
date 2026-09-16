@@ -2225,6 +2225,24 @@ class TabsTest(DeltaGeneratorTestCase):
         ):
             st.tabs(["A", "B"], bind="query-params")
 
+    def test_bind_query_params_duplicate_labels_raises(self) -> None:
+        """Test that bind='query-params' rejects duplicate tab labels."""
+        with pytest.raises(StreamlitValueError, match="unique"):
+            st.tabs(["A", "A", "B"], key="my_tabs", bind="query-params")
+
+    def test_bind_query_params_empty_label_raises(self) -> None:
+        """Test that bind='query-params' rejects empty tab labels."""
+        with pytest.raises(StreamlitValueError, match="non-empty"):
+            st.tabs(["A", "", "B"], key="my_tabs", bind="query-params")
+
+    def test_bind_query_params_invalid_session_state_resets(self) -> None:
+        """Test that an invalid bound tab label in session state resets to default."""
+        st.session_state["my_tabs"] = "Missing"
+        tabs = st.tabs(["A", "B", "C"], key="my_tabs", bind="query-params")
+        assert st.session_state.my_tabs == "A"
+        assert tabs[0].open is True
+        assert tabs[1].open is False
+
     def test_bind_query_params_sets_proto_fields(self) -> None:
         """Test that bind='query-params' sets query_param_key and default_tab_label."""
         st.tabs(["A", "B", "C"], key="my_tabs", bind="query-params")
