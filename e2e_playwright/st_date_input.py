@@ -180,6 +180,14 @@ st.date_input(
     width=150,
     key="narrow_range",
 )
+st.date_input(
+    "Narrow clearable bounded",
+    value=None,
+    min_value=date(2020, 1, 1),
+    max_value=date(2020, 12, 31),
+    width=110,
+    key="narrow_clearable_bounded",
+)
 
 if st.toggle("Update date input props"):
     dval = st.date_input(

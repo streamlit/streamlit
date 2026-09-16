@@ -75,6 +75,7 @@ import {
   StyledClearButton,
   StyledDateField,
   StyledDateFieldContainer,
+  StyledDateFieldsScroller,
   StyledDateInputWrapper,
   StyledErrorIconContainer,
   StyledTrailingIcons,
@@ -585,26 +586,28 @@ function SingleDateInput({
         onPaste={handlePaste}
         onKeyDown={handleFieldKeyDown}
       >
-        <I18nProvider locale="en-US">
-          <StyledDateField>
-            <DateField
-              // Remount on form clear because React Aria retains incomplete
-              // segment text when the controlled value has not changed.
-              key={formResetKey}
-              aria-label={label}
-              aria-describedby={error ? errorId : undefined}
-              isInvalid={!!error}
-              value={displayValue}
-              onChange={handleFieldChange}
-              minValue={minDate}
-              maxValue={maxDate}
-              shouldForceLeadingZeros
-              isDisabled={disabled}
-            >
-              <ReorderedSegments format={format} />
-            </DateField>
-          </StyledDateField>
-        </I18nProvider>
+        <StyledDateFieldsScroller data-testid="stDateInputFieldsScroller">
+          <I18nProvider locale="en-US">
+            <StyledDateField>
+              <DateField
+                // Remount on form clear because React Aria retains incomplete
+                // segment text when the controlled value has not changed.
+                key={formResetKey}
+                aria-label={label}
+                aria-describedby={error ? errorId : undefined}
+                isInvalid={!!error}
+                value={displayValue}
+                onChange={handleFieldChange}
+                minValue={minDate}
+                maxValue={maxDate}
+                shouldForceLeadingZeros
+                isDisabled={disabled}
+              >
+                <ReorderedSegments format={format} />
+              </DateField>
+            </StyledDateField>
+          </I18nProvider>
+        </StyledDateFieldsScroller>
         <StyledTrailingIcons>
           {error && (
             <StyledErrorIconContainer data-testid="stDateInputError">
