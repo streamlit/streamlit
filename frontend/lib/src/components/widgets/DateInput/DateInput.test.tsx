@@ -114,7 +114,7 @@ const clearSegment = async (
 }
 
 describe("DateInput", () => {
-  describe("rendering and initial state", () => {
+  describe("rendering, layout, and initial state", () => {
     it("renders without crashing", () => {
       const props = getProps()
       render(<DateInput {...props} />)
@@ -149,7 +149,7 @@ describe("DateInput", () => {
       expect(literals).toHaveLength(2)
     })
 
-    it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
+    it("passes labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
       const props = getProps({
         labelVisibility: {
           value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
@@ -161,7 +161,7 @@ describe("DateInput", () => {
       )
     })
 
-    it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
+    it("passes labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
       const props = getProps({
         labelVisibility: {
           value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
@@ -297,8 +297,8 @@ describe("DateInput", () => {
     })
   })
 
-  describe("commit on blur", () => {
-    it("commits pending value on blur outside a form (calendar-select → adjust → blur)", async () => {
+  describe("commit on blur outside a form", () => {
+    it("commits pending segment edits on blur outside a form", async () => {
       const user = userEvent.setup()
       const props = getProps()
       vi.spyOn(props.widgetMgr, "setStringArrayValue")
@@ -328,7 +328,7 @@ describe("DateInput", () => {
   })
 
   describe("validation and error display", () => {
-    it("displays an error tooltip when the entered date for single date input outside range", async () => {
+    it("displays an error tooltip when the entered date for single date input is outside range", async () => {
       const user = userEvent.setup()
       const props = getProps({
         min: "2020-01-05",
@@ -719,7 +719,7 @@ describe("DateInput", () => {
       expect(resetSegments.day).toHaveTextContent("15")
     })
 
-    it("commits pending value on blur when inside a form (form-submit race fix)", async () => {
+    it("commits pending value on blur for a widget inside a form", async () => {
       const user = userEvent.setup()
       const props = getProps({ formId: "form" })
       props.widgetMgr.setFormSubmitBehaviors("form", true)
