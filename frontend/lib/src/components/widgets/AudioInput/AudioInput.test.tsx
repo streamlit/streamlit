@@ -1029,12 +1029,26 @@ describe("AudioInput Error Handling", () => {
         return controller
       }
     )
+
+    uploadFilesMock.mockResolvedValue({
+      successfulUploads: [{ fileUrl: { deleteUrl: "delete-123" } }],
+      failedUploads: [],
+    })
   })
 
   afterEach(() => {
     useWaveformControllerMock.mockReset()
+    uploadFilesMock.mockReset()
     FormClearHelperMock.mockReset()
   })
+
+  const approveRecordedAudio = (): void => {
+    const testBlob = new Blob(["audio"], { type: "audio/wav" })
+    act(() => {
+      void latestEvents?.onRecordReady?.(testBlob)
+      void latestEvents?.onApprove?.(testBlob)
+    })
+  }
 
   it("shows permission denied state", async () => {
     render(<AudioInput {...createProps()} />)
@@ -1082,6 +1096,62 @@ describe("AudioInput Error Handling", () => {
     // Verify can record again
     const recordButton = screen.getByRole("button", { name: /record/i })
     expect(recordButton).not.toBeDisabled()
+  })
+
+  it("shows an error when creating a blob URL fails", async () => {
+    global.URL.createObjectURL = vi.fn(() => {
+      throw new Error("blob url failed")
+    })
+
+    render(<AudioInput {...createProps()} />)
+
+    act(() => {
+      void latestEvents?.onApprove?.(
+        new Blob(["audio"], { type: "audio/wav" })
+      )
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/An error has occurred, please try again/i)
+      ).toBeVisible()
+    })
+    expect(uploadFilesMock).not.toHaveBeenCalled()
+  })
+
+  it("shows an error when playback loading fails", async () => {
+    global.URL.createObjectURL = vi.fn(() => "blob:load-fail")
+    controller.playback.load = vi.fn().mockRejectedValue(new Error("bad wav"))
+
+    render(<AudioInput {...createProps()} />)
+    approveRecordedAudio()
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/An error has occurred, please try again/i)
+      ).toBeVisible()
+    })
+  })
+
+  it("shows an error when playback play fails", async () => {
+    const user = userEvent.setup()
+    global.URL.createObjectURL = vi.fn(() => "blob:play-fail")
+    controller.playback.play = vi
+      .fn()
+      .mockRejectedValue(new Error("play failed"))
+    controller.playback.getDurationMs = vi.fn().mockReturnValue(4000)
+
+    render(<AudioInput {...createProps()} />)
+    approveRecordedAudio()
+
+    const playButton = await screen.findByRole("button", { name: /play/i })
+    await user.click(playButton)
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/An error has occurred, please try again/i)
+      ).toBeVisible()
+    })
   })
 })
 

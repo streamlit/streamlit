@@ -1937,7 +1937,7 @@ describe("ChatInput widget", () => {
     })
   })
 
-  it("shows a drop overlay while files are dragged over the window", () => {
+  const renderChatInputWithFileDrop = (): void => {
     render(
       <ChatInput
         {...getProps({
@@ -1946,28 +1946,59 @@ describe("ChatInput widget", () => {
         })}
       />
     )
+  }
 
+  const dispatchWindowEvent = (
+    type: string,
+    properties: Record<string, unknown> = {}
+  ): void => {
     act(() => {
-      const dragOver = new Event("dragover", {
-        bubbles: true,
-        cancelable: true,
-      })
-      Object.defineProperty(dragOver, "dataTransfer", {
-        value: { types: ["Files"] },
-      })
-      window.dispatchEvent(dragOver)
+      const event = new Event(type, { bubbles: true, cancelable: true })
+      for (const [key, value] of Object.entries(properties)) {
+        Object.defineProperty(event, key, { value })
+      }
+      window.dispatchEvent(event)
     })
+  }
+
+  const startFileDrag = (): void => {
+    dispatchWindowEvent("dragover", { dataTransfer: { types: ["Files"] } })
+  }
+
+  it("shows a drop overlay while files are dragged over the window", () => {
+    renderChatInputWithFileDrop()
+    startFileDrag()
 
     expect(screen.getByText("Drag and drop a file here")).toBeVisible()
 
-    act(() => {
-      window.dispatchEvent(
-        new Event("drop", { bubbles: true, cancelable: true })
-      )
-    })
+    dispatchWindowEvent("drop")
 
     expect(
       screen.queryByText("Drag and drop a file here")
     ).not.toBeInTheDocument()
+  })
+
+  it("hides the drop overlay when the drag leaves the window", () => {
+    renderChatInputWithFileDrop()
+    startFileDrag()
+
+    expect(screen.getByText("Drag and drop a file here")).toBeVisible()
+
+    dispatchWindowEvent("dragleave", { clientX: -1, clientY: -1 })
+
+    expect(
+      screen.queryByText("Drag and drop a file here")
+    ).not.toBeInTheDocument()
+  })
+
+  it("keeps the drop overlay when dragleave stays inside the window", () => {
+    renderChatInputWithFileDrop()
+    startFileDrag()
+
+    expect(screen.getByText("Drag and drop a file here")).toBeVisible()
+
+    dispatchWindowEvent("dragleave", { clientX: 40, clientY: 40 })
+
+    expect(screen.getByText("Drag and drop a file here")).toBeVisible()
   })
 })

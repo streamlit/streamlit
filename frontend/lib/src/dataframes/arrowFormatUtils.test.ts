@@ -54,6 +54,14 @@ import {
 } from "./arrowFormatUtils"
 import { DataFrameCellType } from "./arrowTypeUtils"
 
+const PERIOD_DAY_PANDAS_TYPE = {
+  field_name: "p",
+  name: "p",
+  pandas_type: "object",
+  numpy_type: "period[D]",
+  metadata: null,
+}
+
 describe("format", () => {
   it("null", () => {
     expect(
@@ -425,15 +433,19 @@ describe("format", () => {
       format(BigInt(5), {
         type: DataFrameCellType.DATA,
         arrowField: new Field("p", new Int64(), true),
-        pandasType: {
-          field_name: "p",
-          name: "p",
-          pandas_type: "object",
-          numpy_type: "period[D]",
-          metadata: null,
-        },
+        pandasType: PERIOD_DAY_PANDAS_TYPE,
       })
     ).toEqual("5")
+  })
+
+  it("does not throw when a period column is missing its arrow field", () => {
+    expect(
+      format(BigInt(9), {
+        type: DataFrameCellType.DATA,
+        arrowField: undefined as unknown as Field,
+        pandasType: PERIOD_DAY_PANDAS_TYPE,
+      })
+    ).toEqual("9")
   })
 
   it("period column with wrong extension name returns raw duration", () => {
@@ -445,13 +457,7 @@ describe("format", () => {
       format(BigInt(5), {
         type: DataFrameCellType.DATA,
         arrowField: new Field("p", new Int64(), true, meta),
-        pandasType: {
-          field_name: "p",
-          name: "p",
-          pandas_type: "object",
-          numpy_type: "period[D]",
-          metadata: null,
-        },
+        pandasType: PERIOD_DAY_PANDAS_TYPE,
       })
     ).toEqual("5")
   })

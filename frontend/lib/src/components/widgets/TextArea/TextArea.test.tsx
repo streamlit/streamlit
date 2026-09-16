@@ -256,6 +256,57 @@ describe("TextArea widget", () => {
     expect(screen.getByTestId("InputInstructions")).toBeInTheDocument()
   })
 
+  it("initializes auto-expand height once width is available", () => {
+    const scrollHeightDescriptor = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      "scrollHeight"
+    )
+    const offsetHeightDescriptor = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      "offsetHeight"
+    )
+    Object.defineProperty(HTMLElement.prototype, "scrollHeight", {
+      configurable: true,
+      get: () => 120,
+    })
+    Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
+      configurable: true,
+      get: () => 40,
+    })
+
+    try {
+      vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+        elementRef: { current: null },
+        values: [400],
+      })
+
+      const props = getProps(
+        {},
+        {
+          outerElement: new Element({ heightConfig: { useContent: true } }),
+        }
+      )
+      render(<TextArea {...props} />)
+
+      expect(screen.getByRole("textbox")).toHaveStyle({ height: "121px" })
+    } finally {
+      if (scrollHeightDescriptor) {
+        Object.defineProperty(
+          HTMLElement.prototype,
+          "scrollHeight",
+          scrollHeightDescriptor
+        )
+      }
+      if (offsetHeightDescriptor) {
+        Object.defineProperty(
+          HTMLElement.prototype,
+          "offsetHeight",
+          offsetHeightDescriptor
+        )
+      }
+    }
+  })
+
   it("resets its value when form is cleared", async () => {
     const user = userEvent.setup()
     // Create a widget in a clearOnSubmit form
