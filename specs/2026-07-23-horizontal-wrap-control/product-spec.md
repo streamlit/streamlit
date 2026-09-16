@@ -13,20 +13,20 @@ controls, wrapping button-like commands, and text display commands. Setting
 scrolling, a button keeps its standard height and ellipsizes its label, and text
 ellipsizes instead of wrapping. For controls placed inside a layout, the default is
 `wrap: bool | None = None` ("auto"): Streamlit picks `False` when the control is inside
-a horizontal container or is a direct layout child of an `st.columns` column, and
-`True` otherwise. A control therefore stays on one row exactly where compact, aligned
-controls matter most (toolbars, `st.container(horizontal=True)`, and column action
-rows), following the `st.markdown(width="auto")` precedent. Layout containers and text
-commands do not use this adaptive resolution: `st.container` and `st.columns` take
-`wrap: bool = True` (today's wrapping and stacking), and text commands take
-`wrap: bool = True` (today's line wrapping). A single row is requested only with an
-explicit `wrap=False`.
+a horizontal container or is a direct layout child of an `st.columns` column or an
+`st.grid` cell, and `True` otherwise. A control therefore stays on one row exactly where
+compact, aligned controls matter most (toolbars, `st.container(horizontal=True)`, and
+column action rows), following the `st.markdown(width="auto")` precedent. Layout containers
+and text commands do not use this adaptive resolution: `st.container`, `st.columns`, and
+`st.grid` take `wrap: bool = True` (today's wrapping and stacking; for `st.grid`,
+wrapping of column *tracks*), and text commands take `wrap: bool = True` (today's line
+wrapping). A single row is requested only with an explicit `wrap=False`.
 
 This is a layout control with an adaptive default for interactive controls. Existing
 apps keep their current behavior everywhere except for controls inside horizontal
 containers, where the auto default now favors a single row, and controls directly
-placed in columns, where the same default keeps neighboring controls aligned; layout
-containers and text commands keep their current defaults. The initial API covers
+placed in columns or grid cells, where the same default keeps neighboring controls
+aligned; layout containers and text commands keep their current defaults. The initial API covers
 `st.container`, `st.columns`, `st.multiselect`, `st.pills`, `st.segmented_control`,
 `st.button`, `st.download_button`, `st.link_button`, `st.form_submit_button`,
 `st.popover`, `st.menu_button`, `st.checkbox`, `st.toggle`, `st.markdown`, `st.title`,
@@ -235,7 +235,9 @@ message, or popover body — resets it. Explicit `wrap=True` or `wrap=False` alw
 | --- | --- |
 | Directly in a horizontal container | `False` |
 | Directly in an `st.columns` column | `False` |
+| Directly in an `st.grid` cell | `False` |
 | Behind a transparent block directly in a column | `False` |
+| Behind a transparent block directly in a grid cell | `False` |
 | Inside a nested horizontal container in a column | `False` (horizontal rule) |
 | Inside a nested vertical container, expander, tab, form, or popover body in a column | `True` |
 
@@ -249,10 +251,11 @@ existing mobile breakpoint. Resolution follows the stable Streamlit layout tree,
 transient CSS viewport state; changing the value during responsive resize would make
 control heights unstable.
 
-The layout containers themselves — `st.container` and `st.columns` — do not use this
-adaptive resolution. Because `None` would not differ from today's wrapping/stacking
+The layout containers themselves — `st.container`, `st.columns`, and `st.grid` — do not
+use this adaptive resolution. Because `None` would not differ from today's wrapping/stacking
 behavior, they use a plain boolean default of `wrap=True` (a horizontal container wraps
-its children onto more rows; `st.columns` stacks responsively). A single row is requested
+its children onto more rows; `st.columns` stacks responsively; `st.grid` may wrap to fewer
+column tracks). A single row is requested
 only with an explicit `wrap=False`. Resolving a container's own default from whether it
 happens to be nested in another horizontal container would be surprising and could
 silently change existing layouts.
@@ -274,6 +277,7 @@ in one row when `wrap=False`.
 | --- | --- | --- |
 | `st.container(horizontal=True)` | Direct child elements | Scroll the container |
 | `st.columns` | Column containers | Shrink columns, then scroll the group if needed |
+| `st.grid` | Declared column tracks (cells still wrap onto additional grid rows) | Shrink cells to `min_column_width`, then scroll the grid |
 | `st.multiselect` | Selected-value chips in the closed control | Scroll the chip area |
 | `st.pills` | Option buttons | Scroll the option group |
 | `st.segmented_control` | Option buttons | Scroll the option group |
