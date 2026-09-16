@@ -1992,8 +1992,9 @@ describe("ChatInput widget", () => {
         corner === "top-left"
           ? { clientX: 0, clientY: 0 }
           : {
-              clientX: window.innerWidth,
-              clientY: window.innerHeight,
+              // Default jsdom / WindowDimensionsProvider viewport is 1024x768.
+              clientX: 1024,
+              clientY: 768,
             }
       dispatchWindowEvent("dragleave", coordinates)
 
