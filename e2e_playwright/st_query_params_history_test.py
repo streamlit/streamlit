@@ -67,37 +67,28 @@ def test_same_page_query_params_sync_on_browser_back_forward(
     click_button(app, "Increment Query Param")
 
     expect(app).to_have_url(re.compile(r"[?&]value=2(?:&|$)"))
-    expect_prefixed_markdown(app, "Query params:", "{'value': '2'}")
+    expect_prefixed_markdown(app, "Query params:", "{'value': '2'}", exact_match=True)
 
     app.go_back()
     wait_for_app_run(app)
 
     expect(app).to_have_url(re.compile(r"[?&]value=1(?:&|$)"))
-    expect_prefixed_markdown(app, "Query params:", "{'value': '1'}")
-    expect(
-        app.get_by_text("Query params: {'value': '2'}", exact=True)
-    ).not_to_be_visible()
+    expect_prefixed_markdown(app, "Query params:", "{'value': '1'}", exact_match=True)
 
     # The next rerun must use the post-back params, not stale App state.
     click_button(app, "Increment Query Param")
 
     expect(app).to_have_url(re.compile(r"[?&]value=2(?:&|$)"))
-    expect_prefixed_markdown(app, "Query params:", "{'value': '2'}")
-    expect(
-        app.get_by_text("Query params: {'value': '3'}", exact=True)
-    ).not_to_be_visible()
+    expect_prefixed_markdown(app, "Query params:", "{'value': '2'}", exact_match=True)
 
     app.go_back()
     wait_for_app_run(app)
 
     expect(app).to_have_url(re.compile(r"[?&]value=1(?:&|$)"))
-    expect_prefixed_markdown(app, "Query params:", "{'value': '1'}")
+    expect_prefixed_markdown(app, "Query params:", "{'value': '1'}", exact_match=True)
 
     app.go_forward()
     wait_for_app_run(app)
 
     expect(app).to_have_url(re.compile(r"[?&]value=2(?:&|$)"))
-    expect_prefixed_markdown(app, "Query params:", "{'value': '2'}")
-    expect(
-        app.get_by_text("Query params: {'value': '1'}", exact=True)
-    ).not_to_be_visible()
+    expect_prefixed_markdown(app, "Query params:", "{'value': '2'}", exact_match=True)

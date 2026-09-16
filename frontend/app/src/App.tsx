@@ -486,6 +486,8 @@ export class App extends PureComponent<Props, State> {
         pageScriptHash?: string,
         queryStringOverride?: string
       ) => {
+        // HostCommunicationManager omits fragmentId and isAutoRerun; App.sendRerunBackMsg
+        // takes those before queryStringOverride.
         this.sendRerunBackMsg(
           widgetStates,
           undefined,
@@ -525,7 +527,9 @@ export class App extends PureComponent<Props, State> {
       pageLinkBaseUrlChanged: pageLinkBaseUrl => {
         this.setState({ pageLinkBaseUrl })
       },
-      queryParamsChanged: this.syncQueryParams,
+      queryParamsChanged: queryParams => {
+        this.setState({ queryParams })
+      },
       deployedAppMetadataChanged: deployedAppMetadata => {
         this.setState({ deployedAppMetadata })
       },
@@ -1868,10 +1872,9 @@ export class App extends PureComponent<Props, State> {
       return
     }
 
-    // After popstate, the URL is the source of truth:
-    // - Resync App state and notify the host from the URL so later widget reruns stay aligned.
-    // - Pass that query string into onPageChange; setState is async, so this rerun cannot wait for it.
-    // preserveQueryParams also keeps URL params when popstate changes pages.
+    // After popstate the URL is the source of truth. Pass its query string
+    // explicitly to onPageChange because syncQueryParams' setState has not
+    // flushed yet, and preserve it across page changes.
     this.syncQueryParams(queryString)
     this.onPageChange(
       targetAppPage.pageScriptHash as string,

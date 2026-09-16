@@ -5585,6 +5585,42 @@ describe("App", () => {
       })
     })
 
+    it("uses host UPDATE_FROM_QUERY_PARAMS for rerun without echoing SET_QUERY_PARAM", async () => {
+      const hostCommunicationMgr = prepareHostCommunicationManager()
+      const connectionManager = getMockConnectionManager(true)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+      })
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "stale=oldvalue",
+      })
+
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+      // @ts-expect-error
+      hostCommunicationMgr.sendMessageToHost.mockClear()
+
+      fireWindowPostMessage({
+        type: "UPDATE_FROM_QUERY_PARAMS",
+        queryParams: "?fresh=newvalue",
+      })
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      })
+
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
+      ).toBe("fresh=newvalue")
+
+      const setQueryParamCalls = (
+        hostCommunicationMgr.sendMessageToHost as Mock
+      ).mock.calls.filter(call => call[0]?.type === "SET_QUERY_PARAM")
+      expect(setQueryParamCalls).toHaveLength(0)
+    })
+
     it("properly handles TERMINATE_WEBSOCKET_CONNECTION & RESTART_WEBSOCKET_CONNECTION messages", () => {
       prepareHostCommunicationManager()
       const connectionMgr = getMockConnectionManager()
