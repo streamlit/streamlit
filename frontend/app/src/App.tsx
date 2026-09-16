@@ -481,7 +481,19 @@ export class App extends PureComponent<Props, State> {
 
     this.hostCommunicationMgr = new HostCommunicationManager({
       streamlitExecutionStartedAt: props.streamlitExecutionStartedAt,
-      sendRerunBackMsg: this.sendRerunBackMsg,
+      sendRerunBackMsg: (
+        widgetStates?: WidgetStates,
+        pageScriptHash?: string,
+        queryStringOverride?: string
+      ) => {
+        this.sendRerunBackMsg(
+          widgetStates,
+          undefined,
+          pageScriptHash,
+          undefined,
+          queryStringOverride
+        )
+      },
       closeModal: this.closeDialog,
       stopScript: this.stopScript,
       rerunScript: this.rerunScript,
@@ -513,9 +525,7 @@ export class App extends PureComponent<Props, State> {
       pageLinkBaseUrlChanged: pageLinkBaseUrl => {
         this.setState({ pageLinkBaseUrl })
       },
-      queryParamsChanged: queryParams => {
-        this.setState({ queryParams })
-      },
+      queryParamsChanged: this.syncQueryParams,
       deployedAppMetadataChanged: deployedAppMetadata => {
         this.setState({ deployedAppMetadata })
       },
@@ -1839,20 +1849,25 @@ export class App extends PureComponent<Props, State> {
    * Handler called when the history state changes, e.g. `popstate` event.
    */
   onHistoryChange = (): void => {
-    const { currentPageScriptHash } = this.state
+    const { currentPageScriptHash, queryParams } = this.state
     const targetAppPage = this.appNavigation.findPageByUrlPath(
       document.location.pathname
     )
 
-    // do not cause a rerun when an anchor is clicked and we aren't changing pages
     const hasAnchor = document.location.toString().includes("#")
     const isSamePage = targetAppPage?.pageScriptHash === currentPageScriptHash
+    const queryString = normalizeQueryString(document.location.search)
+    const stateQueryString = normalizeQueryString(queryParams)
 
-    if (isNullOrUndefined(targetAppPage) || (hasAnchor && isSamePage)) {
+    if (isNullOrUndefined(targetAppPage)) {
       return
     }
 
-    const queryString = normalizeQueryString(document.location.search)
+    // Do not rerun for anchor-only navigation on the same page.
+    if (hasAnchor && isSamePage && queryString === stateQueryString) {
+      return
+    }
+
     // After popstate, the URL is the source of truth:
     // - Resync App state and notify the host from the URL so later widget reruns stay aligned.
     // - Pass that query string into onPageChange; setState is async, so this rerun cannot wait for it.
