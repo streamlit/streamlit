@@ -3380,6 +3380,55 @@ class MockScriptRunCtx:
     is_history_navigation: bool = False
 
 
+class OmitQueryBoundWidgetStatesTest(DeltaGeneratorTestCase):
+    """Tests for history-navigation widget-state filtering."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+
+    def test_omit_query_bound_widget_states(self) -> None:
+        widget_states = WidgetStatesProto()
+        bound = widget_states.widgets.add()
+        bound.id = "bound_widget"
+        unbound = widget_states.widgets.add()
+        unbound.id = "plain_widget"
+
+        self.session_state._query_param_bound_widget_ids.add("bound_widget")
+
+        filtered = self.session_state._omit_query_bound_widget_states(widget_states)
+
+        assert [widget.id for widget in filtered.widgets] == ["plain_widget"]
+
+    def test_on_script_will_rerun_omits_bound_widgets_on_history_navigation(
+        self,
+    ) -> None:
+        widget_states = WidgetStatesProto()
+        bound = widget_states.widgets.add()
+        bound.id = "bound_widget"
+        bound.string_value = "stale"
+        unbound = widget_states.widgets.add()
+        unbound.id = "plain_widget"
+        unbound.string_value = "keep"
+
+        self.session_state._query_param_bound_widget_ids.add("bound_widget")
+        self.session_state._set_widget_metadata(
+            WidgetMetadata(
+                id="plain_widget",
+                deserializer=lambda v: v,
+                serializer=lambda v: v,
+                value_type="string_value",
+            )
+        )
+
+        self.session_state.on_script_will_rerun(
+            widget_states, is_history_navigation=True
+        )
+
+        assert "bound_widget" not in self.session_state._new_widget_state
+        assert self.session_state._new_widget_state["plain_widget"] == "keep"
+
+
 class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
     """Tests for _handle_query_param_binding method."""
 
@@ -3509,6 +3558,79 @@ class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
         self.query_params.set_initial_query_params("my_widget=default")
 
         metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        seeded = self.session_state._handle_query_param_binding(
+            metadata, "my_widget", "$$ID-hash-my_widget"
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["$$ID-hash-my_widget"] == "default"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(is_history_navigation=True),
+    )
+    def test_history_navigation_url_wins_over_code_set_session_state(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Browser history navigation prefers the URL over code-assigned values."""
+        self.session_state._old_state["$$ID-hash-my_widget"] = "old_value"
+        self.session_state._new_session_state["my_widget"] = "code_value"
+        self.session_state._query_param_bound_widget_ids.add("$$ID-hash-my_widget")
+        self.query_params.set_initial_query_params("my_widget=url_value")
+
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        seeded = self.session_state._handle_query_param_binding(
+            metadata, "my_widget", "$$ID-hash-my_widget"
+        )
+
+        assert seeded is True
+        assert (
+            self.session_state._new_widget_state["$$ID-hash-my_widget"] == "url_value"
+        )
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(is_history_navigation=True),
+    )
+    def test_history_navigation_discards_preserved_widget_state(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """History navigation drops preserved widget state before URL seeding."""
+        self.session_state._query_param_bound_widget_ids.add("$$ID-hash-my_widget")
+        self.session_state._new_widget_state.set_from_value(
+            "$$ID-hash-my_widget", "preserved_value"
+        )
+        self.query_params.set_initial_query_params("my_widget=url_value")
+
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        seeded = self.session_state._handle_query_param_binding(
+            metadata, "my_widget", "$$ID-hash-my_widget"
+        )
+
+        assert seeded is True
+        assert (
+            self.session_state._new_widget_state["$$ID-hash-my_widget"] == "url_value"
+        )
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(is_history_navigation=True),
+    )
+    def test_history_navigation_restores_default_for_invalid_option(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Invalid URL options restore the default on history navigation."""
+        self.session_state._old_state["$$ID-hash-my_widget"] = "stale_value"
+        self.session_state._query_param_bound_widget_ids.add("$$ID-hash-my_widget")
+        self.query_params.set_initial_query_params("my_widget=invalid")
+
+        metadata = _create_test_widget_metadata(
+            "$$ID-hash-my_widget",
+            formatted_options=["alpha", "beta"],
+        )
 
         seeded = self.session_state._handle_query_param_binding(
             metadata, "my_widget", "$$ID-hash-my_widget"

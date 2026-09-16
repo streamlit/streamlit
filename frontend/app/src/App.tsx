@@ -335,9 +335,11 @@ export class App extends PureComponent<Props, State> {
   // This will allow us to ignore finished messages from previous script runs.
   private hasReceivedNewSession: boolean = false
 
-  // Set when a popstate rerun is sent; cleared before any other rerun is sent
-  // or after its PageInfo is handled. Used to skip pushState (not replaceState)
-  // so history entries are not polluted.
+  /**
+   * True while a rerun triggered by browser back/forward is in flight.
+   * The URL already reflects the target history entry, so the resulting
+   * PageInfo must not append another history entry.
+   */
   private historyNavigationRerunPending: boolean = false
 
   // Active `run_every` auto-rerun timers, keyed by fragment id. These are
@@ -1279,12 +1281,17 @@ export class App extends PureComponent<Props, State> {
     // fill the back stack with no-op entries. React state and the host message
     // below are still updated so embeds stay in sync.
     const historyNavigationRerun = this.historyNavigationRerunPending
-    // During browser back/forward the URL is already correct from popstate.
-    if (queryString !== currentSearch && !historyNavigationRerun) {
-      window.history.pushState({}, "", targetUrl)
+    if (queryString !== currentSearch) {
+      if (historyNavigationRerun) {
+        // PageInfo can arrive in multiple messages during one history rerun.
+        // replaceState keeps the address bar and host query params aligned
+        // without polluting the back stack.
+        window.history.replaceState({}, "", targetUrl)
+      } else {
+        window.history.pushState({}, "", targetUrl)
+      }
     }
 
-    this.historyNavigationRerunPending = false
     this.setState({ queryParams: queryString })
 
     this.hostCommunicationMgr.sendMessageToHost({
@@ -2005,6 +2012,8 @@ export class App extends PureComponent<Props, State> {
       scriptRunFinishedSequence: prevState.scriptRunFinishedSequence + 1,
       scriptRunFinishedFragmentIds: prevState.fragmentIdsThisRun,
     }))
+
+    this.historyNavigationRerunPending = false
 
     if (
       status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||

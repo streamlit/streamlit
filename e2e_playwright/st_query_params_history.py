@@ -24,6 +24,16 @@ def history_page() -> None:
 
 
 def query_params_page() -> None:
+    number = st.radio(
+        "Number",
+        options=["3", "5"],
+        index=1,
+        key="number",
+        bind="query-params",
+        horizontal=True,
+    )
+    st.markdown(f"Selected: {number}")
+
     if st.button("Increment Query Param"):
         value = int(st.query_params.get("value", "0"))
         st.query_params["value"] = value + 1

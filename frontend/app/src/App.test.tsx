@@ -1951,6 +1951,33 @@ describe("App", () => {
           .isHistoryNavigation
       ).toBe(true)
     })
+
+    it("does not set isHistoryNavigation on ordinary widget reruns", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...CURRENT_NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      const connectionManager = getMockConnectionManager()
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      })
+
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript
+          .isHistoryNavigation
+      ).toBeFalsy()
+    })
   })
 
   describe("App.handlePageConfigChanged", () => {
@@ -1978,15 +2005,18 @@ describe("App", () => {
   // Please see https://github.com/streamlit/streamlit/issues/2887 for more context on this.
   describe("App.handlePageInfoChanged", () => {
     let pushStateSpy: MockInstance
+    let replaceStateSpy: MockInstance
 
     beforeEach(() => {
       window.history.pushState({}, "", "/")
 
       pushStateSpy = vi.spyOn(window.history, "pushState")
+      replaceStateSpy = vi.spyOn(window.history, "replaceState")
     })
 
     afterEach(() => {
       pushStateSpy.mockRestore()
+      replaceStateSpy.mockRestore()
       // Reset the value of document.location.pathname.
       window.history.pushState({}, "", "/")
     })
@@ -2091,6 +2121,57 @@ describe("App", () => {
         type: "SET_QUERY_PARAM",
         queryParams: `?${queryString}`,
       })
+    })
+
+    it("replaceStates during pending history reruns and pushStates after they finish", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      window.history.pushState({}, "", "/?flying=spaghetti")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      const connectionManager = getMockConnectionManager()
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalled()
+      })
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "",
+      })
+
+      expect(replaceStateSpy).toHaveBeenLastCalledWith({}, "", "/")
+      expect(pushStateSpy).not.toHaveBeenCalled()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "second=1",
+      })
+
+      expect(replaceStateSpy).toHaveBeenLastCalledWith({}, "", "/?second=1")
+      expect(pushStateSpy).not.toHaveBeenCalled()
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "after=1",
+      })
+
+      expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", "/?after=1")
+      expect(replaceStateSpy).not.toHaveBeenCalled()
     })
   })
 
