@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import max_char_sequence
 
@@ -84,7 +85,14 @@ class MermaidChartMixin:
         backtick_count = max(4, max_char_sequence(body, "`") + 1)
         backtick_fence = "`" * backtick_count
         mermaid_body = f"{backtick_fence}mermaid\n{body}\n{backtick_fence}"
-        return self.dg._markdown(mermaid_body, width=width)
+        return self.dg._markdown(
+            mermaid_body,
+            width=width,
+            # A mermaid diagram is a fenced markdown block on the wire, so the
+            # description has to name the command and report the author's
+            # diagram definition rather than the fenced body.
+            agent_props=agent_spec.element("mermaid_chart", body=body),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

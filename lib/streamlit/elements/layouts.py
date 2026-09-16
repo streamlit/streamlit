@@ -20,6 +20,7 @@ from numbers import Integral
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import (
     EXPANDABLE_TYPE_TO_PROTO_MAPPING,
     ExpandableType,
@@ -443,7 +444,12 @@ class LayoutsMixin:
         if autoscroll is not None:
             block_proto.autoscroll = autoscroll
 
-        return self.dg._block(block_proto)
+        return self.dg._block(
+            block_proto,
+            agent_props=agent_spec.block(
+                "container", key=key, border=border, horizontal=horizontal
+            ),
+        )
 
     @gather_metrics("columns")
     def columns(
@@ -722,9 +728,20 @@ class LayoutsMixin:
         validate_width(width=width)
         block_proto.width_config.CopyFrom(get_width_config(width=width))
 
-        row = self.dg._block(block_proto)
+        # st.columns and st.container both emit a FlexContainer, so the
+        # difference between "a row of columns" and "a horizontal container" is
+        # only knowable here.
+        row = self.dg._block(
+            block_proto, agent_props=agent_spec.block("columns", spec=spec)
+        )
         total_weight = sum(weights)
-        return [row._block(column_proto(w / total_weight)) for w in weights]
+        return [
+            row._block(
+                column_proto(w / total_weight),
+                agent_props=agent_spec.block("column", weight=w / total_weight),
+            )
+            for w in weights
+        ]
 
     @gather_metrics("tabs")
     def tabs(
@@ -1105,13 +1122,37 @@ class LayoutsMixin:
             block_proto.id = block_id
 
         tab_cls = get_dg_singleton_instance().tab_container_cls
-        tab_container = self.dg._block(block_proto)
+        tab_container = self.dg._block(
+            block_proto,
+            # Only a stateful tab container is addressable: the tab a client
+            # asks for is a widget value the script reads on the next run.
+            # Otherwise the open tab is browser-local state the server never
+            # learns, so there is nothing to report or set.
+            agent_props=agent_spec.block(
+                "tabs",
+                key=element_id or key,
+                action="value" if is_stateful else None,
+                options=list(tabs),
+                default=default,
+            ),
+        )
 
         tab_dgs: list[TabContainer] = []
         for tab_label in tabs:
             tab_dg = cast(
                 "TabContainer",
-                tab_container._block(tab_proto(tab_label), dg_type=tab_cls),
+                tab_container._block(
+                    tab_proto(tab_label),
+                    dg_type=tab_cls,
+                    agent_props=agent_spec.block(
+                        "tab",
+                        label=tab_label,
+                        # An `on_change="rerun"` app can skip the work behind a
+                        # closed tab, so which one is open decides what the rest
+                        # of the snapshot even contains.
+                        open=tab_label == current_tab_label if is_stateful else None,
+                    ),
+                ),
             )
             if is_stateful:
                 tab_dg.open = tab_label == current_tab_label
@@ -1474,6 +1515,19 @@ class LayoutsMixin:
             self.dg._block(
                 block_proto=block_proto,
                 dg_type=get_dg_singleton_instance().expander_container_cls,
+                # st.expander and st.status share the Expandable proto, so the
+                # command name has to be passed explicitly. Only a stateful
+                # expander is addressable: otherwise whether it is open is
+                # browser-local state the server never learns, and an app that
+                # renders its contents lazily has nothing a client can open.
+                agent_props=agent_spec.block(
+                    "expander",
+                    key=element_id or key,
+                    action="value" if is_stateful else None,
+                    label=label,
+                    expanded=current_expanded,
+                    icon=icon,
+                ),
             ),
         )
 
@@ -1872,6 +1926,18 @@ class LayoutsMixin:
             self.dg._block(
                 block_proto=block_proto,
                 dg_type=get_dg_singleton_instance().popover_container_cls,
+                # Addressable only when stateful, for the same reason as
+                # st.expander: otherwise being open is browser-local state.
+                agent_props=agent_spec.block(
+                    "popover",
+                    key=element_id or key,
+                    action="value" if is_stateful else None,
+                    label=label,
+                    help=help,
+                    icon=icon,
+                    disabled=disabled,
+                    open=current_open,
+                ),
             ),
         )
 

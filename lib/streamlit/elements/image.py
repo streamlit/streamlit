@@ -27,6 +27,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.image_utils import (
     Channels,
     ImageFormatOrAuto,
@@ -204,7 +205,19 @@ class ImageMixin:
                 )
             image_list_proto.link = link
 
-        return self.dg._enqueue("imgs", image_list_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "imgs",
+            image_list_proto,
+            layout_config=layout_config,
+            # st.image and st.pyplot both emit ImageList, and nothing in the
+            # payload says which one ran.
+            agent_props=agent_spec.element(
+                "image",
+                caption=[img.caption for img in image_list_proto.imgs] or None,
+                url=[img.url for img in image_list_proto.imgs] or None,
+                link=link,
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

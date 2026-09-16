@@ -25,6 +25,7 @@ from typing import (
 )
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.elements.lib.options_selector_utils import (
@@ -643,6 +644,18 @@ class SelectSliderMixin:
             slider_proto,
             layout_config=layout_config,
             has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+            agent_props=agent_spec.element(
+                # st.slider and st.select_slider share this proto.
+                "select_slider",
+                key=element_id,
+                action="value",
+                label=label,
+                options=formatted_options,
+                help=help,
+                disabled=disabled,
+                label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
         )
         return current_value
 

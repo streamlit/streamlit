@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Final, cast
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.deprecation_util import show_deprecation_warning
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.errors import StreamlitMissingRequiredParameterError
 from streamlit.proto.Html_pb2 import Html as HtmlProto
@@ -158,12 +159,30 @@ class HtmlMixin:
         if _html_only_style_tags(html_content):
             # If true, there are only style tags - send html to the event container
             html_proto.body = html_content
-            return self._event_dg._enqueue("html", html_proto)
+            return self._event_dg._enqueue(
+                "html",
+                html_proto,
+                # Style-only HTML renders nothing and goes to the event
+                # container, so there is no content for a client to read.
+                agent_props=agent_spec.element("html", support="browser_required"),
+            )
         # Otherwise, send the html to the main container as normal
         # Only set the unsafe JS flag for non-style-only HTML content
         html_proto.unsafe_allow_javascript = unsafe_allow_javascript
         html_proto.body = html_content
-        return self.dg._enqueue("html", html_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "html",
+            html_proto,
+            layout_config=layout_config,
+            # Raw HTML is only meaningful once rendered, so the body is
+            # reported as source and the element is marked browser-required.
+            agent_props=agent_spec.element(
+                "html",
+                support="browser_required",
+                body=html_content,
+                unsafe_allow_javascript=unsafe_allow_javascript,
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

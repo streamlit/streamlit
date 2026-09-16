@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final, TypeAlias, Union, cast
 
 from streamlit import runtime, type_util, url_util
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
 from streamlit.elements.lib.subtitle_utils import process_subtitle_data
 from streamlit.elements.lib.utils import compute_and_register_element_id
@@ -233,7 +234,21 @@ class MediaMixin:
             autoplay,
             width=width,
         )
-        return self.dg._enqueue("audio", audio_proto)
+        return self.dg._enqueue(
+            "audio",
+            audio_proto,
+            agent_props=agent_spec.element(
+                "audio",
+                # The already-registered media URL, which is all a non-browser
+                # client can act on.
+                url=audio_proto.url or None,
+                format=format,
+                start_time=start_time,
+                end_time=end_time,
+                loop=loop,
+                autoplay=autoplay,
+            ),
+        )
 
     @gather_metrics("video")
     def video(
@@ -415,7 +430,21 @@ class MediaMixin:
             muted,
             width=width,
         )
-        return self.dg._enqueue("video", video_proto)
+        return self.dg._enqueue(
+            "video",
+            video_proto,
+            agent_props=agent_spec.element(
+                "video",
+                url=video_proto.url or None,
+                format=video_proto.type or None,
+                start_time=start_time,
+                end_time=end_time,
+                loop=loop,
+                autoplay=autoplay,
+                muted=muted,
+                subtitles=sorted(subtitles) if isinstance(subtitles, dict) else None,
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

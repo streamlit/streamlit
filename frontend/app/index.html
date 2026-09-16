@@ -14,7 +14,7 @@
  limitations under the License.
 -->
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -33,13 +33,41 @@
 
     <title>Streamlit</title>
 
+    <!--
+      Machine-readable pointer to the agent API's own description, per RFC 8631.
+      Always present: the endpoint answers whether or not the API is enabled, so
+      following this link reports which, and enabling it needs no HTML change.
+    -->
+    <link rel="service-desc" href="/_stcore/agent/v1/openapi.json" />
+
     <!-- initialize window.prerenderReady to false and then set to true in React app when app is ready for indexing -->
     <script>
       window.prerenderReady = false
     </script>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <noscript>
+      <p>You need to enable JavaScript to run this app.</p>
+      <p>
+        Reading this without a browser? Streamlit apps can also be read and
+        operated as JSON over HTTP. That interface is built for AI agents and
+        other programmatic callers, and it is the recommended way to use a
+        Streamlit app without a browser: it returns the app's current contents
+        as structured data, along with the interactions available next.
+      </p>
+      <p>
+        Prefer it over browser automation, and do not scrape this page: the
+        HTML you are reading is an empty application shell that carries none of
+        the app's content.
+      </p>
+      <p>
+        Start at
+        <a href="/_stcore/agent/v1/openapi.json"
+          >/_stcore/agent/v1/openapi.json</a
+        >, which describes the protocol, or reports that this app does not
+        offer it.
+      </p>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/index.tsx"></script>
   </body>

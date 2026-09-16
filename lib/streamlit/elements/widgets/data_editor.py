@@ -35,6 +35,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_spec, data_offload
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMapping,
@@ -1488,7 +1489,28 @@ class DataEditorMixin:
         )
 
         _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
-        self.dg._enqueue("dataframe", proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "dataframe",
+            proto,
+            layout_config=layout_config,
+            # st.dataframe and st.data_editor share this proto. The schema and
+            # row preview are derived facts, filled in by the snapshot
+            # serializer from `arrow_data`.
+            agent_props=agent_spec.element(
+                "data_editor",
+                key=proto.id or None,
+                data_url=data_offload.serve_arrow_over_http(
+                    proto.arrow_data.data,
+                    coordinates=self.dg._get_delta_path_str(),
+                ),
+                support="read_only_in_v1",
+                column_config=column_config,
+                column_order=list(column_order) if column_order else None,
+                hide_index=hide_index,
+                num_rows=num_rows,
+                disabled=disabled is True,
+            ),
+        )
         return dataframe_util.convert_pandas_df_to_data_format(data_df, data_format)
 
     @property
