@@ -32,7 +32,7 @@ interface UseEditReconciliationParams {
   editingState: MutableRefObject<EditingState>
   isEditingEnabled: boolean
   editStateHydrationCount: number
-  syncEditState: () => void
+  syncEditState: (options?: { submit?: boolean }) => void
 }
 
 interface UseEditReconciliationReturn {
@@ -71,7 +71,9 @@ interface UseEditReconciliationReturn {
  *   the widget manager on remount; watched so restored edits are reconciled
  *   against the current source data even when `data` has not changed.
  * @param syncEditState - Callback to propagate the editing state to the widget
- *   value after edits are cleared.
+ *   value after edits are cleared. Called with `{ submit: false }` so
+ *   commit-edits mode treats reconciliation as passive persistence rather than
+ *   a fresh user submission.
  * @returns `getSourceCellValue`, which reads the raw source value for a given
  *   column and original (unsorted) row index.
  */
@@ -139,7 +141,9 @@ function useEditReconciliation({
     // reconciliation gives the grid a fresh `getCellContent` that reflects the
     // reconciled source values.
     if (hasClearedCells) {
-      syncEditState()
+      // Passive sync: do not submit a new commit_edits batch for reconciled
+      // clears (fromUser: false / no onEditsSubmitted).
+      syncEditState({ submit: false })
     }
     // `isEditingEnabled` is watched so that reconciliation also runs when
     // editing is re-enabled after having been disabled during a data refresh
