@@ -14,8 +14,26 @@
 
 import streamlit as st
 
-st.checkbox("Toggle this")
-st.query_params["number"] = 1
-if st.button("Set extra param"):
-    st.query_params["extra"] = "yes"
-st.markdown(str(st.query_params))
+
+def history_page() -> None:
+    st.checkbox("Toggle this")
+    st.query_params["number"] = 1
+    if st.button("Set extra param"):
+        st.query_params["extra"] = "yes"
+    st.markdown(str(st.query_params))
+
+
+def query_params_page() -> None:
+    if st.button("Increment Query Param"):
+        value = int(st.query_params.get("value", "0"))
+        st.query_params["value"] = value + 1
+
+    st.markdown(f"Query params: {dict(st.query_params)}")
+
+
+st.navigation(
+    [
+        st.Page(history_page, title="History", default=True),
+        st.Page(query_params_page, title="Query Params", url_path="query-params"),
+    ]
+).run()

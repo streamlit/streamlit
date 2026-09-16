@@ -135,6 +135,16 @@ export function preserveEmbedQueryParams(): string {
 }
 
 /**
+ * Strip a leading `?` so callers get a bare query string.
+ *
+ * Accepts either `location.search` or an already-bare query string, so
+ * combining with embed params cannot produce `embed=true&?foo=bar`.
+ */
+export function normalizeQueryString(queryString: string): string {
+  return queryString.startsWith("?") ? queryString.slice(1) : queryString
+}
+
+/**
  * Builds a query string by combining an optional override with preserved embed params.
  * Used during page navigation to merge user query params with embed options.
  */
@@ -143,12 +153,14 @@ export function getQueryString(
   preservedQueryParams: string
 ): string {
   if (queryStringOverride !== undefined) {
+    const normalizedQueryStringOverride =
+      normalizeQueryString(queryStringOverride)
     if (preservedQueryParams) {
-      return queryStringOverride
-        ? `${preservedQueryParams}&${queryStringOverride}`
+      return normalizedQueryStringOverride
+        ? `${preservedQueryParams}&${normalizedQueryStringOverride}`
         : preservedQueryParams
     }
-    return queryStringOverride
+    return normalizedQueryStringOverride
   }
   return preservedQueryParams
 }

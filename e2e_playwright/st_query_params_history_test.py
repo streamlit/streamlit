@@ -16,7 +16,13 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.shared.app_utils import click_button, click_checkbox
+from e2e_playwright.conftest import build_app_url, wait_for_app_run
+from e2e_playwright.shared.app_utils import (
+    click_button,
+    click_checkbox,
+    expect_prefixed_markdown,
+    goto_app,
+)
 
 
 def test_repeated_query_param_assignment_does_not_push_history(app: Page):
@@ -46,3 +52,43 @@ def test_repeated_query_param_assignment_does_not_push_history(app: Page):
         "history.length did not grow after a real query-param change: "
         f"before={history_length_before}, after={history_length_after_change}"
     )
+
+
+def test_same_page_query_params_sync_on_browser_back_forward(
+    app: Page, app_base_url: str
+) -> None:
+    """st.query_params reflects URL after same-page browser back/forward.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/13963
+    """
+    goto_app(app, build_app_url(app_base_url, path="/query-params"))
+
+    click_button(app, "Increment Query Param")
+    click_button(app, "Increment Query Param")
+
+    expect(app).to_have_url(re.compile(r"[?&]value=2(?:&|$)"))
+    expect_prefixed_markdown(app, "Query params:", "{'value': '2'}", exact_match=True)
+
+    app.go_back()
+    wait_for_app_run(app)
+
+    expect(app).to_have_url(re.compile(r"[?&]value=1(?:&|$)"))
+    expect_prefixed_markdown(app, "Query params:", "{'value': '1'}", exact_match=True)
+
+    # The next rerun must use the post-back params, not stale App state.
+    click_button(app, "Increment Query Param")
+
+    expect(app).to_have_url(re.compile(r"[?&]value=2(?:&|$)"))
+    expect_prefixed_markdown(app, "Query params:", "{'value': '2'}", exact_match=True)
+
+    app.go_back()
+    wait_for_app_run(app)
+
+    expect(app).to_have_url(re.compile(r"[?&]value=1(?:&|$)"))
+    expect_prefixed_markdown(app, "Query params:", "{'value': '1'}", exact_match=True)
+
+    app.go_forward()
+    wait_for_app_run(app)
+
+    expect(app).to_have_url(re.compile(r"[?&]value=2(?:&|$)"))
+    expect_prefixed_markdown(app, "Query params:", "{'value': '2'}", exact_match=True)

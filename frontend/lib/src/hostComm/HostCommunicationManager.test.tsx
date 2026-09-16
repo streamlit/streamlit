@@ -968,7 +968,11 @@ describe("HostCommunicationManager messaging", () => {
       "foo=bar"
     )
     // @ts-expect-error - props are private
-    expect(hostCommunicationMgr.props.sendRerunBackMsg).toHaveBeenCalled()
+    expect(hostCommunicationMgr.props.sendRerunBackMsg).toHaveBeenCalledWith(
+      undefined,
+      undefined,
+      "foo=bar"
+    )
   })
 
   it("can process a received SET_CUSTOM_THEME_CONFIG message", () => {
