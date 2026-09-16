@@ -3377,6 +3377,7 @@ class MockScriptRunCtx:
 
     fragment_ids_this_run: list[str] | None = None
     page_script_hash: str = "page_1_hash"
+    is_history_navigation: bool = False
 
 
 class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
@@ -3448,6 +3449,73 @@ class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
         assert (
             self.session_state._new_widget_state["$$ID-hash-my_widget"] == "user_value"
         )
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(is_history_navigation=True),
+    )
+    def test_url_seeds_widget_on_history_navigation(self, mock_ctx: MagicMock) -> None:
+        """Browser history navigation restores bound widgets from the URL."""
+        self.session_state._old_state["$$ID-hash-my_widget"] = "stale_value"
+        self.session_state._query_param_bound_widget_ids.add("$$ID-hash-my_widget")
+        self.query_params.set_initial_query_params("my_widget=url_value")
+
+        self.session_state._new_widget_state.set_from_value(
+            "$$ID-hash-my_widget", "stale_value"
+        )
+
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        seeded = self.session_state._handle_query_param_binding(
+            metadata, "my_widget", "$$ID-hash-my_widget"
+        )
+
+        assert seeded is True
+        assert (
+            self.session_state._new_widget_state["$$ID-hash-my_widget"] == "url_value"
+        )
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(is_history_navigation=True),
+    )
+    def test_history_navigation_restores_default_when_param_missing(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Browser back to a URL without the param restores the widget default."""
+        self.session_state._old_state["$$ID-hash-my_widget"] = "stale_value"
+        self.session_state._query_param_bound_widget_ids.add("$$ID-hash-my_widget")
+        self.query_params.set_initial_query_params("")
+
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        seeded = self.session_state._handle_query_param_binding(
+            metadata, "my_widget", "$$ID-hash-my_widget"
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["$$ID-hash-my_widget"] == "default"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(is_history_navigation=True),
+    )
+    def test_history_navigation_restores_default_from_url_param(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Browser back can restore a default value even when it is in the URL."""
+        self.session_state._old_state["$$ID-hash-my_widget"] = "stale_value"
+        self.session_state._query_param_bound_widget_ids.add("$$ID-hash-my_widget")
+        self.query_params.set_initial_query_params("my_widget=default")
+
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        seeded = self.session_state._handle_query_param_binding(
+            metadata, "my_widget", "$$ID-hash-my_widget"
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["$$ID-hash-my_widget"] == "default"
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",

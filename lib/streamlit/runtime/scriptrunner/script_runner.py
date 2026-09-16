@@ -692,6 +692,7 @@ class ScriptRunner:
                 fragment_ids_this_run=fragment_ids_this_run,
                 cached_message_hashes=rerun_data.cached_message_hashes,
                 context_info=rerun_data.context_info,
+                is_history_navigation=rerun_data.is_history_navigation,
                 yield_check=self._maybe_handle_execution_control_request,
             )
             with self._join_wake_lock:
@@ -784,6 +785,7 @@ class ScriptRunner:
                             rerun_data.widget_states,
                             replay_trigger_states=rerun_data.replay_trigger_states,
                             replay_trigger_values=rerun_data.replay_trigger_values,
+                            is_history_navigation=rerun_data.is_history_navigation,
                         )
                         # Check for pending rerun/stop requests while
                         # has_script_started is still False so on_script_finished

@@ -897,6 +897,7 @@ class SessionState:
         *,
         replay_trigger_states: WidgetStatesProto | None = None,
         replay_trigger_values: Mapping[str, Any] | None = None,
+        is_history_navigation: bool = False,
     ) -> None:
         """Prepare widget state before a script rerun.
 
@@ -915,10 +916,18 @@ class SessionState:
             Hydrated chat-input values for replay trigger states, keyed by widget ID.
             They preserve uploaded files and audio because chat deserialization
             consumes their records and cannot safely be repeated.
+        is_history_navigation : bool
+            Whether this rerun was triggered by browser back/forward. When true,
+            stale widget states for query-bound widgets are ignored so the URL
+            can restore their values.
         """
         self._reset_triggers()
         self._compact_state()
         if fresh_widget_states is not None:
+            if is_history_navigation:
+                fresh_widget_states = self._omit_query_bound_widget_states(
+                    fresh_widget_states
+                )
             self.set_widgets_from_proto(fresh_widget_states)
             self._current_interaction_widget_states = fresh_widget_states
             try:
@@ -1142,6 +1151,19 @@ class SessionState:
             cached_message_hashes=ctx.cached_message_hashes,
             context_info=ctx.context_info,
         )
+
+    def _omit_query_bound_widget_states(
+        self, widget_states: WidgetStatesProto
+    ) -> WidgetStatesProto:
+        """Drop query-bound widgets so browser history can restore them from the URL."""
+        if not self._query_param_bound_widget_ids:
+            return widget_states
+
+        filtered = WidgetStatesProto()
+        for widget in widget_states.widgets:
+            if widget.id not in self._query_param_bound_widget_ids:
+                filtered.widgets.append(widget)
+        return filtered
 
     def _filter_active_trigger_widget_states(
         self, widget_states: WidgetStatesProto | None
@@ -1756,12 +1778,14 @@ class SessionState:
         - On initial load, URL wins (enables shareable URLs)
         - On subsequent reruns, session_state values win
         - User interaction (frontend value) always wins
+        - On browser history navigation, URL wins for bound widgets
 
         Returns True if the widget's value was seeded from URL, False otherwise.
         """
         # Register the widget binding
         ctx = get_script_run_ctx()
         script_hash = ThreadState.get().active_script_hash if ctx is not None else ""
+        is_history_navigation = ctx is not None and ctx.is_history_navigation
         self.query_params.bind_widget(
             param_key=user_key,
             widget_id=widget_id,
@@ -1774,16 +1798,33 @@ class SessionState:
         # _new_widget_state is a stale/forged frontend value. Let URL seeding proceed;
         # disabled enforcement in register_widget then discards the forged value.
         if widget_id in self._new_widget_state and not metadata.disabled:
-            return False
+            if not is_history_navigation:
+                return False
+            del self._new_widget_state[widget_id]
         is_initial_load = widget_id not in self._old_state
-        if not is_initial_load and user_key in self._new_session_state:
+        if (
+            not is_initial_load
+            and user_key in self._new_session_state
+            and not is_history_navigation
+        ):
             return False  # Code set value after first run
 
         url_value = self.query_params.get_initial_value(user_key)
         if url_value is None:
-            return False
+            if not is_history_navigation:
+                return False
+            default_value = metadata.deserializer(None)
+            self._new_widget_state.set_from_value(widget_id, default_value)
+            self._new_session_state[user_key] = default_value
+            return True
 
-        return self._seed_widget_from_url(metadata, user_key, widget_id, url_value)
+        return self._seed_widget_from_url(
+            metadata,
+            user_key,
+            widget_id,
+            url_value,
+            is_history_navigation=is_history_navigation,
+        )
 
     def _seed_widget_from_url(
         self,
@@ -1791,6 +1832,8 @@ class SessionState:
         user_key: str,
         widget_id: str,
         url_value: str | list[str],
+        *,
+        is_history_navigation: bool = False,
     ) -> bool:
         """Parse URL value, seed widget state, and auto-correct URL if needed.
 
@@ -1823,6 +1866,10 @@ class SessionState:
             # 3. Valid input that normalized to match the default (e.g., "000000" -> "#000000")
             if deserialized_value == default_value:
                 self._clear_url_param(user_key)
+                if is_history_navigation:
+                    self._new_widget_state.set_from_value(widget_id, deserialized_value)
+                    self._new_session_state[user_key] = deserialized_value
+                    return True
                 return False
 
             # Handle case where all URL values were invalid (filtered to empty list).

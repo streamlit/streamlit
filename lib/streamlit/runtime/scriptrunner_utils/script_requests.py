@@ -65,6 +65,8 @@ class RerunData:
     is_fragment_scoped_rerun: bool = False
     # set to true when a script is rerun by the fragment auto-rerun mechanism
     is_auto_rerun: bool = False
+    # set to true when browser back/forward changed the URL (popstate)
+    is_history_navigation: bool = False
     # Active trigger values whose callbacks already ran. These are applied after
     # fresh widget callbacks so the script body can observe them without
     # dispatching their callbacks again.
@@ -410,6 +412,7 @@ class ScriptRequests:
                 cached_message_hashes=new_data.cached_message_hashes,
                 is_fragment_scoped_rerun=is_fragment_scoped_rerun,
                 is_auto_rerun=new_data.is_auto_rerun,
+                is_history_navigation=new_data.is_history_navigation,
                 replay_trigger_states=coalesced_replay_states,
                 replay_trigger_values=coalesced_replay_values,
                 context_info=new_data.context_info,

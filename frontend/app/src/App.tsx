@@ -235,6 +235,8 @@ interface State {
   sidebarChevronDownshift: number
   pageLinkBaseUrl: string
   queryParams: string
+  // True while processing a rerun triggered by browser back/forward.
+  historyNavigationRerun: boolean
   deployedAppMetadata: DeployedAppMetadata
   libConfig: LibConfig
   appConfig: AppConfig
@@ -457,6 +459,7 @@ export class App extends PureComponent<Props, State> {
       // Initialize from URL so bound widget params from shared links are
       // preserved on first page navigation (before handlePageInfoChanged fires).
       queryParams: normalizeQueryString(window.location?.search ?? ""),
+      historyNavigationRerun: false,
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
@@ -1273,11 +1276,19 @@ export class App extends PureComponent<Props, State> {
     // identical, so reruns that re-assign the same query params would otherwise
     // fill the back stack with no-op entries. React state and the host message
     // below are still updated so embeds stay in sync.
+    const { historyNavigationRerun } = this.state
     if (queryString !== currentSearch) {
-      window.history.pushState({}, "", targetUrl)
+      if (historyNavigationRerun) {
+        window.history.replaceState({}, "", targetUrl)
+      } else {
+        window.history.pushState({}, "", targetUrl)
+      }
     }
 
-    this.setState({ queryParams: queryString })
+    this.setState({
+      queryParams: queryString,
+      historyNavigationRerun: false,
+    })
 
     this.hostCommunicationMgr.sendMessageToHost({
       type: "SET_QUERY_PARAM",
@@ -1858,14 +1869,18 @@ export class App extends PureComponent<Props, State> {
       document.location.pathname
     )
 
-    const hasAnchor = document.location.toString().includes("#")
-    const isSamePage = targetAppPage?.pageScriptHash === currentPageScriptHash
-    const queryString = normalizeQueryString(document.location.search)
-    const stateQueryString = normalizeQueryString(queryParams)
-
-    if (isNullOrUndefined(targetAppPage)) {
+    const pageScriptHash =
+      targetAppPage?.pageScriptHash ?? currentPageScriptHash
+    if (!pageScriptHash) {
       return
     }
+
+    const hasAnchor = document.location.toString().includes("#")
+    const isSamePage =
+      isNullOrUndefined(targetAppPage) ||
+      targetAppPage.pageScriptHash === currentPageScriptHash
+    const queryString = normalizeQueryString(document.location.search)
+    const stateQueryString = normalizeQueryString(queryParams)
 
     // Do not rerun for anchor-only navigation on the same page.
     if (hasAnchor && isSamePage && queryString === stateQueryString) {
@@ -1876,11 +1891,7 @@ export class App extends PureComponent<Props, State> {
     // explicitly to onPageChange because syncQueryParams' setState has not
     // flushed yet, and preserve it across page changes.
     this.syncQueryParams(queryString)
-    this.onPageChange(
-      targetAppPage.pageScriptHash as string,
-      queryString,
-      true
-    )
+    this.onPageChange(pageScriptHash, queryString, true, true)
   }
 
   /**
@@ -2298,7 +2309,8 @@ export class App extends PureComponent<Props, State> {
   onPageChange = (
     pageScriptHash: string,
     queryString?: string,
-    preserveQueryParams?: boolean
+    preserveQueryParams?: boolean,
+    isHistoryNavigation?: boolean
   ): void => {
     const { elements, mainScriptHash } = this.state
 
@@ -2326,7 +2338,8 @@ export class App extends PureComponent<Props, State> {
       pageScriptHash,
       undefined,
       queryString,
-      preserveQueryParams
+      preserveQueryParams,
+      isHistoryNavigation
     )
   }
 
@@ -2345,7 +2358,8 @@ export class App extends PureComponent<Props, State> {
     pageScriptHash?: string,
     isAutoRerun?: boolean,
     queryStringOverride?: string,
-    preserveQueryParams?: boolean
+    preserveQueryParams?: boolean,
+    isHistoryNavigation?: boolean
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -2416,6 +2430,10 @@ export class App extends PureComponent<Props, State> {
     const cachedMessageHashes =
       this.connectionManager?.getCachedMessageHashes() ?? []
 
+    if (isHistoryNavigation) {
+      this.setState({ historyNavigationRerun: true })
+    }
+
     this.sendBackMsg(
       new BackMsg({
         rerunScript: {
@@ -2425,6 +2443,7 @@ export class App extends PureComponent<Props, State> {
           pageName,
           fragmentId,
           isAutoRerun,
+          isHistoryNavigation,
           cachedMessageHashes,
           contextInfo,
         },
