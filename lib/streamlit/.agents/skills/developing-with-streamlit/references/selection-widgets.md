@@ -14,6 +14,8 @@ Use `st.segmented_control` or `st.pills` when you want all options visible at on
 | `st.selectbox` | Many options, single select, dropdown |
 | `st.multiselect` | Many options, multi-select, dropdown |
 
+For more values than fit comfortably in a dropdown, filter server-side instead of listing them — see [High-cardinality options](#high-cardinality-options).
+
 ## Segmented control (options visible, single select)
 
 ```python
@@ -54,7 +56,7 @@ country = st.selectbox(
 )
 ```
 
-Dropdowns scale better than radio/pills for long lists.
+Dropdowns scale better than radio/pills for long lists, but the whole option list still travels to the browser. Past a few thousand values, see [High-cardinality options](#high-cardinality-options).
 
 ## Multiselect (many options, multi-select)
 
@@ -86,6 +88,73 @@ with st.form("filters"):
     )
     st.form_submit_button("Apply")
 ```
+
+## High-cardinality options
+
+Every option is serialized into the widget's message and sent to the browser on
+each rerun, and `filter_mode` matching then runs client-side over the whole
+list. The dropdown is virtualized, so long lists still render fine — payload and
+main-thread filtering are the cost. Keep option lists in the low thousands: a
+10k-option list is roughly 180 KB per rerun, while 1M options is ~18 MB and
+several hundred milliseconds of frozen UI per keystroke.
+
+Never derive options from a full table scan. Ask the database for the distinct
+values, bounded:
+
+```python
+# BAD: pulls every row into the app for one dropdown; can exhaust app memory
+df = conn.query("select * from orders")
+customer = st.selectbox("Customer", df["customer"].unique())
+
+# GOOD: the database does the work and returns a bounded list
+customers = conn.query(
+    "select distinct customer from orders order by customer limit 1000",
+    ttl="1h",
+)["customer"]
+customer = st.selectbox("Customer", customers)
+```
+
+When the real domain is larger than a few thousand values, don't ship the list —
+search it. Query on a debounce and offer only what matched:
+
+```python
+@st.fragment
+def customer_filter() -> None:
+    term = st.text_input(
+        "Customer", type="search", live="300ms", placeholder="Type to search…"
+    )
+    st.session_state.customer = None
+    if len(term) < 2:
+        return
+    matches = conn.query(
+        "select customer from customers where customer like :term"
+        " order by customer limit 50",
+        params={"term": f"{term}%"},
+        ttl="60s",
+    )["customer"]
+    if matches.empty:
+        st.caption("No matches.")
+    else:
+        st.session_state.customer = st.selectbox(
+            "Matches", matches, label_visibility="collapsed"
+        )
+
+
+customer_filter()
+```
+
+- `live="300ms"` commits on a pause instead of on every keystroke, and
+  `@st.fragment` keeps the rest of the app from rerunning while the user types.
+- The `limit` bounds the query and the payload; matching a prefix (`term%`) lets
+  an index serve it.
+- Pass a `ttl` to `conn.query` here — it caches indefinitely by default, and
+  every keystroke is a new cache key.
+- Read the choice from `st.session_state` outside the fragment; a fragment's
+  return value isn't available to the main script on a fragment-scoped rerun.
+
+Cascading filters (region → city → store) are the other way to keep each list
+small. Use `accept_new_options=True` when users already know the exact value and
+shouldn't have to find it in a list.
 
 ## Toggle vs checkbox
 
