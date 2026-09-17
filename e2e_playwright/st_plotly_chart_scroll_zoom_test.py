@@ -190,4 +190,15 @@ def test_imshow_streamlit_constrained_labels_visual(
     chart = get_element_by_key(app, "imshow_streamlit_labels")
     expect(chart).to_be_visible()
     _wait_for_layout(app, chart)
+
+    def _yaxis_reversed() -> None:
+        reversed_y = _plotly_div(chart).evaluate(
+            """el => {
+                const range = el._fullLayout?.yaxis?.range
+                return Array.isArray(range) && range.length === 2 && range[0] > range[1]
+            }"""
+        )
+        assert reversed_y is True
+
+    wait_until(app, _yaxis_reversed)
     assert_snapshot(chart, name="st_plotly_chart_scroll_zoom-imshow_streamlit_labels")

@@ -49,7 +49,9 @@ labeled = px.imshow(
     color_continuous_scale="gray",
 )
 labeled.update_xaxes(scaleanchor="y", constrain="domain")
-labeled.update_yaxes(constrain="domain")
+# Pin imshow's reversed y so the snapshot does not race Plotly's first
+# autorange pass (row 0 at the top vs a scatter-style origin at the bottom).
+labeled.update_yaxes(constrain="domain", autorange="reversed")
 labeled.update_layout(height=300)
 st.plotly_chart(
     labeled,
