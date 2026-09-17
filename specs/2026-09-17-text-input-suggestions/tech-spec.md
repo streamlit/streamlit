@@ -68,13 +68,19 @@ else:
     autocomplete_identity = autocomplete  # str | None, as today
 ```
 
-- **Widget identity:** `compute_and_register_element_id(...)` currently hashes
-  `autocomplete=autocomplete`. Hashing a callable is unstable across reruns, so in the
-  callable case we hash a fixed sentinel (`autocomplete_identity` above) instead. Result:
-  swapping between two different suggestion callables does **not** remount an unkeyed widget,
-  keyed widgets stay stable when the callable changes, and switching between a string token
-  and a callable does remount (acceptable — different mode). This matches how `on_change` and
-  `live` stay out of / normalize identity.
+- **Widget identity:** `compute_and_register_element_id(...)` is passed
+  `autocomplete=autocomplete`, but it only reaches the hash for **unkeyed** widgets: with a
+  user `key`, `key_as_main_identity={"max_chars", "validate"}` restricts the hash to those two
+  kwargs, so `autocomplete` is already out of a keyed widget's id today. Either way a callable
+  cannot be hashed (it isn't a `SAFE_VALUES` and a fresh lambda each run would be unstable),
+  so the callable case hashes a fixed sentinel (`autocomplete_identity` above). The resulting
+  behavior, stated per case so session state stays predictable:
+  - **Keyed:** the id never depends on `autocomplete`, so changing the callable — or switching
+    between a string token and a callable — keeps the value.
+  - **Unkeyed:** swapping one suggestion callable for another keeps the value (both hash to
+    the sentinel), while switching between a string token and a callable changes the id and
+    resets it. That's acceptable: it's a different mode, and it matches how any other unkeyed
+    argument change behaves.
 - The native `autocomplete` proto string field (field 10) continues to carry
   `autocomplete_token`; in suggestion mode that is `"off"`.
 - Type errors: a non-callable, non-str, non-None value (or a callable that later returns
@@ -83,6 +89,12 @@ else:
   are normalized/failed-closed at call time (§3), since the callable hasn't run yet.
 
 ### 2. Protobuf changes
+
+The field numbers below are illustrative and must be re-derived when the work starts:
+[#16303](https://github.com/streamlit/streamlit/pull/16303) is still open and already claims
+the next free number in all three messages (`widget_validation` at 7 in the request oneof and
+8 in the response oneof, plus a new `TextInput` field for `validate_callable_id`). Whichever
+lands second takes the next unused number in each message.
 
 **`proto/streamlit/proto/TextInput.proto`** — add one field to `TextInput` (the existing
 `string autocomplete = 10` native token stays as-is):
@@ -114,8 +126,8 @@ message SuggestionsRequestPayload {
 `BackendOperationResponse.payload` oneof:
 
 ```proto
-// Response for autocomplete suggestion requests. Field 7 is already taken by
-// the message-level `error_reason`, so the oneof continues at 8.
+// Response for autocomplete suggestion requests. Numbering is per message, not
+// per oneof, so the message-level `error_reason = 7` is already taken here.
 SuggestionsResponsePayload suggestions = 8;
 
 message SuggestionsResponsePayload {
@@ -164,12 +176,21 @@ class SuggestionSourceManager:
   replaces the previous source with a fresh `source_id`, so stale in-flight responses are
   ignored by the frontend.
 - **`get_suggestions`** validates `source_id` belongs to `session_id` (raising a
-  `SuggestionSourceError` with a frontend-safe message otherwise), invokes `func(text)`, then
-  **normalizes and bounds** the result: coerce to `list[str]`, drop non-strings (or fail
-  closed), truncate over-long individual strings, cap the count (e.g. ≤ 50) so a misbehaving
-  source can't flood the socket, and drop suggestions longer than the widget's `max_chars`
-  (captured on the registered source), since selecting one would commit a value past the
-  limit the field itself enforces.
+  `SuggestionSourceError` with a frontend-safe message otherwise), then bounds its inputs and
+  outputs around the call:
+  - **`text` is untrusted.** It arrives from the client, so `max_chars` on the real input
+    proves nothing about it — a modified client can send an arbitrarily long string straight
+    into user Python. Truncate it to the source's `max_chars` (or a hard ceiling when unset)
+    before invoking the callable. Document for users that `text` is untrusted input: the
+    example query is parameterized on purpose, and interpolating it into SQL or a URL would
+    be an injection bug.
+  - **One return-value contract, and it fails closed.** Accept the result only if it is a
+    finite, non-`str` collection of `str`. A bare `str` is itself a `Sequence[str]`, so
+    accepting one would silently turn `"apple"` into five one-character suggestions; reject it
+    along with any other unexpected type instead of showing a partial list.
+  - **Caps:** truncate individual suggestions to a maximum length, drop any longer than the
+    source's `max_chars` (selecting one would commit a value the field itself rejects), and
+    cap the count (e.g. ≤ 50) so a misbehaving source can't flood the socket.
 - **Synchronization**: the maps are written from the script thread (registration, rerun
   cleanup) and the server thread (shutdown) while being read from suggestion worker threads,
   so — like `DataframeSourceManager` — every shared-map access is guarded by a
@@ -196,8 +217,8 @@ class SuggestionsHandler(BackendOperationHandler):
     async def handle(self, request, session_id) -> BackendOperationResponse:
         payload = request.suggestions
         try:
-            # Runs on the dedicated suggestions pool, bounded per source; the
-            # slot is released by the worker thread itself (see below).
+            # Runs on the dedicated suggestions pool, bounded per source and
+            # globally; permits are released by the worker itself (see below).
             suggestions = await self._run_bounded(
                 session_id, payload.source_id, payload.text
             )
@@ -206,16 +227,14 @@ class SuggestionsHandler(BackendOperationHandler):
                 request_id=request.request_id, error_msg=str(err)
             )
         except (TimeoutError, _NoCapacityError):
-            # Fail closed: an empty dropdown, no error shown to the user.
+            # Fail closed: an empty dropdown, nothing surfaced to the client.
             suggestions = []
         except Exception:
             _LOGGER.exception(
                 "Error computing suggestions for source %s", payload.source_id
             )
-            # Fail closed: empty suggestions, generic message; traceback stays server-side.
-            return BackendOperationResponse(
-                request_id=request.request_id, error_msg="Failed to load suggestions."
-            )
+            # Also fail closed. The traceback stays server-side.
+            suggestions = []
         resp = BackendOperationResponse(request_id=request.request_id)
         resp.suggestions.CopyFrom(
             SuggestionsResponsePayload(
@@ -236,10 +255,16 @@ serialization code, while this one runs an arbitrary user callable that may neve
   timeout can only stop *awaiting* a synchronous call; the thread itself runs to completion.
   On the shared default executor, hung sources would therefore accumulate and starve the
   lazy-dataframe and deferred-file operations that depend on the same capacity.
-- **Slots are held until the thread actually exits.** The per-source semaphore slot is
-  released by the worker in its own `finally`, not by the coroutine that stopped waiting, so
-  a timed-out call keeps occupying its slot while it runs. Otherwise a modified client could
-  vary `text` to defeat coalescing and stack up unbounded hung calls. When no slot is free the
+- **Admission is bounded globally, not just per source.** A `ThreadPoolExecutor` caps running
+  workers but queues everything else without limit, and an app can register arbitrarily many
+  sources — so per-source semaphores alone let a client fill the pool with hung workers and
+  pile up a backlog that later executes long-stale lookups. Gate every submission on a
+  non-blocking global permit as well as the per-source one, so the executor's queue stays
+  shallow by construction.
+- **Permits are held until the thread actually exits.** Both permits are released by the
+  worker in its own `finally`, not by the coroutine that stopped waiting, so a timed-out call
+  keeps occupying its capacity while it runs. Otherwise a modified client could vary `text` to
+  defeat coalescing and stack up unbounded hung calls. When either permit is unavailable the
   handler raises `_NoCapacityError` and fails closed immediately rather than queueing more
   work.
 - **Timeout** (`_SUGGESTIONS_TIMEOUT_S`, e.g. 5s) bounds how long the *user* waits; the pool
@@ -331,7 +356,8 @@ needs it.
 
 #### Request lifecycle
 
-- On focus and on each accepted change, **debounce** with the suggestion timer (reuse the
+- On focus, on each accepted change, and whenever `suggestionsSourceId` changes while the
+  field is focused, **debounce** with the suggestion timer (reuse the
   `useDebouncedCallback` already in this component), then call
   `backendOperationClient.requestSuggestions({ sourceId, text })`. The delay is a constant
   `300ms`, independent of `live` in both directions: the callable is often a database or API
@@ -347,16 +373,27 @@ needs it.
   superseded callable can arrive for text the user is still typing. Cancel/ignore in-flight
   requests on new input (the client already rejects superseded requests on cleanup), and show
   a subtle loading indicator while a request is outstanding.
-- **Selection:** clicking an item or ↑/↓ + Enter/Tab sets `uiValue` — through the same
+- **Source rotation must re-request, not just discard.** Because every rerun mints a fresh
+  `source_id`, the check above would otherwise silently blank the dropdown — and `live` makes
+  that the common case rather than a corner case, since its 250ms default is shorter than the
+  300ms suggestion debounce, so the rerun typically lands before the lookup is even sent.
+  When `suggestionsSourceId` changes, clear pending state for the old id and re-request for
+  the current text against the new one, keeping the visible list until the replacement
+  arrives so it doesn't flicker.
+- **IME:** don't request while `isComposingRef` is set; schedule exactly one request after
+  `compositionend`, so composing CJK text doesn't fire lookups on half-formed input.
+- **Selection:** clicking an item, or ↑/↓ then Enter or Tab, sets `uiValue` — through the same
   `maxChars` gate as typed input, so a long suggestion can never commit a value the field
   itself would reject — and routes through the existing `commitWidgetValue` /
-  `tryCommitOutsideForm` path so `on_change`, `live`,
-  `validate`, `required`, forms, and `bind` all behave exactly as for a typed commit. `Esc`
+  `tryCommitOutsideForm` path so `on_change`, `live`, `validate`, `required`, forms, and `bind`
+  all behave exactly as for a typed commit. Note this is the *commit* path, not a synthetic
+  Enter: inside a form, selecting must fill and stage the value without submitting. Tab selects
+  and then moves focus as usual. `Esc`
   closes the dropdown only; per the product spec, an empty result closes it rather than showing
   Selectbox's "No results" row.
-- Coexist with the existing end enhancers (error icon, search clear button, password toggle)
-  and with `live` commit timers, IME composition (`isComposingRef`), and the
-  stale-`setValue` handling already in the component. The native `<input autocomplete>`
+- Coexist with the existing end enhancers (error icon, search clear button), the `live` commit
+  timers, and the stale-`setValue` handling already in the component. The native
+  `<input autocomplete>`
   attribute is already `"off"` in this mode (set by the backend), so the browser's autofill
   dropdown won't overlap.
 
@@ -383,11 +420,16 @@ Inherits the backend-operation threat model (arbitrary/modified client over the 
   other backend operations need. A timeout stops the waiting, not the thread, so the pool is
   separate from the shared default executor and the worst case is a bounded number of stuck
   suggestion threads.
-- **Per-source concurrency cap + request coalescing**, with slots released only when the
-  worker exits, so a scripted client can't fan out unbounded lookups or stack up hung ones.
-- **Result caps** (max count, max string length, `max_chars`) bound the response payload.
-- **Fail closed + server-only logging**: exceptions and bad return types yield an empty
-  dropdown and a generic message; tracebacks and any values are logged server-side and never
+- **Global and per-source concurrency caps + request coalescing**, with permits released only
+  when the worker exits, so a scripted client can't fan out unbounded lookups, stack up hung
+  ones, or grow a queue behind them by spreading requests across many sources.
+- **Input and result caps**: the client-supplied `text` is truncated before it reaches user
+  Python, and max count / max string length / `max_chars` bound the response payload.
+- **Fail closed + server-only logging**: exceptions, timeouts, and bad return types yield an
+  empty suggestion list and **no** `error_msg` — surfacing one would reject the request in
+  `BackendOperationClient` and show the user an error for what is only a missing hint.
+  `error_msg` stays reserved for frontend-safe `SuggestionSourceError` cases (unknown or
+  wrong-session `source_id`). Tracebacks and values are logged server-side and never
   serialized to the browser (the callable could touch secrets/DB rows).
 - **`type="password"` disallowed** with a callable `autocomplete`; and in suggestion mode the
   native autofill token is forced to `"off"` so the browser never stores/proposes values.

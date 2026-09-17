@@ -91,7 +91,12 @@ All of the following applies only when `autocomplete` is a callable.
 
 - **When it's called:** while the field is focused, after a pause in typing (300ms, independent
   of `live`). It receives the current text verbatim. It is also called with `""` on focus, so a
-  source can offer default or recent suggestions; return `[]` to show nothing.
+  source can offer default or recent suggestions; return `[]` to show nothing. That focus call
+  costs a round trip even when the source has nothing to offer yet — an acceptable price for
+  one lookup per focus, and the reason `autocomplete_min_chars` is on the list of things to add
+  if it proves annoying. Nothing is requested mid-IME-composition; one request is scheduled
+  once the composition ends, so typing CJK or using dead keys doesn't fire lookups on
+  half-formed text.
 
   The pause is deliberately on the generous side, because each one can cost a database query or
   an API call. A large-scale typing study measured a mean inter-key interval of 239ms
@@ -104,10 +109,14 @@ All of the following applies only when `autocomplete` is a callable.
 - **The dropdown:** non-empty results open a list below the input; an empty result closes it,
   as does blurring the field or pressing `Esc`. Streamlit caps how many suggestions it
   returns, so an oversized result set can't flood the browser (limit in the tech spec).
-- **Choosing a suggestion:** clicking one, or highlighting with ↑/↓ and pressing Enter or Tab,
-  fills the field and **commits** the value exactly as pressing Enter would — reruns the app in
-  the widget's normal scope and fires `on_change`. `Esc` closes the list without changing the
-  value.
+- **Choosing a suggestion:** click one, or highlight it with ↑/↓ and press Enter or Tab. That
+  fills the field and **commits** the value — the same commit that typing the value and
+  blurring performs, not a replayed Enter keystroke. So outside a form it reruns the app in the
+  widget's normal scope and fires `on_change`; inside a form it fills and stages the value
+  without submitting; with `on_change="ignore"` it stages without a rerun. While the list is
+  open with an option highlighted, Enter selects instead of submitting a form, and Tab selects
+  and then moves focus as Tab normally would. `Esc` closes the list without changing the value,
+  so the next Enter or Tab behaves exactly as it does today.
 - **Free text is always allowed.** Unlike `st.selectbox`, the user is never forced to pick a
   suggestion; typing and committing an unlisted value behaves like a normal text input. This is
   autocomplete, not a constrained select.
@@ -118,9 +127,12 @@ All of the following applies only when `autocomplete` is a callable.
   the dropdown shows nothing and the field stays fully usable for free text. The error is
   logged **server-side only** and never sent to the browser, since the function may touch
   secrets or database rows.
-- **The function runs outside a script run**, so it must be a fast, read-only lookup. `st.*`
-  display commands inside it have no script context and are not supported; app logic belongs
-  in `on_change` or the normal rerun.
+- **The function runs outside a script run**, so it must be a fast, read-only lookup. It has no
+  script context, which rules out more than `st.*` display commands: `st.session_state` does
+  not resolve to the caller's session there (it falls back to an empty stand-in rather than
+  raising), so reading another widget's value inside the function silently sees nothing. Close
+  over what you need instead — the function is re-registered on every rerun, so a closure
+  always holds that run's values. App logic belongs in `on_change` or the normal rerun.
 - **Browser autofill is turned off** for the field (the native `autocomplete` attribute is set
   to `"off"`) so the browser's own dropdown can't compete with Streamlit's.
 
@@ -147,7 +159,8 @@ That leaves four narrow decisions, worth a design pass but not a redesign:
 - **Empty results.** Selectbox shows a "No results" row. For typeahead that would flash on every
   keystroke that doesn't match yet, so we propose closing the dropdown instead.
 - **No chevron.** Selectbox shows an open button because it has a browsable closed set. A text
-  input has none, so the dropdown should only appear in response to typing.
+  input has none, so there's nothing to browse and no open button: the list appears only when
+  the source returns something — on focus if it offers defaults, otherwise as the user types.
 - **Mobile** inherits selectbox's behavior, with one exception: its heuristic of suppressing the
   on-screen keyboard for short option lists must not apply here, since typing is the point.
 
@@ -158,7 +171,7 @@ browser doesn't know which substring to emphasize (unlike selectbox's client-sid
 
 | Parameter | Behavior with a callable `autocomplete` |
 | --- | --- |
-| `live` | Independent. `live` controls when a committed value reruns the app; `autocomplete` controls the hint dropdown and has its own debounce. Choosing a suggestion is a commit, so it follows the widget's normal rerun rules. |
+| `live` | Independent. `live` controls when a committed value reruns the app; `autocomplete` controls the hint dropdown and has its own debounce. Choosing a suggestion is a commit, so it follows the widget's normal rerun rules. A live rerun re-registers the suggestion source while the user is still typing; the dropdown re-requests for the current text rather than going blank. |
 | `on_change`, `on_change="ignore"` | Unchanged, and only ever triggered by a commit. Showing suggestions never fires `on_change`; with `"ignore"`, a chosen suggestion is staged without a rerun. |
 | `st.form` | The dropdown works and a selection fills the field, but as with every form widget the value only reaches the server on submit. Selecting a suggestion does not submit the form. |
 | `validate`, `required` | Unchanged, applied at commit time. A chosen suggestion is validated like a typed one. |
@@ -183,6 +196,19 @@ def city_search():
 
 
 city_search()
+```
+
+**Depending on another widget** — close over the value; the function can't read session state:
+
+```python
+category = st.selectbox("Category", categories)
+
+
+def suggest_in_category(text: str) -> list[str]:
+    return db.search(text, category=category)
+
+
+product = st.text_input("Product", autocomplete=suggest_in_category)
 ```
 
 **Existing string form, unchanged** — `st.text_input("Full name", autocomplete="name")` still
@@ -231,7 +257,8 @@ native mechanism for the reasons in [Current workarounds](#current-workarounds).
   early-return `[]` for short input.
 - **Async / coroutine functions:** v1 runs a synchronous callable in a worker thread.
 - **Built-in caching and a configurable debounce.** Users can wrap their function in
-  `@st.cache_data` in the meantime.
+  `@st.cache_data` in the meantime — the global default only, since `scope="session"` needs a
+  script run context the function doesn't have.
 
 ## Checklist
 
