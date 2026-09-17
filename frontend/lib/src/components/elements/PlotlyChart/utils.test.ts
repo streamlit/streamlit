@@ -554,6 +554,22 @@ describe("PlotlyChart utils", () => {
 
       expect(plotlyFigureNeedsReactStateUpdate(prev, next)).toBe(true)
     })
+
+    it("is true when a sub-epsilon absolute range still changes relatively", () => {
+      const data: never[] = []
+      const prev = {
+        data,
+        frames: null,
+        layout: { xaxis: { range: [1e-9, 2e-9] } },
+      }
+      const next = {
+        data,
+        frames: null,
+        layout: { xaxis: { range: [1.2e-9, 1.8e-9] } },
+      }
+
+      expect(plotlyFigureNeedsReactStateUpdate(prev, next)).toBe(true)
+    })
   })
 
   const getWidgetMgr = (): WidgetStateManager => {

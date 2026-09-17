@@ -242,6 +242,7 @@ const SELECTION_SHAPE_FIELDS = [
   "y1",
   "path",
 ]
+// Relative to the larger magnitude so sub-1e-6 scientific ranges still persist.
 const RANGE_EPSILON = 1e-6
 
 function numericArraysDiffer(a: unknown, b: unknown): boolean {
@@ -254,7 +255,8 @@ function numericArraysDiffer(a: unknown, b: unknown): boolean {
   return a.some((value, i) => {
     const other = b[i]
     if (typeof value === "number" && typeof other === "number") {
-      return Math.abs(value - other) > RANGE_EPSILON
+      const scale = Math.max(Math.abs(value), Math.abs(other), 1e-12)
+      return Math.abs(value - other) > RANGE_EPSILON * scale
     }
     return !isEqual(value, other)
   })
