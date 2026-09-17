@@ -126,6 +126,14 @@ export const useHandleHtmlAndCssContent = ({
       return
     }
 
+    let linkElement: HTMLLinkElement | undefined
+    const handleCssLoadError = (): void => {
+      handleError(
+        new Error(`Failed to load CSS from ${cssLinkHref}`),
+        setError
+      )
+    }
+
     try {
       if (contentRef.current?.parentNode === parent) {
         parent.removeChild(contentRef.current)
@@ -145,7 +153,7 @@ export const useHandleHtmlAndCssContent = ({
         styleElement.textContent = cssContent
         contentRef.current.appendChild(styleElement)
       } else if (cssLinkHref) {
-        const linkElement = document.createElement("link")
+        linkElement = document.createElement("link")
         linkElement.href = cssLinkHref
         linkElement.rel = "stylesheet"
 
@@ -156,18 +164,17 @@ export const useHandleHtmlAndCssContent = ({
           linkElement.crossOrigin = cssLinkCrossOrigin
         }
 
-        linkElement.onerror = () => {
-          handleError(
-            new Error(`Failed to load CSS from ${cssLinkHref}`),
-            setError
-          )
-        }
+        linkElement.addEventListener("error", handleCssLoadError)
         contentRef.current.appendChild(linkElement)
       }
 
       parent.appendChild(contentRef.current)
     } catch (error) {
       handleError(error, setError, "Failed to process HTML/CSS content")
+    }
+
+    return () => {
+      linkElement?.removeEventListener("error", handleCssLoadError)
     }
   }, [
     html,

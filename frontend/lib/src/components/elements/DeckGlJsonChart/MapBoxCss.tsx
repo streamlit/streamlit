@@ -22,5 +22,5 @@ import "mapbox-gl/dist/mapbox-gl.css"
  * when the user wants to use Mapbox instead of Carto.
  */
 export const MapBoxCss: FC = () => {
-  return <></>
+  return null
 }

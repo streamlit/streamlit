@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { type JSX, ReactElement, useContext, useMemo } from "react"
+import {
+  type JSX,
+  ReactElement,
+  type ReactNode,
+  useContext,
+  useMemo,
+} from "react"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
@@ -39,8 +45,7 @@ import ChatMessage from "~lib/components/elements/ChatMessage/ChatMessage"
 import Dialog from "~lib/components/elements/Dialog/Dialog"
 import Expander from "~lib/components/elements/Expander/Expander"
 import Popover from "~lib/components/elements/Popover/Popover"
-import Tabs from "~lib/components/elements/Tabs/Tabs"
-import type { TabProps } from "~lib/components/elements/Tabs/Tabs"
+import Tabs, { type TabProps } from "~lib/components/elements/Tabs/Tabs"
 import Form from "~lib/components/widgets/Form/Form"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
@@ -68,7 +73,7 @@ import {
   shouldHideStaleDialog,
 } from "./utils"
 
-const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
+const ChildRenderer = (props: BlockPropsWithoutWidth): ReactNode => {
   // Handle cycling of colors for dividers:
   assignDividerColor(props.node, useEmotionTheme())
 
@@ -108,7 +113,7 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
     ]
   )
 
-  return <>{elements}</>
+  return elements
 }
 
 interface ContainerContentsWrapperProps extends BaseBlockProps {
@@ -252,7 +257,7 @@ const MEDIUM_STRETCH_BEHAVIOR = new Set(["chatInput"])
 
 export const BlockNodeRenderer = (
   props: BlockPropsWithoutWidth
-): ReactElement => {
+): ReactElement | null => {
   const { node } = props
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
@@ -284,7 +289,7 @@ export const BlockNodeRenderer = (
   })
 
   if (node.isEmpty && !node.deltaBlock.allowEmpty) {
-    return <></>
+    return null
   }
 
   const enable = shouldComponentBeEnabled("", scriptRunState)
@@ -361,7 +366,7 @@ export const BlockNodeRenderer = (
         fragmentIdsThisRun
       )
     ) {
-      return <></>
+      return null
     }
 
     return (

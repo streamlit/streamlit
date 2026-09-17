@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement, ReactNode, useEffect, useRef } from "react"
+import { ReactNode, useEffect, useRef } from "react"
 
 import { isKeyboardEventFromEditableTarget } from "@streamlit/lib"
 
@@ -38,7 +38,7 @@ export function GlobalHotkeys({
   onKeyDown,
   onKeyUp,
   children,
-}: GlobalHotkeysProps): ReactElement {
+}: GlobalHotkeysProps): ReactNode {
   const keyDownHandlerRef = useRef(onKeyDown)
   const keyUpHandlerRef = useRef(onKeyUp)
   // Keep document listeners stable while dispatching to the latest callbacks.
@@ -100,5 +100,5 @@ export function GlobalHotkeys({
     }
   }, [keyName])
 
-  return <>{children}</>
+  return children
 }

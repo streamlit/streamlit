@@ -116,10 +116,10 @@ class ScreenCastRecorder {
       LOG.warn(`mediaRecorder.start threw an error: ${String(e)}`)
     }
 
-    this.mediaRecorder.onerror = (e: Event): void => {
+    this.mediaRecorder.addEventListener("error", (e: Event): void => {
       logRecorderError(e)
       this.onErrorOrStopCallback()
-    }
+    })
 
     this.mediaRecorder.onstop = (): void => this.onErrorOrStopCallback()
 

@@ -285,7 +285,7 @@ function StatisticsMenu({
   // Defensive fallback: parent ColumnMenu already guards this, but keep for safety.
   // This ensures the component renders nothing if called directly without the guard.
   if (!supportsStatistics(column.kind)) {
-    return <>{children}</>
+    return children
   }
 
   return (

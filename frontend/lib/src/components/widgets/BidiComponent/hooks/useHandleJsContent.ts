@@ -219,6 +219,18 @@ export const useHandleJsContent = ({
       return
     }
 
+    let scriptElement: HTMLScriptElement | undefined
+    let resolveScriptLoad: (() => void) | undefined
+    let rejectScriptLoad: ((reason: Error) => void) | undefined
+    const handleScriptLoad = (): void => {
+      resolveScriptLoad?.()
+    }
+    const handleScriptError = (): void => {
+      rejectScriptLoad?.(
+        new Error(`Failed to load script from ${externalJsSourcePathUrl}`)
+      )
+    }
+
     const run = async (): Promise<void> => {
       try {
         if (inlineJsContent) {
@@ -245,17 +257,14 @@ export const useHandleJsContent = ({
           try {
             // Load the script
             await new Promise<void>((resolve, reject) => {
-              const scriptElement = document.createElement("script")
+              scriptElement = document.createElement("script")
               scriptElement.type = "module"
               scriptElement.src = scriptUrl
               scriptElement.async = true
-              scriptElement.onload = () => resolve()
-              scriptElement.onerror = () =>
-                reject(
-                  new Error(
-                    `Failed to load script from ${externalJsSourcePathUrl}`
-                  )
-                )
+              resolveScriptLoad = resolve
+              rejectScriptLoad = reject
+              scriptElement.addEventListener("load", handleScriptLoad)
+              scriptElement.addEventListener("error", handleScriptError)
               document.head.appendChild(scriptElement)
               scriptElementRef.current = scriptElement
             })
@@ -288,6 +297,11 @@ export const useHandleJsContent = ({
     }
 
     void run()
+
+    return () => {
+      scriptElement?.removeEventListener("load", handleScriptLoad)
+      scriptElement?.removeEventListener("error", handleScriptError)
+    }
   }, [
     componentId,
     componentName,

@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import type { MutableRefObject, RefObject } from "react"
-import { ReactNode } from "react"
+import type { MutableRefObject, ReactNode, RefObject } from "react"
 
 import { renderHook } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -152,7 +151,7 @@ describe("useHandleHtmlAndCssContent", () => {
     )
   })
 
-  it("appends a link element with onerror handler when cssSourcePath is set", () => {
+  it("appends a link element with an error listener when cssSourcePath is set", () => {
     const context = buildContextValue({ cssSourcePath: "styles.css" })
     const cssUrl = "https://example.com/styles.css"
     vi.spyOn(context.componentRegistry, "getBidiComponentURL").mockReturnValue(

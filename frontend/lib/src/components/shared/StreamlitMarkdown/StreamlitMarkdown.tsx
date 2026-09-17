@@ -313,7 +313,7 @@ const HeaderActionElements: FC<HeadingActionElements> = ({
 }) => {
   const theme = useEmotionTheme()
   if (!help && hideAnchor) {
-    return <></>
+    return null
   }
 
   return (

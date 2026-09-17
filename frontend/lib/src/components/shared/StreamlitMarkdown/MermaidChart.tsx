@@ -583,38 +583,46 @@ const MermaidChart = memo(function MermaidChart({
     }
 
     const img = new Image()
-    img.onload = () => {
-      // Use natural dimensions from the SVG viewBox (avoids forced reflow)
-      const width = img.naturalWidth || 800
-      const height = img.naturalHeight || 600
+    img.addEventListener(
+      "load",
+      () => {
+        // Use natural dimensions from the SVG viewBox (avoids forced reflow)
+        const width = img.naturalWidth || 800
+        const height = img.naturalHeight || 600
 
-      const canvas = document.createElement("canvas")
-      const scale = 2 // 2x scale for better quality
-      canvas.width = width * scale
-      canvas.height = height * scale
+        const canvas = document.createElement("canvas")
+        const scale = 2 // 2x scale for better quality
+        canvas.width = width * scale
+        canvas.height = height * scale
 
-      const ctx = canvas.getContext("2d")
-      if (!ctx) {
-        downloadingBlobUrlRef.current = null
-        return
-      }
+        const ctx = canvas.getContext("2d")
+        if (!ctx) {
+          downloadingBlobUrlRef.current = null
+          return
+        }
 
-      ctx.fillStyle = theme.colors.bgColor
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-      ctx.scale(scale, scale)
-      ctx.drawImage(img, 0, 0, width, height)
+        ctx.fillStyle = theme.colors.bgColor
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        ctx.scale(scale, scale)
+        ctx.drawImage(img, 0, 0, width, height)
 
-      const link = document.createElement("a")
-      link.download = "mermaid-diagram.png"
-      link.href = canvas.toDataURL("image/png")
-      link.click()
+        const link = document.createElement("a")
+        link.download = "mermaid-diagram.png"
+        link.href = canvas.toDataURL("image/png")
+        link.click()
 
-      releaseDownloadUrl()
-    }
-    img.onerror = () => {
-      LOG.error("Failed to load SVG for PNG export")
-      releaseDownloadUrl()
-    }
+        releaseDownloadUrl()
+      },
+      { once: true }
+    )
+    img.addEventListener(
+      "error",
+      () => {
+        LOG.error("Failed to load SVG for PNG export")
+        releaseDownloadUrl()
+      },
+      { once: true }
+    )
     img.src = svgBlobUrl
   }, [svgBlobUrl, theme.colors.bgColor])
 
