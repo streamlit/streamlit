@@ -91,12 +91,15 @@ with st.form("filters"):
 
 ## High-cardinality options
 
-Streamlit sends every option to the browser on each rerun, and `filter_mode`
-matching runs client-side over the whole list. The dropdown is virtualized, so
-long lists still render fine; the cost is payload and main-thread filtering.
-Keep option lists in the low thousands. A 10k-option list costs roughly 180 KB
-per rerun; 1M options costs ~18 MB and several hundred milliseconds of frozen UI
-per keystroke.
+Keep option lists in the low thousands. Streamlit serializes the whole option
+list into the widget's message, and `filter_mode` matching then runs client-side
+over all of it. The dropdown is virtualized, so long lists still render fine;
+the costs are message size and main-thread filtering. A 10k-option list is
+roughly 180 KB and 1M options roughly 18 MB. Streamlit caches messages at or
+above `global.minCachedMessageSize` (10 KB) and re-sends unchanged ones as a
+hash reference, so that payload crosses the wire on first render and whenever
+the list changes. Client-side filtering gets no such reprieve: at 1M options it
+freezes the UI for several hundred milliseconds per keystroke.
 
 So don't build options from a full table scan. Ask the database for the distinct
 values, bounded:
@@ -109,7 +112,7 @@ customer = st.selectbox("Customer", df["customer"].unique())
 # GOOD: the database does the work and returns a bounded list
 customers = conn.query(
     "select distinct customer from orders order by customer limit 1000",
-    ttl="1h",
+    ttl=3600,
 )["customer"]
 customer = st.selectbox("Customer", customers)
 ```
@@ -123,31 +126,44 @@ Above a few thousand values, stop shipping the list and search it. Query on a
 debounce and offer only what matched:
 
 ```python
+st.session_state.setdefault("customer", None)
+
+
+def like_term(text: str) -> str:
+    """Escape LIKE wildcards so a typed % or _ matches literally."""
+    for char in ("\\", "%", "_"):
+        text = text.replace(char, "\\" + char)
+    return f"%{text}%"
+
+
 @st.fragment
 def customer_filter() -> None:
     term = st.text_input(
         "Customer", type="search", live="300ms", placeholder="Type to search…"
     )
-    choice = None
     if len(term) >= 2:
         matches = conn.query(
-            "select customer from customers where customer like :term"
+            "select customer from customers"
+            " where customer like :term escape '\\'"
             " order by customer limit 50",
-            params={"term": f"%{term}%"},
-            ttl="60s",
+            params={"term": like_term(term)},
+            ttl=60,
         )["customer"]
         if matches.empty:
             st.caption("No matches.")
         else:
-            choice = st.selectbox(
+            picked = st.selectbox(
                 "Matches",
                 matches,
                 index=None,
                 placeholder="Select a match",
                 label_visibility="collapsed",
             )
-    if choice != st.session_state.get("customer"):
-        st.session_state.customer = choice
+            if picked is not None and picked != st.session_state.customer:
+                st.session_state.customer = picked
+                st.rerun()
+    if st.session_state.customer and st.button("Clear filter"):
+        st.session_state.customer = None
         st.rerun()
 
 
@@ -161,16 +177,23 @@ customer_filter()
   State and call `st.rerun()` when it changes, as above; dependent code then
   re-executes once per real change. Rendering the dependent parts inside the
   fragment also works, and needs no rerun.
-- `index=None` applies nothing until the user picks, so that rerun fires on a
-  real selection and not on every keystroke. Never reset the stored choice at
-  the top of the fragment: with `st.rerun()`, that loops forever.
-- Keep the `limit`. It bounds the payload and lets the database stop once it has
+- Commit the choice only when the user picks one, and let `setdefault` seed the
+  key so dependent code doesn't hit `KeyError` before the first pick.
+  `index=None` stops the first match applying itself, and ignoring a `None`
+  selection stops a search that no longer lists the current customer from
+  dropping the filter behind the user's back. Committing that `None`, or
+  resetting the stored choice at the top of the fragment, reruns forever.
+- Keep the `limit`. It bounds the message and lets the database stop once it has
   enough rows. A leading `%` matches mid-value, which users expect, but makes
   the match itself scan. Whether an index can serve a `like` at all depends on
   the backend, collation, and pattern, so check the query plan and add a
   full-text or search index if it doesn't hold up.
+- Escape `%` and `_` in the term and declare an `escape` character. Untouched
+  they are wildcards, so a typed `%` matches far more than the user asked for.
 - Pass a `ttl` to `conn.query` here. It caches indefinitely by default, and
-  every keystroke is a new cache key.
+  every keystroke is a new cache key. Pass it as a number or `timedelta`: the
+  parameter is typed `float | int | timedelta | None`, so a duration string
+  works at runtime but fails a type check.
 
 Cascading filters (region → city → store) keep each list small without a search
 box.
