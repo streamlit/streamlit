@@ -2205,6 +2205,8 @@ describe("DateInput single-mode keyboard navigation", () => {
     expect(yearTrigger).toHaveTextContent("2020")
     expect(monthTrigger).toHaveTextContent("December")
     expect(within(calendar2).getByRole("grid")).toHaveAccessibleName(/2020/)
+
+    vi.useRealTimers()
   })
 })
 
