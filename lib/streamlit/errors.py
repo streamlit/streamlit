@@ -594,12 +594,20 @@ class StreamlitInvalidLayoutContextError(StreamlitAPIException):
     """Raised when a command is used in a disallowed layout, form, or dialog context."""
 
 
+def _session_state_item(key: str) -> str:
+    """Return a copy-pasteable ``st.session_state[...]`` access for ``key``."""
+    return f"st.session_state[{key!r}]"
+
+
 class StreamlitValueAssignmentNotAllowedError(LocalizableStreamlitException):
     """Exception raised when trying to set values where writes are not allowed."""
 
     def __init__(self, key: str) -> None:
         super().__init__(
-            "Values for the widget with `key` '{key}' cannot be set using `st.session_state`.",
+            "`{session_state_item}` stores read-only event state and cannot be "
+            "assigned through Session State. Use a different Session State key "
+            "for values you need to set.",
+            session_state_item=_session_state_item(key),
             key=key,
         )
 
@@ -609,8 +617,11 @@ class StreamlitWidgetAlreadyInstantiatedError(LocalizableStreamlitException):
 
     def __init__(self, key: str) -> None:
         super().__init__(
-            "`st.session_state.{key}` cannot be modified after the widget"
-            " with key `{key}` is instantiated.",
+            "`{session_state_item}` cannot be modified after the widget with "
+            "that key is instantiated. Assign `{session_state_item}` before "
+            "creating the widget, or update it from an `on_change` or "
+            "`on_click` callback, which runs before the widget is instantiated.",
+            session_state_item=_session_state_item(key),
             key=key,
         )
 

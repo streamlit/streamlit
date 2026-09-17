@@ -335,11 +335,39 @@ def test_value_error_with_detail() -> None:
     assert exc.exec_kwargs["detail"] == "Connection class Foo has an invalid scope."
 
 
-def test_widget_already_instantiated_error_message() -> None:
-    """Session-state assignment after widget creation names the key."""
-    exc = errors.StreamlitWidgetAlreadyInstantiatedError("my_key")
-    assert "`st.session_state.my_key`" in str(exc)
-    assert "instantiated" in str(exc)
+@pytest.mark.parametrize("key", ["my_key", "my-key", "the key"])
+def test_widget_already_instantiated_error_message(key: str) -> None:
+    """Messages use bracket access and tell the caller how to assign safely."""
+    exc = errors.StreamlitWidgetAlreadyInstantiatedError(key)
+    message = str(exc)
+    item = f"st.session_state[{key!r}]"
+
+    assert f"`{item}`" in message
+    assert f"st.session_state.{key}" not in message
+    assert "before creating the widget" in message
+    assert "on_change" in message
+    assert "on_click" in message
+    assert isinstance(exc, errors.StreamlitAPIException)
+    assert isinstance(exc, errors.LocalizableStreamlitException)
+    assert exc.exec_kwargs["key"] == key
+    assert "parameter" not in exc.exec_kwargs
+
+
+@pytest.mark.parametrize("key", ["done_btn", "done-btn"])
+def test_value_assignment_not_allowed_error_message(key: str) -> None:
+    """Read-only event state tells the caller to use a different key."""
+    exc = errors.StreamlitValueAssignmentNotAllowedError(key)
+    message = str(exc)
+    item = f"st.session_state[{key!r}]"
+
+    assert f"`{item}`" in message
+    assert f"st.session_state.{key}" not in message
+    assert "read-only" in message
+    assert "different Session State key" in message
+    assert isinstance(exc, errors.StreamlitAPIException)
+    assert isinstance(exc, errors.LocalizableStreamlitException)
+    assert exc.exec_kwargs["key"] == key
+    assert "parameter" not in exc.exec_kwargs
 
 
 def test_default_not_in_options_error_message() -> None:

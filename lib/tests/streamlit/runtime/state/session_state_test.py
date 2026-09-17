@@ -2676,7 +2676,9 @@ class SessionStateMethodTests(unittest.TestCase):
                     {"widget_id": "widget_id"}
                 )
                 self.session_state["widget_id"] = "blah"
-            assert "`st.session_state.widget_id` cannot be modified" in str(e.value)
+            message = str(e.value)
+            assert "`st.session_state['widget_id']` cannot be modified" in message
+            assert "before creating the widget" in message
 
     def test_setitem_disallows_setting_created_form(self):
         mock_ctx = MagicMock()
@@ -2689,7 +2691,9 @@ class SessionStateMethodTests(unittest.TestCase):
         ):
             with pytest.raises(StreamlitWidgetAlreadyInstantiatedError) as e:
                 self.session_state["form_id"] = "blah"
-            assert "`st.session_state.form_id` cannot be modified" in str(e.value)
+            message = str(e.value)
+            assert "`st.session_state['form_id']` cannot be modified" in message
+            assert "before creating the widget" in message
 
     def test_reset_state_value(self):
         """Test that reset_state_value correctly sets a new state value.

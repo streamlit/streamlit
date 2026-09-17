@@ -122,8 +122,13 @@ class CheckSessionStateRules(ElementPoliciesTest):
         mock_session_state.is_new_state_value.return_value = True
         patched_get_session_state.return_value = mock_session_state
 
-        with pytest.raises(StreamlitValueAssignmentNotAllowedError):
+        with pytest.raises(StreamlitValueAssignmentNotAllowedError) as e:
             check_session_state_rules(5, key=_KEY, writes_allowed=False)
+
+        message = str(e.value)
+        assert f"`st.session_state[{_KEY!r}]`" in message
+        assert "st.session_state.the key" not in message
+        assert "different Session State key" in message
 
 
 class SpecialSessionStatesTest(ElementPoliciesTest):
