@@ -82,6 +82,11 @@ autocomplete: str | Callable[[str], Sequence[str]] | None = None
 | `str` | Explicit native `<input autocomplete>` token, e.g. `"email"` or `"off"` — current behavior. |
 | `Callable[[str], Sequence[str]]` | **New.** Server-side suggestion source, called with the current text; the returned strings are shown in a dropdown. Return a collection of strings — a bare `str` satisfies `Sequence[str]` but is rejected rather than split into characters. |
 
+`Sequence[str]` rather than `Iterable[str]` is deliberate: it's the same shape the deferred
+static-list form would take, so the two stay interchangeable. The runtime is more forgiving
+than the annotation — it walks whatever the source returns, bounded — but a source that wants
+to stream should materialize its own page instead.
+
 The return type of `st.text_input` is unchanged (`str | None`). Suggestions only *propose*
 values; the widget's value is always the text in the field, whether typed or chosen.
 
@@ -117,8 +122,9 @@ All of the following applies only when `autocomplete` is a callable.
   the same commit that typing the value and blurring performs, not a replayed Enter keystroke.
   So outside a form it reruns the app in the widget's normal scope and fires `on_change`;
   inside a form it fills and stages the value without submitting; with `on_change="ignore"` it
-  stages without a rerun. While a row is highlighted, Enter selects instead of submitting a
-  form, and Tab selects and then moves focus as Tab normally would. `Esc` closes the list
+  stages without a rerun. While a row is *armed* — which only ↑/↓ does, as distinct from the
+  hover highlight — Enter selects instead of submitting a form, and Tab selects and then moves
+  focus as Tab normally would. `Esc` closes the list
   without changing the value and goes no further, so it doesn't also close a surrounding
   `st.dialog`, and the next Enter or Tab behaves exactly as it does today.
 - **Free text is always allowed.** Unlike `st.selectbox`, the user is never forced to pick a

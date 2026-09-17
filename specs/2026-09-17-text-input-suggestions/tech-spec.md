@@ -63,10 +63,9 @@ if callable(autocomplete):
     # without a registered source, so no suggestions are requested.
     source_mgr = _get_autocomplete_source_mgr()
     if source_mgr is not None:
+        # Registered after the element id is computed, since that id is the key.
         registered = source_mgr.register_source(
-            autocomplete,
-            coordinates=self.dg._get_delta_path_str(),
-            max_chars=max_chars,
+            autocomplete, element_id=element_id, max_chars=max_chars
         )
         text_input_proto.autocomplete_source_id = registered.source_id
 else:
@@ -167,9 +166,9 @@ Run `make protobuf` after editing.
 ### 3. Session-scoped `AutocompleteSourceManager` (`lib/streamlit/runtime/autocomplete_source_manager.py`)
 
 This shares `DataframeSourceManager`'s lifecycle requirements exactly, so the skeleton
-(per-session coordinate map, unguessable `source_id`, lock-guarded map access, session
-validation, orphan pruning, fragment-aware `clear_session_refs`) should be factored out and
-reused rather than duplicated:
+(per-session key map, unguessable `source_id`, lock-guarded map access, session validation,
+orphan pruning, fragment-aware `clear_session_refs`) should be factored out and reused rather
+than duplicated:
 
 ```python
 @dataclass(frozen=True)
@@ -177,14 +176,14 @@ class RegisteredAutocompleteSource:
     func: Callable[[str], Sequence[str]]
     source_id: str
     session_id: str
-    coordinates: str
+    element_id: str
     fragment_id: str | None
     max_chars: int | None
 
 
 class AutocompleteSourceManager:
     def register_source(
-        self, func, coordinates, max_chars
+        self, func, element_id, max_chars
     ) -> RegisteredAutocompleteSource: ...
     def get_suggestions(self, session_id, source_id, text) -> list[str]: ...
     def clear_session_refs(self, session_id=None, *, fragment_ids=None) -> None: ...
@@ -192,16 +191,23 @@ class AutocompleteSourceManager:
     def clear_all_for_session(self, session_id) -> None: ...
 ```
 
-- **`coordinates`**: the element's delta-path within the session (the same notion
-  `DataframeSourceManager` uses). Unlike a lazy dataframe source, whose id identifies one
-  snapshot of data, a suggestion source identifies a *call site* — the contract is "call
-  whatever is registered there with the current text". So the `source_id` is minted once per
-  `(session_id, coordinates)` and **kept across reruns**, with re-registration replacing the
-  stored callable and `max_chars` behind it. It stays unguessable and session-scoped, and
-  because the id the frontend holds never changes mid-typing, none of the rotation handling a
-  per-run id would force on §6 is needed. This is the one deliberate departure from the
-  dataframe skeleton: the id assignment has to outlive the per-rerun reference map that drives
-  cleanup, so it lives in its own map and is dropped when the source itself is pruned.
+- **Keyed on the element id, not on delta-path coordinates.** Unlike a lazy dataframe source,
+  whose id identifies one snapshot of data, a suggestion source identifies a *widget* — the
+  contract is "call whatever is registered there with the current text". So the `source_id` is
+  minted once per `(session_id, element_id)` and **kept across reruns**, with re-registration
+  replacing the stored callable and `max_chars` behind it. It stays unguessable and
+  session-scoped, and because the id the frontend holds never changes mid-typing, none of the
+  rotation handling a per-run id would force on §6 is needed.
+
+  Delta-path coordinates would *not* work here, even though `DataframeSourceManager` uses them:
+  they're positional, so a keyed widget shifts coordinates as soon as a conditional element
+  appears above it, which would mint a new `source_id` for a widget whose identity hasn't
+  changed. That's harmless when every registration mints a fresh id anyway, and exactly wrong
+  when the id is supposed to be stable. The element id is the identity the widget already
+  guarantees, so register after `compute_and_register_element_id(...)` and key on its result.
+  This is the one deliberate departure from the dataframe skeleton, along with the fact that
+  the id assignment has to outlive the per-rerun reference map that drives cleanup, so it lives
+  in its own map and is dropped when the source itself is pruned.
 
   **The accepted cost is one round trip of stale hints when the callable changes.** If a rerun
   swaps the bound context (the `functools.partial(..., category=...)` pattern) while a lookup is
@@ -220,9 +226,10 @@ class AutocompleteSourceManager:
     common case, but it still happens when the element disappears or the session is cleaned up
     while a lookup is in flight. Return an empty list with no `error_msg`.
   - **A `source_id` belonging to a *different* session** is anomalous, not a race. Raise
-    `AutocompleteSourceError`, which the handler reports via `error_msg`. The split matters
-    because `BackendOperationClient.onResponse` rejects the pending promise whenever `errorMsg`
-    is set, so routing an expired id through it would show the user an error for a missing hint.
+    `AutocompleteSourceError`, which the handler reports via `error_msg`. The split is worth
+    keeping even though §6 swallows rejections either way: a cross-session id is the one case
+    that indicates an attack rather than a timing artifact, and giving it a distinct signal is
+    what makes the session-binding property testable.
   - **`text` is untrusted, and oversized requests are rejected rather than truncated.** It
     arrives from the client, so `max_chars` on the real input proves nothing about it — a
     modified client can send an arbitrarily long string straight into user Python. Reject any
@@ -288,10 +295,10 @@ class AutocompleteHandler(BackendOperationHandler):
             # Fail closed: an empty dropdown, nothing surfaced to the client.
             suggestions = []
         except Exception:
-            _LOGGER.exception(
-                "Error computing suggestions for source %s", payload.source_id
-            )
-            # Also fail closed. The traceback stays server-side.
+            # Fail closed; the traceback stays server-side. Logged once per
+            # (source_id, exception type) — a broken source fails on every
+            # keystroke, and the repeats would bury everything else.
+            _log_source_failure_once(payload.source_id)
             suggestions = []
         resp = BackendOperationResponse(request_id=request.request_id)
         resp.autocomplete.CopyFrom(
@@ -354,9 +361,11 @@ serialization code, while this one runs an arbitrary user callable that may neve
   browser debounce implies. Add a per-session token bucket — keyed on `session_id`, sized for
   bursty typing across a few fields and refilling near the debounce rate (e.g. 20 tokens
   refilling at 4/s) — and fail closed when it's exhausted, with a server-side log line that
-  names rate limiting so an empty dropdown isn't a mystery. This is the one limit that
-  reflects the feature's actual cost model: the expensive resource is the user's database or
-  API quota, not the server's threads.
+  names rate limiting so an empty dropdown isn't a mystery. Charge a token when a call is
+  actually started, not per inbound request, so waiters that coalesce onto one shared task
+  don't each bill for an invocation that happened once. This is the one limit that reflects the
+  feature's actual cost model: the expensive resource is the user's database or API quota, not
+  the server's threads.
 
 **The user's callable**
 
@@ -381,11 +390,14 @@ serialization code, while this one runs an arbitrary user callable that may neve
   making *every* context-less access raise would break `python app.py`, where the mock is the
   supported behavior. So the requirement is narrower than "raise when there's no context": the
   proxy must be able to tell it is running inside a suggestion lookup specifically. A
-  worker-scoped marker set around `func(text)` and cleared in `finally` (a `contextvars.ContextVar`
-  is the obvious shape) satisfies that without touching bare-script behavior. #16303's `validate`
-  callable needs the same marker, so whichever lands first should own it. Probe the context with
-  `suppress_warning=True` so a lookup per keystroke doesn't fill the log with missing-context
-  warnings.
+  worker-scoped marker set around `func(text)` and reset in `finally` (a `contextvars.ContextVar`
+  is the obvious shape) satisfies that without touching bare-script behavior. Two constraints on
+  it: the marker has to reach any Streamlit-managed executor the lookup can reach — notably
+  `cache_data(refresh_mode="background")`, which hands the user function to its own
+  `ThreadPoolExecutor`, and Python executors don't propagate context on their own — and the
+  context should be probed with `suppress_warning=True` so a lookup per keystroke doesn't fill
+  the log with missing-context warnings. #16303's `validate` callable needs the same marker, so
+  whichever lands first should own it.
 
 > **Implementation note.** None of this bounded-execution machinery is suggestion-specific, and
 > #16303's `validate` callable has exactly the same hang risk. If both land, prefer lifting the
@@ -408,8 +420,10 @@ needed there.
 ### 5. Frontend client (`frontend/lib/src/BackendOperationClient.ts`)
 
 Add `"autocomplete"` to the `request<T>` payload-field union, a `requestAutocomplete(payload,
-timeoutMs?)` helper (short timeout, e.g. the default 30s or less), and extend
-`extractResponsePayload` to return `response.autocomplete`.
+timeoutMs?)` helper, and extend `extractResponsePayload` to return `response.autocomplete`.
+Give it a dedicated timeout a little above the server's own bound (e.g. 8s against the ~5s
+server timeout) rather than the generic 30s default, which would leave the spinner up long
+after a lost response.
 
 ### 6. Frontend widget (`frontend/lib/src/components/widgets/TextInput/TextInput.tsx`)
 
@@ -421,6 +435,12 @@ suggestion source. Extract the field into a presentational component and have `T
 choose between two wrappers: the plain one, and a `TextInputWithAutocomplete` that owns the
 combobox hooks, the request lifecycle, and the popover. Everything in this section lives in
 that second wrapper.
+
+The split must not change what React sees at that position in the tree. Define the
+presentational input at module level (never inside `TextInput`'s render) and have both wrappers
+render that same component type, or React remounts the real `<input>` and the user loses focus,
+caret position, and any uncommitted `uiValue` — including on a rerun that flips `autocomplete`
+between a string token and a callable.
 
 #### Attach the selectbox dropdown to the existing text field
 
@@ -450,10 +470,13 @@ its own `WidgetLabel`, `StyledInput`, chevron, clear button, and `className="stS
      the `useComboBoxState` collection with a stable key, rendered through RAC's listbox
      primitives, or else option press, virtual focus, and `aria-activedescendant` have nothing
      to point at. Two further requirements on that state, both load-bearing for the product
-     contract: opening the list must **not** auto-focus the first item the way Selectbox does
-     (`aria-activedescendant` stays unset until the user arrows, so Enter still commits the
-     typed text), and `Esc` must be swallowed while the list is open so it doesn't also dismiss
-     a surrounding `st.dialog`.
+     contract: opening the list must **not** arm a row (`aria-activedescendant` stays unset
+     until the user arrows, so Enter still commits the typed text), and `Esc` must be swallowed
+     while the list is open so it doesn't also dismiss a surrounding `st.dialog`. Note what
+     must *not* be carried over from Selectbox here: it doesn't arm a row on open either, but
+     its `handleInputKeyDown` auto-selects the first visible option when Enter arrives with the
+     list open (`wasOpenBeforeEnterRef`). That's right for a closed set and wrong here, where
+     the typed text is itself a legal value.
    - **Turn hover-focus off — the default is wrong for a free-text field.** `useComboBox` passes
      `shouldFocusOnHover: true`, which makes hovering a row *focus* it, which sets
      `aria-activedescendant`, which is what Enter and Tab accept. Left alone, resting the
@@ -469,9 +492,9 @@ its own `WidgetLabel`, `StyledInput`, chevron, clear button, and `className="stS
      value, and usually the one the user means.
    - **Merging handlers is the real work.** Use `mergeProps` to combine `inputProps` with
      TextInput's `onChange` / `onKeyDown` / `onBlur` / composition handlers, with one explicit
-     precedence rule: when the dropdown is open **and** an option is highlighted, the combobox
-     owns Enter and ↑/↓; otherwise TextInput's existing Enter behavior (commit, or form submit)
-     runs unchanged.
+     precedence rule: when the dropdown is open **and** a row is armed — `focusedKey` is set,
+     not merely `[data-hovered]` — the combobox owns Enter and ↑/↓; otherwise TextInput's
+     existing Enter behavior (commit, or form submit) runs unchanged.
    - **Ctrl/Cmd+A must keep selecting the typed text.** React Aria binds Mod+A to "select all
      options" while the list is open and calls `preventDefault()`, which would break native
      select-all in the field. Carry over `Multiselect`'s `onKeyDownCapture` exception —
@@ -517,9 +540,13 @@ needs it.
   Implement this by ignoring superseded responses, not by cancelling them:
   `BackendOperationClient` has no per-request cancel API — its `cleanup()` rejects *every*
   pending request and only runs on disconnect or session reset. Keep a request generation ref,
-  bump it on each new request and on blur, and discard any resolution that isn't the current
-  generation. Rejections from superseded requests must be swallowed so a stale lookup can't
-  surface an unhandled promise rejection.
+  bump it on each new request and on blur, and discard any outcome that isn't the current
+  generation. The distinction is what the outcome clears, not whether it's a rejection: **any**
+  settled outcome for the current generation, resolved or rejected, clears the busy state and
+  closes the list, while stale-generation outcomes are swallowed entirely. Otherwise a timeout
+  or a `cleanup()` rejection on disconnect leaves the spinner and `aria-busy` stuck until the
+  next keystroke — which, on a disconnected app, never comes. Swallowing must be explicit
+  either way so a stale lookup can't surface an unhandled promise rejection.
 - **IME:** don't request while `isComposingRef` is set; schedule exactly one request after
   `compositionend`, so composing CJK text doesn't fire lookups on half-formed input.
 - **Selection:** clicking an item, or ↑/↓ then Enter or Tab, sets `uiValue` — through the same
@@ -551,9 +578,9 @@ needs it.
   the native `<input autocomplete>` attribute to an autofill-suppressing token in this mode, so
   the browser's own dropdown won't overlap.
 
-Wire `BackendOperationClient` into `TextInput` the same way it reaches other widgets
-(via context/props from `App.tsx`, which already owns the client and routes
-`BackendOperationResponse` ForwardMsgs to `client.onResponse`).
+`TextInputWithAutocomplete` reads the client from `BackendOperationContext`, as `DataFrame` and
+`DownloadButton` do, and shows no suggestions when it is undefined. `App.tsx` already owns the
+client and routes `BackendOperationResponse` ForwardMsgs to `client.onResponse`.
 
 ### 7. AppTest (`lib/streamlit/testing/v1`)
 
@@ -562,7 +589,9 @@ element wrapper, expose a way to call it (e.g. `ti.get_suggestions("ap")`) that 
 same normalized, capped list the handler would send. Note the obvious route doesn't work —
 `AppTest` clears `Runtime._instance` once `.run()` returns, so the wrapper can't resolve a
 Runtime-owned manager by `source_id` afterwards — so the callable and its normalization need to
-be reachable from the element wrapper itself, as #16303 does for server-side validation.
+be reachable from the element wrapper itself, as #16303 does for server-side validation. Add a
+`ti.has_autocomplete` property too, so a test can assert that a source is attached without
+running a lookup.
 
 ### 8. Test coverage for the implementation PR
 
@@ -574,8 +603,8 @@ discovering it in review:
 | Python unit (manager / handler) | Permits released on timeout **and** on failed admission or failed submit (the leak that disables suggestions); one coalesced waiter expiring without cancelling the other; rate-budget exhaustion failing closed to `[]` with no `error_msg`, then succeeding after refill; session-state access raising; bare-`str` and other bad return types rejected; the count cap applied without materializing an unbounded result; oversized inbound `text` rejected rather than truncated; over-long suggestions dropped, never shortened; unknown `source_id` fails closed while a wrong-session id raises; the `source_id` surviving a rerun; source cleanup across full vs fragment reruns |
 | Python unit (`text_widgets`) | Callable vs string vs `None` dispatch; native token set to the autofill-suppressing value; `type="password"` raises; no runtime degrades to a plain text input; unkeyed identity stable across two different callables; keyed identity unaffected |
 | Typing (`lib/tests/streamlit/typing/text_input_types.py`) | The widened `autocomplete` overload still returns `str` / `str \| None` |
-| Frontend unit | Debounce timing; stale responses discarded by generation, by `sourceId`, and after blur; rejected superseded requests swallowed; Enter without a highlighted row committing the typed text; selection committing exactly once via click and via Tab, with any pending `live` commit cancelled; Ctrl/Cmd+A still selecting text; IME composition; commit-not-submit inside a form |
-| E2E (`e2e_playwright/st_text_input_test.py`) | Keyboard and mouse selection, Enter with no highlight committing what was typed, failing source degrading to no dropdown, behavior inside a form, inside a fragment, with `live`, with `max_chars`, and when disabled |
+| Frontend unit | Debounce timing; stale responses discarded by generation, by `sourceId`, and after blur; a current-generation rejection (timeout, disconnect) clearing busy state rather than stranding the spinner; hovering a row **not** arming it, so the next Enter commits the typed text; selection committing exactly once via click and via Tab, with any pending `live` commit cancelled; the plain and autocomplete wrappers not remounting the input when `autocomplete` changes; Ctrl/Cmd+A still selecting text; IME composition; commit-not-submit inside a form |
+| E2E (`e2e_playwright/st_text_input_test.py`) | Keyboard and mouse selection, Enter after hovering (and with nothing armed) committing what was typed, `Esc` closing the list without dismissing an enclosing `st.dialog`, the busy/completion state announced to assistive tech, a failing source degrading to no dropdown, a rerun mid-lookup leaving the previous suggestions up until the next lookup, and behavior inside a form, inside a fragment, with `live`, with `max_chars`, and when disabled |
 
 ## Security & abuse considerations
 
