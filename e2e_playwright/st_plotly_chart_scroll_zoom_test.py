@@ -19,7 +19,7 @@ from typing import Any, cast
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import wait_until
+from e2e_playwright.conftest import ImageCompareFunction, wait_until
 from e2e_playwright.shared.app_utils import click_button, get_element_by_key
 
 WHEEL_TICKS = 12
@@ -34,17 +34,31 @@ def _plotly_div(chart: Locator) -> Locator:
     return chart.locator(".js-plotly-plot")
 
 
-def _layout_metrics(chart: Locator) -> dict[str, Any]:
+def _layout_metrics(chart: Locator) -> dict[str, Any] | None:
     return cast(
-        "dict[str, Any]",
+        "dict[str, Any] | None",
         _plotly_div(chart).evaluate(
-            """el => ({
-            xDomain: el._fullLayout.xaxis.domain.slice(),
-            yDomain: el._fullLayout.yaxis.domain.slice(),
-            plotW: el._fullLayout._size.w,
-            plotH: el._fullLayout._size.h,
-            xRange: el._fullLayout.xaxis.range.slice(),
-        })"""
+            """el => {
+            const layout = el._fullLayout
+            const xaxis = layout?.xaxis
+            const yaxis = layout?.yaxis
+            const size = layout?._size
+            if (
+                !Array.isArray(xaxis?.domain) ||
+                !Array.isArray(yaxis?.domain) ||
+                !Array.isArray(xaxis?.range) ||
+                !size
+            ) {
+                return null
+            }
+            return {
+                xDomain: xaxis.domain.slice(),
+                yDomain: yaxis.domain.slice(),
+                plotW: size.w,
+                plotH: size.h,
+                xRange: xaxis.range.slice(),
+            }
+        }"""
         ),
     )
 
@@ -90,19 +104,31 @@ def _scroll_zoom(chart: Locator) -> None:
     _dispatch_wheel_on_drag_layer(chart)
 
 
+def _wait_for_layout(app: Page, chart: Locator) -> dict[str, Any]:
+    def _ready() -> None:
+        metrics = _layout_metrics(chart)
+        assert metrics is not None
+        assert metrics["plotW"] > 0
+
+    wait_until(app, _ready)
+    metrics = _layout_metrics(chart)
+    assert metrics is not None
+    return metrics
+
+
 def _zoom_until_range_shrinks(
     app: Page, chart: Locator
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    wait_until(app, lambda: _layout_metrics(chart)["plotW"] > 0)
-    before = _layout_metrics(chart)
+    before = _wait_for_layout(app, chart)
     _scroll_zoom(chart)
 
     def _zoomed() -> bool:
         after = _layout_metrics(chart)
+        assert after is not None
         return _range_span(after["xRange"]) < _range_span(before["xRange"])
 
     wait_until(app, _zoomed)
-    return before, _layout_metrics(chart)
+    return before, _wait_for_layout(app, chart)
 
 
 def _assert_domain_stable(before: dict[str, Any], after: dict[str, Any]) -> None:
@@ -147,9 +173,21 @@ def test_scroll_zoom_keeps_plot_box_stable_and_survives_rerun(app: Page):
 
     def _zoom_restored() -> bool:
         after_rerun = _layout_metrics(imshow_streamlit)
+        assert after_rerun is not None
         return _ranges_close(after_rerun["xRange"], imshow_after["xRange"])
 
     wait_until(app, _zoom_restored)
-    assert not _ranges_close(
-        _layout_metrics(imshow_streamlit)["xRange"], imshow_before["xRange"]
-    )
+    restored = _layout_metrics(imshow_streamlit)
+    assert restored is not None
+    assert not _ranges_close(restored["xRange"], imshow_before["xRange"])
+
+
+@pytest.mark.only_browser("chromium")
+def test_imshow_streamlit_constrained_labels_visual(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Lock automargin-off visuals for constrained Streamlit-themed imshow."""
+    chart = get_element_by_key(app, "imshow_streamlit_labels")
+    expect(chart).to_be_visible()
+    _wait_for_layout(app, chart)
+    assert_snapshot(chart, name="st_plotly_chart_scroll_zoom-imshow_streamlit_labels")

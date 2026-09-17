@@ -999,7 +999,7 @@ describe("PlotlyChart Component", () => {
   })
 
   it("persists cartesian zoom reset from onUpdate so a later size change cannot restore range", () => {
-    renderComponent()
+    const { rerender } = renderComponent()
 
     act(() => {
       getLastPlotProps().onUpdate?.(
@@ -1030,6 +1030,29 @@ describe("PlotlyChart Component", () => {
       )
     })
 
+    expect(getLastPlotProps().layout.xaxis?.autorange).toBe(true)
+    expect(getLastPlotProps().layout.xaxis?.range).toBeUndefined()
+
+    rerender(
+      <ElementFullscreenContext.Provider
+        value={{
+          expanded: false,
+          width: 900,
+          height: 500,
+          expand: vi.fn(),
+          collapse: vi.fn(),
+        }}
+      >
+        <PlotlyChart
+          element={DEFAULT_ELEMENT}
+          widgetMgr={widgetMgr}
+          disabled={false}
+          width={900}
+        />
+      </ElementFullscreenContext.Provider>
+    )
+
+    expect(getLastPlotProps().layout.width).toBe(900)
     expect(getLastPlotProps().layout.xaxis?.autorange).toBe(true)
     expect(getLastPlotProps().layout.xaxis?.range).toBeUndefined()
   })
@@ -1093,11 +1116,116 @@ describe("PlotlyChart Component", () => {
 
     const layout = getLastPlotProps().layout
     expect(layout.title).toBe("Recovered")
-    expect(layout.xaxis?.domain).toBeUndefined()
+    expect(layout.xaxis?.domain).toEqual([0.66, 1])
     expect(layout.xaxis?.scaleanchor).toBe("y")
     expect(layout.xaxis?.range).toEqual([0, 1])
     expect(layout.width).toBe(600)
     expect(layout.height).toBe(450)
     expect(layout.autosize).toBe(false)
+  })
+
+  it("keeps saved width when remounting before the container is measured", () => {
+    const savedFigure = {
+      data: [],
+      layout: {
+        title: "Recovered",
+        width: 733,
+        height: 300,
+        xaxis: {
+          scaleanchor: "y",
+          constrain: "domain",
+          domain: [0, 0.32],
+          range: [0, 1],
+        },
+      },
+      frames: null,
+    }
+    vi.mocked(widgetMgr.getElementState).mockReturnValue(savedFigure)
+
+    renderComponent({ width: -1 }, { width: -1 })
+
+    const layout = getLastPlotProps().layout
+    expect(layout.width).toBe(733)
+    expect(layout.xaxis?.domain).toEqual([0, 0.32])
+    expect(layout.autosize).toBe(false)
+  })
+
+  it("keeps themed layout after a theme change and later onUpdate", () => {
+    vi.mocked(applyTheming).mockImplementation((spec, elementTheme) => ({
+      ...spec,
+      layout: {
+        ...spec.layout,
+        paper_bgcolor: elementTheme === "streamlit" ? "#ffffff" : "#000000",
+      },
+    }))
+
+    try {
+      const { rerender } = renderComponent()
+
+      act(() => {
+        getLastPlotProps().onUpdate?.(
+          {
+            data: getLastPlotProps().data,
+            layout: {
+              ...getLastPlotProps().layout,
+              xaxis: { range: [2, 8], autorange: false },
+            },
+            frames: null,
+          },
+          document.createElement("div")
+        )
+      })
+      expect(getLastPlotProps().layout.xaxis?.range).toEqual([2, 8])
+
+      const nextElement = new PlotlyChartProto({
+        ...DEFAULT_ELEMENT,
+        theme: "none",
+      })
+      rerender(
+        <ElementFullscreenContext.Provider
+          value={{
+            expanded: false,
+            width: 600,
+            height: 500,
+            expand: vi.fn(),
+            collapse: vi.fn(),
+          }}
+        >
+          <PlotlyChart
+            element={nextElement}
+            widgetMgr={widgetMgr}
+            disabled={false}
+            width={600}
+          />
+        </ElementFullscreenContext.Provider>
+      )
+
+      expect(getLastPlotProps().layout.paper_bgcolor).toBe("#000000")
+      expect(getLastPlotProps().layout.xaxis?.range).toEqual([2, 8])
+
+      act(() => {
+        getLastPlotProps().onUpdate?.(
+          {
+            data: getLastPlotProps().data,
+            layout: {
+              ...getLastPlotProps().layout,
+              paper_bgcolor: "#ffffff",
+              xaxis: {
+                range: [2, 8],
+                autorange: false,
+                domain: [0.1, 0.9],
+              },
+            },
+            frames: null,
+          },
+          document.createElement("div")
+        )
+      })
+
+      expect(getLastPlotProps().layout.paper_bgcolor).toBe("#000000")
+      expect(getLastPlotProps().layout.xaxis?.range).toEqual([2, 8])
+    } finally {
+      vi.mocked(applyTheming).mockImplementation(spec => spec)
+    }
   })
 })

@@ -565,6 +565,33 @@ describe("PlotlyChart utils", () => {
       expect(result.layout.yaxis?.range).toBeUndefined()
     })
 
+    it.each([
+      ["min", [null, 10]],
+      ["max", [0, null]],
+      ["min reversed", [null, 10]],
+      ["max reversed", [0, null]],
+    ] as const)("keeps range for partial autorange %s", (autorange, range) => {
+      const previousLayout = {
+        xaxis: { range: [0, 10], autorange: false },
+      }
+      const figure = {
+        data: [],
+        frames: null,
+        layout: {
+          xaxis: { autorange, range },
+        },
+      }
+
+      const result = sanitizePlotlyFigureForReact(
+        figure,
+        ownedSize,
+        previousLayout
+      )
+
+      expect(result.layout.xaxis?.autorange).toBe(autorange)
+      expect(result.layout.xaxis?.range).toEqual([...range])
+    })
+
     it("clears persisted hiddenlabels when Plotly omits the key", () => {
       const previousLayout = {
         hiddenlabels: ["slice-a"],

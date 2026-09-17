@@ -37,6 +37,28 @@ st.plotly_chart(
 )
 st.plotly_chart(_imshow(), theme=None, config=config, key="imshow_none", height=300)
 
+labeled = px.imshow(
+    np.arange(16, dtype=np.uint8).reshape(4, 4),
+    x=["col-one", "col-two", "col-three", "col-four"],
+    y=[
+        "long-tick-label-alpha",
+        "long-tick-label-beta",
+        "long-tick-label-gamma",
+        "long-tick-label-delta",
+    ],
+    color_continuous_scale="gray",
+)
+labeled.update_xaxes(scaleanchor="y", constrain="domain")
+labeled.update_yaxes(constrain="domain")
+labeled.update_layout(height=300)
+st.plotly_chart(
+    labeled,
+    theme="streamlit",
+    config=config,
+    key="imshow_streamlit_labels",
+    height=300,
+)
+
 scatter = px.scatter(x=[1, 10, 100, 1000], y=[1, 2, 3, 4])
 scatter.update_layout(height=300)
 # Keep tick label width stable so plot-box assertions measure automargin
