@@ -819,6 +819,8 @@ function RangeDateInput({
           return
         }
 
+        if (parsed.kind !== "partial") return
+
         const base =
           currentValue ??
           (isStartField ? minDate : (displayStartRef.current ?? minDate))

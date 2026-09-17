@@ -456,6 +456,8 @@ function SingleDateInput({
         return
       }
 
+      if (parsed.kind !== "partial") return
+
       const base = displayValue ?? minDate
       const newDate = applyPartialSegmentToDate(base, parsed)
       if (!newDate) return
