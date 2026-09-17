@@ -73,14 +73,14 @@ product = st.text_input("Product", autocomplete=suggest_products)
 ### Parameter: `autocomplete`
 
 ```python
-autocomplete: str | Callable[[str], Sequence[str]] | None = None  # was: str | None
+autocomplete: str | Callable[[str], Sequence[str]] | None = None
 ```
 
 | Value | Meaning |
 | --- | --- |
 | `None` (default) | Native autofill token derived from `type` — current behavior (`"email"` for `type="email"`, `"off"` for `"search"`, and so on). |
 | `str` | Explicit native `<input autocomplete>` token, e.g. `"email"` or `"off"` — current behavior. |
-| `Callable[[str], Sequence[str]]` | **New.** Server-side suggestion source, called with the current text; the returned strings are shown in a dropdown. |
+| `Callable[[str], Sequence[str]]` | **New.** Server-side suggestion source, called with the current text; the returned strings are shown in a dropdown. Return a collection of strings — a bare `str` satisfies `Sequence[str]` but is rejected rather than split into characters. |
 
 The return type of `st.text_input` is unchanged (`str | None`). Suggestions only *propose*
 values; the widget's value is always the text in the field, whether typed or chosen.
@@ -89,35 +89,36 @@ values; the widget's value is always the text in the field, whether typed or cho
 
 All of the following applies only when `autocomplete` is a callable.
 
-- **When it's called:** while the field is focused, after a pause in typing (300ms, independent
-  of `live`). It receives the current text verbatim — on focus that means whatever is already in
-  the field, and `""` only when the field is empty, which is a source's chance to offer default
-  or recent suggestions; return `[]` to show nothing. That focus call
-  costs a round trip even when the source has nothing to offer yet — an acceptable price for
-  one lookup per focus, and the reason `autocomplete_min_chars` is on the list of things to add
-  if it proves annoying. Nothing is requested mid-IME-composition; one request is scheduled
-  once the composition ends, so typing CJK or using dead keys doesn't fire lookups on
-  half-formed text.
+- **When it's called:** while the field is focused, after a 300ms pause in typing. It receives
+  the current text verbatim — on focus that means whatever is already in the field, and `""`
+  only when the field is empty, which is a source's chance to offer default or recent
+  suggestions; return `[]` to show nothing.
 
-  The pause is deliberately on the generous side, because each one can cost a database query or
-  an API call. A large-scale typing study measured a mean inter-key interval of 239ms
+  The pause is deliberately generous, and independent of `live`, because each lookup can cost a
+  database query or an API call. A large-scale typing study measured a mean inter-key interval
+  of 239ms
   ([Dhakal et al., CHI 2018](https://userinterfaces.aalto.fi/136Mkeystrokes/resources/chi-18-analysis.pdf)),
-  so a shorter delay like 200ms would routinely fire *between* keystrokes and bill the app for
-  suggestions nobody sees. At 300ms the lookup generally runs once the user has actually stopped
-  typing. This is longer than `live`'s 250ms default on purpose: a live rerun updates the
-  results the user came for, while a suggestion lookup only draws hints, so it should be the
-  cheaper of the two.
+  so a shorter delay would routinely fire *between* keystrokes and bill the app for suggestions
+  nobody sees. It is longer than `live`'s 250ms default on purpose: a live rerun updates the
+  results the user came for, while a suggestion lookup only draws hints.
+- **Nothing is requested mid-IME-composition.** One request is scheduled once the composition
+  ends, so typing CJK or using dead keys doesn't fire lookups on half-formed text.
 - **The dropdown:** non-empty results open a list below the input; an empty result closes it,
-  as does blurring the field or pressing `Esc`. Streamlit caps how many suggestions it
-  returns, so an oversized result set can't flood the browser (limit in the tech spec).
-- **Choosing a suggestion:** click one, or highlight it with ↑/↓ and press Enter or Tab. That
-  fills the field and **commits** the value — the same commit that typing the value and
-  blurring performs, not a replayed Enter keystroke. So outside a form it reruns the app in the
-  widget's normal scope and fires `on_change`; inside a form it fills and stages the value
-  without submitting; with `on_change="ignore"` it stages without a rerun. While the list is
-  open with an option highlighted, Enter selects instead of submitting a form, and Tab selects
-  and then moves focus as Tab normally would. `Esc` closes the list without changing the value,
-  so the next Enter or Tab behaves exactly as it does today.
+  as does blurring the field or pressing `Esc`. Streamlit caps how many suggestions it returns
+  and how long each may be, so an oversized result set can't flood the browser (limits in the
+  tech spec). An over-long suggestion is dropped rather than shortened — offering a trimmed
+  string would let the user commit something the source never returned.
+- **Choosing a suggestion:** click one, or highlight it with ↑/↓ and press Enter or Tab.
+  Opening the list highlights nothing, so until the user arrows to a row (or hovers one) Enter
+  and Tab do exactly what they do today — a search field must never silently turn "Enter to
+  search" into "accept the first hint". Choosing fills the field and **commits** the value —
+  the same commit that typing the value and blurring performs, not a replayed Enter keystroke.
+  So outside a form it reruns the app in the widget's normal scope and fires `on_change`;
+  inside a form it fills and stages the value without submitting; with `on_change="ignore"` it
+  stages without a rerun. While a row is highlighted, Enter selects instead of submitting a
+  form, and Tab selects and then moves focus as Tab normally would. `Esc` closes the list
+  without changing the value and goes no further, so it doesn't also close a surrounding
+  `st.dialog`, and the next Enter or Tab behaves exactly as it does today.
 - **Free text is always allowed.** Unlike `st.selectbox`, the user is never forced to pick a
   suggestion; typing and committing an unlisted value behaves like a normal text input. This is
   autocomplete, not a constrained select.
@@ -137,16 +138,16 @@ All of the following applies only when `autocomplete` is a callable.
   can share one function — so it should be reentrant and avoid thread-affine database clients
   and mutable closed-over state.
 - **The function runs outside a script run**, so it must be a fast, read-only lookup. Having no
-  script context means it can do *less* than a callback: `st.*` display commands are no-ops,
-  and `st.session_state` does not resolve to the caller's session. Neither reading nor writing
-  session state is supported — a read silently sees nothing, and a write lands in a
-  process-global store shared by every session, so it can leak across users. App logic belongs
-  in `on_change` or the normal rerun. See [Caching and passing in
-  context](#caching-and-passing-in-context) for how to work with that.
-- **Browser autofill is suppressed** for the field (the native `autocomplete` attribute is set
-  to `"off"`) so the browser's own dropdown doesn't compete with Streamlit's. `"off"` is a
-  request rather than a guarantee — Chrome ignores it for fields it reads as name, address, or
-  email — so the implementation may need an unrecognized token instead.
+  script context means it can do *less* than a callback: `st.*` display commands and
+  `st.session_state` both **raise** there rather than quietly half-working, and the lookup then
+  fails closed like any other error. Session state raises by design: off the script thread it
+  would otherwise resolve to a store shared by every session, where one user's write becomes
+  another user's read. App logic belongs in `on_change` or the normal rerun. See [Caching and
+  passing in context](#caching-and-passing-in-context) for how to work with that.
+- **Browser autofill is suppressed** for the field so the browser's own dropdown doesn't compete
+  with Streamlit's. `autocomplete="off"` doesn't achieve that on its own — Chrome ignores it for
+  fields it reads as name, address, or email, which is exactly what this feature is for — so the
+  native attribute is set to a token no browser recognizes.
 
 ### Caching and passing in context
 
@@ -159,14 +160,16 @@ doesn't re-hit the database, and `@st.cache_resource` is the natural place to ke
 connection or client. This is not a special case: `st.cache_data(refresh_mode="background")`
 already recomputes cached functions off the script thread the same way. The one limitation is
 `scope="session"`, which needs a session to resolve and raises when there isn't one — the
-lookup then fails closed to an empty dropdown. Use the default `scope="global"`. (Cached
-functions that draw `st.*` elements also won't render them, for the same no-script-context
-reason.)
+lookup then fails closed to an empty dropdown. Use the default `scope="global"`.
 
 **Pass session values in at registration time.** The function is re-registered on every rerun,
-on the script thread, where session state *is* available — so read it there and bind it, with
-either a closure or `functools.partial`. Bind by **keyword**, so the current text stays the
-first positional argument:
+on the script thread, where session state *is* available — so read it there and bind it with
+`functools.partial`. Bind by **keyword**, so the current text stays the first positional
+argument. For a cached source this is a requirement rather than a style preference: a global
+cache is shared across sessions and its key is built from the call arguments alone, so any
+value that changes the result — a tenant, a category, a set of credentials — must arrive as an
+argument. Close over it instead and one user's cached suggestions answer another user's
+lookup.
 
 ```python
 import functools
@@ -196,6 +199,9 @@ parameterized, as above, rather than interpolating it into SQL or a URL.
 
 ### Design
 
+**No mockups exist yet — the four calls at the end of this section are what design needs to
+sign off on.** Everything else is inherited.
+
 **Keep the existing text field and attach the dropdown from `st.selectbox` to it**, rather than
 designing anything new. The field itself doesn't change — same icon, placeholder, error state,
 character counter, and search clear button — it just gains a suggestion list underneath. That
@@ -210,8 +216,7 @@ uses, so reusing it settles most of the UI by construction:
 | Theming | Existing theme tokens, so it tracks custom themes automatically |
 
 That leaves four narrower calls. Each has a proposed answer below, so what's left is a design
-pass on visual polish rather than a redesign. No mockups exist yet; these are the four things
-to put in front of design.
+pass on visual polish rather than a redesign.
 
 - **Loading affordance** — *proposed.* Selectbox needs none because its filtering is instant.
   Here, show a small spinner in the field's existing end enhancers (beside the error icon and
@@ -235,13 +240,13 @@ browser doesn't know which substring to emphasize (unlike selectbox's client-sid
 
 | Parameter | Behavior with a callable `autocomplete` |
 | --- | --- |
-| `live` | Independent. `live` controls when a committed value reruns the app; `autocomplete` controls the hint dropdown and has its own debounce. Choosing a suggestion is a commit, so it follows the widget's normal rerun rules. A live rerun re-registers the suggestion source while the user is still typing; the dropdown re-requests for the current text rather than going blank. |
+| `live` | Independent: `live` controls when a committed value reruns the app, `autocomplete` controls the hint dropdown, and each has its own debounce. Choosing a suggestion is a commit, so it follows the widget's normal rerun rules. |
 | `on_change`, `on_change="ignore"` | Unchanged, and only ever triggered by a commit. Showing suggestions never fires `on_change`; with `"ignore"`, a chosen suggestion is staged without a rerun. |
-| `st.form` | The dropdown works and a selection fills the field, but as with every form widget the value only reaches the server on submit. Selecting a suggestion does not submit the form. |
+| `st.form` | The dropdown works and a selection fills the field, but as with every form widget the value only reaches the server on submit, and selecting doesn't submit. A source that depends on another field in the same form sees that field's value from the last run, since forms don't rerun until submit. |
 | `validate`, `required` | Unchanged, applied at commit time. A chosen suggestion is validated like a typed one. |
-| `type` | `"default"` and `"search"` are the natural fits. `type="password"` raises `StreamlitIncompatibleParametersError` — proposing or persisting secrets in a dropdown is a footgun. (A *string* `autocomplete` with `type="password"`, e.g. `"new-password"`, is unaffected.) |
+| `type` | `"default"` and `"search"` are the natural fits; `"email"`, `"url"`, and `"tel"` are allowed too, at the cost of the browser's own autofill for that field. `type="password"` raises `StreamlitIncompatibleParametersError` — proposing or persisting secrets in a dropdown is a footgun. (A *string* `autocomplete` with `type="password"`, e.g. `"new-password"`, is unaffected.) |
 | `bind="query-params"` | Unchanged; a committed suggestion syncs to the URL like any committed value. |
-| `max_chars` | Enforced on input as today, so the function only ever sees within-limit text. A suggestion longer than the limit is **dropped, never shortened to fit**: offering a trimmed string would let the user commit something the source never returned, and offering the full one would commit a value the field itself rejects. The same drop rule applies above a fixed length ceiling when `max_chars` is unset (ceiling in the tech spec). |
+| `max_chars` | Enforced on input as today, so the function only ever sees within-limit text, and suggestions longer than the limit are dropped rather than shortened (see the dropdown bullet above). |
 | `disabled` | No suggestions are requested. |
 
 ### Examples
@@ -262,7 +267,8 @@ def city_search():
 city_search()
 ```
 
-**Depending on another widget** — close over the value; the function can't read session state:
+**Depending on another widget** — the function can't read session state, so bind the value at
+registration. A plain closure is enough here because the function isn't cached:
 
 ```python
 category = st.selectbox("Category", categories)
@@ -332,5 +338,5 @@ native mechanism for the reasons in [Current workarounds](#current-workarounds).
 | No breaking API changes | ✅ Additive overload of an existing parameter; `None` and `str` behavior unchanged; the callable is not part of widget identity, so swapping it won't reset a keyed widget |
 | No new dependencies | ✅ Reuses the existing backend-operation infrastructure and native UI primitives |
 | Metrics collected | ✅ Track which `autocomplete` mode is used (callable, string, unset) via the existing text_input metrics |
-| Any security/legal impact? | ⚠️ A user function runs off the rerun path, so it must mirror the lazy-dataframe and validation safeguards: unguessable session-scoped source id, session validation, debounce, timeout, result caps, fail-closed, server-only error logging. See the tech spec |
+| Any security/legal impact? | ⚠️ A user function runs off the rerun path, so it must mirror the lazy-dataframe and validation safeguards: unguessable session-scoped source id, session validation, debounce, timeout, result caps, per-session rate budget, fail-closed, server-only error logging, and no reachable session state. See the tech spec |
 | Any docs changes needed? | ✅ Update the `st.text_input` docstring and the embedded `developing-with-streamlit` skill |
