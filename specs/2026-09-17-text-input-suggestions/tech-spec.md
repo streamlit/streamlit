@@ -451,9 +451,22 @@ its own `WidgetLabel`, `StyledInput`, chevron, clear button, and `className="stS
      primitives, or else option press, virtual focus, and `aria-activedescendant` have nothing
      to point at. Two further requirements on that state, both load-bearing for the product
      contract: opening the list must **not** auto-focus the first item the way Selectbox does
-     (`aria-activedescendant` stays unset until the user arrows or hovers, so Enter still
-     commits the typed text), and `Esc` must be swallowed while the list is open so it doesn't
-     also dismiss a surrounding `st.dialog`.
+     (`aria-activedescendant` stays unset until the user arrows, so Enter still commits the
+     typed text), and `Esc` must be swallowed while the list is open so it doesn't also dismiss
+     a surrounding `st.dialog`.
+   - **Turn hover-focus off — the default is wrong for a free-text field.** `useComboBox` passes
+     `shouldFocusOnHover: true`, which makes hovering a row *focus* it, which sets
+     `aria-activedescendant`, which is what Enter and Tab accept. Left alone, resting the
+     pointer over a dropdown that just opened under the cursor would silently convert the next
+     Enter from "commit what I typed" (or "submit the form") into "accept whichever row the
+     mouse is over" — a wrong value the user never chose. Pass `shouldFocusOnHover: false` so
+     arrow keys are the only thing that arms a row. Hover still *looks* right for free: the
+     shared item style highlights on `[data-hovered]` as well as `[data-focused]`, so the row
+     under the pointer is visually highlighted without being armed, which is exactly the
+     product contract (hover highlights, ↑/↓ arms, pointer selection is a click). This
+     divergence from Selectbox is deliberate: in a closed-set select, arming the hovered row is
+     harmless because every candidate is a legal value; here the typed text is also a legal
+     value, and usually the one the user means.
    - **Merging handlers is the real work.** Use `mergeProps` to combine `inputProps` with
      TextInput's `onChange` / `onKeyDown` / `onBlur` / composition handlers, with one explicit
      precedence rule: when the dropdown is open **and** an option is highlighted, the combobox
