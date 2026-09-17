@@ -16,7 +16,7 @@
 import re
 from datetime import date, datetime, timedelta
 
-from playwright.sync_api import Locator, Page, expect
+from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -33,6 +33,7 @@ from e2e_playwright.shared.app_utils import (
     expect_prefixed_markdown,
     get_date_input,
     get_element_by_key,
+    paste_into,
     reset_focus,
     reset_hovering,
     type_date,
@@ -1043,23 +1044,6 @@ def test_calendar_header_with_year_crossing_bounds(app: Page):
     expect(range_year_popover.get_by_role("option")).to_have_text(["2024", "2025"])
 
 
-def _paste_into(locator: Locator, text: str) -> None:
-    """Simulate a paste event with the given text on a Playwright locator."""
-    locator.evaluate(
-        """(el, text) => {
-            const dt = new DataTransfer();
-            dt.setData('text/plain', text);
-            const event = new ClipboardEvent('paste', {
-                bubbles: true,
-                cancelable: true,
-            });
-            Object.defineProperty(event, 'clipboardData', { value: dt });
-            el.dispatchEvent(event);
-        }""",
-        text,
-    )
-
-
 def test_range_date_input_whole_range_paste(app: Page):
     """Pasting a full start-end string into the range start field commits both dates."""
     date_input = get_date_input(app, "Range, no date")
@@ -1067,7 +1051,14 @@ def test_range_date_input_whole_range_paste(app: Page):
     start_year = date_field.get_by_role("spinbutton").first
     start_year.click()
 
-    _paste_into(start_year, "2024/03/06 \u2013 2024/03/08")
+    paste_into(start_year, "2024/03/06 \u2013 2024/03/08")
+    wait_for_app_run(app)
+    expect_markdown(
+        app,
+        "Value 3: (datetime.date(2024, 3, 6), datetime.date(2024, 3, 8))",
+    )
+
+    paste_into(start_year, "2024/03/06 \u2013 not-a-date")
     wait_for_app_run(app)
     expect_markdown(
         app,

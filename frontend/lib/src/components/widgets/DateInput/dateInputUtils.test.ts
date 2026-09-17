@@ -379,6 +379,27 @@ describe("parsePastedDateRange", () => {
     })
   })
 
+  it("parses hyphenated date formats without splitting on date separators", () => {
+    expect(
+      parsePastedDateRange("2024-03-06 – 2024-03-08", "YYYY-MM-DD")
+    ).toEqual({
+      start: new CalendarDate(2024, 3, 6),
+      end: new CalendarDate(2024, 3, 8),
+    })
+    expect(
+      parsePastedDateRange("03-06-2024 - 03-08-2024", "MM-DD-YYYY")
+    ).toEqual({
+      start: new CalendarDate(2024, 3, 6),
+      end: new CalendarDate(2024, 3, 8),
+    })
+  })
+
+  it("does not split on a bare hyphen between slash-format dates", () => {
+    expect(
+      parsePastedDateRange("2024/03/06-2024/03/08", "YYYY/MM/DD")
+    ).toBeNull()
+  })
+
   it("returns null when either half is invalid", () => {
     expect(
       parsePastedDateRange("2024/03/06 – not-a-date", "YYYY/MM/DD")
@@ -422,6 +443,16 @@ describe("parseDateFieldPaste", () => {
       kind: "partial",
       segmentType: "day",
       value: 15,
+    })
+  })
+
+  it("returns partial segment paste before validating segment bounds", () => {
+    expect(
+      parseDateFieldPaste("99", "YYYY/MM/DD", { segmentType: "day" })
+    ).toEqual({
+      kind: "partial",
+      segmentType: "day",
+      value: 99,
     })
   })
 })

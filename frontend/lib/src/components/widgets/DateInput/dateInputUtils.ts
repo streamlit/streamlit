@@ -286,8 +286,8 @@ export function parsePastedDate(
 
 export type DateSegmentType = "year" | "month" | "day"
 
-/** Range paste separators: en dash, hyphen (with optional spaces), or "to". */
-const RANGE_PASTE_SEPARATOR = /\s*[–-]\s*|\s+to\s+/i
+/** Splits a range paste on en/em dash, a hyphen with surrounding spaces, or "to". Does not treat the date-format hyphen as a delimiter. */
+const RANGE_PASTE_SEPARATOR = /\s*[\u2013\u2014]\s*|\s+-\s+|\s+to\s+/i
 
 export type ParsedDateFieldPaste =
   | { kind: "date"; date: CalendarDate }
@@ -312,9 +312,10 @@ export function parsePastedDateRange(
 }
 
 /**
- * Shared paste parsing for single- and range-mode DateFields. Tries a full
- * range (when allowed), then a single full date, then a partial segment
- * paste when `segmentType` is a year/month/day token.
+ * Parses clipboard text for a DateField. Tries, in order:
+ * - a full start–end range, when `allowRangePaste` is set
+ * - a single full date
+ * - a partial year/month/day paste, when `segmentType` is a segment token
  */
 export function parseDateFieldPaste(
   text: string,
@@ -338,13 +339,15 @@ export function parseDateFieldPaste(
     trimmed,
     options.segmentType ?? null
   )
-  if (!partial || !isValidSegmentValue(partial.segmentType, partial.value)) {
-    return null
-  }
+  if (!partial) return null
   return { kind: "partial", ...partial }
 }
 
-/** Applies a partial segment paste to `base`, or null if the date is invalid. */
+/**
+ * Applies a partial segment paste to `base`. Returns null when the result
+ * would be invalid — `CalendarDate` clamps overflow (April 31 becomes
+ * April 30) rather than rejecting, so the round-trip is compared explicitly.
+ */
 export function applyPartialSegmentToDate(
   base: CalendarDate,
   partial: { segmentType: DateSegmentType; value: number }

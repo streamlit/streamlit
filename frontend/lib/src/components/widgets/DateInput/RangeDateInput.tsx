@@ -67,6 +67,7 @@ import {
   datesEqual,
   getQuickSelectPresets,
   getSafeLocale,
+  isValidSegmentValue,
   noop,
   parseDateFieldPaste,
   SEGMENT_SELECTOR,
@@ -795,6 +796,7 @@ function RangeDateInput({
             : null
 
         const parsed = parseDateFieldPaste(text, format, {
+          // Whole-range paste is start-field only so one clipboard action fills both endpoints.
           allowRangePaste: isStartField,
           segmentType,
         })
@@ -802,9 +804,15 @@ function RangeDateInput({
         e.preventDefault()
 
         if (parsed.kind === "range") {
-          setDisplayStart(parsed.start)
-          setDisplayEnd(parsed.end)
-          onChange(compact([parsed.start, parsed.end]))
+          inAnchorModeRef.current = false
+          selfCommittedAnchorRef.current = null
+          const [start, end] =
+            parsed.start.compare(parsed.end) <= 0
+              ? [parsed.start, parsed.end]
+              : [parsed.end, parsed.start]
+          setDisplayStart(start)
+          setDisplayEnd(end)
+          onChange([start, end])
           return
         }
 
@@ -819,7 +827,7 @@ function RangeDateInput({
           return
         }
 
-        if (parsed.kind !== "partial") return
+        if (!isValidSegmentValue(parsed.segmentType, parsed.value)) return
 
         const base =
           currentValue ??

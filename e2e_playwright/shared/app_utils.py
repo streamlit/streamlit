@@ -415,6 +415,23 @@ def type_date(date_input_field: Locator, *parts: str, commit: bool = True) -> No
         date_input_field.page.keyboard.press("Escape")
 
 
+def paste_into(locator: Locator, text: str) -> None:
+    """Dispatch a native paste event; fill/type do not hit DateInput's onPaste handler."""
+    locator.evaluate(
+        """(el, text) => {
+            const dt = new DataTransfer();
+            dt.setData('text/plain', text);
+            const event = new ClipboardEvent('paste', {
+                bubbles: true,
+                cancelable: true,
+            });
+            Object.defineProperty(event, 'clipboardData', { value: dt });
+            el.dispatchEvent(event);
+        }""",
+        text,
+    )
+
+
 def get_slider(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a slider with the given label.
 

@@ -61,6 +61,7 @@ import {
   applyPartialSegmentToDate,
   datesEqual,
   getSafeLocale,
+  isValidSegmentValue,
   parseDateFieldPaste,
   SEGMENT_SELECTOR,
 } from "./dateInputUtils"
@@ -456,7 +457,7 @@ function SingleDateInput({
         return
       }
 
-      if (parsed.kind !== "partial") return
+      if (!isValidSegmentValue(parsed.segmentType, parsed.value)) return
 
       const base = displayValue ?? minDate
       const newDate = applyPartialSegmentToDate(base, parsed)
