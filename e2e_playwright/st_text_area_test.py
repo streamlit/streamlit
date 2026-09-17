@@ -492,7 +492,6 @@ def test_text_area_on_change_ignore(app: Page):
     # Give a spurious rerun a chance to land before asserting the counter.
     wait_for_app_run(app)
 
-    # Verify no rerun occurred (run count should still be 1)
     expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
     expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
     expect(text_area_field).to_have_value("world")
@@ -503,7 +502,6 @@ def test_text_area_on_change_ignore(app: Page):
     app.get_by_role("button", name="Apply ignore text area", exact=True).click()
     wait_for_app_run(app)
 
-    # Verify the updated value is now visible
     expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
     expect(app.get_by_text("Ignore text area value: world", exact=True)).to_be_visible()
     expect(

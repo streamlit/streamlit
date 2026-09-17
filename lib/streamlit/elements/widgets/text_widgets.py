@@ -1158,11 +1158,11 @@ class TextWidgetsMixin:
             widget.
 
             When ``on_change="ignore"``, the URL is updated as soon as the
-            value is committed (blur, or Ctrl+Enter / Cmd+Enter); typing
-            alone does not update it. As with widgets inside a form, the URL can
-            show a value that Python hasn't received yet. Python receives
-            the new value on the next rerun, so a page load or share uses
-            the updated URL value.
+            value is committed (blurring the field, or pressing Ctrl+Enter /
+            Cmd+Enter); typing alone does not update it. As with widgets
+            inside a form, the URL can show a value that Python hasn't
+            received yet. Python receives the new value on the next rerun,
+            so a page load or share uses the updated URL value.
 
         persist_state : "page", "session", or None
             How long to preserve the widget's value when it isn't rendered.
