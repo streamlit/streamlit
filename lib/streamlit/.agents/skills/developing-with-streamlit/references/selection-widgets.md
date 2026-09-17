@@ -91,11 +91,9 @@ with st.form("filters"):
 
 ## High-cardinality options
 
-Keep option lists in the low thousands. Streamlit serializes every option into the widget's message, so the payload grows with the option count times the label length: a million 16-character labels is roughly 16 MB. Messages at or above `global.minCachedMessageSize` (10 KB) are cached and re-sent as a hash reference, so that payload crosses the wire on first render and whenever the list changes.
+Keep option lists in the low thousands. Every option is serialized into the widget's message and matched client-side on each keystroke; a million 16-character labels is roughly 16 MB.
 
-`filter_mode` matching then runs in the browser on every keystroke. Matching tests every option; `"fuzzy"`, the default, also scores and sorts the ones that match. That only matters well above the low thousands, where message size is already the reason to stop shipping the list.
-
-Don't fetch a whole table into the app just to derive options. Ask the database for a bounded, distinct list. If the real domain is larger than that bound, use the search pattern below; truncating hides values from the user:
+Don't fetch a table to derive options: query the distinct values with a bound, precomputing them into their own table when the base table is large. If the domain outgrows the bound, search it rather than truncate:
 
 ```python
 conn = st.connection("sql")
@@ -108,15 +106,12 @@ customer = st.selectbox("Customer", df["customer"].unique())
 customer = st.selectbox(
     "Customer",
     conn.query(
-        "select distinct customer from orders order by customer limit 1000",
-        ttl=3600,
+        "select distinct customer from orders order by customer limit 1000", ttl=3600
     )["customer"],
 )
 ```
 
-`select distinct` still scans the column, so on a large base table precompute the values into their own table or materialized view on a schedule.
-
-Above a few thousand values, stop shipping the list and search it:
+Past a few thousand, search. Pills keep the matches on screen, so picking one is a single click:
 
 ```python
 conn = st.connection("sql")
@@ -135,22 +130,19 @@ term = st.text_input(
 customer = None
 if len(term) >= 2:
     matches = conn.query(  # the precomputed distinct table
-        "select customer from customers"
-        " where customer like :term escape '!' order by customer limit 50",
+        "select customer from customers where customer like :term escape '!'"
+        " order by customer limit 50",
         params={"term": like_term(term)},
         ttl=60,
     )["customer"]
     customer = st.pills("Matches", matches, wrap=False, label_visibility="collapsed")
 ```
 
-- `live="300ms"` sends the value to Python after a 300 ms pause. Pills keep the matches on screen, so picking one is a single click, and `wrap=False` holds them to one scrollable row.
-- Keep the `limit`: it bounds the message, and the database can stop early when the plan already produces that order. Whether an index can serve the `like` depends on the backend, collation, and pattern, so check the plan.
-- Escape `%` and `_` and declare an `escape` character, or a typed `%` matches far more than the user asked for. `!` avoids the dialects where `\` is itself a string-literal escape.
-- Pass `ttl` as a number: `conn.query` caches indefinitely by default, takes no `max_entries`, and every keystroke is a new cache key.
-- `st.connection("sql")` binds `:name` with a dict; Snowflake binds `?` positionally and uppercases unquoted column names.
-- When the rest of the app is expensive, wrap this in `@st.fragment`, publish the choice through Session State, and call `st.rerun()` when it changes so dependents refresh. Only the fragment reruns otherwise, so they would keep showing the previous selection.
-
-Cascading filters (region → city → store) keep each list small without a search box.
+- `live="300ms"` debounces, so typing doesn't hit the database on every keystroke.
+- Escape `%` and `_` and declare an `escape` character, or a typed `%` matches far more than the user asked for.
+- Pass `ttl` as a number: `conn.query` caches forever by default and takes no `max_entries`.
+- `st.connection("sql")` binds `:name`; Snowflake binds `?` and uppercases unquoted columns.
+- When the rest of the app is expensive, wrap this in `@st.fragment`, publish the choice through Session State, and `st.rerun()` when it changes.
 
 ## Toggle vs checkbox
 
