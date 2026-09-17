@@ -98,12 +98,10 @@ length: a million 16-character labels is roughly 16 MB. Messages at or above
 reference, so that payload crosses the wire on first render and whenever the
 list changes.
 
-`filter_mode` matching then runs in the browser over the whole list on every
-keystroke, so it is linear in the option count and the mode only changes the
-constant. The default `"fuzzy"` scores every candidate and sorts the survivors,
-while `"contains"` and `"prefix"` are a single scan, so switching pays off well
-above the low thousands. Below that every mode is effectively free and message
-size is the limit that matters.
+`filter_mode` matching then runs in the browser on every keystroke. Every mode
+tests all of the options; `"fuzzy"`, the default, also scores and sorts the ones
+that match. That only matters well above the low thousands, where message size
+is already the reason to stop shipping the list.
 
 Don't fetch a whole table into the app just to derive options. Ask the database
 for a bounded, distinct list. If the real domain is larger than that bound, use
@@ -147,37 +145,23 @@ term = st.text_input(
 )
 customer = None
 if len(term) >= 2:
-    matches = conn.query(  # the precomputed distinct table, not a Series
+    matches = conn.query(  # the precomputed distinct table
         "select customer from customers"
         " where customer like :term escape '!' order by customer limit 50",
         params={"term": like_term(term)},
         ttl=60,
     )["customer"]
     customer = st.selectbox(
-        "Matches",
-        matches,
-        index=None,
-        placeholder="Select a match",
-        label_visibility="collapsed",
-    )
-
-if customer is not None:
-    st.dataframe(
-        conn.query(
-            "select * from orders where customer = :customer limit 100",
-            params={"customer": customer},
-            ttl=60,
-        )
+        "Matches", matches, index=None, label_visibility="collapsed"
     )
 ```
 
 - `live="300ms"` sends the value to Python after a 300 ms pause, and
   `index=None` keeps the first match from applying itself before the user
   picks.
-- Keep the `limit`: it bounds the message, and lets the database stop early
-  when the plan already produces the requested order. Whether an index can
-  serve the `like` depends on the backend, collation, and pattern, so check the
-  plan.
+- Keep the `limit`: it bounds the message, and the database can stop early when
+  the plan already produces that order. Whether an index can serve the `like`
+  depends on the backend, collation, and pattern, so check the plan.
 - Escape `%` and `_` and declare an `escape` character, or a typed `%` matches
   far more than the user asked for. `!` avoids the dialects where `\` is itself
   a string-literal escape.
