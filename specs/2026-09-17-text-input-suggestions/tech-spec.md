@@ -63,7 +63,7 @@ if callable(autocomplete) and source_mgr is not None:
     text_input_proto.autocomplete_source_id = registered.source_id
     # Our dropdown replaces the browser's autofill, so suppress the native one.
     autocomplete_token = _AUTOFILL_SUPPRESSED_TOKEN
-    autocomplete_identity = _SUGGESTIONS_IDENTITY_SENTINEL  # stable, not the callable
+    autocomplete_identity = _AUTOCOMPLETE_IDENTITY_SENTINEL  # stable, not the callable
 else:
     # Existing behavior: None -> type default token; str -> explicit token.
     autocomplete_token = (
