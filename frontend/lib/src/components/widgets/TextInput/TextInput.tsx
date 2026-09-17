@@ -168,6 +168,9 @@ function TextInput({
   const isComposingRef = useRef(false)
   const [isComposing, setIsComposing] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
+  // Portaled suggestion rows are outside this widget. A touch press blurs the
+  // input before pointerup; skip that blur so the list can still receive it.
+  const suppressBlurRef = useRef(false)
   const overlayReferenceRef = useRef<HTMLDivElement | null>(null)
   const floatingSetReferenceRef = useRef<
     ((node: HTMLDivElement | null) => void) | undefined
@@ -594,6 +597,11 @@ function TextInput({
         return
       }
 
+      // Touch/pen on a portaled option blurs the input before pointerup.
+      if (suppressBlurRef.current) {
+        return
+      }
+
       if (inForm) {
         // Inside a form, intermediate commits (blur, or Enter without submit)
         // intentionally skip validation: the value only stages into the form's
@@ -770,6 +778,7 @@ function TextInput({
           onInputProps={setAutocompleteInputProps}
           onBusyChange={setAutocompleteBusy}
           onStatusChange={setAutocompleteStatus}
+          suppressBlurRef={suppressBlurRef}
         />
       )}
       <TextInputControl

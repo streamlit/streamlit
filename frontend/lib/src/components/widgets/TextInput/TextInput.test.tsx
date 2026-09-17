@@ -2937,6 +2937,30 @@ describe("TextInput autocomplete", () => {
     })
   })
 
+  it("keeps the list through a touch blur and commits the option on pointer up", async () => {
+    const { user, props } = renderAutocomplete()
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    await user.click(getField())
+    await user.type(getField(), "ap")
+    advanceMs(300)
+    await waitFor(() => {
+      expect(screen.getByText("apple")).toBeVisible()
+    })
+    setStringValueSpy.mockClear()
+    const option = screen.getByRole("option", { name: "apple" })
+    await user.pointer({ keys: "[TouchA>]", target: option })
+    fireEvent.blur(getField())
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+    expect(screen.getByTestId("stTextInputSuggestions")).toBeVisible()
+    await user.pointer({ keys: "[/TouchA]", target: option })
+    expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+    expect(setStringValueSpy).toHaveBeenCalledWith(props.element.id, "apple", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+  })
+
   it("does not submit a form when a suggestion is selected", async () => {
     const sendRerunBackMsg = vi.fn()
     const widgetMgr = new WidgetStateManager({
