@@ -2742,12 +2742,15 @@ describe("DateInput range-mode paste handling", () => {
     vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
 
     const region = screen.getByTestId("stDateInput")
-    const { year } = getRangeDateSegments(region, "end")
+    const end = getRangeDateSegments(region, "end")
 
-    await user.click(year)
+    await user.click(end.year)
     await user.paste("2024/03/06 – 2024/03/08")
 
     expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+    expect(end.year).toHaveTextContent("2019")
+    expect(end.month).toHaveTextContent("07")
+    expect(end.day).toHaveTextContent("08")
   })
 
   it("pasting an out-of-range range does not commit", async () => {

@@ -430,8 +430,19 @@ describe("parseDateFieldPaste", () => {
     })
   })
 
-  it("falls back to single date when range parse fails", () => {
+  it("parses a single date when range paste is not allowed", () => {
     expect(parseDateFieldPaste("2024/03/15", "YYYY/MM/DD")).toEqual({
+      kind: "date",
+      date: new CalendarDate(2024, 3, 15),
+    })
+  })
+
+  it("falls back to a single date when range paste is allowed but parsing fails", () => {
+    expect(
+      parseDateFieldPaste("2024/03/15", "YYYY/MM/DD", {
+        allowRangePaste: true,
+      })
+    ).toEqual({
       kind: "date",
       date: new CalendarDate(2024, 3, 15),
     })

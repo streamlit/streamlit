@@ -796,9 +796,8 @@ function RangeDateInput({
             : null
 
         const parsed = parseDateFieldPaste(text, format, {
-          // Only the start field accepts a whole-range paste: it is the natural
-          // drop target for a copied "start – end" string. The end field still
-          // accepts a single date or segment paste.
+          // A whole-range paste replaces both endpoints only from the start field.
+          // The end field continues to accept a single date or segment.
           allowRangePaste: isStartField,
           segmentType,
         })

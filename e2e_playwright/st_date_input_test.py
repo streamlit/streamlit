@@ -1053,6 +1053,8 @@ def test_range_date_input_whole_range_paste(app: Page):
     start_month = spinbuttons.nth(1)
     start_day = spinbuttons.nth(2)
     end_year = spinbuttons.nth(3)
+    end_month = spinbuttons.nth(4)
+    end_day = spinbuttons.nth(5)
     start_year.click()
 
     paste_into(start_year, "2024/03/06 \u2013 2024/03/08")
@@ -1065,6 +1067,8 @@ def test_range_date_input_whole_range_paste(app: Page):
     expect(start_month).to_have_text("03")
     expect(start_day).to_have_text("06")
     expect(end_year).to_have_text("2024")
+    expect(end_month).to_have_text("03")
+    expect(end_day).to_have_text("08")
 
     paste_into(start_year, "2024/03/06 \u2013 not-a-date")
     wait_for_app_run(app)
@@ -1083,3 +1087,6 @@ def test_range_date_input_whole_range_paste(app: Page):
         app,
         "Value 3: (datetime.date(2024, 3, 6), datetime.date(2024, 3, 8))",
     )
+    expect(end_year).to_have_text("2024")
+    expect(end_month).to_have_text("03")
+    expect(end_day).to_have_text("08")

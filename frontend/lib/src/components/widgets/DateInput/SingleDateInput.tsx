@@ -457,7 +457,7 @@ function SingleDateInput({
         return
       }
 
-      if (parsed.kind !== "partial") return
+      if (parsed.kind !== "partial") return // TS narrow; allowRangePaste is unset in single mode
 
       if (!isValidSegmentValue(parsed.segmentType, parsed.value)) return
 

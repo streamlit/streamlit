@@ -416,7 +416,7 @@ def type_date(date_input_field: Locator, *parts: str, commit: bool = True) -> No
 
 
 def paste_into(locator: Locator, text: str) -> None:
-    """Dispatch a native paste event on the given element.
+    """Dispatch a synthetic ``paste`` event carrying ``text`` on the given element.
 
     Playwright's ``fill``/``press_sequentially`` never produce a ``paste``
     event, so segmented widgets (``st.date_input``, ``st.time_input``) that

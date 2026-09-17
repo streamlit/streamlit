@@ -286,7 +286,14 @@ export function parsePastedDate(
 
 export type DateSegmentType = "year" | "month" | "day"
 
-/** Splits a range paste on en/em dash, a hyphen with surrounding spaces, or "to". Does not treat the date-format hyphen as a delimiter. */
+/**
+ * Delimiters for a whole-range paste:
+ * - en dash or em dash (optional surrounding whitespace)
+ * - a hyphen with spaces on both sides
+ * - the word "to"
+ *
+ * A bare hyphen is not a delimiter, so hyphenated dates (YYYY-MM-DD) stay intact.
+ */
 const RANGE_PASTE_SEPARATOR = /\s*[\u2013\u2014]\s*|\s+-\s+|\s+to\s+/i
 
 export type ParsedDateFieldPaste =
@@ -295,8 +302,8 @@ export type ParsedDateFieldPaste =
   | { kind: "partial"; segmentType: DateSegmentType; value: number }
 
 /**
- * Parses a pasted range string (e.g. "2024/03/06 – 2024/03/08") using
- * `format`'s segment order for each half.
+ * Parses a pasted start–end string using `format` for each half.
+ * Returns null unless the text splits into exactly two dates that both parse.
  */
 export function parsePastedDateRange(
   text: string,
