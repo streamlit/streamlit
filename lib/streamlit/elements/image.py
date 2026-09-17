@@ -157,15 +157,12 @@ class ImageMixin:
             This parameter is only supported when displaying a single image.
 
         use_column_width : "auto", "always", "never", or bool
-            This parameter is a no-op. Streamlit accepts it so that callers
-            that still pass ``use_column_width`` do not raise ``TypeError``.
-            The value is ignored; ``width`` and ``use_container_width`` remain
-            the only layout controls.
+            This parameter is kept purely for compatibility.
 
             .. deprecated::
-                ``use_column_width`` is deprecated and has no effect. Use
-                ``width="stretch"``, ``width="content"``, or an integer pixel
-                value instead.
+                ``use_column_width`` is deprecated, has no effect, and will be
+                fully removed in a future version. Use ``width="stretch"``,
+                ``width="content"``, or an integer pixel value instead.
 
         Examples
         --------
