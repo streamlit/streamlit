@@ -597,6 +597,8 @@ class StreamlitInvalidLayoutContextError(StreamlitAPIException):
 def _markdown_code_span(text: str) -> str:
     """Wrap ``text`` in a Markdown code span that stays intact if it contains backticks."""
     fence_len = 1
+    # Pick a fence longer than any backtick run in text so Markdown does not
+    # end the code span early.
     while "`" * fence_len in text:
         fence_len += 1
     fence = "`" * fence_len
@@ -630,7 +632,8 @@ class StreamlitWidgetAlreadyInstantiatedError(LocalizableStreamlitException):
             "that key is instantiated. Assign {session_state_item} before "
             "creating the widget, or update it from an `on_change` or "
             "`on_click` callback, which runs before the widget is instantiated. "
-            "If Streamlit manages this widget's value, store the value under a "
+            "If this is a read-only Session State key (buttons, file and media "
+            "inputs, `st.data_editor`, forms), store the value under a "
             "different Session State key.",
             session_state_item=_session_state_item(key),
             key=key,

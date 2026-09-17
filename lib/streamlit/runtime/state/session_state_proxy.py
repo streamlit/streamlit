@@ -77,7 +77,8 @@ class SessionStateProxy(MutableMapping[Key, Any]):
 
     Access values with bracket or attribute notation. Bracket notation
     works for every key. Attribute notation works only when the key is a
-    valid Python identifier.
+    valid Python identifier and does not collide with a dictionary method
+    name such as ``items`` or ``get``.
 
     Widget values live under the widget's ``key``. Assign
     ``st.session_state[key]`` **before** that widget is created, or from an
@@ -104,7 +105,7 @@ class SessionStateProxy(MutableMapping[Key, Any]):
 
     >>> import streamlit as st
     >>>
-    >>> st.session_state["volume"] = 50
+    >>> st.session_state.setdefault("volume", 50)
     >>> st.slider("Volume", 0, 100, key="volume")
 
     Store button-driven state in a separate key:

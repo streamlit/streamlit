@@ -191,9 +191,11 @@ st.session_state["my_slider"] = 50  # Raises StreamlitWidgetAlreadyInstantiatedE
 Assign the value **before** creating the widget, or from an `on_change` / `on_click` callback (callbacks run before widgets are instantiated). For widgets whose keys are read-only (see [Read-only widget keys](#read-only-widget-keys)), use a different Session State key instead:
 
 ```python
-st.session_state["my_slider"] = 50
+st.session_state.setdefault("my_slider", 50)
 st.slider("Value", key="my_slider")
 ```
+
+Or from a callback:
 
 ```python
 def reset_slider():

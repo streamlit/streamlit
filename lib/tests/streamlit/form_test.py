@@ -539,7 +539,7 @@ class FormStateInteractionTest(DeltaGeneratorTestCase):
             st.radio("radio", ["a", "b", "c"], 0)
             st.form_submit_button(on_click=lambda x: x)
 
-    def test_form_rejects_session_state_assignment(self):
+    def test_form_rejects_session_state_assignment(self) -> None:
         """Creating a form after assigning its key raises StreamlitValueAssignmentNotAllowedError."""
         st.session_state["my_form"] = True
 
