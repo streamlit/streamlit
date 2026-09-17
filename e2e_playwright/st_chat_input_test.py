@@ -450,6 +450,7 @@ def test_bottom_chat_input_initial_scroll(app: Page, app_base_url: str):
 
     def expect_main_to_stay_at_top(last_content: str) -> None:
         expect(app.get_by_test_id("stAppScrollToBottomContainer")).not_to_be_attached()
+        expect(get_element_by_key(app, "initial_scroll")).to_be_visible()
         expect(app.get_by_text("Dashboard heading", exact=True)).to_be_in_viewport()
         expect(app.get_by_text(last_content, exact=True)).not_to_be_in_viewport()
 
