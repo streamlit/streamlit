@@ -26,6 +26,7 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitDuplicateElementKey,
     StreamlitInvalidLayoutContextError,
+    StreamlitValueAssignmentNotAllowedError,
     StreamlitValueError,
 )
 from streamlit.proto.ButtonLikeIconPosition_pb2 import (
@@ -537,6 +538,19 @@ class FormStateInteractionTest(DeltaGeneratorTestCase):
         with st.form("form"):
             st.radio("radio", ["a", "b", "c"], 0)
             st.form_submit_button(on_click=lambda x: x)
+
+    def test_form_rejects_session_state_assignment(self):
+        """Creating a form after assigning its key raises StreamlitValueAssignmentNotAllowedError."""
+        st.session_state["my_form"] = True
+
+        with pytest.raises(StreamlitValueAssignmentNotAllowedError) as ctx:
+            st.form(key="my_form")
+
+        message = str(ctx.value)
+        assert "`st.session_state['my_form']`" in message
+        assert "read-only" in message
+        assert "event" not in message.lower()
+        assert "different Session State key" in message
 
 
 @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))

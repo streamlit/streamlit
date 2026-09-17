@@ -188,7 +188,7 @@ st.slider("Value", key="my_slider")
 st.session_state["my_slider"] = 50  # Raises StreamlitWidgetAlreadyInstantiatedError
 ```
 
-Assign the value **before** creating the widget, or from an `on_change` / `on_click` callback (callbacks run before widgets are instantiated):
+Assign the value **before** creating the widget, or from an `on_change` / `on_click` callback (callbacks run before widgets are instantiated). For widgets whose keys are read-only (see [Read-only widget keys](#read-only-widget-keys)), use a different Session State key instead:
 
 ```python
 st.session_state["my_slider"] = 50
@@ -204,9 +204,9 @@ st.button("Reset", on_click=reset_slider)
 st.slider("Value", key="my_slider")
 ```
 
-### Read-only event widgets
+### Read-only widget keys
 
-Buttons and other event widgets store read-only event state. Assigning to their key raises `StreamlitValueAssignmentNotAllowedError` even before the widget is created. Keep the event key read-only and store values you need to set in a **different** Session State key:
+Some widgets are read-only in Session State (buttons and other event widgets, file and media inputs, `st.data_editor`, `st.form` keys, and chart or `ButtonColumn` selections). Creating one after assigning to its key raises `StreamlitValueAssignmentNotAllowedError`. Keep that key read-only and store values you need to set in a **different** Session State key:
 
 ```python
 def mark_done():

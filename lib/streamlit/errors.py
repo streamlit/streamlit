@@ -594,9 +594,18 @@ class StreamlitInvalidLayoutContextError(StreamlitAPIException):
     """Raised when a command is used in a disallowed layout, form, or dialog context."""
 
 
+def _markdown_code_span(text: str) -> str:
+    """Wrap ``text`` in a Markdown code span that stays intact if it contains backticks."""
+    fence_len = 1
+    while "`" * fence_len in text:
+        fence_len += 1
+    fence = "`" * fence_len
+    return f"{fence}{text}{fence}"
+
+
 def _session_state_item(key: str) -> str:
-    """Return a copy-pasteable ``st.session_state[...]`` access for ``key``."""
-    return f"st.session_state[{key!r}]"
+    """Format ``key`` as bracket access so non-identifier keys stay valid Python."""
+    return _markdown_code_span(f"st.session_state[{key!r}]")
 
 
 class StreamlitValueAssignmentNotAllowedError(LocalizableStreamlitException):
@@ -604,7 +613,7 @@ class StreamlitValueAssignmentNotAllowedError(LocalizableStreamlitException):
 
     def __init__(self, key: str) -> None:
         super().__init__(
-            "`{session_state_item}` stores read-only event state and cannot be "
+            "{session_state_item} is read-only and cannot be "
             "assigned through Session State. Use a different Session State key "
             "for values you need to set.",
             session_state_item=_session_state_item(key),
@@ -617,10 +626,12 @@ class StreamlitWidgetAlreadyInstantiatedError(LocalizableStreamlitException):
 
     def __init__(self, key: str) -> None:
         super().__init__(
-            "`{session_state_item}` cannot be modified after the widget with "
-            "that key is instantiated. Assign `{session_state_item}` before "
+            "{session_state_item} cannot be modified after the widget with "
+            "that key is instantiated. Assign {session_state_item} before "
             "creating the widget, or update it from an `on_change` or "
-            "`on_click` callback, which runs before the widget is instantiated.",
+            "`on_click` callback, which runs before the widget is instantiated. "
+            "If Streamlit manages this widget's value, store the value under a "
+            "different Session State key.",
             session_state_item=_session_state_item(key),
             key=key,
         )

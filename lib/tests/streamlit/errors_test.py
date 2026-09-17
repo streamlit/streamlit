@@ -347,15 +347,16 @@ def test_widget_already_instantiated_error_message(key: str) -> None:
     assert "before creating the widget" in message
     assert "on_change" in message
     assert "on_click" in message
-    assert isinstance(exc, errors.StreamlitAPIException)
+    assert "different Session State key" in message
     assert isinstance(exc, errors.LocalizableStreamlitException)
     assert exc.exec_kwargs["key"] == key
+    # format_uncaught_exception only suffixes LocalizableStreamlitException when exec_kwargs has parameter.
     assert "parameter" not in exc.exec_kwargs
 
 
 @pytest.mark.parametrize("key", ["done_btn", "done-btn"])
 def test_value_assignment_not_allowed_error_message(key: str) -> None:
-    """Read-only event state tells the caller to use a different key."""
+    """Read-only Session State keys tell the caller to use a different key."""
     exc = errors.StreamlitValueAssignmentNotAllowedError(key)
     message = str(exc)
     item = f"st.session_state[{key!r}]"
@@ -363,11 +364,22 @@ def test_value_assignment_not_allowed_error_message(key: str) -> None:
     assert f"`{item}`" in message
     assert f"st.session_state.{key}" not in message
     assert "read-only" in message
+    assert "event" not in message.lower()
     assert "different Session State key" in message
-    assert isinstance(exc, errors.StreamlitAPIException)
     assert isinstance(exc, errors.LocalizableStreamlitException)
     assert exc.exec_kwargs["key"] == key
+    # format_uncaught_exception only suffixes LocalizableStreamlitException when exec_kwargs has parameter.
     assert "parameter" not in exc.exec_kwargs
+
+
+def test_session_state_error_messages_escape_backticks_in_keys() -> None:
+    """Keys containing backticks still render as a single Markdown code span."""
+    key = "a`b"
+    item = f"st.session_state[{key!r}]"
+    message = str(errors.StreamlitValueAssignmentNotAllowedError(key))
+
+    assert f"``{item}``" in message
+    assert f"`{item}`" not in message.replace(f"``{item}``", "")
 
 
 def test_default_not_in_options_error_message() -> None:
