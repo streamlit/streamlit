@@ -633,8 +633,8 @@ class StreamlitWidgetAlreadyInstantiatedError(LocalizableStreamlitException):
             "creating the widget, or update it from an `on_change` or "
             "`on_click` callback, which runs before the widget is instantiated. "
             "If this is a read-only Session State key (buttons, file and media "
-            "inputs, `st.data_editor`, forms), store the value under a "
-            "different Session State key.",
+            "inputs, `st.data_editor`, forms, chart or `ButtonColumn` "
+            "selections), store the value under a different Session State key.",
             session_state_item=_session_state_item(key),
             key=key,
         )

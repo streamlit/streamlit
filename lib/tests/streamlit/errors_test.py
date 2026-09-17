@@ -348,6 +348,7 @@ def test_widget_already_instantiated_error_message(key: str) -> None:
     assert "on_change" in message
     assert "on_click" in message
     assert "read-only Session State key" in message
+    assert "ButtonColumn" in message
     assert "different Session State key" in message
     assert isinstance(exc, errors.LocalizableStreamlitException)
     assert exc.exec_kwargs["key"] == key
