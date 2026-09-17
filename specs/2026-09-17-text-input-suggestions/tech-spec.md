@@ -178,12 +178,17 @@ class SuggestionSourceManager:
 - **`get_suggestions`** validates `source_id` belongs to `session_id` (raising a
   `SuggestionSourceError` with a frontend-safe message otherwise), then bounds its inputs and
   outputs around the call:
-  - **`text` is untrusted.** It arrives from the client, so `max_chars` on the real input
-    proves nothing about it — a modified client can send an arbitrarily long string straight
-    into user Python. Truncate it to the source's `max_chars` (or a hard ceiling when unset)
-    before invoking the callable. Document for users that `text` is untrusted input: the
-    example query is parameterized on purpose, and interpolating it into SQL or a URL would
-    be an injection bug.
+  - **`text` is untrusted, and oversized requests are rejected rather than truncated.** It
+    arrives from the client, so `max_chars` on the real input proves nothing about it — a
+    modified client can send an arbitrarily long string straight into user Python. Reject any
+    request whose `text` exceeds the source's `max_chars`, or a fixed ceiling (e.g. 4096
+    characters) when `max_chars` is unset, and fail closed to an empty list. Rejecting rather
+    than truncating keeps the public contract honest: the callable always receives the current
+    text verbatim, so suggestions can never be computed from a silent prefix while the response
+    echoes the full text and passes the frontend's match check. The ceiling is the only
+    suggestion-specific input limit; the field itself stays unbounded. Document for users that
+    `text` is untrusted input: the example query is parameterized on purpose, and interpolating
+    it into SQL or a URL would be an injection bug.
   - **One return-value contract, and it fails closed.** Accept the result only if it is a
     finite, non-`str` collection of `str`. A bare `str` is itself a `Sequence[str]`, so
     accepting one would silently turn `"apple"` into five one-character suggestions; reject it
@@ -261,12 +266,16 @@ serialization code, while this one runs an arbitrary user callable that may neve
   pile up a backlog that later executes long-stale lookups. Gate every submission on a
   non-blocking global permit as well as the per-source one, so the executor's queue stays
   shallow by construction.
-- **Permits are held until the thread actually exits.** Both permits are released by the
-  worker in its own `finally`, not by the coroutine that stopped waiting, so a timed-out call
-  keeps occupying its capacity while it runs. Otherwise a modified client could vary `text` to
-  defeat coalescing and stack up unbounded hung calls. When either permit is unavailable the
-  handler raises `_NoCapacityError` and fails closed immediately rather than queueing more
-  work.
+- **Permits are held until the thread actually exits.** Once a worker is submitted, both
+  permits are released by that worker in its own `finally`, not by the coroutine that stopped
+  waiting, so a timed-out call keeps occupying its capacity while it runs. Otherwise a
+  modified client could vary `text` to defeat coalescing and stack up unbounded hung calls.
+- **Admission is all-or-nothing.** Acquiring one permit and failing to get the other must
+  release what was already taken — no worker runs in that case, so nothing else will. Without
+  that, ordinary contention would leak a permit per failed admission and permanently disable
+  suggestions. Acquire both under one guard that unwinds on any failure, including a failure
+  to submit, and raise `_NoCapacityError` so the handler fails closed immediately rather than
+  queueing more work.
 - **Timeout** (`_SUGGESTIONS_TIMEOUT_S`, e.g. 5s) bounds how long the *user* waits; the pool
   size bounds the damage a hung callable can do. Python cannot kill a running thread, so the
   residual risk is a bounded number of stuck threads per server — the accepted trade-off for
@@ -378,8 +387,10 @@ needs it.
   that the common case rather than a corner case, since its 250ms default is shorter than the
   300ms suggestion debounce, so the rerun typically lands before the lookup is even sent.
   When `suggestionsSourceId` changes, clear pending state for the old id and re-request for
-  the current text against the new one, keeping the visible list until the replacement
-  arrives so it doesn't flicker.
+  the current text against the new one. The old list stays on screen until the replacement
+  arrives so it doesn't flicker, but it goes **inert** for that window — no highlight, no
+  selection — because the rerun may have changed the callable or the values it closes over,
+  and selecting a stale row performs a real commit. The window is one round trip.
 - **IME:** don't request while `isComposingRef` is set; schedule exactly one request after
   `compositionend`, so composing CJK text doesn't fire lookups on half-formed input.
 - **Selection:** clicking an item, or ↑/↓ then Enter or Tab, sets `uiValue` — through the same
@@ -423,8 +434,8 @@ Inherits the backend-operation threat model (arbitrary/modified client over the 
 - **Global and per-source concurrency caps + request coalescing**, with permits released only
   when the worker exits, so a scripted client can't fan out unbounded lookups, stack up hung
   ones, or grow a queue behind them by spreading requests across many sources.
-- **Input and result caps**: the client-supplied `text` is truncated before it reaches user
-  Python, and max count / max string length / `max_chars` bound the response payload.
+- **Input and result caps**: an oversized client-supplied `text` is rejected before it reaches
+  user Python, and max count / max string length / `max_chars` bound the response payload.
 - **Fail closed + server-only logging**: exceptions, timeouts, and bad return types yield an
   empty suggestion list and **no** `error_msg` — surfacing one would reject the request in
   `BackendOperationClient` and show the user an error for what is only a missing hint.

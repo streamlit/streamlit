@@ -177,7 +177,7 @@ browser doesn't know which substring to emphasize (unlike selectbox's client-sid
 | `validate`, `required` | Unchanged, applied at commit time. A chosen suggestion is validated like a typed one. |
 | `type` | `"default"` and `"search"` are the natural fits. `type="password"` raises `StreamlitIncompatibleParametersError` — proposing or persisting secrets in a dropdown is a footgun. (A *string* `autocomplete` with `type="password"`, e.g. `"new-password"`, is unaffected.) |
 | `bind="query-params"` | Unchanged; a committed suggestion syncs to the URL like any committed value. |
-| `max_chars` | Enforced on input as today, so the function only ever sees within-limit text. Suggestions longer than the limit are dropped rather than offered, since choosing one would commit a value the field itself would reject. |
+| `max_chars` | Enforced on input as today, so the function only ever sees within-limit text. Suggestions longer than the limit are dropped rather than offered, since choosing one would commit a value the field itself would reject. With no `max_chars`, suggestions simply stop above a fixed length ceiling (in the tech spec) — past that the field isn't a typeahead case any more. |
 | `disabled` | No suggestions are requested. |
 
 ### Examples
