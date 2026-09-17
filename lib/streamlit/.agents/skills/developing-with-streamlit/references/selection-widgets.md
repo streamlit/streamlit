@@ -14,7 +14,7 @@ Use `st.segmented_control` or `st.pills` when you want all options visible at on
 | `st.selectbox` | Many options, single select, dropdown |
 | `st.multiselect` | Many options, multi-select, dropdown |
 
-For more values than fit comfortably in a dropdown, see [High-cardinality options](#high-cardinality-options).
+For thousands of values, see [High-cardinality options](#high-cardinality-options).
 
 ## Segmented control (options visible, single select)
 
@@ -117,8 +117,8 @@ Past a few thousand, search. Pills keep the matches on screen, so picking one is
 conn = st.connection("sql")
 
 
-def like_term(text: str) -> str:
-    """Escape LIKE wildcards so a typed % or _ matches literally."""
+def like_pattern(text: str) -> str:
+    """Return a contains-style LIKE pattern that treats user input literally."""
     for char in ("!", "%", "_"):
         text = text.replace(char, "!" + char)
     return f"%{text}%"
@@ -129,10 +129,11 @@ term = st.text_input(
 )
 customer = None
 if len(term) >= 2:
-    matches = conn.query(  # the precomputed distinct table
+    # Query a precomputed distinct-value table, not the base orders table.
+    matches = conn.query(
         "select customer from customers where customer like :term escape '!'"
         " order by customer limit 50",
-        params={"term": like_term(term)},
+        params={"term": like_pattern(term)},
         ttl=60,
     )["customer"]
     customer = st.pills("Matches", matches, wrap=False, label_visibility="collapsed")
@@ -142,7 +143,7 @@ if len(term) >= 2:
 - Escape `%` and `_` and declare an `escape` character, or a typed `%` matches far more than the user asked for.
 - Pass `ttl` as a number: `conn.query` caches forever by default and takes no `max_entries`.
 - `st.connection("sql")` binds `:name`; Snowflake binds `?` and uppercases unquoted columns.
-- When the rest of the app is expensive, wrap this in `@st.fragment`, publish the choice through Session State, and `st.rerun()` when it changes.
+- When the rest of the app is expensive, wrap this in `@st.fragment` (see `performance.md`), publish the choice through Session State, and `st.rerun()` on change, or dependents keep showing the old value.
 
 ## Toggle vs checkbox
 
