@@ -114,6 +114,11 @@ customers = conn.query(
 customer = st.selectbox("Customer", customers)
 ```
 
+`select distinct` reads only that column rather than every row, but it still
+scans it. When the base table is large, precompute the distinct values into a
+small table or materialized view on a schedule and point the widget at that
+instead of re-scanning on every cache expiry.
+
 When the real domain is larger than a few thousand values, don't ship the list —
 search it. Query on a debounce and offer only what matched:
 
@@ -146,7 +151,10 @@ customer_filter()
 - `live="300ms"` commits on a pause instead of on every keystroke, and
   `@st.fragment` keeps the rest of the app from rerunning while the user types.
 - The `limit` bounds the query and the payload; matching a prefix (`term%`) lets
-  an index serve it.
+  an index serve it. Matching mid-value (`%term%`) or fuzzily is friendlier to
+  users who don't know how a value starts, but generally can't use an index —
+  keep the `limit`, and back it with a full-text or search index if the scan
+  gets expensive.
 - Pass a `ttl` to `conn.query` here — it caches indefinitely by default, and
   every keystroke is a new cache key.
 - Read the choice from `st.session_state` outside the fragment; a fragment's
