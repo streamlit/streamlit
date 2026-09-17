@@ -23,6 +23,7 @@ import {
   calendarDateToIso,
   createDateErrorMessage,
   formatCalendarDate,
+  getFocusedDateFallback,
   getInitialFocusedDate,
   getMaxDate,
   getMinDate,
@@ -180,12 +181,41 @@ describe("getInitialFocusedDate", () => {
     expect(getInitialFocusedDate([], farFuture)).toEqual(farFuture)
   })
 
+  it("falls back to maxDate when there's no value and today is after maxDate", () => {
+    const minDate = new CalendarDate(1970, 1, 1)
+    const maxDate = new CalendarDate(1980, 1, 1)
+    expect(getInitialFocusedDate([], minDate, maxDate)).toEqual(maxDate)
+  })
+
   it("never returns null, even for an unparsable value", () => {
     const result = getInitialFocusedDate(
       ["not-a-date"],
       new CalendarDate(1970, 1, 1)
     )
     expect(result).toBeInstanceOf(CalendarDate)
+  })
+})
+
+describe("getFocusedDateFallback", () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it("clamps today to maxDate", () => {
+    const maxDate = new CalendarDate(1980, 6, 15)
+    expect(
+      getFocusedDateFallback(new CalendarDate(1970, 1, 1), maxDate)
+    ).toEqual(maxDate)
+  })
+
+  it("returns today unchanged when it is within min and max", () => {
+    vi.setSystemTime(new Date(2024, 2, 15))
+    expect(
+      getFocusedDateFallback(
+        new CalendarDate(1970, 1, 1),
+        new CalendarDate(2999, 1, 1)
+      )
+    ).toEqual(new CalendarDate(2024, 3, 15))
   })
 })
 

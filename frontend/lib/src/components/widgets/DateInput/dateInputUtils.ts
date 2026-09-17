@@ -140,16 +140,43 @@ export function getMaxDate(element: DateInputProto): CalendarDate | undefined {
     : undefined
 }
 
-/** Seeds the calendar focused date so it stays controlled from mount
- * (avoids react-stately's uncontrolled→controlled warning). */
+/** Clamps to min first, then max; assumes the backend-validated min <= max. */
+function clampCalendarDateToBounds(
+  date: CalendarDate,
+  minDate: CalendarDate,
+  maxDate?: CalendarDate
+): CalendarDate {
+  let result = date.compare(minDate) < 0 ? minDate : date
+  if (maxDate && result.compare(maxDate) > 0) {
+    result = maxDate
+  }
+  return result
+}
+
+/**
+ * Today, clamped to the widget's bounds. Used as the calendar's visible month
+ * when nothing is committed yet — no value in single mode, no start date in
+ * range mode.
+ */
+export function getFocusedDateFallback(
+  minDate: CalendarDate,
+  maxDate?: CalendarDate
+): CalendarDate {
+  return clampCalendarDateToBounds(today(getLocalTimeZone()), minDate, maxDate)
+}
+
+/**
+ * Seeds calendar focus with a concrete date to keep it controlled from mount.
+ * Uses the first parsable value, or today clamped to the allowed range.
+ */
 export function getInitialFocusedDate(
   value: string[],
-  minDate: CalendarDate
+  minDate: CalendarDate,
+  maxDate?: CalendarDate
 ): CalendarDate {
   const fromValue = value[0] ? isoToCalendarDate(value[0]) : null
   if (fromValue) return fromValue
-  const now = today(getLocalTimeZone())
-  return now.compare(minDate) < 0 ? minDate : now
+  return getFocusedDateFallback(minDate, maxDate)
 }
 
 /** Gate for enabling quick-select: only when `minDate` is more than 2 years in the past. */
