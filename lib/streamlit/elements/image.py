@@ -21,7 +21,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final, Literal, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
@@ -64,7 +64,7 @@ class ImageMixin:
         use_container_width: bool | None = None,
         link: str | None = None,
         # Compatibility no-op for pre-1.61 callers.
-        use_column_width: Literal["auto", "always", "never"] | bool | None = None,
+        use_column_width: Any = None,
     ) -> DeltaGenerator:
         """Display an image or list of images.
 
@@ -156,7 +156,7 @@ class ImageMixin:
 
             This parameter is only supported when displaying a single image.
 
-        use_column_width : "auto", "always", "never", or bool
+        use_column_width : any
             This parameter is kept purely for compatibility.
 
             .. deprecated::

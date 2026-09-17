@@ -520,11 +520,13 @@ class ImageProtoTest(DeltaGeneratorTestCase):
             ("always",),
             ("auto",),
             ("never",),
+            ("foo",),
+            (1,),
         ]
     )
     @mock.patch("streamlit.elements.image.show_deprecation_warning")
     def test_st_image_use_column_width_is_ignored_noop(
-        self, use_column_width: bool | str, show_warning_mock: mock.Mock
+        self, use_column_width: object, show_warning_mock: mock.Mock
     ) -> None:
         """use_column_width is accepted, warned about, and does not change width."""
         img = Image.new("RGB", (64, 64), color="red")

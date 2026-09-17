@@ -74,6 +74,7 @@ if TYPE_CHECKING:
     assert_type(image("image.png", use_column_width="always"), DeltaGenerator)
     assert_type(image("image.png", use_column_width="auto"), DeltaGenerator)
     assert_type(image("image.png", use_column_width="never"), DeltaGenerator)
+    assert_type(image("image.png", use_column_width="foo"), DeltaGenerator)
     assert_type(image("image.png", use_column_width=None), DeltaGenerator)
 
     # Image with link parameter
@@ -123,9 +124,6 @@ if TYPE_CHECKING:
         None,  # ty: ignore[too-many-positional-arguments]
         "https://example.com",
     )  # type: ignore[call-arg]
-
-    # Invalid use_column_width value (not bool or "auto"/"always"/"never")
-    image("image.png", use_column_width="foo")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Unknown keyword still rejected
     image("image.png", not_a_real_param=True)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
