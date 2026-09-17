@@ -1070,8 +1070,9 @@ class ChatMixin:
                 "`st.chat_input()` can't be used in a `st.form()`."
             )
 
-        # A chat input called directly in the main app body is automatically
-        # positioned at the bottom. Inputs in explicit containers render inline.
+        # Streamlit auto-moves a chat input into the bottom container only when it is
+        # called from the main app body with no layout ancestors. Calls already inside
+        # `st.bottom` or other containers stay where they were created.
         ancestor_block_types = set(self.dg._active_dg._ancestor_block_types)
         if (
             self.dg._active_dg._root_container == RootContainer.MAIN
