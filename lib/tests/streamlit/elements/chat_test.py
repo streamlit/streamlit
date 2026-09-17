@@ -1148,17 +1148,29 @@ class ChatInputSerdeFilesAudioTest(DeltaGeneratorTestCase):
         )
 
         proto = ChatInputValueProto()
-        proto.data = "msg"
+        proto.data = ""
         info = proto.file_uploader_state.uploaded_file_info.add()
         info.file_id = "file1"
+        info.file_urls.file_id = "file1"
+        info.file_urls.upload_url = "upload"
+        info.file_urls.delete_url = "delete"
 
         serde = ChatInputSerde(accept_files=True, accept_audio=False)
         result = serde.deserialize(proto)
 
         assert isinstance(result, ChatInputValue)
-        assert result.text == "msg"
+        assert result.text == ""
         assert len(result.files) == 1
         assert result.files[0].name == "doc.txt"
+        assert result.files[0].type == "text/plain"
+        assert result.files[0].getvalue() == b"abc"
+        assert (
+            self.script_run_ctx.uploaded_file_mgr.get_files(
+                session_id=self.script_run_ctx.session_id,
+                file_ids=["file1"],
+            )
+            == []
+        )
         # Anti-regression: when accept_audio is False, audio access raises.
         with pytest.raises(AttributeError):
             _ = result.audio

@@ -371,8 +371,8 @@ describe("st.iframe", () => {
     })
 
     it.each([
-      { width: NaN, height: 100, description: "NaN width" },
-      { width: 100, height: NaN, description: "NaN height" },
+      { width: Number.NaN, height: 100, description: "NaN width" },
+      { width: 100, height: Number.NaN, description: "NaN height" },
       { width: Infinity, height: 100, description: "Infinity width" },
       { width: 100, height: -100, description: "negative height" },
       { width: -100, height: 100, description: "negative width" },

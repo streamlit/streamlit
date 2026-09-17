@@ -341,6 +341,59 @@ describe("migratePlotlyMapboxFigure", () => {
     })
   })
 
+  it("preserves non-string subplot ids and styles and skips non-object traces and frames", () => {
+    const figure = migratePlotlyMapboxFigure({
+      data: [{ type: "scattermapbox", subplot: 2 }, "not-a-trace"],
+      layout: {
+        mapbox: { style: { id: "custom" } },
+      },
+      frames: [null, "skip", { data: [{ type: "scattermapbox" }] }],
+    })
+
+    expect(figure.data).toEqual([
+      { type: "scattermap", subplot: 2 },
+      "not-a-trace",
+    ])
+    expect(figure.layout).toEqual({
+      map: { style: { id: "custom" } },
+    })
+    expect(figure.frames).toEqual([
+      null,
+      "skip",
+      { data: [{ type: "scattermap" }] },
+    ])
+  })
+
+  it("keeps an existing v4 nested key when a migrated v3 key collides", () => {
+    const figure = migratePlotlyMapboxFigure({
+      data: [],
+      layout: {
+        updatemenus: [
+          {
+            buttons: [
+              {
+                args: [{ map: { zoom: 1 }, mapbox: { zoom: 99 } }],
+              },
+            ],
+          },
+        ],
+      },
+      frames: null,
+    })
+
+    expect(figure.layout).toEqual({
+      updatemenus: [
+        {
+          buttons: [
+            {
+              args: [{ map: { zoom: 1 } }],
+            },
+          ],
+        },
+      ],
+    })
+  })
+
   it("does not rewrite Mapbox hostnames or URLs in nested layout strings", () => {
     const figure = migratePlotlyMapboxFigure({
       data: [{ type: "scatter" }],
@@ -410,6 +463,18 @@ describe("migratePlotlyMapboxConfig", () => {
   it("does not rewrite unrelated config", () => {
     const config = { displayModeBar: true, scrollZoom: true }
     expect(migratePlotlyMapboxConfig(config)).toEqual(config)
+  })
+
+  it("leaves non-array mode bar button config unchanged", () => {
+    expect(
+      migratePlotlyMapboxConfig({
+        modeBarButtons: "zoomInMapbox",
+        modeBarButtonsToAdd: { name: "resetViewMapbox" },
+      })
+    ).toEqual({
+      modeBarButtons: "zoomInMapbox",
+      modeBarButtonsToAdd: { name: "resetViewMapbox" },
+    })
   })
 
   it("maps showEditInChartStudio to showSendToCloud when unset", () => {

@@ -513,6 +513,82 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.width_config.pixel_width == 100
 
+    @parameterized.expand(
+        [
+            (True,),
+            (False,),
+            ("always",),
+            ("auto",),
+            ("never",),
+            ("foo",),
+            (1,),
+        ]
+    )
+    @mock.patch("streamlit.elements.image.show_deprecation_warning")
+    def test_st_image_use_column_width_is_ignored_noop(
+        self, use_column_width: object, show_warning_mock: mock.Mock
+    ) -> None:
+        """use_column_width is accepted, warned about, and does not change width."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, use_column_width=use_column_width)
+
+        show_warning_mock.assert_called_once()
+        warning_message = show_warning_mock.call_args.args[0]
+        assert "use_column_width" in warning_message
+        assert "no effect" in warning_message
+        assert "stretch" in warning_message
+        assert "content" in warning_message
+        assert show_warning_mock.call_args.kwargs.get("show_in_browser", True) is True
+        assert show_warning_mock.call_args.kwargs.get("show_once", False) is False
+
+        el = self.get_delta_from_queue().new_element
+        assert el.width_config.use_content
+
+    @mock.patch("streamlit.elements.image.show_deprecation_warning")
+    def test_st_image_use_column_width_does_not_override_width(
+        self, show_warning_mock: mock.Mock
+    ) -> None:
+        """width remains authoritative when use_column_width is also passed."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, width=100, use_column_width=True)
+
+        show_warning_mock.assert_called_once()
+        el = self.get_delta_from_queue().new_element
+        assert el.width_config.pixel_width == 100
+
+    @mock.patch("streamlit.elements.image.show_deprecation_warning")
+    def test_st_image_use_container_width_remains_authoritative(
+        self, show_warning_mock: mock.Mock
+    ) -> None:
+        """use_container_width still maps width when use_column_width is ignored."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, use_container_width=True, use_column_width=True)
+
+        assert show_warning_mock.call_count == 2
+        el = self.get_delta_from_queue().new_element
+        assert el.width_config.use_stretch
+
+    @mock.patch("streamlit.elements.image.show_deprecation_warning")
+    def test_st_image_omits_use_column_width_warning_when_unset(
+        self, show_warning_mock: mock.Mock
+    ) -> None:
+        """Omitting use_column_width does not emit its deprecation warning."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img)
+
+        show_warning_mock.assert_not_called()
+
+    def test_st_image_unknown_keyword_still_raises(self) -> None:
+        """Other unexpected keywords still raise TypeError."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        with pytest.raises(TypeError, match="unexpected keyword argument"):
+            st.image(img, not_a_real_param=True)
+
     def test_st_image_width_stretch(self):
         """Test st.image with width='stretch'."""
         img = Image.new("RGB", (64, 64), color="red")

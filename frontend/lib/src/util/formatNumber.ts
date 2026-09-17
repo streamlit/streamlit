@@ -34,7 +34,7 @@ function determineDefaultMantissa(value: number): number {
 
   const expStr = value.toExponential()
   const parts = expStr.split("e")
-  return Math.abs(parseInt(parts[1], 10))
+  return Math.abs(Number.parseInt(parts[1], 10))
 }
 
 /**

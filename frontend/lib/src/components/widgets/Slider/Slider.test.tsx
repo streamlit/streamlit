@@ -394,26 +394,54 @@ describe("Slider widget", () => {
 
   describe("Datetime slider", () => {
     withTimezones(() => {
-      it("formats datetime values correctly", () => {
-        const DAYS_IN_MICROS = 24 * 60 * 60 * 1000 * 1000
-        const WEEK_IN_MICROS = 7 * DAYS_IN_MICROS
+      const DAYS_IN_MICROS = 24 * 60 * 60 * 1000 * 1000
+      const WEEK_IN_MICROS = 7 * DAYS_IN_MICROS
 
-        const props = getProps({
-          // The default value should be divisible by step.
-          // Otherwise, we get a warning from `react-range`.
-          default: [0],
-          min: 0,
+      it.each([
+        {
+          label: "DATETIME",
+          dataType: SliderProto.DataType.DATETIME,
           max: 4 * WEEK_IN_MICROS,
           step: DAYS_IN_MICROS,
           format: "YYYY-MM-DD",
-          dataType: SliderProto.DataType.DATETIME,
-        })
-        render(<Slider {...props} />)
+          expected: "1970-01-01",
+        },
+        {
+          label: "DATE",
+          dataType: SliderProto.DataType.DATE,
+          max: 4 * WEEK_IN_MICROS,
+          step: DAYS_IN_MICROS,
+          format: "YYYY-MM-DD",
+          expected: "1970-01-01",
+        },
+        {
+          label: "TIME",
+          dataType: SliderProto.DataType.TIME,
+          max: DAYS_IN_MICROS,
+          step: 60 * 1_000_000,
+          format: "HH:mm",
+          expected: "00:00",
+        },
+      ])(
+        "formats $label values",
+        ({ dataType, max, step, format, expected }) => {
+          const props = getProps({
+            // The default value should be divisible by step.
+            // Otherwise, we get a warning from `react-range`.
+            default: [0],
+            min: 0,
+            max,
+            step,
+            format,
+            dataType,
+          })
+          render(<Slider {...props} />)
 
-        // Test that the thumb value shows formatted datetime
-        const thumbValue = screen.getByTestId("stSliderThumbValue")
-        expect(thumbValue).toHaveTextContent("1970-01-01")
-      })
+          expect(screen.getByTestId("stSliderThumbValue")).toHaveTextContent(
+            expected
+          )
+        }
+      )
     })
   })
 
@@ -540,6 +568,34 @@ describe("Slider widget", () => {
       )
       // Negative assertion: setDoubleArrayValue should NOT be called for select_slider
       expect(props.widgetMgr.setDoubleArrayValue).not.toHaveBeenCalled()
+    })
+
+    it("recomputes select_slider indices when options change", () => {
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg: vi.fn(),
+        formsDataChanged: vi.fn(),
+      })
+      const getSelectSliderProps = (options: string[]): Props =>
+        getProps(
+          {
+            default: [1],
+            min: 0,
+            max: options.length - 1,
+            format: "%s",
+            type: SliderProto.Type.SELECT_SLIDER,
+            options,
+          },
+          { widgetMgr }
+        )
+
+      const { rerender } = render(
+        <Slider {...getSelectSliderProps(["a", "b", "c"])} />
+      )
+      expect(screen.getByTestId("stSliderThumbValue")).toHaveTextContent("b")
+
+      rerender(<Slider {...getSelectSliderProps(["b", "a", "c", "d"])} />)
+
+      expect(screen.getByTestId("stSliderThumbValue")).toHaveTextContent("b")
     })
 
     it("handles value changes with setStringArrayValue", async () => {

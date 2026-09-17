@@ -65,6 +65,7 @@ import {
   isComponentStale,
   shouldActivateScrollToBottom,
   shouldComponentBeEnabled,
+  shouldHideStaleDialog,
 } from "./utils"
 
 const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
@@ -246,8 +247,8 @@ export interface BlockPropsWithoutWidth extends BaseBlockProps {
   node: BlockNode
 }
 
-const LARGE_STRETCH_BEHAVIOR = ["tabContainer"]
-const MEDIUM_STRETCH_BEHAVIOR = ["chatInput"]
+const LARGE_STRETCH_BEHAVIOR = new Set(["tabContainer"])
+const MEDIUM_STRETCH_BEHAVIOR = new Set(["chatInput"])
 
 export const BlockNodeRenderer = (
   props: BlockPropsWithoutWidth
@@ -258,9 +259,9 @@ export const BlockNodeRenderer = (
   const flexContext = useContext(FlexContext)
 
   let minStretchBehavior: MinFlexElementWidth
-  if (LARGE_STRETCH_BEHAVIOR.includes(node.deltaBlock.type ?? "")) {
+  if (LARGE_STRETCH_BEHAVIOR.has(node.deltaBlock.type ?? "")) {
     minStretchBehavior = "14rem"
-  } else if (MEDIUM_STRETCH_BEHAVIOR.includes(node.deltaBlock.type ?? "")) {
+  } else if (MEDIUM_STRETCH_BEHAVIOR.has(node.deltaBlock.type ?? "")) {
     minStretchBehavior = "8rem"
   } else if (node.deltaBlock.type === "chatMessage") {
     if (node.isEmpty) {
@@ -345,6 +346,24 @@ export const BlockNodeRenderer = (
   }
 
   if (node.deltaBlock.dialog) {
+    // Hide leftover dialogs from a previous full-app run as soon as the next
+    // full-app run starts. Stale-node cleanup waits until the run finishes,
+    // which would leave the overlay up during blocking work (issue #9405).
+    // Same unmount as that later prune. Do not go through Dialog's onClose:
+    // that path is user dismiss and would newly fire on_dismiss.
+    // Re-opening the same dialog in this run remounts it when the new delta
+    // arrives; keeping a dialog open across st.rerun() is not supported.
+    if (
+      shouldHideStaleDialog(
+        node,
+        scriptRunState,
+        scriptRunId,
+        fragmentIdsThisRun
+      )
+    ) {
+      return <></>
+    }
+
     return (
       <Dialog
         element={node.deltaBlock.dialog as BlockProto.Dialog}

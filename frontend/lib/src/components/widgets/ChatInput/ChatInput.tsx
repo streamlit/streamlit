@@ -240,8 +240,8 @@ function ChatInput({
       const computedStyle = getComputedStyle(textarea)
       fontStringRef.current = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`
 
-      const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0
-      const paddingRight = parseFloat(computedStyle.paddingRight) || 0
+      const paddingLeft = Number.parseFloat(computedStyle.paddingLeft) || 0
+      const paddingRight = Number.parseFloat(computedStyle.paddingRight) || 0
       availableWidthRef.current =
         // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Safe: runs inside ResizeObserver callback or useLayoutEffect after paint
         textarea.clientWidth - paddingLeft - paddingRight
@@ -744,7 +744,7 @@ function ChatInput({
     // eslint-disable-next-line react-hooks/preserve-manual-memoization -- chatInputRef and uploadAbortControllerRef are refs; setAudioUploading and setRecordingError are stable setters
     async (wav: Blob): Promise<void> => {
       // Convert blob to File
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
+      const timestamp = new Date().toISOString().replaceAll(/[:.]/g, "-")
       const audioFile = new File([wav], `audio-${timestamp}.wav`, {
         type: "audio/wav",
       })
@@ -1019,7 +1019,7 @@ function ChatInput({
       return "100%"
     }
     if (heightConfig.pixelHeight && heightConfig.pixelHeight > 0) {
-      const borderWidth = parseInt(theme.sizes.borderWidth, 10) || 1
+      const borderWidth = Number.parseInt(theme.sizes.borderWidth, 10) || 1
       const containerPadding =
         convertRemToPx(theme.spacing.md) * 2 + borderWidth * 2
       const adjustedHeight = Math.max(

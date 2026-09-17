@@ -33,7 +33,11 @@ from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.element_tree import (
     AppTestError,
     UnknownElement,
+    _form_clear_flags,
     _format_value_for_widget,
+    _has_pending_value,
+    _submitted_form_ids,
+    _use_form_clear_defaults,
     parse_tree_from_messages,
 )
 from streamlit.typing import ChatInputValue
@@ -2033,6 +2037,24 @@ def test_button_group_multi_select_and_unselect_edge_cases():
     assert at.pills[0].value == ["X"]
 
 
+def test_button_group_multi_set_value_none():
+    """Multi-select pills treat set_value(None) as an empty selection, not a crash."""
+
+    def script():
+        import streamlit as st
+
+        choice = st.pills(
+            "p", options=["a", "b"], selection_mode="multi", default=["a"]
+        )
+        st.text(repr(choice))
+
+    at = AppTest.from_function(script).run()
+    assert at.pills[0].value == ["a"]
+    at.pills[0].set_value(None).run()
+    assert at.pills[0].value == []
+    assert at.text[0].value == "[]"
+
+
 def test_button_group_single_unselect():
     """ButtonGroup (single) clears the value only when it matches."""
 
@@ -2190,6 +2212,321 @@ def test_form_key_and_get_by_key() -> None:
     assert form.key == "form-key"
 
 
+def test_form_values_apply_only_on_submit() -> None:
+    """Form widget values stay uncommitted until the submit button is clicked.
+
+    Staged ``.value`` remains visible for inspection but is not sent to the
+    script until that form's submit button is clicked.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("name-form"):
+            name = st.text_input("Name")
+            flagged = st.checkbox("Flag")
+            st.form_submit_button("Submit")
+        st.text(f"submitted={name!r}|{flagged}")
+
+    at = AppTest.from_function(script).run()
+    assert at.text[0].value == "submitted=''|False"
+
+    at.text_input[0].set_value("Ada")
+    at.checkbox[0].check()
+    assert at.text_input[0].value == "Ada"
+    assert at.checkbox[0].value is True
+
+    at = at.run()
+    assert at.text[0].value == "submitted=''|False"
+    assert at.text_input[0].value == ""
+    assert at.checkbox[0].value is False
+
+    at.text_input[0].set_value("Ada")
+    at.checkbox[0].check()
+    at.button[0].click().run()
+    assert at.text[0].value == "submitted='Ada'|True"
+    assert at.text_input[0].value == "Ada"
+    assert at.checkbox[0].value is True
+
+
+def test_widgets_outside_form_still_apply_without_submit() -> None:
+    """Widgets outside a form commit on any rerun, even if a form is pending."""
+
+    def script() -> None:
+        import streamlit as st
+
+        outside = st.text_input("Outside")
+        with st.form("inside-form"):
+            inside = st.text_input("Inside")
+            st.form_submit_button("Go")
+        st.text(f"outside={outside!r}")
+        st.text(f"inside={inside!r}")
+
+    at = AppTest.from_function(script).run()
+    at.text_input[0].set_value("now")
+    at.text_input[1].set_value("later")
+    at.run()
+    assert at.text[0].value == "outside='now'"
+    assert at.text[1].value == "inside=''"
+
+
+def test_submitting_one_form_does_not_commit_another() -> None:
+    """Each form batches independently; submitting A must not apply B."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("form-a"):
+            a = st.text_input("A")
+            st.form_submit_button("Submit A")
+        with st.form("form-b"):
+            b = st.text_input("B")
+            st.form_submit_button("Submit B")
+        st.text(f"a={a!r}")
+        st.text(f"b={b!r}")
+
+    at = AppTest.from_function(script).run()
+    at.text_input[0].set_value("Ada")
+    at.text_input[1].set_value("Bob")
+    at.button[0].click().run()
+    assert at.text[0].value == "a='Ada'"
+    assert at.text[1].value == "b=''"
+
+
+def test_form_keeps_committed_value_on_unrelated_rerun() -> None:
+    """A non-form rerun keeps the last submitted form values."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("name-form"):
+            name = st.text_input("Name")
+            st.form_submit_button("Submit")
+        st.button("Outside")
+        st.text(f"submitted={name!r}")
+
+    at = AppTest.from_function(script).run()
+    at.text_input[0].set_value("Ada")
+    at.button[0].click().run()
+    at.button[1].click().run()
+    assert at.text[0].value == "submitted='Ada'"
+
+
+def test_form_clear_on_submit_sends_defaults_on_next_submit() -> None:
+    """clear_on_submit resets form widgets for the next submit, like the frontend."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("name-form", clear_on_submit=True):
+            name = st.text_input("Name")
+            st.form_submit_button("Submit")
+        st.text(f"submitted={name!r}")
+
+    at = AppTest.from_function(script).run()
+    at.text_input[0].set_value("Ada")
+    at.button[0].click().run()
+    assert at.text[0].value == "submitted='Ada'"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "submitted=''"
+
+
+def test_form_clear_on_submit_selectbox_uses_option_default() -> None:
+    """clear_on_submit must serialize the option value, not proto.default's index."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("choice-form", clear_on_submit=True):
+            choice = st.selectbox("Choice", ["a", "b"], index=0)
+            st.form_submit_button("Submit")
+        st.text(f"choice={choice!r}")
+
+    at = AppTest.from_function(script).run()
+    at.selectbox[0].select("b")
+    at.button[0].click().run()
+    assert at.text[0].value == "choice='b'"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "choice='a'"
+
+
+def test_form_clear_on_submit_keeps_explicit_none() -> None:
+    """select_index(None) after a clearing submit is pending, not 'untouched'.
+
+    A selectbox with ``index=0`` snaps ``None`` back to the first option on
+    run, so the script cannot observe the staged clear. Pin that the value
+    is pending (so the cleared-default path is skipped) and that
+    ``get_widget_states()`` does not consume the clear flag. Widgets that
+    allow ``None`` cover the observable case in
+    ``test_form_clear_on_submit_pills_keeps_explicit_none``.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("choice-form", clear_on_submit=True):
+            st.selectbox("Choice", ["a", "b"], index=0)
+            st.form_submit_button("Submit")
+
+    at = AppTest.from_function(script).run()
+    at.selectbox[0].select("b")
+    at.button[0].click().run()
+    cleared = set(at._cleared_form_ids)
+    at._tree.get_widget_states()
+    assert at._cleared_form_ids == cleared
+
+    at.selectbox[0].select_index(None)
+    at.button[0].click()
+    assert _has_pending_value(at.selectbox[0])
+    assert not _use_form_clear_defaults(
+        at.selectbox[0],
+        submitted=_submitted_form_ids(at._tree),
+        cleared=at._cleared_form_ids,
+        form_clears=_form_clear_flags(at._tree),
+    )
+
+
+def test_form_clear_on_submit_follows_current_form_config() -> None:
+    """Stale cleared-form ids must not apply if the form no longer clears."""
+
+    def script() -> None:
+        import streamlit as st
+
+        should_clear = st.checkbox("Clear")
+        with st.form("name-form", clear_on_submit=should_clear):
+            name = st.text_input("Name")
+            st.form_submit_button("Submit")
+        st.text(f"submitted={name!r}")
+
+    at = AppTest.from_function(script).run()
+    at.checkbox[0].check().run()
+    at.text_input[0].set_value("Ada")
+    at.button[0].click().run()
+    assert at.text[0].value == "submitted='Ada'"
+
+    at.checkbox[0].uncheck().run()
+    at.button[0].click().run()
+    assert at.text[0].value == "submitted='Ada'"
+
+
+def test_form_file_uploader_applies_only_on_submit() -> None:
+    """Form uploads stay local until submit; clear_on_submit drops them next submit."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("upload-form", clear_on_submit=True):
+            uploaded = st.file_uploader("File")
+            st.form_submit_button("Submit")
+        st.button("Outside")
+        st.text("yes" if uploaded is not None else "no")
+
+    at = AppTest.from_function(script).run()
+    at.file_uploader[0].set_value([("a.txt", b"hi", "text/plain")])
+    at.run()
+    assert at.text[0].value == "no"
+
+    at.file_uploader[0].set_value([("a.txt", b"hi", "text/plain")])
+    at.button[0].click().run()
+    assert at.text[0].value == "yes"
+
+    at.button[1].click().run()
+    assert at.text[0].value == "yes"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "no"
+
+
+def test_form_clear_on_submit_selectbox_format_func() -> None:
+    """Cleared option defaults must not run format_func a second time."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("choice-form", clear_on_submit=True):
+            choice = st.selectbox("Choice", [1, 2], format_func=lambda x: f"#{x}")
+            st.form_submit_button("Submit")
+        st.text(f"choice={choice!r}")
+
+    at = AppTest.from_function(script).run()
+    at.selectbox[0].set_value(2)
+    at.button[0].click().run()
+    assert at.text[0].value == "choice=2"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "choice=1"
+
+
+def test_form_clear_on_submit_pills_default_none() -> None:
+    """Pills with default=None must clear on the next submit, not keep the last pick."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("choice-form", clear_on_submit=True):
+            choice = st.pills("Choice", ["a", "b"])
+            st.form_submit_button("Submit")
+        st.text(f"choice={choice!r}")
+
+    at = AppTest.from_function(script).run()
+    at.pills[0].select("a")
+    at.button[0].click().run()
+    assert at.text[0].value == "choice='a'"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "choice=None"
+
+
+def test_form_clear_on_submit_pills_keeps_explicit_none() -> None:
+    """set_value(None) after a clearing submit must not fall back to the pills default."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("choice-form", clear_on_submit=True):
+            choice = st.pills("Choice", ["a", "b"], default="a")
+            st.form_submit_button("Submit")
+        st.text(f"choice={choice!r}")
+
+    at = AppTest.from_function(script).run()
+    at.pills[0].select("b")
+    at.button[0].click().run()
+    assert at.text[0].value == "choice='b'"
+
+    at.pills[0].set_value(None)
+    at.button[0].click().run()
+    assert at.text[0].value == "choice=None"
+
+
+def test_form_file_uploader_clear_after_enabling_clear_on_submit() -> None:
+    """First clearing submit still sends committed files; the next submit drops them."""
+
+    def script() -> None:
+        import streamlit as st
+
+        should_clear = st.checkbox("Clear")
+        with st.form("upload-form", clear_on_submit=should_clear):
+            uploaded = st.file_uploader("File")
+            st.form_submit_button("Submit")
+        st.text("yes" if uploaded is not None else "no")
+
+    at = AppTest.from_function(script).run()
+    at.file_uploader[0].set_value([("a.txt", b"hi", "text/plain")])
+    at.button[0].click().run()
+    assert at.text[0].value == "yes"
+
+    at.checkbox[0].check().run()
+    assert at.text[0].value == "yes"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "yes"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "no"
+
+
 def test_get_by_key_rejects_ambiguous_key() -> None:
     """A form ID can match a widget key, so get_by_key must reject the clash."""
 
@@ -2223,6 +2560,63 @@ def test_container_excludes_columns_row() -> None:
     assert len(at.container) == 1
     assert at.container[0].key == "filters"
     assert len(at.columns) == 2
+
+
+def test_get_accepts_public_attribute_names() -> None:
+    """``AppTest.get()`` accepts public collection names, not only proto types.
+
+    Testers following the docstring pass attribute names such as
+    ``datetime_input`` and ``pills``. Proto names remain valid.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        st.datetime_input("When", key="when")
+        st.pills("Pills", options=["A", "B"], key="pills")
+        st.segmented_control("Seg", options=["X", "Y"], key="seg")
+        st.help("Hello")
+        st.image("https://example.com/image.png")
+        with st.container(key="filters"):
+            st.text("inside")
+        with st.container(horizontal=True, key="toolbar"):
+            st.text("tools")
+        left, right = st.columns(2)
+        left.text("left")
+        right.text("right")
+        tab_one, tab_two = st.tabs(["One", "Two"])
+        tab_one.text("tab-one")
+        tab_two.text("tab-two")
+
+    at = AppTest.from_function(script).run()
+
+    assert list(at.get("datetime_input")) == list(at.datetime_input)
+    assert list(at.get("date_time_input")) == list(at.datetime_input)
+
+    assert list(at.get("pills")) == list(at.pills)
+    assert list(at.get("segmented_control")) == list(at.segmented_control)
+    assert len(at.get("button_group")) == 2
+    assert at.get("pills")[0].key == "pills"
+    assert at.get("segmented_control")[0].key == "seg"
+
+    assert list(at.get("columns")) == list(at.columns)
+    assert list(at.get("column")) == list(at.columns)
+    assert len(at.get("columns")) == 2
+
+    assert list(at.get("help")) == list(at.get("help_info"))
+    assert len(at.get("help")) == 1
+    assert at.get("help")[0].type == "help_info"
+
+    assert list(at.get("container")) == list(at.container)
+    assert {node.key for node in at.get("container")} == {"filters", "toolbar"}
+
+    assert list(at.get("image")) == list(at.image)
+    assert len(at.get("image")) == 1
+
+    assert list(at.get("tabs")) == list(at.tabs)
+    assert list(at.get("tab")) == list(at.tabs)
+    assert len(at.get("tabs")) == 2
+    assert list(at.get("not_an_element")) == []
 
 
 def test_expander_key_and_get_by_key() -> None:

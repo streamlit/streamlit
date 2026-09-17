@@ -312,6 +312,15 @@ class AlertIconExtractionTest(DeltaGeneratorTestCase):
         assert el.alert.body == "🚨 Something went wrong"
 
     @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_empty_icon_skips_body_extraction(self, alert_func):
+        """Pass icon="" to keep a leading emoji in the body and show no icon."""
+        alert_func("🚨 boom", icon="")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.icon == ""
+        assert el.alert.body == "🚨 boom"
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
     def test_alert_no_icon_extraction_without_leading_icon(self, alert_func):
         """Test that alerts without leading icons work normally."""
         alert_func("No icon here")
