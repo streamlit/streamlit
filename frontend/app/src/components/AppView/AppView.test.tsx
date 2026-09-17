@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import { act, screen } from "@testing-library/react"
+import { act, screen, within } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
 import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation/utils"
 import {
@@ -1635,6 +1636,32 @@ describe("AppView element", () => {
       expect(
         screen.queryByTestId("stSidebarCollapseButton")
       ).not.toBeInTheDocument()
+    })
+
+    it("persists sidebar collapsed state when the user toggles the sidebar", async () => {
+      const user = userEvent.setup()
+      renderAppViewWithSidebar(PageConfig.SidebarState.EXPANDED)
+
+      await user.hover(screen.getByTestId("stSidebarHeader"))
+      await user.click(
+        within(screen.getByTestId("stSidebarCollapseButton")).getByRole(
+          "button"
+        )
+      )
+
+      expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+        "aria-expanded",
+        "false"
+      )
+      expect(window.localStorage.getItem("stSidebarCollapsed-")).toBe("true")
+
+      await user.click(screen.getByTestId("stExpandSidebarButton"))
+
+      expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+        "aria-expanded",
+        "true"
+      )
+      expect(window.localStorage.getItem("stSidebarCollapsed-")).toBe("false")
     })
   })
 })
