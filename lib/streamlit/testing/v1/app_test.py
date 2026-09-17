@@ -1436,24 +1436,25 @@ class AppTest:
         """Get elements or widgets of the specified type.
 
         This method returns the collection of all elements or widgets of
-        the specified type on the current page. Retrieve a specific element by
-        using its index (order on page) or key lookup.
+        the specified type on the current page. Retrieve a specific element
+        by index. Key lookup lives on typed collections
+        (``at.slider(key=...)``) or ``get_by_key``.
 
         Parameters
         ----------
         element_type: str
-            An element attribute of ``AppTest``. For example, "button",
-            "caption", or "chat_input".
+            An ``AppTest`` collection name such as ``"button"``,
+            ``"datetime_input"``, ``"pills"``, or ``"tabs"``. Internal node
+            type names such as ``"date_time_input"`` also work. ``"help"``
+            selects ``st.help`` elements (node type ``help_info``).
 
         Returns
         -------
         Sequence of Elements
-            Sequence of elements of the given type. Individual elements can
-            be accessed from a Sequence by index (order on the page). When
-            getting and ``element_type`` that is a widget, individual widgets
-            can be accessed by key. For example, ``at.get("text")[0]`` for the
-            first ``st.text`` element or ``at.get("slider")(key="my_key")`` for
-            the ``st.slider`` widget with a given key.
+            Sequence of matching nodes, accessed by index. For example,
+            ``at.get("text")[0]`` for the first ``st.text`` element. Widgets
+            with a key are looked up on the typed collection
+            (``at.slider(key="my_key")``) or with ``get_by_key``.
         """
         return self._tree.get(element_type)
 
