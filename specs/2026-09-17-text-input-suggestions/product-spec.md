@@ -94,10 +94,11 @@ values; the widget's value is always the text in the field, whether typed or cho
 
 All of the following applies only when `autocomplete` is a callable.
 
-- **When it's called:** while the field is focused, after a 300ms pause in typing. It receives
-  the current text verbatim — on focus that means whatever is already in the field, and `""`
-  only when the field is empty, which is a source's chance to offer default or recent
-  suggestions; return `[]` to show nothing.
+- **When it's called:** while the field is focused, after a 300ms pause in typing, with the
+  current text verbatim. Focusing an **empty** field also calls it, with `""` — a source's
+  chance to offer default or recent suggestions; return `[]` to show nothing. Focusing a field
+  that already has text does not, since the text hasn't changed and every tab-through would
+  otherwise bill a query.
 
   The pause is deliberately generous, and independent of `live`, because each lookup can cost a
   database query or an API call. A large-scale typing study measured a mean inter-key interval

@@ -56,6 +56,12 @@ if callable(autocomplete):
             "type='password'",
             explanation="Password suggestions must not appear in a dropdown.",
         )
+    if inspect.iscoroutinefunction(autocomplete):
+        # v1 runs the source in a worker thread; fail fast rather than fail
+        # closed to an empty dropdown that never explains itself.
+        raise StreamlitInvalidParameterTypeError(
+            "autocomplete", "async function", ["str", "function"]
+        )
     # Our dropdown replaces the browser's autofill, so suppress the native one.
     autocomplete_token = _AUTOFILL_SUPPRESSED_TOKEN
     autocomplete_identity = _AUTOCOMPLETE_IDENTITY_SENTINEL  # stable, not the callable
@@ -97,7 +103,12 @@ else:
   - **Unkeyed, two call sites:** because every callable hashes to the same sentinel, two
     otherwise identical unkeyed inputs with *different* callables now collide and raise
     `StreamlitDuplicateElementId`, where two different string tokens would have kept them
-    apart. Accepted — the remedy is the usual one, add a `key`.
+    apart. Accepted — the remedy is the usual one, add a `key`. The alternative is a derived
+    identity such as `f"{func.__module__}.{func.__qualname__}"` (unwrapping `functools.partial`
+    via `.func`), which would keep the two apart and is still stable across reruns. It's
+    recorded here rather than chosen: it trades a one-line sentinel for a rule about what
+    counts as "the same function", and the collision it avoids is rare and already has a
+    remedy.
 - The native `autocomplete` proto string field (field 10) continues to carry
   `autocomplete_token`. In suggestion mode that is a token no browser recognizes rather than
   `"off"`, which Chrome ignores for the name/address/email fields this feature targets.
@@ -153,7 +164,9 @@ message AutocompleteResponsePayload {
   // Echoes the requested source id so the frontend can match the response.
   string source_id = 1;
   // Echoes the requested text so the frontend can drop responses that no
-  // longer match the current input.
+  // longer match the current input. This is not redundant with request
+  // correlation: the user can keep typing inside the debounce window, so the
+  // newest in-flight request can answer text that is already outdated.
   string text = 2;
   // Suggestions after the server-side caps: over-long items are dropped, never
   // shortened, so each string is exactly what the source returned.
@@ -249,13 +262,15 @@ class AutocompleteSourceManager:
     at runtime the source returns whatever the app returns, so the walk has to be bounded to
     stay safe against a lazy or enormous result rather than trusting `list(result)[:N]`.
   - **Length caps drop, never rewrite.** Drop any suggestion longer than an absolute per-item
-    ceiling, which `max_chars` can again only tighten, and bound the encoded response as a
-    whole — a `BackendOperationResponse` over `server.maxMessageSize` is rewritten into an
-    exception delta, so the client would wait out its timeout for a reply that never comes.
-    Shortening a suggestion to fit would be worse than dropping it: the user would be offered,
-    and could commit, a string the source never returned. So there is one rule for over-long
-    suggestions — they don't appear — and a suggestion's text is always exactly what the
-    callable returned.
+    ceiling, which `max_chars` can again only tighten. Shortening a suggestion to fit would be
+    worse than dropping it: the user would be offered, and could commit, a string the source
+    never returned. So there is one rule for over-long suggestions — they don't appear — and a
+    suggestion's text is always exactly what the callable returned.
+  - **Measure length the way the browser does.** `max_chars` is enforced in the field by
+    `maxLength`, which counts UTF-16 code units, while Python's `len()` counts code points. Use
+    the browser's measure for the drop rule, or a suggestion containing an emoji can pass the
+    server filter, appear in the list, and then be rejected by the frontend gate on selection.
+    Test with astral characters.
 - **Synchronization**: the maps are written from the script thread (registration, rerun
   cleanup) and the server thread (shutdown) while being read from suggestion worker threads,
   so — like `DataframeSourceManager` — every shared-map access is guarded by a
@@ -311,6 +326,12 @@ class AutocompleteHandler(BackendOperationHandler):
         return resp
 ```
 
+The size limit belongs here rather than in the manager, which owns neither the request id nor
+the enclosing `ForwardMsg`: check the fully constructed outgoing message against
+`server.maxMessageSize` (and bound the client-supplied request id), falling back to an empty
+list that is guaranteed to fit. An oversized `BackendOperationResponse` is rewritten into an
+exception delta, and the client would then wait out its timeout for a reply it can never match.
+
 `_run_bounded` is where the safety properties live, and it differs from
 `DataframeChunkHandler` in one important way: that handler runs Streamlit's own bounded
 serialization code, while this one runs an arbitrary user callable that may never return.
@@ -350,7 +371,10 @@ serialization code, while this one runs an arbitrary user callable that may neve
   size bounds the damage a hung callable can do. Python cannot kill a running thread, so the
   residual risk is a bounded number of stuck threads per server — the accepted trade-off for
   running user code off the rerun path, and the reason the bound is a fixed pool rather than
-  the shared one.
+  the shared one. One consequence to state rather than discover: `ThreadPoolExecutor` joins its
+  workers at interpreter exit, so a permanently stuck source delays shutdown. Shut the pool
+  down without waiting on in-flight lookups (`cancel_futures=True`), accept that an already
+  running one still holds exit, and cover shutdown in the tests.
 - **Coalescing**: as in `DataframeChunkHandler`, identical in-flight requests keyed by
   `(session_id, source_id, text)` share one call, so rapid keystrokes don't multiply work.
   Waiters must `asyncio.shield` the shared task, as that handler does; otherwise the first
@@ -524,8 +548,8 @@ needs it.
 
 #### Request lifecycle
 
-- On focus and on each accepted change, **debounce** with the suggestion timer (reuse the
-  `useDebouncedCallback` already in this component), then call
+- On each accepted change, and on focus of an empty field, **debounce** with the suggestion
+  timer (reuse the `useDebouncedCallback` already in this component), then call
   `backendOperationClient.requestAutocomplete({ sourceId, text })`. The delay is a constant
   `300ms`, independent of `live` in both directions — see the product spec for why. Keep the
   value in one named constant so the future "configurable debounce" follow-up has a single
@@ -533,9 +557,13 @@ needs it.
   a rerun never invalidates a pending lookup, so there is nothing to re-request or re-time.
 - **Race handling:** apply a response only if its echoed `sourceId` and `text` still match the
   element's `autocompleteSourceId` and the current `uiValue`, **and** the field is still focused
-  and enabled. The focus condition matters on its own: blur closes the list per the product
-  spec, and without it a response that arrives afterwards with unchanged text would pop the
-  list back open on an unfocused field.
+  and enabled. The text check is not redundant with the generation ref below: typing inside the
+  debounce window changes `uiValue` without issuing a new request, so the newest request can
+  come back answering text the user has already moved past.
+- **Blur, disable, and unmount cancel the pending debounce first**, then invalidate the
+  generation. Invalidating alone only discards a response that was already paid for — a
+  focus, type, blur sequence would still fire the timer and bill the source for a lookup whose
+  result the contract says to throw away.
 
   Implement this by ignoring superseded responses, not by cancelling them:
   `BackendOperationClient` has no per-request cancel API — its `cleanup()` rejects *every*
