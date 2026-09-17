@@ -77,7 +77,7 @@ interface UseDataEditorParams {
    * Callback that needs to be called on all edits. This will also trigger a rerun
    * and send widget state to the backend.
    */
-  syncEditState: () => void
+  syncEditState: (options?: { submit?: boolean }) => void
   /** Callback to clear the current selection. */
   clearSelection: () => void
 }
