@@ -26,6 +26,8 @@ WHEEL_TICKS = 12
 WHEEL_DELTA_Y = -80
 DOMAIN_TOLERANCE = 0.005
 PLOT_BOX_TOLERANCE_PX = 2
+# Match frontend RANGE_EPSILON: relative to the zoom window span.
+RANGE_EPSILON = 1e-6
 
 
 def _plotly_div(chart: Locator) -> Locator:
@@ -51,6 +53,16 @@ def _range_span(range_values: list[float]) -> float:
     return abs(range_values[1] - range_values[0])
 
 
+def _ranges_close(left: list[float], right: list[float]) -> bool:
+    if len(left) != len(right):
+        return False
+    span = max(_range_span(left), _range_span(right), 1e-12)
+    return all(
+        abs(left_value - right_value) <= RANGE_EPSILON * span
+        for left_value, right_value in zip(left, right, strict=True)
+    )
+
+
 def _dispatch_wheel_on_drag_layer(chart: Locator) -> None:
     chart.locator(".nsewdrag").evaluate(
         """(el, { ticks, deltaY }) => {
@@ -66,16 +78,16 @@ def _dispatch_wheel_on_drag_layer(chart: Locator) -> None:
     )
 
 
-def _scroll_zoom(app: Page, chart: Locator) -> None:
+def _scroll_zoom(chart: Locator) -> None:
+    """Zoom via Plotly's cartesian drag layer so the interaction is deterministic.
+
+    Playwright `mouse.wheel` at the plot center does not always reach Plotly.
+    """
     chart.scroll_into_view_if_needed()
     expect(chart).to_be_visible()
     plot = _plotly_div(chart)
     expect(plot).to_be_visible()
-    box = plot.bounding_box()
-    assert box is not None
-    app.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
-    for _ in range(WHEEL_TICKS):
-        app.mouse.wheel(0, WHEEL_DELTA_Y)
+    _dispatch_wheel_on_drag_layer(chart)
 
 
 def _zoom_until_range_shrinks(
@@ -83,14 +95,11 @@ def _zoom_until_range_shrinks(
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     wait_until(app, lambda: _layout_metrics(chart)["plotW"] > 0)
     before = _layout_metrics(chart)
-    _scroll_zoom(app, chart)
+    _scroll_zoom(chart)
 
     def _zoomed() -> bool:
         after = _layout_metrics(chart)
         return _range_span(after["xRange"]) < _range_span(before["xRange"])
-
-    if not _zoomed():
-        _dispatch_wheel_on_drag_layer(chart)
 
     wait_until(app, _zoomed)
     return before, _layout_metrics(chart)
@@ -138,7 +147,9 @@ def test_scroll_zoom_keeps_plot_box_stable_and_survives_rerun(app: Page):
 
     def _zoom_restored() -> bool:
         after_rerun = _layout_metrics(imshow_streamlit)
-        return bool(after_rerun["xRange"] == imshow_after["xRange"])
+        return _ranges_close(after_rerun["xRange"], imshow_after["xRange"])
 
     wait_until(app, _zoom_restored)
-    assert _layout_metrics(imshow_streamlit)["xRange"] != imshow_before["xRange"]
+    assert not _ranges_close(
+        _layout_metrics(imshow_streamlit)["xRange"], imshow_before["xRange"]
+    )

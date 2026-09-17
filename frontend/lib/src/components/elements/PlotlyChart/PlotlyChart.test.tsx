@@ -294,6 +294,43 @@ describe("PlotlyChart Component", () => {
     expect(getLastPlotProps().layout.dragmode).toBe("pan")
   })
 
+  it("adopts modebar dragmode when onUpdate mutates the live layout object", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      selectionMode: [PlotlyChartProto.SelectionMode.BOX],
+    })
+    renderComponent({ element })
+
+    act(() => {
+      getLastPlotProps().onUpdate?.(
+        {
+          data: getLastPlotProps().data,
+          layout: { ...getLastPlotProps().layout, dragmode: "select" },
+          frames: null,
+        },
+        document.createElement("div")
+      )
+    })
+
+    const liveLayout = getLastPlotProps().layout
+    liveLayout.dragmode = "pan"
+
+    act(() => {
+      getLastPlotProps().onUpdate?.(
+        {
+          data: getLastPlotProps().data,
+          layout: liveLayout,
+          frames: null,
+        },
+        document.createElement("div")
+      )
+    })
+
+    expect(getLastPlotProps().layout.dragmode).toBe("pan")
+    // Box-only selection: leaving select/lasso should reset clickmode to none.
+    expect(getLastPlotProps().layout.clickmode).toBe("none")
+  })
+
   it("configures selection modes correctly (Lasso)", () => {
     const element = new PlotlyChartProto({
       ...DEFAULT_ELEMENT,
@@ -912,6 +949,79 @@ describe("PlotlyChart Component", () => {
     ])
     expect(layout.scene?.camera).toEqual(camera)
     expect(layout.dragmode).toBe("pan")
+  })
+
+  it("persists cartesian zoom reset from onUpdate so a later size change cannot restore range", () => {
+    renderComponent()
+
+    act(() => {
+      getLastPlotProps().onUpdate?.(
+        {
+          data: getLastPlotProps().data,
+          layout: {
+            ...getLastPlotProps().layout,
+            xaxis: { range: [2, 8], autorange: false },
+          },
+          frames: null,
+        },
+        document.createElement("div")
+      )
+    })
+    expect(getLastPlotProps().layout.xaxis?.range).toEqual([2, 8])
+
+    act(() => {
+      getLastPlotProps().onUpdate?.(
+        {
+          data: getLastPlotProps().data,
+          layout: {
+            ...getLastPlotProps().layout,
+            xaxis: { autorange: true },
+          },
+          frames: null,
+        },
+        document.createElement("div")
+      )
+    })
+
+    expect(getLastPlotProps().layout.xaxis?.autorange).toBe(true)
+    expect(getLastPlotProps().layout.xaxis?.range).toBeUndefined()
+  })
+
+  it("clears persisted selections when onUpdate omits layout.selections", () => {
+    renderComponent()
+
+    act(() => {
+      getLastPlotProps().onUpdate?.(
+        {
+          data: getLastPlotProps().data,
+          layout: {
+            ...getLastPlotProps().layout,
+            selections: [{ type: "rect", x0: 1, x1: 2, y0: 1, y1: 2 }],
+          },
+          frames: null,
+        },
+        document.createElement("div")
+      )
+    })
+    expect(getLastPlotProps().layout.selections).toEqual([
+      { type: "rect", x0: 1, x1: 2, y0: 1, y1: 2 },
+    ])
+
+    const layoutWithoutSelections = { ...getLastPlotProps().layout }
+    delete layoutWithoutSelections.selections
+
+    act(() => {
+      getLastPlotProps().onUpdate?.(
+        {
+          data: getLastPlotProps().data,
+          layout: layoutWithoutSelections,
+          frames: null,
+        },
+        document.createElement("div")
+      )
+    })
+
+    expect(getLastPlotProps().layout.selections).toEqual([])
   })
 
   it("sanitizes recovered widgetMgr figure state on mount", () => {

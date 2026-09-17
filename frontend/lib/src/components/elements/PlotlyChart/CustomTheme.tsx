@@ -37,6 +37,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
+function isConstrainedCartesianAxis(axis: Record<string, unknown>): boolean {
+  // Plotly uses `scaleanchor: false` to unlink axes; that is not constrained.
+  return (
+    (axis.scaleanchor !== undefined && axis.scaleanchor !== false) ||
+    axis.constrain === "domain"
+  )
+}
+
 /** Plotly accepts `layout.title` as a string or `{ text, ... }`. */
 function plotlyTitleObject(title: unknown): Record<string, unknown> {
   if (typeof title === "string") {
@@ -226,10 +234,12 @@ export function applyStreamlitThemeTemplateLayout(
 }
 
 /**
- * Layout-level `automargin` fights constrained axes (e.g. `px.imshow`
- * `scaleanchor` / `constrain: "domain"`) when Streamlit re-feeds Plotly's
- * computed layout. Override the template `automargin: true` only on those
- * axes; ordinary scatter/line charts keep template automargin.
+ * Turn off layout-level automargin on constrained cartesian axes.
+ *
+ * Streamlit's template sets `automargin: true`. Combined with
+ * `scaleanchor` / `constrain: "domain"` (e.g. `px.imshow`), Plotly
+ * retunes the plot box on scroll-zoom. Override only those axes;
+ * unconstrained scatter/line charts keep template automargin.
  *
  * @param layout - `spec.layout` (not the template layout)
  */
@@ -244,7 +254,7 @@ function suppressAutomarginOnConstrainedAxes(
     if (!isRecord(axis)) {
       continue
     }
-    if (axis.scaleanchor !== undefined || axis.constrain === "domain") {
+    if (isConstrainedCartesianAxis(axis)) {
       // Layout-level automargin overrides the template default.
       layout[key] = { ...axis, automargin: false }
     }

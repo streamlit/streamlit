@@ -419,6 +419,98 @@ describe("PlotlyChart utils", () => {
       expect(result.layout.hovermode).toBe("closest")
     })
 
+    it("overlays zoom reset by adopting autorange and dropping the stale range", () => {
+      const previousLayout = {
+        xaxis: { range: [2, 8], autorange: false },
+        yaxis: { range: [1, 5], autorange: false },
+      }
+      const figure = {
+        data: [],
+        frames: null,
+        layout: {
+          xaxis: { autorange: true },
+          yaxis: { autorange: true, range: [0, 10] },
+        },
+      }
+
+      const result = sanitizePlotlyFigureForReact(
+        figure,
+        ownedSize,
+        previousLayout
+      )
+
+      expect(result.layout.xaxis?.autorange).toBe(true)
+      expect(result.layout.xaxis?.range).toBeUndefined()
+      expect(result.layout.yaxis?.autorange).toBe(true)
+      expect(result.layout.yaxis?.range).toBeUndefined()
+    })
+
+    it("sets autorange false when adopting a zoom range", () => {
+      const previousLayout = {
+        xaxis: { autorange: true },
+      }
+      const figure = {
+        data: [],
+        frames: null,
+        layout: {
+          xaxis: { range: [2, 8] },
+        },
+      }
+
+      const result = sanitizePlotlyFigureForReact(
+        figure,
+        ownedSize,
+        previousLayout
+      )
+
+      expect(result.layout.xaxis?.range).toEqual([2, 8])
+      expect(result.layout.xaxis?.autorange).toBe(false)
+    })
+
+    it("clears persisted selections when Plotly omits the key", () => {
+      const previousLayout = {
+        selections: [
+          { type: "rect", xref: "x", yref: "y", x0: 1, x1: 2, y0: 1, y1: 2 },
+        ],
+      }
+      const figure = {
+        data: [],
+        frames: null,
+        layout: { xaxis: { range: [0, 1] } },
+      }
+
+      const result = sanitizePlotlyFigureForReact(
+        figure,
+        ownedSize,
+        previousLayout
+      )
+
+      expect(result.layout.selections).toEqual([])
+    })
+
+    it("keeps unconstrained domain when scaleanchor is false", () => {
+      const previousLayout = {
+        xaxis: { domain: [0, 0.45], range: [0, 10] },
+      }
+      const figure = {
+        data: [],
+        frames: null,
+        layout: {
+          xaxis: { scaleanchor: false, domain: [0.1, 0.4], range: [1, 5] },
+        },
+      }
+
+      const result = sanitizePlotlyFigureForReact(
+        figure,
+        ownedSize,
+        previousLayout
+      )
+
+      expect(result.layout.xaxis?.domain).toEqual([0, 0.45])
+      expect(result.layout.xaxis?.scaleanchor).toBe(false)
+      expect(result.layout.xaxis?.range).toEqual([1, 5])
+    })
+
     it("does not need a React state update after applying a noisy live layout twice", () => {
       const data: never[] = []
       const previousLayout = {
@@ -441,6 +533,10 @@ describe("PlotlyChart utils", () => {
               x1: 2,
               y0: 1,
               y1: 2,
+              line: { color: "red", width: 2 },
+              fillcolor: "rgba(0,0,255,0.2)",
+              opacity: 0.4,
+              name: "box",
               _inputIndex: 0,
             },
           ],
@@ -468,6 +564,10 @@ describe("PlotlyChart utils", () => {
           x1: 2,
           y0: 1,
           y1: 2,
+          line: { color: "red", width: 2 },
+          fillcolor: "rgba(0,0,255,0.2)",
+          opacity: 0.4,
+          name: "box",
         },
       ])
     })
@@ -489,6 +589,29 @@ describe("PlotlyChart utils", () => {
       expect(result).toBe(target)
       expect(target.xaxis).toEqual({ range: [2, 8] })
       expect(target.autosize).toBe(false)
+      expect(target.margin).toBeUndefined()
+    })
+
+    it("deletes sanitizer-omitted keys such as polar and stale selections", () => {
+      const target: Partial<Plotly.Layout> = {
+        xaxis: { range: [0, 1] },
+        polar: { radialaxis: { visible: true } },
+        selections: [{ type: "rect", x0: 1, x1: 2, y0: 1, y1: 2 }],
+        margin: { l: 99 },
+      }
+      const source: Partial<Plotly.Layout> = {
+        xaxis: { range: [2, 8] },
+        autosize: false,
+      }
+
+      assignLayoutInPlace(target, source)
+
+      expect(target).toEqual({
+        xaxis: { range: [2, 8] },
+        autosize: false,
+      })
+      expect(target.polar).toBeUndefined()
+      expect(target.selections).toBeUndefined()
       expect(target.margin).toBeUndefined()
     })
   })
@@ -569,6 +692,38 @@ describe("PlotlyChart utils", () => {
       }
 
       expect(plotlyFigureNeedsReactStateUpdate(prev, next)).toBe(true)
+    })
+
+    it("is true when a large-offset window pans by more than span-relative epsilon", () => {
+      const data: never[] = []
+      const prev = {
+        data,
+        frames: null,
+        layout: { xaxis: { range: [1e12, 1e12 + 100] } },
+      }
+      const next = {
+        data,
+        frames: null,
+        layout: { xaxis: { range: [1e12 + 1, 1e12 + 101] } },
+      }
+
+      expect(plotlyFigureNeedsReactStateUpdate(prev, next)).toBe(true)
+    })
+
+    it("is false when a large-offset window only drifts by a sub-span epsilon", () => {
+      const data: never[] = []
+      const prev = {
+        data,
+        frames: null,
+        layout: { xaxis: { range: [1e12, 1e12 + 100] } },
+      }
+      const next = {
+        data,
+        frames: null,
+        layout: { xaxis: { range: [1e12 + 1e-6, 1e12 + 100 + 1e-6] } },
+      }
+
+      expect(plotlyFigureNeedsReactStateUpdate(prev, next)).toBe(false)
     })
   })
 

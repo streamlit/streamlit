@@ -228,35 +228,43 @@ function isAxisRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isConstrainedCartesianAxis(axis: Record<string, unknown>): boolean {
-  return axis.scaleanchor !== undefined || axis.constrain === "domain"
+  // Plotly uses `scaleanchor: false` to unlink axes; that is not constrained.
+  return (
+    (axis.scaleanchor !== undefined && axis.scaleanchor !== false) ||
+    axis.constrain === "domain"
+  )
 }
 
 const MAP_VIEW_FIELDS = ["center", "zoom", "bearing", "pitch", "projection"]
-const SELECTION_SHAPE_FIELDS = [
-  "type",
-  "xref",
-  "yref",
-  "x0",
-  "x1",
-  "y0",
-  "y1",
-  "path",
-]
-// Relative to the larger magnitude so sub-1e-6 scientific ranges still persist.
+// Relative to the range window so both sub-1e-6 scientific axes and
+// large-offset (timestamp-like) windows persist real pans/zooms.
 const RANGE_EPSILON = 1e-6
 
-function numericArraysDiffer(a: unknown, b: unknown): boolean {
+function numericRangeSpan(range: unknown[]): number {
+  const numbers = range.filter(
+    (value): value is number => typeof value === "number"
+  )
+  if (numbers.length === 0) {
+    return 1e-12
+  }
+  if (numbers.length === 1) {
+    return Math.max(Math.abs(numbers[0]), 1e-12)
+  }
+  return Math.max(Math.max(...numbers) - Math.min(...numbers), 1e-12)
+}
+
+function axisRangeValuesDiffer(a: unknown, b: unknown): boolean {
   if (a === b) {
     return false
   }
   if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
     return true
   }
+  const span = Math.max(numericRangeSpan(a), numericRangeSpan(b))
   return a.some((value, i) => {
     const other = b[i]
     if (typeof value === "number" && typeof other === "number") {
-      const scale = Math.max(Math.abs(value), Math.abs(other), 1e-12)
-      return Math.abs(value - other) > RANGE_EPSILON * scale
+      return Math.abs(value - other) > RANGE_EPSILON * span
     }
     return !isEqual(value, other)
   })
@@ -269,7 +277,7 @@ function shouldAdoptNumericArray(previous: unknown, next: unknown): boolean {
   if (previous === undefined) {
     return true
   }
-  return numericArraysDiffer(previous, next)
+  return axisRangeValuesDiffer(previous, next)
 }
 
 function sanitizeSelections(selections: unknown): unknown {
@@ -281,9 +289,10 @@ function sanitizeSelections(selections: unknown): unknown {
       return selection
     }
     const nextSelection: Record<string, unknown> = {}
-    for (const field of SELECTION_SHAPE_FIELDS) {
-      if (selection[field] !== undefined) {
-        nextSelection[field] = selection[field]
+    for (const [field, value] of Object.entries(selection)) {
+      // Strip Plotly-private keys (`_inputIndex`, …); keep public styling.
+      if (!field.startsWith("_") && value !== undefined) {
+        nextSelection[field] = value
       }
     }
     return nextSelection
@@ -308,13 +317,22 @@ function overlayCartesianAxisInteraction(
       : {}
     const hasInteraction =
       sourceAxis.range !== undefined ||
+      sourceAxis.autorange !== undefined ||
       sourceAxis.scaleanchor !== undefined ||
       sourceAxis.constrain !== undefined
     if (!hasInteraction) {
       continue
     }
-    if (shouldAdoptNumericArray(nextAxis.range, sourceAxis.range)) {
+    if (sourceAxis.autorange === true) {
+      // Double-click zoom reset: persist autorange and drop the stale window
+      // so a later Plotly.react (resize, fullscreen, remount) cannot restore it.
+      nextAxis.autorange = true
+      delete nextAxis.range
+    } else if (shouldAdoptNumericArray(nextAxis.range, sourceAxis.range)) {
       nextAxis.range = sourceAxis.range
+      nextAxis.autorange = false
+    } else if (sourceAxis.autorange !== undefined) {
+      nextAxis.autorange = sourceAxis.autorange
     }
     if (sourceAxis.scaleanchor !== undefined) {
       nextAxis.scaleanchor = sourceAxis.scaleanchor
@@ -367,6 +385,10 @@ function overlayViewState(
 
   if (sourceLayout.selections !== undefined) {
     nextLayout.selections = sanitizeSelections(sourceLayout.selections)
+  } else if (nextLayout.selections !== undefined) {
+    // `onDeselect` does not rewrite the figure. If Plotly omits the key
+    // instead of sending `[]`, drop persisted box/lasso shapes.
+    nextLayout.selections = []
   }
 
   // Adopt modebar / Plotly dragmode (pan, select, lasso, zoom, orbit, …).
@@ -389,20 +411,30 @@ type PlotlyFigureLike = {
  * `Plotly.react`.
  *
  * When `previousLayout` is provided, start from that React-owned layout and
- * overlay only interaction fields. Spreading Plotly's live layout would copy
- * constraint-computed `domain` (and other internals) and, because
- * react-plotly.js compares `layout` by reference, retrigger `Plotly.react`
- * in a loop. When omitted (remount recovery), start from the saved figure.
+ * overlay only interaction fields: cartesian axis `range` / `autorange`
+ * (including zoom reset), `scaleanchor` / `constrain`, `scene.camera`,
+ * map/geo view, `hiddenlabels`, `selections`, and `dragmode`. Any other
+ * Plotly-reported layout is intentionally discarded — including polar/ternary
+ * view, slider/updatemenu index, and `config.editable` annotation/shape
+ * edits. Spreading Plotly's live layout would copy constraint-computed
+ * `domain` (and other internals) and, because react-plotly.js compares
+ * `layout` by reference, retrigger `Plotly.react` in a loop. When omitted
+ * (remount recovery), start from the saved figure.
  *
  * Plotly's live `figure.layout` is mutated in place; this always returns a
  * new layout (and copied axis objects) and leaves `data` shared.
  *
+ * `previousLayout` must not be Plotly's live `gd.layout`. After
+ * `assignLayoutInPlace`, those can be the same object; pass the last
+ * sanitized copy instead so computed `domain` / automargin `margin` are
+ * not treated as Streamlit-owned.
+ *
  * @param figure - Figure from `onUpdate` / `onInitialized` / remount state
  * @param ownedSize - Container width/height owned by Streamlit
- * @param previousLayout - Last React-owned layout. When provided, restore its
- *   `margin` — including no layout-level margin, so template/theme margin is
- *   used instead of Plotly automargin output. When omitted (remount recovery),
- *   keep the figure's margin.
+ * @param previousLayout - Last sanitized React-owned layout. When provided,
+ *   restore its `margin` — including no layout-level margin, so
+ *   template/theme margin is used instead of Plotly automargin output. When
+ *   omitted (remount recovery), keep the figure's margin.
  * @returns A shallow-copied figure safe to pass back to `Plot`
  */
 export function sanitizePlotlyFigureForReact(
@@ -448,7 +480,12 @@ export function sanitizePlotlyFigureForReact(
  * on the graph div; replacing the layout object would retrigger `Plotly.react`
  * and revert or interrupt the zoom.
  *
- * @param target - React-owned layout currently passed to `Plot`
+ * After the first update, `target` may simultaneously be React state, the
+ * `layout` prop of `Plot`, and Plotly's live `gd.layout`. Keys omitted from
+ * `source` are deleted so sanitizer-dropped fields (`polar`, computed
+ * `margin`, stale `selections`, …) cannot leak into a later `Plotly.react`.
+ *
+ * @param target - Layout currently passed to `Plot` (may be live `gd.layout`)
  * @param source - Sanitized layout to copy
  * @returns `target`
  */
@@ -456,10 +493,15 @@ export function assignLayoutInPlace(
   target: Partial<Plotly.Layout>,
   source: Partial<Plotly.Layout>
 ): Partial<Plotly.Layout> {
-  Object.assign(target, source)
-  if (!Object.hasOwn(source, "margin")) {
-    delete target.margin
+  const targetRecord = target as Record<string, unknown>
+  const sourceRecord = source as Record<string, unknown>
+  for (const key of Object.keys(targetRecord)) {
+    if (!Object.hasOwn(sourceRecord, key)) {
+      // oxlint-disable-next-line typescript/no-dynamic-delete -- omitted sanitizer keys must not remain on Plotly's live layout
+      delete targetRecord[key]
+    }
   }
+  Object.assign(target, source)
   return target
 }
 
@@ -468,7 +510,12 @@ export function assignLayoutInPlace(
  * persist. Callers may still reuse the current `layout` object identity so
  * react-plotly.js does not call `Plotly.react`.
  *
- * @param prev - Current React-owned figure
+ * `prev.layout` must be a non-aliased snapshot (the last sanitizer output).
+ * After `assignLayoutInPlace`, Plotly mutates the React `layout` in place, so
+ * comparing against that live object would miss dragmode / zoom-reset updates
+ * and skip the `setPlotlyFigure` that selection `clickmode` effects need.
+ *
+ * @param prev - Current React-owned figure (`layout` = last sanitized copy)
  * @param next - Candidate sanitized figure
  * @returns Whether interaction state should be written back
  */

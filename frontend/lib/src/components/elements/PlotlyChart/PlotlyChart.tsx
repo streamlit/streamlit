@@ -25,7 +25,7 @@ import {
   useState,
 } from "react"
 
-import { isEqual } from "lodash-es"
+import { cloneDeep, isEqual } from "lodash-es"
 import type * as Plotly from "plotly.js"
 
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
@@ -159,6 +159,11 @@ export function PlotlyChart({
   })
   const plotlyFigureRef = useRef(plotlyFigure)
   plotlyFigureRef.current = plotlyFigure
+  // Last sanitizer output — never Plotly's live `gd.layout`. After
+  // `assignLayoutInPlace`, React state and `gd.layout` are the same object.
+  const lastSanitizedLayoutRef = useRef<Partial<Plotly.Layout> | undefined>(
+    undefined
+  )
 
   const isSelectionActivated = element.selectionMode.length > 0 && !disabled
   const isLassoSelectionActivated =
@@ -382,13 +387,25 @@ export function PlotlyChart({
     ) {
       return layout
     }
-    return {
-      ...layout,
-      width: calculatedWidth,
-      height: calculatedHeight,
-      autosize: false as const,
-    }
-  }, [plotlyFigure.layout, calculatedWidth, calculatedHeight])
+    // Size changes issue a new layout object (and `Plotly.react`). Sanitize
+    // from the last owned snapshot so live computed domain/margin are not
+    // spread back in.
+    return sanitizePlotlyFigureForReact(
+      {
+        data: plotlyFigure.data,
+        layout,
+        frames: plotlyFigure.frames,
+      },
+      { width: calculatedWidth, height: calculatedHeight },
+      lastSanitizedLayoutRef.current ?? layout
+    ).layout
+  }, [
+    plotlyFigure.data,
+    plotlyFigure.frames,
+    plotlyFigure.layout,
+    calculatedWidth,
+    calculatedHeight,
+  ])
   // react-plotly.js compares `layout` by reference. Reuse the previous
   // object when the contents match so Plotly.react is not retriggered.
   const plotLayoutRef = useRef(nextPlotLayout)
@@ -433,20 +450,46 @@ export function PlotlyChart({
    * and break box/lasso select. Interaction is committed on `onUpdate`.
    */
   const persistSanitizedFigure = useCallback(
-    (figure: PlotlyFigureType, updateReactState: boolean): void => {
+    (
+      figure: PlotlyFigureType,
+      { updateReactState }: { updateReactState: boolean }
+    ): void => {
       const previousFigure = plotlyFigureRef.current
+      // Once `assignLayoutInPlace` has run, `figure.layout` is `gd.layout`
+      // and the same object as React state. Overlay from the last sanitized
+      // copy so computed domain/margin are not treated as owned.
+      const layoutIsAliased = figure.layout === previousFigure.layout
+      const previousLayout =
+        layoutIsAliased && lastSanitizedLayoutRef.current
+          ? lastSanitizedLayoutRef.current
+          : previousFigure.layout
       const sanitized = sanitizePlotlyFigureForReact(
         figure,
         { width: calculatedWidth, height: calculatedHeight },
-        previousFigure.layout
+        previousLayout
       )
       if (element.id) {
         widgetMgr.setElementState(element.id, "figure", sanitized)
       }
+
+      const commitSanitizedSnapshot = (): void => {
+        lastSanitizedLayoutRef.current = cloneDeep(sanitized.layout)
+      }
+
       if (!updateReactState) {
+        commitSanitizedSnapshot()
         return
       }
-      if (!plotlyFigureNeedsReactStateUpdate(previousFigure, sanitized)) {
+      if (
+        !plotlyFigureNeedsReactStateUpdate(
+          {
+            data: previousFigure.data,
+            frames: previousFigure.frames,
+            layout: lastSanitizedLayoutRef.current ?? previousFigure.layout,
+          },
+          sanitized
+        )
+      ) {
         return
       }
 
@@ -465,23 +508,21 @@ export function PlotlyChart({
         layout: nextLayout,
       }
       plotlyFigureRef.current = nextFigure
+      commitSanitizedSnapshot()
       setPlotlyFigure(nextFigure)
     },
-    // Using element.id instead of element: the proto object gets a new reference
-    // on each render, but element.id only changes when the element actually changes.
-
     [calculatedWidth, calculatedHeight, element.id, widgetMgr]
   )
 
   const handleInitialized = useCallback(
     (figure: PlotlyFigureType): void => {
-      persistSanitizedFigure(figure, false)
+      persistSanitizedFigure(figure, { updateReactState: false })
     },
     [persistSanitizedFigure]
   )
   const handleUpdate = useCallback(
     (figure: PlotlyFigureType): void => {
-      persistSanitizedFigure(figure, true)
+      persistSanitizedFigure(figure, { updateReactState: true })
     },
     [persistSanitizedFigure]
   )

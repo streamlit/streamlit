@@ -429,6 +429,27 @@ describe("PlotlyChart CustomTheme", () => {
       expect(layout.xaxis?.automargin).toBeUndefined()
       expect(layout.template.layout.xaxis.automargin).toBe(true)
     })
+
+    it("does not disable automargin when scaleanchor is false", () => {
+      const spec: Record<string, unknown> = {
+        layout: {
+          xaxis: { scaleanchor: false },
+          template: {
+            layout: {},
+          },
+        },
+      }
+
+      applyStreamlitTheme(spec, theme)
+
+      const layout = spec.layout as {
+        xaxis: { automargin?: boolean; scaleanchor: boolean }
+        template: { layout: { xaxis: { automargin: boolean } } }
+      }
+      expect(layout.xaxis.automargin).toBeUndefined()
+      expect(layout.xaxis.scaleanchor).toBe(false)
+      expect(layout.template.layout.xaxis.automargin).toBe(true)
+    })
   })
 
   describe("layoutWithThemeDefaults", () => {
