@@ -158,7 +158,7 @@ if len(term) >= 2:
 
 - `live="300ms"` sends the value to Python after a 300 ms pause. Pills keep the
   matches on screen, so picking one is a single click, and `wrap=False` holds
-  them in one scrollable row instead of a block.
+  them to one scrollable row.
 - Keep the `limit`: it bounds the message, and the database can stop early when
   the plan already produces that order. Whether an index can serve the `like`
   depends on the backend, collation, and pattern, so check the plan.
