@@ -283,12 +283,13 @@ describe("TextArea widget", () => {
 
     expect(screen.getByRole("textbox")).toHaveStyle({ height: "2.5rem" })
 
-    // scrollHeight lives on Element.prototype; offsetHeight on HTMLElement.
+    // Restorable getter spy (same pattern as Toast.test.tsx). Do not spy
+    // `Element.prototype` here — that name is the protobuf Element import.
     // Install measurable heights only after the zero-width mount so this
     // pins TextArea's width-gated layout effect, not the auto-expand hook's
     // initial measurement.
     const scrollHeightSpy = vi
-      .spyOn(Element.prototype, "scrollHeight", "get")
+      .spyOn(HTMLElement.prototype, "scrollHeight", "get")
       .mockReturnValue(120)
     const offsetHeightSpy = vi
       .spyOn(HTMLElement.prototype, "offsetHeight", "get")
