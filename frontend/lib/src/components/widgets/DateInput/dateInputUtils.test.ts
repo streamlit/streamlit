@@ -364,6 +364,15 @@ describe("parsePastedDateRange", () => {
     })
   })
 
+  it("parses em-dash separated dates", () => {
+    expect(
+      parsePastedDateRange("2024/03/06 — 2024/03/08", "YYYY/MM/DD")
+    ).toEqual({
+      start: new CalendarDate(2024, 3, 6),
+      end: new CalendarDate(2024, 3, 8),
+    })
+  })
+
   it("parses hyphen and 'to' separators", () => {
     expect(
       parsePastedDateRange("06/03/2024 - 08/03/2024", "DD/MM/YYYY")

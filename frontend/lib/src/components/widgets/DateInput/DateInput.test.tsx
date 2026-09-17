@@ -2731,6 +2731,47 @@ describe("DateInput range-mode paste handling", () => {
     })
   })
 
+  it("pasting a full range string into the end field is ignored", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      default: ["2019-07-06", "2019-07-08"],
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getRangeDateSegments(region, "end")
+
+    await user.click(year)
+    await user.paste("2024/03/06 – 2024/03/08")
+
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+  })
+
+  it("pasting an out-of-range range does not commit", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      default: ["2019-07-06", "2019-07-08"],
+      min: "2019-07-01",
+      max: "2019-12-31",
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getRangeDateSegments(region, "start")
+
+    await user.click(year)
+    await user.paste("2024/03/06 – 2024/03/08")
+
+    await screen.findByTestId("stTooltipErrorHoverTarget")
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+  })
+
   it("paste is ignored when range widget is disabled", async () => {
     const user = userEvent.setup()
     const props = getProps(

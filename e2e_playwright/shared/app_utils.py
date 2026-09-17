@@ -416,7 +416,20 @@ def type_date(date_input_field: Locator, *parts: str, commit: bool = True) -> No
 
 
 def paste_into(locator: Locator, text: str) -> None:
-    """Dispatch a native paste event; fill/type do not hit DateInput's onPaste handler."""
+    """Dispatch a native paste event on the given element.
+
+    Playwright's ``fill``/``press_sequentially`` never produce a ``paste``
+    event, so segmented widgets (``st.date_input``, ``st.time_input``) that
+    implement an ``onPaste`` handler need the event synthesized directly.
+
+    Parameters
+    ----------
+    locator : Locator
+        The element to dispatch the paste event on.
+
+    text : str
+        The clipboard text to paste.
+    """
     locator.evaluate(
         """(el, text) => {
             const dt = new DataTransfer();
