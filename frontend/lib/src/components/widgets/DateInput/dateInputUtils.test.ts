@@ -187,19 +187,30 @@ describe("getInitialFocusedDate", () => {
     expect(getInitialFocusedDate([], minDate, maxDate)).toEqual(maxDate)
   })
 
-  it("getFocusedDateFallback clamps today to maxDate", () => {
-    const maxDate = new CalendarDate(1980, 6, 15)
-    expect(
-      getFocusedDateFallback(new CalendarDate(1970, 1, 1), maxDate)
-    ).toEqual(maxDate)
-  })
-
   it("never returns null, even for an unparsable value", () => {
     const result = getInitialFocusedDate(
       ["not-a-date"],
       new CalendarDate(1970, 1, 1)
     )
     expect(result).toBeInstanceOf(CalendarDate)
+  })
+})
+
+describe("getFocusedDateFallback", () => {
+  it("clamps today to maxDate", () => {
+    const maxDate = new CalendarDate(1980, 6, 15)
+    expect(
+      getFocusedDateFallback(new CalendarDate(1970, 1, 1), maxDate)
+    ).toEqual(maxDate)
+  })
+
+  it("returns today unchanged when it is within min and max", () => {
+    const minDate = new CalendarDate(1970, 1, 1)
+    const maxDate = new CalendarDate(2999, 1, 1)
+    const result = getFocusedDateFallback(minDate, maxDate)
+    expect(result.compare(minDate)).toBeGreaterThanOrEqual(0)
+    expect(result.compare(maxDate)).toBeLessThanOrEqual(0)
+    expect(result).toEqual(getFocusedDateFallback(minDate))
   })
 })
 
