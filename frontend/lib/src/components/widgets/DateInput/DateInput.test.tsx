@@ -2658,6 +2658,30 @@ describe("DateInput range-mode paste handling", () => {
     })
   })
 
+  it("pasting a full range string into the start field updates both values", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      default: ["2019-07-06", "2019-07-08"],
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getRangeDateSegments(region, "start")
+
+    await user.click(year)
+    await user.paste("2024/03/06 – 2024/03/08")
+
+    await waitFor(() => {
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        "1",
+        ["2024-03-06", "2024-03-08"],
+        expect.objectContaining({ fromUser: true })
+      )
+    })
+  })
+
   it("paste is ignored when range widget is disabled", async () => {
     const user = userEvent.setup()
     const props = getProps(

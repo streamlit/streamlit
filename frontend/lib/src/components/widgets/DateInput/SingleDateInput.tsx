@@ -58,11 +58,10 @@ import {
   DATE_INPUT_HEADER_PICKER_POPOVER_CLASS,
 } from "./CalendarPopoverHeader"
 import {
+  applyPartialSegmentToDate,
   datesEqual,
   getSafeLocale,
-  isValidSegmentValue,
-  parsePartialSegmentPaste,
-  parsePastedDate,
+  parseDateFieldPaste,
   SEGMENT_SELECTOR,
 } from "./dateInputUtils"
 import { ReorderedSegments } from "./ReorderedSegments"
@@ -441,28 +440,25 @@ function SingleDateInput({
     (e: ClipboardEvent<HTMLDivElement>): void => {
       if (disabled) return
       const text = e.clipboardData.getData("text").trim()
+      const target = e.target as HTMLElement
+      const segmentType =
+        target.getAttribute("role") === "spinbutton"
+          ? target.getAttribute("data-type")
+          : null
 
-      const fullDate = parsePastedDate(text, format)
-      if (fullDate) {
-        e.preventDefault()
-        setDisplayValue(fullDate)
-        onChange(fullDate)
+      const parsed = parseDateFieldPaste(text, format, { segmentType })
+      if (!parsed) return
+      e.preventDefault()
+
+      if (parsed.kind === "date") {
+        setDisplayValue(parsed.date)
+        onChange(parsed.date)
         return
       }
 
-      const target = e.target as HTMLElement
-      if (target.getAttribute("role") !== "spinbutton") return
-      const partial = parsePartialSegmentPaste(
-        text,
-        target.getAttribute("data-type")
-      )
-      if (!partial) return
-      e.preventDefault()
-      if (!isValidSegmentValue(partial.segmentType, partial.value)) return
-
       const base = displayValue ?? minDate
-      const newDate = base.set({ [partial.segmentType]: partial.value })
-      if (newDate[partial.segmentType] !== partial.value) return
+      const newDate = applyPartialSegmentToDate(base, parsed)
+      if (!newDate) return
       setDisplayValue(newDate)
       onChange(newDate)
     },

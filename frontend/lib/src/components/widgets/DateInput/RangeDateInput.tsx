@@ -63,13 +63,12 @@ import {
   DATE_INPUT_HEADER_PICKER_POPOVER_CLASS,
 } from "./CalendarPopoverHeader"
 import {
+  applyPartialSegmentToDate,
   datesEqual,
   getQuickSelectPresets,
   getSafeLocale,
-  isValidSegmentValue,
   noop,
-  parsePartialSegmentPaste,
-  parsePastedDate,
+  parseDateFieldPaste,
   SEGMENT_SELECTOR,
   validateDate,
 } from "./dateInputUtils"
@@ -789,35 +788,42 @@ function RangeDateInput({
         if (disabled) return
         if (!isStartField && !displayStartRef.current) return
         const text = e.clipboardData.getData("text").trim()
+        const target = e.target as HTMLElement
+        const segmentType =
+          target.getAttribute("role") === "spinbutton"
+            ? target.getAttribute("data-type")
+            : null
 
-        const fullDate = parsePastedDate(text, format)
-        if (fullDate) {
-          e.preventDefault()
-          setDisplay(fullDate)
+        const parsed = parseDateFieldPaste(text, format, {
+          allowRangePaste: isStartField,
+          segmentType,
+        })
+        if (!parsed) return
+        e.preventDefault()
+
+        if (parsed.kind === "range") {
+          setDisplayStart(parsed.start)
+          setDisplayEnd(parsed.end)
+          onChange(compact([parsed.start, parsed.end]))
+          return
+        }
+
+        if (parsed.kind === "date") {
+          setDisplay(parsed.date)
           onChange(
             compact([
-              isStartField ? fullDate : displayStartRef.current,
-              isStartField ? displayEndRef.current : fullDate,
+              isStartField ? parsed.date : displayStartRef.current,
+              isStartField ? displayEndRef.current : parsed.date,
             ])
           )
           return
         }
 
-        const target = e.target as HTMLElement
-        if (target.getAttribute("role") !== "spinbutton") return
-        const partial = parsePartialSegmentPaste(
-          text,
-          target.getAttribute("data-type")
-        )
-        if (!partial) return
-        e.preventDefault()
-        if (!isValidSegmentValue(partial.segmentType, partial.value)) return
-
         const base =
           currentValue ??
           (isStartField ? minDate : (displayStartRef.current ?? minDate))
-        const newDate = base.set({ [partial.segmentType]: partial.value })
-        if (newDate[partial.segmentType] !== partial.value) return
+        const newDate = applyPartialSegmentToDate(base, parsed)
+        if (!newDate) return
         setDisplay(newDate)
         onChange(
           compact([

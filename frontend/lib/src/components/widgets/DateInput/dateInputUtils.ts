@@ -286,6 +286,74 @@ export function parsePastedDate(
 
 export type DateSegmentType = "year" | "month" | "day"
 
+/** Range paste separators: en dash, hyphen (with optional spaces), or "to". */
+const RANGE_PASTE_SEPARATOR = /\s*[–-]\s*|\s+to\s+/i
+
+export type ParsedDateFieldPaste =
+  | { kind: "date"; date: CalendarDate }
+  | { kind: "range"; start: CalendarDate; end: CalendarDate }
+  | { kind: "partial"; segmentType: DateSegmentType; value: number }
+
+/**
+ * Parses a pasted range string (e.g. "2024/03/06 – 2024/03/08") using
+ * `format`'s segment order for each half.
+ */
+export function parsePastedDateRange(
+  text: string,
+  format: string
+): { start: CalendarDate; end: CalendarDate } | null {
+  const parts = text.trim().split(RANGE_PASTE_SEPARATOR)
+  if (parts.length !== 2) return null
+
+  const start = parsePastedDate(parts[0].trim(), format)
+  const end = parsePastedDate(parts[1].trim(), format)
+  if (!start || !end) return null
+  return { start, end }
+}
+
+/**
+ * Shared paste parsing for single- and range-mode DateFields. Tries a full
+ * range (when allowed), then a single full date, then a partial segment
+ * paste when `segmentType` is a year/month/day token.
+ */
+export function parseDateFieldPaste(
+  text: string,
+  format: string,
+  options: {
+    allowRangePaste?: boolean
+    segmentType?: string | null
+  } = {}
+): ParsedDateFieldPaste | null {
+  const trimmed = text.trim()
+
+  if (options.allowRangePaste) {
+    const range = parsePastedDateRange(trimmed, format)
+    if (range) return { kind: "range", ...range }
+  }
+
+  const date = parsePastedDate(trimmed, format)
+  if (date) return { kind: "date", date }
+
+  const partial = parsePartialSegmentPaste(
+    trimmed,
+    options.segmentType ?? null
+  )
+  if (!partial || !isValidSegmentValue(partial.segmentType, partial.value)) {
+    return null
+  }
+  return { kind: "partial", ...partial }
+}
+
+/** Applies a partial segment paste to `base`, or null if the date is invalid. */
+export function applyPartialSegmentToDate(
+  base: CalendarDate,
+  partial: { segmentType: DateSegmentType; value: number }
+): CalendarDate | null {
+  const newDate = base.set({ [partial.segmentType]: partial.value })
+  if (newDate[partial.segmentType] !== partial.value) return null
+  return newDate
+}
+
 /** Parses a partial paste (pure digits, no separator) targeting a single segment. */
 export function parsePartialSegmentPaste(
   text: string,
