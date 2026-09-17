@@ -48,7 +48,7 @@ currently consumed in two places — the widget-identity hash and the proto's na
 `autocomplete` string field — and both must be adjusted:
 
 ```python
-source_mgr = _get_suggestion_source_mgr()  # None without a runtime, as in arrow.py
+source_mgr = _get_autocomplete_source_mgr()  # None without a runtime, as in arrow.py
 if callable(autocomplete) and source_mgr is not None:
     # Backend suggestion mode.
     if type == "password":
@@ -60,7 +60,7 @@ if callable(autocomplete) and source_mgr is not None:
     registered = source_mgr.register_source(
         autocomplete, coordinates=self.dg._get_delta_path_str(), max_chars=max_chars
     )
-    text_input_proto.suggestion_source_id = registered.source_id
+    text_input_proto.autocomplete_source_id = registered.source_id
     # Our dropdown replaces the browser's autofill, so suppress the native one.
     autocomplete_token = _AUTOFILL_SUPPRESSED_TOKEN
     autocomplete_identity = _SUGGESTIONS_IDENTITY_SENTINEL  # stable, not the callable
@@ -73,7 +73,7 @@ else:
 ```
 
 - **No runtime, no suggestions.** A bare `python app.py` run has no `Runtime` and no frontend to
-  serve lookups, so `_get_suggestion_source_mgr()` returns `None` and the widget degrades to a
+  serve lookups, so `_get_autocomplete_source_mgr()` returns `None` and the widget degrades to a
   plain text input — the same guard and fallback `arrow.py` uses for lazy dataframes.
 - **Widget identity:** pass `autocomplete=autocomplete_identity` to
   `compute_and_register_element_id(...)`, never the callable itself, which isn't in
@@ -115,7 +115,7 @@ lands second takes the next unused number in each message.
 // `autocomplete` is not a callable. When set, the native `autocomplete` field
 // carries a token that suppresses browser autofill, so the browser's own
 // dropdown does not compete with the suggestion dropdown.
-optional string suggestion_source_id = 21;
+optional string autocomplete_source_id = 21;
 // Next: 22
 ```
 
@@ -124,9 +124,9 @@ optional string suggestion_source_id = 21;
 
 ```proto
 // Autocomplete suggestion request for st.text_input.
-SuggestionsRequestPayload suggestions = 7;
+AutocompleteRequestPayload autocomplete = 7;
 
-message SuggestionsRequestPayload {
+message AutocompleteRequestPayload {
   // Session-scoped id of the registered suggestion source.
   string source_id = 1;
   // Current text in the input to complete.
@@ -140,9 +140,9 @@ message SuggestionsRequestPayload {
 ```proto
 // Response for autocomplete suggestion requests. Numbering is per message, not
 // per oneof, so the message-level `error_reason = 7` is already taken here.
-SuggestionsResponsePayload suggestions = 8;
+AutocompleteResponsePayload autocomplete = 8;
 
-message SuggestionsResponsePayload {
+message AutocompleteResponsePayload {
   // Echoes the requested source id so the frontend can match the response.
   string source_id = 1;
   // Echoes the requested text so the frontend can drop responses that no
@@ -156,7 +156,7 @@ message SuggestionsResponsePayload {
 
 Run `make protobuf` after editing.
 
-### 3. Session-scoped `SuggestionSourceManager` (`lib/streamlit/runtime/suggestion_source_manager.py`)
+### 3. Session-scoped `AutocompleteSourceManager` (`lib/streamlit/runtime/autocomplete_source_manager.py`)
 
 This shares `DataframeSourceManager`'s lifecycle requirements exactly, so the skeleton
 (per-session coordinate map, unguessable `source_id`, lock-guarded map access, session
@@ -165,7 +165,7 @@ reused rather than duplicated:
 
 ```python
 @dataclass(frozen=True)
-class RegisteredSuggestionSource:
+class RegisteredAutocompleteSource:
     func: Callable[[str], Sequence[str]]
     source_id: str
     session_id: str
@@ -174,10 +174,10 @@ class RegisteredSuggestionSource:
     max_chars: int | None
 
 
-class SuggestionSourceManager:
+class AutocompleteSourceManager:
     def register_source(
         self, func, coordinates, max_chars
-    ) -> RegisteredSuggestionSource: ...
+    ) -> RegisteredAutocompleteSource: ...
     def get_suggestions(self, session_id, source_id, text) -> list[str]: ...
     def clear_session_refs(self, session_id=None, *, fragment_ids=None) -> None: ...
     def remove_orphaned_sources(self) -> None: ...
@@ -201,7 +201,7 @@ class SuggestionSourceManager:
     common case, but it still happens when the element disappears or the session is cleaned up
     while a lookup is in flight. Return an empty list with no `error_msg`.
   - **A `source_id` belonging to a *different* session** is anomalous, not a race. Raise
-    `SuggestionSourceError`, which the handler reports via `error_msg`. The split matters
+    `AutocompleteSourceError`, which the handler reports via `error_msg`. The split matters
     because `BackendOperationClient.onResponse` rejects the pending promise whenever `errorMsg`
     is set, so routing an expired id through it would show the user an error for a missing hint.
   - **`text` is untrusted, and oversized requests are rejected rather than truncated.** It
@@ -233,7 +233,7 @@ class SuggestionSourceManager:
   cleanup) and the server thread (shutdown) while being read from suggestion worker threads,
   so — like `DataframeSourceManager` — every shared-map access is guarded by a
   `threading.Lock`, and `get_suggestions` captures the immutable
-  `RegisteredSuggestionSource` under that lock and releases it before invoking the callable.
+  `RegisteredAutocompleteSource` under that lock and releases it before invoking the callable.
   Without this, a rerun replacing or pruning a source can race an in-flight lookup and make a
   valid request fail or run against stale state.
 - **Lifecycle wiring** mirrors media files / dataframe sources:
@@ -242,25 +242,25 @@ class SuggestionSourceManager:
   Add the manager to `Runtime` (next to `dataframe_source_mgr`) and invoke the cleanup hooks
   from the same places `DataframeSourceManager`'s are.
 
-### 4. Backend operation handler (`lib/streamlit/runtime/suggestions_handler.py`)
+### 4. Backend operation handler (`lib/streamlit/runtime/autocomplete_handler.py`)
 
 A `BackendOperationHandler` mirroring `DataframeChunkHandler`:
 
 ```python
-class SuggestionsHandler(BackendOperationHandler):
+class AutocompleteHandler(BackendOperationHandler):
     def __init__(
-        self, get_source_mgr: Callable[[], SuggestionSourceManager]
+        self, get_source_mgr: Callable[[], AutocompleteSourceManager]
     ) -> None: ...
 
     async def handle(self, request, session_id) -> BackendOperationResponse:
-        payload = request.suggestions
+        payload = request.autocomplete
         try:
             # Runs on the dedicated suggestions pool, bounded per source, per
             # session, and globally; the worker releases its own permits.
             suggestions = await self._run_bounded(
                 session_id, payload.source_id, payload.text
             )
-        except SuggestionSourceError as err:
+        except AutocompleteSourceError as err:
             return BackendOperationResponse(
                 request_id=request.request_id, error_msg=str(err)
             )
@@ -274,8 +274,8 @@ class SuggestionsHandler(BackendOperationHandler):
             # Also fail closed. The traceback stays server-side.
             suggestions = []
         resp = BackendOperationResponse(request_id=request.request_id)
-        resp.suggestions.CopyFrom(
-            SuggestionsResponsePayload(
+        resp.autocomplete.CopyFrom(
+            AutocompleteResponsePayload(
                 source_id=payload.source_id,
                 text=payload.text,
                 suggestions=suggestions,
@@ -319,7 +319,7 @@ serialization code, while this one runs an arbitrary user callable that may neve
   loop with `loop.call_soon_threadsafe`. The former is simpler and is what this design assumes.
 **Timeout, coalescing, and rate**
 
-- **Timeout** (`_SUGGESTIONS_TIMEOUT_S`, e.g. 5s) bounds how long the *user* waits; the pool
+- **Timeout** (`_AUTOCOMPLETE_TIMEOUT_S`, e.g. 5s) bounds how long the *user* waits; the pool
   size bounds the damage a hung callable can do. Python cannot kill a running thread, so the
   residual risk is a bounded number of stuck threads per server — the accepted trade-off for
   running user code off the rerun path, and the reason the bound is a fixed pool rather than
@@ -366,8 +366,8 @@ Register it in `AppSession._create_backend_operation_dispatcher`:
 
 ```python
 dispatcher.register(
-    "suggestions",
-    SuggestionsHandler(lambda: runtime.get_instance().suggestion_source_mgr),
+    "autocomplete",
+    AutocompleteHandler(lambda: runtime.get_instance().autocomplete_source_mgr),
 )
 ```
 
@@ -377,18 +377,18 @@ needed there.
 
 ### 5. Frontend client (`frontend/lib/src/BackendOperationClient.ts`)
 
-Add `"suggestions"` to the `request<T>` payload-field union, a `requestSuggestions(payload,
+Add `"autocomplete"` to the `request<T>` payload-field union, a `requestAutocomplete(payload,
 timeoutMs?)` helper (short timeout, e.g. the default 30s or less), and extend
-`extractResponsePayload` to return `response.suggestions`.
+`extractResponsePayload` to return `response.autocomplete`.
 
 ### 6. Frontend widget (`frontend/lib/src/components/widgets/TextInput/TextInput.tsx`)
 
-Suggestions are active only when `element.suggestionSourceId` is set — but that has to be a
+Suggestions are active only when `element.autocompleteSourceId` is set — but that has to be a
 **structural** split, not an `if` inside one component. Hooks can't be called conditionally, so
 putting `useComboBoxState` / `useComboBox` directly in `TextInput` would run the combobox
 machinery for every `st.text_input` in every app, including the overwhelming majority with no
 suggestion source. Extract the field into a presentational component and have `TextInput`
-choose between two wrappers: the plain one, and a `TextInputWithSuggestions` that owns the
+choose between two wrappers: the plain one, and a `TextInputWithAutocomplete` that owns the
 combobox hooks, the request lifecycle, and the popover. Everything in this section lives in
 that second wrapper.
 
@@ -460,13 +460,13 @@ needs it.
 
 - On focus and on each accepted change, **debounce** with the suggestion timer (reuse the
   `useDebouncedCallback` already in this component), then call
-  `backendOperationClient.requestSuggestions({ sourceId, text })`. The delay is a constant
+  `backendOperationClient.requestAutocomplete({ sourceId, text })`. The delay is a constant
   `300ms`, independent of `live` in both directions — see the product spec for why. Keep the
   value in one named constant so the future "configurable debounce" follow-up has a single
-  place to hook into. Because `suggestionSourceId` is stable for the life of the element (§3),
+  place to hook into. Because `autocompleteSourceId` is stable for the life of the element (§3),
   a rerun never invalidates a pending lookup, so there is nothing to re-request or re-time.
 - **Race handling:** apply a response only if its echoed `sourceId` and `text` still match the
-  element's `suggestionSourceId` and the current `uiValue`, **and** the field is still focused
+  element's `autocompleteSourceId` and the current `uiValue`, **and** the field is still focused
   and enabled. The focus condition matters on its own: blur closes the list per the product
   spec, and without it a response that arrives afterwards with unchanged text would pop the
   list back open on an unfocused field.
