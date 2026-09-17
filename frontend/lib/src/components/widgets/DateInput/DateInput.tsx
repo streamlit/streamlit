@@ -43,6 +43,7 @@ import {
   calendarDateToIso,
   createDateErrorMessage,
   DateValidationErrorType,
+  datesEqual,
   formatCalendarDate,
   getFocusedDateFallback,
   getInitialFocusedDate,
@@ -310,9 +311,10 @@ function DateInput({
     if (singleValue) {
       setFocusedValue(singleValue)
     } else {
-      // After clear: reset to today (clamped to bounds) so the calendar
-      // shows a sensible month instead of the stale previous value.
-      setFocusedValue(getFocusedDateFallback(minDateCalendar, maxDateCalendar))
+      // No committed value (initial render or after a clear): show today,
+      // clamped to the widget's bounds, rather than a stale month.
+      const fallback = getFocusedDateFallback(minDateCalendar, maxDateCalendar)
+      setFocusedValue(prev => (datesEqual(prev, fallback) ? prev : fallback))
     }
   }, [element.isRange, singleValue, minDateCalendar, maxDateCalendar])
 
@@ -321,7 +323,9 @@ function DateInput({
     if (rangeStartValue) {
       setFocusedValue(rangeStartValue)
     } else {
-      setFocusedValue(getFocusedDateFallback(minDateCalendar, maxDateCalendar))
+      // Same fallback as single mode — see above.
+      const fallback = getFocusedDateFallback(minDateCalendar, maxDateCalendar)
+      setFocusedValue(prev => (datesEqual(prev, fallback) ? prev : fallback))
     }
   }, [element.isRange, rangeStartValue, minDateCalendar, maxDateCalendar])
 

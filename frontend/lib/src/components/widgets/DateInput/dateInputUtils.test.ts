@@ -197,6 +197,10 @@ describe("getInitialFocusedDate", () => {
 })
 
 describe("getFocusedDateFallback", () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it("clamps today to maxDate", () => {
     const maxDate = new CalendarDate(1980, 6, 15)
     expect(
@@ -205,12 +209,13 @@ describe("getFocusedDateFallback", () => {
   })
 
   it("returns today unchanged when it is within min and max", () => {
-    const minDate = new CalendarDate(1970, 1, 1)
-    const maxDate = new CalendarDate(2999, 1, 1)
-    const result = getFocusedDateFallback(minDate, maxDate)
-    expect(result.compare(minDate)).toBeGreaterThanOrEqual(0)
-    expect(result.compare(maxDate)).toBeLessThanOrEqual(0)
-    expect(result).toEqual(getFocusedDateFallback(minDate))
+    vi.setSystemTime(new Date(2024, 2, 15))
+    expect(
+      getFocusedDateFallback(
+        new CalendarDate(1970, 1, 1),
+        new CalendarDate(2999, 1, 1)
+      )
+    ).toEqual(new CalendarDate(2024, 3, 15))
   })
 })
 
