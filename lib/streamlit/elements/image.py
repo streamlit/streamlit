@@ -63,8 +63,7 @@ class ImageMixin:
         *,
         use_container_width: bool | None = None,
         link: str | None = None,
-        # Compatibility no-op for pre-1.61 callers; omitted from the docstring
-        # on purpose.
+        # Compatibility no-op for pre-1.61 callers.
         use_column_width: Literal["auto", "always", "never"] | bool | None = None,
     ) -> DeltaGenerator:
         """Display an image or list of images.
@@ -157,6 +156,17 @@ class ImageMixin:
 
             This parameter is only supported when displaying a single image.
 
+        use_column_width : "auto", "always", "never", or bool
+            This parameter is a no-op. Streamlit accepts it so that callers
+            that still pass ``use_column_width`` do not raise ``TypeError``.
+            The value is ignored; ``width`` and ``use_container_width`` remain
+            the only layout controls.
+
+            .. deprecated::
+                ``use_column_width`` is deprecated and has no effect. Use
+                ``width="stretch"``, ``width="content"``, or an integer pixel
+                value instead.
+
         Examples
         --------
         >>> import streamlit as st
@@ -170,11 +180,7 @@ class ImageMixin:
         if use_column_width is not None:
             # Keep the keyword so pre-1.61 callers do not raise TypeError, but
             # ignore the value so width and use_container_width stay authoritative.
-            show_deprecation_warning(
-                _USE_COLUMN_WIDTH_REMOVED_WARNING,
-                show_in_browser=False,
-                show_once=True,
-            )
+            show_deprecation_warning(_USE_COLUMN_WIDTH_REMOVED_WARNING)
 
         if use_container_width is not None:
             show_deprecation_warning(

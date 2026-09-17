@@ -537,8 +537,8 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         assert "no effect" in warning_message
         assert "stretch" in warning_message
         assert "content" in warning_message
-        assert show_warning_mock.call_args.kwargs["show_in_browser"] is False
-        assert show_warning_mock.call_args.kwargs["show_once"] is True
+        assert show_warning_mock.call_args.kwargs.get("show_in_browser", True) is True
+        assert show_warning_mock.call_args.kwargs.get("show_once", False) is False
 
         el = self.get_delta_from_queue().new_element
         assert el.width_config.use_content
