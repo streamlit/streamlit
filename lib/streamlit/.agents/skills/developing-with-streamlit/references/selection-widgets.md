@@ -98,10 +98,10 @@ length: a million 16-character labels is roughly 16 MB. Messages at or above
 reference, so that payload crosses the wire on first render and whenever the
 list changes.
 
-`filter_mode` matching then runs in the browser on every keystroke. Every mode
-tests all of the options; `"fuzzy"`, the default, also scores and sorts the ones
-that match. That only matters well above the low thousands, where message size
-is already the reason to stop shipping the list.
+`filter_mode` matching then runs in the browser on every keystroke. Matching
+tests every option; `"fuzzy"`, the default, also scores and sorts the ones that
+match. That only matters well above the low thousands, where message size is
+already the reason to stop shipping the list.
 
 Don't fetch a whole table into the app just to derive options. Ask the database
 for a bounded, distinct list. If the real domain is larger than that bound, use
