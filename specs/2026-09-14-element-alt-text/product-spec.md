@@ -7,16 +7,17 @@ created: 2026-09-14
 
 ## Summary
 
-Add a keyword-only `alt` parameter to the 19 display commands with no author-facing way to
-supply an accessible name: images, media players, charts, maps, dataframes, and tables.
-Authors provide a short, plain-text accessible name, and Streamlit maps it to whichever
+Add a keyword-only `alt` parameter to the 21 display commands with no author-facing way to
+supply an accessible name: images, media players, charts, maps, dataframes, tables, PDFs, and
+iframes. Authors provide a short, plain-text accessible name, and Streamlit maps it to whichever
 attribute is correct for that element.
 
-Four of the 19 expose something today, but none of it is a parameter and none of it is discoverable
+Four of the 21 expose something today, but none of it is a parameter and none of it is discoverable
 from a command signature: `st.mermaid_chart` honors `accTitle` / `accDescr` directives written into
 the diagram source, `st.altair_chart` and `st.vega_lite_chart` surface a `description` set inside the
 Vega spec, and `st.echarts_chart` generates an `aria-label` from the data by default — see [Commands in
-scope](#commands-in-scope) for what each command exposes today.
+scope](#commands-in-scope) for what each command exposes today. `st.iframe` hardcodes
+`title="st.iframe"`, which is a name only in the sense that every embed on the page shares one.
 
 ```python
 st.image("q3-revenue.png", alt="Bar chart showing Q3 revenue up 15% year over year")
@@ -31,19 +32,22 @@ accessibility-tree change lands with no author action, fixing a current defect: 
 `st.pyplot` stop emitting the positional index as `alt`. See the [Checklist](#checklist).
 
 This specifies the `alt` API for [#8563](https://github.com/streamlit/streamlit/issues/8563), our
-most-upvoted open issue; the implementation PRs will close it. It also ratifies the `alt` name proposed for `st.audio` and `st.video` in
+most-upvoted open issue, and for [#16607](https://github.com/streamlit/streamlit/issues/16607) on
+`st.iframe`; the implementation PRs will close them. It also ratifies the `alt` name proposed for `st.audio` and `st.video` in
 [#16568](https://github.com/streamlit/streamlit/pull/16568).
 
 ## Outstanding decisions
 
-1. **[The parameter name](#the-parameter-name)** — **recommend `alt`**, on all 19 commands.
+1. **[The parameter name](#the-parameter-name)** — **recommend `alt`**, on all 21 commands.
    Effectively permanent once shipped, and `alt_text` has peer precedent, so worth an explicit call.
+   That includes `st.iframe`, whose HTML attribute is `title`: one Python name still maps to the
+   correct attribute per element, rather than exposing `title` only there.
 2. **[What an image gets with no `alt`](#what-an-image-gets-with-no-alt)** — **recommend emitting no
    `alt` attribute.** All three candidate answers are non-conforming for a typical call, so the
    choice is which failure we prefer: one a scanner keeps flagging, or one nothing can detect.
 3. **[What `alt=""` means](#what-alt-means)** — **recommend decorative on `st.image` and `st.pyplot`**,
    the only two commands whose name today is the positional index, and "not provided" on the other
-   seventeen, `st.mermaid_chart` included since it has a fallback name to lose. This is the
+   nineteen, `st.mermaid_chart` included since it has a fallback name to lose. This is the
    one place the parameter does not behave identically everywhere, which principle 10 cautions
    against, and changing it after release would break apps that relied on either reading — so it
    wants an explicit call rather than an inline note.
@@ -72,15 +76,19 @@ two lean on WCAG by reference — Section 508 on 2.0 AA, and EN 301 549 on WCAG 
 own — so targeting WCAG 2.1 AA covers most of what all three ask for. [SC 1.1.1 Non-text
 Content](https://www.w3.org/TR/WCAG21/#non-text-content) (Level A) requires a text
 alternative for non-text content. Streamlit offers authors no parameter for one on any of
-the 19 commands, and no mechanism at all on 15 of them — see the Summary for the four
+the 21 commands, and no mechanism at all on 17 of them — see the Summary for the four
 partial exceptions, none of which is discoverable from a command signature.
 
 ### User requests
 
 - [#8563](https://github.com/streamlit/streamlit/issues/8563) — the ask itself. 272 👍, our
   most-upvoted open issue
+- [#16607](https://github.com/streamlit/streamlit/issues/16607) — `st.iframe` hardcodes
+  `title="st.iframe"`, so every embed on a page has the same accessible name. In scope here;
+  the Python parameter is `alt`, mapped to the iframe `title`
 - [#16148](https://github.com/streamlit/streamlit/issues/16148) — Fullscreen buttons announce
-  without element context. Adjacent but [out of scope](#out-of-scope-future-work)
+  without element context. Adjacent; a [fast follow-up](#out-of-scope-future-work) once `alt`
+  exists to compose into those names
 - [#12873](https://github.com/streamlit/streamlit/issues/12873) — decorative Streamlit _chrome_.
   Complementary: that is our UI, this is the author API for content
 - [#8399](https://github.com/streamlit/streamlit/issues/8399) — broader web accessibility.
@@ -135,7 +143,8 @@ The commands that get it are listed under [Commands in scope](#commands-in-scope
 section is the converse — why the parameter stops there.
 
 `alt` fills the gap for **non-text display elements that have no** `label` — and only
-those. Widgets, `st.metric`, expanders, and tabs are already named through `label`, so
+those. That includes embeds (`st.iframe`, `st.pdf`) whose accessible name is not a visible
+label. Widgets, `st.metric`, expanders, and tabs are already named through `label`, so
 adding `alt` there would duplicate `label` for no gain — "Start Minimal" (principle 4), since every
 parameter is a maintenance burden. Text elements _are_ the text alternative and need nothing. `alt` is invisible, which
 is what distinguishes it from `caption` (visible, `st.image` only) and `help` (a tooltip).
@@ -161,7 +170,7 @@ st.image("chart.png", alt="Line chart of monthly revenue")
 ```
 
 - Pros: Short; the term authors and WCAG both use ("alt text"); familiar from HTML, React,
-  and markdown `![alt](url)`; one name across all 19 commands
+  and markdown `![alt](url)`; one name across all 21 commands
 - Cons: HTML `alt` exists only on `<img>`, so using it for charts and tables is a slight
   stretch
 
@@ -221,7 +230,7 @@ rather than anything a spec constrains — so the one-sentence guidance is desig
 we can source.
 
 **The case for deferring is "Start Minimal" (principle 4), not a standards preference.** A
-second parameter on 19 commands, plus a description region per element, for a use case we
+second parameter on 21 commands, plus a description region per element, for a use case we
 have not yet observed. That reason stands on its own.
 
 Authors are not blocked meanwhile, though the workaround below is a workaround rather than a
@@ -288,7 +297,7 @@ defense.
 
 ### What `alt=""` means
 
-An empty string is the standard WCAG way to say "decorative", so it needs a meaning on 19 commands
+An empty string is the standard WCAG way to say "decorative", so it needs a meaning on 21 commands
 where only two have nothing to lose by it.
 
 **Option A: decorative on `st.image` and `st.pyplot`, "not provided" everywhere else** ✅ PREFERRED
@@ -296,18 +305,20 @@ where only two have nothing to lose by it.
 - Pros: These are the only two commands whose accessible name today is the positional index, so an
   empty `alt` destroys nothing and a figure genuinely can be decorative. Everywhere else `""` keeps a
   name the element already has rather than deleting it — a YouTube iframe keeps its URL-derived
-  `title`, and `st.mermaid_chart` keeps the author's `accTitle` / `accDescr` or its type-derived
-  fallback, which is exactly why mermaid is **not** in the decorative group despite rendering an
-  `<img>`
+  `title`, `st.iframe` keeps `"st.iframe"`, and `st.mermaid_chart` keeps the author's `accTitle` /
+  `accDescr` or its type-derived fallback, which is exactly why mermaid is **not** in the decorative
+  group despite rendering an `<img>`. An iframe must have a title, so emptying one is never a
+  decorative signal we can honor
 - Cons: One value with two meanings, which principle 10 cautions against. Nothing in the signature
   tells an author which group a command is in, so the empty case is logged
 
 **Option B: decorative everywhere, a logged no-op where there is no attribute**
 
 - Pros: One meaning everywhere, satisfying principle 10 literally
-- Cons: "Decorative" becomes a claim Streamlit cannot act on for seventeen commands, and honoring it
+- Cons: "Decorative" becomes a claim Streamlit cannot act on for nineteen commands, and honoring it
   would mean suppressing a fallback that is currently the element's only name — an author emptying a
-  YouTube title to signal "decorative" would get a nameless iframe, which is an outright failure
+  YouTube or `st.iframe` title to signal "decorative" would get a nameless iframe, which is an
+  outright failure
 
 **Recommendation: Option A**, on the grounds that the alternative's one-meaning consistency is
 nominal — it reads the same everywhere and behaves the same nowhere, because there is nothing to
@@ -334,6 +345,8 @@ intended for the user" on it is precisely the undetectable failure this spec rej
 | `st.map`, `st.pydeck_chart` | Nothing, and no text alternative of any kind behind the canvas | An accessible label on the map |
 | `st.dataframe`, `st.data_editor` | Cells are navigable, but nothing says what the data _is_ | An accessible label on the grid |
 | `st.table` | Correct table semantics. No author-facing name, and when scrollable a hardcoded `aria-label="Scrollable table"` the author cannot change | An accessible label on the `<table>` itself. The `"Scrollable table"` label stays put — it describes the scroll affordance, not the content, so the two do not compete |
+| `st.iframe` | Hardcoded `title="st.iframe"` on every embed (`IFrame.tsx`). No author-facing parameter. [#16607](https://github.com/streamlit/streamlit/issues/16607). The [iframe spec](../2026-03-13-st-iframe/product-spec.md) listed a `title` parameter as future work; this spec supersedes that with `alt` | The iframe's HTML `title` attribute. `alt` replaces `"st.iframe"` only when set. Deprecated `st.components.v1.iframe` / `.html` share that component and are **not** getting the parameter |
+| `st.pdf` | The viewer is `streamlit-pdf`, a Components v2 mount (shadow root, not Streamlit's `<iframe>`). `pdf_viewer` today takes `file`, `height`, and `key` only | Forwarded through `st.pdf` into `streamlit-pdf` as `aria-label` on the viewer root. Extra kwargs would `TypeError` on current `streamlit-pdf`, so this phase needs a matching package release and a version bump of the extra |
 
 ### Caption vs. `alt`
 
@@ -450,6 +463,8 @@ st.bar_chart(df, alt="Revenue by product line, highest for Enterprise")
 st.map(df, alt="Delivery hubs across the Pacific Northwest")
 st.dataframe(df, alt="Top 20 customers by revenue")
 st.table(summary, alt="Quarterly KPI summary")
+st.iframe("https://docs.streamlit.io", alt="Streamlit documentation")
+st.pdf("report.pdf", alt="Q3 2026 financial report")
 ```
 
 ### Docs guidance
@@ -471,7 +486,8 @@ and diagrams, and its descriptive-identification requirement for `st.audio` and 
 name identifies the media but captions and transcripts are what actually satisfy 1.2.x. It also
 enables **SC 4.1.2 Name, Role, Value** (Level A) for the interactive cases —
 `st.data_editor`, and `st.dataframe`, `st.plotly_chart`, `st.pydeck_chart` and the Vega charts
-whenever `on_select` makes them widgets. It does not close either on its own: 1.1.1 requires the text to serve the
+whenever `on_select` makes them widgets — and for `st.iframe`, whose name is the frame `title`.
+`st.pdf` is named as an embedded viewer under the same 4.1.2 rule. It does not close either on its own: 1.1.1 requires the text to serve the
 visual's equivalent purpose, so a complex chart or map may still need a longer description or the
 underlying data. Shipping the parameter removes the blocker; whether a given app conforms depends
 on what its author writes.
@@ -496,41 +512,60 @@ and phase 0 needs no API decision at all.
 | Phase | Commands                                                            | Why here                                                                                                                                                                                                                          |
 | ----- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0     | `st.image`, `st.pyplot` — remove the index `alt`, and stop rendering the wrapper anchor for a blocked image link | Needs no new API, and helps every existing app whether or not its author adopts `alt`. **Sequencing is a maintainer call:** shipping this before phase 6 leaves images with no accessible name *and* no parameter to supply one until the parameter lands, so it may be better released alongside phase 6 than ahead of it |
-| 1     | `st.audio`, `st.video`                                              | Nothing unresolved, and the code exists — though only in [#16568](https://github.com/streamlit/streamlit/pull/16568), which was approved and then closed, so no proto in the tree carries `alt` yet. Reopening it lands 2 of the 19 first and fixes the parameter name in the codebase |
+| 1     | `st.audio`, `st.video`, `st.iframe`                                 | Nothing unresolved. Audio/video code exists in [#16568](https://github.com/streamlit/streamlit/pull/16568), which was approved and then closed, so no proto in the tree carries `alt` yet. `st.iframe` is the same pattern as YouTube's frame `title` — one proto field onto an attribute the component already sets. Reopening #16568 plus the iframe field lands 3 of the 21 first |
 | 2     | The six simple and Vega charts, plus `st.echarts_chart`             | Each library already supports a chart-level description natively — Vega's `description`, ECharts' `aria.label.description` — so this is the least work for the most commands. Confirmed rather than assumed: Streamlit renders through **vega-embed** (`useVegaEmbed.ts`), which applies `role="graphics-document"` and maps the view description to `aria-label`, fed from `spec.description` — so an Altair `description` reaches assistive tech today. `st.echarts_chart`'s scope is [decision 4](#outstanding-decisions) |
 | 3     | `st.plotly_chart`, `st.graphviz_chart`, `st.map`, `st.pydeck_chart` | All four need the same new wiring; decide once, apply four times                                                                                                                                                                  |
-| 4     | `st.table`, `st.mermaid_chart`                                      | `st.table` is natively nameable. Mermaid is not as easy as it looks — no proto of its own, and its name is derived on the frontend, so this phase picks a wiring route                                                            |
-| 5     | `st.dataframe`, `st.data_editor`                                    | One component covers both                                                                                                                                                                                                         |
+| 4     | `st.table`, `st.mermaid_chart`, `st.pdf`                            | `st.table` is natively nameable. Mermaid has no proto of its own, so this phase picks a wiring route. `st.pdf` is a thin wrapper around `streamlit-pdf`; the Python parameter is in this repo, the accessible-name sink is in that package |
+| 5     | `st.dataframe`, `st.data_editor`                                    | One component covers both. The name must attach without hiding the canvas's existing cell-level `alt` — see the identity and DOM constraints below                                                                                |
 | 6     | `st.image`, `st.pyplot`                                             | The headline ask, and the only structurally involved phase                                                                                                                                                                        |
 
 #16568 describes itself as the first slice of a "17-element" project, which reconciles as follows.
 The original list held 18 commands, one of which was `st.bokeh_chart`; that command was removed in
 [#15636](https://github.com/streamlit/streamlit/pull/15636) on 2026-06-19, two months before #16568
 opened, leaving the 17 it counted. This spec adds `st.mermaid_chart`, which renders as an image and
-meets the same scope rule, and `st.echarts_chart`, which landed 2026-09-05. **The reconciled count
-is 19.**
+meets the same scope rule, and `st.echarts_chart`, which landed 2026-09-05, plus `st.iframe` and
+`st.pdf`. **The reconciled count is 21.**
 
 The phases are very unevenly sized: 1 and 2 are close to free, and **phase 6 carries most of the
 risk and most of the user-visible value**, which is the argument for splitting phase 0 out of it.
 
-Two constraints carry across every phase. **Setting or changing `alt` must never reset state a user
-has built up**, so `alt` never participates in element identity. That is a deliberate departure from
-`label` and `help`, which are passed into `compute_and_register_element_id` today: those name a widget
-whose state belongs to that name, whereas `alt` describes an element without changing what it is. So
-`alt` is not an identity kwarg, and it
-is never written into a chart spec that is hashed into one. For the Vega commands that means
-carrying `alt` as its own proto field and applying it to the view after the element ID is computed,
-rather than writing it into the spec JSON that gets hashed. And **an author's `alt` names an ECharts
-chart even when the option dict sets `aria: {enabled: false}`**, the same precedence by which `alt`
-beats a Vega `description`; that option requests silence only when `alt` is omitted. Both are
-sign-off gates on the implementation PRs rather than blockers for agreeing the direction here.
+Three constraints carry across every phase.
 
-The first has a consequence worth naming, because it is visible to authors: since `alt` is not part
-of identity, it cannot distinguish two otherwise-identical elements. `st.plotly_chart(fig, alt="A")`
-followed by the same call with `alt="B"` raises `StreamlitDuplicateElementId` rather than rendering
-two charts, and `key` is the remedy on the commands that accept one. That is the trade this spec
-prefers, for the same reason it prefers a missing `alt` to a placeholder: a loud error gets fixed
-where silent state loss does not.
+**Element identity.** For commands that already call `compute_and_register_element_id`, pass `alt`
+into that call as a normal kwarg. Do **not** add `alt` to any `key_as_main_identity` set, and do not
+start computing an ID on a command that has none today solely to hash `alt`.
+`disabled` is the only parameter we consistently omit from the hash, because it is expected to
+change between reruns; `alt` is expected to stay stable for a given chart, image, dataframe, or
+embed, so it does not differ from most other parameters. Two consequences:
+
+- Unkeyed: `alt` participates in the ID. Two otherwise-identical elements with different `alt`
+  values are distinct, and changing `alt` remounts an unkeyed element — the same as changing
+  `width`. Two unkeyed `st.plotly_chart(fig)` calls with the same or omitted `alt` still raise
+  `StreamlitDuplicateElementId`; `key` is the remedy when the author wants two identical charts.
+- Keyed, with `key_as_main_identity=True` or a set that does not include `alt`: changing `alt` does
+  not remount or reset widget state.
+
+`alt` is still never written into a chart spec that is hashed into an ID. For the Vega commands that
+means carrying `alt` as its own proto field and applying it to the view after the element ID is
+computed, rather than writing it into the spec JSON — *and* passing the string into
+`compute_and_register_element_id` as a kwarg, which is a separate input from that spec hash.
+
+**ECharts silence.** An author's `alt` names an ECharts chart even when the option dict sets
+`aria: {enabled: false}`, the same precedence by which `alt` beats a Vega `description`; that option
+requests silence only when `alt` is omitted.
+
+**DOM node.** Attach `alt` to the element's own accessible name. Do not put it on a wrapper in a way
+that hides names or keyboard access already provided by inner content. The concrete case is
+`st.dataframe` / `st.data_editor`: Glide Data Grid exposes cell values through the canvas `alt` in
+addition to the painted grid, and that alternative must stay in the accessibility tree and remain
+navigable. Author `alt` names the grid as a whole (what the data *is*); it must not overwrite or
+`aria-hidden` the canvas's cell-level alternative. The same rule applies anywhere a command already
+names substructure — a labelled iframe inside a media player, a table inside a scroll region. Role
+and exact attribute remain per-phase implementation choices; which node they land on is a sign-off
+gate, not a free choice.
+
+These three constraints are sign-off gates on the implementation PRs rather than blockers for
+agreeing the direction here.
 
 Each phase gets Python and frontend unit tests plus an e2e test asserting the _computed_ accessible
 name rather than the presence of an attribute. Automated tests confirm a name exists, not that it is
@@ -571,10 +606,10 @@ unlikely to be covered at all.
 - **Images Streamlit renders that authors cannot reach** — `st.column_config.ImageColumn`,
   `st.chat_message(avatar=…)`, camera input, uploaded-file thumbnails. Author-supplied
   content rendered by our chrome, so #12873 does not cover it either
-- **Naming `st.iframe`** — an iframe's name is its `title` attribute, which `IFrame.tsx` currently
-  hardcodes to `"st.iframe"` with no author-facing parameter. The iframe spec already tracks that as
-  its own future work, so it stays there rather than being absorbed here
-- **`st.pdf` / `st.html` / custom components** — authors control the inner content
+- **`st.html` / custom components / deprecated `st.components.v1.iframe`** — authors control
+  the inner content of `st.html` and custom components. `st.components.v1.iframe` and
+  `st.components.v1.html` share the hardcoded `"st.iframe"` title with `st.iframe` but are
+  deprecated, so they do not get the parameter ([#16607](https://github.com/streamlit/streamlit/issues/16607#issuecomment-5375781603))
 - **Decorative chrome** — [#12873](https://github.com/streamlit/streamlit/issues/12873)
 - **A fully accessible dataframe canvas, and map viewport announcements** — separate and
   much larger projects, neither with an issue of its own yet
@@ -583,10 +618,12 @@ unlikely to be covered at all.
   rather than a naming one
 - **Naming element toolbar buttons** ([#16148](https://github.com/streamlit/streamlit/issues/16148))
   — every `"Fullscreen"` and `"Download as PNG"` is identical, so a page of charts is a list of
-  indistinguishable buttons. A natural follow-up that could use `alt` as context, but it is
-  Streamlit chrome rather than author content, which is the same reason `st.logo` is out. It also
-  does not depend on this project: composing from an image's existing `caption` would close the
-  original report on its own
+  indistinguishable buttons. Reasonable **fast follow-up**: compose `alt` (else `caption` on
+  `st.image`) into those button names so "Fullscreen" becomes "Fullscreen: Revenue by product
+  line". Still Streamlit chrome rather than a new author parameter, which is why it is not a
+  phase here — but unlike `st.logo`, it now has a string to compose from once this ships. The
+  original report can still be closed with `caption` alone; using `alt` is the better default
+  once it exists
 
 ## Alternatives Considered
 
@@ -603,8 +640,8 @@ different parameter wearing a sacred name.
 **Inject a visually hidden heading before each chart.** Would alter the document's heading
 outline. A description does not.
 
-Which ARIA role each element uses, and the DOM node the name attaches to, are
-implementation choices rather than API ones and are settled during each phase.
+Which ARIA role each element uses is an implementation choice settled during each phase. Which
+DOM node the name attaches to is not free: see the [DOM-node constraint](#rollout).
 
 ## Checklist
 
