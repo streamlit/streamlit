@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { isEqual } from "lodash-es"
 import type * as Plotly from "plotly.js"
 
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
@@ -208,6 +209,288 @@ export function applyTheming(
     spec.layout = layoutWithThemeDefaults(spec.layout, theme)
   }
   return spec
+}
+
+const CARTESIAN_AXIS_KEY_PATTERN = /^(x|y)axis\d*$/
+
+/**
+ * True for Plotly cartesian axis layout keys such as `xaxis`, `yaxis2`.
+ *
+ * @param key - A `layout` object key
+ * @returns Whether the key names a cartesian x or y axis
+ */
+function isCartesianAxisKey(key: string): boolean {
+  return CARTESIAN_AXIS_KEY_PATTERN.test(key)
+}
+
+function isAxisRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function isConstrainedCartesianAxis(axis: Record<string, unknown>): boolean {
+  return axis.scaleanchor !== undefined || axis.constrain === "domain"
+}
+
+const MAP_VIEW_FIELDS = ["center", "zoom", "bearing", "pitch", "projection"]
+const SELECTION_SHAPE_FIELDS = [
+  "type",
+  "xref",
+  "yref",
+  "x0",
+  "x1",
+  "y0",
+  "y1",
+  "path",
+]
+const RANGE_EPSILON = 1e-6
+
+function numericArraysDiffer(a: unknown, b: unknown): boolean {
+  if (a === b) {
+    return false
+  }
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
+    return true
+  }
+  return a.some((value, i) => {
+    const other = b[i]
+    if (typeof value === "number" && typeof other === "number") {
+      return Math.abs(value - other) > RANGE_EPSILON
+    }
+    return !isEqual(value, other)
+  })
+}
+
+function shouldAdoptNumericArray(previous: unknown, next: unknown): boolean {
+  if (next === undefined) {
+    return false
+  }
+  if (previous === undefined) {
+    return true
+  }
+  return numericArraysDiffer(previous, next)
+}
+
+function sanitizeSelections(selections: unknown): unknown {
+  if (!Array.isArray(selections)) {
+    return selections
+  }
+  return selections.map(selection => {
+    if (!isAxisRecord(selection)) {
+      return selection
+    }
+    const nextSelection: Record<string, unknown> = {}
+    for (const field of SELECTION_SHAPE_FIELDS) {
+      if (selection[field] !== undefined) {
+        nextSelection[field] = selection[field]
+      }
+    }
+    return nextSelection
+  })
+}
+
+function overlayCartesianAxisInteraction(
+  nextLayout: Record<string, unknown>,
+  sourceLayout: Record<string, unknown>
+): void {
+  for (const key of Object.keys(sourceLayout)) {
+    if (!isCartesianAxisKey(key)) {
+      continue
+    }
+    const sourceAxis = sourceLayout[key]
+    if (!isAxisRecord(sourceAxis)) {
+      continue
+    }
+
+    const nextAxis = isAxisRecord(nextLayout[key])
+      ? { ...nextLayout[key] }
+      : {}
+    const hasInteraction =
+      sourceAxis.range !== undefined ||
+      sourceAxis.scaleanchor !== undefined ||
+      sourceAxis.constrain !== undefined
+    if (!hasInteraction) {
+      continue
+    }
+    if (shouldAdoptNumericArray(nextAxis.range, sourceAxis.range)) {
+      nextAxis.range = sourceAxis.range
+    }
+    if (sourceAxis.scaleanchor !== undefined) {
+      nextAxis.scaleanchor = sourceAxis.scaleanchor
+    }
+    if (sourceAxis.constrain !== undefined) {
+      nextAxis.constrain = sourceAxis.constrain
+    }
+    if (isConstrainedCartesianAxis(nextAxis)) {
+      delete nextAxis.domain
+    }
+    nextLayout[key] = nextAxis
+  }
+}
+
+function overlayViewState(
+  nextLayout: Record<string, unknown>,
+  sourceLayout: Record<string, unknown>
+): void {
+  const sourceScene = sourceLayout.scene
+  if (isAxisRecord(sourceScene) && sourceScene.camera !== undefined) {
+    const nextScene = isAxisRecord(nextLayout.scene)
+      ? { ...nextLayout.scene }
+      : {}
+    nextScene.camera = sourceScene.camera
+    nextLayout.scene = nextScene
+  }
+
+  for (const key of ["mapbox", "map", "geo"]) {
+    const sourceView = sourceLayout[key]
+    if (!isAxisRecord(sourceView)) {
+      continue
+    }
+    const nextView = isAxisRecord(nextLayout[key])
+      ? { ...nextLayout[key] }
+      : {}
+    for (const field of MAP_VIEW_FIELDS) {
+      if (sourceView[field] !== undefined) {
+        nextView[field] = sourceView[field]
+      }
+    }
+    nextLayout[key] = nextView
+  }
+
+  if (
+    sourceLayout.hiddenlabels !== undefined &&
+    !isEqual(sourceLayout.hiddenlabels, nextLayout.hiddenlabels)
+  ) {
+    nextLayout.hiddenlabels = sourceLayout.hiddenlabels
+  }
+
+  if (sourceLayout.selections !== undefined) {
+    nextLayout.selections = sanitizeSelections(sourceLayout.selections)
+  }
+
+  // Adopt modebar / Plotly dragmode (pan, select, lasso, zoom, orbit, …).
+  // clickmode / hovermode stay React-owned: Streamlit’s selection effects set
+  // those, and re-feeding Plotly’s live values fights those effects.
+  if (sourceLayout.dragmode !== undefined) {
+    nextLayout.dragmode = sourceLayout.dragmode
+  }
+}
+
+type PlotlyFigureLike = {
+  data: Plotly.Data[]
+  layout?: Record<string, unknown>
+  frames?: Plotly.Frame[] | null
+}
+
+/**
+ * Copy a Plotly-reported figure into React-owned state without re-feeding
+ * computed size, constrained-axis domain, or automargin output into
+ * `Plotly.react`.
+ *
+ * When `previousLayout` is provided, start from that React-owned layout and
+ * overlay only interaction fields. Spreading Plotly's live layout would copy
+ * constraint-computed `domain` (and other internals) and, because
+ * react-plotly.js compares `layout` by reference, retrigger `Plotly.react`
+ * in a loop. When omitted (remount recovery), start from the saved figure.
+ *
+ * Plotly's live `figure.layout` is mutated in place; this always returns a
+ * new layout (and copied axis objects) and leaves `data` shared.
+ *
+ * @param figure - Figure from `onUpdate` / `onInitialized` / remount state
+ * @param ownedSize - Container width/height owned by Streamlit
+ * @param previousLayout - Last React-owned layout. When provided, restore its
+ *   `margin` — including no layout-level margin, so template/theme margin is
+ *   used instead of Plotly automargin output. When omitted (remount recovery),
+ *   keep the figure's margin.
+ * @returns A shallow-copied figure safe to pass back to `Plot`
+ */
+export function sanitizePlotlyFigureForReact(
+  figure: PlotlyFigureLike,
+  ownedSize: { width?: number; height?: number },
+  previousLayout?: Partial<Plotly.Layout> | Record<string, unknown>
+): PlotlyFigureType {
+  const sourceLayout = figure.layout ?? {}
+  const baseLayout = (previousLayout ?? sourceLayout) as Record<
+    string,
+    unknown
+  >
+  const nextLayout: Record<string, unknown> = {
+    ...baseLayout,
+    width: ownedSize.width,
+    height: ownedSize.height,
+    autosize: false,
+  }
+
+  overlayCartesianAxisInteraction(nextLayout, sourceLayout)
+  overlayViewState(nextLayout, sourceLayout)
+
+  if (previousLayout !== undefined) {
+    if (previousLayout.margin !== undefined) {
+      nextLayout.margin = previousLayout.margin
+    } else {
+      delete nextLayout.margin
+    }
+  }
+
+  return {
+    data: figure.data,
+    frames: figure.frames ?? null,
+    layout: nextLayout as Partial<Plotly.Layout>,
+  }
+}
+
+/**
+ * Copy `source` onto `target` while keeping `target`'s object identity.
+ *
+ * react-plotly.js skips `Plotly.react` when the `layout` prop is unchanged by
+ * reference. Scroll-zoom (`plotly_relayouting`) already applied the new range
+ * on the graph div; replacing the layout object would retrigger `Plotly.react`
+ * and revert or interrupt the zoom.
+ *
+ * @param target - React-owned layout currently passed to `Plot`
+ * @param source - Sanitized layout to copy
+ * @returns `target`
+ */
+export function assignLayoutInPlace(
+  target: Partial<Plotly.Layout>,
+  source: Partial<Plotly.Layout>
+): Partial<Plotly.Layout> {
+  Object.assign(target, source)
+  if (!Object.hasOwn(source, "margin")) {
+    delete target.margin
+  }
+  return target
+}
+
+/**
+ * True when the sanitized figure differs from React-owned state enough to
+ * persist. Callers may still reuse the current `layout` object identity so
+ * react-plotly.js does not call `Plotly.react`.
+ *
+ * @param prev - Current React-owned figure
+ * @param next - Candidate sanitized figure
+ * @returns Whether interaction state should be written back
+ */
+export function plotlyFigureNeedsReactStateUpdate(
+  prev: PlotlyFigureLike,
+  next: PlotlyFigureLike
+): boolean {
+  if ((prev.frames ?? null) !== (next.frames ?? null)) {
+    return true
+  }
+  if (!isEqual(prev.layout, next.layout)) {
+    return true
+  }
+  if (prev.data === next.data) {
+    return false
+  }
+  return !isEqual(
+    prev.data.map(
+      trace => (trace as { selectedpoints?: unknown }).selectedpoints
+    ),
+    next.data.map(
+      trace => (trace as { selectedpoints?: unknown }).selectedpoints
+    )
+  )
 }
 
 /**

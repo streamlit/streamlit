@@ -31,6 +31,7 @@ import { ensureError } from "~lib/util/ErrorHandling"
 import { notNullOrUndefined } from "~lib/util/utils"
 
 const LOG = getLogger("PlotlyChart:CustomTheme")
+const CARTESIAN_AXIS_KEY_PATTERN = /^(x|y)axis\d*$/
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -222,6 +223,32 @@ export function applyStreamlitThemeTemplateLayout(
   }
 
   merge(layout, streamlitTheme)
+}
+
+/**
+ * Layout-level `automargin` fights constrained axes (e.g. `px.imshow`
+ * `scaleanchor` / `constrain: "domain"`) when Streamlit re-feeds Plotly's
+ * computed layout. Override the template `automargin: true` only on those
+ * axes; ordinary scatter/line charts keep template automargin.
+ *
+ * @param layout - `spec.layout` (not the template layout)
+ */
+function suppressAutomarginOnConstrainedAxes(
+  layout: Record<string, unknown>
+): void {
+  for (const key of Object.keys(layout)) {
+    if (!CARTESIAN_AXIS_KEY_PATTERN.test(key)) {
+      continue
+    }
+    const axis = layout[key]
+    if (!isRecord(axis)) {
+      continue
+    }
+    if (axis.scaleanchor !== undefined || axis.constrain === "domain") {
+      // Layout-level automargin overrides the template default.
+      layout[key] = { ...axis, automargin: false }
+    }
+  }
 }
 
 /**
@@ -440,6 +467,7 @@ export function applyStreamlitTheme(
 
   try {
     applyStreamlitThemeTemplateLayout(templateLayout, theme)
+    suppressAutomarginOnConstrainedAxes(layout)
     // Ensure user-provided `layout.font` overrides Streamlit's trace-level
     // `textfont` defaults (e.g. Sankey, icicle); otherwise those template
     // defaults shadow user settings.

@@ -21,9 +21,11 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
+import { isEqual } from "lodash-es"
 import type * as Plotly from "plotly.js"
 
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
@@ -47,8 +49,11 @@ import {
 import { StyledPlotlyChartContainer } from "./styled-components"
 import {
   applyTheming,
+  assignLayoutInPlace,
   handleClickEvent,
   handleSelection,
+  plotlyFigureNeedsReactStateUpdate,
+  sanitizePlotlyFigureForReact,
   sendEmptySelection,
 } from "./utils"
 
@@ -110,6 +115,8 @@ export function PlotlyChart({
     useCalculatedDimensions([], 0)
 
   const width = elWidth || 0
+  const lastValidWidthRef = useRef<number | undefined>(undefined)
+  const lastValidHeightRef = useRef<number | undefined>(undefined)
 
   // Load the initial figure spec from the element message
   const initialFigureSpec = useMemo<PlotlyFigureType>(() => {
@@ -135,11 +142,23 @@ export function PlotlyChart({
       element.id,
       "figure"
     )
+    const ownedSize = {
+      width: width === -1 ? undefined : Math.max(width, MIN_WIDTH),
+      height:
+        chartContainerHeight > 0
+          ? chartContainerHeight
+          : DEFAULT_PLOTLY_HEIGHT,
+    }
     if (initialFigureState) {
-      return migratePlotlyMapboxFigure(initialFigureState)
+      return sanitizePlotlyFigureForReact(
+        migratePlotlyMapboxFigure(initialFigureState),
+        ownedSize
+      )
     }
     return applyTheming(initialFigureSpec, element.theme, theme)
   })
+  const plotlyFigureRef = useRef(plotlyFigure)
+  plotlyFigureRef.current = plotlyFigure
 
   const isSelectionActivated = element.selectionMode.length > 0 && !disabled
   const isLassoSelectionActivated =
@@ -322,12 +341,19 @@ export function PlotlyChart({
     disabled,
   ])
 
+  if (width !== -1) {
+    lastValidWidthRef.current = Math.max(width, MIN_WIDTH)
+  }
+  if (chartContainerHeight > 0) {
+    lastValidHeightRef.current = chartContainerHeight
+  }
+
   let calculatedWidth =
     width === -1
       ? // In some situations - e.g. initial loading of tabs - the width is set to -1
         // before its able to determine the real width. We want to keep the previous
         // width in this case.
-        plotlyFigure.layout?.width
+        (lastValidWidthRef.current ?? plotlyFigure.layout?.width)
       : Math.max(
           width,
           // Apply a min width to prevent the chart running into issues with negative
@@ -338,29 +364,38 @@ export function PlotlyChart({
   let calculatedHeight =
     chartContainerHeight > 0
       ? chartContainerHeight
-      : (plotlyFigure.layout?.height ?? DEFAULT_PLOTLY_HEIGHT)
+      : (lastValidHeightRef.current ??
+        plotlyFigure.layout?.height ??
+        DEFAULT_PLOTLY_HEIGHT)
 
   if (isFullScreen) {
     calculatedWidth = width
     calculatedHeight = fullScreenHeight ?? DEFAULT_PLOTLY_HEIGHT
   }
 
-  if (
-    plotlyFigure.layout.height !== calculatedHeight ||
-    plotlyFigure.layout.width !== calculatedWidth
-  ) {
-    // Update the figure with the new height and width (if they have changed)
-    setPlotlyFigure((prevFigure: PlotlyFigureType) => {
-      return {
-        ...prevFigure,
-        layout: {
-          ...prevFigure.layout,
-          height: calculatedHeight,
-          width: calculatedWidth,
-        },
-      }
-    })
+  const nextPlotLayout = useMemo(() => {
+    const layout = plotlyFigure.layout
+    if (
+      layout.width === calculatedWidth &&
+      layout.height === calculatedHeight &&
+      layout.autosize === false
+    ) {
+      return layout
+    }
+    return {
+      ...layout,
+      width: calculatedWidth,
+      height: calculatedHeight,
+      autosize: false as const,
+    }
+  }, [plotlyFigure.layout, calculatedWidth, calculatedHeight])
+  // react-plotly.js compares `layout` by reference. Reuse the previous
+  // object when the contents match so Plotly.react is not retriggered.
+  const plotLayoutRef = useRef(nextPlotLayout)
+  if (!isEqual(plotLayoutRef.current, nextPlotLayout)) {
+    plotLayoutRef.current = nextPlotLayout
   }
+  const plotLayout = plotLayoutRef.current
 
   /**
    * Callback to handle selections on the plotly chart.
@@ -386,6 +421,69 @@ export function PlotlyChart({
     // on each render, but element.id only changes when the element actually changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [element.id, widgetMgr, fragmentId]
+  )
+
+  /**
+   * Persist Plotly interaction state (zoom, selection, camera) without
+   * re-feeding computed domain/size/automargin back into `Plotly.react`.
+   *
+   * `onInitialized` only writes widget remount state. Plotly's first react
+   * reports dragmode "zoom" before Streamlit's selection effect has been
+   * applied; writing that into React state would stick the chart in zoom
+   * and break box/lasso select. Interaction is committed on `onUpdate`.
+   */
+  const persistSanitizedFigure = useCallback(
+    (figure: PlotlyFigureType, updateReactState: boolean): void => {
+      const previousFigure = plotlyFigureRef.current
+      const sanitized = sanitizePlotlyFigureForReact(
+        figure,
+        { width: calculatedWidth, height: calculatedHeight },
+        previousFigure.layout
+      )
+      if (element.id) {
+        widgetMgr.setElementState(element.id, "figure", sanitized)
+      }
+      if (!updateReactState) {
+        return
+      }
+      if (!plotlyFigureNeedsReactStateUpdate(previousFigure, sanitized)) {
+        return
+      }
+
+      const currentLayout = plotLayoutRef.current
+      const shouldReuseLayout =
+        currentLayout.width === sanitized.layout.width &&
+        currentLayout.height === sanitized.layout.height &&
+        currentLayout.autosize === false
+      const nextLayout = shouldReuseLayout
+        ? assignLayoutInPlace(currentLayout, sanitized.layout)
+        : sanitized.layout
+
+      const nextFigure: PlotlyFigureType = {
+        data: figure.data,
+        frames: sanitized.frames ?? null,
+        layout: nextLayout,
+      }
+      plotlyFigureRef.current = nextFigure
+      setPlotlyFigure(nextFigure)
+    },
+    // Using element.id instead of element: the proto object gets a new reference
+    // on each render, but element.id only changes when the element actually changes.
+
+    [calculatedWidth, calculatedHeight, element.id, widgetMgr]
+  )
+
+  const handleInitialized = useCallback(
+    (figure: PlotlyFigureType): void => {
+      persistSanitizedFigure(figure, false)
+    },
+    [persistSanitizedFigure]
+  )
+  const handleUpdate = useCallback(
+    (figure: PlotlyFigureType): void => {
+      persistSanitizedFigure(figure, true)
+    },
+    [persistSanitizedFigure]
   )
 
   const { restart: restartResetSelectionTimeout } = useTimeout(
@@ -505,14 +603,13 @@ export function PlotlyChart({
     >
       <Plot
         data={plotlyFigure.data}
-        layout={plotlyFigure.layout}
+        layout={plotLayout}
         config={plotlyConfig}
         frames={plotlyFigure.frames ?? undefined}
         style={{
           // Hide the plotly chart if the width is not defined yet
           // to prevent flickering issues.
-          visibility:
-            plotlyFigure.layout?.width === undefined ? "hidden" : undefined,
+          visibility: plotLayout.width === undefined ? "hidden" : undefined,
           // If the scrollbars are activated, it leads to flickering issues.
           // We don't need overflow here since the parent container and plot dimensions are in sync.
           overflow: "hidden",
@@ -537,15 +634,9 @@ export function PlotlyChart({
               }
             : undefined
         }
-        onInitialized={figure => {
-          widgetMgr.setElementState(element.id, "figure", figure)
-        }}
+        onInitialized={handleInitialized}
         // Update the figure state on every change to the figure itself:
-        onUpdate={figure => {
-          // Save the updated figure state to allow it to be recovered
-          widgetMgr.setElementState(element.id, "figure", figure)
-          setPlotlyFigure(figure)
-        }}
+        onUpdate={handleUpdate}
       />
     </StyledPlotlyChartContainer>
   )

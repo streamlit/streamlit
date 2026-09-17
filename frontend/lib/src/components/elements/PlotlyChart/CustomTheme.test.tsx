@@ -375,6 +375,60 @@ describe("PlotlyChart CustomTheme", () => {
         "color"
       )
     })
+
+    it("disables automargin on constrained layout axes only", () => {
+      const spec: Record<string, unknown> = {
+        layout: {
+          xaxis: {
+            scaleanchor: "y",
+            constrain: "domain",
+          },
+          yaxis: {
+            constrain: "domain",
+          },
+          template: {
+            layout: {},
+          },
+        },
+      }
+
+      applyStreamlitTheme(spec, theme)
+
+      const layout = spec.layout as {
+        xaxis: { automargin: boolean; scaleanchor: string }
+        yaxis: { automargin: boolean }
+        template: {
+          layout: {
+            xaxis: { automargin: boolean }
+            yaxis: { automargin: boolean }
+          }
+        }
+      }
+      expect(layout.xaxis.automargin).toBe(false)
+      expect(layout.yaxis.automargin).toBe(false)
+      expect(layout.xaxis.scaleanchor).toBe("y")
+      expect(layout.template.layout.xaxis.automargin).toBe(true)
+      expect(layout.template.layout.yaxis.automargin).toBe(true)
+    })
+
+    it("does not override automargin on unconstrained axes", () => {
+      const spec: Record<string, unknown> = {
+        layout: {
+          template: {
+            layout: {},
+          },
+        },
+      }
+
+      applyStreamlitTheme(spec, theme)
+
+      const layout = spec.layout as {
+        xaxis?: { automargin?: boolean }
+        template: { layout: { xaxis: { automargin: boolean } } }
+      }
+      expect(layout.xaxis?.automargin).toBeUndefined()
+      expect(layout.template.layout.xaxis.automargin).toBe(true)
+    })
   })
 
   describe("layoutWithThemeDefaults", () => {

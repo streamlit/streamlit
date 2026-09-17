@@ -20,7 +20,7 @@ import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
 
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
-import type { PlotParams } from "~lib/util/reactPlotlyCompat"
+import type { Figure, PlotParams } from "~lib/util/reactPlotlyCompat"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { PlotlyChart } from "./PlotlyChart"
@@ -52,12 +52,16 @@ vi.mock("~lib/hooks/useEmotionTheme", () => ({
   useEmotionTheme: () => mockTheme.emotion,
 }))
 
-vi.mock("./utils", () => ({
-  applyTheming: vi.fn(spec => spec),
-  handleSelection: vi.fn(),
-  handleClickEvent: vi.fn(),
-  sendEmptySelection: vi.fn(),
-}))
+vi.mock("./utils", async importOriginal => {
+  const actual = await importOriginal<typeof import("./utils")>()
+  return {
+    ...actual,
+    applyTheming: vi.fn(spec => spec),
+    handleSelection: vi.fn(),
+    handleClickEvent: vi.fn(),
+    sendEmptySelection: vi.fn(),
+  }
+})
 
 const formClearHelperMocks = vi.hoisted(() => ({
   manageFormClearListener: vi.fn(),
@@ -107,6 +111,27 @@ const DEFAULT_ELEMENT = new PlotlyChartProto({
   selectionMode: [],
   id: "test_chart_id",
   theme: "streamlit",
+})
+
+const CONSTRAINED_SPEC = JSON.stringify({
+  data: [
+    {
+      type: "heatmap",
+      z: [
+        [1, 2],
+        [3, 4],
+      ],
+    },
+  ],
+  layout: {
+    xaxis: {
+      scaleanchor: "y",
+      constrain: "domain",
+      domain: [0.66, 1],
+      range: [-0.5, 1.5],
+    },
+    yaxis: { constrain: "domain", domain: [0, 0.85], range: [-0.5, 1.5] },
+  },
 })
 
 describe("PlotlyChart Component", () => {
@@ -224,6 +249,49 @@ describe("PlotlyChart Component", () => {
     expect(lastCallProps.layout.dragmode).toBe("select")
     // clickmode is set to "event" via effect when dragmode is select/lasso
     expect(lastCallProps.layout.clickmode).toBe("event")
+  })
+
+  it("does not let onInitialized replace selection dragmode with Plotly's default zoom", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      selectionMode: [PlotlyChartProto.SelectionMode.BOX],
+    })
+    renderComponent({ element })
+    expect(getLastPlotProps().layout.dragmode).toBe("select")
+
+    act(() => {
+      getLastPlotProps().onInitialized?.(
+        {
+          data: getLastPlotProps().data,
+          layout: { ...getLastPlotProps().layout, dragmode: "zoom" },
+          frames: null,
+        },
+        document.createElement("div")
+      )
+    })
+
+    expect(getLastPlotProps().layout.dragmode).toBe("select")
+  })
+
+  it("adopts modebar dragmode from onUpdate", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      selectionMode: [PlotlyChartProto.SelectionMode.BOX],
+    })
+    renderComponent({ element })
+
+    act(() => {
+      getLastPlotProps().onUpdate?.(
+        {
+          data: getLastPlotProps().data,
+          layout: { ...getLastPlotProps().layout, dragmode: "pan" },
+          frames: null,
+        },
+        document.createElement("div")
+      )
+    })
+
+    expect(getLastPlotProps().layout.dragmode).toBe("pan")
   })
 
   it("configures selection modes correctly (Lasso)", () => {
@@ -352,25 +420,45 @@ describe("PlotlyChart Component", () => {
     expect(lastCallProps.onDoubleClick).toBeUndefined()
   })
 
-  it("saves figure to widget state on update", () => {
+  it("saves sanitized figure to widget state on update", () => {
     renderComponent()
 
     const lastCallProps = getLastPlotProps()
     const newFigure = {
       data: [],
-      layout: { title: { text: "New Title" } },
+      layout: {
+        title: { text: "New Title" },
+        xaxis: { range: [2, 8] },
+      },
       frames: null,
     }
 
     act(() => {
-      lastCallProps.onUpdate?.(newFigure, document.createElement("div"))
+      lastCallProps.onUpdate?.(
+        newFigure as unknown as Figure,
+        document.createElement("div")
+      )
     })
 
     expect(widgetMgr.setElementState).toHaveBeenCalledWith(
       DEFAULT_ELEMENT.id,
       "figure",
-      newFigure
+      expect.objectContaining({
+        data: newFigure.data,
+        frames: newFigure.frames,
+        layout: expect.objectContaining({
+          title: "Test Chart",
+          xaxis: expect.objectContaining({ range: [2, 8] }),
+          width: 600,
+          height: 450,
+          autosize: false,
+        }),
+      })
     )
+    const storedFigure = vi
+      .mocked(widgetMgr.setElementState)
+      .mock.calls.at(-1)?.[2]
+    expect(storedFigure).not.toBe(newFigure)
   })
 
   it("adds fullscreen button to toolbar", () => {
@@ -624,12 +712,15 @@ describe("PlotlyChart Component", () => {
     expect(formClearHelperMocks.disconnect).toHaveBeenCalled()
   })
 
-  it("saves figure to widget state on initialize", () => {
+  it("saves sanitized figure to widget state on initialize", () => {
     renderComponent()
 
     const figure = {
       data: [],
-      layout: { title: { text: "Initial" } },
+      layout: {
+        title: { text: "Initial" },
+        xaxis: { range: [1, 4] as [number, number] },
+      },
       frames: null,
     }
     act(() => {
@@ -639,7 +730,217 @@ describe("PlotlyChart Component", () => {
     expect(widgetMgr.setElementState).toHaveBeenCalledWith(
       DEFAULT_ELEMENT.id,
       "figure",
-      figure
+      expect.objectContaining({
+        data: figure.data,
+        frames: figure.frames,
+        layout: expect.objectContaining({
+          title: "Test Chart",
+          xaxis: expect.objectContaining({ range: [1, 4] }),
+          width: 600,
+          height: 450,
+          autosize: false,
+        }),
+      })
     )
+    const storedFigure = vi
+      .mocked(widgetMgr.setElementState)
+      .mock.calls.at(-1)?.[2]
+    expect(storedFigure).not.toBe(figure)
+  })
+
+  it("keeps Plot layout identity when onUpdate reports only computed domain", () => {
+    renderComponent()
+    act(() => {
+      getLastPlotProps().onInitialized?.(
+        {
+          data: getLastPlotProps().data,
+          layout: getLastPlotProps().layout,
+          frames: null,
+        },
+        document.createElement("div")
+      )
+    })
+    const layoutBefore = getLastPlotProps().layout
+
+    act(() => {
+      getLastPlotProps().onUpdate?.(
+        {
+          data: getLastPlotProps().data,
+          layout: {
+            ...layoutBefore,
+            xaxis: {
+              ...layoutBefore.xaxis,
+              domain: [0.67, 0.99],
+            },
+          },
+          frames: null,
+        },
+        document.createElement("div")
+      )
+    })
+
+    expect(getLastPlotProps().layout).toBe(layoutBefore)
+  })
+
+  it("keeps Plot layout identity when onUpdate reports a new zoom range", () => {
+    renderComponent()
+    const layoutBefore = getLastPlotProps().layout
+    const data = getLastPlotProps().data
+
+    act(() => {
+      getLastPlotProps().onUpdate?.(
+        {
+          data,
+          layout: {
+            ...layoutBefore,
+            xaxis: { ...layoutBefore.xaxis, range: [2, 8] },
+          },
+          frames: null,
+        },
+        document.createElement("div")
+      )
+    })
+
+    expect(getLastPlotProps().layout).toBe(layoutBefore)
+    expect(getLastPlotProps().layout.xaxis?.range).toEqual([2, 8])
+  })
+
+  it("does not adopt Plotly-reported domain on constrained axes after onUpdate", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      spec: CONSTRAINED_SPEC,
+    })
+    renderComponent({ element })
+
+    act(() => {
+      getLastPlotProps().onUpdate?.(
+        {
+          data: [
+            {
+              type: "heatmap",
+              z: [
+                [1, 2],
+                [3, 4],
+              ],
+            },
+          ],
+          layout: {
+            xaxis: {
+              scaleanchor: "y",
+              constrain: "domain",
+              domain: [0.67, 0.99],
+              range: [-0.2, 1.2],
+            },
+            yaxis: {
+              constrain: "domain",
+              domain: [0.01, 0.84],
+              range: [-0.2, 1.2],
+            },
+          },
+          frames: null,
+        },
+        document.createElement("div")
+      )
+    })
+
+    const nextLayout = getLastPlotProps().layout
+    expect(nextLayout.xaxis?.domain).toBeUndefined()
+    expect(nextLayout.yaxis?.domain).toBeUndefined()
+    expect(nextLayout.xaxis?.range).toEqual([-0.2, 1.2])
+    expect(nextLayout.xaxis?.scaleanchor).toBe("y")
+    expect(nextLayout.xaxis?.constrain).toBe("domain")
+    expect(nextLayout.yaxis?.constrain).toBe("domain")
+  })
+
+  it("does not adopt Plotly-reported width and height on update", () => {
+    renderComponent()
+
+    act(() => {
+      getLastPlotProps().onUpdate?.(
+        { data: [], layout: { width: 10, height: 10 }, frames: null },
+        document.createElement("div")
+      )
+    })
+
+    const layout = getLastPlotProps().layout
+    expect(layout.width).toBe(600)
+    expect(layout.height).toBe(450)
+    expect(layout.autosize).toBe(false)
+  })
+
+  it("does not adopt Plotly-reported automargin on update", () => {
+    renderComponent()
+
+    act(() => {
+      getLastPlotProps().onUpdate?.(
+        {
+          data: [],
+          layout: { margin: { l: 99, r: 99, t: 99, b: 99 } },
+          frames: null,
+        },
+        document.createElement("div")
+      )
+    })
+
+    expect(getLastPlotProps().layout.margin).toBeUndefined()
+  })
+
+  it("persists zoom, selection, and camera from onUpdate into Plot props", () => {
+    renderComponent()
+    const camera = { eye: { x: 1.5, y: 1.5, z: 1.5 } }
+
+    act(() => {
+      getLastPlotProps().onUpdate?.(
+        {
+          data: [],
+          layout: {
+            xaxis: { range: [2, 8] },
+            selections: [{ type: "rect", x0: 1, x1: 2, y0: 1, y1: 2 }],
+            scene: { camera },
+            dragmode: "pan",
+          },
+          frames: null,
+        },
+        document.createElement("div")
+      )
+    })
+
+    const layout = getLastPlotProps().layout
+    expect(layout.xaxis?.range).toEqual([2, 8])
+    expect(layout.selections).toEqual([
+      { type: "rect", x0: 1, x1: 2, y0: 1, y1: 2 },
+    ])
+    expect(layout.scene?.camera).toEqual(camera)
+    expect(layout.dragmode).toBe("pan")
+  })
+
+  it("sanitizes recovered widgetMgr figure state on mount", () => {
+    const savedFigure = {
+      data: [],
+      layout: {
+        title: "Recovered",
+        width: 10,
+        height: 10,
+        xaxis: {
+          scaleanchor: "y",
+          constrain: "domain",
+          domain: [0.66, 1],
+          range: [0, 1],
+        },
+      },
+      frames: null,
+    }
+    vi.mocked(widgetMgr.getElementState).mockReturnValue(savedFigure)
+
+    renderComponent()
+
+    const layout = getLastPlotProps().layout
+    expect(layout.title).toBe("Recovered")
+    expect(layout.xaxis?.domain).toBeUndefined()
+    expect(layout.xaxis?.scaleanchor).toBe("y")
+    expect(layout.xaxis?.range).toEqual([0, 1])
+    expect(layout.width).toBe(600)
+    expect(layout.height).toBe(450)
+    expect(layout.autosize).toBe(false)
   })
 })

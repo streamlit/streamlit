@@ -25,10 +25,13 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { applyStreamlitTheme, layoutWithThemeDefaults } from "./CustomTheme"
 import {
   applyTheming,
+  assignLayoutInPlace,
   handleClickEvent,
   handleSelection,
   parseBoxSelection,
   parseLassoPath,
+  plotlyFigureNeedsReactStateUpdate,
+  sanitizePlotlyFigureForReact,
   sendEmptySelection,
 } from "./utils"
 
@@ -127,6 +130,429 @@ describe("PlotlyChart utils", () => {
       applyTheming(mockPlotlyFigure, chartTheme, mockTheme.emotion)
 
       expect(layoutWithThemeDefaults).toHaveBeenCalled()
+    })
+  })
+
+  describe("sanitizePlotlyFigureForReact", () => {
+    const ownedSize = { width: 600, height: 450 }
+
+    it("strips domain from constrained imshow-like axes and keeps range and scaleanchor", () => {
+      const data = [
+        {
+          type: "heatmap" as const,
+          z: [
+            [1, 2],
+            [3, 4],
+          ],
+        },
+      ]
+      const figure = {
+        data,
+        frames: null,
+        layout: {
+          xaxis: {
+            scaleanchor: "y",
+            constrain: "domain",
+            domain: [0.66, 1],
+            range: [-0.5, 1.5],
+          },
+          yaxis: {
+            constrain: "domain",
+            domain: [0, 0.85],
+            range: [-0.5, 1.5],
+          },
+        },
+      }
+
+      const result = sanitizePlotlyFigureForReact(figure, ownedSize)
+
+      expect(result.layout.xaxis?.domain).toBeUndefined()
+      expect(result.layout.yaxis?.domain).toBeUndefined()
+      expect(result.layout.xaxis?.range).toEqual([-0.5, 1.5])
+      expect(result.layout.xaxis?.scaleanchor).toBe("y")
+      expect(result.layout.xaxis?.constrain).toBe("domain")
+      expect(result.layout.yaxis?.constrain).toBe("domain")
+    })
+
+    it("preserves explicit domain on unconstrained scatter axes", () => {
+      const figure = {
+        data: [{ type: "scatter" as const, x: [1, 2], y: [1, 2] }],
+        frames: null,
+        layout: {
+          xaxis: { domain: [0, 0.45], range: [0, 10] },
+          yaxis: { domain: [0, 1], range: [0, 5] },
+        },
+      }
+
+      const result = sanitizePlotlyFigureForReact(figure, ownedSize)
+
+      expect(result.layout.xaxis?.domain).toEqual([0, 0.45])
+      expect(result.layout.yaxis?.domain).toEqual([0, 1])
+      expect(result.layout.xaxis?.range).toEqual([0, 10])
+    })
+
+    it("strips domain from xaxis2 and yaxis2 when constrain is domain", () => {
+      const figure = {
+        data: [],
+        frames: null,
+        layout: {
+          xaxis2: { constrain: "domain", domain: [0.5, 1], range: [1, 2] },
+          yaxis2: { constrain: "domain", domain: [0.5, 1], range: [3, 4] },
+        },
+      }
+
+      const result = sanitizePlotlyFigureForReact(figure, ownedSize)
+
+      expect(result.layout.xaxis2?.domain).toBeUndefined()
+      expect(result.layout.yaxis2?.domain).toBeUndefined()
+      expect(result.layout.xaxis2?.constrain).toBe("domain")
+      expect(result.layout.xaxis2?.range).toEqual([1, 2])
+      expect(result.layout.yaxis2?.range).toEqual([3, 4])
+    })
+
+    it("uses Streamlit-owned size and forces autosize false", () => {
+      const figure = {
+        data: [],
+        frames: null,
+        layout: { width: 10, height: 10, autosize: true },
+      }
+
+      const result = sanitizePlotlyFigureForReact(figure, ownedSize)
+
+      expect(result.layout.width).toBe(600)
+      expect(result.layout.height).toBe(450)
+      expect(result.layout.autosize).toBe(false)
+    })
+
+    it("restores previousLayout margin instead of Plotly automargin output", () => {
+      const figure = {
+        data: [],
+        frames: null,
+        layout: { margin: { l: 99, r: 99, t: 99, b: 99 } },
+      }
+      const previousLayout = { margin: { l: 10, r: 20, t: 30, b: 40 } }
+
+      const result = sanitizePlotlyFigureForReact(
+        figure,
+        ownedSize,
+        previousLayout
+      )
+
+      expect(result.layout.margin).toEqual({ l: 10, r: 20, t: 30, b: 40 })
+    })
+
+    it("drops Plotly-computed margin when previousLayout has no layout margin", () => {
+      const figure = {
+        data: [],
+        frames: null,
+        layout: { margin: { l: 99, r: 99, t: 99, b: 99 } },
+      }
+
+      const result = sanitizePlotlyFigureForReact(figure, ownedSize, {})
+
+      expect(result.layout.margin).toBeUndefined()
+    })
+
+    it("keeps figure margin when previousLayout is omitted", () => {
+      const margin = { l: 12, r: 12, t: 12, b: 12 }
+      const result = sanitizePlotlyFigureForReact(
+        { data: [], frames: null, layout: { margin } },
+        ownedSize
+      )
+
+      expect(result.layout.margin).toEqual(margin)
+    })
+
+    it("copies scene.camera through unchanged", () => {
+      const camera = { eye: { x: 1.5, y: 1.25, z: 0.75 } }
+      const figure = {
+        data: [],
+        frames: null,
+        layout: { scene: { camera } },
+      }
+
+      const result = sanitizePlotlyFigureForReact(figure, ownedSize)
+
+      expect(result.layout.scene?.camera).toEqual(camera)
+    })
+
+    it("does not mutate the input figure layout", () => {
+      const layout = {
+        xaxis: {
+          scaleanchor: "y" as const,
+          constrain: "domain" as const,
+          domain: [0.66, 1],
+          range: [0, 1],
+        },
+      }
+      const figure = { data: [], frames: null, layout }
+
+      sanitizePlotlyFigureForReact(figure, ownedSize)
+
+      expect(layout.xaxis.domain).toEqual([0.66, 1])
+    })
+
+    it("keeps the same data reference without deep cloning", () => {
+      const data = [{ type: "scatter" as const, x: [1], y: [2] }]
+      const figure = { data, frames: null, layout: {} }
+
+      const result = sanitizePlotlyFigureForReact(figure, ownedSize)
+
+      expect(result.data).toBe(data)
+    })
+
+    it("overlays zoom range onto previousLayout without adopting computed domain", () => {
+      const previousLayout = {
+        title: { text: "Keep me" },
+        xaxis: {
+          scaleanchor: "y" as const,
+          constrain: "domain" as const,
+          range: [-0.5, 1.5],
+        },
+        yaxis: { constrain: "domain" as const, range: [-0.5, 1.5] },
+      }
+      const figure = {
+        data: [],
+        frames: null,
+        layout: {
+          xaxis: {
+            scaleanchor: "y",
+            constrain: "domain",
+            domain: [0.67, 0.99],
+            range: [0.1, 0.9],
+            tickvals: [0.1, 0.5, 0.9],
+          },
+          yaxis: {
+            constrain: "domain",
+            domain: [0.01, 0.84],
+            range: [0.2, 0.8],
+          },
+        },
+      }
+
+      const result = sanitizePlotlyFigureForReact(
+        figure,
+        ownedSize,
+        previousLayout
+      )
+
+      expect(result.layout.title).toEqual({ text: "Keep me" })
+      expect(result.layout.xaxis?.range).toEqual([0.1, 0.9])
+      expect(result.layout.yaxis?.range).toEqual([0.2, 0.8])
+      expect(result.layout.xaxis?.domain).toBeUndefined()
+      expect(result.layout.yaxis?.domain).toBeUndefined()
+      expect(result.layout.xaxis?.scaleanchor).toBe("y")
+      expect(
+        (result.layout.xaxis as Record<string, unknown> | undefined)?.tickvals
+      ).toBeUndefined()
+    })
+
+    it("preserves unconstrained domain from previousLayout while overlaying range", () => {
+      const previousLayout = {
+        xaxis: { domain: [0, 0.45], range: [0, 10] },
+      }
+      const figure = {
+        data: [],
+        frames: null,
+        layout: {
+          xaxis: { domain: [0.1, 0.4], range: [1, 5] },
+        },
+      }
+
+      const result = sanitizePlotlyFigureForReact(
+        figure,
+        ownedSize,
+        previousLayout
+      )
+
+      expect(result.layout.xaxis?.domain).toEqual([0, 0.45])
+      expect(result.layout.xaxis?.range).toEqual([1, 5])
+    })
+
+    it("ignores tiny Plotly range drift so React layout stays stable", () => {
+      const previousLayout = {
+        xaxis: { range: [0, 10] },
+      }
+      const figure = {
+        data: [],
+        frames: null,
+        layout: {
+          xaxis: { range: [0, 10 + 1e-9], tickvals: [0, 5, 10] },
+          polar: { radialaxis: { visible: true } },
+        },
+      }
+
+      const result = sanitizePlotlyFigureForReact(
+        figure,
+        ownedSize,
+        previousLayout
+      )
+
+      expect(result.layout.xaxis?.range).toEqual([0, 10])
+      expect(
+        (result.layout.xaxis as Record<string, unknown> | undefined)?.tickvals
+      ).toBeUndefined()
+      expect(result.layout.polar).toBeUndefined()
+    })
+
+    it("adopts live dragmode so modebar pan/select/zoom persist", () => {
+      const previousLayout = {
+        dragmode: "select" as const,
+        hovermode: "closest" as const,
+      }
+      const figure = {
+        data: [],
+        frames: null,
+        layout: {
+          dragmode: "pan" as const,
+          hovermode: "x" as const,
+        },
+      }
+
+      const result = sanitizePlotlyFigureForReact(
+        figure,
+        ownedSize,
+        previousLayout
+      )
+
+      expect(result.layout.dragmode).toBe("pan")
+      expect(result.layout.hovermode).toBe("closest")
+    })
+
+    it("does not need a React state update after applying a noisy live layout twice", () => {
+      const data: never[] = []
+      const previousLayout = {
+        title: { text: "Owned" },
+        xaxis: { range: [0, 10] },
+        dragmode: "select" as const,
+      }
+      const liveFigure = {
+        data,
+        frames: null,
+        layout: {
+          xaxis: { range: [1e-12, 10 - 1e-12], tickvals: [0, 5, 10] },
+          dragmode: "select" as const,
+          selections: [
+            {
+              type: "rect",
+              xref: "x",
+              yref: "y",
+              x0: 1,
+              x1: 2,
+              y0: 1,
+              y1: 2,
+              _inputIndex: 0,
+            },
+          ],
+        },
+      }
+
+      const first = sanitizePlotlyFigureForReact(
+        liveFigure,
+        ownedSize,
+        previousLayout
+      )
+      const second = sanitizePlotlyFigureForReact(
+        liveFigure,
+        ownedSize,
+        first.layout
+      )
+
+      expect(plotlyFigureNeedsReactStateUpdate(first, second)).toBe(false)
+      expect(first.layout.selections).toEqual([
+        {
+          type: "rect",
+          xref: "x",
+          yref: "y",
+          x0: 1,
+          x1: 2,
+          y0: 1,
+          y1: 2,
+        },
+      ])
+    })
+  })
+
+  describe("assignLayoutInPlace", () => {
+    it("keeps the target object identity while replacing contents", () => {
+      const target: Partial<Plotly.Layout> = {
+        xaxis: { range: [0, 1] },
+        margin: { l: 99 },
+      }
+      const source: Partial<Plotly.Layout> = {
+        xaxis: { range: [2, 8] },
+        autosize: false,
+      }
+
+      const result = assignLayoutInPlace(target, source)
+
+      expect(result).toBe(target)
+      expect(target.xaxis).toEqual({ range: [2, 8] })
+      expect(target.autosize).toBe(false)
+      expect(target.margin).toBeUndefined()
+    })
+  })
+
+  describe("plotlyFigureNeedsReactStateUpdate", () => {
+    it("is false when data, frames, and layout contents match", () => {
+      const prev = {
+        data: [{ type: "scatter" as const, x: [1], y: [2] }],
+        frames: null,
+        layout: { xaxis: { range: [0, 1] }, width: 600, autosize: false },
+      }
+      const next = {
+        data: prev.data,
+        frames: null,
+        layout: { xaxis: { range: [0, 1] }, width: 600, autosize: false },
+      }
+
+      expect(plotlyFigureNeedsReactStateUpdate(prev, next)).toBe(false)
+    })
+
+    it("treats null and undefined frames as the same", () => {
+      const data: never[] = []
+      expect(
+        plotlyFigureNeedsReactStateUpdate(
+          { data, frames: null, layout: {} },
+          { data, frames: undefined, layout: {} }
+        )
+      ).toBe(false)
+    })
+
+    it("is false when data is a new array with the same selectedpoints", () => {
+      const layout = { xaxis: { range: [0, 1] } }
+      const prev = {
+        data: [
+          { type: "scatter" as const, x: [1], y: [2], selectedpoints: [0] },
+        ],
+        frames: null,
+        layout,
+      }
+      const next = {
+        data: [
+          { type: "scatter" as const, x: [1], y: [2], selectedpoints: [0] },
+        ],
+        frames: null,
+        layout: { xaxis: { range: [0, 1] } },
+      }
+
+      expect(plotlyFigureNeedsReactStateUpdate(prev, next)).toBe(false)
+    })
+
+    it("is true when zoom range changes", () => {
+      const data: never[] = []
+      const prev = {
+        data,
+        frames: null,
+        layout: { xaxis: { range: [0, 1] } },
+      }
+      const next = {
+        data,
+        frames: null,
+        layout: { xaxis: { range: [0.2, 0.8] } },
+      }
+
+      expect(plotlyFigureNeedsReactStateUpdate(prev, next)).toBe(true)
     })
   })
 
