@@ -14,6 +14,8 @@ Use `st.segmented_control` or `st.pills` when you want all options visible at on
 | `st.selectbox` | Many options, single select, dropdown |
 | `st.multiselect` | Many options, multi-select, dropdown |
 
+Free-form typeahead is not a selection widget. Pass a callable to `st.text_input(..., autocomplete=...)` when the user can type any value and suggestions are only hints. Use `st.selectbox` when the value must come from a known set; use `accept_new_options` only when users may add to that set. See [best-practices.md](best-practices.md) for the callable `autocomplete` pattern.
+
 ## Segmented control (options visible, single select)
 
 ```python
@@ -150,6 +152,7 @@ country = st.selectbox(
 - [st.pills](https://docs.streamlit.io/develop/api-reference/widgets/st.pills)
 - [st.selectbox](https://docs.streamlit.io/develop/api-reference/widgets/st.selectbox)
 - [st.multiselect](https://docs.streamlit.io/develop/api-reference/widgets/st.multiselect)
+- [st.text_input](https://docs.streamlit.io/develop/api-reference/widgets/st.text_input) (callable `autocomplete` for free-form typeahead)
 - [st.toggle](https://docs.streamlit.io/develop/api-reference/widgets/st.toggle)
 - [st.checkbox](https://docs.streamlit.io/develop/api-reference/widgets/st.checkbox)
 - [st.form](https://docs.streamlit.io/develop/api-reference/execution-flow/st.form)

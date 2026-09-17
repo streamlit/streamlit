@@ -32,6 +32,10 @@ import {
   TextInput as TextInputProto,
 } from "@streamlit/protobuf"
 
+import {
+  BackendOperationClient,
+  REQUEST_TIMED_OUT_MESSAGE,
+} from "~lib/BackendOperationClient"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -2686,5 +2690,410 @@ describe("TextInput live updates", () => {
       "secret",
       fromUserCommit(props)
     )
+  })
+})
+
+describe("TextInput autocomplete", () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [190],
+    })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const advanceMs = (ms: number): void => {
+    act(() => {
+      vi.advanceTimersByTime(ms)
+    })
+  }
+
+  const renderAutocomplete = ({
+    requestAutocomplete,
+    elementProps = {},
+    widgetProps = {},
+  }: {
+    requestAutocomplete?: ReturnType<typeof vi.fn>
+    elementProps?: Partial<TextInputProto>
+    widgetProps?: Partial<Props>
+  } = {}): ReturnType<typeof renderWithContexts> & {
+    user: ReturnType<typeof userEvent.setup>
+    props: Props
+    requestAutocomplete: ReturnType<typeof vi.fn>
+  } => {
+    const autocompleteRequest =
+      requestAutocomplete ??
+      vi
+        .fn()
+        .mockImplementation((payload: { sourceId: string; text: string }) =>
+          Promise.resolve({
+            sourceId: payload.sourceId,
+            text: payload.text,
+            suggestions: ["apple", "apricot"],
+          })
+        )
+    const props = getProps(
+      {
+        autocompleteSourceId: "src-1",
+        autocomplete: "st-suggestions",
+        ...elementProps,
+      },
+      widgetProps
+    )
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const view = renderWithContexts(<TextInput {...props} />, {
+      backendOperationContext: {
+        backendOperationClient: {
+          requestAutocomplete: autocompleteRequest,
+        } as unknown as BackendOperationClient,
+      },
+    })
+    return { user, props, requestAutocomplete: autocompleteRequest, ...view }
+  }
+
+  const getField = (): HTMLElement => screen.getByTestId("stTextInputField")
+
+  it("sets autoComplete to st-suggestions when a source id is present", () => {
+    renderAutocomplete()
+    expect(getField()).toHaveAttribute("autoComplete", "st-suggestions")
+  })
+
+  it("does not request suggestions until the 300ms debounce elapses", async () => {
+    const { user, requestAutocomplete } = renderAutocomplete()
+    await user.click(getField())
+    advanceMs(299)
+    expect(requestAutocomplete).not.toHaveBeenCalled()
+    advanceMs(1)
+    await waitFor(() => {
+      expect(requestAutocomplete).toHaveBeenCalledTimes(1)
+    })
+    expect(requestAutocomplete).toHaveBeenCalledWith({
+      sourceId: "src-1",
+      text: "",
+    })
+  })
+
+  it("does not request suggestions while disabled", async () => {
+    const { user, requestAutocomplete } = renderAutocomplete({
+      widgetProps: { disabled: true },
+    })
+    await user.click(getField())
+    advanceMs(400)
+    expect(requestAutocomplete).not.toHaveBeenCalled()
+    expect(
+      screen.queryByTestId("stTextInputSuggestions")
+    ).not.toBeInTheDocument()
+  })
+
+  it("opens the list after suggestions resolve and closes on empty results", async () => {
+    const requestAutocomplete = vi
+      .fn()
+      .mockResolvedValueOnce({
+        sourceId: "src-1",
+        text: "",
+        suggestions: ["apple", "apricot"],
+      })
+      .mockResolvedValueOnce({
+        sourceId: "src-1",
+        text: "z",
+        suggestions: [],
+      })
+    const { user } = renderAutocomplete({ requestAutocomplete })
+    await user.click(getField())
+    advanceMs(300)
+    await waitFor(() => {
+      expect(screen.getByTestId("stTextInputSuggestions")).toBeVisible()
+    })
+    expect(screen.getByText("apple")).toBeVisible()
+
+    await user.type(getField(), "z")
+    advanceMs(300)
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stTextInputSuggestions")
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it("clears busy state when the current generation rejects", async () => {
+    const requestAutocomplete = vi
+      .fn()
+      .mockRejectedValue(new Error(REQUEST_TIMED_OUT_MESSAGE))
+    const { user } = renderAutocomplete({ requestAutocomplete })
+    await user.click(getField())
+    advanceMs(300)
+    await waitFor(() => {
+      expect(requestAutocomplete).toHaveBeenCalled()
+    })
+    await waitFor(() => {
+      expect(getField()).not.toHaveAttribute("aria-busy")
+      expect(
+        screen.queryByTestId("stTextInputSuggestionsSpinner")
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it("drops a stale response after blur", async () => {
+    let resolveRequest: (value: {
+      sourceId: string
+      text: string
+      suggestions: string[]
+    }) => void = () => undefined
+    const requestAutocomplete = vi.fn().mockImplementation(
+      () =>
+        new Promise(resolve => {
+          resolveRequest = resolve
+        })
+    )
+    const { user } = renderAutocomplete({ requestAutocomplete })
+    await user.click(getField())
+    advanceMs(300)
+    await waitFor(() => {
+      expect(requestAutocomplete).toHaveBeenCalled()
+    })
+    await user.click(document.body)
+    resolveRequest({
+      sourceId: "src-1",
+      text: "",
+      suggestions: ["apple"],
+    })
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stTextInputSuggestions")
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it("does not request during IME composition until compositionend", async () => {
+    const { requestAutocomplete } = renderAutocomplete()
+    const field = getField()
+    fireEvent.focus(field)
+    fireEvent.compositionStart(field)
+    // IME composition is not expressible via userEvent.type.
+    // eslint-disable-next-line testing-library/prefer-user-event -- composition
+    fireEvent.change(field, { target: { value: "あ" } })
+    advanceMs(400)
+    expect(requestAutocomplete).not.toHaveBeenCalled()
+    fireEvent.compositionEnd(field, { currentTarget: { value: "あ" } })
+    advanceMs(300)
+    await waitFor(() => {
+      expect(requestAutocomplete).toHaveBeenCalled()
+    })
+  })
+
+  it("commits a clicked suggestion once and cancels a pending live debounce", async () => {
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const { user, props } = renderAutocomplete({
+      elementProps: { liveDebounceMs: 250 },
+      widgetProps: { widgetMgr },
+    })
+    const setStringValueSpy = vi.spyOn(widgetMgr, "setStringValue")
+    await user.click(getField())
+    await user.type(getField(), "ap")
+    advanceMs(300)
+    await waitFor(() => {
+      expect(screen.getByText("apple")).toBeVisible()
+    })
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+    await user.click(screen.getByText("apple"))
+    expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+    expect(setStringValueSpy).toHaveBeenCalledWith(props.element.id, "apple", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+    advanceMs(300)
+    expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not submit a form when a suggestion is selected", async () => {
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const submitSpy = vi.spyOn(widgetMgr, "submitForm")
+    const { user } = renderAutocomplete({
+      elementProps: { formId: "form" },
+      widgetProps: { widgetMgr },
+    })
+    await user.click(getField())
+    advanceMs(300)
+    await waitFor(() => {
+      expect(screen.getByText("apple")).toBeVisible()
+    })
+    await user.click(screen.getByText("apple"))
+    expect(submitSpy).not.toHaveBeenCalled()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(getField()).toHaveValue("apple")
+  })
+
+  it("does not arm a row on hover so Enter commits the typed text", async () => {
+    const { user, props } = renderAutocomplete()
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    await user.click(getField())
+    await user.type(getField(), "ap")
+    advanceMs(300)
+    await waitFor(() => {
+      expect(screen.getByText("apple")).toBeVisible()
+    })
+    await user.hover(screen.getByText("apple"))
+    expect(getField()).not.toHaveAttribute("aria-activedescendant")
+    expect(screen.getByText("apple").closest("[data-hovered]")).not.toBeNull()
+    setStringValueSpy.mockClear()
+    await user.keyboard("{Enter}")
+    expect(setStringValueSpy).toHaveBeenCalledWith(props.element.id, "ap", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+  })
+
+  it("commits the armed suggestion on Enter after ArrowDown", async () => {
+    const { user, props } = renderAutocomplete()
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    await user.click(getField())
+    await user.type(getField(), "ap")
+    advanceMs(300)
+    await waitFor(() => {
+      expect(screen.getByText("apple")).toBeVisible()
+    })
+    setStringValueSpy.mockClear()
+    await user.keyboard("{ArrowDown}")
+    await waitFor(() => {
+      expect(
+        screen.getByText("apple").closest("[data-focused]")
+      ).not.toBeNull()
+    })
+    await user.keyboard("{Enter}")
+    expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+    expect(setStringValueSpy).toHaveBeenCalledWith(props.element.id, "apple", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+  })
+
+  it("commits the armed suggestion on Tab after ArrowDown", async () => {
+    const { user, props } = renderAutocomplete()
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    await user.click(getField())
+    await user.type(getField(), "ap")
+    advanceMs(300)
+    await waitFor(() => {
+      expect(screen.getByText("apple")).toBeVisible()
+    })
+    setStringValueSpy.mockClear()
+    await user.keyboard("{ArrowDown}")
+    await waitFor(() => {
+      expect(
+        screen.getByText("apple").closest("[data-focused]")
+      ).not.toBeNull()
+    })
+    await user.keyboard("{Tab}")
+    expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+    expect(setStringValueSpy).toHaveBeenCalledWith(props.element.id, "apple", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+  })
+
+  it("disarms the highlighted row when the query changes", async () => {
+    const { user, props } = renderAutocomplete()
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    await user.click(getField())
+    await user.type(getField(), "ap")
+    advanceMs(300)
+    await waitFor(() => {
+      expect(screen.getByText("apple")).toBeVisible()
+    })
+    await user.keyboard("{ArrowDown}")
+    await waitFor(() => {
+      expect(getField()).toHaveAttribute("aria-activedescendant")
+    })
+    await user.type(getField(), "r")
+    expect(getField()).not.toHaveAttribute("aria-activedescendant")
+    setStringValueSpy.mockClear()
+    await user.keyboard("{Enter}")
+    expect(setStringValueSpy).toHaveBeenCalledWith(props.element.id, "apr", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+  })
+
+  it("closes the list on Escape and does not swallow a following Escape", async () => {
+    const { user } = renderAutocomplete()
+    await user.click(getField())
+    await user.type(getField(), "ap")
+    advanceMs(300)
+    await waitFor(() => {
+      expect(screen.getByTestId("stTextInputSuggestions")).toBeVisible()
+    })
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stTextInputSuggestions")
+      ).not.toBeInTheDocument()
+    })
+    expect(getField()).toHaveValue("ap")
+  })
+
+  it("keeps the same input node when the autocomplete layer mounts and unmounts", () => {
+    const props = getProps()
+    const { rerender } = render(<TextInput {...props} />)
+    const field = screen.getByTestId("stTextInputField")
+    act(() => {
+      field.focus()
+    })
+    if (field instanceof HTMLInputElement) {
+      field.value = "hello"
+      field.setSelectionRange(2, 2)
+    }
+
+    act(() => {
+      rerender(
+        <TextInput
+          {...props}
+          element={TextInputProto.create({
+            ...props.element,
+            autocompleteSourceId: "src-1",
+            autocomplete: "st-suggestions",
+          })}
+        />
+      )
+    })
+    const afterMount = screen.getByTestId("stTextInputField")
+    expect(afterMount).toBe(field)
+    expect(document.activeElement).toBe(field)
+
+    act(() => {
+      rerender(<TextInput {...props} />)
+    })
+    expect(screen.getByTestId("stTextInputField")).toBe(field)
+  })
+
+  it("lets Cmd/Ctrl+A select the input text while the list is open", async () => {
+    const { user } = renderAutocomplete()
+    const field = getField()
+    await user.click(field)
+    await user.type(field, "ap")
+    advanceMs(300)
+    await waitFor(() => {
+      expect(screen.getByText("apple")).toBeVisible()
+    })
+    await user.keyboard("{Control>}a{/Control}")
+    expect(field).toHaveProperty("selectionStart", 0)
+    expect(field).toHaveProperty("selectionEnd", 2)
   })
 })

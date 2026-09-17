@@ -31,6 +31,7 @@ stale entries recompute in the foreground at hard expiry instead.
 
 from __future__ import annotations
 
+import contextvars
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Final
@@ -145,10 +146,15 @@ class _BackgroundRefreshManager:
 
         try:
             executor = self._ensure_executor()
+            # Copy context so a worker marker (e.g. suggestion-source
+            # session-state blocking) still applies if this refresh was
+            # triggered from that worker. Python executors do not propagate
+            # ContextVars on their own.
+            context = contextvars.copy_context()
 
             def _runner() -> None:
                 try:
-                    task()
+                    context.run(task)
                 finally:
                     slots.release()
 

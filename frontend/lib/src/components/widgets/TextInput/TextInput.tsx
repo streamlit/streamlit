@@ -18,7 +18,6 @@ import {
   CompositionEvent,
   FocusEvent,
   memo,
-  MouseEvent,
   ReactElement,
   useCallback,
   useContext,
@@ -29,23 +28,11 @@ import {
   useState,
 } from "react"
 
-import { ErrorOutline } from "@emotion-icons/material-outlined"
-import { Cancel } from "@emotion-icons/material-rounded"
 import { getLogger } from "loglevel"
-import { TextField } from "react-aria-components"
 
 import { TextInput as TextInputProto } from "@streamlit/protobuf"
 
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
-import {
-  DynamicIcon,
-  isMaterialIcon,
-} from "~lib/components/shared/Icon/DynamicIcon"
-import Icon from "~lib/components/shared/Icon/Icon"
-import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
-import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
-import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
-import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
   useBasicWidgetState,
   ValueWithSource,
@@ -64,18 +51,12 @@ import {
 } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
+import { StyledTextInput } from "./styled-components"
 import {
-  StyledClearButton,
-  StyledEndEnhancers,
-  StyledErrorEnhancer,
-  StyledInputElement,
-  StyledInputInstructionsContainer,
-  StyledInputRoot,
-  StyledPasswordToggle,
-  StyledStartEnhancer,
-  StyledTextInput,
-  StyledVisuallyHidden,
-} from "./styled-components"
+  type AutocompleteInputProps,
+  TextInputControl,
+} from "./TextInputControl"
+import { TextInputWithAutocomplete } from "./TextInputWithAutocomplete"
 import {
   compileTextInputValidationRegex,
   getInvalidTextInputMessage,
@@ -185,6 +166,31 @@ function TextInput({
   // matching finished rerun catches up.
   const pendingLiveCommitsRef = useRef(new Set<string | null>())
   const isComposingRef = useRef(false)
+  const [isComposing, setIsComposing] = useState(false)
+  const inputRef = useRef<HTMLInputElement | null>(null)
+  const overlayReferenceRef = useRef<HTMLDivElement | null>(null)
+  const floatingSetReferenceRef = useRef<
+    ((node: HTMLDivElement | null) => void) | undefined
+  >(undefined)
+  const setOverlayReference = useCallback((node: HTMLDivElement | null) => {
+    overlayReferenceRef.current = node
+    floatingSetReferenceRef.current?.(node)
+  }, [])
+  const registerFloatingSetReference = useCallback(
+    (setter: ((node: HTMLDivElement | null) => void) | null) => {
+      floatingSetReferenceRef.current = setter ?? undefined
+      if (overlayReferenceRef.current) {
+        setter?.(overlayReferenceRef.current)
+      }
+    },
+    []
+  )
+  const [autocompleteInputProps, setAutocompleteInputProps] =
+    useState<AutocompleteInputProps>({})
+  const [autocompleteBusy, setAutocompleteBusy] = useState(false)
+  const [autocompleteStatus, setAutocompleteStatus] = useState<string | null>(
+    null
+  )
   // True after a dirty live input dropped an incoming setValue. The next
   // pause/blur must commit even if the string still equals lastCommitted,
   // so Python does not stay on the dropped write.
@@ -520,6 +526,33 @@ function TextInput({
     [commitOrScheduleLive]
   )
 
+  const handleSelectSuggestion = useCallback(
+    (suggestion: string): void => {
+      if (maxChars !== 0 && suggestion.length > maxChars) {
+        return
+      }
+      cancelLiveCommit()
+      setHasUserError(false)
+      setHasRequiredError(false)
+      setUiValueAndRef(suggestion)
+      setDirtyAndRef(true)
+      if (inForm) {
+        commitWidgetValue(suggestion)
+        return
+      }
+      tryCommitOutsideForm(suggestion)
+    },
+    [
+      cancelLiveCommit,
+      commitWidgetValue,
+      inForm,
+      maxChars,
+      setDirtyAndRef,
+      setUiValueAndRef,
+      tryCommitOutsideForm,
+    ]
+  )
+
   const formSubmitValidatorRef = useRef<() => boolean>(() => true)
   formSubmitValidatorRef.current = () => {
     if (!validateBeforeCommit(uiValueRef.current)) {
@@ -613,12 +646,14 @@ function TextInput({
 
   const handleCompositionStart = useCallback((): void => {
     isComposingRef.current = true
+    setIsComposing(true)
     cancelLiveCommit()
   }, [cancelLiveCommit])
 
   const handleCompositionEnd = useCallback(
     (e: CompositionEvent<HTMLInputElement>): void => {
       isComposingRef.current = false
+      setIsComposing(false)
       // compositionend does not go through the input handler. Route through
       // onChange so maxChars and uiValue stay in sync before a live commit.
       // A trailing input event with the same value is deduped by
@@ -711,153 +746,84 @@ function TextInput({
     widgetMgr,
   ])
 
+  const autocompleteSourceId = element.autocompleteSourceId
+
   return (
     <StyledTextInput
       className="stTextInput"
       data-testid="stTextInput"
       ref={elementRef}
     >
-      {liveEnabled && (
-        <LivePendingCommitAck
-          fragmentId={fragmentId}
-          dirtyRef={dirtyRef}
-          pendingLiveCommitsRef={pendingLiveCommitsRef}
+      {autocompleteSourceId && !disabled && (
+        <TextInputWithAutocomplete
+          key="autocomplete-layer"
+          inputRef={inputRef}
+          overlayReferenceRef={overlayReferenceRef}
+          onRegisterSetReference={registerFloatingSetReference}
+          sourceId={autocompleteSourceId}
+          uiValue={uiValue}
+          focused={focused}
+          disabled={disabled}
+          label={element.label}
+          isComposing={isComposing}
+          onSelectSuggestion={handleSelectSuggestion}
+          onInputProps={setAutocompleteInputProps}
+          onBusyChange={setAutocompleteBusy}
+          onStatusChange={setAutocompleteStatus}
         />
       )}
-      <WidgetLabel
+      <TextInputControl
+        key="field"
+        inputRef={inputRef}
+        setOverlayReference={setOverlayReference}
+        extraInputProps={autocompleteInputProps}
+        id={id}
+        errorId={errorId}
         label={element.label}
-        disabled={disabled}
+        help={element.help}
         required={element.required}
+        disabled={disabled}
         labelVisibility={labelVisibilityProtoValueToEnum(
           element.labelVisibility?.value
         )}
-        htmlFor={id}
-      >
-        {element.help && (
-          <WidgetLabelHelpIcon content={element.help} label={element.label} />
-        )}
-      </WidgetLabel>
-      {/*
-       * Keep React Aria out of native constraint validation so a native
-       * `type="email"`/`"url"` `typeMismatch` does not create a second invalid
-       * state alongside our regex `validate` tooltip. TextInput already owns
-       * `aria-invalid` and the error UI, so we also deliberately do NOT set
-       * `isInvalid` here.
-       */}
-      <TextField isDisabled={disabled} validationBehavior="aria">
-        <StyledInputRoot
-          data-testid="stTextInputRootElement"
-          $isFocused={focused}
-          $hasIcon={!!icon}
-          $hasError={Boolean(displayedError)}
-        >
-          {icon && (
-            <StyledStartEnhancer $isMaterialIcon={isMaterialIcon(icon)}>
-              <DynamicIcon
-                data-testid="stTextInputIcon"
-                iconValue={icon}
-                size="base"
-              />
-            </StyledStartEnhancer>
-          )}
-          <StyledInputElement
-            id={id}
-            data-testid="stTextInputField"
-            aria-label={element.label}
-            aria-required={element.required ? true : undefined}
-            aria-invalid={displayedError ? true : undefined}
-            aria-describedby={displayedError ? errorId : undefined}
-            value={uiValue ?? ""}
-            placeholder={placeholder}
-            type={showPassword ? "text" : getTypeString(element)}
-            // Label the mobile keyboard's return key for search inputs. This is
-            // the one type-aligned keyboard hint we set; other types rely on
-            // the native input `type` alone.
-            enterKeyHint={
-              element.type === TextInputProto.Type.SEARCH
-                ? "search"
-                : undefined
-            }
-            autoComplete={element.autocomplete}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            onChange={onChange}
-            onKeyDown={handleKeyDown}
-            onCompositionStart={handleCompositionStart}
-            onCompositionEnd={handleCompositionEnd}
-          />
-          <StyledEndEnhancers>
-            {displayedError && (
-              <StyledErrorEnhancer data-testid="stTextInputErrorIcon">
-                <Tooltip
-                  content={displayedError}
-                  placement={Placement.TOP_RIGHT}
-                  error
-                >
-                  <Icon content={ErrorOutline} size="base" />
-                </Tooltip>
-              </StyledErrorEnhancer>
-            )}
-            {showClearButton && (
-              <StyledClearButton
-                type="button"
-                data-testid="stTextInputClearButton"
-                aria-label="Clear entry"
-                tabIndex={-1}
-                // Prevent mousedown from moving focus off the input before the
-                // click fires, which would otherwise commit the dirty value via
-                // handleBlur and cause a spurious extra rerun.
-                onMouseDown={preventFocusLoss}
-                onClick={handleClear}
-              >
-                <Cancel size={theme.iconSizes.base} aria-hidden="true" />
-              </StyledClearButton>
-            )}
-            {isPassword && (
-              <StyledPasswordToggle
-                type="button"
-                onMouseDown={preventFocusLoss}
-                onClick={handleToggleShowPassword}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                aria-pressed={showPassword}
-                disabled={disabled}
-              >
-                <DynamicIcon
-                  iconValue={
-                    showPassword
-                      ? ":material/visibility_off:"
-                      : ":material/visibility:"
-                  }
-                  size="base"
-                />
-              </StyledPasswordToggle>
-            )}
-          </StyledEndEnhancers>
-        </StyledInputRoot>
-      </TextField>
-      {displayedError && (
-        // The error message is shown visually in a tooltip on hover. The tooltip
-        // trigger isn't focusable, so we also expose the message to assistive
-        // tech via a visually hidden, aria-describedby-linked alert.
-        <StyledVisuallyHidden id={errorId} role="alert">
-          {displayedError}
-        </StyledVisuallyHidden>
-      )}
-      {shouldShowInstructions && (
-        <StyledInputInstructionsContainer
-          $hasErrorIcon={Boolean(displayedError)}
-          $hasClearButton={showClearButton}
-          $hasPasswordToggle={isPassword}
-        >
-          <InputInstructions
-            dirty={dirty}
-            value={uiValue ?? ""}
-            maxLength={maxChars}
-            inForm={inForm}
-            allowEnterToSubmit={allowEnterToSubmit}
-          />
-        </StyledInputInstructionsContainer>
-      )}
+        icon={icon}
+        displayedError={displayedError}
+        uiValue={uiValue}
+        placeholder={placeholder}
+        inputType={getTypeString(element)}
+        enterKeyHint={
+          element.type === TextInputProto.Type.SEARCH ? "search" : undefined
+        }
+        autoComplete={element.autocomplete}
+        focused={focused}
+        showClearButton={showClearButton}
+        showPasswordToggle={isPassword}
+        showPassword={showPassword}
+        showInstructions={shouldShowInstructions}
+        dirty={dirty}
+        maxChars={maxChars}
+        inForm={inForm}
+        allowEnterToSubmit={allowEnterToSubmit}
+        busy={autocompleteBusy}
+        statusMessage={autocompleteStatus}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onChange={onChange}
+        onKeyDown={handleKeyDown}
+        onCompositionStart={handleCompositionStart}
+        onCompositionEnd={handleCompositionEnd}
+        onClear={handleClear}
+        onToggleShowPassword={handleToggleShowPassword}
+        livePendingAck={
+          liveEnabled ? (
+            <LivePendingCommitAck
+              fragmentId={fragmentId}
+              dirtyRef={dirtyRef}
+              pendingLiveCommitsRef={pendingLiveCommitsRef}
+            />
+          ) : null
+        }
+      />
     </StyledTextInput>
   )
 }
@@ -909,13 +875,6 @@ const DOM_INPUT_TYPE_BY_PROTO: Record<number, string> = {
 
 function getTypeString(element: TextInputProto): string {
   return DOM_INPUT_TYPE_BY_PROTO[element.type] ?? "text"
-}
-
-// Prevents the toggle button from stealing focus from the input on mousedown,
-// avoiding a premature dirty-value commit via handleBlur. Extracted at module
-// level so the reference is stable across renders.
-function preventFocusLoss(e: MouseEvent): void {
-  e.preventDefault()
 }
 
 export default memo(TextInput)

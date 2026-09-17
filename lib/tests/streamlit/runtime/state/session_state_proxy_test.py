@@ -211,3 +211,36 @@ def test_get_session_state_skips_warning_when_runtime_exists() -> None:
 
     assert isinstance(result, SafeSessionState)
     mock_logger.warning.assert_not_called()
+
+
+def test_worker_marker_blocks_session_state() -> None:
+    """A backend-operation worker marker makes get_session_state raise."""
+    from streamlit.runtime.state.session_state_proxy import (
+        _WORKER_SESSION_STATE_BLOCKED,
+    )
+
+    token = _WORKER_SESSION_STATE_BLOCKED.set(True)
+    try:
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            get_session_state()
+        assert exc_info.value.error_id == "session-state-in-backend-operation-worker"
+    finally:
+        _WORKER_SESSION_STATE_BLOCKED.reset(token)
+
+
+def test_worker_marker_unset_still_allows_mock() -> None:
+    """Bare-script mock session state still works when the worker marker is unset."""
+    from streamlit.runtime.state.session_state_proxy import (
+        _WORKER_SESSION_STATE_BLOCKED,
+    )
+
+    token = _WORKER_SESSION_STATE_BLOCKED.set(False)
+    try:
+        with patch(
+            "streamlit.runtime.scriptrunner_utils.script_run_context.get_script_run_ctx",
+            return_value=None,
+        ):
+            state = get_session_state()
+        assert isinstance(state, SafeSessionState)
+    finally:
+        _WORKER_SESSION_STATE_BLOCKED.reset(token)

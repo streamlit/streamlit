@@ -71,5 +71,11 @@ message TextInput {
 
   // If true, empty / whitespace-only values cannot be committed (client-side).
   bool required = 20;
-  // Next: 21
+
+  // Session-scoped id of a registered server-side suggestion source. Unset when
+  // `autocomplete` is not a callable. When set, the native `autocomplete` field
+  // carries a token that suppresses browser autofill, so the browser's own
+  // dropdown does not compete with the suggestion dropdown.
+  optional string autocomplete_source_id = 21;
+  // Next: 22
 }

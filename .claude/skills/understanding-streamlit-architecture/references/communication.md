@@ -38,6 +38,7 @@ message ForwardMsg {
 - `new_session`: Initial session setup, config, pages
 - `script_finished`: Signals script completion
 - `ref_hash`: Reference to cached message (bandwidth optimization)
+- `backend_operation_response`: Completes a backend operation that did not rerun the script
 
 ## ForwardMsg metadata (`active_script_hash`)
 
@@ -68,6 +69,7 @@ message BackMsg {
   oneof type {
     ClientState rerun_script = 11;    // Main rerun trigger
     bool stop_script = 7;
+    BackendOperationRequest backend_operation_request = 19;  // No rerun
     // ... more types
   }
 }
@@ -189,6 +191,22 @@ sequenceDiagram
     Note over Runner: st.button() returns True
     Runner->>Runner: After run: reset trigger_value
 ```
+
+Not every in-widget request takes this path. Autocomplete lookups, lazy dataframe chunks, and deferred downloads use backend operations instead.
+
+## Backend operations (no rerun)
+
+`BackMsg.backend_operation_request` asks the server to do work without a script rerun. The matching `ForwardMsg.backend_operation_response` completes the request (or returns an error) and does not apply a delta.
+
+Typical payloads: lazy dataframe row chunks, `st.text_input` autocomplete suggestions, deferred file downloads.
+
+Flow: widget/component → `BackendOperationClient` → `BackMsg.backend_operation_request` → session dispatcher / handler (for autocomplete, `AutocompleteHandler` plus `AutocompleteSourceManager`) → `ForwardMsg.backend_operation_response` → waiting client.
+
+Key files:
+- `proto/streamlit/proto/BackMsg.proto` (`BackendOperationRequest`)
+- `proto/streamlit/proto/ForwardMsg.proto` (`BackendOperationResponse`)
+- `lib/streamlit/runtime/backend_operation_handler.py`
+- `frontend/lib/src/BackendOperationClient.ts`
 
 ## Message caching
 

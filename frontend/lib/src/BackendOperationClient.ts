@@ -17,6 +17,8 @@
 import { getLogger } from "loglevel"
 
 import {
+  type AutocompleteRequestPayload,
+  type AutocompleteResponsePayload,
   BackendOperationRequest,
   type BackendOperationResponse,
   type DataframeChunkRequestPayload,
@@ -46,6 +48,9 @@ const DATAFRAME_CHUNK_REQUEST_TIMEOUT_MS = 120_000
  * We use the same generous budget as deferred files.
  */
 const INSTALL_SKILLS_REQUEST_TIMEOUT_MS = 180_000
+
+/** Timeout for autocomplete suggestion requests (8 seconds). */
+const AUTOCOMPLETE_REQUEST_TIMEOUT_MS = 8_000
 
 /**
  * Rejection message used when pending requests are cleaned up on
@@ -147,6 +152,7 @@ export class BackendOperationClient {
       | "dataframeChunk"
       | "installSkills"
       | "dismissSkillsNudge"
+      | "autocomplete"
     >,
     payload: BackendOperationRequest.$Properties[typeof payloadField],
     timeoutMs?: number
@@ -258,6 +264,23 @@ export class BackendOperationClient {
   }
 
   /**
+   * Request autocomplete suggestions for a registered text-input source.
+   *
+   * An empty `suggestions` list is a successful fail-closed result, not an
+   * error. Only a response with `errorMsg` (wrong-session `source_id`) rejects.
+   */
+  public requestAutocomplete(
+    payload: AutocompleteRequestPayload.$Properties,
+    timeoutMs?: number
+  ): Promise<AutocompleteResponsePayload.$Properties> {
+    return this.request<AutocompleteResponsePayload.$Properties>(
+      "autocomplete",
+      payload,
+      timeoutMs ?? AUTOCOMPLETE_REQUEST_TIMEOUT_MS
+    )
+  }
+
+  /**
    * Handle a response from the server. Called by App.tsx when a
    * BackendOperationResponse ForwardMsg is received.
    */
@@ -332,6 +355,7 @@ export class BackendOperationClient {
     if (response.dataframeChunk) return response.dataframeChunk
     if (response.installSkills) return response.installSkills
     if (response.dismissSkillsNudge) return response.dismissSkillsNudge
+    if (response.autocomplete) return response.autocomplete
 
     LOG.warn("Response contained no recognized payload", response)
     throw new Error("Response contained no recognized payload")

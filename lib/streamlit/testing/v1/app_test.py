@@ -24,6 +24,7 @@ from urllib import parse
 
 from streamlit.components.v2.component_manager import BidiComponentManager
 from streamlit.runtime import Runtime
+from streamlit.runtime.autocomplete_source_manager import AutocompleteSourceManager
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
@@ -471,6 +472,7 @@ class AppTest:
             MemoryMediaFileStorage("/mock/media")
         )
         mock_runtime.dataframe_source_mgr = DataframeSourceManager()
+        mock_runtime.autocomplete_source_mgr = AutocompleteSourceManager()
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         if self._bidi_component_manager is None:
             bidi_component_manager = BidiComponentManager()

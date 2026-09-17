@@ -172,3 +172,27 @@ def test_submit_releases_slot_on_unexpected_executor_error() -> None:
         assert "Failed to schedule" in mock_warning.call_args.args[0]
     finally:
         manager.shutdown()
+
+
+def test_submit_copies_contextvars_into_worker() -> None:
+    """A ContextVar set on the submitting thread is visible in the pool thread."""
+    from streamlit.runtime.state.session_state_proxy import (
+        _WORKER_SESSION_STATE_BLOCKED,
+    )
+
+    manager = _BackgroundRefreshManager(max_workers=1)
+    seen: list[bool] = []
+    done = threading.Event()
+
+    def task() -> None:
+        seen.append(_WORKER_SESSION_STATE_BLOCKED.get())
+        done.set()
+
+    token = _WORKER_SESSION_STATE_BLOCKED.set(True)
+    try:
+        assert manager.submit(task) is True
+        assert done.wait(timeout=5)
+        assert seen == [True]
+    finally:
+        _WORKER_SESSION_STATE_BLOCKED.reset(token)
+        manager.shutdown()

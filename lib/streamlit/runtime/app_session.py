@@ -39,6 +39,7 @@ from streamlit.proto.NewSession_pb2 import (
     UserInfo,
 )
 from streamlit.runtime import caching
+from streamlit.runtime.autocomplete_handler import AutocompleteHandler
 from streamlit.runtime.backend_operation_handler import (
     BackendOperationDispatcher,
     DeferredFileHandler,
@@ -297,6 +298,11 @@ class AppSession:
             DataframeChunkHandler(lambda: runtime.get_instance().dataframe_source_mgr),
         )
 
+        dispatcher.register(
+            "autocomplete",
+            AutocompleteHandler(lambda: runtime.get_instance().autocomplete_source_mgr),
+        )
+
         # Bind the app dir via the ScriptData (not ``self``) so the handler's
         # closure does not capture the AppSession, which would create a
         # reference cycle the disconnect ref-leak test guards against.
@@ -390,6 +396,7 @@ class AppSession:
                 rt.media_file_mgr.clear_session_refs(self.id)
                 rt.media_file_mgr.remove_orphaned_files()
                 rt.dataframe_source_mgr.clear_all_for_session(self.id)
+                rt.autocomplete_source_mgr.clear_all_for_session(self.id)
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until
@@ -882,6 +889,9 @@ class AppSession:
                     # running AND the session is actually shutting down.
                     runtime.get_instance().media_file_mgr.clear_session_refs(self.id)
                     runtime.get_instance().dataframe_source_mgr.clear_all_for_session(
+                        self.id
+                    )
+                    runtime.get_instance().autocomplete_source_mgr.clear_all_for_session(
                         self.id
                     )
                     self.clear_session_caches()

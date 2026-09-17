@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import TYPE_CHECKING, Final, Literal, NamedTuple, cast, overload
+from typing import TYPE_CHECKING, Final, Literal, NamedTuple, TypeGuard, cast, overload
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
@@ -33,6 +33,7 @@ from streamlit.elements.lib.utils import (
     LabelVisibility,
     compute_and_register_element_id,
     get_label_visibility_proto_value,
+    save_for_app_testing,
     to_key,
 )
 from streamlit.errors import (
@@ -60,7 +61,10 @@ from streamlit.string_util import to_help_str, validate_icon_or_emoji
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
+
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.autocomplete_source_manager import AutocompleteSourceManager
     from streamlit.type_util import SupportsStr
 
 
@@ -116,6 +120,41 @@ def _parse_text_input_validate(
         type(validate).__name__,
         ["None", "str", "tuple"],
     )
+
+
+# Native ``<input autocomplete>`` token used when ``autocomplete`` is a
+# callable. Browsers ignore ``off`` for name/address/email fields, so this
+# token is one they do not treat as a known autofill hint.
+_AUTOFILL_SUPPRESSED_TOKEN: Final = "st-suggestions"  # noqa: S105
+# Identity hash sentinel for a callable ``autocomplete``. Never hash the
+# callable itself (its ``str()`` includes ``id()`` and would reset unkeyed
+# widgets every rerun).
+_AUTOCOMPLETE_IDENTITY_SENTINEL: Final = "__callable__"
+
+
+def _is_suggestion_source(
+    autocomplete: object,
+) -> TypeGuard[Callable[[str], Sequence[str]]]:
+    """True when ``autocomplete`` is a suggestion callable, not a native token.
+
+    A ``str`` instance is not callable, but a ``str`` subclass can be. Exclude
+    those so a token is never treated as a source, and so type checkers can
+    narrow.
+    """
+    return callable(autocomplete) and not isinstance(autocomplete, str)
+
+
+def _get_autocomplete_source_mgr() -> AutocompleteSourceManager | None:
+    """Return the runtime's suggestion-source manager, or ``None`` if no runtime.
+
+    Lookups require a running Streamlit server. In bare ``python app.py`` mode
+    there is no frontend, so the field still renders without a registered source.
+    """
+    from streamlit import runtime
+
+    if not runtime.exists():
+        return None
+    return runtime.get_instance().autocomplete_source_mgr
 
 
 # Default pause used when ``live=True``.
@@ -269,7 +308,7 @@ class TextWidgetsMixin:
             "default", "password", "email", "url", "phone", "search"
         ] = "default",
         help: str | None = None,
-        autocomplete: str | None = None,
+        autocomplete: str | Callable[[str], Sequence[str]] | None = None,
         on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -298,7 +337,7 @@ class TextWidgetsMixin:
             "default", "password", "email", "url", "phone", "search"
         ] = "default",
         help: str | None = None,
-        autocomplete: str | None = None,
+        autocomplete: str | Callable[[str], Sequence[str]] | None = None,
         on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -327,7 +366,7 @@ class TextWidgetsMixin:
             "default", "password", "email", "url", "phone", "search"
         ] = "default",
         help: str | None = None,
-        autocomplete: str | None = None,
+        autocomplete: str | Callable[[str], Sequence[str]] | None = None,
         on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -444,16 +483,35 @@ class TextWidgetsMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        autocomplete : str or None
-            An optional value that will be passed to the <input> element's
-            autocomplete property. If this is ``None`` (default), the value is
+        autocomplete : str, callable, or None
+            How the field should complete as the user types. If this is
+            ``None`` (default), the native ``<input autocomplete>`` token is
             derived from ``type``: ``"new-password"`` for ``"password"``,
             ``"email"`` for ``"email"``, ``"url"`` for ``"url"``, ``"tel"``
             for ``"phone"``, ``"off"`` for ``"search"``, and the empty string
-            for ``"default"``. Pass an explicit token to override the default,
-            or ``""`` to fall back to the browser's default autofill behavior
-            (equivalent to not setting the attribute). For more details, see
+            for ``"default"``. Pass an explicit string token to override the
+            default, or ``""`` to fall back to the browser's default autofill
+            behavior (equivalent to not setting the attribute). For more
+            details, see
             https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete
+
+            Pass a callable ``(text: str) -> Sequence[str]`` to show server-side
+            suggestions in a dropdown as the user types. Streamlit calls the
+            function after a 300ms pause while the field is focused, without
+            rerunning the app.
+
+            - The function runs on a worker thread outside a script run, so
+              ``st.*`` display commands and ``st.session_state`` raise. Bind
+              session values at registration time with ``functools.partial``.
+            - ``@st.cache_data`` / ``@st.cache_resource`` work at the default
+              ``scope="global"``; ``scope="session"`` fails closed to an empty
+              list.
+            - ``text`` is untrusted input from the browser — parameterize
+              queries rather than interpolating it into SQL or a URL.
+            - Suggestions only propose values; the user can always type free
+              text.
+            - You cannot use a callable ``autocomplete`` together with
+              ``type="password"``.
 
         on_change : callable, "rerun", "ignore", or None
             How the text input should respond to value changes. This controls
@@ -722,6 +780,27 @@ class TextWidgetsMixin:
            https://doc-text-input-live.streamlit.app/
            height: 450px
 
+        Pass a function to ``autocomplete`` for typeahead suggestions from a
+        backend source. Bind any session or widget values at registration
+        time, and keep queries parameterized because ``text`` is untrusted:
+
+        >>> import functools
+        >>> import streamlit as st
+        >>>
+        >>> @st.cache_data(ttl="10m")
+        >>> def search_products(text: str, *, category: str) -> list[str]:
+        ...     return db.query(
+        ...         "SELECT name FROM products WHERE category = ? AND name ILIKE ? LIMIT 10",
+        ...         category,
+        ...         f"{text}%",
+        ...     )
+        >>>
+        >>> category = st.selectbox("Category", ["Fruit", "Dairy"])
+        >>> product = st.text_input(
+        ...     "Product",
+        ...     autocomplete=functools.partial(search_products, category=category),
+        ... )
+
         """
         ctx = get_script_run_ctx()
         return self._text_input(
@@ -756,7 +835,7 @@ class TextWidgetsMixin:
         key: Key | None = None,
         type: str = "default",
         help: str | None = None,
-        autocomplete: str | None = None,
+        autocomplete: str | Callable[[str], Sequence[str]] | None = None,
         on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -798,10 +877,27 @@ class TextWidgetsMixin:
         # Make sure value is always string or None:
         value = str(value) if value is not None else None
 
+        if (
+            autocomplete is not None
+            and not isinstance(autocomplete, str)
+            and not _is_suggestion_source(autocomplete)
+        ):
+            raise StreamlitInvalidParameterTypeError(
+                "autocomplete",
+                autocomplete.__class__.__name__,
+                ["str", "callable", "None"],
+            )
+
         # Hash the raw user-provided values, before type-derived defaults below.
         # `type` is already part of the identity, so those defaults (icon,
         # placeholder, validate, autocomplete) stay out of the hash.
         identity_validate_regex, _ = _parse_text_input_validate(validate)
+        if _is_suggestion_source(autocomplete):
+            autocomplete_identity: str | None = _AUTOCOMPLETE_IDENTITY_SENTINEL
+        else:
+            autocomplete_identity = (
+                autocomplete if isinstance(autocomplete, str) else None
+            )
 
         element_id = compute_and_register_element_id(
             "text_input",
@@ -819,7 +915,7 @@ class TextWidgetsMixin:
             max_chars=max_chars,
             type=type,
             help=help,
-            autocomplete=autocomplete,
+            autocomplete=autocomplete_identity,
             placeholder=str(placeholder),
             icon=icon,
             width=width,
@@ -846,9 +942,6 @@ class TextWidgetsMixin:
         validate_regex, validate_message = _parse_text_input_validate(
             effective_validate
         )
-
-        if autocomplete is None:
-            autocomplete = type_defaults.autocomplete
 
         session_state = get_session_state().filtered_state
         if key is not None and key in session_state and session_state[key] is None:
@@ -886,7 +979,33 @@ class TextWidgetsMixin:
 
         text_input_proto.type = type_defaults.proto_type
 
-        text_input_proto.autocomplete = autocomplete
+        if _is_suggestion_source(autocomplete):
+            if type == "password":
+                raise StreamlitIncompatibleParametersError(
+                    "autocomplete=<callable>",
+                    "type='password'",
+                    explanation="Password suggestions must not appear in a dropdown.",
+                )
+            autocomplete_token = _AUTOFILL_SUPPRESSED_TOKEN
+            source_mgr = _get_autocomplete_source_mgr()
+            if source_mgr is not None:
+                registered = source_mgr.register_source(
+                    autocomplete, element_id=element_id, max_chars=max_chars
+                )
+                text_input_proto.autocomplete_source_id = registered.source_id
+            if ctx is not None:
+                save_for_app_testing(
+                    ctx,
+                    element_id,
+                    {"autocomplete": autocomplete, "max_chars": max_chars},
+                )
+        else:
+            autocomplete_token = (
+                autocomplete
+                if isinstance(autocomplete, str)
+                else type_defaults.autocomplete
+            )
+        text_input_proto.autocomplete = autocomplete_token
 
         # Prevent binding password inputs to query params (exposes secrets in URL)
         if bind == "query-params" and type == "password":

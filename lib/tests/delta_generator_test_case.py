@@ -23,6 +23,7 @@ from unittest.mock import MagicMock
 
 from streamlit.components.v2.component_manager import BidiComponentManager
 from streamlit.runtime import Runtime
+from streamlit.runtime.autocomplete_source_manager import AutocompleteSourceManager
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
@@ -92,6 +93,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         mock_runtime.media_file_mgr = MediaFileManager(self.media_file_storage)
         mock_runtime.dataframe_source_mgr = DataframeSourceManager()
+        mock_runtime.autocomplete_source_mgr = AutocompleteSourceManager()
         mock_runtime.uploaded_file_mgr = self.script_run_ctx.uploaded_file_mgr
         mock_runtime._session_mgr = MagicMock(spec=SessionManager)
         Runtime._instance = mock_runtime

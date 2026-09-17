@@ -61,6 +61,7 @@ Central orchestrator managing everything.
 - `sessionStatusChanged`: Updates script run state
 - `navigation`: Handles MPA page changes
 - `pageConfigChanged`: Updates page title, icon, layout
+- `backendOperationResponse`: Completes an in-flight backend operation (lazy dataframe chunks, autocomplete, deferred downloads) without applying a delta
 
 ## Element tree (`frontend/lib/src/render-tree/`)
 

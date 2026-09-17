@@ -1930,6 +1930,44 @@ class TextInput(Widget):
             return self
         return self.set_value(v)
 
+    @property
+    def has_autocomplete(self) -> bool:
+        """True if this text input has a server-side suggestion source."""
+        return bool(
+            self.proto.HasField("autocomplete_source_id")
+            and self.proto.autocomplete_source_id
+        )
+
+    def get_suggestions(self, text: str) -> list[str]:
+        """Return the normalized suggestions the source would send for ``text``.
+
+        Uses the callable stored for AppTest (the Runtime manager is gone after
+        ``AppTest.run()``). Matches the handler: oversized ``text``, bad return
+        types, and a raising source all fail closed to ``[]``.
+        """
+        from streamlit.runtime.autocomplete_source_manager import (
+            normalize_suggestions,
+            query_exceeds_autocomplete_limit,
+        )
+
+        ss = self.root.session_state
+        assert ss
+        try:
+            stored = ss[TESTING_KEY].get(self.id)
+        except KeyError:
+            return []
+        if not isinstance(stored, dict) or "autocomplete" not in stored:
+            return []
+        func = stored["autocomplete"]
+        max_chars = stored.get("max_chars")
+        if query_exceeds_autocomplete_limit(text, max_chars):
+            return []
+        try:
+            raw = func(text)
+        except builtins.Exception:
+            return []
+        return normalize_suggestions(raw, max_chars=max_chars)
+
 
 TimeValue: TypeAlias = time | datetime
 DateTimeWidgetValue: TypeAlias = datetime

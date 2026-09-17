@@ -48,7 +48,7 @@ Represents a single browser tab.
 **Lifecycle**:
 1. WebSocket connects -> `Runtime.connect_session()`
 2. Creates `AppSession` (ScriptRunner starts when the first `rerun_script` BackMsg arrives)
-3. Widget interaction -> `handle_backmsg()` -> `request_rerun()`
+3. Widget interaction -> `handle_backmsg()` -> `request_rerun()`, or a `backend_operation_request` that does not rerun
 4. Script produces ForwardMsgs -> queued -> flushed to browser
 5. WebSocket disconnects -> cleanup
 

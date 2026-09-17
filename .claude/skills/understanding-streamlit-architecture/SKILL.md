@@ -14,7 +14,7 @@ Use this file as a quick mental model and navigation index; use `references/back
 |---------|-------------|-----------|
 | **Command** | Any function exposed in Streamlit's public API (`st.*` namespace). Commands can create elements/widgets, control execution flow, or configure app behavior. | `lib/streamlit/delta_generator.py`, `lib/streamlit/elements/`, `lib/streamlit/commands/` |
 | **Element** | Umbrella term for all UI components in Streamlit: widgets, containers, and display elements. Represented in `Element.proto` as a `oneof` union of ~50+ types. | `proto/streamlit/proto/Element.proto`, `lib/streamlit/elements/` |
-| **Widget** | Interactive element (button, slider, text_input) that typically triggers a rerun on user interaction. Value accessible via return value or `st.session_state`. Widgets that support `on_change="ignore"` update in the browser without rerunning until something else does. Some elements become widgets conditionally (e.g., dataframe/chart with `on_select`). | `lib/streamlit/elements/widgets/`, `frontend/lib/src/components/widgets/` |
+| **Widget** | Interactive element (button, slider, text_input) that typically triggers a rerun on user interaction. Value accessible via return value or `st.session_state`. Widgets that support `on_change="ignore"` update in the browser without rerunning until something else does. Some in-widget lookups (for example `st.text_input` autocomplete) use backend operations and do not rerun. Some elements become widgets conditionally (e.g., dataframe/chart with `on_select`). | `lib/streamlit/elements/widgets/`, `frontend/lib/src/components/widgets/` |
 | **Display Element** | Non-interactive element (text, markdown, image, chart) that renders content without triggering reruns by itself. | `lib/streamlit/elements/`, `frontend/lib/src/components/elements/` |
 | **Container** | Layout block that groups elements spatially (sidebar, columns, expander, tabs, form). Represented as `BlockNode` in the element tree. | `lib/streamlit/elements/layouts.py`, `Block.proto` |
 | **DeltaGenerator** | The `st` object; API entry point that queues UI deltas. Uses mixin pattern to compose all `st.*` commands. | `lib/streamlit/delta_generator.py` |
@@ -131,8 +131,8 @@ Streamlit's execution model differs from traditional web frameworks:
 
 | Proto | Purpose |
 |-------|---------|
-| `ForwardMsg.proto` | Server to client: deltas, session events, navigation |
-| `BackMsg.proto` | Client to server: rerun requests with widget states |
+| `ForwardMsg.proto` | Server to client: deltas, session events, navigation, backend operation responses |
+| `BackMsg.proto` | Client to server: rerun requests with widget states, plus backend operations that do not rerun |
 | `Element.proto` | ~50+ element types in `oneof type` union |
 | `WidgetStates.proto` | Widget values: `trigger_value`, `string_value`, `bool_value`, etc. |
 
@@ -146,6 +146,8 @@ Streamlit's execution model differs from traditional web frameworks:
   - Deep dive: [references/layout.md](references/layout.md)
 - **Script rerun model**: Widget interaction -> `BackMsg` (`ClientState`) -> backend updates `SessionState` -> script rerun -> `ForwardMsg` deltas.
   - Deep dive: `references/communication.md#widget-interaction-to-script-rerun`
+- **Backend operations**: Client requests that run on the server without a script rerun (lazy dataframe chunks, `st.text_input` autocomplete, deferred downloads). `BackMsg.backend_operation_request` → handler → `ForwardMsg.backend_operation_response`.
+  - Deep dive: `references/communication.md#backend-operations-no-rerun`
 - **Delta path system**: Elements are addressed by delta paths (for example `[0, 2, 3]`) to support efficient tree updates.
   - Deep dive: `references/communication.md#delta-ui-changes`
 - **`active_script_hash` semantics**: `ForwardMsg.metadata.active_script_hash` scopes node ownership across multipage and fragment reruns.

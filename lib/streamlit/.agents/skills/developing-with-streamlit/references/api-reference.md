@@ -127,7 +127,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.tabs` | Insert containers separated into tabs. Use tabs to switch between related views while rendering all tab content in the same run. |
 | `st.text` | Write text without Markdown or HTML parsing. Use it for unformatted output. |
 | `st.text_area` | Display a multi-line text input widget. Use it for comments, prompts, notes, and longer free-form input. |
-| `st.text_input` | Display a single-line text input widget. Use it for short free-form input such as names, filters, IDs, or search text. |
+| `st.text_input` | Display a single-line text input widget. Use it for short free-form input such as names, filters, IDs, or search text, including server-side suggestions. |
 | `st.time_input` | Display a time input widget. Use it when users need to choose a time of day. |
 | `st.title` | Display text in title formatting. Use it for the main page title. |
 | `st.toast` | Display a short message, known as a notification "toast". It appears in the app's top-right corner and disappears after four seconds. |

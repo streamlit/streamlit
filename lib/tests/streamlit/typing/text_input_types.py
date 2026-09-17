@@ -88,6 +88,12 @@ if TYPE_CHECKING:
     assert_type(text_input("Enter text", autocomplete=None), str)
     assert_type(text_input("Enter text", value=None, autocomplete="name"), str | None)
 
+    def suggest(text: str) -> list[str]:
+        return []
+
+    assert_type(text_input("x", autocomplete=suggest), str)
+    assert_type(text_input("x", value=None, autocomplete=suggest), str | None)
+
     # =====================================================================
     # Test placeholder parameter (keyword-only)
     # =====================================================================
