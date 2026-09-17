@@ -550,7 +550,7 @@ class FormStateInteractionTest(DeltaGeneratorTestCase):
         assert "`st.session_state['my_form']`" in message
         assert "read-only" in message
         assert "event widget" not in message.lower()
-        assert "different Session State key" in message
+        assert "different session state key" in message
 
 
 @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))

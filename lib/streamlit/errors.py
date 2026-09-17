@@ -620,7 +620,7 @@ class StreamlitValueAssignmentNotAllowedError(LocalizableStreamlitException):
     def __init__(self, key: str) -> None:
         super().__init__(
             "{session_state_item} is read-only and cannot be "
-            "assigned through Session State. Use a different Session State key "
+            "assigned through session state. Use a different session state key "
             "for values you need to set.",
             session_state_item=_session_state_item(key),
             key=key,
@@ -636,9 +636,9 @@ class StreamlitWidgetAlreadyInstantiatedError(LocalizableStreamlitException):
             "that key is instantiated. Assign {session_state_item} before "
             "creating the widget, or update it from an `on_change` or "
             "`on_click` callback, which runs before the widget is instantiated. "
-            "If this is a read-only Session State key (buttons, file and media "
+            "If this is a read-only session state key (buttons, file and media "
             "inputs, `st.data_editor`, forms, chart or `ButtonColumn` "
-            "selections), store the value under a different Session State key.",
+            "selections), store the value under a different session state key.",
             session_state_item=_session_state_item(key),
             key=key,
         )

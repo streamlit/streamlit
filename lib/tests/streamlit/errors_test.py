@@ -347,9 +347,9 @@ def test_widget_already_instantiated_error_message(key: str) -> None:
     assert "before creating the widget" in message
     assert "on_change" in message
     assert "on_click" in message
-    assert "read-only Session State key" in message
+    assert "read-only session state key" in message
     assert "ButtonColumn" in message
-    assert "different Session State key" in message
+    assert "different session state key" in message
     assert isinstance(exc, errors.LocalizableStreamlitException)
     assert exc.exec_kwargs["key"] == key
     # format_uncaught_exception only suffixes LocalizableStreamlitException when exec_kwargs has parameter.
@@ -358,7 +358,7 @@ def test_widget_already_instantiated_error_message(key: str) -> None:
 
 @pytest.mark.parametrize("key", ["done_btn", "done-btn"])
 def test_value_assignment_not_allowed_error_message(key: str) -> None:
-    """Read-only Session State keys tell the caller to use a different key."""
+    """Read-only session state keys tell the caller to use a different key."""
     exc = errors.StreamlitValueAssignmentNotAllowedError(key)
     message = str(exc)
     item = f"st.session_state[{key!r}]"
@@ -368,7 +368,7 @@ def test_value_assignment_not_allowed_error_message(key: str) -> None:
     assert "read-only" in message
     # Keep the copy generic; this error also covers st.form keys, not only event widgets.
     assert "event widget" not in message.lower()
-    assert "different Session State key" in message
+    assert "different session state key" in message
     assert isinstance(exc, errors.LocalizableStreamlitException)
     assert exc.exec_kwargs["key"] == key
     # format_uncaught_exception only suffixes LocalizableStreamlitException when exec_kwargs has parameter.

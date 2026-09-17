@@ -86,11 +86,11 @@ class SessionStateProxy(MutableMapping[Key, Any]):
     instantiated). Assigning after the widget is created on the same run
     raises ``StreamlitWidgetAlreadyInstantiatedError``.
 
-    Some widgets are read-only in Session State (buttons and button-like
+    Some widgets are read-only in session state (buttons and button-like
     triggers, file and media inputs, ``st.data_editor``, ``st.form`` keys,
     and chart or ``ButtonColumn`` selections). Creating one after assigning
     to its key raises ``StreamlitValueAssignmentNotAllowedError``. Store
-    values you need to set in a different Session State key.
+    values you need to set in a different session state key.
 
     Examples
     --------
