@@ -588,6 +588,21 @@ function TextInput({
     setFocused(true)
   }, [])
 
+  const handlePointerGestureEnd = useCallback((selected: boolean): void => {
+    const input = inputRef.current
+    if (input && document.activeElement === input) {
+      return
+    }
+    // After a tap-select, put caret back in the field. After a scroll or
+    // cancelled press, leave the input blurred so the mobile keyboard stays
+    // down and the list does not stick open.
+    if (selected) {
+      input?.focus({ preventScroll: true })
+      return
+    }
+    setFocused(false)
+  }, [])
+
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLInputElement>): void => {
       // When keyboard Tab moves focus to the password toggle, focus stays
@@ -779,6 +794,7 @@ function TextInput({
           onBusyChange={setAutocompleteBusy}
           onStatusChange={setAutocompleteStatus}
           suppressBlurRef={suppressBlurRef}
+          onPointerGestureEnd={handlePointerGestureEnd}
         />
       )}
       <TextInputControl

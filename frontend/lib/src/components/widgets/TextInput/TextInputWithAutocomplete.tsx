@@ -91,6 +91,7 @@ export interface TextInputWithAutocompleteProps {
   onBusyChange: (busy: boolean) => void
   onStatusChange: (message: string | null) => void
   suppressBlurRef: { current: boolean }
+  onPointerGestureEnd: (selected: boolean) => void
 }
 
 function SuggestionOption({
@@ -98,15 +99,15 @@ function SuggestionOption({
   state,
   armed,
   onSelect,
-  inputRef,
   suppressBlurRef,
+  onPointerGestureEnd,
 }: {
   item: Node<SuggestionItem>
   state: ComboBoxState<SuggestionItem>
   armed: boolean
   onSelect: (key: React.Key) => void
-  inputRef: RefObject<HTMLInputElement | null>
   suppressBlurRef: { current: boolean }
+  onPointerGestureEnd: (selected: boolean) => void
 }): ReactElement {
   const ref = useRef<HTMLLIElement>(null)
   // Hover must not arm a row; Streamlit owns `armedKey` for Enter/Tab.
@@ -119,14 +120,6 @@ function SuggestionOption({
 
   const pointerStartYRef = useRef(0)
 
-  const restoreInputFocus = (): void => {
-    suppressBlurRef.current = false
-    const input = inputRef.current
-    if (input && document.activeElement !== input) {
-      input.focus({ preventScroll: true })
-    }
-  }
-
   const handleOptionPointerDown = (
     event: PointerEvent<HTMLLIElement>
   ): void => {
@@ -137,17 +130,27 @@ function SuggestionOption({
     if (event.pointerType === "mouse") {
       preventFocusLoss(event)
     }
-  }
 
-  const handleOptionPointerUp = (event: PointerEvent<HTMLLIElement>): void => {
-    // Firefox suppresses click after mousedown preventDefault; pointerup
-    // still fires. Ignore a press that moved far enough to be a scroll.
-    const moved = Math.abs(event.clientY - pointerStartYRef.current) > 8
-    const isPrimary = event.pointerType === "mouse" ? event.button === 0 : true
-    if (!moved && isPrimary && !isDisabled) {
-      onSelect(item.key)
+    const pointerId = event.pointerId
+    const pointerType = event.pointerType
+    const finish = (up: globalThis.PointerEvent): void => {
+      if (up.pointerId !== pointerId) {
+        return
+      }
+      window.removeEventListener("pointerup", finish, true)
+      window.removeEventListener("pointercancel", finish, true)
+      const moved = Math.abs(up.clientY - pointerStartYRef.current) > 8
+      const isPrimary = pointerType === "mouse" ? up.button === 0 : true
+      const selected =
+        up.type === "pointerup" && !moved && isPrimary && !isDisabled
+      if (selected) {
+        onSelect(item.key)
+      }
+      suppressBlurRef.current = false
+      onPointerGestureEnd(selected)
     }
-    restoreInputFocus()
+    window.addEventListener("pointerup", finish, true)
+    window.addEventListener("pointercancel", finish, true)
   }
 
   return (
@@ -160,8 +163,6 @@ function SuggestionOption({
       data-hovered={isHovered || undefined}
       data-disabled={isDisabled || undefined}
       onPointerDown={handleOptionPointerDown}
-      onPointerUp={handleOptionPointerUp}
-      onPointerCancel={restoreInputFocus}
       onClick={event => {
         optionProps.onClick?.(event)
       }}
@@ -193,6 +194,7 @@ export function TextInputWithAutocomplete({
   onBusyChange,
   onStatusChange,
   suppressBlurRef,
+  onPointerGestureEnd,
 }: TextInputWithAutocompleteProps): ReactElement | null {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
@@ -640,8 +642,8 @@ export function TextInputWithAutocomplete({
               state={state}
               armed={item.key === armedKey}
               onSelect={handleSelectionChange}
-              inputRef={inputRef}
               suppressBlurRef={suppressBlurRef}
+              onPointerGestureEnd={onPointerGestureEnd}
             />
           ))}
         </StyledSuggestionsList>
