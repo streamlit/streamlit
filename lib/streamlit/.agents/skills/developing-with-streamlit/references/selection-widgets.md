@@ -101,8 +101,8 @@ hash reference, so that payload crosses the wire on first render and whenever
 the list changes. Client-side filtering gets no such reprieve: at 1M options it
 freezes the UI for several hundred milliseconds per keystroke.
 
-So don't build options from a full table scan. Ask the database for the distinct
-values, bounded:
+Don't fetch a whole table into the app just to derive options. Ask the database
+for a bounded, distinct list:
 
 ```python
 # BAD: pulls every row into the app for one dropdown; can exhaust app memory
@@ -122,8 +122,8 @@ distinct values. When the base table is large, precompute them into a small
 table or materialized view on a schedule and point the widget at that, so you
 don't pay for it again on every cache expiry.
 
-Above a few thousand values, stop shipping the list and search it. Query on a
-debounce and offer only what matched:
+Above a few thousand values, stop shipping the list and search it. Run a
+debounced query and offer only the matching values:
 
 ```python
 st.session_state.setdefault("customer", None)
@@ -131,8 +131,8 @@ st.session_state.setdefault("customer", None)
 
 def like_term(text: str) -> str:
     """Escape LIKE wildcards so a typed % or _ matches literally."""
-    for char in ("\\", "%", "_"):
-        text = text.replace(char, "\\" + char)
+    for char in ("!", "%", "_"):
+        text = text.replace(char, "!" + char)
     return f"%{text}%"
 
 
@@ -144,7 +144,7 @@ def customer_filter() -> None:
     if len(term) >= 2:
         matches = conn.query(
             "select customer from customers"
-            " where customer like :term escape '\\'"
+            " where customer like :term escape '!'"
             " order by customer limit 50",
             params={"term": like_term(term)},
             ttl=60,
@@ -162,7 +162,7 @@ def customer_filter() -> None:
             if picked is not None and picked != st.session_state.customer:
                 st.session_state.customer = picked
                 st.rerun()
-    if st.session_state.customer and st.button("Clear filter"):
+    if st.session_state.customer is not None and st.button("Clear filter"):
         st.session_state.customer = None
         st.rerun()
 
@@ -170,8 +170,9 @@ def customer_filter() -> None:
 customer_filter()
 ```
 
-- `live="300ms"` commits after a 300ms pause in typing, and `@st.fragment` keeps
-  the rest of the app from rerunning while the user types.
+- `live="300ms"` sends the value to Python after 300 ms without further typing,
+  and `@st.fragment` keeps the rest of the app from rerunning while the user
+  types.
 - Only the fragment reruns when the user types or picks, so the rest of the app
   keeps showing results for the previous selection. Store the choice in Session
   State and call `st.rerun()` when it changes, as above; dependent code then
@@ -190,8 +191,10 @@ customer_filter()
   full-text or search index if it doesn't hold up.
 - Escape `%` and `_` in the term and declare an `escape` character. Untouched
   they are wildcards, so a typed `%` matches far more than the user asked for.
-- Pass a `ttl` to `conn.query` here. It caches indefinitely by default, and
-  every keystroke is a new cache key. Pass it as a number or `timedelta`: the
+  `!` sidesteps the dialects where `\` is itself a string-literal escape.
+- Pass a `ttl` to `conn.query` here. It caches indefinitely by default, every
+  keystroke is a new cache key, and it takes no `max_entries`, so the `ttl` is
+  the only bound on that cache. Pass it as a number or `timedelta`: the
   parameter is typed `float | int | timedelta | None`, so a duration string
   works at runtime but fails a type check.
 
