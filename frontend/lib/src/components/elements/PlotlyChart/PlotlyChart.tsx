@@ -69,6 +69,31 @@ const RESET_SELECTION_TIMEOUT_MS = 50
 // Default height for Plotly charts when no height is specified
 const DEFAULT_PLOTLY_HEIGHT = 450
 
+function applyOwnedClickHover(
+  layout: Partial<Plotly.Layout>,
+  owned: Partial<Plotly.Layout>
+): Partial<Plotly.Layout> {
+  const next = { ...layout }
+  if (owned.clickmode !== undefined) {
+    next.clickmode = owned.clickmode
+  }
+  if (owned.hovermode !== undefined) {
+    next.hovermode = owned.hovermode
+  }
+  return next
+}
+
+function applyOwnedSelectionModes(
+  layout: Partial<Plotly.Layout>,
+  owned: Partial<Plotly.Layout>
+): Partial<Plotly.Layout> {
+  const next = applyOwnedClickHover(layout, owned)
+  if (owned.dragmode !== undefined) {
+    next.dragmode = owned.dragmode
+  }
+  return next
+}
+
 // Custom icon used in the fullscreen expand toolbar button:
 /* eslint-disable streamlit-custom/no-hardcoded-theme-values */
 const FULLSCREEN_EXPAND_ICON = {
@@ -389,7 +414,7 @@ export function PlotlyChart({
     }
     // Size changes issue a new layout object (and `Plotly.react`). Sanitize
     // from the last owned snapshot so live computed domain/margin are not
-    // spread back in.
+    // spread back in, but keep React-owned selection modes from current state.
     return sanitizePlotlyFigureForReact(
       {
         data: plotlyFigure.data,
@@ -397,7 +422,10 @@ export function PlotlyChart({
         frames: plotlyFigure.frames,
       },
       { width: calculatedWidth, height: calculatedHeight },
-      lastSanitizedLayoutRef.current ?? layout
+      applyOwnedSelectionModes(
+        lastSanitizedLayoutRef.current ?? layout,
+        layout
+      )
     ).layout
   }, [
     plotlyFigure.data,
@@ -457,17 +485,30 @@ export function PlotlyChart({
       const previousFigure = plotlyFigureRef.current
       // Once `assignLayoutInPlace` has run, `figure.layout` is `gd.layout`
       // and the same object as React state. Overlay from the last sanitized
-      // copy so computed domain/margin are not treated as owned.
+      // copy so computed domain/margin are not treated as owned, and keep
+      // React-owned clickmode/hovermode/dragmode from current state.
       const layoutIsAliased = figure.layout === previousFigure.layout
-      const previousLayout =
+      const previousLayout = applyOwnedSelectionModes(
         layoutIsAliased && lastSanitizedLayoutRef.current
           ? lastSanitizedLayoutRef.current
-          : previousFigure.layout
+          : previousFigure.layout,
+        previousFigure.layout
+      )
       const sanitized = sanitizePlotlyFigureForReact(
         figure,
         { width: calculatedWidth, height: calculatedHeight },
         previousLayout
       )
+      sanitized.layout = applyOwnedClickHover(
+        sanitized.layout,
+        previousFigure.layout
+      )
+      if (!updateReactState) {
+        sanitized.layout = applyOwnedSelectionModes(
+          sanitized.layout,
+          previousFigure.layout
+        )
+      }
       if (element.id) {
         widgetMgr.setElementState(element.id, "figure", sanitized)
       }
@@ -477,6 +518,8 @@ export function PlotlyChart({
       }
 
       if (!updateReactState) {
+        // Plotly's first react reports dragmode "zoom"; keep Streamlit's
+        // selection dragmode/clickmode on the snapshot and remount state.
         commitSanitizedSnapshot()
         return
       }
@@ -526,6 +569,27 @@ export function PlotlyChart({
     },
     [persistSanitizedFigure]
   )
+
+  useEffect(() => {
+    const snapshot = lastSanitizedLayoutRef.current
+    const layout = plotlyFigure.layout
+    if (snapshot === undefined) {
+      return
+    }
+    if (
+      snapshot.clickmode === layout.clickmode &&
+      snapshot.hovermode === layout.hovermode &&
+      snapshot.dragmode === layout.dragmode
+    ) {
+      return
+    }
+    lastSanitizedLayoutRef.current = {
+      ...snapshot,
+      clickmode: layout.clickmode,
+      hovermode: layout.hovermode,
+      dragmode: layout.dragmode,
+    }
+  }, [plotlyFigure])
 
   const { restart: restartResetSelectionTimeout } = useTimeout(
     () => {

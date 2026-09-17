@@ -331,6 +331,53 @@ describe("PlotlyChart Component", () => {
     expect(getLastPlotProps().layout.clickmode).toBe("none")
   })
 
+  it("keeps selection clickmode after onInitialized and a size change", () => {
+    const element = new PlotlyChartProto({
+      ...DEFAULT_ELEMENT,
+      selectionMode: [PlotlyChartProto.SelectionMode.POINTS],
+    })
+    const { rerender } = renderComponent({ element })
+    expect(getLastPlotProps().layout.clickmode).toBe("event+select")
+    expect(getLastPlotProps().layout.dragmode).toBe("pan")
+
+    act(() => {
+      getLastPlotProps().onInitialized?.(
+        {
+          data: getLastPlotProps().data,
+          layout: {
+            ...getLastPlotProps().layout,
+            dragmode: "zoom",
+            clickmode: "event",
+          },
+          frames: null,
+        },
+        document.createElement("div")
+      )
+    })
+
+    rerender(
+      <ElementFullscreenContext.Provider
+        value={{
+          expanded: false,
+          width: 900,
+          height: 500,
+          expand: vi.fn(),
+          collapse: vi.fn(),
+        }}
+      >
+        <PlotlyChart
+          element={element}
+          widgetMgr={widgetMgr}
+          disabled={false}
+          width={900}
+        />
+      </ElementFullscreenContext.Provider>
+    )
+
+    expect(getLastPlotProps().layout.dragmode).toBe("pan")
+    expect(getLastPlotProps().layout.clickmode).toBe("event+select")
+  })
+
   it("configures selection modes correctly (Lasso)", () => {
     const element = new PlotlyChartProto({
       ...DEFAULT_ELEMENT,
@@ -881,8 +928,8 @@ describe("PlotlyChart Component", () => {
     })
 
     const nextLayout = getLastPlotProps().layout
-    expect(nextLayout.xaxis?.domain).toBeUndefined()
-    expect(nextLayout.yaxis?.domain).toBeUndefined()
+    expect(nextLayout.xaxis?.domain).toEqual([0.66, 1])
+    expect(nextLayout.yaxis?.domain).toEqual([0, 0.85])
     expect(nextLayout.xaxis?.range).toEqual([-0.2, 1.2])
     expect(nextLayout.xaxis?.scaleanchor).toBe("y")
     expect(nextLayout.xaxis?.constrain).toBe("domain")

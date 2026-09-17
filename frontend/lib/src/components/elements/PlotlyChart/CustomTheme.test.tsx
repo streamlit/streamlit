@@ -450,6 +450,28 @@ describe("PlotlyChart CustomTheme", () => {
       expect(layout.xaxis.scaleanchor).toBe(false)
       expect(layout.template.layout.xaxis.automargin).toBe(true)
     })
+
+    it("does not overwrite an authored automargin on constrained axes", () => {
+      const spec: Record<string, unknown> = {
+        layout: {
+          xaxis: {
+            scaleanchor: "y",
+            constrain: "domain",
+            automargin: "left+top",
+          },
+          template: {
+            layout: {},
+          },
+        },
+      }
+
+      applyStreamlitTheme(spec, theme)
+
+      const layout = spec.layout as {
+        xaxis: { automargin: string }
+      }
+      expect(layout.xaxis.automargin).toBe("left+top")
+    })
   })
 
   describe("layoutWithThemeDefaults", () => {

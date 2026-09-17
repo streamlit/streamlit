@@ -511,6 +511,79 @@ describe("PlotlyChart utils", () => {
       expect(result.layout.xaxis?.range).toEqual([1, 5])
     })
 
+    it("keeps authored subplot domain on constrained axes when previousLayout is provided", () => {
+      const previousLayout = {
+        xaxis: {
+          scaleanchor: "y" as const,
+          constrain: "domain" as const,
+          domain: [0, 0.32],
+          range: [0, 1],
+        },
+      }
+      const figure = {
+        data: [],
+        frames: null,
+        layout: {
+          xaxis: {
+            scaleanchor: "y",
+            constrain: "domain",
+            domain: [0.01, 0.31],
+            range: [0.2, 0.8],
+          },
+        },
+      }
+
+      const result = sanitizePlotlyFigureForReact(
+        figure,
+        ownedSize,
+        previousLayout
+      )
+
+      expect(result.layout.xaxis?.domain).toEqual([0, 0.32])
+      expect(result.layout.xaxis?.range).toEqual([0.2, 0.8])
+    })
+
+    it("treats non-boolean autorange as a zoom reset", () => {
+      const previousLayout = {
+        yaxis: { range: [0, 10], autorange: false },
+      }
+      const figure = {
+        data: [],
+        frames: null,
+        layout: {
+          yaxis: { autorange: "reversed", range: [0, 10] },
+        },
+      }
+
+      const result = sanitizePlotlyFigureForReact(
+        figure,
+        ownedSize,
+        previousLayout
+      )
+
+      expect(result.layout.yaxis?.autorange).toBe("reversed")
+      expect(result.layout.yaxis?.range).toBeUndefined()
+    })
+
+    it("clears persisted hiddenlabels when Plotly omits the key", () => {
+      const previousLayout = {
+        hiddenlabels: ["slice-a"],
+      }
+      const figure = {
+        data: [],
+        frames: null,
+        layout: { xaxis: { range: [0, 1] } },
+      }
+
+      const result = sanitizePlotlyFigureForReact(
+        figure,
+        ownedSize,
+        previousLayout
+      )
+
+      expect(result.layout.hiddenlabels).toEqual([])
+    })
+
     it("does not need a React state update after applying a noisy live layout twice", () => {
       const data: never[] = []
       const previousLayout = {

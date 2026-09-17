@@ -301,7 +301,8 @@ function sanitizeSelections(selections: unknown): unknown {
 
 function overlayCartesianAxisInteraction(
   nextLayout: Record<string, unknown>,
-  sourceLayout: Record<string, unknown>
+  sourceLayout: Record<string, unknown>,
+  stripConstrainedDomain: boolean
 ): void {
   for (const key of Object.keys(sourceLayout)) {
     if (!isCartesianAxisKey(key)) {
@@ -312,9 +313,6 @@ function overlayCartesianAxisInteraction(
       continue
     }
 
-    const nextAxis = isAxisRecord(nextLayout[key])
-      ? { ...nextLayout[key] }
-      : {}
     const hasInteraction =
       sourceAxis.range !== undefined ||
       sourceAxis.autorange !== undefined ||
@@ -323,10 +321,13 @@ function overlayCartesianAxisInteraction(
     if (!hasInteraction) {
       continue
     }
-    if (sourceAxis.autorange === true) {
-      // Double-click zoom reset: persist autorange and drop the stale window
-      // so a later Plotly.react (resize, fullscreen, remount) cannot restore it.
-      nextAxis.autorange = true
+
+    const nextAxis = isAxisRecord(nextLayout[key])
+      ? { ...nextLayout[key] }
+      : {}
+    // Plotly autorange is not boolean-only (`"reversed"` on px.imshow, …).
+    if (sourceAxis.autorange !== undefined && sourceAxis.autorange !== false) {
+      nextAxis.autorange = sourceAxis.autorange
       delete nextAxis.range
     } else if (shouldAdoptNumericArray(nextAxis.range, sourceAxis.range)) {
       nextAxis.range = sourceAxis.range
@@ -340,7 +341,9 @@ function overlayCartesianAxisInteraction(
     if (sourceAxis.constrain !== undefined) {
       nextAxis.constrain = sourceAxis.constrain
     }
-    if (isConstrainedCartesianAxis(nextAxis)) {
+    // Never copy live `domain`. Only strip on remount recovery, so authored
+    // facet / subplot domains on `previousLayout` are kept.
+    if (stripConstrainedDomain && isConstrainedCartesianAxis(nextAxis)) {
       delete nextAxis.domain
     }
     nextLayout[key] = nextAxis
@@ -376,11 +379,12 @@ function overlayViewState(
     nextLayout[key] = nextView
   }
 
-  if (
-    sourceLayout.hiddenlabels !== undefined &&
-    !isEqual(sourceLayout.hiddenlabels, nextLayout.hiddenlabels)
-  ) {
-    nextLayout.hiddenlabels = sourceLayout.hiddenlabels
+  if (sourceLayout.hiddenlabels !== undefined) {
+    if (!isEqual(sourceLayout.hiddenlabels, nextLayout.hiddenlabels)) {
+      nextLayout.hiddenlabels = sourceLayout.hiddenlabels
+    }
+  } else if (nextLayout.hiddenlabels !== undefined) {
+    nextLayout.hiddenlabels = []
   }
 
   if (sourceLayout.selections !== undefined) {
@@ -454,7 +458,11 @@ export function sanitizePlotlyFigureForReact(
     autosize: false,
   }
 
-  overlayCartesianAxisInteraction(nextLayout, sourceLayout)
+  overlayCartesianAxisInteraction(
+    nextLayout,
+    sourceLayout,
+    previousLayout === undefined
+  )
   overlayViewState(nextLayout, sourceLayout)
 
   if (previousLayout !== undefined) {
@@ -495,8 +503,11 @@ export function assignLayoutInPlace(
 ): Partial<Plotly.Layout> {
   const targetRecord = target as Record<string, unknown>
   const sourceRecord = source as Record<string, unknown>
+  // Selection effects write clickmode/hovermode onto the Plot layout; the
+  // sanitizer overlay does not copy those fields, so they must not be deleted.
+  const preserveWhenAbsent = new Set(["clickmode", "hovermode"])
   for (const key of Object.keys(targetRecord)) {
-    if (!Object.hasOwn(sourceRecord, key)) {
+    if (!Object.hasOwn(sourceRecord, key) && !preserveWhenAbsent.has(key)) {
       // oxlint-disable-next-line typescript/no-dynamic-delete -- omitted sanitizer keys must not remain on Plotly's live layout
       delete targetRecord[key]
     }

@@ -254,8 +254,8 @@ function suppressAutomarginOnConstrainedAxes(
     if (!isRecord(axis)) {
       continue
     }
-    if (isConstrainedCartesianAxis(axis)) {
-      // Layout-level automargin overrides the template default.
+    if (isConstrainedCartesianAxis(axis) && axis.automargin === undefined) {
+      // Override the template default only when the axis has no authored value.
       layout[key] = { ...axis, automargin: false }
     }
   }
