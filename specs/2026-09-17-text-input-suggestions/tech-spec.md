@@ -21,7 +21,7 @@ A suggestion callable is arbitrary user Python that must run:
 
 - **Per keystroke (debounced)**, at high frequency, while the field is focused.
 - **Without a script rerun** — a rerun per pause is too heavy for hints and has no
-  input-dropdown UX (see product spec, "Why native, and why without a rerun").
+  input-dropdown UX (see the product spec's [current workarounds](./product-spec.md#current-workarounds)).
 - **Safely** — off the rerun path, so it needs the same guardrails the other
   backend operations already established: an unguessable, session-scoped id; validation that
   the request belongs to the requesting session; a worker thread so a slow lookup can't block
@@ -56,7 +56,7 @@ if callable(autocomplete):
             explanation="Password suggestions must not appear in a dropdown.",
         )
     registered = get_suggestion_source_mgr().register_source(
-        autocomplete, coordinates=<element delta-path>,
+        autocomplete, coordinates=<element delta-path>, max_chars=max_chars
     )
     text_input_proto.suggestions_source_id = registered.source_id
     # Our dropdown replaces the browser's autofill, so turn native autofill off.
@@ -114,8 +114,9 @@ message SuggestionsRequestPayload {
 `BackendOperationResponse.payload` oneof:
 
 ```proto
-// Response for autocomplete suggestion requests.
-SuggestionsResponsePayload suggestions = 7;
+// Response for autocomplete suggestion requests. Field 7 is already taken by
+// the message-level `error_reason`, so the oneof continues at 8.
+SuggestionsResponsePayload suggestions = 8;
 
 message SuggestionsResponsePayload {
   // Echoes the requested source id so the frontend can match the response.
@@ -134,8 +135,8 @@ Run `make protobuf` after editing.
 
 A near-copy of `DataframeSourceManager`'s structure — the lifecycle requirements are
 identical, so the shared skeleton (per-session coordinate map, unguessable `source_id`,
-session validation, orphan pruning, fragment-aware `clear_session_refs`) should be
-factored/reused rather than reinvented:
+lock-guarded map access, session validation, orphan pruning, fragment-aware
+`clear_session_refs`) should be factored/reused rather than reinvented:
 
 ```python
 @dataclass(frozen=True)
@@ -145,10 +146,13 @@ class RegisteredSuggestionSource:
     session_id: str
     coordinates: str
     fragment_id: str | None
+    max_chars: int | None
 
 
 class SuggestionSourceManager:
-    def register_source(self, func, coordinates) -> RegisteredSuggestionSource: ...
+    def register_source(
+        self, func, coordinates, max_chars
+    ) -> RegisteredSuggestionSource: ...
     def get_suggestions(self, session_id, source_id, text) -> list[str]: ...
     def clear_session_refs(self, session_id=None, *, fragment_ids=None) -> None: ...
     def remove_orphaned_sources(self) -> None: ...
@@ -162,8 +166,17 @@ class SuggestionSourceManager:
 - **`get_suggestions`** validates `source_id` belongs to `session_id` (raising a
   `SuggestionSourceError` with a frontend-safe message otherwise), invokes `func(text)`, then
   **normalizes and bounds** the result: coerce to `list[str]`, drop non-strings (or fail
-  closed), truncate over-long individual strings, and cap the count (e.g. ≤ 50) so a
-  misbehaving source can't flood the socket.
+  closed), truncate over-long individual strings, cap the count (e.g. ≤ 50) so a misbehaving
+  source can't flood the socket, and drop suggestions longer than the widget's `max_chars`
+  (captured on the registered source), since selecting one would commit a value past the
+  limit the field itself enforces.
+- **Synchronization**: the maps are written from the script thread (registration, rerun
+  cleanup) and the server thread (shutdown) while being read from suggestion worker threads,
+  so — like `DataframeSourceManager` — every shared-map access is guarded by a
+  `threading.Lock`, and `get_suggestions` captures the immutable
+  `RegisteredSuggestionSource` under that lock and releases it before invoking the callable.
+  Without this, a rerun replacing or pruning a source can race an in-flight lookup and make a
+  valid request fail or run against stale state.
 - **Lifecycle wiring** mirrors media files / dataframe sources:
   `clear_session_refs` at the start of a full rerun (fragment-aware for fragment reruns),
   `remove_orphaned_sources` after a script finishes, `clear_all_for_session` on shutdown.
@@ -183,19 +196,18 @@ class SuggestionsHandler(BackendOperationHandler):
     async def handle(self, request, session_id) -> BackendOperationResponse:
         payload = request.suggestions
         try:
-            suggestions = await asyncio.wait_for(
-                asyncio.to_thread(
-                    self._get_source_mgr().get_suggestions,
-                    session_id,
-                    payload.source_id,
-                    payload.text,
-                ),
-                timeout=_SUGGESTIONS_TIMEOUT_S,  # e.g. 5s, fail closed on expiry
+            # Runs on the dedicated suggestions pool, bounded per source; the
+            # slot is released by the worker thread itself (see below).
+            suggestions = await self._run_bounded(
+                session_id, payload.source_id, payload.text
             )
         except SuggestionSourceError as err:
             return BackendOperationResponse(
                 request_id=request.request_id, error_msg=str(err)
             )
+        except (TimeoutError, _NoCapacityError):
+            # Fail closed: an empty dropdown, no error shown to the user.
+            suggestions = []
         except Exception:
             _LOGGER.exception(
                 "Error computing suggestions for source %s", payload.source_id
@@ -215,15 +227,28 @@ class SuggestionsHandler(BackendOperationHandler):
         return resp
 ```
 
-- **Worker thread** (`asyncio.to_thread`) so a slow DB/API lookup never blocks the event
-  loop — same as `DataframeChunkHandler`.
-- **Timeout** via `asyncio.wait_for`, failing closed to an empty list. (`DataframeChunkHandler`
-  relies on the client timeout; suggestions add a server-side timeout because the callable is
-  arbitrary user code that could hang.)
-- **De-dup / concurrency cap per source**: reuse `DataframeChunkHandler`'s pattern of a
-  per-source semaphore + coalescing identical in-flight requests, keyed by
-  `(session_id, source_id, text)`, so rapid keystrokes and a modified client can't exhaust the
-  shared worker pool.
+`_run_bounded` is where the safety properties live, and it differs from
+`DataframeChunkHandler` in one important way: that handler runs Streamlit's own bounded
+serialization code, while this one runs an arbitrary user callable that may never return.
+
+- **A dedicated, bounded thread pool** — a module-level `ThreadPoolExecutor` reserved for
+  suggestion sources, not `asyncio.to_thread`'s default executor. This matters because a
+  timeout can only stop *awaiting* a synchronous call; the thread itself runs to completion.
+  On the shared default executor, hung sources would therefore accumulate and starve the
+  lazy-dataframe and deferred-file operations that depend on the same capacity.
+- **Slots are held until the thread actually exits.** The per-source semaphore slot is
+  released by the worker in its own `finally`, not by the coroutine that stopped waiting, so
+  a timed-out call keeps occupying its slot while it runs. Otherwise a modified client could
+  vary `text` to defeat coalescing and stack up unbounded hung calls. When no slot is free the
+  handler raises `_NoCapacityError` and fails closed immediately rather than queueing more
+  work.
+- **Timeout** (`_SUGGESTIONS_TIMEOUT_S`, e.g. 5s) bounds how long the *user* waits; the pool
+  size bounds the damage a hung callable can do. Python cannot kill a running thread, so the
+  residual risk is a bounded number of stuck threads per server — the accepted trade-off for
+  running user code off the rerun path, and the reason the bound is a fixed pool rather than
+  the shared one.
+- **Coalescing**: as in `DataframeChunkHandler`, identical in-flight requests keyed by
+  `(session_id, source_id, text)` share one call, so rapid keystrokes don't multiply work.
 
 Register it in `AppSession._create_backend_operation_dispatcher`:
 
@@ -277,6 +302,11 @@ its own `WidgetLabel`, `StyledInput`, chevron, clear button, and `className="stS
      precedence rule: when the dropdown is open **and** an option is highlighted, the combobox
      owns Enter and ↑/↓; otherwise TextInput's existing Enter behavior (commit, or form submit)
      runs unchanged.
+   - **Ctrl/Cmd+A must keep selecting the typed text.** React Aria binds Mod+A to "select all
+     options" while the list is open and calls `preventDefault()`, which would break native
+     select-all in the field. Carry over `Multiselect`'s `onKeyDownCapture` exception —
+     `stopPropagation()` *without* `preventDefault()` — which fixed exactly this regression in
+     [#16650](https://github.com/streamlit/streamlit/pull/16650).
    - **Cost:** the shared styles in `Selectbox.styled.ts` are bound to RAC component types
      (`styled(Popover)`, `styled(ListBox)`, `styled(ListBoxItem)`), so their style objects need
      extracting into shared functions both call sites can consume. That's a pure refactor with no
@@ -306,12 +336,17 @@ needs it.
   deliberately independent of `live` — a long `live` pause chosen to throttle expensive reruns
   must not make hints sluggish), then call
   `backendOperationClient.requestSuggestions({ sourceId, text })`.
-- **Race handling:** track the latest requested `text`, drop a response whose echoed `text`
-  ≠ current `uiValue`, and cancel/ignore in-flight requests on new input (the client already
-  rejects superseded requests on cleanup). Show a subtle loading indicator while a request is
-  outstanding.
-- **Selection:** clicking an item or ↑/↓ + Enter/Tab sets `uiValue` and routes through the
-  existing `commitWidgetValue` / `tryCommitOutsideForm` path so `on_change`, `live`,
+- **Race handling:** drop a response unless **both** its echoed `sourceId` matches the
+  element's current `suggestionsSourceId` **and** its echoed `text` matches the current
+  `uiValue`. Checking the text alone is not enough: each rerun re-registers the source with a
+  fresh `source_id` without remounting the (stable-identity) widget, so a response from the
+  superseded callable can arrive for text the user is still typing. Cancel/ignore in-flight
+  requests on new input (the client already rejects superseded requests on cleanup), and show
+  a subtle loading indicator while a request is outstanding.
+- **Selection:** clicking an item or ↑/↓ + Enter/Tab sets `uiValue` — through the same
+  `maxChars` gate as typed input, so a long suggestion can never commit a value the field
+  itself would reject — and routes through the existing `commitWidgetValue` /
+  `tryCommitOutsideForm` path so `on_change`, `live`,
   `validate`, `required`, forms, and `bind` all behave exactly as for a typed commit. `Esc`
   closes the dropdown only; per the product spec, an empty result closes it rather than showing
   Selectbox's "No results" row.
@@ -339,11 +374,14 @@ Inherits the backend-operation threat model (arbitrary/modified client over the 
 
 - **Unguessable, session-scoped `source_id`** (uuid4 hex), validated against the requesting
   session before the callable runs — a client can't invoke another session's source.
-- **Worker-thread execution + server-side timeout** so a slow or hung callable degrades to
-  "no suggestions" instead of stalling the session or event loop.
-- **Per-source concurrency cap + request coalescing** so a scripted client can't fan out
-  unbounded lookups.
-- **Result caps** (max count, max string length) bound the response payload.
+- **Dedicated bounded thread pool + server-side timeout** so a slow or hung callable degrades
+  to "no suggestions" without stalling the event loop or consuming executor capacity that
+  other backend operations need. A timeout stops the waiting, not the thread, so the pool is
+  separate from the shared default executor and the worst case is a bounded number of stuck
+  suggestion threads.
+- **Per-source concurrency cap + request coalescing**, with slots released only when the
+  worker exits, so a scripted client can't fan out unbounded lookups or stack up hung ones.
+- **Result caps** (max count, max string length, `max_chars`) bound the response payload.
 - **Fail closed + server-only logging**: exceptions and bad return types yield an empty
   dropdown and a generic message; tracebacks and any values are logged server-side and never
   serialized to the browser (the callable could touch secrets/DB rows).

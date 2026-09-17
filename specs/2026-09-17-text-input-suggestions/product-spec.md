@@ -120,9 +120,8 @@ All of the following applies only when `autocomplete` is a callable.
 **Keep the existing text field and attach the dropdown from `st.selectbox` to it**, rather than
 designing anything new. The field itself doesn't change — same icon, placeholder, error state,
 character counter, and search clear button — it just gains a suggestion list underneath. That
-list is the popover, virtualized option list, item styling, and empty state already shared
-between `st.selectbox` and `st.multiselect`, so reusing it settles most of the UI by
-construction:
+list is the popover, virtualized option list, and item styling that `st.selectbox` already
+uses, so reusing it settles most of the UI by construction:
 
 | Concern | Inherited from the selectbox dropdown |
 | --- | --- |
@@ -156,7 +155,7 @@ browser doesn't know which substring to emphasize (unlike selectbox's client-sid
 | `validate`, `required` | Unchanged, applied at commit time. A chosen suggestion is validated like a typed one. |
 | `type` | `"default"` and `"search"` are the natural fits. `type="password"` raises `StreamlitIncompatibleParametersError` — proposing or persisting secrets in a dropdown is a footgun. (A *string* `autocomplete` with `type="password"`, e.g. `"new-password"`, is unaffected.) |
 | `bind="query-params"` | Unchanged; a committed suggestion syncs to the URL like any committed value. |
-| `max_chars` | Enforced on input as today, so the function only ever sees within-limit text. |
+| `max_chars` | Enforced on input as today, so the function only ever sees within-limit text. Suggestions longer than the limit are dropped rather than offered, since choosing one would commit a value the field itself would reject. |
 | `disabled` | No suggestions are requested. |
 
 ### Examples
