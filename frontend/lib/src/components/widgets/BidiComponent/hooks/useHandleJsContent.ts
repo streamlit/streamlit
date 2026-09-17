@@ -240,11 +240,7 @@ export const useHandleJsContent = ({
             `st-bidi-${componentName}`
           )
 
-          if (cancelled) {
-            return
-          }
-
-          cleanupRef.current = await loadAndRunModule({
+          const cleanup = await loadAndRunModule({
             componentId,
             componentIdForWidgetMgr: id,
             componentName,
@@ -256,6 +252,12 @@ export const useHandleJsContent = ({
             parentElement: containerRefCurrent,
             widgetMgr,
           })
+
+          if (cancelled) {
+            return
+          }
+
+          cleanupRef.current = cleanup
         } else if (externalJsSourcePathUrl) {
           const scriptUrl = externalJsSourcePathUrl
 
@@ -278,8 +280,7 @@ export const useHandleJsContent = ({
               return
             }
 
-            // Run the module and store the cleanup function
-            cleanupRef.current = await loadAndRunModule({
+            const cleanup = await loadAndRunModule({
               componentId,
               componentIdForWidgetMgr: id,
               componentName,
@@ -291,6 +292,12 @@ export const useHandleJsContent = ({
               parentElement: containerRefCurrent,
               widgetMgr,
             })
+
+            if (cancelled) {
+              return
+            }
+
+            cleanupRef.current = cleanup
           } catch (error) {
             throw normalizeError(
               error,
@@ -312,7 +319,7 @@ export const useHandleJsContent = ({
       scriptElement?.removeEventListener("load", handleScriptLoad)
       scriptElement?.removeEventListener("error", handleScriptError)
       // Resolve rather than reject so a theme/data re-run does not flash a
-      // false component error. Skip loadAndRunModule via `cancelled` above.
+      // false component error; the `cancelled` flag then skips mounting the module.
       resolveScriptLoad?.()
       if (scriptElement?.parentNode) {
         scriptElement.parentNode.removeChild(scriptElement)

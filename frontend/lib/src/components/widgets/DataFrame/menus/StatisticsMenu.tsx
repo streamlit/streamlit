@@ -282,8 +282,8 @@ function StatisticsMenu({
     onOpenChange,
   })
 
-  // Defensive fallback: parent ColumnMenu already guards this, but keep for safety.
-  // This ensures the component renders nothing if called directly without the guard.
+  // Defensive fallback: ColumnMenu already filters unsupported kinds. If this
+  // component is used directly, render the trigger without the statistics submenu.
   if (!supportsStatistics(column.kind)) {
     return children
   }

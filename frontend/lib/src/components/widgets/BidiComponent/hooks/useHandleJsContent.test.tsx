@@ -16,7 +16,7 @@
 
 import type { ReactNode, RefObject } from "react"
 
-import { renderHook } from "@testing-library/react"
+import { renderHook, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
@@ -122,6 +122,27 @@ describe("useHandleJsContent", () => {
 
     expect(queryExternalScripts()).toHaveLength(1)
     expect(setError).not.toHaveBeenCalled()
+  })
+
+  it("reports a live script load error", async () => {
+    renderUseHandleJsContent({
+      context: buildContextValue(),
+      containerRef,
+      setError,
+    })
+
+    const script = queryExternalScripts()[0]
+    expect(script).toBeDefined()
+    expect(script.isConnected).toBe(true)
+
+    script.dispatchEvent(new Event("error"))
+
+    await waitFor(() => {
+      expect(setError).toHaveBeenCalledTimes(1)
+    })
+    const errorArg = setError.mock.calls[0][0]
+    expect(errorArg).toBeInstanceOf(Error)
+    expect(errorArg.message).toMatch(/Failed to load script from/)
   })
 
   it("settles a pending load on cleanup without treating it as an error", async () => {

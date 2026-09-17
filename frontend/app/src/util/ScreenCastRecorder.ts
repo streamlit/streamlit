@@ -116,6 +116,9 @@ class ScreenCastRecorder {
       LOG.warn(`mediaRecorder.start threw an error: ${String(e)}`)
     }
 
+    // `{ once: true }` matches start()-once-per-instance: the callback stops
+    // recording, so later errors are irrelevant and a retry would otherwise
+    // stack listeners (unlike the old onerror assignment).
     this.mediaRecorder.addEventListener(
       "error",
       (e: Event): void => {

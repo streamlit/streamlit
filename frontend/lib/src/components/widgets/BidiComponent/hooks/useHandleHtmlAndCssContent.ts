@@ -126,6 +126,8 @@ export const useHandleHtmlAndCssContent = ({
       return
     }
 
+    // Abort the CSS error listener on cleanup so a stale stylesheet cannot
+    // call `setError` after this effect has been replaced.
     const controller = new AbortController()
     const handleCssLoadError = (): void => {
       handleError(

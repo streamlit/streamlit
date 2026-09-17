@@ -81,9 +81,8 @@ function stubImageLoad(mode: "load" | "error"): void {
       this.listeners.set(type, existing)
     }
     set src(_value: string) {
-      const type = mode === "load" ? "load" : "error"
-      const event = new Event(type)
-      this.listeners.get(type)?.forEach(listener => listener(event))
+      const event = new Event(mode)
+      this.listeners.get(mode)?.forEach(listener => listener(event))
     }
   }
   vi.stubGlobal("Image", MockImage)
