@@ -151,9 +151,7 @@ if len(term) >= 2:
         params={"term": like_term(term)},
         ttl=60,
     )["customer"]
-    customer = st.pills(
-        "Matches", matches, wrap=False, label_visibility="collapsed"
-    )
+    customer = st.pills("Matches", matches, wrap=False, label_visibility="collapsed")
 ```
 
 - `live="300ms"` sends the value to Python after a 300 ms pause. Pills keep the
