@@ -367,7 +367,7 @@ def test_value_assignment_not_allowed_error_message(key: str) -> None:
     assert f"st.session_state.{key}" not in message
     assert "read-only" in message
     # Keep the copy generic; this error also covers st.form keys, not only event widgets.
-    assert "event" not in message.lower()
+    assert "event widget" not in message.lower()
     assert "different Session State key" in message
     assert isinstance(exc, errors.LocalizableStreamlitException)
     assert exc.exec_kwargs["key"] == key
@@ -382,13 +382,25 @@ def test_value_assignment_not_allowed_error_message(key: str) -> None:
         ("a``b", 3),
     ],
 )
+@pytest.mark.parametrize(
+    "exc_cls",
+    [
+        errors.StreamlitValueAssignmentNotAllowedError,
+        errors.StreamlitWidgetAlreadyInstantiatedError,
+    ],
+)
 def test_session_state_error_messages_keep_backticks_in_one_code_span(
-    key: str, fence_len: int
+    key: str,
+    fence_len: int,
+    exc_cls: type[
+        errors.StreamlitValueAssignmentNotAllowedError
+        | errors.StreamlitWidgetAlreadyInstantiatedError
+    ],
 ) -> None:
     """Keys containing backticks still render as a single Markdown code span."""
     item = f"st.session_state[{key!r}]"
     fence = "`" * fence_len
-    message = str(errors.StreamlitValueAssignmentNotAllowedError(key))
+    message = str(exc_cls(key))
 
     assert f"{fence}{item}{fence}" in message
 

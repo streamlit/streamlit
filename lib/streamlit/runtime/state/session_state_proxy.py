@@ -86,14 +86,16 @@ class SessionStateProxy(MutableMapping[Key, Any]):
     instantiated). Assigning after the widget is created on the same run
     raises ``StreamlitWidgetAlreadyInstantiatedError``.
 
-    Some widgets are read-only in Session State (buttons and other
-    event widgets, file and media inputs, ``st.data_editor``, ``st.form``
-    keys, and chart or ``ButtonColumn`` selections). Creating one after
-    assigning to its key raises ``StreamlitValueAssignmentNotAllowedError``.
-    Store values you need to set in a different Session State key.
+    Some widgets are read-only in Session State (buttons and button-like
+    triggers, file and media inputs, ``st.data_editor``, ``st.form`` keys,
+    and chart or ``ButtonColumn`` selections). Creating one after assigning
+    to its key raises ``StreamlitValueAssignmentNotAllowedError``. Store
+    values you need to set in a different Session State key.
 
     Examples
     --------
+    **Example 1: Initialize and update a value**
+
     >>> import streamlit as st
     >>>
     >>> st.session_state.setdefault("count", 0)
@@ -101,14 +103,14 @@ class SessionStateProxy(MutableMapping[Key, Any]):
     ...     st.session_state.count += 1
     >>> st.write(st.session_state.count)
 
-    Set a widget's value before creating it:
+    **Example 2: Set a widget's value before creating it**
 
     >>> import streamlit as st
     >>>
     >>> st.session_state.setdefault("volume", 50)
     >>> st.slider("Volume", 0, 100, key="volume")
 
-    Store button-driven state in a separate key:
+    **Example 3: Store button-driven state in a separate key**
 
     >>> import streamlit as st
     >>>

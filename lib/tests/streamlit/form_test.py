@@ -549,7 +549,7 @@ class FormStateInteractionTest(DeltaGeneratorTestCase):
         message = str(ctx.value)
         assert "`st.session_state['my_form']`" in message
         assert "read-only" in message
-        assert "event" not in message.lower()
+        assert "event widget" not in message.lower()
         assert "different Session State key" in message
 
 

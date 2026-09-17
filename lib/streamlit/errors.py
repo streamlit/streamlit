@@ -606,7 +606,11 @@ def _markdown_code_span(text: str) -> str:
 
 
 def _session_state_item(key: str) -> str:
-    """Format ``key`` as bracket access so non-identifier keys stay valid Python."""
+    """Format ``key`` as bracket access so non-identifier keys stay valid Python.
+
+    The result is already a Markdown code span; interpolate it without adding
+    backticks.
+    """
     return _markdown_code_span(f"st.session_state[{key!r}]")
 
 

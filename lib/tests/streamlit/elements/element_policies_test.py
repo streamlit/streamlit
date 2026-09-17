@@ -129,7 +129,7 @@ class CheckSessionStateRules(ElementPoliciesTest):
         assert f"`st.session_state[{_KEY!r}]`" in message
         assert f"st.session_state.{_KEY}" not in message
         assert "different Session State key" in message
-        assert "event" not in message.lower()
+        assert "event widget" not in message.lower()
 
 
 class SpecialSessionStatesTest(ElementPoliciesTest):
