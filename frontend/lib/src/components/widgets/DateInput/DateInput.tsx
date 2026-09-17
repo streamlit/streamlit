@@ -42,8 +42,8 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   calendarDateToIso,
   createDateErrorMessage,
-  DateValidationErrorType,
   datesEqual,
+  DateValidationErrorType,
   formatCalendarDate,
   getFocusedDateFallback,
   getInitialFocusedDate,
