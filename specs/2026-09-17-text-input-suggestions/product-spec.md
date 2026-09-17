@@ -109,9 +109,11 @@ All of the following applies only when `autocomplete` is a callable.
   tech spec). An over-long suggestion is dropped rather than shortened — offering a trimmed
   string would let the user commit something the source never returned.
 - **Choosing a suggestion:** click one, or highlight it with ↑/↓ and press Enter or Tab.
-  Opening the list highlights nothing, so until the user arrows to a row (or hovers one) Enter
-  and Tab do exactly what they do today — a search field must never silently turn "Enter to
-  search" into "accept the first hint". Choosing fills the field and **commits** the value —
+  Opening the list highlights nothing, and only ↑/↓ arms a row for Enter or Tab (hovering
+  highlights visually but doesn't arm it, and pointer selection is a click). So until the user
+  arrows, Enter and Tab do exactly what they do today — a search field must never silently turn
+  "Enter to search" into "accept the first hint". Choosing fills the field and **commits** the
+  value —
   the same commit that typing the value and blurring performs, not a replayed Enter keystroke.
   So outside a form it reruns the app in the widget's normal scope and fires `on_change`;
   inside a form it fills and stages the value without submitting; with `on_change="ignore"` it
@@ -157,7 +159,9 @@ for the headline use case.
 **Caching works, and is the main way to make an expensive source cheap.** A function decorated
 with `@st.cache_data` or `@st.cache_resource` can be called normally, so a repeated prefix
 doesn't re-hit the database, and `@st.cache_resource` is the natural place to keep the
-connection or client. This is not a special case: `st.cache_data(refresh_mode="background")`
+connection or client — a thread-safe one or a connection pool, since a cached resource is
+shared and lookups can run concurrently. This is not a special case:
+`st.cache_data(refresh_mode="background")`
 already recomputes cached functions off the script thread the same way. The one limitation is
 `scope="session"`, which needs a session to resolve and raises when there isn't one — the
 lookup then fails closed to an empty dropdown. Use the default `scope="global"`.
@@ -242,9 +246,9 @@ browser doesn't know which substring to emphasize (unlike selectbox's client-sid
 | --- | --- |
 | `live` | Independent: `live` controls when a committed value reruns the app, `autocomplete` controls the hint dropdown, and each has its own debounce. Choosing a suggestion is a commit, so it follows the widget's normal rerun rules. |
 | `on_change`, `on_change="ignore"` | Unchanged, and only ever triggered by a commit. Showing suggestions never fires `on_change`; with `"ignore"`, a chosen suggestion is staged without a rerun. |
-| `st.form` | The dropdown works and a selection fills the field, but as with every form widget the value only reaches the server on submit, and selecting doesn't submit. A source that depends on another field in the same form sees that field's value from the last run, since forms don't rerun until submit. |
+| `st.form` | The dropdown works and a selection fills the field, but as with every form widget the *widget value* only reaches the script on submit, and selecting doesn't submit. The typed text does still reach the suggestion source on every debounce — suggestions are a server lookup, not a local filter, inside a form as anywhere else. A source that depends on another field in the same form sees that field's value from the last run, since forms don't rerun until submit. |
 | `validate`, `required` | Unchanged, applied at commit time. A chosen suggestion is validated like a typed one. |
-| `type` | `"default"` and `"search"` are the natural fits; `"email"`, `"url"`, and `"tel"` are allowed too, at the cost of the browser's own autofill for that field. `type="password"` raises `StreamlitIncompatibleParametersError` — proposing or persisting secrets in a dropdown is a footgun. (A *string* `autocomplete` with `type="password"`, e.g. `"new-password"`, is unaffected.) |
+| `type` | `"default"` and `"search"` are the natural fits; `"email"`, `"url"`, and `"phone"` are allowed too, at the cost of the browser's own autofill for that field. `type="password"` raises `StreamlitIncompatibleParametersError` — proposing or persisting secrets in a dropdown is a footgun. (A *string* `autocomplete` with `type="password"`, e.g. `"new-password"`, is unaffected.) |
 | `bind="query-params"` | Unchanged; a committed suggestion syncs to the URL like any committed value. |
 | `max_chars` | Enforced on input as today, so the function only ever sees within-limit text, and suggestions longer than the limit are dropped rather than shortened (see the dropdown bullet above). |
 | `disabled` | No suggestions are requested. |

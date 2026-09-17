@@ -48,8 +48,7 @@ currently consumed in two places — the widget-identity hash and the proto's na
 `autocomplete` string field — and both must be adjusted:
 
 ```python
-source_mgr = _get_autocomplete_source_mgr()  # None without a runtime, as in arrow.py
-if callable(autocomplete) and source_mgr is not None:
+if callable(autocomplete):
     # Backend suggestion mode.
     if type == "password":
         raise StreamlitIncompatibleParametersError(
@@ -57,13 +56,19 @@ if callable(autocomplete) and source_mgr is not None:
             "type='password'",
             explanation="Password suggestions must not appear in a dropdown.",
         )
-    registered = source_mgr.register_source(
-        autocomplete, coordinates=self.dg._get_delta_path_str(), max_chars=max_chars
-    )
-    text_input_proto.autocomplete_source_id = registered.source_id
     # Our dropdown replaces the browser's autofill, so suppress the native one.
     autocomplete_token = _AUTOFILL_SUPPRESSED_TOKEN
     autocomplete_identity = _AUTOCOMPLETE_IDENTITY_SENTINEL  # stable, not the callable
+    # None without a runtime, as in arrow.py: the field still renders, just
+    # without a registered source, so no suggestions are requested.
+    source_mgr = _get_autocomplete_source_mgr()
+    if source_mgr is not None:
+        registered = source_mgr.register_source(
+            autocomplete,
+            coordinates=self.dg._get_delta_path_str(),
+            max_chars=max_chars,
+        )
+        text_input_proto.autocomplete_source_id = registered.source_id
 else:
     # Existing behavior: None -> type default token; str -> explicit token.
     autocomplete_token = (
@@ -73,8 +78,11 @@ else:
 ```
 
 - **No runtime, no suggestions.** A bare `python app.py` run has no `Runtime` and no frontend to
-  serve lookups, so `_get_autocomplete_source_mgr()` returns `None` and the widget degrades to a
-  plain text input — the same guard and fallback `arrow.py` uses for lazy dataframes.
+  serve lookups, so `_get_autocomplete_source_mgr()` returns `None` and the field renders with
+  no registered source — the same guard and fallback `arrow.py` uses for lazy dataframes. Note
+  the branch is on `callable(autocomplete)` alone: a missing manager skips registration only,
+  and the parameter validation, sentinel identity, and autofill token still apply, so the
+  widget behaves identically either way apart from the absent dropdown.
 - **Widget identity:** pass `autocomplete=autocomplete_identity` to
   `compute_and_register_element_id(...)`, never the callable itself, which isn't in
   `SAFE_VALUES` and whose per-run representation would reset an unkeyed widget on every rerun.
@@ -194,6 +202,17 @@ class AutocompleteSourceManager:
   per-run id would force on §6 is needed. This is the one deliberate departure from the
   dataframe skeleton: the id assignment has to outlive the per-rerun reference map that drives
   cleanup, so it lives in its own map and is dropped when the source itself is pruned.
+
+  **The accepted cost is one round trip of stale hints when the callable changes.** If a rerun
+  swaps the bound context (the `functools.partial(..., category=...)` pattern) while a lookup is
+  in flight, the old closure's result still matches the id and text, so the dropdown can show
+  the previous category's suggestions until the next lookup replaces them. That is bounded and
+  cosmetic: hints are proposals, free text is always allowed, and choosing a visible row is
+  equivalent to typing that string, which still passes `max_chars` / `validate` / `required` at
+  commit. Distinguishing the two would mean carrying a registration generation through the
+  request and response — the rotation machinery under another name — so it is deliberately not
+  specified here. If review disagrees, adding that generation is the remedy, and it is where
+  this decision should be revisited.
 - **`get_suggestions`** resolves `source_id` for `session_id`, then bounds its inputs and
   outputs around the call. Distinguish two lookup failures, because they are not equally
   exceptional:
@@ -218,9 +237,10 @@ class AutocompleteSourceManager:
   - **One return-value contract, checked in a single bounded pass.** A bare `str` is itself a
     `Sequence[str]`, so accepting one would silently turn `"apple"` into five one-character
     suggestions; reject it up front, along with any other unexpected type, instead of showing a
-    partial list. Then walk at most N+1 items (N ≈ 50) rather than materializing the result:
-    `list(result)[:N]` would pull a 100k-row Series, a generator, or an open cursor fully into
-    memory before the cap ever applies.
+    partial list. Then walk at most N+1 items (N ≈ 50) rather than materializing the result.
+    The annotation says `Sequence[str]`, but an annotation is documentation, not enforcement —
+    at runtime the source returns whatever the app returns, so the walk has to be bounded to
+    stay safe against a lazy or enormous result rather than trusting `list(result)[:N]`.
   - **Length caps drop, never rewrite.** Drop any suggestion longer than an absolute per-item
     ceiling, which `max_chars` can again only tighten, and bound the encoded response as a
     whole — a `BackendOperationResponse` over `server.maxMessageSize` is rewritten into an
@@ -306,12 +326,12 @@ serialization code, while this one runs an arbitrary user callable that may neve
   permits are released by that worker in its own `finally`, not by the coroutine that stopped
   waiting, so a timed-out call keeps occupying its capacity while it runs. Otherwise a
   modified client could vary `text` to defeat coalescing and stack up unbounded hung calls.
-- **Admission is all-or-nothing.** Acquiring one permit and failing to get the other must
-  release what was already taken — no worker runs in that case, so nothing else will. Without
-  that, ordinary contention would leak a permit per failed admission and permanently disable
-  suggestions. Acquire both under one guard that unwinds on any failure, including a failure
-  to submit, and raise `_NoCapacityError` so the handler fails closed immediately rather than
-  queueing more work.
+- **Admission is all-or-nothing across all three permits and the `submit()`.** Acquiring some
+  and failing on another must release everything already taken — no worker runs in that case,
+  so nothing else will release them. Without that, ordinary contention would leak a permit per
+  failed admission and permanently disable suggestions. Acquire under one guard that unwinds on
+  any failure, including a failure to submit, and raise `_NoCapacityError` so the handler fails
+  closed immediately rather than queueing more work.
 - **The permits must be thread-safe primitives.** Because the worker releases them from its own
   thread, they cannot be the `asyncio.Semaphore` that `DataframeChunkHandler` uses — asyncio
   primitives are not thread-safe. Use `threading.BoundedSemaphore` (bounded so a double release
@@ -348,14 +368,24 @@ serialization code, while this one runs an arbitrary user callable that may neve
   lands in the generic fail-closed branch, so the log line must name the cause: a
   session-scoped cache is the most likely way an otherwise working source starts silently
   returning nothing, and a bare "error computing suggestions" would send the developer hunting.
-- **Session state and `st.*` display commands must raise on the worker**, failing closed
-  through the same branch. This needs pinning because the default is worse than an error:
-  without a script run context `get_session_state()` resolves to the process-global mock in
-  `session_state_proxy.py` that every session shares, so a write leaks across users and a later
-  read can observe it. Raise the way `session-scoped-cache-outside-app-thread` already does.
-  Do **not** attach a `ScriptRunContext` to the worker to make these calls "work" — the
-  callable runs outside a script run by design, and the values it needs are bound at
-  registration time.
+- **`st.*` display commands already fail** on the worker: `enqueue_message()` raises
+  `NoSessionContext` without a script run context, which lands in the fail-closed branch. No new
+  behavior is needed, and none should be added — do **not** attach a `ScriptRunContext` to the
+  worker to make these calls "work". The callable runs outside a script run by design, and the
+  values it needs are bound at registration time.
+- **Session state must raise on the worker, and that needs a new marker.** The default is worse
+  than an error: without a script run context `get_session_state()` returns the process-global
+  mock in `session_state_proxy.py` that every session shares, so a write leaks across users and
+  a later read can observe it. The `session-scoped-cache-outside-app-thread` precedent does not
+  transfer — that fires only when a caller asks for a session id, not on state access — and
+  making *every* context-less access raise would break `python app.py`, where the mock is the
+  supported behavior. So the requirement is narrower than "raise when there's no context": the
+  proxy must be able to tell it is running inside a suggestion lookup specifically. A
+  worker-scoped marker set around `func(text)` and cleared in `finally` (a `contextvars.ContextVar`
+  is the obvious shape) satisfies that without touching bare-script behavior. #16303's `validate`
+  callable needs the same marker, so whichever lands first should own it. Probe the context with
+  `suppress_warning=True` so a lookup per keystroke doesn't fill the log with missing-context
+  warnings.
 
 > **Implementation note.** None of this bounded-execution machinery is suggestion-specific, and
 > #16303's `validate` callable has exactly the same hang risk. If both land, prefer lifting the
