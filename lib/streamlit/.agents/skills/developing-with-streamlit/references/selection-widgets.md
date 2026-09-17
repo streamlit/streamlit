@@ -151,14 +151,14 @@ if len(term) >= 2:
         params={"term": like_term(term)},
         ttl=60,
     )["customer"]
-    customer = st.selectbox(
-        "Matches", matches, index=None, label_visibility="collapsed"
+    customer = st.pills(
+        "Matches", matches, wrap=False, label_visibility="collapsed"
     )
 ```
 
-- `live="300ms"` sends the value to Python after a 300 ms pause, and
-  `index=None` keeps the first match from applying itself before the user
-  picks.
+- `live="300ms"` sends the value to Python after a 300 ms pause. Pills keep the
+  matches on screen, so picking one is a single click, and `wrap=False` holds
+  them in one scrollable row instead of a block.
 - Keep the `limit`: it bounds the message, and the database can stop early when
   the plan already produces that order. Whether an index can serve the `like`
   depends on the backend, collation, and pattern, so check the plan.
