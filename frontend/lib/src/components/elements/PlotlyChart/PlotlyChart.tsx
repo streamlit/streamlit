@@ -69,6 +69,11 @@ const RESET_SELECTION_TIMEOUT_MS = 50
 // Default height for Plotly charts when no height is specified
 const DEFAULT_PLOTLY_HEIGHT = 450
 
+/**
+ * Restore Streamlit-owned click/hover modes after sanitizing a live figure.
+ * Plotly's first react can report different clickmode/hovermode than the
+ * selection-mode effect has applied on React state.
+ */
 function applyOwnedClickHover(
   layout: Partial<Plotly.Layout>,
   owned: Partial<Plotly.Layout>
@@ -83,6 +88,11 @@ function applyOwnedClickHover(
   return next
 }
 
+/**
+ * Restore Streamlit-owned selection dragmode in addition to click/hover.
+ * Used so `onInitialized` does not persist Plotly's default `dragmode: "zoom"`
+ * over box/lasso `select` / `lasso`.
+ */
 function applyOwnedSelectionModes(
   layout: Partial<Plotly.Layout>,
   owned: Partial<Plotly.Layout>
@@ -92,6 +102,25 @@ function applyOwnedSelectionModes(
     next.dragmode = owned.dragmode
   }
   return next
+}
+
+/**
+ * Build a replacement layout from the last sanitizer snapshot so theme,
+ * clickmode, and selection-reset effects do not copy Plotly's live
+ * computed domain/margin into React state.
+ */
+function layoutFromOwnedSnapshot(
+  prevLayout: Partial<Plotly.Layout>,
+  snapshot: Partial<Plotly.Layout> | undefined,
+  overlay: Partial<Plotly.Layout>
+): Partial<Plotly.Layout> {
+  return {
+    ...(snapshot ?? prevLayout),
+    width: prevLayout.width,
+    height: prevLayout.height,
+    autosize: prevLayout.autosize,
+    ...overlay,
+  }
 }
 
 // Custom icon used in the fullscreen expand toolbar button:
@@ -167,17 +196,25 @@ export function PlotlyChart({
       element.id,
       "figure"
     )
-    const ownedSize = {
-      width: width === -1 ? undefined : Math.max(width, MIN_WIDTH),
-      height:
-        chartContainerHeight > 0
-          ? chartContainerHeight
-          : DEFAULT_PLOTLY_HEIGHT,
-    }
+    const ownedHeight =
+      chartContainerHeight > 0 ? chartContainerHeight : DEFAULT_PLOTLY_HEIGHT
     if (initialFigureState) {
+      const recovered = migratePlotlyMapboxFigure(initialFigureState)
+      // Pass recovered layout as previousLayout so authored constrained
+      // subplot domains are not stripped. Keep saved width when the
+      // container has not been measured yet (tabs: width === -1).
       return sanitizePlotlyFigureForReact(
-        migratePlotlyMapboxFigure(initialFigureState),
-        ownedSize
+        recovered,
+        {
+          width:
+            width === -1
+              ? typeof recovered.layout?.width === "number"
+                ? recovered.layout.width
+                : undefined
+              : Math.max(width, MIN_WIDTH),
+          height: ownedHeight,
+        },
+        recovered.layout
       )
     }
     return applyTheming(initialFigureSpec, element.theme, theme)
@@ -287,7 +324,36 @@ export function PlotlyChart({
   useEffect(() => {
     // If the theme changes, we need to reapply the theming to the figure
     setPlotlyFigure((prevState: PlotlyFigureType) => {
-      return applyTheming(prevState, element.theme, theme)
+      const snapshot = lastSanitizedLayoutRef.current
+      const themed = applyTheming(
+        snapshot === undefined
+          ? prevState
+          : { ...prevState, layout: snapshot },
+        element.theme,
+        theme
+      )
+      if (themed === prevState) {
+        return prevState
+      }
+      if (snapshot !== undefined) {
+        lastSanitizedLayoutRef.current = {
+          ...snapshot,
+          template: themed.layout.template,
+          paper_bgcolor: themed.layout.paper_bgcolor,
+          plot_bgcolor: themed.layout.plot_bgcolor,
+          font: themed.layout.font,
+          colorway: themed.layout.colorway,
+        }
+      }
+      return {
+        ...themed,
+        layout: {
+          ...themed.layout,
+          width: prevState.layout.width,
+          height: prevState.layout.height,
+          autosize: prevState.layout.autosize,
+        },
+      }
     })
   }, [element.id, theme, element.theme])
 
@@ -349,14 +415,27 @@ export function PlotlyChart({
         return prevState
       }
 
-      return {
-        ...prevState,
-        layout: {
-          ...prevState.layout,
+      const nextLayout = layoutFromOwnedSnapshot(
+        prevState.layout,
+        lastSanitizedLayoutRef.current,
+        {
           clickmode: updatedClickMode,
           hovermode: updatedHoverMode,
           dragmode: updatedDragMode,
-        },
+        }
+      )
+      const snapshot = lastSanitizedLayoutRef.current
+      if (snapshot !== undefined) {
+        lastSanitizedLayoutRef.current = {
+          ...snapshot,
+          clickmode: updatedClickMode,
+          hovermode: updatedHoverMode,
+          dragmode: updatedDragMode,
+        }
+      }
+      return {
+        ...prevState,
+        layout: nextLayout,
       }
     })
     // We want to reload these options whenever the element id changes
@@ -483,15 +562,11 @@ export function PlotlyChart({
       { updateReactState }: { updateReactState: boolean }
     ): void => {
       const previousFigure = plotlyFigureRef.current
-      // Once `assignLayoutInPlace` has run, `figure.layout` is `gd.layout`
-      // and the same object as React state. Overlay from the last sanitized
-      // copy so computed domain/margin are not treated as owned, and keep
-      // React-owned clickmode/hovermode/dragmode from current state.
-      const layoutIsAliased = figure.layout === previousFigure.layout
+      // Always overlay from the last sanitizer snapshot when it exists.
+      // Selection/theme effects can replace React layout with a new object
+      // that still carries live computed domain; alias checks miss that.
       const previousLayout = applyOwnedSelectionModes(
-        layoutIsAliased && lastSanitizedLayoutRef.current
-          ? lastSanitizedLayoutRef.current
-          : previousFigure.layout,
+        lastSanitizedLayoutRef.current ?? previousFigure.layout,
         previousFigure.layout
       )
       const sanitized = sanitizePlotlyFigureForReact(
@@ -605,10 +680,11 @@ export function PlotlyChart({
               selectedpoints: null,
             }
           }),
-          layout: {
-            ...prevFigure.layout,
-            selections: [],
-          },
+          layout: layoutFromOwnedSnapshot(
+            prevFigure.layout,
+            lastSanitizedLayoutRef.current,
+            { selections: [] }
+          ),
         }
       })
     },
@@ -687,12 +763,18 @@ export function PlotlyChart({
 
     if (plotlyFigure.layout?.clickmode !== clickmode) {
       setPlotlyFigure((prevFigure: PlotlyFigureType) => {
+        const snapshot = lastSanitizedLayoutRef.current
+        if (snapshot !== undefined) {
+          lastSanitizedLayoutRef.current = {
+            ...snapshot,
+            clickmode,
+          }
+        }
         return {
           ...prevFigure,
-          layout: {
-            ...prevFigure.layout,
-            clickmode: clickmode,
-          },
+          layout: layoutFromOwnedSnapshot(prevFigure.layout, snapshot, {
+            clickmode,
+          }),
         }
       })
     }

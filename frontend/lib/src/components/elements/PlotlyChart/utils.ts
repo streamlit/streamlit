@@ -270,7 +270,7 @@ function axisRangeValuesDiffer(a: unknown, b: unknown): boolean {
   })
 }
 
-function shouldAdoptNumericArray(previous: unknown, next: unknown): boolean {
+function shouldAdoptAxisRange(previous: unknown, next: unknown): boolean {
   if (next === undefined) {
     return false
   }
@@ -278,6 +278,12 @@ function shouldAdoptNumericArray(previous: unknown, next: unknown): boolean {
     return true
   }
   return axisRangeValuesDiffer(previous, next)
+}
+
+function isFullAutorangeReset(autorange: unknown): boolean {
+  // Only these values autorange both ends. `"min"` / `"max"` /
+  // `"min reversed"` / `"max reversed"` keep the fixed endpoint in `range`.
+  return autorange === true || autorange === "reversed"
 }
 
 function sanitizeSelections(selections: unknown): unknown {
@@ -326,14 +332,19 @@ function overlayCartesianAxisInteraction(
       ? { ...nextLayout[key] }
       : {}
     // Plotly autorange is not boolean-only (`"reversed"` on px.imshow, …).
-    if (sourceAxis.autorange !== undefined && sourceAxis.autorange !== false) {
+    // Full resets drop `range`. Partial modes keep the fixed endpoint.
+    if (isFullAutorangeReset(sourceAxis.autorange)) {
       nextAxis.autorange = sourceAxis.autorange
       delete nextAxis.range
-    } else if (shouldAdoptNumericArray(nextAxis.range, sourceAxis.range)) {
-      nextAxis.range = sourceAxis.range
-      nextAxis.autorange = false
-    } else if (sourceAxis.autorange !== undefined) {
-      nextAxis.autorange = sourceAxis.autorange
+    } else {
+      if (sourceAxis.autorange !== undefined) {
+        nextAxis.autorange = sourceAxis.autorange
+      } else if (sourceAxis.range !== undefined) {
+        nextAxis.autorange = false
+      }
+      if (shouldAdoptAxisRange(nextAxis.range, sourceAxis.range)) {
+        nextAxis.range = sourceAxis.range
+      }
     }
     if (sourceAxis.scaleanchor !== undefined) {
       nextAxis.scaleanchor = sourceAxis.scaleanchor
@@ -341,8 +352,8 @@ function overlayCartesianAxisInteraction(
     if (sourceAxis.constrain !== undefined) {
       nextAxis.constrain = sourceAxis.constrain
     }
-    // Never copy live `domain`. Only strip on remount recovery, so authored
-    // facet / subplot domains on `previousLayout` are kept.
+    // Never copy live `domain`. Only strip when there is no owned previous
+    // layout, so authored facet / subplot domains are kept on remount.
     if (stripConstrainedDomain && isConstrainedCartesianAxis(nextAxis)) {
       delete nextAxis.domain
     }
@@ -422,8 +433,10 @@ type PlotlyFigureLike = {
  * view, slider/updatemenu index, and `config.editable` annotation/shape
  * edits. Spreading Plotly's live layout would copy constraint-computed
  * `domain` (and other internals) and, because react-plotly.js compares
- * `layout` by reference, retrigger `Plotly.react` in a loop. When omitted
- * (remount recovery), start from the saved figure.
+ * `layout` by reference, retrigger `Plotly.react` in a loop. When omitted,
+ * start from the saved figure and strip computed constrained-axis `domain`.
+ * Remount recovery should pass the recovered layout as `previousLayout` so
+ * authored subplot domains are kept.
  *
  * Plotly's live `figure.layout` is mutated in place; this always returns a
  * new layout (and copied axis objects) and leaves `data` shared.
@@ -438,7 +451,7 @@ type PlotlyFigureLike = {
  * @param previousLayout - Last sanitized React-owned layout. When provided,
  *   restore its `margin` — including no layout-level margin, so
  *   template/theme margin is used instead of Plotly automargin output. When
- *   omitted (remount recovery), keep the figure's margin.
+ *   omitted, keep the figure's margin and strip constrained-axis `domain`.
  * @returns A shallow-copied figure safe to pass back to `Plot`
  */
 export function sanitizePlotlyFigureForReact(
