@@ -259,6 +259,18 @@ class ScriptRequestsTest(unittest.TestCase):
         assert reqs._rerun_data.fragment_id_queue == ["frag_a", "frag_b"]
         assert reqs._rerun_data.is_fragment_scoped_rerun is True
 
+    def test_union_keeps_history_navigation_when_either_rerun_is_history(self):
+        """Coalescing keeps history navigation if either request was popstate."""
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData(is_history_navigation=True))
+        reqs.request_rerun(RerunData())
+        assert reqs._rerun_data.is_history_navigation is True
+
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData())
+        reqs.request_rerun(RerunData(is_history_navigation=True))
+        assert reqs._rerun_data.is_history_navigation is True
+
     def test_full_app_clears_pending_fragment_scoped_rerun(self):
         """A full-app rerun drops a pending fragment-scoped rerun's scope and queue."""
         reqs = ScriptRequests()

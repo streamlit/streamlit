@@ -1280,9 +1280,8 @@ export class App extends PureComponent<Props, State> {
     // identical, so reruns that re-assign the same query params would otherwise
     // fill the back stack with no-op entries. React state and the host message
     // below are still updated so embeds stay in sync.
-    const historyNavigationRerun = this.historyNavigationRerunPending
     if (queryString !== currentSearch) {
-      if (historyNavigationRerun) {
+      if (this.historyNavigationRerunPending) {
         // PageInfo can arrive in multiple messages during one history rerun.
         // replaceState keeps the address bar and host query params aligned
         // without polluting the back stack.
@@ -1873,6 +1872,9 @@ export class App extends PureComponent<Props, State> {
       document.location.pathname
     )
 
+    // Before Navigation metadata arrives, findPageByUrlPath returns null.
+    // Fall back to the current page hash so query-only back/forward still reruns
+    // instead of being ignored as unknown-page navigation.
     const pageScriptHash =
       targetAppPage?.pageScriptHash ?? currentPageScriptHash
     if (!pageScriptHash) {
@@ -2013,7 +2015,12 @@ export class App extends PureComponent<Props, State> {
       scriptRunFinishedFragmentIds: prevState.fragmentIdsThisRun,
     }))
 
-    this.historyNavigationRerunPending = false
+    // Only clear the pending history rerun when this finish belongs to the
+    // latest frontend-requested run. Stale finishes from interrupted or
+    // in-flight runs must not re-arm pushState for the current popstate rerun.
+    if (this.hasReceivedNewSession) {
+      this.historyNavigationRerunPending = false
+    }
 
     if (
       status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||

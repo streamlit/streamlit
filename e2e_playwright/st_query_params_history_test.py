@@ -22,6 +22,7 @@ from e2e_playwright.shared.app_utils import (
     click_checkbox,
     expect_prefixed_markdown,
     goto_app,
+    select_radio_option,
 )
 
 
@@ -94,19 +95,6 @@ def test_same_page_query_params_sync_on_browser_back_forward(
     expect_prefixed_markdown(app, "Query params:", "{'value': '2'}", exact_match=True)
 
 
-def _push_history_and_popstate(page: Page, query: dict[str, str]) -> None:
-    """Push a history entry and fire popstate within the current SPA session."""
-    query_string = "&".join(f"{k}={v}" for k, v in query.items())
-    page.evaluate(
-        """(qs) => {
-          const url = window.location.pathname + (qs ? `?${qs}` : '');
-          window.history.pushState({}, '', url);
-          window.dispatchEvent(new PopStateEvent('popstate'));
-        }""",
-        query_string,
-    )
-
-
 def test_bound_widget_follows_url_on_browser_back(app: Page, app_base_url: str) -> None:
     """bind=query-params widgets follow the URL after browser back.
 
@@ -119,7 +107,10 @@ def test_bound_widget_follows_url_on_browser_back(app: Page, app_base_url: str) 
     expect(app).to_have_url(re.compile(r"[?&]number=3(?:&|$)"))
     expect_prefixed_markdown(app, "Selected:", "3", exact_match=True)
 
-    _push_history_and_popstate(app, {"number": "5"})
+    click_button(app, "Increment Query Param")
+    wait_for_app_run(app)
+
+    select_radio_option(app, "5", label="Number")
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Selected:", "5", exact_match=True)

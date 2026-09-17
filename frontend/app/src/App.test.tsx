@@ -2123,7 +2123,7 @@ describe("App", () => {
       })
     })
 
-    it("replaceStates during pending history reruns and pushStates after they finish", async () => {
+    it("uses replaceState during a pending history rerun and pushState afterwards", async () => {
       renderApp(getProps())
 
       sendForwardMessage("newSession", {
@@ -2144,6 +2144,11 @@ describe("App", () => {
       pushStateSpy.mockClear()
       replaceStateSpy.mockClear()
 
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      )
+
       sendForwardMessage("pageInfoChanged", {
         queryString: "",
       })
@@ -2157,6 +2162,11 @@ describe("App", () => {
 
       expect(replaceStateSpy).toHaveBeenLastCalledWith({}, "", "/?second=1")
       expect(pushStateSpy).not.toHaveBeenCalled()
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
 
       sendForwardMessage(
         "scriptFinished",

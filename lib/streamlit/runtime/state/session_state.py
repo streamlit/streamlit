@@ -1600,10 +1600,10 @@ class SessionState:
             self._set_key_widget_mapping(widget_id, user_key)
 
         # Handle query param binding
-        url_value_seeded = False
+        url_binding_resolved = False
         if metadata.bind == "query-params" and user_key is not None:
             self._query_param_bound_widget_ids.add(widget_id)
-            url_value_seeded = self._handle_query_param_binding(
+            url_binding_resolved = self._handle_query_param_binding(
                 metadata, user_key, widget_id
             )
         elif metadata.bind is None and user_key is not None:
@@ -1636,7 +1636,7 @@ class SessionState:
         # frontend value and must be dropped, so resolution falls back to the
         # widget's previous value (or its default on first registration).
         # URL-seeded values are exempt: they populate widget state legitimately
-        # for bound widgets (url_value_seeded). A programmatic st.session_state
+        # for bound widgets (url_binding_resolved). A programmatic st.session_state
         # assignment lives in _new_session_state and still wins during
         # resolution, so dropping the forged widget-state entry never affects it
         # while preventing the forged value from lingering there until compaction.
@@ -1644,7 +1644,7 @@ class SessionState:
         if (
             metadata.disabled
             and widget_id in self._new_widget_state
-            and not url_value_seeded
+            and not url_binding_resolved
         ):
             del self._new_widget_state[widget_id]
             # The captured wire label belongs to the dropped frontend value, so
@@ -1661,7 +1661,7 @@ class SessionState:
         if (
             widget_id not in self
             and (user_key is None or user_key not in self)
-            and not url_value_seeded
+            and not url_binding_resolved
         ):
             # This is the first time the widget is registered, so we save its
             # value in widget state (unless we already seeded from URL).
@@ -1709,7 +1709,7 @@ class SessionState:
                     restored_bound_value = True
                 elif (
                     user_key in self._new_session_state
-                    and not url_value_seeded
+                    and not url_binding_resolved
                     and (widget_id in self._old_state or user_key in self._old_state)
                 ):
                     serialized = metadata.serializer(widget_value)
@@ -1721,7 +1721,7 @@ class SessionState:
                         )
             elif (
                 user_key in self._new_session_state
-                and not url_value_seeded
+                and not url_binding_resolved
                 and self.query_params.has_param(user_key)
                 and (widget_id in self._old_state or user_key in self._old_state)
             ):
@@ -1789,7 +1789,8 @@ class SessionState:
         - URL wins, including when the param is missing or invalid
         - Code-assigned ``st.session_state`` values for this run are overridden
 
-        Returns True if the widget's value was seeded from URL, False otherwise.
+        Returns True if the widget's value was resolved here (seeded from the URL,
+        or reset to the default on history navigation), False otherwise.
         """
         # Register the widget binding
         ctx = get_script_run_ctx()
@@ -1809,8 +1810,10 @@ class SessionState:
         if widget_id in self._new_widget_state and not metadata.disabled:
             if not is_history_navigation:
                 return False
-            # Also drops values preserved on MPA page change, not only the
-            # incoming proto filtered by _omit_query_bound_widget_states.
+            # History navigation must discard preserved widget state so the URL
+            # can seed. Omit only strips the incoming proto; this also drops
+            # values copied into _new_widget_state on MPA page change and
+            # first-time binds.
             del self._new_widget_state[widget_id]
         is_initial_load = widget_id not in self._old_state
         if (
@@ -1822,8 +1825,11 @@ class SessionState:
 
         url_value = self.query_params.get_initial_value(user_key)
         if url_value is None:
-            return self._seed_default_on_history_navigation_failure(
-                metadata, user_key, widget_id, is_history_navigation
+            return self._restore_default_on_history_navigation(
+                metadata,
+                user_key,
+                widget_id,
+                is_history_navigation=is_history_navigation,
             )
 
         return self._seed_widget_from_url(
@@ -1834,14 +1840,15 @@ class SessionState:
             is_history_navigation=is_history_navigation,
         )
 
-    def _seed_default_on_history_navigation_failure(
+    def _restore_default_on_history_navigation(
         self,
         metadata: WidgetMetadata[T],
         user_key: str,
         widget_id: str,
+        *,
         is_history_navigation: bool,
     ) -> bool:
-        """Restore the widget default when history navigation cannot seed from URL."""
+        """Restore the widget default during history navigation."""
         if not is_history_navigation:
             return False
 
@@ -1875,8 +1882,11 @@ class SessionState:
         if is_empty_url_value(url_value) and not metadata.clearable:
             # Widget doesn't allow empty state - clear the invalid param
             self._clear_url_param(user_key)
-            return self._seed_default_on_history_navigation_failure(
-                metadata, user_key, widget_id, is_history_navigation
+            return self._restore_default_on_history_navigation(
+                metadata,
+                user_key,
+                widget_id,
+                is_history_navigation=is_history_navigation,
             )
 
         try:
@@ -1892,8 +1902,11 @@ class SessionState:
             # 3. Valid input that normalized to match the default (e.g., "000000" -> "#000000")
             if deserialized_value == default_value:
                 self._clear_url_param(user_key)
-                return self._seed_default_on_history_navigation_failure(
-                    metadata, user_key, widget_id, is_history_navigation
+                return self._restore_default_on_history_navigation(
+                    metadata,
+                    user_key,
+                    widget_id,
+                    is_history_navigation=is_history_navigation,
                 )
 
             # Handle case where all URL values were invalid (filtered to empty list).
@@ -1905,8 +1918,11 @@ class SessionState:
                 and parsed_value  # Non-empty list means URL had values
             ):
                 self._clear_url_param(user_key)
-                return self._seed_default_on_history_navigation_failure(
-                    metadata, user_key, widget_id, is_history_navigation
+                return self._restore_default_on_history_navigation(
+                    metadata,
+                    user_key,
+                    widget_id,
+                    is_history_navigation=is_history_navigation,
                 )
 
             # For string_value selection widgets (radio, selectbox), validate
@@ -1921,8 +1937,11 @@ class SessionState:
                 and parsed_value not in metadata.formatted_options
             ):
                 self._clear_url_param(user_key)
-                return self._seed_default_on_history_navigation_failure(
-                    metadata, user_key, widget_id, is_history_navigation
+                return self._restore_default_on_history_navigation(
+                    metadata,
+                    user_key,
+                    widget_id,
+                    is_history_navigation=is_history_navigation,
                 )
 
             # For string_array_value widgets (e.g. multiselect, select_slider),
@@ -1940,14 +1959,20 @@ class SessionState:
                 if sanitized is not None:
                     if not sanitized:
                         self._clear_url_param(user_key)
-                        return self._seed_default_on_history_navigation_failure(
-                            metadata, user_key, widget_id, is_history_navigation
+                        return self._restore_default_on_history_navigation(
+                            metadata,
+                            user_key,
+                            widget_id,
+                            is_history_navigation=is_history_navigation,
                         )
                     deserialized_value = metadata.deserializer(sanitized)
                     if deserialized_value == default_value:
                         self._clear_url_param(user_key)
-                        return self._seed_default_on_history_navigation_failure(
-                            metadata, user_key, widget_id, is_history_navigation
+                        return self._restore_default_on_history_navigation(
+                            metadata,
+                            user_key,
+                            widget_id,
+                            is_history_navigation=is_history_navigation,
                         )
 
             # Store the value in widget and session state
@@ -1967,8 +1992,11 @@ class SessionState:
                 e,
             )
             self._clear_url_param(user_key)
-            return self._seed_default_on_history_navigation_failure(
-                metadata, user_key, widget_id, is_history_navigation
+            return self._restore_default_on_history_navigation(
+                metadata,
+                user_key,
+                widget_id,
+                is_history_navigation=is_history_navigation,
             )
 
     def _clear_url_param(self, user_key: str) -> None:

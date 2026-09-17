@@ -3388,6 +3388,7 @@ class OmitQueryBoundWidgetStatesTest(DeltaGeneratorTestCase):
         self.session_state = SessionState()
 
     def test_omit_query_bound_widget_states(self) -> None:
+        """Omit copies bound widget IDs out of the incoming proto and leaves unbound IDs."""
         widget_states = WidgetStatesProto()
         bound = widget_states.widgets.add()
         bound.id = "bound_widget"
