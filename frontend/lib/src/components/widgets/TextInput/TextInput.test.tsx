@@ -2915,7 +2915,7 @@ describe("TextInput autocomplete", () => {
     expect(setStringValueSpy).toHaveBeenCalledTimes(1)
   })
 
-  it("commits a suggestion on pointer down so Firefox still selects after preventDefault", async () => {
+  it("commits a suggestion on pointer up so Firefox still selects after preventDefault", async () => {
     const { user, props } = renderAutocomplete()
     const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
     await user.click(getField())
@@ -2925,10 +2925,10 @@ describe("TextInput autocomplete", () => {
       expect(screen.getByText("apple")).toBeVisible()
     })
     setStringValueSpy.mockClear()
-    await user.pointer({
-      keys: "[MouseLeft>]",
-      target: screen.getByRole("option", { name: "apple" }),
-    })
+    const option = screen.getByRole("option", { name: "apple" })
+    await user.pointer({ keys: "[MouseLeft>]", target: option })
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+    await user.pointer({ keys: "[/MouseLeft]", target: option })
     expect(setStringValueSpy).toHaveBeenCalledTimes(1)
     expect(setStringValueSpy).toHaveBeenCalledWith(props.element.id, "apple", {
       formId: props.element.formId,

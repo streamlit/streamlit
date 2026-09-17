@@ -112,13 +112,24 @@ function SuggestionOption({
   )
   const { hoverProps, isHovered } = useHover({ isDisabled })
 
+  const pointerTypeRef = useRef<string>("mouse")
+
   const handleOptionPointerDown = (
     event: PointerEvent<HTMLLIElement>
   ): void => {
-    // preventDefault keeps focus on the input. Firefox does not fire click
-    // after that, so selection has to happen here rather than onClick.
-    preventFocusLoss(event)
-    if (event.button === 0 && !isDisabled) {
+    pointerTypeRef.current = event.pointerType
+    // Keep focus on the input for mouse. Skip preventDefault for touch/pen
+    // so overflowY:auto lists can still be scrolled.
+    if (event.pointerType === "mouse") {
+      preventFocusLoss(event)
+    }
+  }
+
+  const handleOptionPointerUp = (event: PointerEvent<HTMLLIElement>): void => {
+    // Firefox suppresses click after mousedown preventDefault; pointerup
+    // still fires. Touch/pen wait for click so a scroll gesture does not
+    // commit.
+    if (event.pointerType === "mouse" && event.button === 0 && !isDisabled) {
       onSelect(item.key)
     }
   }
@@ -133,9 +144,14 @@ function SuggestionOption({
       data-hovered={isHovered || undefined}
       data-disabled={isDisabled || undefined}
       onPointerDown={handleOptionPointerDown}
-      onMouseDown={preventFocusLoss}
-      onPointerUp={undefined}
-      onClick={undefined}
+      onPointerUp={handleOptionPointerUp}
+      onClick={event => {
+        optionProps.onClick?.(event)
+        if (pointerTypeRef.current === "mouse" || isDisabled) {
+          return
+        }
+        onSelect(item.key)
+      }}
     >
       <StyledSuggestionsHighlight data-item-hl="">
         {item.rendered}
