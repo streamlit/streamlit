@@ -102,10 +102,11 @@ reference, so that payload crosses the wire on first render and whenever the
 list changes.
 
 Client-side filtering gets no such reprieve. The default `filter_mode="fuzzy"`
-scores and ranks every option, costing roughly 10 ms per keystroke at 100k
-options and 100 ms at 1M. `"contains"` and `"prefix"` are a single pass, closer
-to 30 ms and 20 ms at 1M, so switching mode is the cheapest fix for a list that
-has to stay client-side in the upper thousands.
+scores and ranks every option: once warm, roughly 10 ms per keystroke at 100k
+options and 100 ms at 1M, and several times that on the first keystroke of a
+session. `"contains"` and `"prefix"` are a single pass, closer to 30 ms and
+20 ms at 1M, so switching mode is the cheapest fix for a list that has to stay
+client-side in the upper thousands.
 
 Don't fetch a whole table into the app just to derive options. Ask the database
 for a bounded, distinct list:
