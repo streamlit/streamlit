@@ -56,9 +56,11 @@ if callable(autocomplete):
             "type='password'",
             explanation="Password suggestions must not appear in a dropdown.",
         )
-    if inspect.iscoroutinefunction(autocomplete):
+    if _is_async_callable(autocomplete):  # from cache_resource_api.py
         # v1 runs the source in a worker thread; fail fast rather than fail
-        # closed to an empty dropdown that never explains itself.
+        # closed to an empty dropdown that never explains itself. Reuse that
+        # helper rather than inspect.iscoroutinefunction, which misses a
+        # callable instance whose __call__ is async.
         raise StreamlitInvalidParameterTypeError(
             "autocomplete", "async function", ["str", "function"]
         )
@@ -266,11 +268,12 @@ class AutocompleteSourceManager:
     worse than dropping it: the user would be offered, and could commit, a string the source
     never returned. So there is one rule for over-long suggestions — they don't appear — and a
     suggestion's text is always exactly what the callable returned.
-  - **Measure length the way the browser does.** `max_chars` is enforced in the field by
-    `maxLength`, which counts UTF-16 code units, while Python's `len()` counts code points. Use
-    the browser's measure for the drop rule, or a suggestion containing an emoji can pass the
-    server filter, appear in the list, and then be rejected by the frontend gate on selection.
-    Test with astral characters.
+  - **Measure length the way the browser does.** `max_chars` is enforced in `useOnInputChange`
+    by JavaScript string length, which counts UTF-16 code units, while Python's `len()` counts
+    code points. Use the UTF-16 measure for the drop rule *and* for the inbound `text` ceiling,
+    or a suggestion containing an emoji can pass the server filter, appear in the list, and then
+    be rejected by the frontend gate on selection — and a value the field itself accepted can be
+    rejected server-side. Test with astral characters.
 - **Synchronization**: the maps are written from the script thread (registration, rerun
   cleanup) and the server thread (shutdown) while being read from suggestion worker threads,
   so — like `DataframeSourceManager` — every shared-map access is guarded by a
@@ -306,13 +309,18 @@ class AutocompleteHandler(BackendOperationHandler):
             return BackendOperationResponse(
                 request_id=request.request_id, error_msg=str(err)
             )
-        except (TimeoutError, _NoCapacityError):
+        except (asyncio.TimeoutError, _NoCapacityError):
+            # Named explicitly: on Python 3.10 this is not the builtin
+            # TimeoutError, so catching the builtin would log timeouts as
+            # source failures.
             # Fail closed: an empty dropdown, nothing surfaced to the client.
             suggestions = []
         except Exception:
             # Fail closed; the traceback stays server-side. Logged once per
             # (source_id, exception type) — a broken source fails on every
-            # keystroke, and the repeats would bury everything else.
+            # keystroke, and the repeats would bury everything else. Never log
+            # `text`: it is user-typed and frequently a name or email, and a
+            # traceback through func(text) carries it in the frame locals.
             _log_source_failure_once(payload.source_id)
             suggestions = []
         resp = BackendOperationResponse(request_id=request.request_id)
@@ -328,9 +336,18 @@ class AutocompleteHandler(BackendOperationHandler):
 
 The size limit belongs here rather than in the manager, which owns neither the request id nor
 the enclosing `ForwardMsg`: check the fully constructed outgoing message against
-`server.maxMessageSize` (and bound the client-supplied request id), falling back to an empty
-list that is guaranteed to fit. An oversized `BackendOperationResponse` is rewritten into an
-exception delta, and the client would then wait out its timeout for a reply it can never match.
+`server.maxMessageSize`. Note the fallback only fits if the echoed fields are bounded too —
+`request_id`, `source_id`, and especially `text` all come from the client, so an empty
+`suggestions` list alone doesn't guarantee a deliverable reply. An oversized
+`BackendOperationResponse` is rewritten into an exception delta that clears the
+`backend_operation_response` oneof, and the client then waits out its timeout for a reply it
+can never match — the hang `dataframe_chunk_handler.py` already documents.
+
+The failure log needs a bounded lifetime as well: `_log_source_failure_once` is keyed on
+`(source_id, exception type)` and `source_id` is stable per element per session, so prune its
+entries alongside the sources in `remove_orphaned_sources` / `clear_all_for_session`. "Once"
+means once per source per exception type — one line per broken field per session, not one per
+server lifetime.
 
 `_run_bounded` is where the safety properties live, and it differs from
 `DataframeChunkHandler` in one important way: that handler runs Streamlit's own bounded
@@ -365,6 +382,7 @@ serialization code, while this one runs an arbitrary user callable that may neve
   primitives are not thread-safe. Use `threading.BoundedSemaphore` (bounded so a double release
   raises instead of silently inflating capacity), or else marshal every release back to the
   loop with `loop.call_soon_threadsafe`. The former is simpler and is what this design assumes.
+
 **Timeout, coalescing, and rate**
 
 - **Timeout** (`_AUTOCOMPLETE_TIMEOUT_S`, e.g. 5s) bounds how long the *user* waits; the pool
@@ -385,7 +403,10 @@ serialization code, while this one runs an arbitrary user callable that may neve
   browser debounce implies. Add a per-session token bucket — keyed on `session_id`, sized for
   bursty typing across a few fields and refilling near the debounce rate (e.g. 20 tokens
   refilling at 4/s) — and fail closed when it's exhausted, with a server-side log line that
-  names rate limiting so an empty dropdown isn't a mystery. Charge a token when a call is
+  names rate limiting so an empty dropdown isn't a mystery. Those numbers come from the
+  legitimate steady state: one focused field can issue at most ~3.3 lookups/s behind the 300ms
+  debounce, which 4/s covers, and the 20-token burst absorbs a tab-through of a form, where each
+  empty field spends a token on focus. Charge a token when a call is
   actually started, not per inbound request, so waiters that coalesce onto one shared task
   don't each bill for an invocation that happened once. This is the one limit that reflects the
   feature's actual cost model: the expensive resource is the user's database or API quota, not
@@ -406,7 +427,8 @@ serialization code, while this one runs an arbitrary user callable that may neve
   behavior is needed, and none should be added — do **not** attach a `ScriptRunContext` to the
   worker to make these calls "work". The callable runs outside a script run by design, and the
   values it needs are bound at registration time.
-- **Session state must raise on the worker, and that needs a new marker.** The default is worse
+- **Session state, `st.user`, and `st.context` must raise on the worker, and that needs a new
+  marker.** The default is worse
   than an error: without a script run context `get_session_state()` returns the process-global
   mock in `session_state_proxy.py` that every session shares, so a write leaks across users and
   a later read can observe it. The `session-scoped-cache-outside-app-thread` precedent does not
@@ -422,6 +444,13 @@ serialization code, while this one runs an arbitrary user callable that may neve
   context should be probed with `suppress_warning=True` so a lookup per keystroke doesn't fill
   the log with missing-context warnings. #16303's `validate` callable needs the same marker, so
   whichever lands first should own it.
+
+  The same treatment is needed for `st.user` and `st.context`, which are quieter about it and
+  therefore worse: `st.user` returns `{}` and `st.context.*` returns silent defaults when there
+  is no context. A source that writes `if st.user.email: filter_for(user)` then serves
+  *unfiltered* results, and under `@st.cache_data` that empty user is invisible to the cache
+  key, so the unfiltered entry answers other sessions too. Bind those values at registration
+  instead, the same way the product spec binds `category`.
 
 > **Implementation note.** None of this bounded-execution machinery is suggestion-specific, and
 > #16303's `validate` callable has exactly the same hang risk. If both land, prefer lifting the
@@ -460,11 +489,15 @@ choose between two wrappers: the plain one, and a `TextInputWithAutocomplete` th
 combobox hooks, the request lifecycle, and the popover. Everything in this section lives in
 that second wrapper.
 
-The split must not change what React sees at that position in the tree. Define the
-presentational input at module level (never inside `TextInput`'s render) and have both wrappers
-render that same component type, or React remounts the real `<input>` and the user loses focus,
-caret position, and any uncommitted `uiValue` — including on a rerun that flips `autocomplete`
-between a string token and a callable.
+Define the presentational input at module level, never inside `TextInput`'s render — a
+component type recreated each render remounts the `<input>` on every rerun, dropping focus and
+caret mid-typing. That alone doesn't make the two wrappers interchangeable, though: React
+reconciles the wrapper first, so switching between them unmounts the subtree regardless of what
+the child is. That only happens when `autocomplete` flips between a string token and a callable
+on a **keyed** widget — always-callable reruns keep the wrapper stable, and an unkeyed flip
+already remounts through widget identity — so the remount is accepted for that case rather than
+designed around. Keeping one outer type with the autocomplete hooks attached as a sibling
+controller would avoid it, at the cost of the clean structural split.
 
 #### Attach the selectbox dropdown to the existing text field
 
@@ -501,8 +534,10 @@ its own `WidgetLabel`, `StyledInput`, chevron, clear button, and `className="stS
      its `handleInputKeyDown` auto-selects the first visible option when Enter arrives with the
      list open (`wasOpenBeforeEnterRef`). That's right for a closed set and wrong here, where
      the typed text is itself a legal value.
-   - **Turn hover-focus off — the default is wrong for a free-text field.** `useComboBox` passes
-     `shouldFocusOnHover: true`, which makes hovering a row *focus* it, which sets
+   - **Turn hover-focus off — the default is wrong for a free-text field.** `useComboBox` sets
+     `shouldFocusOnHover: true` on the `listBoxProps` it returns rather than taking it as an
+     option, so this has to be overridden where those props are consumed — passing it into
+     `useComboBox` won't do anything. Left at the default, hovering a row *focuses* it, which sets
      `aria-activedescendant`, which is what Enter and Tab accept. Left alone, resting the
      pointer over a dropdown that just opened under the cursor would silently convert the next
      Enter from "commit what I typed" (or "submit the form") into "accept whichever row the

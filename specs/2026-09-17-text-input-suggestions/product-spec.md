@@ -133,10 +133,12 @@ All of the following applies only when `autocomplete` is a callable.
   autocomplete, not a constrained select.
 - **Requests are asynchronous.** A newer keystroke supersedes an in-flight request and stale
   responses are dropped, so the list always reflects the current text. While a request is
-  outstanding the field is marked busy and shows a small spinner. Since both an empty result
-  and a failure close the list, that state is also announced to assistive tech, so a
-  screen-reader user can tell "still loading" from "nothing found" without watching the
-  spinner.
+  outstanding the field is marked busy and shows a small spinner. Because an empty result and a
+  failure both just close the list, the spinner is not enough on its own: a polite status
+  message announces loading, the number of suggestions, and "no suggestions" (failures
+  deliberately read the same as empty, since a missing hint isn't worth reporting to the user).
+  That status sits alongside the field's existing error and help wiring rather than replacing
+  it, and the spinner itself is hidden from assistive tech so the two don't double up.
 - **Failures fail closed.** If the function raises, times out, or returns an unexpected type,
   the dropdown shows nothing and the field stays fully usable for free text. Nothing is
   surfaced to the user as an error — a missing hint is not worth interrupting them for. The
@@ -156,7 +158,11 @@ All of the following applies only when `autocomplete` is a callable.
 - **Browser autofill is suppressed** for the field so the browser's own dropdown doesn't compete
   with Streamlit's. `autocomplete="off"` doesn't achieve that on its own — Chrome ignores it for
   fields it reads as name, address, or email, which is exactly what this feature is for — so the
-  native attribute is set to a token no browser recognizes.
+  native attribute is set to a token no browser recognizes. That is a best-effort workaround
+  rather than a guarantee: browsers may still fill heuristically, and it does cost the field its
+  input-purpose metadata, so on `type="email"`, `"url"`, or `"phone"` password managers won't
+  offer to fill and the WCAG 1.3.5 hint is gone. Worth knowing before choosing a callable on
+  those types.
 
 ### Caching and passing in context
 
@@ -251,7 +257,7 @@ browser doesn't know which substring to emphasize (unlike selectbox's client-sid
 
 | Parameter | Behavior with a callable `autocomplete` |
 | --- | --- |
-| `live` | Independent: `live` controls when a committed value reruns the app, `autocomplete` controls the hint dropdown, and each has its own debounce. Choosing a suggestion is a commit, so it follows the widget's normal rerun rules. |
+| `live` | Independent: `live` controls when a committed value reruns the app, `autocomplete` controls the hint dropdown, and each has its own debounce. Choosing a suggestion is a commit, so it follows the widget's normal rerun rules. The two overlap constantly — `live` fires at 250ms, the lookup at 300ms — so a rerun arriving mid-typing must leave the dropdown open, the armed row where it is, and focus in the field. If it also swaps a value the source is bound to, the visible suggestions can be one lookup behind until the next one lands. |
 | `on_change`, `on_change="ignore"` | Unchanged, and only ever triggered by a commit. Showing suggestions never fires `on_change`; with `"ignore"`, a chosen suggestion is staged without a rerun. |
 | `st.form` | The dropdown works and a selection fills the field, but as with every form widget the *widget value* only reaches the script on submit, and selecting doesn't submit. The typed text does still reach the suggestion source on every debounce — suggestions are a server lookup, not a local filter, inside a form as anywhere else. A source that depends on another field in the same form sees that field's value from the last run, since forms don't rerun until submit. |
 | `validate`, `required` | Unchanged, applied at commit time. A chosen suggestion is validated like a typed one. |
