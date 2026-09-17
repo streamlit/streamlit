@@ -89,9 +89,18 @@ values; the widget's value is always the text in the field, whether typed or cho
 
 All of the following applies only when `autocomplete` is a callable.
 
-- **When it's called:** while the field is focused, after a short pause in typing (~200ms,
-  independent of `live`). It receives the current text verbatim. It is also called with `""`
-  on focus, so a source can offer default or recent suggestions; return `[]` to show nothing.
+- **When it's called:** while the field is focused, after a pause in typing (300ms, independent
+  of `live`). It receives the current text verbatim. It is also called with `""` on focus, so a
+  source can offer default or recent suggestions; return `[]` to show nothing.
+
+  The pause is deliberately on the generous side, because each one can cost a database query or
+  an API call. A large-scale typing study measured a mean inter-key interval of 239ms
+  ([Dhakal et al., CHI 2018](https://userinterfaces.aalto.fi/136Mkeystrokes/resources/chi-18-analysis.pdf)),
+  so a shorter delay like 200ms would routinely fire *between* keystrokes and bill the app for
+  suggestions nobody sees. At 300ms the lookup generally runs once the user has actually stopped
+  typing. This is longer than `live`'s 250ms default on purpose: a live rerun updates the
+  results the user came for, while a suggestion lookup only draws hints, so it should be the
+  cheaper of the two.
 - **The dropdown:** non-empty results open a list below the input; an empty result closes it,
   as does blurring the field or pressing `Esc`. Streamlit caps how many suggestions it
   returns, so an oversized result set can't flood the browser (limit in the tech spec).

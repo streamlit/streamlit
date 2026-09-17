@@ -332,10 +332,14 @@ needs it.
 #### Request lifecycle
 
 - On focus and on each accepted change, **debounce** with the suggestion timer (reuse the
-  `useDebouncedCallback` already in this component, with its own ~200ms delay that is
-  deliberately independent of `live` — a long `live` pause chosen to throttle expensive reruns
-  must not make hints sluggish), then call
-  `backendOperationClient.requestSuggestions({ sourceId, text })`.
+  `useDebouncedCallback` already in this component), then call
+  `backendOperationClient.requestSuggestions({ sourceId, text })`. The delay is a constant
+  `300ms`, independent of `live` in both directions: the callable is often a database or API
+  query, so the pause must be long enough to skip the gaps between keystrokes (mean inter-key
+  interval is ~239ms), and conversely a long `live` pause chosen to throttle expensive reruns
+  must not be inherited here and make hints sluggish. See the product spec for the full
+  rationale. Keep the value in one named constant so the future "configurable debounce"
+  follow-up has a single place to hook into.
 - **Race handling:** drop a response unless **both** its echoed `sourceId` matches the
   element's current `suggestionsSourceId` **and** its echoed `text` matches the current
   `uiValue`. Checking the text alone is not enough: each rerun re-registers the source with a
