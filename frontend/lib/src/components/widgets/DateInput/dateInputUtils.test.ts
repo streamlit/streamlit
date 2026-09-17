@@ -23,6 +23,7 @@ import {
   calendarDateToIso,
   createDateErrorMessage,
   formatCalendarDate,
+  getFocusedDateFallback,
   getInitialFocusedDate,
   getMaxDate,
   getMinDate,
@@ -178,6 +179,19 @@ describe("getInitialFocusedDate", () => {
   it("falls back to minDate when there's no value and minDate is in the future", () => {
     const farFuture = new CalendarDate(2999, 1, 1)
     expect(getInitialFocusedDate([], farFuture)).toEqual(farFuture)
+  })
+
+  it("falls back to maxDate when there's no value and today is after maxDate", () => {
+    const minDate = new CalendarDate(1970, 1, 1)
+    const maxDate = new CalendarDate(1980, 1, 1)
+    expect(getInitialFocusedDate([], minDate, maxDate)).toEqual(maxDate)
+  })
+
+  it("getFocusedDateFallback clamps today to maxDate", () => {
+    const maxDate = new CalendarDate(1980, 6, 15)
+    expect(
+      getFocusedDateFallback(new CalendarDate(1970, 1, 1), maxDate)
+    ).toEqual(maxDate)
   })
 
   it("never returns null, even for an unparsable value", () => {

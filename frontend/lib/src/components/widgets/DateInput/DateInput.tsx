@@ -24,7 +24,7 @@ import {
   useState,
 } from "react"
 
-import { CalendarDate, getLocalTimeZone, today } from "@internationalized/date"
+import { CalendarDate } from "@internationalized/date"
 
 import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
@@ -44,6 +44,7 @@ import {
   createDateErrorMessage,
   DateValidationErrorType,
   formatCalendarDate,
+  getFocusedDateFallback,
   getInitialFocusedDate,
   getMaxDate as getMaxCalendarDate,
   getMinDate,
@@ -123,7 +124,7 @@ function DateInput({
   // visible-month. Seeded with a concrete date so it stays controlled for
   // the component's entire lifetime (see getInitialFocusedDate).
   const [focusedValue, setFocusedValue] = useState<CalendarDate>(() =>
-    getInitialFocusedDate(value, minDateCalendar)
+    getInitialFocusedDate(value, minDateCalendar, maxDateCalendar)
   )
 
   const enableQuickSelect = useMemo(() => {
@@ -309,22 +310,20 @@ function DateInput({
     if (singleValue) {
       setFocusedValue(singleValue)
     } else {
-      // After clear: reset to today (clamped to minDate) so the calendar
+      // After clear: reset to today (clamped to bounds) so the calendar
       // shows a sensible month instead of the stale previous value.
-      const now = today(getLocalTimeZone())
-      setFocusedValue(now.compare(minDateCalendar) < 0 ? minDateCalendar : now)
+      setFocusedValue(getFocusedDateFallback(minDateCalendar, maxDateCalendar))
     }
-  }, [element.isRange, singleValue, minDateCalendar])
+  }, [element.isRange, singleValue, minDateCalendar, maxDateCalendar])
 
   useEffect(() => {
     if (!element.isRange) return
     if (rangeStartValue) {
       setFocusedValue(rangeStartValue)
     } else {
-      const now = today(getLocalTimeZone())
-      setFocusedValue(now.compare(minDateCalendar) < 0 ? minDateCalendar : now)
+      setFocusedValue(getFocusedDateFallback(minDateCalendar, maxDateCalendar))
     }
-  }, [element.isRange, rangeStartValue, minDateCalendar])
+  }, [element.isRange, rangeStartValue, minDateCalendar, maxDateCalendar])
 
   return (
     <div className="stDateInput" data-testid="stDateInput">
