@@ -1557,7 +1557,9 @@ class ScriptRunnerTest(unittest.TestCase):
 
         Runtime._instance.media_file_mgr.remove_orphaned_files.assert_called_once()
         Runtime._instance.dataframe_source_mgr.remove_orphaned_sources.assert_called_once()
-        Runtime._instance.autocomplete_source_mgr.remove_orphaned_sources.assert_called_once()
+        Runtime._instance.autocomplete_source_mgr.remove_orphaned_sources.assert_called_once_with(
+            scriptrunner._session_id
+        )
 
     def test_stale_widget_removal_skipped_when_stopped_for_rerun(self):
         """A run stopped for rerun must reset triggers without dropping widgets.

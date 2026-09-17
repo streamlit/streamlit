@@ -888,6 +888,13 @@ class TextWidgetsMixin:
                 ["str", "callable", "None"],
             )
 
+        if _is_suggestion_source(autocomplete) and type == "password":
+            raise StreamlitIncompatibleParametersError(
+                "autocomplete=<callable>",
+                "type='password'",
+                explanation="Password suggestions must not appear in a dropdown.",
+            )
+
         # Hash the raw user-provided values, before type-derived defaults below.
         # `type` is already part of the identity, so those defaults (icon,
         # placeholder, validate, autocomplete) stay out of the hash.
@@ -980,12 +987,6 @@ class TextWidgetsMixin:
         text_input_proto.type = type_defaults.proto_type
 
         if _is_suggestion_source(autocomplete):
-            if type == "password":
-                raise StreamlitIncompatibleParametersError(
-                    "autocomplete=<callable>",
-                    "type='password'",
-                    explanation="Password suggestions must not appear in a dropdown.",
-                )
             autocomplete_token = _AUTOFILL_SUPPRESSED_TOKEN
             source_mgr = _get_autocomplete_source_mgr()
             if source_mgr is not None:

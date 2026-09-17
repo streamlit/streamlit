@@ -1015,7 +1015,9 @@ class ScriptRunner:
 
             # Prune lazy dataframe sources that were not re-registered this run.
             runtime.get_instance().dataframe_source_mgr.remove_orphaned_sources()
-            runtime.get_instance().autocomplete_source_mgr.remove_orphaned_sources()
+            runtime.get_instance().autocomplete_source_mgr.remove_orphaned_sources(
+                self._session_id
+            )
 
         # Force garbage collection to run, to help avoid memory use building up
         # This is usually not an issue, but sometimes GC takes time to kick in and

@@ -261,7 +261,7 @@ def test_coalesced_waiter_timeout_does_not_cancel_the_other() -> None:
     assert list(response.autocomplete.suggestions) == ["ap"]
 
 
-def test_permits_released_on_timeout() -> None:
+def test_timed_out_waiter_does_not_release_permits_until_worker_exits() -> None:
     """A timed-out waiter does not free permits until the worker exits."""
     started = threading.Event()
     release = threading.Event()

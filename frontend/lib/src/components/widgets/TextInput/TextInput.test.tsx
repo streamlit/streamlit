@@ -2904,7 +2904,7 @@ describe("TextInput autocomplete", () => {
     })
     setStringValueSpy.mockClear()
     sendRerunBackMsg.mockClear()
-    await user.click(screen.getByText("apple"))
+    await user.click(screen.getByRole("option", { name: "apple" }))
     expect(setStringValueSpy).toHaveBeenCalledTimes(1)
     expect(setStringValueSpy).toHaveBeenCalledWith(props.element.id, "apple", {
       formId: props.element.formId,
@@ -2913,6 +2913,28 @@ describe("TextInput autocomplete", () => {
     })
     advanceMs(300)
     expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it("commits a suggestion on pointer down so Firefox still selects after preventDefault", async () => {
+    const { user, props } = renderAutocomplete()
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    await user.click(getField())
+    await user.type(getField(), "ap")
+    advanceMs(300)
+    await waitFor(() => {
+      expect(screen.getByText("apple")).toBeVisible()
+    })
+    setStringValueSpy.mockClear()
+    await user.pointer({
+      keys: "[MouseLeft>]",
+      target: screen.getByRole("option", { name: "apple" }),
+    })
+    expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+    expect(setStringValueSpy).toHaveBeenCalledWith(props.element.id, "apple", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
   })
 
   it("does not submit a form when a suggestion is selected", async () => {
@@ -2931,7 +2953,7 @@ describe("TextInput autocomplete", () => {
     await waitFor(() => {
       expect(screen.getByText("apple")).toBeVisible()
     })
-    await user.click(screen.getByText("apple"))
+    await user.click(screen.getByRole("option", { name: "apple" }))
     expect(submitSpy).not.toHaveBeenCalled()
     expect(sendRerunBackMsg).not.toHaveBeenCalled()
     expect(getField()).toHaveValue("apple")
@@ -2946,7 +2968,7 @@ describe("TextInput autocomplete", () => {
     await waitFor(() => {
       expect(screen.getByText("apple")).toBeVisible()
     })
-    await user.hover(screen.getByText("apple"))
+    await user.hover(screen.getByRole("option", { name: "apple" }))
     expect(getField()).not.toHaveAttribute("aria-activedescendant")
     expect(screen.getByText("apple").closest("[data-hovered]")).not.toBeNull()
     setStringValueSpy.mockClear()
@@ -3047,6 +3069,30 @@ describe("TextInput autocomplete", () => {
       ).not.toBeInTheDocument()
     })
     expect(getField()).toHaveValue("ap")
+  })
+
+  it("ignores suggestion keys and closes the list during IME composition", async () => {
+    const { user, props } = renderAutocomplete()
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    await user.click(getField())
+    await user.type(getField(), "ap")
+    advanceMs(300)
+    await waitFor(() => {
+      expect(screen.getByTestId("stTextInputSuggestions")).toBeVisible()
+    })
+    setStringValueSpy.mockClear()
+    // userEvent cannot set KeyboardEvent.isComposing.
+    // eslint-disable-next-line testing-library/prefer-user-event -- IME composition
+    fireEvent.keyDown(getField(), { key: "ArrowDown", isComposing: true })
+    // eslint-disable-next-line testing-library/prefer-user-event -- IME composition
+    fireEvent.keyDown(getField(), { key: "Enter", isComposing: true })
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+    fireEvent.compositionStart(getField())
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stTextInputSuggestions")
+      ).not.toBeInTheDocument()
+    })
   })
 
   it("keeps the same input node when the autocomplete layer mounts and unmounts", () => {

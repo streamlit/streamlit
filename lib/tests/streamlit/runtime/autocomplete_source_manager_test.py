@@ -210,7 +210,7 @@ def test_clear_session_refs_then_prune_removes_sources() -> None:
     mgr = AutocompleteSourceManager()
     reg = _register(mgr, session_id="s1")
     mgr.clear_session_refs("s1")
-    mgr.remove_orphaned_sources()
+    mgr.remove_orphaned_sources("s1")
     assert mgr.get_source_count() == 0
     assert mgr.get_suggestions(reg.session_id, reg.source_id, "ap") == []
 
@@ -222,9 +222,21 @@ def test_clear_session_refs_only_affects_target_session() -> None:
     reg_s2 = _register(mgr, session_id="s2", element_id="el1")
 
     mgr.clear_session_refs("s1")
-    mgr.remove_orphaned_sources()
+    mgr.remove_orphaned_sources("s1")
 
     assert mgr.get_suggestions(reg_s1.session_id, reg_s1.source_id, "ap") == []
+    assert mgr.get_suggestions(reg_s2.session_id, reg_s2.source_id, "ap") == ["ap"]
+
+
+def test_prune_does_not_collect_another_session_mid_rerun() -> None:
+    """Finishing session A must not prune session B's sources during B's rerun."""
+    mgr = AutocompleteSourceManager()
+    _register(mgr, session_id="s1", element_id="el1")
+    reg_s2 = _register(mgr, session_id="s2", element_id="el1")
+
+    mgr.clear_session_refs("s2")
+    mgr.remove_orphaned_sources("s1")
+
     assert mgr.get_suggestions(reg_s2.session_id, reg_s2.source_id, "ap") == ["ap"]
 
 
@@ -236,7 +248,7 @@ def test_clear_session_refs_only_affects_target_fragments() -> None:
     frag_b = _register(mgr, element_id="frag-b", fragment_id="b")
 
     mgr.clear_session_refs("s1", fragment_ids=["a"])
-    mgr.remove_orphaned_sources()
+    mgr.remove_orphaned_sources("s1")
 
     assert mgr.get_suggestions(frag_a.session_id, frag_a.source_id, "ap") == []
     assert mgr.get_suggestions(body.session_id, body.source_id, "ap") == ["ap"]
@@ -249,7 +261,7 @@ def test_clear_session_refs_fragment_empty_list_is_noop() -> None:
     reg = _register(mgr, element_id="frag-a", fragment_id="a")
 
     mgr.clear_session_refs("s1", fragment_ids=[])
-    mgr.remove_orphaned_sources()
+    mgr.remove_orphaned_sources("s1")
 
     assert mgr.get_suggestions(reg.session_id, reg.source_id, "ap") == ["ap"]
 

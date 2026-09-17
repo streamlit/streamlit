@@ -264,6 +264,8 @@ export const StyledSuggestionsItem = styled.li(({ theme }) =>
   getDropdownListBoxItemStyles(theme)
 )
 
-export const StyledSuggestionsHighlight = styled.div(({ theme }) =>
-  getDropdownItemHighlightStyles(theme)
-)
+export const StyledSuggestionsHighlight = styled.div(({ theme }) => ({
+  ...getDropdownItemHighlightStyles(theme),
+  // Clicks must hit the row so Firefox still selects after preventDefault.
+  pointerEvents: "none",
+}))

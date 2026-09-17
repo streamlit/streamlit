@@ -31,7 +31,6 @@ stale entries recompute in the foreground at hard expiry instead.
 
 from __future__ import annotations
 
-import contextvars
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Final
@@ -146,16 +145,21 @@ class _BackgroundRefreshManager:
 
         try:
             executor = self._ensure_executor()
-            # Copy context so a worker marker (e.g. suggestion-source
-            # session-state blocking) still applies if this refresh was
-            # triggered from that worker. Python executors do not propagate
-            # ContextVars on their own.
-            context = contextvars.copy_context()
+            # Only propagate the backend-operation worker marker. A full
+            # copy_context() would also copy script-thread state such as
+            # fragment_id and in_cached_function into the refresh worker.
+            from streamlit.runtime.state.session_state_proxy import (
+                _WORKER_SESSION_STATE_BLOCKED,
+            )
+
+            blocked = _WORKER_SESSION_STATE_BLOCKED.get()
 
             def _runner() -> None:
+                token = _WORKER_SESSION_STATE_BLOCKED.set(blocked)
                 try:
-                    context.run(task)
+                    task()
                 finally:
+                    _WORKER_SESSION_STATE_BLOCKED.reset(token)
                     slots.release()
 
             # ThreadPoolExecutor starts worker threads lazily on submit, so a

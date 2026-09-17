@@ -174,8 +174,8 @@ def test_submit_releases_slot_on_unexpected_executor_error() -> None:
         manager.shutdown()
 
 
-def test_submit_copies_contextvars_into_worker() -> None:
-    """A ContextVar set on the submitting thread is visible in the pool thread."""
+def test_submit_propagates_worker_session_state_block() -> None:
+    """The session-state worker marker is visible in the pool thread."""
     from streamlit.runtime.state.session_state_proxy import (
         _WORKER_SESSION_STATE_BLOCKED,
     )

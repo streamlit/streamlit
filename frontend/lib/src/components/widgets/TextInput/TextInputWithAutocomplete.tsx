@@ -17,6 +17,7 @@
 import {
   FocusEvent,
   KeyboardEvent,
+  PointerEvent,
   ReactElement,
   RefObject,
   useCallback,
@@ -111,6 +112,17 @@ function SuggestionOption({
   )
   const { hoverProps, isHovered } = useHover({ isDisabled })
 
+  const handleOptionPointerDown = (
+    event: PointerEvent<HTMLLIElement>
+  ): void => {
+    // preventDefault keeps focus on the input. Firefox does not fire click
+    // after that, so selection has to happen here rather than onClick.
+    preventFocusLoss(event)
+    if (event.button === 0 && !isDisabled) {
+      onSelect(item.key)
+    }
+  }
+
   return (
     <StyledSuggestionsItem
       {...optionProps}
@@ -120,13 +132,10 @@ function SuggestionOption({
       data-focused={isFocused || armed || undefined}
       data-hovered={isHovered || undefined}
       data-disabled={isDisabled || undefined}
+      onPointerDown={handleOptionPointerDown}
       onMouseDown={preventFocusLoss}
-      onClick={event => {
-        optionProps.onClick?.(event)
-        if (!isDisabled) {
-          onSelect(item.key)
-        }
-      }}
+      onPointerUp={undefined}
+      onClick={undefined}
     >
       <StyledSuggestionsHighlight data-item-hl="">
         {item.rendered}
@@ -324,6 +333,13 @@ export function TextInputWithAutocomplete({
     }
 
     const onKeyDown = (e: globalThis.KeyboardEvent): void => {
+      // IME candidate navigation and composition Enter must not drive the list.
+      // keyCode 229 is the standard composing-key signal on Android.
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
+      if (e.isComposing || e.keyCode === 229) {
+        return
+      }
+
       const comboState = stateRef.current
       const itemKeys = itemsRef.current.map(item => item.id)
       const currentArmed = armedKeyRef.current
@@ -480,12 +496,14 @@ export function TextInputWithAutocomplete({
           disabled
         ) {
           setSuggestions([])
-          onStatusChange("No suggestions")
+          onStatusChange(null)
           return
         }
         const next = result.suggestions ?? []
         setSuggestions(next)
-        onStatusChange(next.length === 0 ? "No suggestions" : null)
+        onStatusChange(
+          next.length === 0 ? "No suggestions" : `${next.length} suggestions`
+        )
       } catch {
         if (generation !== generationRef.current) {
           return
@@ -513,7 +531,17 @@ export function TextInputWithAutocomplete({
       return
     }
     if (isComposing) {
+      // Drop in-flight results so a lookup started before composition cannot
+      // open the list mid-IME. Arrow/Enter during composition are ignored
+      // separately in the capture key handler.
+      generationRef.current += 1
       cancelFetch()
+      applyBusy(false)
+      setSuggestions([])
+      onStatusChange(null)
+      if (stateRef.current.isOpen) {
+        stateRef.current.close()
+      }
       return
     }
     if (skipNextUiValueFetchRef.current) {

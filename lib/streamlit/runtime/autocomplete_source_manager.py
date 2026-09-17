@@ -269,19 +269,22 @@ class AutocompleteSourceManager:
             if not element_map:
                 self._refs_by_session_and_element.pop(session_id, None)
 
-    def remove_orphaned_sources(self) -> None:
-        """Delete sources no longer referenced by any session.
+    def remove_orphaned_sources(self, session_id: str) -> None:
+        """Delete this session's sources that are no longer referenced.
 
-        Also drops the matching stable ``source_id`` assignment so a later
-        widget at the same element id mints a fresh id.
+        Only ``session_id`` is collected so a session that has cleared refs at
+        the start of a slow rerun cannot have its still-rendered sources
+        pruned by another session finishing first. Also drops the matching
+        stable ``source_id`` assignment so a later widget at the same element
+        id mints a fresh id.
         """
         with self._lock:
-            referenced: set[str] = set()
-            for element_map in self._refs_by_session_and_element.values():
-                referenced.update(element_map.values())
-
+            element_map = self._refs_by_session_and_element.get(session_id, {})
+            referenced = set(element_map.values())
             orphaned = [
-                source_id for source_id in self._sources if source_id not in referenced
+                source_id
+                for source_id, entry in self._sources.items()
+                if entry.session_id == session_id and source_id not in referenced
             ]
             for source_id in orphaned:
                 entry = self._sources.pop(source_id)
@@ -300,7 +303,7 @@ class AutocompleteSourceManager:
         self.clear_session_refs(session_id)
         with self._lock:
             self._source_id_by_session_and_element.pop(session_id, None)
-        self.remove_orphaned_sources()
+        self.remove_orphaned_sources(session_id)
 
     def get_source_count(self) -> int:
         """Return the number of registered sources (for tests/debugging)."""

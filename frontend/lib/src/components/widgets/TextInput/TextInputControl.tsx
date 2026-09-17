@@ -18,7 +18,6 @@ import {
   FocusEvent,
   InputHTMLAttributes,
   KeyboardEvent,
-  MouseEvent,
   ReactElement,
   ReactNode,
   Ref,
@@ -114,7 +113,7 @@ const EMPTY_AUTOCOMPLETE_INPUT_PROPS: AutocompleteInputProps = {}
  * input, which would otherwise commit a dirty value via blur. Module-level so
  * the reference is stable across renders.
  */
-export function preventFocusLoss(e: MouseEvent): void {
+export function preventFocusLoss(e: { preventDefault: () => void }): void {
   e.preventDefault()
 }
 
@@ -300,11 +299,9 @@ export function TextInputControl({
           {displayedError}
         </StyledVisuallyHidden>
       )}
-      {statusMessage && (
-        <StyledVisuallyHidden role="status">
-          {statusMessage}
-        </StyledVisuallyHidden>
-      )}
+      <StyledVisuallyHidden role="status">
+        {statusMessage ?? ""}
+      </StyledVisuallyHidden>
       {showInstructions && (
         <StyledInputInstructionsContainer
           $hasErrorIcon={Boolean(displayedError)}

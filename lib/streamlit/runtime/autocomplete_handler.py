@@ -180,6 +180,10 @@ class AutocompleteHandler(BackendOperationHandler):
 
         acquired = self._try_admit(session_id, source_id)
         if acquired is None:
+            _LOGGER.warning(
+                "Autocomplete request rejected (no capacity) for session %s",
+                session_id,
+            )
             raise _NoCapacityError
 
         try:
