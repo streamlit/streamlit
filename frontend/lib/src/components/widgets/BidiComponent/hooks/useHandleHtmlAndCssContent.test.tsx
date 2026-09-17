@@ -172,6 +172,27 @@ describe("useHandleHtmlAndCssContent", () => {
     expect(errorArg.message).toMatch(/Failed to load CSS/)
   })
 
+  it("does not call setError for a CSS error after the effect is cleaned up", () => {
+    const context = buildContextValue({ cssSourcePath: "styles.css" })
+    const cssUrl = "https://example.com/styles.css"
+    vi.spyOn(context.componentRegistry, "getBidiComponentURL").mockReturnValue(
+      cssUrl
+    )
+
+    const { unmount } = renderUseHandleHtmlAndCssContent({
+      context,
+      containerRef,
+      setError,
+    })
+
+    const link = parent.querySelector("link")
+    expect(link).not.toBeNull()
+
+    unmount()
+    link?.dispatchEvent(new Event("error"))
+    expect(setError).not.toHaveBeenCalled()
+  })
+
   it("prefers cssContent over cssSourcePath when both are provided", () => {
     const context = buildContextValue({
       cssContent: "p { color: red; }",

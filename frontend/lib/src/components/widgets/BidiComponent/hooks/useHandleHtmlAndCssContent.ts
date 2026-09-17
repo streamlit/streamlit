@@ -126,7 +126,7 @@ export const useHandleHtmlAndCssContent = ({
       return
     }
 
-    let linkElement: HTMLLinkElement | undefined
+    const controller = new AbortController()
     const handleCssLoadError = (): void => {
       handleError(
         new Error(`Failed to load CSS from ${cssLinkHref}`),
@@ -153,7 +153,7 @@ export const useHandleHtmlAndCssContent = ({
         styleElement.textContent = cssContent
         contentRef.current.appendChild(styleElement)
       } else if (cssLinkHref) {
-        linkElement = document.createElement("link")
+        const linkElement = document.createElement("link")
         linkElement.href = cssLinkHref
         linkElement.rel = "stylesheet"
 
@@ -164,7 +164,9 @@ export const useHandleHtmlAndCssContent = ({
           linkElement.crossOrigin = cssLinkCrossOrigin
         }
 
-        linkElement.addEventListener("error", handleCssLoadError)
+        linkElement.addEventListener("error", handleCssLoadError, {
+          signal: controller.signal,
+        })
         contentRef.current.appendChild(linkElement)
       }
 
@@ -174,7 +176,7 @@ export const useHandleHtmlAndCssContent = ({
     }
 
     return () => {
-      linkElement?.removeEventListener("error", handleCssLoadError)
+      controller.abort()
     }
   }, [
     html,

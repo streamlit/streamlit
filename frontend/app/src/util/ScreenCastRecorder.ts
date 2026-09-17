@@ -116,11 +116,17 @@ class ScreenCastRecorder {
       LOG.warn(`mediaRecorder.start threw an error: ${String(e)}`)
     }
 
-    this.mediaRecorder.addEventListener("error", (e: Event): void => {
-      logRecorderError(e)
-      this.onErrorOrStopCallback()
-    })
+    this.mediaRecorder.addEventListener(
+      "error",
+      (e: Event): void => {
+        logRecorderError(e)
+        this.onErrorOrStopCallback()
+      },
+      { once: true }
+    )
 
+    // Keep onstop as a property assignment so stop() can overwrite it and a
+    // user-initiated stop does not call onErrorOrStop.
     this.mediaRecorder.onstop = (): void => this.onErrorOrStopCallback()
 
     try {

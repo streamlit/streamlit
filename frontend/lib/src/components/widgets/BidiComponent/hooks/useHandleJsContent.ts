@@ -222,6 +222,7 @@ export const useHandleJsContent = ({
     let scriptElement: HTMLScriptElement | undefined
     let resolveScriptLoad: (() => void) | undefined
     let rejectScriptLoad: ((reason: Error) => void) | undefined
+    let cancelled = false
     const handleScriptLoad = (): void => {
       resolveScriptLoad?.()
     }
@@ -238,6 +239,10 @@ export const useHandleJsContent = ({
             inlineJsContent,
             `st-bidi-${componentName}`
           )
+
+          if (cancelled) {
+            return
+          }
 
           cleanupRef.current = await loadAndRunModule({
             componentId,
@@ -269,6 +274,10 @@ export const useHandleJsContent = ({
               scriptElementRef.current = scriptElement
             })
 
+            if (cancelled) {
+              return
+            }
+
             // Run the module and store the cleanup function
             cleanupRef.current = await loadAndRunModule({
               componentId,
@@ -299,8 +308,15 @@ export const useHandleJsContent = ({
     void run()
 
     return () => {
+      cancelled = true
       scriptElement?.removeEventListener("load", handleScriptLoad)
       scriptElement?.removeEventListener("error", handleScriptError)
+      // Resolve rather than reject so a theme/data re-run does not flash a
+      // false component error. Skip loadAndRunModule via `cancelled` above.
+      resolveScriptLoad?.()
+      if (scriptElement?.parentNode) {
+        scriptElement.parentNode.removeChild(scriptElement)
+      }
     }
   }, [
     componentId,

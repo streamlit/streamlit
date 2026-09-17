@@ -32,7 +32,11 @@ interface MockMediaRecorder {
   stop: Mock<() => void>
   ondataavailable?: (event: { data: Blob }) => void
   onstop?: () => void
-  addEventListener: (type: string, listener: (event: Event) => void) => void
+  addEventListener: (
+    type: string,
+    listener: (event: Event) => void,
+    options?: { once?: boolean }
+  ) => void
   dispatchEvent: (event: Event) => boolean
 }
 
@@ -96,10 +100,20 @@ const installMediaMocks = (): void => {
 
     public addEventListener(
       type: string,
-      listener: (event: Event) => void
+      listener: (event: Event) => void,
+      options?: { once?: boolean }
     ): void {
+      const wrapped = (event: Event): void => {
+        if (options?.once) {
+          this.listeners.set(
+            type,
+            (this.listeners.get(type) ?? []).filter(item => item !== wrapped)
+          )
+        }
+        listener(event)
+      }
       const existing = this.listeners.get(type) ?? []
-      existing.push(listener)
+      existing.push(wrapped)
       this.listeners.set(type, existing)
     }
 
@@ -270,6 +284,7 @@ describe("ScreenCastRecorder lifecycle", () => {
     await recorder.initialize()
     recorder.start()
 
+    getMediaRecorder().dispatchEvent(new Event("error"))
     getMediaRecorder().dispatchEvent(new Event("error"))
     expect(onErrorOrStop).toHaveBeenCalledTimes(1)
   })
