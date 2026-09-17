@@ -52,11 +52,12 @@ if callable(autocomplete):
     # Backend suggestion mode.
     if type == "password":
         raise StreamlitIncompatibleParametersError(
-            "autocomplete", "type='password'",
+            "autocomplete",
+            "type='password'",
             explanation="Password suggestions must not appear in a dropdown.",
         )
     registered = get_suggestion_source_mgr().register_source(
-        autocomplete, coordinates=<element delta-path>, max_chars=max_chars
+        autocomplete, coordinates=ctx.current_delta_path, max_chars=max_chars
     )
     text_input_proto.suggestions_source_id = registered.source_id
     # Our dropdown replaces the browser's autofill, so turn native autofill off.
@@ -64,7 +65,9 @@ if callable(autocomplete):
     autocomplete_identity = _SUGGESTIONS_IDENTITY_SENTINEL  # stable, not the callable
 else:
     # Existing behavior: None -> type default token; str -> explicit token.
-    autocomplete_token = type_defaults.autocomplete if autocomplete is None else autocomplete
+    autocomplete_token = (
+        type_defaults.autocomplete if autocomplete is None else autocomplete
+    )
     autocomplete_identity = autocomplete  # str | None, as today
 ```
 
@@ -175,9 +178,19 @@ class SuggestionSourceManager:
   `DataframeSourceManager` uses). Re-registering at the same coordinates on the next run
   replaces the previous source with a fresh `source_id`, so stale in-flight responses are
   ignored by the frontend.
-- **`get_suggestions`** validates `source_id` belongs to `session_id` (raising a
-  `SuggestionSourceError` with a frontend-safe message otherwise), then bounds its inputs and
-  outputs around the call:
+- **`get_suggestions`** resolves `source_id` for `session_id`, then bounds its inputs and
+  outputs around the call. Distinguish two lookup failures, because they are not equally
+  exceptional:
+  - **Unknown or superseded `source_id` is routine, so fail closed silently.** Every rerun
+    mints a fresh id and `remove_orphaned_sources` prunes the old one, so an in-flight lookup
+    against a retired id is expected — especially under `live`, where the rerun usually lands
+    before the 300ms lookup is even sent. Return an empty list with no `error_msg`.
+  - **A `source_id` belonging to a *different* session** is anomalous, not a race. Raise
+    `SuggestionSourceError`, which the handler reports via `error_msg`.
+
+  This split matters because `BackendOperationClient.onResponse` rejects the pending promise
+  whenever `errorMsg` is set. Routing the routine case through `error_msg` would turn an
+  ordinary rotation race into a visible error while the user is mid-word.
   - **`text` is untrusted, and oversized requests are rejected rather than truncated.** It
     arrives from the client, so `max_chars` on the real input proves nothing about it — a
     modified client can send an arbitrarily long string straight into user Python. Reject any
@@ -193,9 +206,12 @@ class SuggestionSourceManager:
     finite, non-`str` collection of `str`. A bare `str` is itself a `Sequence[str]`, so
     accepting one would silently turn `"apple"` into five one-character suggestions; reject it
     along with any other unexpected type instead of showing a partial list.
-  - **Caps:** truncate individual suggestions to a maximum length, drop any longer than the
-    source's `max_chars` (selecting one would commit a value the field itself rejects), and
-    cap the count (e.g. ≤ 50) so a misbehaving source can't flood the socket.
+  - **Caps, applied by dropping — never by rewriting.** Drop any suggestion longer than the
+    source's `max_chars`, or longer than a fixed ceiling when `max_chars` is unset, and cap the
+    count (e.g. ≤ 50) so a misbehaving source can't flood the socket. Shortening a suggestion
+    to fit would be worse than dropping it: the user would be offered, and could commit, a
+    string the source never returned. So there is one rule for over-long suggestions — they
+    don't appear — and a suggestion's text is always exactly what the callable returned.
 - **Synchronization**: the maps are written from the script thread (registration, rerun
   cleanup) and the server thread (shutdown) while being read from suggestion worker threads,
   so — like `DataframeSourceManager` — every shared-map access is guarded by a
@@ -276,6 +292,11 @@ serialization code, while this one runs an arbitrary user callable that may neve
   suggestions. Acquire both under one guard that unwinds on any failure, including a failure
   to submit, and raise `_NoCapacityError` so the handler fails closed immediately rather than
   queueing more work.
+- **The permits must be thread-safe primitives.** Because the worker releases them from its own
+  thread, they cannot be the `asyncio.Semaphore` that `DataframeChunkHandler` uses — asyncio
+  primitives are not thread-safe. Use `threading.BoundedSemaphore` (bounded so a double release
+  raises instead of silently inflating capacity), or else marshal every release back to the
+  loop with `loop.call_soon_threadsafe`. The former is simpler and is what this design assumes.
 - **Timeout** (`_SUGGESTIONS_TIMEOUT_S`, e.g. 5s) bounds how long the *user* waits; the pool
   size bounds the damage a hung callable can do. Python cannot kill a running thread, so the
   residual risk is a bounded number of stuck threads per server — the accepted trade-off for
@@ -283,6 +304,26 @@ serialization code, while this one runs an arbitrary user callable that may neve
   the shared one.
 - **Coalescing**: as in `DataframeChunkHandler`, identical in-flight requests keyed by
   `(session_id, source_id, text)` share one call, so rapid keystrokes don't multiply work.
+- **Cached sources are an expected, supported case.** `@st.cache_data` / `@st.cache_resource`
+  at the default `scope="global"` pass `session_id=None` and never call
+  `get_session_id_or_throw`, so they resolve fine off the script thread — the same property
+  `cache_data(refresh_mode="background")` already relies on. `scope="session"` does call it and
+  raises `StreamlitAPIException` (`error_id="session-scoped-cache-outside-app-thread"`). That
+  lands in the generic fail-closed branch, so the log line must name the cause: a
+  session-scoped cache is the most likely way an otherwise working source starts silently
+  returning nothing, and a bare "error computing suggestions" would send the developer hunting.
+- **Rate, not just concurrency.** Everything above bounds how much runs *at once*, which a
+  modified client can still walk around: vary `text` to defeat coalescing and re-fire as
+  permits recycle, and a fast billable source gets called far more often than the 300ms
+  browser debounce implies. Add a per-session budget (a token bucket keyed on session, not on
+  the rotating `source_id`) and fail closed when it's exhausted. This is the one limit that
+  reflects the feature's actual cost model: the expensive resource is the user's database or
+  API quota, not the server's threads.
+
+> **Implementation note.** None of this bounded-execution machinery is suggestion-specific, and
+> #16303's `validate` callable has exactly the same hang risk. If both land, prefer lifting the
+> pool, permits, admission, and timeout into shared backend-operation infrastructure over
+> duplicating the lifecycle — but only if that genuinely leaves both handlers simpler.
 
 Register it in `AppSession._create_backend_operation_dispatcher`:
 
@@ -305,7 +346,14 @@ timeoutMs?)` helper (short timeout, e.g. the default 30s or less), and extend
 
 ### 6. Frontend widget (`frontend/lib/src/components/widgets/TextInput/TextInput.tsx`)
 
-Active only when `element.suggestionsSourceId` is set.
+Suggestions are active only when `element.suggestionsSourceId` is set — but that has to be a
+**structural** split, not an `if` inside one component. Hooks can't be called conditionally, so
+putting `useComboBoxState` / `useComboBox` directly in `TextInput` would run the combobox
+machinery for every `st.text_input` in every app, including the overwhelming majority with no
+suggestion source. Extract the field into a presentational component and have `TextInput`
+choose between two wrappers: the plain one, and a `TextInputWithSuggestions` that owns the
+combobox hooks, the request lifecycle, and the popover. Everything in this section lives in
+that second wrapper.
 
 #### Attach the selectbox dropdown to the existing text field
 
@@ -315,7 +363,7 @@ The field already carries a lot that must not be re-derived: `maxChars` gating v
 composition, `validate` / `required` error wiring (`aria-invalid`, `aria-describedby`),
 `enterKeyHint`, the password toggle, and the search clear button. Swapping it for React Aria's
 `ComboBox`-owned `Input` would put RAC's input-value controller in competition with that state
-machine — the failure mode `Selectbox.tsx` documents at length (`getInsertedText`,
+machine — the failure mode `shared/Dropdown/Selectbox.tsx` documents at length (`getInsertedText`,
 revert-on-blur, deferred `onChange` after close).
 
 So we reuse the **dropdown**, not the widget. Note that `Selectbox` is a full widget (it renders
@@ -379,18 +427,34 @@ needs it.
   element's current `suggestionsSourceId` **and** its echoed `text` matches the current
   `uiValue`. Checking the text alone is not enough: each rerun re-registers the source with a
   fresh `source_id` without remounting the (stable-identity) widget, so a response from the
-  superseded callable can arrive for text the user is still typing. Cancel/ignore in-flight
-  requests on new input (the client already rejects superseded requests on cleanup), and show
-  a subtle loading indicator while a request is outstanding.
+  superseded callable can arrive for text the user is still typing.
+
+  Implement this by ignoring superseded responses, not by cancelling them:
+  `BackendOperationClient` has no per-request cancel API — its `cleanup()` rejects *every*
+  pending request and only runs on disconnect or session reset. Keep a request generation ref,
+  bump it on each new request, and discard any resolution that isn't the current generation.
+  Rejections from superseded requests must be swallowed so a stale lookup can't surface an
+  unhandled promise rejection.
 - **Source rotation must re-request, not just discard.** Because every rerun mints a fresh
   `source_id`, the check above would otherwise silently blank the dropdown — and `live` makes
   that the common case rather than a corner case, since its 250ms default is shorter than the
   300ms suggestion debounce, so the rerun typically lands before the lookup is even sent.
-  When `suggestionsSourceId` changes, clear pending state for the old id and re-request for
-  the current text against the new one. The old list stays on screen until the replacement
-  arrives so it doesn't flicker, but it goes **inert** for that window — no highlight, no
-  selection — because the rerun may have changed the callable or the values it closes over,
-  and selecting a stale row performs a real commit. The window is one round trip.
+  When `suggestionsSourceId` changes, re-request for the current text against the new id.
+  - **The re-request shares the same 300ms rate limit as typing**, as a trailing throttle. It
+    must not simply restart the debounce (that re-imposes the very delay rotation is trying to
+    avoid), and it must not fire immediately per rotation either: `live="0ms"` remints the id
+    on *every* keystroke, which would otherwise turn each keystroke into a lookup and defeat
+    the debounce entirely. One lookup per interval, whatever mix of typing and rotation
+    triggered it.
+  - **The visible list stays live during the swap** — no flicker, no inert window. Committing
+    a slightly stale suggestion is not a correctness problem here: free text is always allowed,
+    so choosing a row the user can see is equivalent to typing that same string, and it still
+    passes through the normal `maxChars` / `validate` / `required` gates on commit. This is the
+    one place where being a free-text field, rather than a constrained select, makes the racy
+    case harmless.
+  - **If the replacement request fails, is superseded, or returns nothing, close the list.**
+    Otherwise a rotation whose follow-up never produces a response would strand the previous
+    results on screen indefinitely.
 - **IME:** don't request while `isComposingRef` is set; schedule exactly one request after
   `compositionend`, so composing CJK text doesn't fire lookups on half-formed input.
 - **Selection:** clicking an item, or ↑/↓ then Enter or Tab, sets `uiValue` — through the same
@@ -399,9 +463,15 @@ needs it.
   `tryCommitOutsideForm` path so `on_change`, `live`, `validate`, `required`, forms, and `bind`
   all behave exactly as for a typed commit. Note this is the *commit* path, not a synthetic
   Enter: inside a form, selecting must fill and stage the value without submitting. Tab selects
-  and then moves focus as usual. `Esc`
-  closes the dropdown only; per the product spec, an empty result closes it rather than showing
-  Selectbox's "No results" row.
+  and then moves focus as usual. `Esc` closes the dropdown only; per the product spec, an empty
+  result closes it rather than showing Selectbox's "No results" row.
+- **Pointer selection must not trip the blur commit.** `handleBlur` commits whenever focus
+  leaves `elementRef`, and the popover renders outside that subtree — so a plain click on a
+  suggestion would blur first and commit the half-typed text, rerunning with the wrong value
+  before the selection is ever applied. Suppress the focus change on pointer-down the way the
+  component already does for its own end enhancers (`preventFocusLoss`, the module-level
+  `e.preventDefault()` used by the password toggle and clear button) so focus never leaves the
+  input and the click resolves as a selection.
 - Coexist with the existing end enhancers (error icon, search clear button), the `live` commit
   timers, and the stale-`setValue` handling already in the component. The native
   `<input autocomplete>`
@@ -420,6 +490,19 @@ Expose the suggestion source so tests can drive it without a browser: on the
 `SuggestionSourceManager` and returns the normalized list. This mirrors how #16303 surfaces
 server-side validation to AppTest.
 
+### 8. Test coverage for the implementation PR
+
+The riskiest behavior here is invisible in the happy path, so name it up front rather than
+discovering it in review:
+
+| Layer | What to cover |
+| --- | --- |
+| Python unit (manager / handler) | Permits released on timeout **and** on failed admission or failed submit (the leak that disables suggestions); bare-`str` and other bad return types rejected; oversized inbound `text` rejected rather than truncated; over-long suggestions dropped, never shortened; count cap; unknown/superseded `source_id` fails closed while a wrong-session id raises; source cleanup across full vs fragment reruns |
+| Python unit (`text_widgets`) | Callable vs string vs `None` dispatch; native token forced to `"off"`; `type="password"` raises; unkeyed identity stable across two different callables; keyed identity unaffected |
+| Typing (`lib/tests/streamlit/typing/text_input_types.py`) | The widened `autocomplete` overload still returns `str` / `str \| None` |
+| Frontend unit | Debounce and its shared rate limit across typing and source rotation; stale responses discarded by generation and by `sourceId`; rejected superseded requests swallowed; pointer-down not committing via blur; Ctrl/Cmd+A still selecting text; IME composition; combobox keyboard selection and commit-not-submit inside a form |
+| E2E (`e2e_playwright/st_text_input_test.py`) | Keyboard and mouse selection, failing source degrading to no dropdown, behavior inside a form, inside a fragment, with `live`, with `max_chars`, and when disabled |
+
 ## Security & abuse considerations
 
 Inherits the backend-operation threat model (arbitrary/modified client over the WebSocket):
@@ -436,12 +519,23 @@ Inherits the backend-operation threat model (arbitrary/modified client over the 
   ones, or grow a queue behind them by spreading requests across many sources.
 - **Input and result caps**: an oversized client-supplied `text` is rejected before it reaches
   user Python, and max count / max string length / `max_chars` bound the response payload.
+- **A per-session rate budget**, because the caps above bound concurrency but not *rate*: a
+  modified client can vary `text` to defeat coalescing and re-fire as permits recycle, calling
+  a billable database or API far more often than the browser's 300ms debounce suggests. The
+  budget is keyed on the session rather than the rotating `source_id`.
 - **Fail closed + server-only logging**: exceptions, timeouts, and bad return types yield an
   empty suggestion list and **no** `error_msg` — surfacing one would reject the request in
-  `BackendOperationClient` and show the user an error for what is only a missing hint.
-  `error_msg` stays reserved for frontend-safe `SuggestionSourceError` cases (unknown or
-  wrong-session `source_id`). Tracebacks and values are logged server-side and never
-  serialized to the browser (the callable could touch secrets/DB rows).
+  `BackendOperationClient` and show the user an error for what is only a missing hint. An
+  unknown or superseded `source_id` takes the same silent path, since source rotation makes it
+  routine. `error_msg` stays reserved for a `source_id` belonging to a different session.
+  Tracebacks and values are logged server-side and never serialized to the browser (the
+  callable could touch secrets/DB rows).
+- **Session state is not reachable from the callable, and writing to it leaks across
+  sessions.** Off the script thread `get_session_state()` resolves to the process-global mock
+  rather than the caller's session, so a read sees nothing and a write lands in a store shared
+  by every session and never cleaned up. The public contract says neither is supported;
+  raising on access there (Principle 23) is worth considering over silently resolving to the
+  shared mock.
 - **`type="password"` disallowed** with a callable `autocomplete`; and in suggestion mode the
   native autofill token is forced to `"off"` so the browser never stores/proposes values.
 - **No new browser→internet path**: all lookups go through the existing authenticated

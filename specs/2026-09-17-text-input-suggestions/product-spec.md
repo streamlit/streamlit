@@ -90,8 +90,9 @@ values; the widget's value is always the text in the field, whether typed or cho
 All of the following applies only when `autocomplete` is a callable.
 
 - **When it's called:** while the field is focused, after a pause in typing (300ms, independent
-  of `live`). It receives the current text verbatim. It is also called with `""` on focus, so a
-  source can offer default or recent suggestions; return `[]` to show nothing. That focus call
+  of `live`). It receives the current text verbatim — on focus that means whatever is already in
+  the field, and `""` only when the field is empty, which is a source's chance to offer default
+  or recent suggestions; return `[]` to show nothing. That focus call
   costs a round trip even when the source has nothing to offer yet — an acceptable price for
   one lookup per focus, and the reason `autocomplete_min_chars` is on the list of things to add
   if it proves annoying. Nothing is requested mid-IME-composition; one request is scheduled
@@ -121,20 +122,77 @@ All of the following applies only when `autocomplete` is a callable.
   suggestion; typing and committing an unlisted value behaves like a normal text input. This is
   autocomplete, not a constrained select.
 - **Requests are asynchronous.** A newer keystroke supersedes an in-flight request and stale
-  responses are dropped, so the list always reflects the current text. A subtle loading
-  affordance shows while a request is outstanding.
+  responses are dropped, so the list always reflects the current text. While a request is
+  outstanding the field is marked busy and shows a small spinner. Since both an empty result
+  and a failure close the list, that state is also announced to assistive tech, so a
+  screen-reader user can tell "still loading" from "nothing found" without watching the
+  spinner.
 - **Failures fail closed.** If the function raises, times out, or returns an unexpected type,
-  the dropdown shows nothing and the field stays fully usable for free text. The error is
-  logged **server-side only** and never sent to the browser, since the function may touch
-  secrets or database rows.
-- **The function runs outside a script run**, so it must be a fast, read-only lookup. It has no
-  script context, which rules out more than `st.*` display commands: `st.session_state` does
-  not resolve to the caller's session there (it falls back to an empty stand-in rather than
-  raising), so reading another widget's value inside the function silently sees nothing. Close
-  over what you need instead — the function is re-registered on every rerun, so a closure
-  always holds that run's values. App logic belongs in `on_change` or the normal rerun.
-- **Browser autofill is turned off** for the field (the native `autocomplete` attribute is set
-  to `"off"`) so the browser's own dropdown can't compete with Streamlit's.
+  the dropdown shows nothing and the field stays fully usable for free text. Nothing is
+  surfaced to the user as an error — a missing hint is not worth interrupting them for. The
+  cause is logged **server-side only** and never sent to the browser, since the function may
+  touch secrets or database rows.
+- **The function must be safe to call from a worker thread.** It runs off the script thread,
+  and Streamlit may call it concurrently — several lookups can be in flight, and two widgets
+  can share one function — so it should be reentrant and avoid thread-affine database clients
+  and mutable closed-over state.
+- **The function runs outside a script run**, so it must be a fast, read-only lookup. Having no
+  script context means it can do *less* than a callback: `st.*` display commands are no-ops,
+  and `st.session_state` does not resolve to the caller's session. Neither reading nor writing
+  session state is supported — a read silently sees nothing, and a write lands in a
+  process-global store shared by every session, so it can leak across users. App logic belongs
+  in `on_change` or the normal rerun. See [Caching and passing in
+  context](#caching-and-passing-in-context) for how to work with that.
+- **Browser autofill is suppressed** for the field (the native `autocomplete` attribute is set
+  to `"off"`) so the browser's own dropdown doesn't compete with Streamlit's. `"off"` is a
+  request rather than a guarantee — Chrome ignores it for fields it reads as name, address, or
+  email — so the implementation may need an unrecognized token instead.
+
+### Caching and passing in context
+
+Two things follow from the function running off the script thread, and both are load-bearing
+for the headline use case.
+
+**Caching works, and is the main way to make an expensive source cheap.** A function decorated
+with `@st.cache_data` or `@st.cache_resource` can be called normally, so a repeated prefix
+doesn't re-hit the database, and `@st.cache_resource` is the natural place to keep the
+connection or client. This is not a special case: `st.cache_data(refresh_mode="background")`
+already recomputes cached functions off the script thread the same way. The one limitation is
+`scope="session"`, which needs a session to resolve and raises when there isn't one — the
+lookup then fails closed to an empty dropdown. Use the default `scope="global"`. (Cached
+functions that draw `st.*` elements also won't render them, for the same no-script-context
+reason.)
+
+**Pass session values in at registration time.** The function is re-registered on every rerun,
+on the script thread, where session state *is* available — so read it there and bind it, with
+either a closure or `functools.partial`. Bind by **keyword**, so the current text stays the
+first positional argument:
+
+```python
+import functools
+import streamlit as st
+
+
+@st.cache_data(ttl="10m")  # default scope="global"
+def search_products(text: str, *, category: str) -> list[str]:
+    return db.query(
+        "SELECT name FROM products WHERE category = ? AND name ILIKE ? LIMIT 10",
+        category,
+        f"{text}%",
+    )
+
+
+category = st.selectbox("Category", ["Fruit", "Dairy"])
+
+product = st.text_input(
+    "Product",
+    # Reads session/widget state now, on the script thread, and binds it.
+    autocomplete=functools.partial(search_products, category=category),
+)
+```
+
+Note that `text` is untrusted input — it comes from the browser — so keep queries
+parameterized, as above, rather than interpolating it into SQL or a URL.
 
 ### Design
 
@@ -151,18 +209,24 @@ uses, so reusing it settles most of the UI by construction:
 | Item look and keyboard nav | Themed rows with the rounded highlight pill; ↑/↓/Enter/Esc and the combobox/listbox ARIA roles come from React Aria |
 | Theming | Existing theme tokens, so it tracks custom themes automatically |
 
-That leaves four narrow decisions, worth a design pass but not a redesign:
+That leaves four narrower calls. Each has a proposed answer below, so what's left is a design
+pass on visual polish rather than a redesign. No mockups exist yet; these are the four things
+to put in front of design.
 
-- **Loading affordance.** The selectbox dropdown has none, since its filtering is instant.
-  Suggestions arrive over the network, so we need something low-key that doesn't make the list
-  jump.
-- **Empty results.** Selectbox shows a "No results" row. For typeahead that would flash on every
-  keystroke that doesn't match yet, so we propose closing the dropdown instead.
-- **No chevron.** Selectbox shows an open button because it has a browsable closed set. A text
-  input has none, so there's nothing to browse and no open button: the list appears only when
-  the source returns something — on focus if it offers defaults, otherwise as the user types.
-- **Mobile** inherits selectbox's behavior, with one exception: its heuristic of suppressing the
-  on-screen keyboard for short option lists must not apply here, since typing is the point.
+- **Loading affordance** — *proposed.* Selectbox needs none because its filtering is instant.
+  Here, show a small spinner in the field's existing end enhancers (beside the error icon and
+  clear button) rather than inside the list, so the list never shifts or steals focus, and mark
+  the field busy for assistive tech.
+- **Empty results** — *proposed.* Selectbox shows a "No results" row. For typeahead that would
+  flash on every keystroke that hasn't matched yet, so close the dropdown instead and let the
+  announcement above carry the information.
+- **No chevron** — *proposed.* Selectbox shows an open button because it has a browsable closed
+  set. A text input has none, so there's nothing to browse and no open button: the list appears
+  only when the source returns something — on focus if it offers defaults, otherwise as the
+  user types.
+- **Mobile** — *proposed.* Inherit selectbox's behavior, with one exception: its heuristic of
+  suppressing the on-screen keyboard for short option lists must not apply here, since typing
+  is the point.
 
 Match highlighting is deliberately *not* on the list: the server decides what matches, so the
 browser doesn't know which substring to emphasize (unlike selectbox's client-side filter).
@@ -177,7 +241,7 @@ browser doesn't know which substring to emphasize (unlike selectbox's client-sid
 | `validate`, `required` | Unchanged, applied at commit time. A chosen suggestion is validated like a typed one. |
 | `type` | `"default"` and `"search"` are the natural fits. `type="password"` raises `StreamlitIncompatibleParametersError` — proposing or persisting secrets in a dropdown is a footgun. (A *string* `autocomplete` with `type="password"`, e.g. `"new-password"`, is unaffected.) |
 | `bind="query-params"` | Unchanged; a committed suggestion syncs to the URL like any committed value. |
-| `max_chars` | Enforced on input as today, so the function only ever sees within-limit text. Suggestions longer than the limit are dropped rather than offered, since choosing one would commit a value the field itself would reject. With no `max_chars`, suggestions simply stop above a fixed length ceiling (in the tech spec) — past that the field isn't a typeahead case any more. |
+| `max_chars` | Enforced on input as today, so the function only ever sees within-limit text. A suggestion longer than the limit is **dropped, never shortened to fit**: offering a trimmed string would let the user commit something the source never returned, and offering the full one would commit a value the field itself rejects. The same drop rule applies above a fixed length ceiling when `max_chars` is unset (ceiling in the tech spec). |
 | `disabled` | No suggestions are requested. |
 
 ### Examples
