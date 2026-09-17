@@ -14,7 +14,7 @@ Use `st.segmented_control` or `st.pills` when you want all options visible at on
 | `st.selectbox` | Many options, single select, dropdown |
 | `st.multiselect` | Many options, multi-select, dropdown |
 
-For more values than fit comfortably in a dropdown, filter server-side instead of listing them — see [High-cardinality options](#high-cardinality-options).
+For more values than fit comfortably in a dropdown, see [High-cardinality options](#high-cardinality-options).
 
 ## Segmented control (options visible, single select)
 
@@ -91,14 +91,14 @@ with st.form("filters"):
 
 ## High-cardinality options
 
-Every option is serialized into the widget's message and sent to the browser on
-each rerun, and `filter_mode` matching then runs client-side over the whole
-list. The dropdown is virtualized, so long lists still render fine — payload and
-main-thread filtering are the cost. Keep option lists in the low thousands: a
-10k-option list is roughly 180 KB per rerun, while 1M options is ~18 MB and
-several hundred milliseconds of frozen UI per keystroke.
+Streamlit sends every option to the browser on each rerun, and `filter_mode`
+matching runs client-side over the whole list. The dropdown is virtualized, so
+long lists still render fine; the cost is payload and main-thread filtering.
+Keep option lists in the low thousands. A 10k-option list costs roughly 180 KB
+per rerun; 1M options costs ~18 MB and several hundred milliseconds of frozen UI
+per keystroke.
 
-Never derive options from a full table scan. Ask the database for the distinct
+So don't build options from a full table scan. Ask the database for the distinct
 values, bounded:
 
 ```python
@@ -114,13 +114,13 @@ customers = conn.query(
 customer = st.selectbox("Customer", customers)
 ```
 
-`select distinct` reads only that column rather than every row, but it still
-scans it. When the base table is large, precompute the distinct values into a
-small table or materialized view on a schedule and point the widget at that
-instead of re-scanning on every cache expiry.
+That hands the app one bounded column, but the database still has to find those
+distinct values. When the base table is large, precompute them into a small
+table or materialized view on a schedule and point the widget at that, so you
+don't pay for it again on every cache expiry.
 
-When the real domain is larger than a few thousand values, don't ship the list —
-search it. Query on a debounce and offer only what matched:
+Above a few thousand values, stop shipping the list and search it. Query on a
+debounce and offer only what matched:
 
 ```python
 @st.fragment
@@ -128,41 +128,52 @@ def customer_filter() -> None:
     term = st.text_input(
         "Customer", type="search", live="300ms", placeholder="Type to search…"
     )
-    st.session_state.customer = None
-    if len(term) < 2:
-        return
-    matches = conn.query(
-        "select customer from customers where customer like :term"
-        " order by customer limit 50",
-        params={"term": f"{term}%"},
-        ttl="60s",
-    )["customer"]
-    if matches.empty:
-        st.caption("No matches.")
-    else:
-        st.session_state.customer = st.selectbox(
-            "Matches", matches, label_visibility="collapsed"
-        )
+    choice = None
+    if len(term) >= 2:
+        matches = conn.query(
+            "select customer from customers where customer like :term"
+            " order by customer limit 50",
+            params={"term": f"%{term}%"},
+            ttl="60s",
+        )["customer"]
+        if matches.empty:
+            st.caption("No matches.")
+        else:
+            choice = st.selectbox(
+                "Matches",
+                matches,
+                index=None,
+                placeholder="Select a match",
+                label_visibility="collapsed",
+            )
+    if choice != st.session_state.get("customer"):
+        st.session_state.customer = choice
+        st.rerun()
 
 
 customer_filter()
 ```
 
-- `live="300ms"` commits on a pause instead of on every keystroke, and
-  `@st.fragment` keeps the rest of the app from rerunning while the user types.
-- The `limit` bounds the query and the payload; matching a prefix (`term%`) lets
-  an index serve it. Matching mid-value (`%term%`) or fuzzily is friendlier to
-  users who don't know how a value starts, but generally can't use an index —
-  keep the `limit`, and back it with a full-text or search index if the scan
-  gets expensive.
-- Pass a `ttl` to `conn.query` here — it caches indefinitely by default, and
+- `live="300ms"` commits after a 300ms pause in typing, and `@st.fragment` keeps
+  the rest of the app from rerunning while the user types.
+- Only the fragment reruns when the user types or picks, so the rest of the app
+  keeps showing results for the previous selection. Store the choice in Session
+  State and call `st.rerun()` when it changes, as above; dependent code then
+  re-executes once per real change. Rendering the dependent parts inside the
+  fragment also works, and needs no rerun.
+- `index=None` applies nothing until the user picks, so that rerun fires on a
+  real selection and not on every keystroke. Never reset the stored choice at
+  the top of the fragment: with `st.rerun()`, that loops forever.
+- Keep the `limit`. It bounds the payload and lets the database stop once it has
+  enough rows. A leading `%` matches mid-value, which users expect, but makes
+  the match itself scan. Whether an index can serve a `like` at all depends on
+  the backend, collation, and pattern, so check the query plan and add a
+  full-text or search index if it doesn't hold up.
+- Pass a `ttl` to `conn.query` here. It caches indefinitely by default, and
   every keystroke is a new cache key.
-- Read the choice from `st.session_state` outside the fragment; a fragment's
-  return value isn't available to the main script on a fragment-scoped rerun.
 
-Cascading filters (region → city → store) are the other way to keep each list
-small. Use `accept_new_options=True` when users already know the exact value and
-shouldn't have to find it in a list.
+Cascading filters (region → city → store) keep each list small without a search
+box.
 
 ## Toggle vs checkbox
 
