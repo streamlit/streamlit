@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from playwright.sync_api import Locator, Page, expect
@@ -33,14 +33,17 @@ def _plotly_div(chart: Locator) -> Locator:
 
 
 def _layout_metrics(chart: Locator) -> dict[str, Any]:
-    return _plotly_div(chart).evaluate(
-        """el => ({
+    return cast(
+        "dict[str, Any]",
+        _plotly_div(chart).evaluate(
+            """el => ({
             xDomain: el._fullLayout.xaxis.domain.slice(),
             yDomain: el._fullLayout.yaxis.domain.slice(),
             plotW: el._fullLayout._size.w,
             plotH: el._fullLayout._size.h,
             xRange: el._fullLayout.xaxis.range.slice(),
         })"""
+        ),
     )
 
 
@@ -135,7 +138,7 @@ def test_scroll_zoom_keeps_plot_box_stable_and_survives_rerun(app: Page):
 
     def _zoom_restored() -> bool:
         after_rerun = _layout_metrics(imshow_streamlit)
-        return after_rerun["xRange"] == imshow_after["xRange"]
+        return bool(after_rerun["xRange"] == imshow_after["xRange"])
 
     wait_until(app, _zoom_restored)
     assert _layout_metrics(imshow_streamlit)["xRange"] != imshow_before["xRange"]
