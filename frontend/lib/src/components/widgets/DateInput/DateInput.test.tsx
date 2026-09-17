@@ -2162,6 +2162,50 @@ describe("DateInput single-mode keyboard navigation", () => {
       within(calendar2).queryByRole("button", { name: /January 20, 1970/ })
     ).not.toBeInTheDocument()
   })
+
+  it("calendar shows max month after clear when max is before today", async () => {
+    const user = userEvent.setup()
+    vi.setSystemTime(new Date(2024, 2, 15))
+
+    const props = getProps({
+      default: [],
+      value: ["1970-01-20"],
+      setValue: true,
+      min: "1970-01-01",
+      max: "2020-12-31",
+    })
+    render(<DateInput {...props} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getSingleDateSegments(region)
+
+    await user.click(year)
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    expect(
+      within(calendar).getByRole("button", { name: /January 20, 1970/ })
+    ).toBeInTheDocument()
+
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+
+    await user.click(screen.getByTestId("stDateInputClearButton"))
+
+    const segments2 = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    await user.click(segments2.year)
+    const calendar2 = await screen.findByTestId("stDateInputCalendar")
+
+    const yearTrigger = within(calendar2).getByRole("button", { name: "year" })
+    const monthTrigger = within(calendar2).getByRole("button", {
+      name: "month",
+    })
+    expect(yearTrigger).toHaveTextContent("2020")
+    expect(monthTrigger).toHaveTextContent("December")
+    expect(within(calendar2).getByRole("grid")).toHaveAccessibleName(/2020/)
+  })
 })
 
 describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
