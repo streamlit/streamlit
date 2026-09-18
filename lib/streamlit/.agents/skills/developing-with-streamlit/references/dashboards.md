@@ -51,6 +51,16 @@ with st.container(horizontal=True):
 
 Horizontal containers wrap on smaller screens. Prefer them over `st.columns` for metric rows.
 
+## Zero deltas
+
+Streamlit shows a string `delta` as-is and does not parse it. Only the string `"0"` is zero, so `"0%"` gets a green up-arrow. For a flat period, pass the number `0` as `delta` and put the qualifier text in `delta_description`:
+
+```python
+st.metric("Orders", "1.4k", 0, delta_description="vs. last month", border=True)
+```
+
+Streamlit shows that delta in gray with no arrow.
+
 ## Metrics with sparklines
 
 Add trend context with `chart_data`:

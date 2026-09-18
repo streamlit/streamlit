@@ -369,6 +369,8 @@ st.metric(
 
 **Note:** Sparklines only show y-values and ignore x-axis spacing. Use them for evenly-spaced data (like daily or weekly snapshots). For irregularly-spaced time series, use a proper chart instead.
 
+**Note:** Streamlit shows a string `delta` as-is. Only the string `"0"` is zero, so `"0%"` gets a green up-arrow. For a flat period, pass the number `0` as `delta` and put the qualifier text in `delta_description`.
+
 See `dashboards.md` for composing metrics into dashboard layouts.
 
 ## References
