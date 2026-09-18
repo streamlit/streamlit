@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Final, TypeAlias, Union, cast
 from streamlit import runtime, type_util, url_util
 from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
 from streamlit.elements.lib.subtitle_utils import process_subtitle_data
-from streamlit.elements.lib.utils import compute_and_register_element_id
+from streamlit.elements.lib.utils import compute_and_register_element_id, normalize_alt
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitIncompatibleParametersError,
@@ -157,7 +157,9 @@ class MediaMixin:
             technologies. If this is ``None`` (default), Streamlit does not
             provide an accessible name for the player.
 
-            An empty or blank string is treated the same as ``None``.
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
 
             Describe the content of the audio rather than repeating text that is
             already visible on the page, which assistive technologies can read
@@ -359,7 +361,9 @@ class MediaMixin:
             provide an accessible name for a native player. A YouTube iframe
             continues to use its embed URL as its title.
 
-            An empty or blank string is treated the same as ``None``.
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
 
             Describe the content of the video rather than repeating text that is
             already visible on the page, which assistive technologies can read
@@ -607,8 +611,8 @@ def marshall_video(
         enable autoplay without user interaction. Defaults to False.
     alt: str or None
         A description of the video exposed to assistive technologies as the
-        accessible name. Defaults to None. Blank strings are treated as unset by
-        the frontend.
+        accessible name. Defaults to None. Empty or whitespace-only values are
+        treated as unset (and logged); leading/trailing whitespace is stripped.
     width: int or "stretch"
         The width of the video player. This can be one of the following:
         - An int: The width in pixels, e.g. 200 for a width of 200 pixels.
@@ -636,8 +640,9 @@ def marshall_video(
         width_config.use_stretch = True
     proto.width_config.CopyFrom(width_config)
 
-    if alt is not None:
-        proto.alt = alt
+    normalized_alt = normalize_alt(alt)
+    if normalized_alt is not None:
+        proto.alt = normalized_alt
 
     # "type" distinguishes between YouTube and non-YouTube links
     proto.type = VideoProto.Type.NATIVE
@@ -710,10 +715,9 @@ def marshall_video(
 
     if autoplay:
         proto.autoplay = autoplay
-        # Deliberately exclude `alt` from the element ID: the frontend keys its
-        # "already autoplayed" flag off this ID, so changing `alt` must not make
-        # the same media autoplay again. Trade-off: two autoplaying media
-        # elements that differ only in `alt` still collide as duplicate IDs.
+        # Include `alt` like other stable kwargs. Changing `alt` remounts an
+        # unkeyed autoplaying player (and may re-trigger autoplay), matching
+        # the approved element-identity contract for `alt`.
         proto.id = compute_and_register_element_id(
             "video",
             # video does not yet allow setting a user-defined key
@@ -727,6 +731,7 @@ def marshall_video(
             loop=loop,
             autoplay=autoplay,
             muted=muted,
+            alt=normalized_alt,
             width=width,
         )
 
@@ -886,8 +891,8 @@ def marshall_audio(
         Browsers will not autoplay audio files if the user has not interacted with the page yet.
     alt: str or None
         A description of the audio exposed to assistive technologies as the
-        accessible name. Defaults to None. Blank strings are treated as unset by
-        the frontend.
+        accessible name. Defaults to None. Empty or whitespace-only values are
+        treated as unset (and logged); leading/trailing whitespace is stripped.
     width: int or "stretch"
         The width of the audio player. This can be one of the following:
         - An int: The width in pixels, e.g. 200 for a width of 200 pixels.
@@ -907,8 +912,9 @@ def marshall_audio(
         width_config.use_stretch = True
     proto.width_config.CopyFrom(width_config)
 
-    if alt is not None:
-        proto.alt = alt
+    normalized_alt = normalize_alt(alt)
+    if normalized_alt is not None:
+        proto.alt = normalized_alt
 
     if isinstance(data, Path):
         data = str(data)  # Convert Path to string
@@ -929,10 +935,9 @@ def marshall_audio(
 
     if autoplay:
         proto.autoplay = autoplay
-        # Deliberately exclude `alt` from the element ID: the frontend keys its
-        # "already autoplayed" flag off this ID, so changing `alt` must not make
-        # the same media autoplay again. Trade-off: two autoplaying media
-        # elements that differ only in `alt` still collide as duplicate IDs.
+        # Include `alt` like other stable kwargs. Changing `alt` remounts an
+        # unkeyed autoplaying player (and may re-trigger autoplay), matching
+        # the approved element-identity contract for `alt`.
         proto.id = compute_and_register_element_id(
             "audio",
             user_key=None,
@@ -945,5 +950,6 @@ def marshall_audio(
             end_time=end_time,
             loop=loop,
             autoplay=autoplay,
+            alt=normalized_alt,
             width=width,
         )

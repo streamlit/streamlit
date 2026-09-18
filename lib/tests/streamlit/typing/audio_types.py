@@ -103,7 +103,7 @@ if TYPE_CHECKING:
     audio("audio.wav", width="content")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid alt value (must be a string or None)
-    audio("audio.wav", alt=123)  # type: ignore[arg-type]
+    audio("audio.wav", alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Passing sample_rate as positional argument (should be keyword-only)
     audio("audio.wav", "audio/wav", 0, 44100)  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]

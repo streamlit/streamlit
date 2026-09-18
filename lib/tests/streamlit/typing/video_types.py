@@ -122,7 +122,7 @@ if TYPE_CHECKING:
     video("video.mp4", width="content")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid alt value (must be a string or None)
-    video("video.mp4", alt=123)  # type: ignore[arg-type]
+    video("video.mp4", alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Passing subtitles as positional argument (should be keyword-only)
     video("video.mp4", "video/mp4", 0, "subtitles.vtt")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
