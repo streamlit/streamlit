@@ -697,9 +697,8 @@ class NumberInputMixin:
         element_id = compute_and_register_element_id(
             "number_input",
             user_key=key,
-            # A user key ignores all command kwargs, including required.
-            # Passing required hashes it only for unkeyed widgets; toggling it
-            # cannot make a stored value incompatible.
+            # `required` is hashed only for unkeyed widgets: toggling it cannot make a
+            # stored value incompatible, so it is omitted from keyed identity.
             key_as_main_identity=True,
             dg=self.dg,
             label=label,

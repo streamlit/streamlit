@@ -807,7 +807,9 @@ def test_number_input_on_change_ignore(app: Page):
 
 
 def test_number_input_required_blocks_empty_commits_and_form_submits(app: Page):
-    """Test required validation for forms, blur commits, zero, and hidden labels."""
+    """Verify required number inputs block empty form submissions and commits
+    while accepting zero and preserving hidden-label accessibility.
+    """
     amount_widget = get_element_by_key(app, "required_amount")
     count_widget = get_element_by_key(app, "required_count")
     amount_field = amount_widget.locator("input").first

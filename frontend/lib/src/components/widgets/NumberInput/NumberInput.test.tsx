@@ -2351,6 +2351,33 @@ describe("NumberInput widget", () => {
       expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
     })
 
+    it("does not rewrite an untouched %0.2f value on form submit", () => {
+      const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+      const props = getFloatProps(
+        {
+          formId: "form",
+          default: 0.075,
+          format: "%0.2f",
+          min: 0,
+          max: 1,
+          hasMin: true,
+          hasMax: true,
+        },
+        { widgetMgr }
+      )
+      const setDoubleValueSpy = vi.spyOn(widgetMgr, "setDoubleValue")
+      render(<NumberInput {...props} />)
+      setDoubleValueSpy.mockClear()
+
+      act(() => {
+        widgetMgr.submitForm("form", undefined)
+      })
+
+      expect(sendRerunBackMsg).toHaveBeenCalled()
+      expect(setDoubleValueSpy).not.toHaveBeenCalled()
+      expect(widgetMgr.getDoubleValue(props.element)).toBe(0.075)
+    })
+
     it("blocks form submit click for an out-of-range value when not required", async () => {
       const user = userEvent.setup()
       const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()

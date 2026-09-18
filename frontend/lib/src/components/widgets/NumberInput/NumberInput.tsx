@@ -303,7 +303,8 @@ const NumberInput: React.FC<Props> = ({
 
   // When the widget has no default, the user can clear the value to null.
   // `clearable` is false when disabled, so the clear button is never shown in that state.
-  // Required fields hide the X because it would commit empty; keyboard emptying still works.
+  // Required fields hide the clear button because it would commit an empty value.
+  // Users can still clear the field with the keyboard.
   const clearable =
     isNullOrUndefined(element.default) && !disabled && !element.required
 
@@ -361,13 +362,16 @@ const NumberInput: React.FC<Props> = ({
     return Number.isNaN(parsed) ? null : parsed
   }, [formattedValue, element.dataType])
 
+  /**
+   * True when the value, after the default fallback, is empty — i.e. what
+   * commitValue would write is null.
+   */
   const isRequiredEmpty = (valueArg: number | null): boolean =>
     (valueArg ?? elementDefault ?? null) === null
 
-  // Required is not in keyed identity, so this error flag can outlive a rerun
-  // that turns required off or writes a non-empty value. Clear the flag when
-  // the chrome would hide it so required off→on or a programmatic fill-then-clear
-  // does not resurrect the error without a new commit/submit.
+  // Clear the stored error once it is no longer visible. Keyed widgets preserve
+  // local state across required changes and programmatic values, so otherwise
+  // re-enabling required could resurrect a stale error.
   const requiredError =
     element.required &&
     hasRequiredError &&
@@ -392,9 +396,9 @@ const NumberInput: React.FC<Props> = ({
 
   const handleBlur = useCallback((): void => {
     if (dirty) {
-      // Use currentNumericValue (parsed from formattedValue) not value (from useBasicWidgetState)
-      // because value isn't updated until commit, but the user has typed a new value.
-      // In-form blur stages the value without the required check; gating is at submit.
+      // Validate the user's current edit, not the last committed value. In a
+      // form, stage empty values here and let the submit validator enforce
+      // requiredness.
       commitValue({
         value: currentNumericValue,
         fromUser: true,
@@ -490,11 +494,25 @@ const NumberInput: React.FC<Props> = ({
     ]
   )
 
-  formSubmitValidatorRef.current = () =>
-    commitValue({
-      value: currentNumericValue,
-      fromUser: true,
-    })
+  formSubmitValidatorRef.current = () => {
+    if (dirty) {
+      return commitValue({
+        value: currentNumericValue,
+        fromUser: true,
+      })
+    }
+
+    // Do not write a clean value. commitValue parses the display-formatted
+    // string, so an untouched 0.075 with default %0.2f would become 0.08.
+    if (element.required && isRequiredEmpty(value)) {
+      setHasRequiredError(true)
+      return false
+    }
+
+    // A step on an out-of-range value can set validationError while dirty
+    // stays false. Keep blocking submit while that error is visible.
+    return !validationError
+  }
 
   // Register for every in-form number input so submit (click or Enter)
   // re-runs required then range against the live UI, not only Enter.

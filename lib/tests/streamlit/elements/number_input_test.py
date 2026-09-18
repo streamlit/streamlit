@@ -111,10 +111,8 @@ class NumberInputTest(DeltaGeneratorTestCase):
             assert id1 != id2
 
     def test_required_not_in_keyed_widget_id(self) -> None:
-        """Test that toggling required with a key keeps the widget ID.
-
-        A user key ignores all command kwargs, so required is not part of
-        the keyed identity.
+        """With `key_as_main_identity`, the widget ID derives from the user key rather
+        than command parameters. Changing `required` therefore preserves this ID.
         """
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
