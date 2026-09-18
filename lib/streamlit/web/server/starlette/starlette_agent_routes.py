@@ -102,6 +102,20 @@ def _is_loopback_peer(request: Request) -> bool:
         return False
 
 
+def _peer_allowed(request: Request) -> bool:
+    """True when this caller may drive the app.
+
+    Loopback always may. A non-loopback caller may only when
+    `server.agentApiAllowRemote` is explicitly on — a local deviation from the
+    upstream prototype, which is loopback-only on purpose. The peer test itself
+    is unchanged and still reads the raw TCP address: the escape hatch is an
+    operator's explicit choice, never something a forwarded header can claim.
+    """
+    if _is_loopback_peer(request):
+        return True
+    return bool(config.get_option("server.agentApiAllowRemote"))
+
+
 def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRoute]:
     """Create the agent API routes.
 
@@ -143,7 +157,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         """
         if not enabled:
             availability = "disabled"
-        elif not _is_loopback_peer(request):
+        elif not _peer_allowed(request):
             availability = "loopback-only"
         else:
             availability = "available"
@@ -168,7 +182,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
                 f"{schema_path} for what it would offer.",
                 status=error_status("not_available"),
             )
-        if not _is_loopback_peer(request):
+        if not _peer_allowed(request):
             return _refuse_non_loopback(request)
 
         # The same bound the WebSocket handler applies to an inbound frame, so

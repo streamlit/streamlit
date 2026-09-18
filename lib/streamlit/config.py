@@ -1255,6 +1255,29 @@ _create_option(
 )
 
 _create_option(
+    "server.agentApiAllowRemote",
+    description="""
+        Serve the agent API to non-loopback callers as well.
+
+        NOT FOR PRODUCTION, and not part of the upstream prototype. The agent
+        API is loopback-only by design: the peer check reads the raw TCP peer
+        address so a proxy cannot present a remote caller as local, and remote
+        enablement is deliberately deferred until identity mapping into
+        `st.user`, Origin and XSRF handling, and response and rate budgets are
+        settled.
+
+        This option exists only so the prototype can be exercised where the app
+        is necessarily reached through a platform proxy — Streamlit in
+        Snowflake, where the TCP peer is the SPCS ingress and every call would
+        otherwise be refused. Turning it on means any caller that can reach the
+        port can drive the app with no authentication whatsoever.
+    """,
+    default_val=False,
+    type_=bool,
+    visibility="hidden",
+)
+
+_create_option(
     "server.agentRunTimeout",
     description="""
         Maximum number of seconds an agent API interaction waits for the app's
