@@ -232,6 +232,21 @@ export const useHandleJsContent = ({
       )
     }
 
+    // If this run was cancelled after the module initialized, invoke its
+    // teardown instead of storing it — otherwise listeners/requests leak.
+    const adoptCleanup = (cleanup: CleanupFunction | void): void => {
+      if (!cancelled) {
+        cleanupRef.current = cleanup
+        return
+      }
+
+      void Promise.resolve(cleanup)
+        .then(result => result?.())
+        .catch(error => {
+          LOG.error("Failed to run custom component cleanup", error)
+        })
+    }
+
     const run = async (): Promise<void> => {
       try {
         if (inlineJsContent) {
@@ -240,24 +255,20 @@ export const useHandleJsContent = ({
             `st-bidi-${componentName}`
           )
 
-          const cleanup = await loadAndRunModule({
-            componentId,
-            componentIdForWidgetMgr: id,
-            componentName,
-            data,
-            formId,
-            fragmentId,
-            getWidgetValue,
-            moduleUrl: url,
-            parentElement: containerRefCurrent,
-            widgetMgr,
-          })
-
-          if (cancelled) {
-            return
-          }
-
-          cleanupRef.current = cleanup
+          adoptCleanup(
+            await loadAndRunModule({
+              componentId,
+              componentIdForWidgetMgr: id,
+              componentName,
+              data,
+              formId,
+              fragmentId,
+              getWidgetValue,
+              moduleUrl: url,
+              parentElement: containerRefCurrent,
+              widgetMgr,
+            })
+          )
         } else if (externalJsSourcePathUrl) {
           const scriptUrl = externalJsSourcePathUrl
 
@@ -280,24 +291,20 @@ export const useHandleJsContent = ({
               return
             }
 
-            const cleanup = await loadAndRunModule({
-              componentId,
-              componentIdForWidgetMgr: id,
-              componentName,
-              data,
-              formId,
-              fragmentId,
-              getWidgetValue,
-              moduleUrl: scriptUrl,
-              parentElement: containerRefCurrent,
-              widgetMgr,
-            })
-
-            if (cancelled) {
-              return
-            }
-
-            cleanupRef.current = cleanup
+            adoptCleanup(
+              await loadAndRunModule({
+                componentId,
+                componentIdForWidgetMgr: id,
+                componentName,
+                data,
+                formId,
+                fragmentId,
+                getWidgetValue,
+                moduleUrl: scriptUrl,
+                parentElement: containerRefCurrent,
+                widgetMgr,
+              })
+            )
           } catch (error) {
             throw normalizeError(
               error,
