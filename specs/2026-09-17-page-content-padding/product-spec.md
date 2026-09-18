@@ -39,8 +39,8 @@ Planned issue with 103 👍 reactions.
    named fast follow after the layout pass below.
 3. **[Option naming](#option-naming)** — prefer `paddingTop` / `paddingBottom`;
    alternative `appPadding*`; reject `mainPadding*`.
-4. **[Sidebar support](#sidebar-support)** — yes, via `[theme.sidebar]`, with an explicit
-   non-inheritance rule so main padding does not leak into the sidebar.
+4. **[Sidebar support](#sidebar-support)** — yes, via `[theme.sidebar]`; main padding does
+   not leak; sidebar top is the gap below sidebar header chrome when set.
 5. **[Header chrome composition](#how-values-compose-with-header-chrome)** — top is the
    author-controlled gap below header chrome; configured values replace legacy `6rem` /
    `8rem` (including the top-nav aesthetic bump) while Streamlit still clears the actual
