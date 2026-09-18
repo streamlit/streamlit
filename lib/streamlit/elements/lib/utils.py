@@ -18,6 +18,7 @@ from datetime import date, datetime, time, timedelta
 from typing import (
     TYPE_CHECKING,
     Any,
+    Final,
     Literal,
     TypeAlias,
     Union,
@@ -33,6 +34,7 @@ from streamlit.errors import (
     StreamlitDuplicateElementKey,
     StreamlitValueError,
 )
+from streamlit.logger import get_logger
 from streamlit.proto.ChatInput_pb2 import ChatInput
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility as LabelVisibilityProto
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -45,6 +47,7 @@ from streamlit.runtime.state.common import (
     TESTING_KEY,
     user_key_from_element_id,
 )
+from streamlit.string_util import to_str
 
 if TYPE_CHECKING:
     from builtins import ellipsis
@@ -52,6 +55,12 @@ if TYPE_CHECKING:
 
     from streamlit.delta_generator import DeltaGenerator
 
+_LOGGER: Final = get_logger(__name__)
+
+_EMPTY_ALT_WARNING: Final = (
+    "`alt` was empty or whitespace-only and will be ignored. "
+    "Pass a non-empty description, or omit `alt`."
+)
 
 Key: TypeAlias = str | int
 
@@ -120,6 +129,42 @@ def to_key(key: Key) -> str: ...
 
 def to_key(key: Key | None) -> str | None:
     return None if key is None else str(key)
+
+
+def normalize_alt(
+    alt: object | None,
+    *,
+    allow_empty: bool = False,
+) -> str | None:
+    """Normalize author-provided ``alt`` text before marshalling.
+
+    Returns
+    -------
+    str or None
+        ``None`` when ``alt`` is omitted, empty (unless ``allow_empty``), or
+        whitespace-only. A non-empty result is stripped plain text. When
+        ``allow_empty`` is True (``st.image`` / ``st.pyplot``), an empty string
+        is returned as ``""`` for decorative images; whitespace-only is never
+        decorative and still becomes ``None``.
+    """
+    if alt is None:
+        return None
+
+    coerced = to_str(alt)
+    # Empty vs whitespace-only must be distinguished before strip: whitespace
+    # is never decorative, even when allow_empty is True.
+    if coerced == "":
+        if allow_empty:
+            return ""
+        _LOGGER.warning("%s", _EMPTY_ALT_WARNING, stack_info=True)
+        return None
+
+    stripped = coerced.strip()
+    if not stripped:
+        _LOGGER.warning("%s", _EMPTY_ALT_WARNING, stack_info=True)
+        return None
+
+    return stripped
 
 
 def _register_element_id(
