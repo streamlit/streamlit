@@ -207,6 +207,7 @@ export const useHandleJsContent = ({
   const cleanupRef = useRef<CleanupFunction | void>()
   const scriptElementRef = useRef<HTMLScriptElement>()
   const unmountedRef = useRef(false)
+  const runGenerationRef = useRef(0)
 
   // Initialization/update effect: runs when inputs change
   useEffect(() => {
@@ -219,6 +220,7 @@ export const useHandleJsContent = ({
       return
     }
 
+    const generation = ++runGenerationRef.current
     let scriptElement: HTMLScriptElement | undefined
     let resolveScriptLoad: (() => void) | undefined
     let rejectScriptLoad: ((reason: Error) => void) | undefined
@@ -232,11 +234,16 @@ export const useHandleJsContent = ({
       )
     }
 
-    // If this run was cancelled after the module initialized, invoke its
-    // teardown instead of storing it — otherwise listeners/requests leak.
+    // If this run is cancelled after the module initialized, tear it down
+    // only when no newer effect owns the shared parentElement. Otherwise a
+    // deferred stale cleanup can wipe the live instance.
     const adoptCleanup = (cleanup: CleanupFunction | void): void => {
       if (!cancelled) {
         cleanupRef.current = cleanup
+        return
+      }
+
+      if (runGenerationRef.current !== generation) {
         return
       }
 
