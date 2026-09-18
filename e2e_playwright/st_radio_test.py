@@ -31,6 +31,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     get_radio,
     get_radio_option,
+    reset_hovering,
     select_radio_option,
 )
 
@@ -89,6 +90,24 @@ def test_radio_widget_rendering(
     assert_snapshot(
         get_radio(themed_app, re.compile(r"^radio 14")), name="st_radio-markdown_label"
     )
+
+
+def test_radio_option_hover(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Unchecked option hover lightens the fill while keeping a distinct border.
+
+    Covers light and dark themes via themed_app. Hovers the unselected option so
+    the selected primary fill is not mistaken for the hover style.
+    """
+    radio = get_radio(themed_app, "radio 1 (default)")
+    # Exact match: has_text="male" also matches the selected "female" option.
+    unselected = get_radio_option(radio, re.compile(r"^male$"))
+
+    reset_hovering(themed_app)
+    expect(radio.locator("[data-hovered]")).to_have_count(0)
+
+    unselected.hover()
+    expect(unselected).to_have_attribute("data-hovered", "true")
+    assert_snapshot(radio, name="st_radio-option_hover")
 
 
 def test_radio_width_examples(app: Page, assert_snapshot: ImageCompareFunction):

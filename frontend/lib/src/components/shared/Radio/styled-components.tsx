@@ -134,7 +134,9 @@ interface StyledRadioOuterProps {
  * Unchecked uses the same border + fill model as `st.checkbox` / secondary
  * button (`borderColor` stroke, `bgColor` → `darkenedBgMix15` on hover) so the
  * fill can lighten without collapsing into the outline. Checked fills with
- * primary; the white centre dot is `StyledRadioInner`.
+ * primary; disabled+selected uses `fadedText40` (same muted fill as checkbox)
+ * so the white centre dot stays visible. The white centre dot is
+ * `StyledRadioInner`.
  *
  * No margin offset needed: the parent `StyledRadioRow` uses `align-items:
  * center` and contains only this circle and the option text, so centering is
@@ -146,8 +148,12 @@ export const StyledRadioOuter = styled.div<StyledRadioOuterProps>(
     let borderColor: string
 
     if ($isDisabled) {
+      // Mirror checkbox: muted primary fill when selected+disabled so the
+      // centre dot stays visible; unchecked stays a hollow ring.
       borderColor = theme.colors.borderColor
-      backgroundColor = theme.colors.bgColor
+      backgroundColor = $isSelected
+        ? theme.colors.fadedText40
+        : theme.colors.bgColor
     } else if ($isSelected) {
       borderColor = theme.colors.primary
       backgroundColor = theme.colors.primary
