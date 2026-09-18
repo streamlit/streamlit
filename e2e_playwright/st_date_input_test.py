@@ -33,6 +33,7 @@ from e2e_playwright.shared.app_utils import (
     expect_prefixed_markdown,
     get_date_input,
     get_element_by_key,
+    paste_into,
     reset_focus,
     reset_hovering,
     type_date,
@@ -1041,3 +1042,51 @@ def test_calendar_header_with_year_crossing_bounds(app: Page):
     range_year_popover = app.get_by_test_id("stDateInputHeaderPickerPopover")
     expect(range_year_popover).to_be_visible()
     expect(range_year_popover.get_by_role("option")).to_have_text(["2024", "2025"])
+
+
+def test_range_date_input_whole_range_paste(app: Page):
+    """Pasting a full start-end string into the range start field commits both dates."""
+    date_input = get_date_input(app, "Range, no date")
+    date_field = date_input.get_by_test_id("stDateInputField")
+    spinbuttons = date_field.get_by_role("spinbutton")
+    start_year = spinbuttons.nth(0)
+    start_month = spinbuttons.nth(1)
+    start_day = spinbuttons.nth(2)
+    end_year = spinbuttons.nth(3)
+    end_month = spinbuttons.nth(4)
+    end_day = spinbuttons.nth(5)
+    start_year.click()
+
+    paste_into(start_year, "2024/03/06 \u2013 2024/03/08")
+    wait_for_app_run(app)
+    expect_markdown(
+        app,
+        "Value 3: (datetime.date(2024, 3, 6), datetime.date(2024, 3, 8))",
+    )
+    expect(start_year).to_have_text("2024")
+    expect(start_month).to_have_text("03")
+    expect(start_day).to_have_text("06")
+    expect(end_year).to_have_text("2024")
+    expect(end_month).to_have_text("03")
+    expect(end_day).to_have_text("08")
+
+    paste_into(start_year, "2024/03/06 \u2013 not-a-date")
+    wait_for_app_run(app)
+    expect_markdown(
+        app,
+        "Value 3: (datetime.date(2024, 3, 6), datetime.date(2024, 3, 8))",
+    )
+    expect(start_year).to_have_text("2024")
+    expect(start_month).to_have_text("03")
+    expect(start_day).to_have_text("06")
+
+    end_year.click()
+    paste_into(end_year, "2025/01/01 \u2013 2025/01/31")
+    wait_for_app_run(app)
+    expect_markdown(
+        app,
+        "Value 3: (datetime.date(2024, 3, 6), datetime.date(2024, 3, 8))",
+    )
+    expect(end_year).to_have_text("2024")
+    expect(end_month).to_have_text("03")
+    expect(end_day).to_have_text("08")
