@@ -304,7 +304,7 @@ const NumberInput: React.FC<Props> = ({
   // When the widget has no default, the user can clear the value to null.
   // `clearable` is false when disabled, so the clear button is never shown in that state.
   // Required fields hide the clear button because it would commit an empty value.
-  // Users can still clear the field with the keyboard.
+  // Users can still empty the field by selecting the text and deleting it.
   const clearable =
     isNullOrUndefined(element.default) && !disabled && !element.required
 
@@ -494,6 +494,7 @@ const NumberInput: React.FC<Props> = ({
     ]
   )
 
+  /** Returns false to abort the form submit, painting the required or range error. Runs on both submit-button click and Enter. */
   formSubmitValidatorRef.current = () => {
     if (dirty) {
       return commitValue({
@@ -514,8 +515,8 @@ const NumberInput: React.FC<Props> = ({
     return !validationError
   }
 
-  // Register for every in-form number input so submit (click or Enter)
-  // re-runs required then range against the live UI, not only Enter.
+  // Register for every in-form number input so submit checks required and range.
+  // Dirty fields validate the live edit; clean fields preserve the stored value.
   useEffect(() => {
     if (!inForm) {
       return undefined

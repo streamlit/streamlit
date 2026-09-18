@@ -80,6 +80,20 @@ const getFloatProps = (
   )
 }
 
+const createFormWidgetMgr = (): {
+  sendRerunBackMsg: ReturnType<typeof vi.fn>
+  widgetMgr: WidgetStateManager
+} => {
+  const sendRerunBackMsg = vi.fn()
+  return {
+    sendRerunBackMsg,
+    widgetMgr: new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    }),
+  }
+}
+
 describe("NumberInput widget", () => {
   beforeEach(() => {
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
@@ -2017,20 +2031,6 @@ describe("NumberInput widget", () => {
         widgetProps
       )
 
-    const createFormWidgetMgr = (): {
-      sendRerunBackMsg: ReturnType<typeof vi.fn>
-      widgetMgr: WidgetStateManager
-    } => {
-      const sendRerunBackMsg = vi.fn()
-      return {
-        sendRerunBackMsg,
-        widgetMgr: new WidgetStateManager({
-          sendRerunBackMsg,
-          formsDataChanged: vi.fn(),
-        }),
-      }
-    }
-
     it("does not show a required error on initial render", () => {
       render(<NumberInput {...getRequiredEmptyProps()} />)
 
@@ -2351,65 +2351,6 @@ describe("NumberInput widget", () => {
       expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
     })
 
-    it("does not rewrite an untouched %0.2f value on form submit", () => {
-      const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
-      const props = getFloatProps(
-        {
-          formId: "form",
-          default: 0.075,
-          format: "%0.2f",
-          min: 0,
-          max: 1,
-          hasMin: true,
-          hasMax: true,
-        },
-        { widgetMgr }
-      )
-      const setDoubleValueSpy = vi.spyOn(widgetMgr, "setDoubleValue")
-      render(<NumberInput {...props} />)
-      setDoubleValueSpy.mockClear()
-
-      act(() => {
-        widgetMgr.submitForm("form", undefined)
-      })
-
-      expect(sendRerunBackMsg).toHaveBeenCalled()
-      expect(setDoubleValueSpy).not.toHaveBeenCalled()
-      expect(widgetMgr.getDoubleValue(props.element)).toBe(0.075)
-    })
-
-    it("blocks form submit click for an out-of-range value when not required", async () => {
-      const user = userEvent.setup()
-      const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
-      const props = getIntProps(
-        {
-          formId: "form",
-          required: false,
-          min: 0,
-          max: 10,
-          hasMin: true,
-          hasMax: true,
-        },
-        { widgetMgr }
-      )
-      render(<NumberInput {...props} />)
-
-      const input = screen.getByTestId("stNumberInputField")
-      await user.clear(input)
-      await user.type(input, "99")
-      act(() => {
-        widgetMgr.submitForm("form", undefined)
-      })
-
-      expect(sendRerunBackMsg).not.toHaveBeenCalled()
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        "Number is outside the allowed range."
-      )
-      expect(screen.getByRole("alert")).not.toHaveTextContent(
-        "This field is required."
-      )
-    })
-
     it("required takes precedence over range when empty", async () => {
       const user = userEvent.setup()
       const props = getRequiredEmptyProps({
@@ -2661,6 +2602,67 @@ describe("NumberInput widget", () => {
         expect.anything()
       )
       expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required."
+      )
+    })
+  })
+
+  describe("form submit validation", () => {
+    it("does not rewrite an untouched %0.2f value on form submit", () => {
+      const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+      const props = getFloatProps(
+        {
+          formId: "form",
+          default: 0.075,
+          format: "%0.2f",
+          min: 0,
+          max: 1,
+          hasMin: true,
+          hasMax: true,
+        },
+        { widgetMgr }
+      )
+      const setDoubleValueSpy = vi.spyOn(widgetMgr, "setDoubleValue")
+      render(<NumberInput {...props} />)
+      setDoubleValueSpy.mockClear()
+
+      act(() => {
+        widgetMgr.submitForm("form", undefined)
+      })
+
+      expect(sendRerunBackMsg).toHaveBeenCalled()
+      expect(setDoubleValueSpy).not.toHaveBeenCalled()
+      expect(widgetMgr.getDoubleValue(props.element)).toBe(0.075)
+    })
+
+    it("blocks form submit click for an out-of-range value when not required", async () => {
+      const user = userEvent.setup()
+      const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+      const props = getIntProps(
+        {
+          formId: "form",
+          required: false,
+          min: 0,
+          max: 10,
+          hasMin: true,
+          hasMax: true,
+        },
+        { widgetMgr }
+      )
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.clear(input)
+      await user.type(input, "99")
+      act(() => {
+        widgetMgr.submitForm("form", undefined)
+      })
+
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Number is outside the allowed range."
+      )
+      expect(screen.getByRole("alert")).not.toHaveTextContent(
         "This field is required."
       )
     })

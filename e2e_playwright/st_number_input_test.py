@@ -815,7 +815,7 @@ def test_number_input_required_blocks_empty_commits_and_form_submits(app: Page):
     amount_field = amount_widget.locator("input").first
 
     expect_markdown(app, "required form submitted: False")
-    expect_markdown(app, "Required rerun counter: 1")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
     expect(
         amount_widget.get_by_test_id("stTooltipErrorHoverTarget")
     ).not_to_be_visible()
@@ -831,7 +831,8 @@ def test_number_input_required_blocks_empty_commits_and_form_submits(app: Page):
     expect(amount_widget.get_by_role("alert")).to_have_text("This field is required.")
     expect(count_widget.get_by_role("alert")).to_have_text("This field is required.")
     expect_markdown(app, "required form submitted: False")
-    expect_markdown(app, "Required rerun counter: 1")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
 
     amount_field.fill("5")
     submit_button.click()
@@ -841,7 +842,8 @@ def test_number_input_required_blocks_empty_commits_and_form_submits(app: Page):
     ).not_to_be_visible()
     expect(count_widget.get_by_test_id("stTooltipErrorHoverTarget")).to_be_visible()
     expect_markdown(app, "required form submitted: False")
-    expect_markdown(app, "Required rerun counter: 1")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
 
     count_widget.locator("input").first.fill("0")
     submit_button.click()
@@ -849,8 +851,8 @@ def test_number_input_required_blocks_empty_commits_and_form_submits(app: Page):
 
     expect_markdown(app, "required form submitted: True")
     expect_markdown(app, "required amount: 5.0")
-    expect_markdown(app, "required form count: 0")
-    expect_markdown(app, "Required rerun counter: 2")
+    expect_markdown(app, "required count: 0")
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
     expect(
         amount_widget.get_by_test_id("stTooltipErrorHoverTarget")
     ).not_to_be_visible()
@@ -862,7 +864,7 @@ def test_number_input_required_blocks_empty_commits_and_form_submits(app: Page):
     standalone_field.press("Enter")
     wait_for_app_run(app)
     expect_markdown(app, "required standalone: 7.0")
-    expect_markdown(app, "Required rerun counter: 3")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
     expect(standalone_widget.get_by_test_id("stNumberInputClearButton")).to_have_count(
         0
     )
@@ -876,13 +878,14 @@ def test_number_input_required_blocks_empty_commits_and_form_submits(app: Page):
         "This field is required."
     )
     expect_markdown(app, "required standalone: 7.0")
-    expect_markdown(app, "Required rerun counter: 3")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
 
     standalone_field.fill("0")
     standalone_field.press("Enter")
     wait_for_app_run(app)
     expect_markdown(app, "required standalone: 0.0")
-    expect_markdown(app, "Required rerun counter: 4")
+    expect(app.get_by_text("Runs: 4", exact=True)).to_be_visible()
     expect(
         standalone_widget.get_by_test_id("stTooltipErrorHoverTarget")
     ).not_to_be_visible()
@@ -897,7 +900,7 @@ def test_number_input_required_blocks_empty_commits_and_form_submits(app: Page):
 def test_number_input_required_marker_and_error_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Snapshot the required marker and the required error chrome."""
+    """Snapshot the required marker and the required error state."""
     widget = get_element_by_key(themed_app, "required_standalone")
     expect(widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
     assert_snapshot(widget, name="st_number_input-required_marker")

@@ -244,11 +244,6 @@ if st.button("Apply ignore number", key="apply_ignore_number"):
 
 st.markdown("Required number inputs:")
 
-if "required_rerun_counter" not in st.session_state:
-    st.session_state.required_rerun_counter = 0
-
-st.session_state.required_rerun_counter += 1
-
 with st.form("required_number_input_form", clear_on_submit=True):
     st.number_input(
         "Required amount",
@@ -267,7 +262,7 @@ with st.form("required_number_input_form", clear_on_submit=True):
 
 st.write("required form submitted:", required_form_submitted)
 st.write("required amount:", st.session_state.get("required_amount"))
-st.write("required form count:", st.session_state.get("required_count"))
+st.write("required count:", st.session_state.get("required_count"))
 
 required_standalone = st.number_input(
     "Required standalone",
@@ -284,4 +279,3 @@ st.number_input(
     required=True,
     label_visibility="hidden",
 )
-st.write("Required rerun counter:", st.session_state.required_rerun_counter)
