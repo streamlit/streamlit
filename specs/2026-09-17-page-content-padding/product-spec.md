@@ -13,7 +13,7 @@ large top margin users complain about — through **advanced theming** in
 `.streamlit/config.toml`, with optional overrides under `[theme.sidebar]`.
 
 Today a non-embedded app always pads the main block container by **6rem** (or **8rem**
-with top nav) on top and a large bottom inset (~**10rem** when `st.bottom` is empty),
+with top nav) on top and **10rem** on the bottom (`1rem` when `st.bottom` is present),
 which wastes vertical space on dense dashboards. Authors currently hack this with fragile
 CSS. This spec adds first-class theme options instead of the original
 `st.set_page_config(margin_*)` proposal.
@@ -232,7 +232,7 @@ applies sidebar overrides. **Padding keys must be special-cased** so main-area
 
 | Config | Effect |
 | ------ | ------ |
-| Neither set | Main keeps today’s `6rem`/`8rem`/`10rem`/`1rem` paths; sidebar keeps today’s spacing (`paddingTop`: `spacing.twoXL` when page nav is above, else `0`; header still has `headerHeight` + `spacing.lg` margin; `paddingBottom`: `sizes.sidebarTopSpace` / `6rem`) |
+| Neither set | Today’s main and sidebar paths (baseline above; composition tables below) |
 | Only `[theme]` set | Applies to **main only**; sidebar unchanged |
 | Only `[theme.sidebar]` set | Applies to **sidebar only**; main unchanged |
 | Both set | Each section uses its own value |
@@ -242,9 +242,9 @@ shrink, drop sidebar to a follow-up — don’t invent a second API later.
 
 ### How values compose
 
-One rule for every key: a configured value is the author-controlled gap. Unset keeps
-today’s path for that context. Set replaces that path — do not also add a legacy
-aesthetic bump. Streamlit only reserves space for chrome that is actually there.
+Unset keeps today’s path for that context. Set replaces that path — do not add a legacy
+aesthetic bump on top. Top keys are the gap under chrome that is actually there;
+Streamlit still reserves that chrome. Bottom keys are aesthetic insets, not clearance.
 
 #### Main top
 
@@ -262,10 +262,9 @@ nav still lives inside the same `headerHeight` bar.
 | Situation | Behavior |
 | --------- | -------- |
 | `paddingTop` unset | Preserve today’s policy: `6rem` vs `8rem` (and today’s embed/minimal paths) |
-| `paddingTop` set | Author value wins. It replaces both the `6rem` and `8rem` defaults. Do not also add the top-nav +`2rem` bump — same visual gap under chrome with or without top nav |
+| `paddingTop` set | Author value replaces the whole default (`6rem`, `8rem`, and the embed paths). Do not also add the top-nav +`2rem` bump — same gap under whatever header is actually shown |
 
-Configured apps do not inherit Streamlit’s “more air when top nav is on” opinion; unset
-apps keep current look for compatibility.
+`client.toolbarMode` / `ui.hideTopBar` still choose which chrome exists; these keys do not hide it.
 
 #### Sidebar
 
@@ -323,46 +322,17 @@ scrolling under `st.bottom`.
 | Header toolbar / deploy / status | Header area, not a footer |
 | Cloud “Manage app” | Host overlay in the bottom-right (~`2.75rem` tall); this API does not reserve space for it |
 
-#### Risks
-
-| Risk | Severity | Mitigation |
-| ---- | -------- | ---------- |
-| Header clipping | High if absolute CSS with no clearance | Content inset: always clear real header height; author value is the gap under it |
-| Negative / `%` / `calc()` lengths | Medium | Reject in value grammar; warn + fall back |
-| Main padding leaking to sidebar | Medium | Special-case: do not inherit main padding into sidebar via `createSidebarTheme` merge |
-| Sidebar `paddingTop` applied to header margin **and** user-content padding | High | One gap, one property: no nav → header `marginBottom`; nav above → user-content `paddingTop`. Never both (see [Sidebar](#sidebar)) |
-| Re-applying top-nav `8rem` on top of a set value | Medium | Author config trumps `6rem`/`8rem`; no +`2rem` bump when set |
-| Cloud “Manage app” | Medium, corner-local | Document caveat; do not auto-clear unknown host UI. Near-zero bottom padding can overlap bottom-right content |
-| Cramped `st.bottom` / auto chat input | Low–medium | Main `paddingBottom` does not restyle bottom-container internals |
-| `st.toast` / skills nudge | Low | Top-right under header; unrelated to `paddingBottom` |
-| Focus ring clipped at `paddingTop = "0"` | Low | Implementation should verify first focusable control / focus ring is not visually clipped by the header edge |
-
-**Takeaway:** ship top + bottom for main and sidebar. When authors opt in, their gap
-replaces Streamlit’s default density (including the main top-nav `+2rem` bump). Streamlit
-only protects real header overlap on main. Bottom — main and sidebar — is aesthetic;
-main also documents `st.bottom` and the Cloud overlay, and does not clear either.
-
-Pixel/rem math for composing inset + header height is an implementation detail. Product
-contract: authors set the gap under chrome (main header, sidebar header/nav) and the
-bottom breathing room; configured values trump today’s defaults; Streamlit prevents
-main-header underlap, not unknown host overlays.
-
-Also: `client.toolbarMode` / `ui.hideTopBar` still choose which chrome exists; padding
-does not hide them. Embed modes keep today’s branching when unset; when set, author inset
-applies on top of real chrome clearance in those modes too.
-
 ### Behavior
 
-- **Defaults:** unset → preserve today’s hardcoded values (`6rem` / `8rem` top; `10rem`
-  bottom when `showPadding && !hasBottom`, else `1rem`; current sidebar spacing). No
-  visual change for apps that set nothing.
-- **Inheritance:** see [Sidebar support](#sidebar-support) precedence table. Main padding
-  does not flow into sidebar. v1 keys are not light/dark-scoped.
+- **Defaults and inheritance:** unset preserves the paths in
+  [What authors get today](#what-authors-get-today). Main keys do not flow into the
+  sidebar ([Sidebar support](#sidebar-support)). v1 keys are not light/dark-scoped.
 - **Host themes:** same value grammar and section rules as `config.toml`.
-- **Print:** today’s print stylesheet overrides only main `paddingTop` to `2.25rem` and
-  leaves bottom alone. **When `paddingTop` is set, that configured value also applies in
-  print** (author intent). When unset, print keeps `2.25rem`. `paddingBottom` is unchanged
-  by print either way. No separate print API.
+- **Print:** the print stylesheet replaces main `paddingTop` with an absolute `2.25rem`.
+  It does not add `headerHeight` — most header chrome is hidden, and the header stays
+  absolutely positioned. When `paddingTop` is set, the author value replaces that
+  `2.25rem` as the entire print `paddingTop`. When unset, print stays `2.25rem`.
+  `paddingBottom` and sidebar padding are unchanged by print. No separate print API.
 - **Small viewports:** the configured value applies unchanged across breakpoints
   (including mobile, where the sidebar is an overlay). No mobile-specific floor in v1.
 - **No runtime Python setter** — [#14172](https://github.com/streamlit/streamlit/issues/14172)
