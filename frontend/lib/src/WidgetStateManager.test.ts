@@ -699,6 +699,49 @@ describe("Widget State Manager", () => {
       expect(formsData.submitButtons.get("form")?.length).toEqual(0)
     })
 
+    it("keeps the first submit button first after a remount", () => {
+      const formId = "form"
+      const firstButton = new ButtonProto({ id: "first", disabled: true })
+      const secondButton = new ButtonProto({ id: "second" })
+      widgetMgr.addSubmitButton(formId, firstButton)
+      widgetMgr.addSubmitButton(formId, secondButton)
+
+      // Simulate React re-running the first button's effect: cleanup then add
+      // with a new proto instance for the same id.
+      widgetMgr.removeSubmitButton(formId, firstButton)
+      const remountedFirstButton = new ButtonProto({
+        id: "first",
+        disabled: true,
+      })
+      widgetMgr.addSubmitButton(formId, remountedFirstButton)
+
+      const submitButtons = formsData.submitButtons.get(formId)
+      expect(submitButtons?.map(button => button.id)).toEqual([
+        "first",
+        "second",
+      ])
+      expect(widgetMgr.allowFormEnterToSubmit(formId)).toBe(false)
+    })
+
+    it("replaces an existing submit button in place by id", () => {
+      const formId = "form"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "first", disabled: true })
+      )
+      widgetMgr.addSubmitButton(formId, new ButtonProto({ id: "second" }))
+      widgetMgr.addSubmitButton(formId, new ButtonProto({ id: "first" }))
+
+      const submitButtons = formsData.submitButtons.get(formId)
+      expect(submitButtons).toHaveLength(2)
+      expect(submitButtons?.map(button => button.id)).toEqual([
+        "first",
+        "second",
+      ])
+      expect(submitButtons?.[0].disabled).toBe(false)
+      expect(widgetMgr.allowFormEnterToSubmit(formId)).toBe(true)
+    })
+
     it("updates formsWithUploads", () => {
       widgetMgr.setFormsWithUploadsInProgress(new Set(["three", "four"]))
       expect(onFormsDataChanged).toHaveBeenCalledTimes(1)

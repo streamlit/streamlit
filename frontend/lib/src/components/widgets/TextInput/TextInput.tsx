@@ -36,6 +36,7 @@ import { TextField } from "react-aria-components"
 
 import { TextInput as TextInputProto } from "@streamlit/protobuf"
 
+import { FormsContext } from "~lib/components/core/FormsContext"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import {
   DynamicIcon,
@@ -538,6 +539,10 @@ function TextInput({
 
     return true
   }
+
+  // Re-render when form submit buttons are registered or updated so
+  // enter-to-submit instructions stay in sync with allowFormEnterToSubmit.
+  useContext(FormsContext)
 
   // Show "Please enter" instructions if in a form & allowed, or not in form
   // and dirty. Hide "Press Enter to apply" when live updates are on.
