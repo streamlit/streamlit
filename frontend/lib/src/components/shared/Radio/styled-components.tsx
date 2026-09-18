@@ -133,10 +133,10 @@ interface StyledRadioOuterProps {
  *
  * Unchecked uses the same border + fill model as `st.checkbox` / secondary
  * button (`borderColor` stroke, `bgColor` → `darkenedBgMix15` on hover) so the
- * fill can lighten without collapsing into the outline. Checked fills with
- * primary; disabled+selected uses `fadedText40` (same muted fill as checkbox)
- * so the white centre dot stays visible. The white centre dot is
- * `StyledRadioInner`.
+ * fill shifts with the shared hover token without collapsing into the outline.
+ * Checked fills with primary; disabled+selected uses `fadedText40` (same muted
+ * fill as checkbox) so the white centre dot stays visible. The white centre
+ * dot is `StyledRadioInner`.
  *
  * No margin offset needed: the parent `StyledRadioRow` uses `align-items:
  * center` and contains only this circle and the option text, so centering is
