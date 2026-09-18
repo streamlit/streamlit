@@ -40,7 +40,8 @@ Planned issue with 103 👍 reactions.
 3. **[Option naming](#option-naming)** — prefer `paddingTop` / `paddingBottom`;
    alternative `appPadding*`; reject `mainPadding*`.
 4. **[Sidebar support](#sidebar-support)** — yes, via `[theme.sidebar]`; main padding does
-   not leak; sidebar top is the gap below sidebar header chrome when set.
+   not leak; sidebar top maps to header `marginBottom` only (never also user-content
+   `paddingTop`).
 5. **[Header chrome composition](#how-values-compose-with-header-chrome)** — top is the
    author-controlled gap below header chrome; configured values replace legacy `6rem` /
    `8rem` (including the top-nav aesthetic bump) while Streamlit still clears the actual
@@ -183,7 +184,7 @@ only for variants in the *same* section (`baseRadius` vs `buttonRadius`, etc.).
 | ---------- | ---------- |
 | `theme.paddingTop` | Main top content inset |
 | `theme.paddingBottom` | Main bottom inset |
-| `theme.sidebar.paddingTop` | Gap below sidebar header/logo chrome |
+| `theme.sidebar.paddingTop` | Sidebar header `marginBottom` (gap below logo/header row) |
 | `theme.sidebar.paddingBottom` | Sidebar bottom inset |
 
 - Pros: Matches `backgroundColor` / `borderColor`; natural under `[theme.sidebar]`;
@@ -237,17 +238,32 @@ applies sidebar overrides. **Padding keys must be special-cased** so main-area
 | Only `[theme.sidebar]` set | Applies to **sidebar only**; main unchanged |
 | Both set | Each section uses its own value |
 
-**Sidebar top — gap after sidebar chrome:** unlike main, the sidebar header/logo row is
-in normal flow (not absolutely overlapping content). Today’s visible top gap with no page
-nav is mostly that header’s height + `spacing.lg` margin, while user-content `paddingTop`
-is already `0` — so a key that only wrote user-content padding could not tighten the
-no-nav case (negatives are rejected).
+**Sidebar top — single gap below the header/logo row.** Sidebar DOM order today is:
 
-When `theme.sidebar.paddingTop` is **set**, it is the author-controlled gap below the
-sidebar header/logo row: it replaces today’s header `marginBottom` **and** user-content
-`paddingTop` (including the page-nav `twoXL` branch). `"0"` means flush under the header
-row; the header row’s own height is still reserved. When **unset**, preserve today’s
-header margin + `twoXL`/`0` user-content behavior.
+1. `StyledSidebarHeaderContainer` (`headerHeight` + `marginBottom: spacing.lg`)
+2. optional `SidebarNav` when page nav is above
+3. `StyledSidebarUserContent` (`paddingTop: spacing.twoXL` with page nav, else `0`)
+
+Header `marginBottom` and user-content `paddingTop` sit on **opposite sides** of page
+nav when it is present. The configured value must therefore land on **exactly one**
+property — never both — or the author gap is applied twice.
+
+| `theme.sidebar.paddingTop` | Page nav above? | Header `marginBottom` | User-content `paddingTop` |
+| -------------------------- | --------------- | --------------------- | ------------------------- |
+| unset | no | `spacing.lg` | `0` |
+| unset | yes | `spacing.lg` | `spacing.twoXL` |
+| set | no | **author value** | `0` |
+| set | yes | **author value** | `spacing.twoXL` (unchanged) |
+
+When set, the author value replaces **only** today’s header `marginBottom` (the gap
+immediately below the header/logo row). `"0"` means flush under that row; the row’s own
+`headerHeight` is still reserved. User-content `paddingTop` keeps today’s page-nav rule
+and is **not** rewritten to the author value — that spacing is between nav and widgets,
+not the header gap this option controls.
+
+(A key that only wrote user-content `paddingTop` could not tighten the no-nav case:
+that path is already `0`, and negatives are rejected. Targeting header `marginBottom`
+is what makes denser no-nav sidebars possible.)
 
 `theme.sidebar.paddingBottom` replaces today’s user-content `paddingBottom`
 (`sidebarTopSpace` / `6rem`) directly.
@@ -301,6 +317,7 @@ prevents main content from scrolling under `st.bottom`.
 | Header clipping | High if absolute CSS with no clearance | Content inset: always clear real header height; author value is the gap under it |
 | Negative / `%` / `calc()` lengths | Medium | Reject in value grammar; warn + fall back |
 | Main padding leaking to sidebar | Medium | Special-case: do not inherit main padding into sidebar via `createSidebarTheme` merge |
+| Sidebar `paddingTop` applied to header margin **and** user-content padding | High | Apply author value only to header `marginBottom`; leave user-content `paddingTop` on today’s page-nav rule (see sidebar table) |
 | Re-applying top-nav `8rem` on top of a set value | Medium | Author config trumps `6rem`/`8rem`; no +`2rem` bump when set |
 | Cloud “Manage app” | Medium, corner-local | Document caveat; do not auto-clear unknown host UI. Near-zero bottom padding can overlap bottom-right content |
 | Cramped `st.bottom` / auto chat input | Low–medium | Main `paddingBottom` does not restyle bottom-container internals |
