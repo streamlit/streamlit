@@ -123,14 +123,16 @@ Streamlit functions. We restrict the ScriptRunner's execution control to the
 script thread. Calling Streamlit functions from other threads is unlikely to
 work correctly due to lack of ScriptRunContext, so we may add a guard against
 it in the future.
-Script threads are daemons so the process can exit when a user script is stuck
-in a tight loop with no ``st.*`` interrupt points. Python threads inherit the
-daemon flag, so threads the script starts itself also default to daemon.
-``ThreadPoolExecutor`` workers inherit it too, but ``concurrent.futures`` joins
-its workers via an atexit hook, so a task hung inside an executor still blocks
-process exit. Cooperative interrupts still run when the script reaches an
-``st.*`` call. A thread that must block interpreter shutdown can set
-``daemon=False`` explicitly.
+Script threads are daemons so the process can exit even when a user script is
+stuck in a loop with no st.* interrupt points. Consequences:
+- Threads the script starts inherit daemon=True, so they no longer keep the
+  process alive at interpreter shutdown. A thread that must block shutdown has
+  to set daemon=False explicitly.
+- ThreadPoolExecutor workers inherit it too, but concurrent.futures joins its
+  workers at interpreter shutdown, so a task hung in an executor still blocks
+  exit.
+- Cooperative stop is unchanged: it only takes effect once the script reaches
+  an st.* call.
 """
 
 
@@ -351,8 +353,8 @@ class ScriptRunner:
         self._script_thread = threading.Thread(
             target=self._run_script_thread,
             name="ScriptRunner.scriptThread",
-            # Daemon so the process can exit even if the user script is stuck
-            # in a tight loop with no st.* interrupt points.
+            # Daemon so a hung script cannot block process exit.
+            # See Note [Threading] above for the full consequences.
             daemon=True,
         )
         self._script_thread.start()

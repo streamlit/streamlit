@@ -33,12 +33,18 @@ _PROCESS_EXIT_TIMEOUT_SEC: Final = 30
 
 
 @pytest.mark.slow
-def test_process_exits_when_script_thread_is_hung() -> None:
+def test_process_exits_when_script_thread_is_hung(tmp_path: Path) -> None:
     """The interpreter must exit even if the script thread is stuck in a tight
     loop with no st.* interrupt points.
     """
+    sentinel = tmp_path / "started"
     proc = subprocess.Popen(
-        [sys.executable, str(_HUNG_CHILD_SCRIPT), str(_TIGHT_LOOP_SCRIPT)],
+        [
+            sys.executable,
+            str(_HUNG_CHILD_SCRIPT),
+            str(_TIGHT_LOOP_SCRIPT),
+            str(sentinel),
+        ],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,

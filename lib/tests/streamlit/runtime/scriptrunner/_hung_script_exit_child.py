@@ -25,7 +25,6 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
-import tempfile
 import time
 from pathlib import Path
 from typing import Final
@@ -40,13 +39,13 @@ from streamlit.runtime.scriptrunner.script_runner import ScriptRunner, ScriptRun
 from streamlit.runtime.scriptrunner_utils.script_requests import RerunData
 from streamlit.runtime.state.session_state import SessionState
 
-_SCRIPT_START_TIMEOUT_SEC: Final = 5.0
+_SCRIPT_START_TIMEOUT_SEC: Final = 15.0
 _SENTINEL_ENV: Final = "STREAMLIT_HUNG_LOOP_SENTINEL"
 
 
 def main() -> None:
     script_path = sys.argv[1]
-    sentinel = Path(tempfile.mkdtemp()) / "started"
+    sentinel = Path(sys.argv[2])
     os.environ[_SENTINEL_ENV] = str(sentinel)
 
     # ScriptRunner calls Runtime.instance() during setup, before user code.
