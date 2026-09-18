@@ -23,13 +23,11 @@ interface StyledGraphVizChartProps {
 
 export const StyledGraphVizChart = styled.div<StyledGraphVizChartProps>(
   ({ theme, shouldUseFullWidth, shouldUseFullHeight }) => ({
-    "& *": {
-      fontFamily: theme.genericFonts.bodyFont,
-      // Font sizes inside the SVG element are getting huge for some reason.
-      // Hacking together a number by eyeballing it:
-      // 12px in the SVG looks like 1rem outside.
-      fontSize: `calc(${theme.fontSizes.twoSm} * 0.8)`,
-    },
+    // Do not restyle SVG fonts after layout. Graphviz WASM sizes record/HTML
+    // labels using its own font metrics (Times-Roman 14pt unless the DOT sets
+    // fontname/fontsize). A later CSS font-family/font-size override cannot
+    // resize those nodes, so labels get trailing space proportional to length.
+    // See https://github.com/streamlit/streamlit/issues/7397
 
     // Ensure SVG is allowed the full width/height in full screen mode
     "& svg": {

@@ -131,6 +131,32 @@ st.subheader("Combined Width and Height")
 st.write("width=300, height=150")
 st.graphviz_chart(dot_code, width=300, height=150)
 
+st.subheader("Record-shape label spacing")
+
+# Repro for https://github.com/streamlit/streamlit/issues/7397 — CSS font
+# overrides after Graphviz layout used to leave trailing space in record nodes.
+_record_label_0 = (
+    "it's 5pm on friday and I have no idea why this box is so long "
+    "at the end of this sentence"
+)
+_record_label_2 = (
+    "The extra space at the end of the line appears to be proportional "
+    "to the length of the sentence so I expect the extra space here is "
+    "going to be very much longer."
+)
+st.graphviz_chart(
+    f"""
+    digraph Diagram {{
+        node [shape=record, style=filled, fillcolor=gray95, margin=0.1, height=0.1, width=0.1]
+        Node0 [label = <<b>node0</b>|{_record_label_0}>]
+        Node1 [label = <<b>node1</b>|I need to improve product>]
+        Node2 [label = <<b>node2</b>|{_record_label_2}>]
+        Node0 -> Node1 -> Node2;
+    }}
+    """,
+    width="content",
+)
+
 st.subheader("Dangerous link sanitization")
 
 # Node with a dangerous javascript: URL. The frontend must neutralize this to

@@ -131,6 +131,27 @@ describe("GraphVizChart Element", () => {
     expect(graphviz).toHaveBeenCalled()
   })
 
+  it("does not override Graphviz SVG font metrics after layout", () => {
+    render(<GraphVizChart {...getProps()} />)
+
+    const chart = screen.getByTestId("stGraphVizChart")
+    const emotionClass = Array.from(chart.classList).find(cls =>
+      cls.startsWith("css-")
+    )
+    expect(emotionClass).toBeDefined()
+
+    const cssText = Array.from(document.querySelectorAll("style"))
+      .map(styleTag => styleTag.textContent ?? "")
+      .join("\n")
+
+    expect(cssText).not.toMatch(
+      new RegExp(
+        `\\.${emotionClass}\\s+[^{]*\\{[^}]*font-(?:family|size)`,
+        "i"
+      )
+    )
+  })
+
   it("should update chart and log error when crashes", () => {
     // Mock graphviz().renderDot() to throw an error for the "crash" spec
     const mockRenderDot = vi.fn().mockImplementation(spec => {

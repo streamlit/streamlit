@@ -66,7 +66,7 @@ def test_initial_setup(app: Page):
     """Initial setup: ensure charts are loaded."""
     expect(
         app.get_by_test_id("stGraphVizChart").locator("svg > g > title")
-    ).to_have_count(15)
+    ).to_have_count(16)
 
 
 def test_shows_left_and_right_graph(app: Page):
@@ -264,13 +264,49 @@ def test_width_height_combined(app: Page, assert_snapshot: ImageCompareFunction)
     )
 
 
+def test_record_shape_label_spacing(app: Page, assert_snapshot: ImageCompareFunction):
+    """Record/HTML labels should not grow trailing space with label length."""
+    record_chart = app.get_by_test_id("stGraphVizChart").nth(14)
+    svg = record_chart.locator("svg")
+    expect(record_chart.locator("svg > g > title")).to_have_text("Diagram")
+
+    # Graphviz sizes nodes from the same font that is painted. Extra right
+    # padding that grows with label length is the #7397 regression.
+    node_padding = record_chart.evaluate(
+        """chart => {
+          return [...chart.querySelectorAll('.node')].map(node => {
+            const shape = node.querySelector('polygon, path, rect')
+            const texts = [...node.querySelectorAll('text')]
+            const nodeBox = shape.getBoundingClientRect()
+            const textBoxes = texts.map(text => text.getBoundingClientRect())
+            const leftPad = Math.min(...textBoxes.map(box => box.left)) - nodeBox.left
+            const rightPad = nodeBox.right - Math.max(...textBoxes.map(box => box.right))
+            return {
+              title: node.querySelector('title')?.textContent,
+              leftPad,
+              rightPad,
+              width: nodeBox.width,
+            }
+          })
+        }"""
+    )
+    assert node_padding, "Expected Graphviz record nodes"
+    for node in node_padding:
+        assert abs(node["leftPad"] - node["rightPad"]) < 4, node
+
+    assert_snapshot(
+        svg,
+        name="st_graphviz_chart_record_shape_labels",
+    )
+
+
 def test_sanitizes_dangerous_link_urls(app: Page):
     """Test that dangerous javascript: link URLs are neutralized to '#'.
 
     This relies on real-browser URL normalization that jsdom cannot fully
     replicate, so it complements the frontend unit tests.
     """
-    malicious_chart = app.get_by_test_id("stGraphVizChart").nth(14)
+    malicious_chart = app.get_by_test_id("stGraphVizChart").nth(15)
     link = malicious_chart.locator("a").first
     expect(link).to_be_attached()
 
