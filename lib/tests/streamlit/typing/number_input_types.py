@@ -98,6 +98,13 @@ if TYPE_CHECKING:
     assert_type(number_input("foo", min_value=1, on_change="ignore"), int)
     assert_type(number_input("foo", value=None, on_change="ignore"), float | None)
 
+    # Test required parameter (keyword-only)
+    assert_type(number_input("foo", required=True), float)
+    assert_type(number_input("foo", required=False), float)
+    assert_type(number_input("foo", value=None, required=True), float | None)
+    assert_type(number_input("foo", min_value=1, value=None, required=True), int | None)
+    assert_type(number_input("foo", value=0, required=True), int)
+
     def on_number_change(prefix: str) -> None: ...
 
     # Common parameters combined
@@ -113,6 +120,7 @@ if TYPE_CHECKING:
             kwargs={},
             placeholder="0",
             disabled=False,
+            required=True,
             label_visibility="visible",
             icon=":material/123:",
             width=240,

@@ -28,6 +28,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
     expect_help_tooltip,
+    expect_markdown,
     expect_prefixed_markdown,
     fill_number_input,
     get_element_by_key,
@@ -35,7 +36,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-NUMBER_INPUT_COUNT = 25
+NUMBER_INPUT_COUNT = 29
 
 
 def test_number_input_widget_display(
@@ -803,3 +804,112 @@ def test_number_input_on_change_ignore(app: Page):
         get_number_input(app, "Ignore change number input").locator("input").first
     ).to_have_value("41")
     expect_prefixed_markdown(app, "Ignore number value:", "41")
+
+
+def test_number_input_required_blocks_empty_commits_and_form_submits(app: Page):
+    """Verify required number inputs block empty form submissions and commits
+    while accepting zero and preserving hidden-label accessibility.
+    """
+    amount_widget = get_element_by_key(app, "required_amount")
+    count_widget = get_element_by_key(app, "required_count")
+    amount_field = amount_widget.locator("input").first
+
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(
+        amount_widget.get_by_test_id("stTooltipErrorHoverTarget")
+    ).not_to_be_visible()
+    expect(amount_field).to_have_attribute("aria-required", "true")
+    expect(amount_widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+
+    submit_button = app.get_by_role(
+        "button", name="Submit required number input form", exact=True
+    )
+    submit_button.click()
+    expect(amount_widget.get_by_test_id("stTooltipErrorHoverTarget")).to_be_visible()
+    expect(count_widget.get_by_test_id("stTooltipErrorHoverTarget")).to_be_visible()
+    expect(amount_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect(count_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+
+    amount_field.fill("5")
+    submit_button.click()
+    expect(amount_field).to_have_value("5.00")
+    expect(
+        amount_widget.get_by_test_id("stTooltipErrorHoverTarget")
+    ).not_to_be_visible()
+    expect(count_widget.get_by_test_id("stTooltipErrorHoverTarget")).to_be_visible()
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+
+    count_widget.locator("input").first.fill("0")
+    submit_button.click()
+    wait_for_app_run(app)
+
+    expect_markdown(app, "required form submitted: True")
+    expect_markdown(app, "required amount: 5.0")
+    expect_markdown(app, "required count: 0")
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(
+        amount_widget.get_by_test_id("stTooltipErrorHoverTarget")
+    ).not_to_be_visible()
+    expect(count_widget.get_by_test_id("stTooltipErrorHoverTarget")).not_to_be_visible()
+
+    standalone_widget = get_element_by_key(app, "required_standalone")
+    standalone_field = standalone_widget.locator("input").first
+    standalone_field.fill("7")
+    standalone_field.press("Enter")
+    wait_for_app_run(app)
+    expect_markdown(app, "required standalone: 7.0")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(standalone_widget.get_by_test_id("stNumberInputClearButton")).to_have_count(
+        0
+    )
+
+    standalone_field.fill("")
+    standalone_field.blur()
+    expect(
+        standalone_widget.get_by_test_id("stTooltipErrorHoverTarget")
+    ).to_be_visible()
+    expect(standalone_widget.get_by_role("alert")).to_have_text(
+        "This field is required."
+    )
+    expect_markdown(app, "required standalone: 7.0")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+
+    standalone_field.fill("0")
+    standalone_field.press("Enter")
+    wait_for_app_run(app)
+    expect_markdown(app, "required standalone: 0.0")
+    expect(app.get_by_text("Runs: 4", exact=True)).to_be_visible()
+    expect(
+        standalone_widget.get_by_test_id("stTooltipErrorHoverTarget")
+    ).not_to_be_visible()
+
+    hidden_widget = get_element_by_key(app, "required_hidden")
+    expect(hidden_widget.locator("input").first).to_have_attribute(
+        "aria-required", "true"
+    )
+    expect(hidden_widget.get_by_test_id("stWidgetLabelRequired")).to_have_count(0)
+
+
+def test_number_input_required_marker_and_error_rendering(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Snapshot the required marker and the required error state."""
+    widget = get_element_by_key(themed_app, "required_standalone")
+    expect(widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+    assert_snapshot(widget, name="st_number_input-required_marker")
+
+    field = widget.locator("input").first
+    field.fill("7")
+    field.press("Enter")
+    wait_for_app_run(themed_app)
+    field.fill("")
+    field.blur()
+    expect(widget.get_by_test_id("stTooltipErrorHoverTarget")).to_be_visible()
+    assert_snapshot(widget, name="st_number_input-required_error")
