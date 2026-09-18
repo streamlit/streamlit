@@ -70,7 +70,7 @@ Hardcoded main block-container padding in `StyledAppViewBlockContainer`:
 | Embedded, minimal chrome | `2.25rem`–`4.5rem` | `1rem` |
 
 Production wiring sets `showPadding = true` for every non-embedded app
-(`!isEmbed() \|\| isPaddingDisplayed()`), so the `10rem` bottom path is the normal-app
+(`!isEmbed() || isPaddingDisplayed()`), so the `10rem` bottom path is the normal-app
 default — not embed-only. The styled-component prop is named `bottomEmbedPadding` for
 historical reasons; do not read that name as “embed only.”
 
