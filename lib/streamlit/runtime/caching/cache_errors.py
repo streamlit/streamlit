@@ -162,9 +162,7 @@ class CachedFunctionReturnedAwaitableError(StreamlitAPIException):
             "itself be awaitable.\n\n"
             "Return a non-awaitable value instead. Prefer defining the cached function "
             "with `async def` and `await` the operation; note that `async def` cached "
-            'functions require `refresh_mode="foreground"`. In a '
-            "synchronous script context without an active event loop, you can instead "
-            "run the operation to completion with `asyncio.run` before returning."
+            'functions require `refresh_mode="foreground"`.'
         )
 
 
