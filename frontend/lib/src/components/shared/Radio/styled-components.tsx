@@ -134,9 +134,10 @@ interface StyledRadioOuterProps {
  * Unchecked uses the same border + fill model as `st.checkbox` / secondary
  * button (`borderColor` stroke, `bgColor` → `darkenedBgMix15` on hover) so the
  * fill shifts with the shared hover token without collapsing into the outline.
- * Checked fills with primary. Disabled+selected uses the same `borderColor`
- * disk (`fadedText10`) so the white centre dot stays visible. The white centre
- * dot is `StyledRadioInner`.
+ * Checked fills with primary. Disabled draws no CSS border: `borderColor` is
+ * translucent, so a stroke on top of the fill thickens the ring. The outer is
+ * a `borderColor` disk; `StyledRadioInner` is the white centre when selected
+ * and the `bgColor` hole when not.
  *
  * No margin offset needed: the parent `StyledRadioRow` uses `align-items:
  * center` and contains only this circle and the option text, so centering is
@@ -145,23 +146,18 @@ interface StyledRadioOuterProps {
 export const StyledRadioOuter = styled.div<StyledRadioOuterProps>(
   ({ theme, $isSelected, $isHovered, $isDisabled }) => {
     let backgroundColor: string
-    let borderColor: string
+    let border = "none"
 
     if ($isDisabled) {
-      // Selected uses the borderColor disk so the white centre stays visible.
-      // Unchecked stays a hollow ring.
-      borderColor = theme.colors.borderColor
-      backgroundColor = $isSelected
-        ? theme.colors.borderColor
-        : theme.colors.bgColor
+      backgroundColor = theme.colors.borderColor
     } else if ($isSelected) {
-      borderColor = theme.colors.primary
+      border = `${theme.sizes.borderWidth} solid ${theme.colors.primary}`
       backgroundColor = theme.colors.primary
     } else if ($isHovered) {
-      borderColor = theme.colors.borderColor
+      border = `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`
       backgroundColor = theme.colors.darkenedBgMix15
     } else {
-      borderColor = theme.colors.borderColor
+      border = `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`
       backgroundColor = theme.colors.bgColor
     }
 
@@ -175,7 +171,7 @@ export const StyledRadioOuter = styled.div<StyledRadioOuterProps>(
       alignItems: "center",
       justifyContent: "center",
       backgroundColor,
-      border: `${theme.sizes.borderWidth} solid ${borderColor}`,
+      border,
       transition: "background-color 100ms ease, border-color 100ms ease",
     }
   }
@@ -183,28 +179,44 @@ export const StyledRadioOuter = styled.div<StyledRadioOuterProps>(
 
 interface StyledRadioInnerProps {
   $isSelected: boolean
+  $isDisabled: boolean
 }
 
 /**
- * Centre dot of a selected radio. Unchecked fill lives on `StyledRadioOuter`
- * (border + background), matching checkbox — this element collapses to zero
- * size when unselected.
+ * Centre of the radio indicator.
  *
- * Checked size is 37.5% of the outer diameter, pixel-rounded to avoid uneven
- * edges from fractional rem-to-px conversion.
+ * Selected is a white dot, 37.5% of the outer diameter. Enabled and unchecked
+ * collapses to zero — that fill lives on `StyledRadioOuter`. Disabled and
+ * unchecked is a `bgColor` disk inset by `threeXS`, which leaves the hairline
+ * `borderColor` ring. Sizes are pixel-rounded to avoid uneven edges from
+ * fractional rem-to-px conversion.
  */
 export const StyledRadioInner = styled.div<StyledRadioInnerProps>(
-  ({ theme, $isSelected }) => {
+  ({ theme, $isSelected, $isDisabled }) => {
     const checkboxSize = Number.parseFloat(theme.sizes.checkbox)
     const outerPx = convertRemToPx(checkboxSize.toString())
     const checkedPx = Math.round(outerPx * 0.375)
-    const size = $isSelected ? `${checkedPx}px` : "0"
+
+    let sizePx = $isSelected ? checkedPx : 0
+    let backgroundColor = theme.colors.white
+
+    if ($isDisabled && !$isSelected) {
+      const threeXSSpacing = Number.parseFloat(theme.spacing.threeXS)
+      let uncheckedPx = Math.round(
+        convertRemToPx((checkboxSize - threeXSSpacing).toString())
+      )
+      if (uncheckedPx >= outerPx) {
+        uncheckedPx -= 1
+      }
+      sizePx = uncheckedPx
+      backgroundColor = theme.colors.bgColor
+    }
 
     return {
       borderRadius: "50%",
-      backgroundColor: theme.colors.white,
-      width: size,
-      height: size,
+      backgroundColor,
+      width: `${sizePx}px`,
+      height: `${sizePx}px`,
     }
   }
 )

@@ -145,7 +145,10 @@ function Radio({
                       $isHovered={isHovered}
                       $isDisabled={isDisabled}
                     >
-                      <StyledRadioInner $isSelected={isSelected} />
+                      <StyledRadioInner
+                        $isSelected={isSelected}
+                        $isDisabled={isDisabled}
+                      />
                     </StyledRadioOuter>
                     <StreamlitMarkdown
                       source={option}
