@@ -93,8 +93,10 @@ def test_radio_widget_rendering(
 
 
 def test_radio_option_hover(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    """Unchecked option hover. Hovers the unselected option so the selected primary
-    fill is not mistaken for the hover style.
+    """Snapshot hover on an unselected radio option.
+
+    Hovers the unselected option so the selected option's primary fill cannot be
+    mistaken for the hover style.
     """
     radio = get_radio(themed_app, "radio 1 (default)")
     # Exact match: has_text="male" also matches the selected "female" option.

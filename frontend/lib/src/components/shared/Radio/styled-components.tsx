@@ -131,13 +131,14 @@ interface StyledRadioOuterProps {
 /**
  * Visual outer circle of the radio button indicator.
  *
- * Unchecked uses the same border + fill model as `st.checkbox` / secondary
- * button (`borderColor` stroke, `bgColor` → `darkenedBgMix15` on hover) so the
- * fill shifts with the shared hover token without collapsing into the outline.
- * Checked fills with primary. Disabled draws no CSS border: `borderColor` is
- * translucent, so a stroke on top of the fill thickens the ring. The outer is
- * a `borderColor` disk; `StyledRadioInner` is the white centre when selected
- * and the `bgColor` hole when not.
+ * Unchecked uses a `borderColor` stroke over a surface fill, and uses
+ * `darkenedBgMix15` on hover like the secondary button and `st.toggle`
+ * track. Checked fills with primary (including a matching stroke so
+ * `border-color` can transition). Disabled draws no CSS border:
+ * `borderColor` is translucent, so a stroke on top of the fill would
+ * thicken the ring. In that case the outer is a `borderColor` disk and
+ * `StyledRadioInner` is the white centre when selected or the `bgColor`
+ * hole when not.
  *
  * No margin offset needed: the parent `StyledRadioRow` uses `align-items:
  * center` and contains only this circle and the option text, so centering is
@@ -185,11 +186,13 @@ interface StyledRadioInnerProps {
 /**
  * Centre of the radio indicator.
  *
- * Selected is a white dot, 37.5% of the outer diameter. Enabled and unchecked
- * collapses to zero — that fill lives on `StyledRadioOuter`. Disabled and
- * unchecked is a `bgColor` disk inset by `threeXS`, which leaves the hairline
- * `borderColor` ring. Sizes are pixel-rounded to avoid uneven edges from
- * fractional rem-to-px conversion.
+ * - Selected: white dot, 37.5% of the outer diameter.
+ * - Enabled and unchecked: size 0, because `StyledRadioOuter` paints the fill.
+ * - Disabled and unchecked: `bgColor` disk inset by `threeXS`, leaving a
+ *   hairline `borderColor` ring.
+ *
+ * Sizes are pixel-rounded to avoid uneven edges from fractional rem-to-px
+ * conversion.
  */
 export const StyledRadioInner = styled.div<StyledRadioInnerProps>(
   ({ theme, $isSelected, $isDisabled }) => {
