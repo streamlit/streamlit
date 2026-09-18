@@ -72,16 +72,17 @@ async function waitForMermaidError(): Promise<HTMLElement> {
 
 function stubImageLoad(mode: "load" | "error"): void {
   class MockImage {
-    onload: ((this: MockImage, ev: Event) => void) | null = null
-    onerror: ((this: MockImage, ev: Event) => void) | null = null
     naturalWidth = mode === "load" ? 200 : 0
     naturalHeight = mode === "load" ? 100 : 0
+    private readonly listeners = new Map<string, ((ev: Event) => void)[]>()
+    addEventListener(type: string, listener: (ev: Event) => void): void {
+      const existing = this.listeners.get(type) ?? []
+      existing.push(listener)
+      this.listeners.set(type, existing)
+    }
     set src(_value: string) {
-      if (mode === "load") {
-        this.onload?.(new Event("load"))
-      } else {
-        this.onerror?.(new Event("error"))
-      }
+      const event = new Event(mode)
+      this.listeners.get(mode)?.forEach(listener => listener(event))
     }
   }
   vi.stubGlobal("Image", MockImage)
@@ -406,7 +407,7 @@ describe("MermaidChart", () => {
       // eslint-disable-next-line testing-library/prefer-user-event -- opacity:0 toolbar blocks userEvent
       fireEvent.click(screen.getByRole("button", { name: "Download as PNG" }))
 
-      // onerror is synchronous via the MockImage setter; no download link click.
+      // load/error listeners are synchronous via the MockImage setter; no download link click.
       expect(anchorClick).not.toHaveBeenCalled()
     })
   })

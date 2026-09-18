@@ -67,7 +67,7 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   children,
   widgetMgr,
   fragmentId,
-}): ReactElement => {
+}): ReactElement | null => {
   const {
     title,
     dismissible,
@@ -145,7 +145,7 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
 
   // don't use the Modal's isOpen prop as it feels laggy when using it
   if (!isOpen) {
-    return <></>
+    return null
   }
   return (
     <Modal

@@ -292,7 +292,7 @@ export default defineConfig([
       "@eslint-react/use-state": "off",
       // Turning off for now until we have clearer guidance on how to fix existing usages
       "@eslint-react/set-state-in-effect": "off",
-      // We don't want to warn about empty fragments
+      // Oxlint react/jsx-no-useless-fragment owns this check.
       "@eslint-react/jsx-no-useless-fragment": "off",
       // Prevent context values from being recreated on every render
       "@eslint-react/no-unstable-context-value": "error",
