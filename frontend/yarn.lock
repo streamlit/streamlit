@@ -3605,7 +3605,7 @@ __metadata:
     lodash-es: "npm:^4.18.1"
     loglevel: "npm:^1.9.2"
     mapbox-gl: "npm:^1.13.2"
-    marked: "npm:^18.0.12"
+    marked: "npm:^18.0.13"
     mdast-util-find-and-replace: "npm:^3.0.2"
     mermaid: "npm:^11.17.2"
     moment: "npm:^2.30.1"
@@ -10428,12 +10428,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"marked@npm:^18.0.12":
-  version: 18.0.12
-  resolution: "marked@npm:18.0.12"
+"marked@npm:^18.0.13":
+  version: 18.0.13
+  resolution: "marked@npm:18.0.13"
   bin:
     marked: bin/marked.js
-  checksum: 10c0/16cee41cc0bbed129d79997841252eec6842137f877a8cc061443b9d9b6583065a91f636b55c49c3744eee886ca93063d59dc37907442919147b8b98b5a3c91b
+  checksum: 10c0/420039a67d7cebddee022cfc4766fa9b4f965b83848d0f252d6782dcbdca06c972a83f6dc0242dfbd392652aa1f7ef25eaecf18856c7ec80da61d3176342e20f
   languageName: node
   linkType: hard
 
