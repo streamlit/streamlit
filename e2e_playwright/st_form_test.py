@@ -197,6 +197,16 @@ def test_form_submits_on_enter(app: Page):
 def test_form_disabled_submit_on_enter(app: Page):
     """Tests that submit on enter does not work when 1st submit button disabled."""
     form_7 = app.get_by_test_id("stForm").nth(6)
+    # Wait until the first submit button is registered as disabled so
+    # enter-to-submit instructions are computed against that state.
+    expect(form_7.get_by_test_id("stFormSubmitButton")).to_have_count(2)
+    expect(
+        form_7.get_by_test_id("stFormSubmitButton").first.locator("button")
+    ).to_be_disabled()
+    expect(
+        form_7.get_by_test_id("stFormSubmitButton").last.locator("button")
+    ).to_be_enabled()
+
     text_input = form_7.get_by_test_id("stTextInput").locator("input")
     text_input.fill("Test")
     expect(form_7.get_by_test_id("InputInstructions")).to_have_text("")

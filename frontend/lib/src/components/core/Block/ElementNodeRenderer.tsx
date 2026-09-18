@@ -84,6 +84,10 @@ import { AppSkeleton } from "~lib/components/elements/Skeleton/AppSkeleton"
 import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
 import TextElement from "~lib/components/elements/TextElement/TextElement"
 import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
+// Loaded eagerly so multiple submit buttons in a form register in
+// declaration order. Lazy loading plus per-element Suspense can mount an
+// enabled secondary button first, which would incorrectly allow enter-to-submit.
+import { FormSubmitContent } from "~lib/components/widgets/Form/FormSubmitContent"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 
 import { ElementContainer } from "./ElementContainer"
@@ -184,11 +188,6 @@ const Feedback = lazy(
 )
 const FileUploader = lazy(
   () => import("~lib/components/widgets/FileUploader/FileUploader")
-)
-const FormSubmitContent = lazy(() =>
-  import("~lib/components/widgets/Form/FormSubmitContent").then(module => ({
-    default: module.FormSubmitContent,
-  }))
 )
 const Multiselect = lazy(
   () => import("~lib/components/widgets/Multiselect/Multiselect")

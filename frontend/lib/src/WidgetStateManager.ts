@@ -337,6 +337,14 @@ export class WidgetStateManager {
   private scheduledFragmentId: string | undefined
 
   /**
+   * Index to restore when a form submit button is removed and immediately
+   * re-added. React runs effect cleanup (remove) before the next effect (add)
+   * when a button remounts; without this, ``addSubmitButton`` would append and
+   * change which button is treated as first for enter-to-submit.
+   */
+  private readonly pendingSubmitButtonInsertIndex = new Map<string, number>()
+
+  /**
    * Tracks whether we've already logged a mixed-fragmentId warning for the
    * currently scheduled batch. This prevents spamming the console if multiple
    * conflicting calls happen in the same macrotask.
@@ -1057,19 +1065,40 @@ export class WidgetStateManager {
   /**
    * Called by FormSubmitButton on creation. Add the SubmitButtonProto for
    * the given form and update FormsData.
+   *
+   * If a button with the same id is already registered, it is replaced in
+   * place. If it was just removed (React remount), it is re-inserted at its
+   * previous index so enter-to-submit still keys off the first declared
+   * submit button.
    */
   public addSubmitButton(
     formId: string,
     submitButtonProto: SubmitButtonProto
   ): void {
-    const submitButtons = this.formsData.submitButtons.get(formId)
-    if (submitButtons === undefined) {
-      this.setSubmitButtons(formId, [submitButtonProto])
+    const submitButtons = [...(this.formsData.submitButtons.get(formId) ?? [])]
+    const existingIndex = this.indexOfSubmitButton(
+      submitButtons,
+      submitButtonProto
+    )
+    if (existingIndex >= 0) {
+      submitButtons[existingIndex] = submitButtonProto
     } else {
-      const copySubmitButtons = Object.assign([], submitButtons)
-      copySubmitButtons.push(submitButtonProto)
-      this.setSubmitButtons(formId, copySubmitButtons)
+      const savedIndex = this.getPendingSubmitButtonInsertIndex(
+        formId,
+        submitButtonProto
+      )
+      if (
+        savedIndex !== undefined &&
+        savedIndex >= 0 &&
+        savedIndex <= submitButtons.length
+      ) {
+        submitButtons.splice(savedIndex, 0, submitButtonProto)
+      } else {
+        submitButtons.push(submitButtonProto)
+      }
     }
+    this.clearPendingSubmitButtonInsertIndex(formId, submitButtonProto)
+    this.setSubmitButtons(formId, submitButtons)
   }
 
   /**
@@ -1081,13 +1110,72 @@ export class WidgetStateManager {
     submitButtonProto: SubmitButtonProto
   ): void {
     const submitButtons = this.formsData.submitButtons.get(formId)
-    if (submitButtons !== undefined) {
-      const copySubmitButtons = Object.assign([], submitButtons)
-      const index = copySubmitButtons.indexOf(submitButtonProto, 0)
-      if (index > -1) {
-        copySubmitButtons.splice(index, 1)
+    if (submitButtons === undefined) {
+      return
+    }
+
+    const index = this.indexOfSubmitButton(submitButtons, submitButtonProto)
+    if (index < 0) {
+      return
+    }
+
+    this.setPendingSubmitButtonInsertIndex(formId, submitButtonProto, index)
+    const copySubmitButtons = submitButtons.filter((_, i) => i !== index)
+    this.setSubmitButtons(formId, copySubmitButtons)
+  }
+
+  private indexOfSubmitButton(
+    submitButtons: SubmitButtonProto[],
+    submitButtonProto: SubmitButtonProto
+  ): number {
+    if (submitButtonProto.id) {
+      const byId = submitButtons.findIndex(
+        button => button.id === submitButtonProto.id
+      )
+      if (byId >= 0) {
+        return byId
       }
-      this.setSubmitButtons(formId, copySubmitButtons)
+    }
+    return submitButtons.indexOf(submitButtonProto)
+  }
+
+  private submitButtonKey(
+    formId: string,
+    submitButtonProto: SubmitButtonProto
+  ): string | undefined {
+    return submitButtonProto.id
+      ? `${formId}::${submitButtonProto.id}`
+      : undefined
+  }
+
+  private getPendingSubmitButtonInsertIndex(
+    formId: string,
+    submitButtonProto: SubmitButtonProto
+  ): number | undefined {
+    const key = this.submitButtonKey(formId, submitButtonProto)
+    return key === undefined
+      ? undefined
+      : this.pendingSubmitButtonInsertIndex.get(key)
+  }
+
+  private setPendingSubmitButtonInsertIndex(
+    formId: string,
+    submitButtonProto: SubmitButtonProto,
+    index: number
+  ): void {
+    const key = this.submitButtonKey(formId, submitButtonProto)
+    if (key !== undefined) {
+      this.pendingSubmitButtonInsertIndex.set(key, index)
+    }
+  }
+
+  private clearPendingSubmitButtonInsertIndex(
+    formId: string,
+    submitButtonProto: SubmitButtonProto
+  ): void {
+    const key = this.submitButtonKey(formId, submitButtonProto)
+    if (key !== undefined) {
+      this.pendingSubmitButtonInsertIndex.delete(key)
     }
   }
 
