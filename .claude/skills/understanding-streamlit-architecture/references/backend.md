@@ -69,7 +69,8 @@ This ordering explains why `connect_session()` alone does not start user code ex
 
 ## ScriptRunner (`lib/streamlit/runtime/scriptrunner/script_runner.py`)
 
-Executes user scripts in isolated thread.
+Executes user scripts in an isolated daemon thread so the process can still
+exit if a script is stuck in a loop with no `st.*` interrupt points.
 
 **Execution flow**:
 1. Compile script to bytecode (cached via ScriptCache)
