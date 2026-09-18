@@ -20,7 +20,6 @@ CSS. This spec adds first-class theme options instead of the original
 
 ```toml
 [theme]
-# Exact names: outstanding decision #3
 paddingTop = "1.5rem"
 paddingBottom = "2rem"
 
@@ -32,7 +31,10 @@ paddingBottom = "1rem"
 This proposal addresses [#6336](https://github.com/streamlit/streamlit/issues/6336), a
 Planned issue with 103 👍 reactions.
 
-## Outstanding decisions
+## Decisions for review
+
+Items 1–5 are the proposed contract. The only unresolved design is
+[left/right](#leftright-fast-follow-open).
 
 1. **[API surface](#api-surface)** — prefer advanced theming, not `st.set_page_config`.
 2. **[Which properties](#which-properties)** — top + bottom this ship; left/right as a
@@ -66,8 +68,8 @@ Hardcoded main block-container padding in `StyledAppViewBlockContainer`:
 | Context | Typical `padding-top` | Typical `padding-bottom` |
 | ------- | --------------------- | ------------------------ |
 | Normal app (non-embedded) | `6rem` (`8rem` with top nav) | `10rem` when no `st.bottom`, else `1rem` (`spacing.lg`) |
-| Embedded + `show_padding` | `6rem` | same `10rem` / `1rem` rule as non-embedded |
-| Embedded, minimal chrome | `2.25rem`–`4.5rem` | `1rem` |
+| Embedded + `show_padding` or `show_toolbar` | `6rem` | same `10rem` / `1rem` rule as non-embedded |
+| Embedded, neither flag | `4.5rem` with header or sidebar chrome, else `2.25rem` | `1rem` |
 
 Production wiring sets `showPadding = true` for every non-embedded app
 (`!isEmbed() || isPaddingDisplayed()`), so the `10rem` bottom path is the normal-app
@@ -140,7 +142,7 @@ keys are the durable end state once chrome-composition rules exist.
 | Property | This ship? | Rationale |
 | -------- | ---------- | --------- |
 | Top | ✅ | Core of #6336 |
-| Bottom | ✅ | Same wasted-chrome complaint; large when no `st.bottom` |
+| Bottom | ✅ | Lets authors change the large aesthetic bottom inset (`10rem` when no `st.bottom`) |
 | Left / right | 🔜 fast follow | Needs layout-interaction decisions below |
 | Element / widget gap | ❌ out of scope | Gap tokens, not page chrome |
 
@@ -212,8 +214,9 @@ log a warning and fall back to today’s default for that context (same pattern 
 `baseRadius`). Host-supplied themes must use the same grammar — do not forward arbitrary
 CSS strings into styles.
 
-Note: `parseFontSize` today treats bare `"0"` as invalid via a truthy check; padding
-parsing must explicitly allow zero.
+Note: `parseFontSize` today rejects `"0rem"` / `"0px"` via a truthy check (bare `"0"`
+slips through its numeric fallback and becomes `"0px"`). Padding parsing must explicitly
+allow zero in all three forms.
 
 #### Config sections (v1)
 
@@ -227,8 +230,9 @@ options (colors, radii, fonts) do not cause. Easy to widen later; hard to narrow
 **Ship sidebar overrides in the same release** via `[theme.sidebar]`.
 
 Today `createSidebarTheme` merges the full main `themeInput` into the sidebar, then
-applies sidebar overrides. **Padding keys must be special-cased** so main-area
-`paddingTop` / `paddingBottom` do **not** leak into the sidebar.
+applies sidebar overrides. **Padding keys must be special-cased** (same pattern as
+`headingFontSizes`, which is set from the sidebar input rather than inherited) so
+main-area `paddingTop` / `paddingBottom` do **not** leak into the sidebar.
 
 | Config | Effect |
 | ------ | ------ |
@@ -250,9 +254,10 @@ Streamlit still reserves that chrome. Bottom keys are aesthetic insets, not clea
 
 `paddingTop` is the space between the bottom of Streamlit header chrome and the first
 main content — not distance from the viewport top. `"0"` / `"0rem"` means flush under
-the header, never overlapping it. Streamlit still clears the actual overlapping header
-(today `theme.sizes.headerHeight`, `3.75rem`) so content does not clip. Effective main
-top padding = header clearance + author inset.
+the header, never overlapping it. Streamlit still clears a shown header (today
+`theme.sizes.headerHeight`, `3.75rem`). CSS `padding-top` = `headerHeight` + author when
+a header is shown, or the author value alone when it is not. Do not write the author
+string in place of today’s `6rem` / `8rem` / embed totals.
 
 **Regular header vs top nav:** today’s non-embedded defaults are `6rem` without top nav
 and `8rem` with top nav ([#11836](https://github.com/streamlit/streamlit/pull/11836)).
@@ -262,7 +267,7 @@ nav still lives inside the same `headerHeight` bar.
 | Situation | Behavior |
 | --------- | -------- |
 | `paddingTop` unset | Preserve today’s policy: `6rem` vs `8rem` (and today’s embed/minimal paths) |
-| `paddingTop` set | Author value replaces the whole default (`6rem`, `8rem`, and the embed paths). Do not also add the top-nav +`2rem` bump — same gap under whatever header is actually shown |
+| `paddingTop` set | Author value is the gap, not the total. Header shown → `headerHeight` + author (no top-nav `+2rem`). No header → author alone. `"0"` with a header is flush under the bar (`headerHeight` total), never `0` on the container |
 
 `client.toolbarMode` / `ui.hideTopBar` still choose which chrome exists; these keys do not hide it.
 
@@ -331,8 +336,10 @@ scrolling under `st.bottom`.
 - **Print:** the print stylesheet replaces main `paddingTop` with an absolute `2.25rem`.
   It does not add `headerHeight` — most header chrome is hidden, and the header stays
   absolutely positioned. When `paddingTop` is set, the author value replaces that
-  `2.25rem` as the entire print `paddingTop`. When unset, print stays `2.25rem`.
-  `paddingBottom` and sidebar padding are unchanged by print. No separate print API.
+  `2.25rem` as the entire print `paddingTop` — do not add `headerHeight`. A small value
+  (`"0"`, `"0.5rem"`) may overlap a printed logo; that is accepted. Unset print is
+  already below `headerHeight`, so print never cleared the full header. `paddingBottom`
+  and sidebar padding are unchanged by print. No separate print API.
 - **Small viewports:** the configured value applies unchanged across breakpoints
   (including mobile, where the sidebar is an overlay). No mobile-specific floor in v1.
 - **No runtime Python setter** — [#14172](https://github.com/streamlit/streamlit/issues/14172)
@@ -384,12 +391,15 @@ paddingBottom = "4rem"
 No Figma in this PR. Visual sign-off is the implementation PR’s before/after screenshots
 (and e2e snapshots): default baseline; small top/bottom with header + toolbar (no
 clipping / focus-ring check at small inset); top nav with configured value (no +`2rem`
-bump); sidebar overrides; embedded minimal chrome; `st.bottom` / auto chat input; print;
-optional Cloud bottom-right with near-zero `paddingBottom`.
+bump); sidebar overrides (including page-nav above and not); embedded minimal chrome;
+host-supplied themes using the same value grammar; `st.bottom` / auto chat input; print
+(including a small `paddingTop` that may overlap the logo); optional Cloud bottom-right
+with near-zero `paddingBottom`.
 
 Implementation should also add automated coverage: length parsing/fallback in
 `frontend/lib/src/theme/utils.ts`, config-option tests mirroring `baseRadius`, and AppView
-padding unit tests for unset `6rem`/`8rem`, set-trumps-top-nav, and sidebar non-inheritance.
+padding unit tests for unset `6rem`/`8rem`, set as `headerHeight` + author (author alone
+with no header, no extra top-nav `+2rem`), and sidebar non-inheritance.
 Screenshots supplement those assertions; they do not replace them.
 
 ## Checklist
@@ -399,6 +409,6 @@ Screenshots supplement those assertions; they do not replace them.
 | Works on SiS, Cloud, etc? | Yes — theme config already flows; verify host-supplied themes accept the new keys with the same grammar; document Manage-app caveat on Cloud |
 | No breaking API changes | Yes — opt-in; unset preserves today’s padding |
 | No new dependencies | Yes |
-| Metrics collected | Use existing theme/config metrics if available; else skip new telemetry for v1 |
+| Metrics collected | No — theme config keys are not individually metered; do not add telemetry for v1 |
 | Any security/legal impact? | No — validated CSS length theme options only |
-| Any docs changes needed? | Yes — theming reference + point #6336 workarounds at the new options |
+| Any docs changes needed? | Yes — theming docs, including `references/theme.md` in the developing-with-streamlit skill, and point #6336 workarounds at the new options |
