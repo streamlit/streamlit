@@ -124,21 +124,18 @@ export const StyledCheckboxInput = styled.input({
  * Custom visual checkmark square for column-visibility rows.
  *
  * Colours come from `getCheckboxIndicatorColors` (same helper as `st.checkbox`)
- * so rest / hover / checked fills cannot drift.
+ * so rest and checked fills cannot drift.
  *
  * State is CSS-driven:
  * - `data-checked` / `data-indeterminate` on this element → primary fill
- * - hover on the parent row `<label>` → unchecked hover fill only
+ * - The parent row already paints `darkenedBgMix15` on hover. This mark does
+ *   not, or that translucent token would stack and the square would read
+ *   stronger than `st.checkbox`.
  */
 export const StyledCheckboxMark = styled.span(({ theme }) => {
   const rest = getCheckboxIndicatorColors(theme, {
     isSelected: false,
     isHovered: false,
-    isDisabled: false,
-  })
-  const hovered = getCheckboxIndicatorColors(theme, {
-    isSelected: false,
-    isHovered: true,
     isDisabled: false,
   })
   const selected = getCheckboxIndicatorColors(theme, {
@@ -155,13 +152,6 @@ export const StyledCheckboxMark = styled.span(({ theme }) => {
       borderColor: selected.borderColor,
       backgroundColor: selected.backgroundColor,
     },
-    // Unchecked hover only — selected stays primary. Parent label is the
-    // hover target (same hit area as the menu row).
-    'label:hover &:not([data-checked="true"]):not([data-indeterminate="true"])':
-      {
-        borderColor: hovered.borderColor,
-        backgroundColor: hovered.backgroundColor,
-      },
     "input:focus-visible + &": {
       boxShadow: theme.shadows.focusRing,
     },

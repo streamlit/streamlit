@@ -22,7 +22,8 @@ import type { EmotionTheme } from "~lib/theme/types"
 /**
  * Visual state for the shared checkbox indicator (the square + checkmark).
  * Used by `st.checkbox` (prop-driven) and DataFrame column-visibility menus
- * (CSS `data-*` / `:hover`-driven) so border/fill cannot drift apart.
+ * (CSS `data-*`) so rest and selected colours cannot drift apart. The menu
+ * mark does not use the hover state: the row already paints that token.
  */
 type CheckboxIndicatorVisualState = {
   /** Checked or indeterminate — both use the primary fill. */
@@ -32,8 +33,9 @@ type CheckboxIndicatorVisualState = {
 }
 
 /**
- * Return border and fill so the indicator matches secondary-button hover
- * and stays in sync across `st.checkbox` and DataFrame menus.
+ * Return border and fill so the indicator matches secondary-button hover.
+ * `st.checkbox` uses every state below. DataFrame menus use rest and selected
+ * only — the row already paints `darkenedBgMix15`, so the mark must not.
  *
  * - Unchecked rest: `lightenedBg05` fill, `borderColor` stroke
  * - Unchecked hover: `darkenedBgMix15` fill, `borderColor` stroke
