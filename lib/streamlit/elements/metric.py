@@ -157,12 +157,12 @@ class MetricMixin:
               the arrow points down and the delta is red.
             - Otherwise, the arrow points up and the delta is green.
 
-            Streamlit shows a string delta as-is and does not parse it, so only
-            the number ``0`` and the string ``"0"`` are zero. Other zero-like
-            strings follow the sign rule above: ``"0%"`` is positive and
-            ``"-0.0%"`` is negative. For a gray zero delta with qualifier text,
-            pass the number ``0`` as ``delta``. Put the qualifier text in
-            ``delta_description``.
+            Streamlit treats numeric zeros and the string ``"0"`` as zero. It
+            does not parse other string deltas as numbers to choose the arrow
+            and color, so they follow the sign rule above: ``"0%"`` is positive
+            and ``"-0.0%"`` is negative. To show a gray zero delta with
+            qualifier text, pass the number ``0`` as ``delta``. Put the
+            qualifier text in ``delta_description``.
 
             You can modify the display, color, and orientation of the arrow
             using the ``delta_color`` and ``delta_arrow`` parameters.

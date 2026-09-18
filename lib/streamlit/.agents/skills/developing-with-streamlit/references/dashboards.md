@@ -53,7 +53,7 @@ Horizontal containers wrap on smaller screens. Prefer them over `st.columns` for
 
 ## Zero deltas
 
-Streamlit shows a string `delta` as-is and does not parse it. Only the string `"0"` is zero, so `"0%"` gets a green up-arrow. For a flat period, pass the number `0` as `delta` and put the qualifier text in `delta_description`:
+Streamlit treats numeric zeros and the string `"0"` as zero. It does not parse other string deltas as numbers to choose the arrow and color, so `"0%"` gets a green up-arrow. For a flat period, pass the number `0` as `delta` and put the qualifier text in `delta_description`:
 
 ```python
 st.metric("Orders", "1.4k", 0, delta_description="vs. last month", border=True)
