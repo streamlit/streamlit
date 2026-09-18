@@ -14,12 +14,27 @@
  * limitations under the License.
  */
 
-import { transparentize } from "color2k"
+import { opacify, transparentize } from "color2k"
+import { LinearGradient } from "vega"
 
 import { Metric as MetricProto } from "@streamlit/protobuf"
 
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import { EmotionTheme } from "~lib/theme/types"
+
+/**
+ * How much opacity to add to the top of an area chart's gradient fill.
+ *
+ * Fading the fill out towards its baseline removes roughly half of its alpha,
+ * which would leave the shading fainter than the flat fill it replaces. Adding
+ * opacity at the top keeps the shading's overall weight comparable. This is the
+ * knob to turn if the shading needs to read stronger or softer overall.
+ *
+ * Note that `opacify` clamps at full opacity, so for a custom theme whose
+ * background color is already opaque the boost is a no-op and the fill still
+ * reads lighter overall than the flat one.
+ */
+const AREA_GRADIENT_TOP_OPACITY_BOOST = 0.15
 
 /**
  * Returns the main color for a metric based on the MetricColor enum.
@@ -77,6 +92,62 @@ export function getMetricBackgroundColor(
     // this must be grey
     default:
       return theme.colors.grayBackgroundColor
+  }
+}
+
+/**
+ * Returns the fill for an area chart's shaded region as a vertical gradient.
+ *
+ * The fill fades out towards the baseline, so the shading dissolves into the
+ * space beyond it instead of ending in a hard horizontal edge.
+ *
+ * Gradient coordinates are normalized to the shaded region's bounding box, so
+ * the fade tracks the region's vertical extent rather than following the line
+ * itself. Placing the transparent stop at the baseline's own offset within that
+ * box means a fill that diverges around the baseline (a series crossing zero)
+ * fades out in both directions from it: downwards above the baseline, and
+ * upwards below it.
+ *
+ * @param baselineOffset - Where the baseline sits in the shaded region's
+ * bounding box, as a normalized offset from its top edge. `1` (the bottom edge)
+ * for a fill that does not diverge, which collapses the fade to a single
+ * direction.
+ */
+export function getMetricAreaGradient(
+  theme: EmotionTheme,
+  color: MetricProto.MetricColor,
+  baselineOffset: number
+): LinearGradient | string {
+  const backgroundColor = getMetricBackgroundColor(theme, color)
+
+  let fillColor: string
+  let transparentFillColor: string
+  try {
+    fillColor = opacify(backgroundColor, AREA_GRADIENT_TOP_OPACITY_BOOST)
+    // `transparentize` clamps alpha at 0, so this is fully transparent
+    // regardless of how opaque the background color is.
+    transparentFillColor = transparentize(backgroundColor, 1)
+  } catch {
+    // Custom theme colors are validated with the browser's CSS parser, which
+    // accepts values color2k cannot parse (e.g. `currentcolor`). Fall back to
+    // the flat fill rather than failing to render the chart at all.
+    return backgroundColor
+  }
+
+  return {
+    gradient: "linear",
+    // Vertical gradient: y1 is the top edge of the shaded region, y2 its bottom.
+    x1: 0,
+    x2: 0,
+    y1: 0,
+    y2: 1,
+    stops: [
+      { offset: 0, color: fillColor },
+      { offset: baselineOffset, color: transparentFillColor },
+      // Only reached when the fill diverges: below the baseline the shading
+      // fades back in towards the lowest data point.
+      ...(baselineOffset < 1 ? [{ offset: 1, color: fillColor }] : []),
+    ],
   }
 }
 
