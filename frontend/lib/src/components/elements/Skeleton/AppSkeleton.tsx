@@ -35,7 +35,7 @@ const RawAppSkeleton: FC<React.PropsWithChildren<unknown>> = () => {
     setVisible(true)
   }, SHOW_DELAY_MS)
 
-  if (!visible) return <></>
+  if (!visible) return null
 
   return (
     <StyledSkeleton

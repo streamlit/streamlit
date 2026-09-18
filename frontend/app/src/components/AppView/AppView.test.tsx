@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import { act, screen } from "@testing-library/react"
+import { act, screen, within } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
 import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation/utils"
 import {
@@ -146,7 +147,10 @@ function createAllowEmptyBlock(
   )
 }
 
-function createChatInputNode(id: string): ElementNode {
+function createChatInputNode(
+  id: string,
+  isAutoPositionedAtBottom = false
+): ElementNode {
   return new ElementNode(
     new Element({
       chatInput: {
@@ -154,6 +158,7 @@ function createChatInputNode(id: string): ElementNode {
         placeholder: "Enter Text Here",
         disabled: false,
         default: "",
+        isAutoPositionedAtBottom,
       },
     }),
     ForwardMsgMetadata.create({}),
@@ -970,9 +975,21 @@ describe("AppView element", () => {
     expect(stbContainer).not.toBeInTheDocument()
   })
 
-  it("renders a Scroll To Bottom container if there is an element in the bottom container.", () => {
+  it("does not activate app autoscroll for explicit bottom placement", () => {
     const props = getProps({
       elements: appRootWithBottom([createChatInputNode("123")]),
+    })
+
+    render(<AppView {...props} />)
+
+    expect(
+      screen.queryByTestId("stAppScrollToBottomContainer")
+    ).not.toBeInTheDocument()
+  })
+
+  it("activates app autoscroll for automatic bottom positioning", () => {
+    const props = getProps({
+      elements: appRootWithBottom([createChatInputNode("123", true)]),
     })
 
     render(<AppView {...props} />)
@@ -985,7 +1002,7 @@ describe("AppView element", () => {
       name: "a transient node in the bottom holds a chat input",
       transient: () =>
         new TransientNode("no script run id", undefined, [
-          createChatInputNode("transient-chat"),
+          createChatInputNode("transient-chat", true),
         ]),
     },
     {
@@ -993,7 +1010,7 @@ describe("AppView element", () => {
       transient: () =>
         new TransientNode(
           "no script run id",
-          createChatInputNode("anchor-chat"),
+          createChatInputNode("anchor-chat", true),
           []
         ),
     },
@@ -1635,6 +1652,32 @@ describe("AppView element", () => {
       expect(
         screen.queryByTestId("stSidebarCollapseButton")
       ).not.toBeInTheDocument()
+    })
+
+    it("persists sidebar collapsed state when the user toggles the sidebar", async () => {
+      const user = userEvent.setup()
+      renderAppViewWithSidebar(PageConfig.SidebarState.EXPANDED)
+
+      await user.hover(screen.getByTestId("stSidebarHeader"))
+      await user.click(
+        within(screen.getByTestId("stSidebarCollapseButton")).getByRole(
+          "button"
+        )
+      )
+
+      expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+        "aria-expanded",
+        "false"
+      )
+      expect(window.localStorage.getItem("stSidebarCollapsed-")).toBe("true")
+
+      await user.click(screen.getByTestId("stExpandSidebarButton"))
+
+      expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+        "aria-expanded",
+        "true"
+      )
+      expect(window.localStorage.getItem("stSidebarCollapsed-")).toBe("false")
     })
   })
 })

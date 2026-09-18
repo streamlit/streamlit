@@ -20,9 +20,11 @@ import type { DateSegment as IDateSegment } from "react-stately"
 import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
 import {
+  applyPartialSegmentToDate,
   calendarDateToIso,
   createDateErrorMessage,
   formatCalendarDate,
+  getFocusedDateFallback,
   getInitialFocusedDate,
   getMaxDate,
   getMinDate,
@@ -31,9 +33,11 @@ import {
   isoToCalendarDate,
   isValidSegmentValue,
   normalizeRangeOrder,
+  parseDateFieldPaste,
   parseFormatOrder,
   parsePartialSegmentPaste,
   parsePastedDate,
+  parsePastedDateRange,
   reorderSegments,
   validateDate,
 } from "./dateInputUtils"
@@ -180,12 +184,41 @@ describe("getInitialFocusedDate", () => {
     expect(getInitialFocusedDate([], farFuture)).toEqual(farFuture)
   })
 
+  it("falls back to maxDate when there's no value and today is after maxDate", () => {
+    const minDate = new CalendarDate(1970, 1, 1)
+    const maxDate = new CalendarDate(1980, 1, 1)
+    expect(getInitialFocusedDate([], minDate, maxDate)).toEqual(maxDate)
+  })
+
   it("never returns null, even for an unparsable value", () => {
     const result = getInitialFocusedDate(
       ["not-a-date"],
       new CalendarDate(1970, 1, 1)
     )
     expect(result).toBeInstanceOf(CalendarDate)
+  })
+})
+
+describe("getFocusedDateFallback", () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it("clamps today to maxDate", () => {
+    const maxDate = new CalendarDate(1980, 6, 15)
+    expect(
+      getFocusedDateFallback(new CalendarDate(1970, 1, 1), maxDate)
+    ).toEqual(maxDate)
+  })
+
+  it("returns today unchanged when it is within min and max", () => {
+    vi.setSystemTime(new Date(2024, 2, 15))
+    expect(
+      getFocusedDateFallback(
+        new CalendarDate(1970, 1, 1),
+        new CalendarDate(2999, 1, 1)
+      )
+    ).toEqual(new CalendarDate(2024, 3, 15))
   })
 })
 
@@ -348,6 +381,145 @@ describe("parsePartialSegmentPaste", () => {
 
   it("returns null for text longer than 4 digits", () => {
     expect(parsePartialSegmentPaste("12345", "year")).toBeNull()
+  })
+})
+
+describe("parsePastedDateRange", () => {
+  it("parses en-dash separated dates", () => {
+    expect(
+      parsePastedDateRange("2024/03/06 – 2024/03/08", "YYYY/MM/DD")
+    ).toEqual({
+      start: new CalendarDate(2024, 3, 6),
+      end: new CalendarDate(2024, 3, 8),
+    })
+  })
+
+  it("parses em-dash separated dates", () => {
+    expect(
+      parsePastedDateRange("2024/03/06 — 2024/03/08", "YYYY/MM/DD")
+    ).toEqual({
+      start: new CalendarDate(2024, 3, 6),
+      end: new CalendarDate(2024, 3, 8),
+    })
+  })
+
+  it("parses hyphen and 'to' separators", () => {
+    expect(
+      parsePastedDateRange("06/03/2024 - 08/03/2024", "DD/MM/YYYY")
+    ).toEqual({
+      start: new CalendarDate(2024, 3, 6),
+      end: new CalendarDate(2024, 3, 8),
+    })
+    expect(
+      parsePastedDateRange("2024/03/06 to 2024/03/08", "YYYY/MM/DD")
+    ).toEqual({
+      start: new CalendarDate(2024, 3, 6),
+      end: new CalendarDate(2024, 3, 8),
+    })
+  })
+
+  it("parses hyphenated date formats without splitting on date separators", () => {
+    expect(
+      parsePastedDateRange("2024-03-06 – 2024-03-08", "YYYY-MM-DD")
+    ).toEqual({
+      start: new CalendarDate(2024, 3, 6),
+      end: new CalendarDate(2024, 3, 8),
+    })
+    expect(
+      parsePastedDateRange("03-06-2024 - 03-08-2024", "MM-DD-YYYY")
+    ).toEqual({
+      start: new CalendarDate(2024, 3, 6),
+      end: new CalendarDate(2024, 3, 8),
+    })
+  })
+
+  it("does not split on a bare hyphen between slash-format dates", () => {
+    expect(
+      parsePastedDateRange("2024/03/06-2024/03/08", "YYYY/MM/DD")
+    ).toBeNull()
+  })
+
+  it("returns null when either half is invalid", () => {
+    expect(
+      parsePastedDateRange("2024/03/06 – not-a-date", "YYYY/MM/DD")
+    ).toBeNull()
+    expect(parsePastedDateRange("2024/03/06", "YYYY/MM/DD")).toBeNull()
+  })
+})
+
+describe("parseDateFieldPaste", () => {
+  it("prefers range paste when allowed", () => {
+    expect(
+      parseDateFieldPaste("2024/03/06 – 2024/03/08", "YYYY/MM/DD", {
+        allowRangePaste: true,
+      })
+    ).toEqual({
+      kind: "range",
+      start: new CalendarDate(2024, 3, 6),
+      end: new CalendarDate(2024, 3, 8),
+    })
+  })
+
+  it("parses a single date when range paste is not allowed", () => {
+    expect(parseDateFieldPaste("2024/03/15", "YYYY/MM/DD")).toEqual({
+      kind: "date",
+      date: new CalendarDate(2024, 3, 15),
+    })
+  })
+
+  it("falls back to a single date when range paste is allowed but parsing fails", () => {
+    expect(
+      parseDateFieldPaste("2024/03/15", "YYYY/MM/DD", {
+        allowRangePaste: true,
+      })
+    ).toEqual({
+      kind: "date",
+      date: new CalendarDate(2024, 3, 15),
+    })
+  })
+
+  it("does not parse range paste unless allowed", () => {
+    expect(
+      parseDateFieldPaste("2024/03/06 – 2024/03/08", "YYYY/MM/DD", {
+        allowRangePaste: false,
+      })
+    ).toBeNull()
+  })
+
+  it("parses partial segment paste when segmentType is provided", () => {
+    expect(
+      parseDateFieldPaste("15", "YYYY/MM/DD", { segmentType: "day" })
+    ).toEqual({
+      kind: "partial",
+      segmentType: "day",
+      value: 15,
+    })
+  })
+
+  it("returns partial segment paste before validating segment bounds", () => {
+    expect(
+      parseDateFieldPaste("99", "YYYY/MM/DD", { segmentType: "day" })
+    ).toEqual({
+      kind: "partial",
+      segmentType: "day",
+      value: 99,
+    })
+  })
+})
+
+describe("applyPartialSegmentToDate", () => {
+  it("updates the targeted segment on a base date", () => {
+    const base = new CalendarDate(2024, 3, 1)
+    expect(
+      applyPartialSegmentToDate(base, { segmentType: "day", value: 15 })
+    ).toEqual(new CalendarDate(2024, 3, 15))
+  })
+
+  it("returns null for invalid segment values", () => {
+    const base = new CalendarDate(2024, 4, 1)
+    expect(
+      applyPartialSegmentToDate(base, { segmentType: "day", value: 31 })
+    ).toBeNull()
   })
 })
 

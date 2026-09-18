@@ -83,6 +83,10 @@ if TYPE_CHECKING:
         ),
         Sequence[TabContainer],
     )
+    assert_type(
+        tabs(["A", "B"], key="qp_tabs", bind="query-params"),
+        Sequence[TabContainer],
+    )
 
     # Invalid usages — should NOT type check
     tabs(["A", "B"], on_change=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]

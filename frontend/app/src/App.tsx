@@ -114,6 +114,7 @@ import {
   lightTheme,
   mark,
   measure,
+  normalizeQueryString,
   notUndefined,
   preserveEmbedQueryParams,
   PresetThemeName,
@@ -455,7 +456,7 @@ export class App extends PureComponent<Props, State> {
       pageLinkBaseUrl: "",
       // Initialize from URL so bound widget params from shared links are
       // preserved on first page navigation (before handlePageInfoChanged fires).
-      queryParams: window.location?.search?.replace(/^\?/, "") ?? "",
+      queryParams: normalizeQueryString(window.location?.search ?? ""),
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
@@ -476,13 +477,25 @@ export class App extends PureComponent<Props, State> {
     })
 
     // Sync widget URL changes to App state for page navigation preservation.
-    this.widgetMgr.setQueryParamsChangeHandler(
-      this.handleQueryParamsFromWidget
-    )
+    this.widgetMgr.setQueryParamsChangeHandler(this.syncQueryParams)
 
     this.hostCommunicationMgr = new HostCommunicationManager({
       streamlitExecutionStartedAt: props.streamlitExecutionStartedAt,
-      sendRerunBackMsg: this.sendRerunBackMsg,
+      sendRerunBackMsg: (
+        widgetStates?: WidgetStates,
+        pageScriptHash?: string,
+        queryStringOverride?: string
+      ) => {
+        // HostCommunicationManager omits fragmentId and isAutoRerun; App.sendRerunBackMsg
+        // takes those before queryStringOverride.
+        this.sendRerunBackMsg(
+          widgetStates,
+          undefined,
+          pageScriptHash,
+          undefined,
+          queryStringOverride
+        )
+      },
       closeModal: this.closeDialog,
       stopScript: this.stopScript,
       rerunScript: this.rerunScript,
@@ -1240,8 +1253,8 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  /** Callback for WidgetStateManager when bound widgets update URL params. */
-  handleQueryParamsFromWidget = (queryString: string): void => {
+  /** Update local query-param state and notify the host. */
+  syncQueryParams = (queryString: string): void => {
     this.setState({ queryParams: queryString })
 
     this.hostCommunicationMgr.sendMessageToHost({
@@ -1254,7 +1267,7 @@ export class App extends PureComponent<Props, State> {
     const { queryString } = pageInfo
     const targetUrl =
       document.location.pathname + (queryString ? `?${queryString}` : "")
-    const currentSearch = document.location.search.replace(/^\?/, "")
+    const currentSearch = normalizeQueryString(document.location.search)
 
     // `pushState` always adds a history entry, even when the resulting URL is
     // identical, so reruns that re-assign the same query params would otherwise
@@ -1840,23 +1853,34 @@ export class App extends PureComponent<Props, State> {
    * Handler called when the history state changes, e.g. `popstate` event.
    */
   onHistoryChange = (): void => {
-    const { currentPageScriptHash } = this.state
+    const { currentPageScriptHash, queryParams } = this.state
     const targetAppPage = this.appNavigation.findPageByUrlPath(
       document.location.pathname
     )
 
-    // do not cause a rerun when an anchor is clicked and we aren't changing pages
     const hasAnchor = document.location.toString().includes("#")
     const isSamePage = targetAppPage?.pageScriptHash === currentPageScriptHash
+    const queryString = normalizeQueryString(document.location.search)
+    const stateQueryString = normalizeQueryString(queryParams)
 
-    if (isNullOrUndefined(targetAppPage) || (hasAnchor && isSamePage)) {
+    if (isNullOrUndefined(targetAppPage)) {
       return
     }
-    // Pass preserveQueryParams=true to preserve query params from the URL when
-    // navigating via browser history (back/forward buttons). This ensures that
-    // query params present in the URL after history navigation are sent to the
-    // server on the first script run.
-    this.onPageChange(targetAppPage.pageScriptHash as string, undefined, true)
+
+    // Do not rerun for anchor-only navigation on the same page.
+    if (hasAnchor && isSamePage && queryString === stateQueryString) {
+      return
+    }
+
+    // After popstate the URL is the source of truth. Pass its query string
+    // explicitly to onPageChange because syncQueryParams' setState has not
+    // flushed yet, and preserve it across page changes.
+    this.syncQueryParams(queryString)
+    this.onPageChange(
+      targetAppPage.pageScriptHash as string,
+      queryString,
+      true
+    )
   }
 
   /**
@@ -2638,7 +2662,7 @@ export class App extends PureComponent<Props, State> {
         ? queryParams
         : document.location.search
 
-    return queryString.startsWith("?") ? queryString.slice(1) : queryString
+    return normalizeQueryString(queryString)
   }
 
   getThemeColorScheme = (): string => {

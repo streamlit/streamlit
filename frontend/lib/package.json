@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/lib",
-  "version": "1.63.0",
+  "version": "1.64.0",
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
@@ -63,9 +63,9 @@
     "@loaders.gl/core": "^4.5.1",
     "@loaders.gl/csv": "^4.5.1",
     "@loaders.gl/gltf": "^4.5.1",
-    "@luma.gl/core": "^9.3.5",
-    "@luma.gl/engine": "^9.3.5",
-    "@luma.gl/shadertools": "^9.3.5",
+    "@luma.gl/core": "^9.4.1",
+    "@luma.gl/engine": "^9.4.1",
+    "@luma.gl/shadertools": "^9.4.1",
     "@microlink/react-json-view": "^1.31.33",
     "@sindresorhus/slugify": "^3.0.1",
     "@streamlit/component-v2-lib": "workspace:^",
@@ -130,7 +130,7 @@
     "vega-interpreter": "^2.3.2",
     "vega-lite": "6.4.3",
     "vfile": "^6.0.0",
-    "wavesurfer.js": "^7.12.11",
+    "wavesurfer.js": "^7.12.12",
     "xxhashjs": "^0.2.2"
   },
   "peerDependencies": {
@@ -166,7 +166,7 @@
     "@vitejs/plugin-react-swc": "^4.3.3",
     "timezone-mock": "^1.4.3",
     "typesync": "^0.14.3",
-    "vite": "^8.2.2",
+    "vite": "^8.3.0",
     "vite-plugin-dts": "^5.1.0",
     "vitest": "^5.0.0",
     "vitest-fetch-mock": "^0.4.5"

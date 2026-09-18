@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import { compile } from "vega-lite"
-import type { TopLevelSpec } from "vega-lite"
+import { compile, type TopLevelSpec } from "vega-lite"
 
 import { renderHook } from "~lib/components/shared/ElementFullscreen/testUtils"
 import { lightTheme } from "~lib/theme/themeConfigs"

@@ -57,5 +57,9 @@ message ChatInput {
   }
   SubmitMode submit_mode = 14;
 
+  // Whether st.chat_input automatically moved this widget from the main app
+  // body into the bottom container.
+  bool is_auto_positioned_at_bottom = 15;
+
   reserved 8;
 }

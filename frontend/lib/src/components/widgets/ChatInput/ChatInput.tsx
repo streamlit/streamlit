@@ -1149,44 +1149,41 @@ function ChatInput({
                     />
                   </StyledInputInstructions>
                 )}
-                {acceptAudio && (
-                  <>
-                    {recordingError ? (
-                      <Tooltip
-                        content={recordingError}
-                        placement={Placement.TOP}
-                        error
-                      >
-                        <StyledSendIconButton
-                          onClick={handleMicClickVoid}
-                          disabled={
-                            disabled || isDisabledDuringRun || audioUploading
-                          }
-                          hasError
-                          data-testid="stChatInputMicButton"
-                          aria-label="Start recording"
-                        >
-                          <Icon
-                            content={ErrorOutline}
-                            size="xl"
-                            color="inherit"
-                          />
-                        </StyledSendIconButton>
-                      </Tooltip>
-                    ) : (
+                {acceptAudio &&
+                  (recordingError ? (
+                    <Tooltip
+                      content={recordingError}
+                      placement={Placement.TOP}
+                      error
+                    >
                       <StyledSendIconButton
                         onClick={handleMicClickVoid}
                         disabled={
                           disabled || isDisabledDuringRun || audioUploading
                         }
+                        hasError
                         data-testid="stChatInputMicButton"
                         aria-label="Start recording"
                       >
-                        <Icon content={MicNone} size="xl" color="inherit" />
+                        <Icon
+                          content={ErrorOutline}
+                          size="xl"
+                          color="inherit"
+                        />
                       </StyledSendIconButton>
-                    )}
-                  </>
-                )}
+                    </Tooltip>
+                  ) : (
+                    <StyledSendIconButton
+                      onClick={handleMicClickVoid}
+                      disabled={
+                        disabled || isDisabledDuringRun || audioUploading
+                      }
+                      data-testid="stChatInputMicButton"
+                      aria-label="Start recording"
+                    >
+                      <Icon content={MicNone} size="xl" color="inherit" />
+                    </StyledSendIconButton>
+                  ))}
                 {renderActionButton()}
               </StyledRightCluster>
             </StyledToolbarRow>
@@ -1258,50 +1255,41 @@ function ChatInput({
                         />
                       </StyledInputInstructions>
                     )}
-                    {acceptAudio && (
-                      <>
-                        {recordingError ? (
-                          <Tooltip
-                            content={recordingError}
-                            placement={Placement.TOP}
-                            error
-                          >
-                            <StyledSendIconButton
-                              onClick={handleMicClickVoid}
-                              disabled={
-                                disabled ||
-                                isDisabledDuringRun ||
-                                audioUploading
-                              }
-                              hasError
-                              data-testid="stChatInputMicButton"
-                              aria-label="Start recording"
-                            >
-                              <Icon
-                                content={ErrorOutline}
-                                size="xl"
-                                color="inherit"
-                              />
-                            </StyledSendIconButton>
-                          </Tooltip>
-                        ) : (
+                    {acceptAudio &&
+                      (recordingError ? (
+                        <Tooltip
+                          content={recordingError}
+                          placement={Placement.TOP}
+                          error
+                        >
                           <StyledSendIconButton
                             onClick={handleMicClickVoid}
                             disabled={
                               disabled || isDisabledDuringRun || audioUploading
                             }
+                            hasError
                             data-testid="stChatInputMicButton"
                             aria-label="Start recording"
                           >
                             <Icon
-                              content={MicNone}
+                              content={ErrorOutline}
                               size="xl"
                               color="inherit"
                             />
                           </StyledSendIconButton>
-                        )}
-                      </>
-                    )}
+                        </Tooltip>
+                      ) : (
+                        <StyledSendIconButton
+                          onClick={handleMicClickVoid}
+                          disabled={
+                            disabled || isDisabledDuringRun || audioUploading
+                          }
+                          data-testid="stChatInputMicButton"
+                          aria-label="Start recording"
+                        >
+                          <Icon content={MicNone} size="xl" color="inherit" />
+                        </StyledSendIconButton>
+                      ))}
                     {renderActionButton()}
                   </>
                 )}

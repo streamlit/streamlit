@@ -59,6 +59,15 @@ const getProps = (
 })
 
 describe("TextArea widget", () => {
+  beforeEach(() => {
+    // Default wider than hideWidgetDetails (180px) so Input Instructions tests
+    // do not depend on a leaked useResizeObserver mock from another case.
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [400],
+    })
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
     render(<TextArea {...props} />)
@@ -254,6 +263,53 @@ describe("TextArea widget", () => {
     await user.click(textArea)
 
     expect(screen.getByTestId("InputInstructions")).toBeInTheDocument()
+  })
+
+  it("initializes auto-expand height once width is available", () => {
+    const resizeObserverSpy = vi
+      .spyOn(UseResizeObserver, "useResizeObserver")
+      .mockReturnValue({
+        elementRef: { current: null },
+        values: [0],
+      })
+
+    const props = getProps(
+      {},
+      {
+        outerElement: new Element({ heightConfig: { useContent: true } }),
+      }
+    )
+    const { rerender } = render(<TextArea {...props} />)
+
+    expect(screen.getByRole("textbox")).toHaveStyle({ height: "2.5rem" })
+
+    // Restorable getter spy (same pattern as Toast.test.tsx). Do not spy
+    // `Element.prototype` here — that name is the protobuf Element import.
+    // Install measurable heights only after the zero-width mount so this
+    // pins TextArea's width-gated layout effect, not the auto-expand hook's
+    // initial measurement.
+    const scrollHeightSpy = vi
+      .spyOn(HTMLElement.prototype, "scrollHeight", "get")
+      .mockReturnValue(120)
+    const offsetHeightSpy = vi
+      .spyOn(HTMLElement.prototype, "offsetHeight", "get")
+      .mockReturnValue(40)
+
+    try {
+      resizeObserverSpy.mockReturnValue({
+        elementRef: { current: null },
+        values: [400],
+      })
+      // TextArea is memoized, so identical props would skip the rerender
+      // that should pick up the new observed width.
+      rerender(<TextArea {...props} fragmentId="after-width" />)
+
+      // 121px = scrollHeight 120 + ROUNDING_OFFSET 1
+      expect(screen.getByRole("textbox")).toHaveStyle({ height: "121px" })
+    } finally {
+      scrollHeightSpy.mockRestore()
+      offsetHeightSpy.mockRestore()
+    }
   })
 
   it("resets its value when form is cleared", async () => {
