@@ -367,6 +367,8 @@ st.metric(
 )
 ```
 
+**Zero deltas:** Streamlit treats numeric zeros and the string `"0"` as zero. It does not parse other string deltas as numbers to choose the arrow and color, so `"0%"` gets a green up-arrow. For a flat period, pass the number `0` as `delta` and put the qualifier text in `delta_description`.
+
 **Note:** Sparklines only show y-values and ignore x-axis spacing. Use them for evenly-spaced data (like daily or weekly snapshots). For irregularly-spaced time series, use a proper chart instead.
 
 See `dashboards.md` for composing metrics into dashboard layouts.
