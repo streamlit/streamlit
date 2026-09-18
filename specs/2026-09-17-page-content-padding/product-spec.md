@@ -40,12 +40,11 @@ Planned issue with 103 👍 reactions.
 3. **[Option naming](#option-naming)** — prefer `paddingTop` / `paddingBottom`;
    alternative `appPadding*`; reject `mainPadding*`.
 4. **[Sidebar support](#sidebar-support)** — yes, via `[theme.sidebar]`; main padding does
-   not leak. Sidebar `paddingTop` is the same idea as main: the gap from sidebar chrome
-   to the first widget, applied to exactly one property.
-5. **[Header chrome composition](#how-values-compose-with-header-chrome)** — top is the
-   author-controlled gap below header chrome; configured values replace legacy `6rem` /
-   `8rem` (including the top-nav aesthetic bump) while Streamlit still clears the actual
-   header. Bottom is aesthetic inset only (no page footer; no host-overlay clearance).
+   not leak into the sidebar.
+5. **[How values compose](#how-values-compose)** — same rule on main and sidebar: the
+   author gap from chrome to content (top) or the aesthetic inset (bottom). Main top still
+   clears the real header; sidebar top hits exactly one property; neither bottom reserves
+   space for a footer or host overlay.
 
 ## Problem
 
@@ -238,43 +237,22 @@ applies sidebar overrides. **Padding keys must be special-cased** so main-area
 | Only `[theme.sidebar]` set | Applies to **sidebar only**; main unchanged |
 | Both set | Each section uses its own value |
 
-**Sidebar top — same rule as main:** the gap from sidebar chrome to the first author
-widget. Sidebar chrome is the header row (logo + collapse), plus page nav when that nav
-is rendered above the widgets. Main top nav lives *inside* the header, so one padding
-covers it. Sidebar page nav is a *sibling* between the header row and the widgets, so
-the gap-before-widgets is a different CSS property in each state. The author value is
-written to **exactly one** of them — never both.
+How those values sit relative to chrome is [below](#how-values-compose). If scope must
+shrink, drop sidebar to a follow-up — don’t invent a second API later.
 
-DOM order today:
+### How values compose
 
-1. `StyledSidebarHeaderContainer` (logo + collapse; `headerHeight` + `marginBottom: spacing.lg`)
-2. optional `SidebarNav` when page nav is above
-3. `StyledSidebarUserContent` (`paddingTop: spacing.twoXL` with page nav, else `0`) — first widgets
+One rule for every key: a configured value is the author-controlled gap. Unset keeps
+today’s path for that context. Set replaces that path — do not also add a legacy
+aesthetic bump. Streamlit only reserves space for chrome that is actually there.
 
-| `theme.sidebar.paddingTop` | Page nav above? | Header `marginBottom` | User-content `paddingTop` |
-| -------------------------- | --------------- | --------------------- | ------------------------- |
-| unset | no | `spacing.lg` | `0` |
-| unset | yes | `spacing.lg` | `spacing.twoXL` |
-| set | no | **author value** (this is the gap under the logo row) | `0` |
-| set | yes | `spacing.lg` (header-to-nav; not this option) | **author value** (the gap under page nav) |
+#### Main top
 
-`"0"` means flush under the last chrome: the logo/collapse row when there is no page nav,
-or under page nav when nav is above. The header row’s height is always reserved; nav
-height is reserved when nav is shown. Do not also zero the other property — that would
-collapse a different gap (header-to-nav, or an already-zero user padding).
-
-`theme.sidebar.paddingBottom` replaces today’s user-content `paddingBottom`
-(`sidebarTopSpace` / `6rem`) directly.
-
-If scope must shrink, drop sidebar to a follow-up — don’t invent a second API later.
-
-### How values compose with header chrome
-
-**Top — content inset (required):** `paddingTop` is the space between the bottom of
-Streamlit header chrome and the first main content — not distance from the viewport top.
-`"0"` / `"0rem"` means flush under the header, never overlapping it. Streamlit still
-clears the actual overlapping header (today `theme.sizes.headerHeight`, `3.75rem`) so
-content does not clip. Effective main top padding = header clearance + author inset.
+`paddingTop` is the space between the bottom of Streamlit header chrome and the first
+main content — not distance from the viewport top. `"0"` / `"0rem"` means flush under
+the header, never overlapping it. Streamlit still clears the actual overlapping header
+(today `theme.sizes.headerHeight`, `3.75rem`) so content does not clip. Effective main
+top padding = header clearance + author inset.
 
 **Regular header vs top nav:** today’s non-embedded defaults are `6rem` without top nav
 and `8rem` with top nav ([#11836](https://github.com/streamlit/streamlit/pull/11836)).
@@ -289,22 +267,59 @@ nav still lives inside the same `headerHeight` bar.
 Configured apps do not inherit Streamlit’s “more air when top nav is on” opinion; unset
 apps keep current look for compatibility.
 
-**Bottom — aesthetic inset (no footer clearance):** there is no fixed Streamlit page
-footer (“Made with Streamlit” is menu-only). `paddingBottom` replaces today’s large main
-breathing room.
+#### Sidebar
 
-**`st.bottom`:** `theme.paddingBottom` customizes main-area bottom breathing room. Today,
-when `st.bottom` is present, main `paddingBottom` already falls from `10rem` to `1rem`
-(`showPadding && !hasBottom ? "10rem" : spacing.lg`) for both non-embedded and
-embedded+`show_padding`. A configured `paddingBottom` replaces that main-area value; it
-does not restyle padding inside `StyledBottomBlockContainer`. Sticky + spacer already
-prevents main content from scrolling under `st.bottom`.
+Same product rule as main top: `theme.sidebar.paddingTop` is the gap from sidebar chrome
+to the first sidebar widget. Sidebar chrome is the header row (logo + collapse), plus
+page nav when that nav is rendered above the widgets.
+
+Main top nav lives *inside* the header, so one padding covers it. Sidebar page nav is a
+*sibling* between the header row and the widgets, so the gap-before-widgets is a
+different CSS property in each state. The author value is written to **exactly one** of
+them — never both.
+
+DOM order today:
+
+1. `StyledSidebarHeaderContainer` (logo + collapse; `headerHeight` + `marginBottom: spacing.lg`)
+2. optional `SidebarNav` when page nav is above
+3. `StyledSidebarUserContent` (`paddingTop: spacing.twoXL` with page nav, else `0`) — first widgets
+
+| `theme.sidebar.paddingTop` | Page nav above? | Header `marginBottom` | User-content `paddingTop` |
+| -------------------------- | --------------- | --------------------- | ------------------------- |
+| unset | no | `spacing.lg` | `0` |
+| unset | yes | `spacing.lg` | `spacing.twoXL` |
+| set | no | **author value** (gap under the logo row) | `0` |
+| set | yes | `spacing.lg` (header-to-nav; not this option) | **author value** (gap under page nav) |
+
+`"0"` means flush under the last chrome: the logo/collapse row when there is no page
+nav, or under page nav when nav is above. The header row’s height is always reserved;
+nav height is reserved when nav is shown. Do not also zero the other property.
+
+`theme.sidebar.paddingBottom` is the aesthetic inset at the bottom of sidebar user
+content. There is no sidebar footer and no `st.bottom` equivalent. It replaces today’s
+`paddingBottom` (`sizes.sidebarTopSpace` / `6rem`) directly. `"0"` is flush with the
+bottom of the sidebar content area. It does not affect main `paddingBottom` or
+`st.bottom`.
+
+#### Main bottom
+
+There is no fixed Streamlit page footer (“Made with Streamlit” is menu-only).
+`paddingBottom` replaces today’s main breathing room. Unlike top, there is no overlapping
+chrome to clear — `"0"` is flush with the bottom of the main content area.
+
+**`st.bottom`:** `theme.paddingBottom` customizes that main-area breathing room, not the
+sticky container. Today, when `st.bottom` is present, main `paddingBottom` already falls
+from `10rem` to `1rem` (`showPadding && !hasBottom ? "10rem" : spacing.lg`) for both
+non-embedded and embedded+`show_padding`. A configured `paddingBottom` replaces that
+main-area value either way; it does not restyle padding inside
+`StyledBottomBlockContainer`. Sticky + spacer already prevents main content from
+scrolling under `st.bottom`.
 
 | Bottom element | Role |
 | -------------- | ---- |
 | Default `10rem` main bottom padding (no `st.bottom`) | Aesthetic room — what `paddingBottom` replaces when unset would have been `10rem` |
 | `1rem` when `st.bottom` is present (or embed without `show_padding`) | Today’s shrunk path; configured `paddingBottom` still replaces main-area padding |
-| `st.bottom` | Author sticky content; see rule above |
+| `st.bottom` | Author sticky content; internals are not this option |
 | Header toolbar / deploy / status | Header area, not a footer |
 | Cloud “Manage app” | Host overlay in the bottom-right (~`2.75rem` tall); this API does not reserve space for it |
 
@@ -315,20 +330,22 @@ prevents main content from scrolling under `st.bottom`.
 | Header clipping | High if absolute CSS with no clearance | Content inset: always clear real header height; author value is the gap under it |
 | Negative / `%` / `calc()` lengths | Medium | Reject in value grammar; warn + fall back |
 | Main padding leaking to sidebar | Medium | Special-case: do not inherit main padding into sidebar via `createSidebarTheme` merge |
-| Sidebar `paddingTop` applied to header margin **and** user-content padding | High | One gap, one property: no nav → header `marginBottom`; nav above → user-content `paddingTop`. Never both (see sidebar table) |
+| Sidebar `paddingTop` applied to header margin **and** user-content padding | High | One gap, one property: no nav → header `marginBottom`; nav above → user-content `paddingTop`. Never both (see [Sidebar](#sidebar)) |
 | Re-applying top-nav `8rem` on top of a set value | Medium | Author config trumps `6rem`/`8rem`; no +`2rem` bump when set |
 | Cloud “Manage app” | Medium, corner-local | Document caveat; do not auto-clear unknown host UI. Near-zero bottom padding can overlap bottom-right content |
 | Cramped `st.bottom` / auto chat input | Low–medium | Main `paddingBottom` does not restyle bottom-container internals |
 | `st.toast` / skills nudge | Low | Top-right under header; unrelated to `paddingBottom` |
 | Focus ring clipped at `paddingTop = "0"` | Low | Implementation should verify first focusable control / focus ring is not visually clipped by the header edge |
 
-**Takeaway:** ship top + bottom. When authors opt in, their inset wins over Streamlit’s
-default density (including top-nav air); Streamlit only protects real header overlap.
-Bottom is opt-in aesthetic control with a small host-overlay caveat.
+**Takeaway:** ship top + bottom for main and sidebar. When authors opt in, their gap
+replaces Streamlit’s default density (including the main top-nav `+2rem` bump). Streamlit
+only protects real header overlap on main. Bottom — main and sidebar — is aesthetic;
+main also documents `st.bottom` and the Cloud overlay, and does not clear either.
 
 Pixel/rem math for composing inset + header height is an implementation detail. Product
-contract: authors set the gap under the header (and bottom breathing room); configured
-values trump `6rem`/`8rem`; Streamlit prevents header underlap, not unknown host overlays.
+contract: authors set the gap under chrome (main header, sidebar header/nav) and the
+bottom breathing room; configured values trump today’s defaults; Streamlit prevents
+main-header underlap, not unknown host overlays.
 
 Also: `client.toolbarMode` / `ui.hideTopBar` still choose which chrome exists; padding
 does not hide them. Embed modes keep today’s branching when unset; when set, author inset
