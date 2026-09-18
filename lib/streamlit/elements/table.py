@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit import dataframe_util
+from streamlit.elements.lib import agent_spec, data_offload
 from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
@@ -387,7 +388,22 @@ class TableMixin:
         proto.border_mode = border_mode
         proto.hide_index = should_hide_index
         proto.hide_header = should_hide_header
-        return self.dg._enqueue("table", proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "table",
+            proto,
+            layout_config=layout_config,
+            # The schema and row preview are derived facts and are filled in by
+            # the snapshot serializer from `arrow_data`.
+            agent_props=agent_spec.element(
+                "table",
+                data_url=data_offload.serve_arrow_over_http(
+                    proto.arrow_data.data, coordinates=delta_path
+                ),
+                hide_index=hide_index,
+                hide_header=hide_header,
+                border=border,
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

@@ -1242,6 +1242,49 @@ _create_option(
 )
 
 _create_option(
+    "server.enableAgentApi",
+    description="""
+        Enable the agent API, which lets a non-browser client drive the app
+        over HTTP at `/_stcore/agent/v1/interact`.
+
+        The API is off by default and is only served to loopback callers, so
+        it is reachable from the machine running the server and nowhere else.
+    """,
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
+    "server.agentRunTimeout",
+    description="""
+        Maximum number of seconds an agent API interaction waits for the app's
+        run chain to settle before failing the request.
+
+        Note: This is an experimental API subject to change.
+    """,
+    default_val=60,
+    type_=int,
+    # Hide until the budgets are settled.
+    visibility="hidden",
+)
+
+_create_option(
+    "server.agentSessionTTL",
+    description="""
+        TTL in seconds for idle agent API sessions.
+
+        An agent session is reclaimed after this much time without an
+        interaction, so clients do not have to close sessions explicitly.
+
+        Note: This is an experimental API subject to change.
+    """,
+    default_val=900,
+    type_=int,
+    # Hide until the budgets are settled.
+    visibility="hidden",
+)
+
+_create_option(
     "server.disconnectedSessionTTL",
     description="""
         TTL in seconds for sessions whose websockets have been disconnected.

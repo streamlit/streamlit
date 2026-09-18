@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Final, Literal, cast
 
 from streamlit import runtime, url_util
 from streamlit.deprecation_util import show_deprecation_warning
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import (
     LayoutConfig,
     validate_height,
@@ -162,7 +163,18 @@ class IframeMixin:
             width=width if width is not None else "stretch",
             height=height if height is not None else 150,
         )
-        return self.dg._enqueue("iframe", iframe_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "iframe",
+            iframe_proto,
+            layout_config=layout_config,
+            # Component JavaScript is never executed server-side, so an iframe
+            # can only be reported by its source.
+            agent_props=agent_spec.element(
+                "components.v1.iframe",
+                support="browser_required",
+                src=iframe_proto.src or None,
+            ),
+        )
 
     @gather_metrics("_html")
     def _html(
@@ -259,7 +271,14 @@ class IframeMixin:
             width=width if width is not None else "stretch",
             height=height if height is not None else 150,
         )
-        return self.dg._enqueue("iframe", iframe_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "iframe",
+            iframe_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "components.v1.html", support="browser_required"
+            ),
+        )
 
     @gather_metrics("iframe")
     def iframe(
@@ -413,7 +432,16 @@ class IframeMixin:
 
         layout_config = LayoutConfig(width=effective_width, height=effective_height)
 
-        return self.dg._enqueue("iframe", iframe_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "iframe",
+            iframe_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "iframe",
+                support="browser_required",
+                src=iframe_proto.src or None,
+            ),
+        )
 
     def _process_local_file(
         self, proto: IFrameProto, file_path: str, coordinates: str

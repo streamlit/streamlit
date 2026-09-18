@@ -17,6 +17,7 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING, TypeAlias, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.errors import (
     StreamlitInvalidParameterTypeError,
@@ -165,7 +166,14 @@ class ProgressMixin:
 
         layout_config = create_layout_config(width=width)
 
-        return self.dg._enqueue("progress", progress_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "progress",
+            progress_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "progress", value=progress_proto.value, text=text
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

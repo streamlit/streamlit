@@ -19,6 +19,7 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.elements.lib.policies import maybe_raise_label_warnings
 from streamlit.elements.lib.utils import (
@@ -467,7 +468,33 @@ class MetricMixin:
             allow_content_height=True,
         )
 
-        return self.dg._enqueue("metric", metric_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "metric",
+            metric_proto,
+            layout_config=layout_config,
+            # `value` and `delta` are reported as authored, so a number stays a
+            # number for a caller that has to compute with it. The rendered
+            # strings come along only when they differ, which is when the
+            # author passed a number and Streamlit formatted it.
+            # `delta_color` is likewise as authored rather than the `direction`
+            # and `color` pair it becomes on the wire.
+            agent_props=agent_spec.element(
+                "metric",
+                label=label,
+                value=value,
+                display_value=_display_of(value, metric_proto.body),
+                delta=delta,
+                display_delta=_display_of(delta, metric_proto.delta),
+                delta_color=delta_color,
+                delta_description=delta_description,
+                help=help,
+                icon=icon,
+                format=format,
+                border=border,
+                chart_type=chart_type if chart_data is not None else None,
+                label_visibility=label_visibility,
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:
@@ -504,6 +531,17 @@ def _parse_metric_number(value: AnyNumber, parameter: str) -> str:
             ["int", "float", "Decimal", "NumPy number"],
             detail="Convert the value to a number type.",
         ) from ex
+
+
+def _display_of(authored: Value | Delta, rendered: str) -> str | None:
+    """The rendered string, for the agent API, when it adds anything.
+
+    An author who passed a string already sees it under `value`, so repeating
+    it as `display_value` would just be two names for one fact.
+    """
+    if not rendered or rendered == authored:
+        return None
+    return rendered
 
 
 def _parse_value(value: Value) -> str:

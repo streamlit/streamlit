@@ -23,6 +23,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.errors import StreamlitInvalidParameterTypeError
 from streamlit.proto.GraphVizChart_pb2 import GraphVizChart as GraphVizChartProto
@@ -186,7 +187,14 @@ class GraphvizMixin:
         )
 
         return self.dg._enqueue(
-            "graphviz_chart", graphviz_chart_proto, layout_config=layout_config
+            "graphviz_chart",
+            graphviz_chart_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "graphviz_chart",
+                spec=graphviz_chart_proto.spec,
+                engine=graphviz_chart_proto.engine or None,
+            ),
         )
 
     @property
