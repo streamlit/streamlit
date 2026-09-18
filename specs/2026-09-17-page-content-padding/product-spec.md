@@ -67,14 +67,19 @@ Hardcoded main block-container padding in `StyledAppViewBlockContainer`:
 
 | Context | Typical `padding-top` | Typical `padding-bottom` |
 | ------- | --------------------- | ------------------------ |
-| Normal app (non-embedded) | `6rem` (`8rem` with top nav) | `10rem` when no `st.bottom`, else `1rem` (`spacing.lg`) |
-| Embedded + `show_padding` or `show_toolbar` | `6rem` | same `10rem` / `1rem` rule as non-embedded |
-| Embedded, neither flag | `4.5rem` with header or sidebar chrome, else `2.25rem` | `1rem` |
+| Non-embedded | `6rem` (`8rem` with top nav). Ignores both props below | `10rem` when no `st.bottom`, else `1rem` (`spacing.lg`) |
+| Embedded | `6rem` if `showPadding` or `showToolbar`; else `4.5rem` if header or sidebar chrome; else `2.25rem` | `10rem` only if `showPadding` and no `st.bottom`; otherwise `1rem` |
 
-Production wiring sets `showPadding = true` for every non-embedded app
-(`!isEmbed() || isPaddingDisplayed()`), so the `10rem` bottom path is the normal-app
-default — not embed-only. The styled-component prop is named `bottomEmbedPadding` for
-historical reasons; do not read that name as “embed only.”
+Those columns use the props passed into `StyledAppViewBlockContainer`, not URL option strings.
+
+`showPadding` is `!isEmbed() || isPaddingDisplayed()` (`embed_options=show_padding`). It is
+always true outside embeds, so the `10rem` bottom path is the normal-app default. The
+styled-component field is named `bottomEmbedPadding`; do not read that name as embed-only.
+`showToolbar` is not the URL `show_toolbar` option. It is
+`(!isEmbed() || isToolbarDisplayed()) && hasContentToShow`. `hasContentToShow` is false
+only when `toolbarMode` is `minimal` and there are no host or app menu/toolbar items, so
+an embed can request `show_toolbar` and still take the `4.5rem` / `2.25rem` top path.
+`showToolbar` does not affect bottom padding.
 
 Side padding is `theme.spacing.lg` (or `theme.sizes.wideSidePadding` in wide mode on
 large screens). Sidebar user content uses `paddingTop: spacing.twoXL` when page nav is
@@ -313,8 +318,7 @@ chrome to clear — `"0"` is flush with the bottom of the main content area.
 
 **`st.bottom`:** `theme.paddingBottom` customizes that main-area breathing room, not the
 sticky container. Today, when `st.bottom` is present, main `paddingBottom` already falls
-from `10rem` to `1rem` (`showPadding && !hasBottom ? "10rem" : spacing.lg`) for both
-non-embedded and embedded+`show_padding`. A configured `paddingBottom` replaces that
+from `10rem` to `1rem` (`showPadding && !hasBottom ? "10rem" : spacing.lg`). A configured `paddingBottom` replaces that
 main-area value either way; it does not restyle padding inside
 `StyledBottomBlockContainer`. Sticky + spacer already prevents main content from
 scrolling under `st.bottom`.
@@ -322,7 +326,7 @@ scrolling under `st.bottom`.
 | Bottom element | Role |
 | -------------- | ---- |
 | Default `10rem` main bottom padding (no `st.bottom`) | Aesthetic room — what `paddingBottom` replaces when unset would have been `10rem` |
-| `1rem` when `st.bottom` is present (or embed without `show_padding`) | Today’s shrunk path; configured `paddingBottom` still replaces main-area padding |
+| `1rem` when `st.bottom` is present, or `showPadding` is false | Today’s shrunk path; configured `paddingBottom` still replaces main-area padding |
 | `st.bottom` | Author sticky content; internals are not this option |
 | Header toolbar / deploy / status | Header area, not a footer |
 | Cloud “Manage app” | Host overlay in the bottom-right (~`2.75rem` tall); this API does not reserve space for it |
