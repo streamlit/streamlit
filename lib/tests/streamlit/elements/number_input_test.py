@@ -80,6 +80,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
         assert c.default == 0.0
         assert c.HasField("default")
         assert not c.disabled
+        assert not c.required
         assert c.placeholder == ""
 
     def test_just_disabled(self):
@@ -88,6 +89,42 @@ class NumberInputTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.number_input
         assert c.disabled
+
+    @parameterized.expand([(True,), (False,)])
+    def test_required_sets_proto_field(self, required: bool) -> None:
+        """Test that required is marshalled to the proto field."""
+        st.number_input("the label", required=required)
+
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.required is required
+
+    def test_required_is_in_unkeyed_widget_id(self) -> None:
+        """Test that toggling required without a key changes the widget ID."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.number_input("the label", required=False)
+            id1 = self.get_delta_from_queue().new_element.number_input.id
+            st.number_input("the label", required=True)
+            id2 = self.get_delta_from_queue().new_element.number_input.id
+            assert id1 != id2
+
+    def test_required_not_in_keyed_widget_id(self) -> None:
+        """Test that toggling required with a key keeps the widget ID.
+
+        A user key ignores all command kwargs, so required is not part of
+        the keyed identity.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.number_input("the label", key="number_input_key", required=False)
+            id1 = self.get_delta_from_queue().new_element.number_input.id
+            st.number_input("the label", key="number_input_key", required=True)
+            id2 = self.get_delta_from_queue().new_element.number_input.id
+            assert id1 == id2
 
     def test_placeholder(self):
         """Test that it can be called with placeholder param."""
@@ -642,6 +679,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
                 min_value=1,
                 max_value=20,
                 step=2,
+                required=True,
             )
             c2 = self.get_delta_from_queue().new_element.number_input
             id2 = c2.id

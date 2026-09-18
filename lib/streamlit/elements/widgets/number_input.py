@@ -124,6 +124,7 @@ class NumberInputMixin:
         *,
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
@@ -150,6 +151,7 @@ class NumberInputMixin:
         *,
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
@@ -176,6 +178,7 @@ class NumberInputMixin:
         kwargs: WidgetKwargs | None = None,
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
@@ -202,6 +205,7 @@ class NumberInputMixin:
         kwargs: WidgetKwargs | None = None,
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
@@ -228,6 +232,7 @@ class NumberInputMixin:
         kwargs: WidgetKwargs | None = None,
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
@@ -254,6 +259,7 @@ class NumberInputMixin:
         kwargs: WidgetKwargs | None = None,
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
@@ -280,6 +286,7 @@ class NumberInputMixin:
         kwargs: WidgetKwargs | None = None,
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
@@ -306,6 +313,7 @@ class NumberInputMixin:
         *,
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
@@ -332,6 +340,7 @@ class NumberInputMixin:
         *,
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
@@ -356,6 +365,7 @@ class NumberInputMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
@@ -491,6 +501,26 @@ class NumberInputMixin:
             An optional boolean that disables the number input if set to
             ``True``. The default is ``False``.
 
+        required : bool
+            An optional boolean that requires a non-empty value if set to
+            ``True``. The default is ``False``. If this is ``True``, empty
+            values (``None``) cannot be submitted.
+
+            Outside a form, clearing the field does not rerun the app, and
+            the last committed value is kept. Inside a form, submission is
+            blocked until the field has a value. The widget still returns
+            its default value until the user provides input.
+
+            ``required=True`` does not change the widget's default. A
+            number input still starts at ``min_value`` (or ``0``) unless
+            you pass ``value=None``. Use ``value=None`` together with
+            ``required=True`` for an empty required field.
+
+            .. note::
+               This check runs in the user's browser and can be bypassed.
+               If requiredness is security-relevant, you must also check the
+               value on the server (in your app code) after it is submitted.
+
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
@@ -616,6 +646,7 @@ class NumberInputMixin:
             kwargs=kwargs,
             placeholder=placeholder,
             disabled=disabled,
+            required=required,
             label_visibility=label_visibility,
             icon=icon,
             width=width,
@@ -640,6 +671,7 @@ class NumberInputMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
@@ -665,6 +697,9 @@ class NumberInputMixin:
         element_id = compute_and_register_element_id(
             "number_input",
             user_key=key,
+            # A user key ignores all command kwargs, including required.
+            # Passing required hashes it only for unkeyed widgets; toggling it
+            # cannot make a stored value incompatible.
             key_as_main_identity=True,
             dg=self.dg,
             label=label,
@@ -677,6 +712,7 @@ class NumberInputMixin:
             placeholder=None if placeholder is None else str(placeholder),
             icon=icon,
             width=width,
+            required=required,
         )
 
         # Ensure that all arguments are of the same type.
@@ -818,6 +854,7 @@ class NumberInputMixin:
             number_input_proto.placeholder = str(placeholder)
         number_input_proto.form_id = current_form_id(self.dg)
         number_input_proto.disabled = disabled
+        number_input_proto.required = required
         number_input_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
