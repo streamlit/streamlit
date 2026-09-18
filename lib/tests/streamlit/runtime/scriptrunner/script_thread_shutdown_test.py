@@ -27,9 +27,9 @@ _THIS_DIR: Final = Path(__file__).parent
 _TIGHT_LOOP_SCRIPT: Final = _THIS_DIR / "test_data" / "tight_loop.py"
 _HUNG_CHILD_SCRIPT: Final = _THIS_DIR / "_hung_script_exit_child.py"
 
-# Interpreter shutdown waits on non-daemon threads, so this must return while
-# the script thread is still alive in its tight loop.
-_PROCESS_EXIT_TIMEOUT_SEC: Final = 10
+# Interpreter shutdown joins non-daemon threads, so communicate() only returns
+# within this budget if the script thread is a daemon while still spinning.
+_PROCESS_EXIT_TIMEOUT_SEC: Final = 30
 
 
 @pytest.mark.slow

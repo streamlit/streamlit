@@ -23,9 +23,11 @@ is a daemon.
 from __future__ import annotations
 
 import asyncio
+import os
 import sys
-import threading
+import tempfile
 import time
+from pathlib import Path
 from typing import Final
 from unittest.mock import MagicMock
 
@@ -39,10 +41,13 @@ from streamlit.runtime.scriptrunner_utils.script_requests import RerunData
 from streamlit.runtime.state.session_state import SessionState
 
 _SCRIPT_START_TIMEOUT_SEC: Final = 5.0
+_SENTINEL_ENV: Final = "STREAMLIT_HUNG_LOOP_SENTINEL"
 
 
 def main() -> None:
     script_path = sys.argv[1]
+    sentinel = Path(tempfile.mkdtemp()) / "started"
+    os.environ[_SENTINEL_ENV] = str(sentinel)
 
     # ScriptRunner calls Runtime.instance() during setup, before user code.
     Runtime._instance = MagicMock()
@@ -62,32 +67,32 @@ def main() -> None:
         event_loop=loop,
     )
 
-    started = threading.Event()
-    failed: list[str] = []
+    terminal_events: list[str] = []
 
     def record_event(
         sender: object,
         event: ScriptRunnerEvent,
         **kwargs: object,
     ) -> None:
-        if event == ScriptRunnerEvent.SCRIPT_STARTED:
-            started.set()
-        elif event in {
+        if event in {
             ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
             ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
             ScriptRunnerEvent.SHUTDOWN,
         }:
-            failed.append(event.value)
+            terminal_events.append(event.value)
 
     runner.on_event.connect(record_event, weak=False)
     runner.start()
-    if not started.wait(timeout=_SCRIPT_START_TIMEOUT_SEC):
+    deadline = time.monotonic() + _SCRIPT_START_TIMEOUT_SEC
+    while time.monotonic() < deadline:
+        if sentinel.exists():
+            break
+        time.sleep(0.05)
+    else:
         raise RuntimeError(
-            f"script never started (events={failed}, thread={runner._script_thread})"
+            "tight loop never started "
+            f"(events={terminal_events}, thread={runner._script_thread})"
         )
-    # SCRIPT_STARTED is emitted before compile and exec(). Give the tight loop
-    # a moment to begin so this matches shutdown-while-hung, not startup.
-    time.sleep(0.2)
     # Cooperative stop cannot unwind a tight loop with no st.* calls.
     runner.request_stop()
 
@@ -95,11 +100,12 @@ def main() -> None:
     if thread is None or not thread.is_alive():
         raise RuntimeError(
             "script thread exited after request_stop(); the loop was not hung "
-            f"(events={failed})"
+            f"(events={terminal_events})"
         )
-    if failed:
+    if terminal_events:
         raise RuntimeError(
-            f"script left the hung loop before interpreter shutdown (events={failed})"
+            "script left the hung loop before interpreter shutdown "
+            f"(events={terminal_events})"
         )
     # Returning from main should exit the process because the script thread is
     # a daemon. If it is not, interpreter shutdown blocks on the live thread

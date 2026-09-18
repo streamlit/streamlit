@@ -117,18 +117,20 @@ framework and runs the Uvicorn webserver.
 A script thread is created by a ScriptRunner when it starts. The script thread
 is where the ScriptRunner executes, including running the user script itself,
 processing messages to/from the frontend, and all the Streamlit library function
-calls in the user script. Script threads are daemons so the process can exit
-when a user script is stuck in a tight loop with no ``st.*`` interrupt points.
-Python threads inherit the daemon flag, so user-created threads and
-``ThreadPoolExecutor`` workers started from the script thread also default to
-daemon. That only affects process exit, not per-rerun teardown; cooperative
-interrupts still run when the script reaches an ``st.*`` call. A thread that
-must block interpreter shutdown can set ``daemon=False`` explicitly.
+calls in the user script.
 It is possible for the user script to spawn its own threads, which could call
 Streamlit functions. We restrict the ScriptRunner's execution control to the
 script thread. Calling Streamlit functions from other threads is unlikely to
 work correctly due to lack of ScriptRunContext, so we may add a guard against
 it in the future.
+Script threads are daemons so the process can exit when a user script is stuck
+in a tight loop with no ``st.*`` interrupt points. Python threads inherit the
+daemon flag, so threads the script starts itself also default to daemon.
+``ThreadPoolExecutor`` workers inherit it too, but ``concurrent.futures`` joins
+its workers via an atexit hook, so a task hung inside an executor still blocks
+process exit. Cooperative interrupts still run when the script reaches an
+``st.*`` call. A thread that must block interpreter shutdown can set
+``daemon=False`` explicitly.
 """
 
 

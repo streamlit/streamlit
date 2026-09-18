@@ -14,5 +14,12 @@
 
 """A ScriptRunner test script that never reaches an st.* interrupt point."""
 
+import os
+from pathlib import Path
+
+_sentinel = os.environ.get("STREAMLIT_HUNG_LOOP_SENTINEL")
+if _sentinel:
+    Path(_sentinel).write_text("started", encoding="utf-8")
+
 while True:
     pass
