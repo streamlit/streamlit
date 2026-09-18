@@ -90,7 +90,11 @@ const createWidgetManager = (): WidgetStateManager => {
 }
 
 function getLastPlotProps(): PlotParams {
-  return MockPlot.mock.calls[MockPlot.mock.calls.length - 1][0] as PlotParams
+  const lastCall = MockPlot.mock.calls.at(-1)
+  if (!lastCall) {
+    throw new Error("Expected Plot to have been called")
+  }
+  return lastCall[0] as PlotParams
 }
 
 // Static test data - extracted to module level per coding guidelines

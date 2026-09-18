@@ -58,11 +58,12 @@ import {
   DATE_INPUT_HEADER_PICKER_POPOVER_CLASS,
 } from "./CalendarPopoverHeader"
 import {
+  applyPartialSegmentToDate,
   datesEqual,
   getSafeLocale,
   isValidSegmentValue,
-  parsePartialSegmentPaste,
-  parsePastedDate,
+  parseDateFieldPaste,
+  SEGMENT_SELECTOR,
 } from "./dateInputUtils"
 import { ReorderedSegments } from "./ReorderedSegments"
 import {
@@ -74,6 +75,7 @@ import {
   StyledClearButton,
   StyledDateField,
   StyledDateFieldContainer,
+  StyledDateFieldsScroller,
   StyledDateInputWrapper,
   StyledErrorIconContainer,
   StyledTrailingIcons,
@@ -177,6 +179,10 @@ function SingleDateInput({
     setDisplayValue(value)
   }
 
+  // Capture whether the remount must restore focus. By effect time, the
+  // previously focused segment has already been removed.
+  const shouldRestoreFocusRef = useRef(false)
+
   // Form clear: displayValue may have diverged (uncommitted typing) while
   // the widget state stayed at default. The value prop won't change in that
   // case, so watch the resetKey separately.
@@ -184,6 +190,14 @@ function SingleDateInput({
   if (prevResetKey !== formResetKey) {
     setPrevResetKey(formResetKey)
     setDisplayValue(value)
+    activeOriginRef.current = null
+    // Reading the DOM during render is safe here because this write sits inside
+    // the same condition that advances `prevResetKey`: a discarded render
+    // retries against live focus rather than keeping a stale `true`. Strict
+    // Mode's double render sees the same focus.
+    shouldRestoreFocusRef.current = !!triggerRef.current?.contains(
+      document.activeElement
+    )
   }
 
   // Ref so the close-detection effect always reads the latest displayValue
@@ -242,6 +256,17 @@ function SingleDateInput({
     wasOpenRef.current = isOpen
   }, [isOpen, value, clearable])
 
+  // Restore focus to the first editable segment after the form-reset remount.
+  // Suppress handleFocus while focusin dispatches synchronously so the calendar
+  // does not reopen; clearing the guard after a frame could stall in hidden tabs.
+  useEffect(() => {
+    if (!shouldRestoreFocusRef.current) return
+    shouldRestoreFocusRef.current = false
+    isRestoringFocusRef.current = true
+    triggerRef.current?.querySelector<HTMLElement>(SEGMENT_SELECTOR)?.focus()
+    isRestoringFocusRef.current = false
+  }, [formResetKey])
+
   // When entering active mode, move focus to the focused calendar cell.
   useEffect(() => {
     if (!isCalendarActive || !isOpen) return
@@ -288,7 +313,7 @@ function SingleDateInput({
       const segments = triggerRef.current?.querySelectorAll<HTMLElement>(
         '[role="spinbutton"]'
       )
-      const lastSegment = segments?.[segments.length - 1]
+      const lastSegment = segments ? Array.from(segments).at(-1) : undefined
       if (lastSegment) {
         lastSegment.focus()
       } else {
@@ -416,28 +441,29 @@ function SingleDateInput({
     (e: ClipboardEvent<HTMLDivElement>): void => {
       if (disabled) return
       const text = e.clipboardData.getData("text").trim()
+      const target = e.target as HTMLElement
+      const segmentType =
+        target.getAttribute("role") === "spinbutton"
+          ? target.getAttribute("data-type")
+          : null
 
-      const fullDate = parsePastedDate(text, format)
-      if (fullDate) {
-        e.preventDefault()
-        setDisplayValue(fullDate)
-        onChange(fullDate)
+      const parsed = parseDateFieldPaste(text, format, { segmentType })
+      if (!parsed) return
+      e.preventDefault()
+
+      if (parsed.kind === "date") {
+        setDisplayValue(parsed.date)
+        onChange(parsed.date)
         return
       }
 
-      const target = e.target as HTMLElement
-      if (target.getAttribute("role") !== "spinbutton") return
-      const partial = parsePartialSegmentPaste(
-        text,
-        target.getAttribute("data-type")
-      )
-      if (!partial) return
-      e.preventDefault()
-      if (!isValidSegmentValue(partial.segmentType, partial.value)) return
+      if (parsed.kind !== "partial") return // TS narrow; allowRangePaste is unset in single mode
+
+      if (!isValidSegmentValue(parsed.segmentType, parsed.value)) return
 
       const base = displayValue ?? minDate
-      const newDate = base.set({ [partial.segmentType]: partial.value })
-      if (newDate[partial.segmentType] !== partial.value) return
+      const newDate = applyPartialSegmentToDate(base, parsed)
+      if (!newDate) return
       setDisplayValue(newDate)
       onChange(newDate)
     },
@@ -462,9 +488,10 @@ function SingleDateInput({
       const segments = wrapper.querySelectorAll<HTMLElement>(
         '[role="spinbutton"]'
       )
+      const segmentList = Array.from(segments)
       const isLeavingField =
-        (!e.shiftKey && e.target === segments[segments.length - 1]) ||
-        (e.shiftKey && e.target === segments[0])
+        (!e.shiftKey && e.target === segmentList.at(-1)) ||
+        (e.shiftKey && e.target === segmentList[0])
       if (isLeavingField) {
         setIsOpen(false)
       }
@@ -560,23 +587,28 @@ function SingleDateInput({
         onPaste={handlePaste}
         onKeyDown={handleFieldKeyDown}
       >
-        <I18nProvider locale="en-US">
-          <StyledDateField>
-            <DateField
-              aria-label={label}
-              aria-describedby={error ? errorId : undefined}
-              isInvalid={!!error}
-              value={displayValue}
-              onChange={handleFieldChange}
-              minValue={minDate}
-              maxValue={maxDate}
-              shouldForceLeadingZeros
-              isDisabled={disabled}
-            >
-              <ReorderedSegments format={format} />
-            </DateField>
-          </StyledDateField>
-        </I18nProvider>
+        <StyledDateFieldsScroller data-testid="stDateInputFieldsScroller">
+          <I18nProvider locale="en-US">
+            <StyledDateField>
+              <DateField
+                // Remount on form clear because React Aria retains incomplete
+                // segment text when the controlled value has not changed.
+                key={formResetKey}
+                aria-label={label}
+                aria-describedby={error ? errorId : undefined}
+                isInvalid={!!error}
+                value={displayValue}
+                onChange={handleFieldChange}
+                minValue={minDate}
+                maxValue={maxDate}
+                shouldForceLeadingZeros
+                isDisabled={disabled}
+              >
+                <ReorderedSegments format={format} />
+              </DateField>
+            </StyledDateField>
+          </I18nProvider>
+        </StyledDateFieldsScroller>
         <StyledTrailingIcons>
           {error && (
             <StyledErrorIconContainer data-testid="stDateInputError">
@@ -607,7 +639,7 @@ function SingleDateInput({
         </StyledTrailingIcons>
         {error && (
           <StyledVisuallyHidden id={errorId} role="alert">
-            {error.replace(/\*\*/g, "")}
+            {error.replaceAll("**", "")}
           </StyledVisuallyHidden>
         )}
       </StyledDateInputWrapper>

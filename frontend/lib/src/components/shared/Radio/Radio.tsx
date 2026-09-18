@@ -71,7 +71,7 @@ function Radio({
 
   const handleChange = useCallback(
     (selectedValue: string): void => {
-      const selectedIndex = parseInt(selectedValue, 10)
+      const selectedIndex = Number.parseInt(selectedValue, 10)
       setValue(selectedIndex)
       onChange(selectedIndex)
     },

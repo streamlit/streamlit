@@ -66,6 +66,7 @@ from streamlit.testing.v1.element_tree import (
     Header,
     Image,
     Info,
+    InitialValue,
     Json,
     Latex,
     Markdown,
@@ -92,6 +93,10 @@ from streamlit.testing.v1.element_tree import (
     Toggle,
     Warning,  # noqa: A004
     WidgetList,
+    _form_clear_flags,
+    _submitted_form_ids,
+    _use_form_clear_defaults,
+    _widget_form_id,
     repr_,
 )
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
@@ -99,12 +104,92 @@ from streamlit.testing.v1.util import patch_config_options
 from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator, Sequence
+    from collections.abc import (
+        Callable,
+        ItemsView,
+        Iterator,
+        KeysView,
+        Sequence,
+        ValuesView,
+    )
 
     from streamlit.proto.WidgetStates_pb2 import WidgetStates
     from streamlit.source_util import PageHash, PageInfo
 
 TMP_DIR = tempfile.TemporaryDirectory()
+
+
+class _AppTestSessionState:
+    """Dict-like session state for AppTest testers.
+
+    Item and attribute access match ``st.session_state``. Mapping methods
+    (``get``, ``keys``, ``items``, ``values``, ``to_dict``, iteration)
+    expose filtered user state and keyed widgets, not internal Streamlit
+    keys.
+    """
+
+    _state: SafeSessionState
+
+    def __init__(self, state: SafeSessionState) -> None:
+        object.__setattr__(self, "_state", state)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """Return the value for ``key``, or ``default`` if it is unset."""
+        try:
+            return self._state[key]
+        except KeyError:
+            return default
+
+    def keys(self) -> KeysView[str]:
+        return self._state.filtered_state.keys()
+
+    def items(self) -> ItemsView[str, Any]:
+        return self._state.filtered_state.items()
+
+    def values(self) -> ValuesView[Any]:
+        return self._state.filtered_state.values()
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return user state and keyed widget values."""
+        return self._state.filtered_state
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._state.filtered_state)
+
+    def __len__(self) -> int:
+        return len(self._state.filtered_state)
+
+    def __getitem__(self, key: str) -> Any:
+        return self._state[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self._state[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self._state[key]
+
+    def __contains__(self, key: object) -> bool:
+        # Membership follows the tester-facing filtered view; item access
+        # still reaches internal keys that AppTest itself reads.
+        return key in self._state.filtered_state
+
+    def __getattr__(self, key: str) -> Any:
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(f"{key} not found in session_state.")
+
+    def __setattr__(self, key: str, value: Any) -> None:
+        self[key] = value
+
+    def __delattr__(self, key: str) -> None:
+        try:
+            del self[key]
+        except KeyError:
+            raise AttributeError(f"{key} not found in session_state.")
+
+    def __repr__(self) -> str:
+        return repr(self._state.filtered_state)
 
 
 class AppTest:
@@ -159,9 +244,10 @@ class AppTest:
         Dictionary of secrets to be used by the simulated app. Use dict-like
         syntax to set secret values for the simulated app.
 
-    session_state: SafeSessionState
-        Session State for the simulated app. SafeSessionState object supports
-        read and write operations as usual for Streamlit apps.
+    session_state
+        Session State for the simulated app. Supports item and attribute
+        access plus dict-style operations from ``st.session_state``: ``get``,
+        ``keys``, ``items``, ``values``, ``to_dict``, ``len``, and iteration.
 
     query_params: dict[str, Any]
         Dictionary of query parameters to be used by the simulated app. Use
@@ -180,7 +266,8 @@ class AppTest:
         self.default_timeout = default_timeout
         session_state = SessionState()
         session_state[TESTING_KEY] = {}
-        self.session_state = SafeSessionState(session_state, lambda: None)
+        self._session_state = SafeSessionState(session_state, lambda: None)
+        self.session_state = _AppTestSessionState(self._session_state)
         self.query_params: dict[str, Any] = {}
         self.secrets: dict[str, Any] = {}
         self.args = args
@@ -196,6 +283,10 @@ class AppTest:
         # still resolvable by callbacks that fire before the script body
         # re-registers them in the next run.
         self._fragment_storage = MemoryFragmentStorage()
+        # Form ids whose last submit used clear_on_submit. The next submit of
+        # those forms serializes proto defaults for widgets the test has not
+        # set, matching frontend pending-clear without an extra rerun.
+        self._cleared_form_ids: set[str] = set()
 
         tree = ElementTree()
         tree._runner = self
@@ -405,7 +496,7 @@ class AppTest:
 
         script_runner = LocalScriptRunner(
             self._script_path,
-            self.session_state,
+            self._session_state,
             pages_manager,
             args=self.args,
             kwargs=self.kwargs,
@@ -447,13 +538,32 @@ class AppTest:
         """Register files from FileUploader widgets with the file manager."""
         from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 
+        submitted = _submitted_form_ids(self._tree)
+        form_clears = _form_clear_flags(self._tree)
         for widget in self._tree.file_uploader:
+            form_id = _widget_form_id(widget)
+            saved_files = widget._files
+            if form_id and form_id not in submitted:
+                # Re-register only the files committed by the last submit;
+                # newly staged uploads wait for this form's submit button.
+                widget._files = InitialValue()
+            elif _use_form_clear_defaults(
+                widget,
+                submitted=submitted,
+                cleared=self._cleared_form_ids,
+                form_clears=form_clears,
+            ):
+                continue
+            try:
+                files_to_register = widget._get_files_to_register()
+            finally:
+                widget._files = saved_files
             for (
                 file_id,
                 filename,
                 content,
                 mime_type,
-            ) in widget._get_files_to_register():
+            ) in files_to_register:
                 file_rec = UploadedFileRec(
                     file_id=file_id,
                     name=filename,
@@ -1326,24 +1436,25 @@ class AppTest:
         """Get elements or widgets of the specified type.
 
         This method returns the collection of all elements or widgets of
-        the specified type on the current page. Retrieve a specific element by
-        using its index (order on page) or key lookup.
+        the specified type on the current page. Retrieve a specific element
+        by index. Key lookup lives on typed collections
+        (``at.slider(key=...)``) or ``get_by_key``.
 
         Parameters
         ----------
         element_type: str
-            An element attribute of ``AppTest``. For example, "button",
-            "caption", or "chat_input".
+            An ``AppTest`` collection name such as ``"button"``,
+            ``"datetime_input"``, ``"pills"``, or ``"tabs"``. Internal node
+            type names such as ``"date_time_input"`` also work. ``"help"``
+            selects ``st.help`` elements (node type ``help_info``).
 
         Returns
         -------
         Sequence of Elements
-            Sequence of elements of the given type. Individual elements can
-            be accessed from a Sequence by index (order on the page). When
-            getting and ``element_type`` that is a widget, individual widgets
-            can be accessed by key. For example, ``at.get("text")[0]`` for the
-            first ``st.text`` element or ``at.get("slider")(key="my_key")`` for
-            the ``st.slider`` widget with a given key.
+            Sequence of matching nodes, accessed by index. For example,
+            ``at.get("text")[0]`` for the first ``st.text`` element. Widgets
+            with a key are looked up on the typed collection
+            (``at.slider(key="my_key")``) or with ``get_by_key``.
         """
         return self._tree.get(element_type)
 

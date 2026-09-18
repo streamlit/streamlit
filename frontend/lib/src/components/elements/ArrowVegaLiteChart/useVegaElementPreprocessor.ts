@@ -319,10 +319,6 @@ const generateSpec = (
     spec.padding.bottom = BOTTOM_PADDING
   }
 
-  if (spec.datasets) {
-    throw new Error("Datasets should not be passed as part of the spec")
-  }
-
   if (selectionMode.length > 0) {
     prepareSpecForSelections(spec)
   }

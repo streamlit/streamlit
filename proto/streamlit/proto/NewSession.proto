@@ -107,6 +107,12 @@ message Initialize {
   //                            loopback gate excludes.
   //   "check_failed"         - the eligibility check itself threw, so the
   //                            nudge was withheld defensively.
+  //   "check_unreadable"     - no install target could be read (e.g.
+  //                            permissions), so whether the skills are
+  //                            installed is unknown and the nudge was withheld.
+  //                            Split from "check_failed" because the two point
+  //                            at different fixes: ours vs. the user's
+  //                            filesystem.
   // The high-volume uninteresting cases (headless, no agent harness, skills
   // already installed, user dismissed) are deliberately NOT reported.
   //

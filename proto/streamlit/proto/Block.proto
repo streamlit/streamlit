@@ -157,11 +157,17 @@ message Block {
 
   message TabContainer {
     int32 default_tab_index = 1;
-    // Widget ID for dynamic tabs. Only set when on_change="rerun",
-    // signaling the frontend to treat this as a stateful widget.
-    // When absent, tabs may still have a block-level id for CSS key
-    // styling but should not trigger reruns on tab change.
+    // Widget ID for dynamic tabs. Only set when on_change="rerun" or
+    // bind="query-params", signaling the frontend to treat this as a
+    // stateful widget. When absent, tabs may still have a block-level id
+    // for CSS key styling but should not trigger reruns on tab change.
     optional string id = 2;
+    // Query parameter name the active tab syncs with. Only set when
+    // bind="query-params".
+    optional string query_param_key = 3;
+    // Original default tab label (from `default=` or the first tab). Omitted
+    // from the URL when the active tab matches.
+    optional string default_tab_label = 4;
   }
 
   message Tab {

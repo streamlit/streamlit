@@ -22,6 +22,9 @@ import appPackage from "./package.json" with { type: "json" }
 
 import react from "@vitejs/plugin-react-swc"
 
+// Vite's native config loader requires the extension on relative imports.
+import { katexWoff2Only } from "./vite-plugins/katexWoff2Only.ts"
+
 const BASE = "./"
 const HASH = process.env.OMIT_HASH_FROM_MAIN_FILES ? "" : ".[hash]"
 // We do not explicitly set the DEV_BUILD in any of our processes
@@ -99,6 +102,7 @@ export default defineConfig(({ command }) => ({
     },
   },
   plugins: [
+    katexWoff2Only(),
     react({
       jsxImportSource: "@emotion/react",
       plugins: [["@swc/plugin-emotion", {}]],

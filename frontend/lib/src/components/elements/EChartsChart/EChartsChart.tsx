@@ -217,8 +217,7 @@ export function EChartsChart({
           if (prev[op] === undefined) {
             return prev
           }
-          const next = { ...prev }
-          delete next[op]
+          const { [op]: _removed, ...next } = prev
           return next
         }
         if (prev[op] === message) {
@@ -612,32 +611,30 @@ export function EChartsChart({
               ECharts chart error: {parseError}
             </StyledEChartsError>
           ) : (
-            <>
-              <StyledEChartsChartStack>
-                {/*
-              No `role` here on purpose. ECharts sets `role="img"` plus a
-              generated `aria-label` on this same element (`zr.dom`) whenever
-              `aria.enabled` is on, which is the default. Declaring the role
-              here too would leave it behind as an image with no accessible
-              name for users who opt out with `aria: {enabled: false}`.
-            */}
-                <StyledEChartsChartContainer
-                  ref={containerRef}
-                  className="stEChartsChart"
-                  data-testid="stEChartsChart"
-                  aria-busy={!hasRendered && renderError === null}
-                  isDisabled={disabled && element.selectionActivated}
-                />
-                {renderError !== null && (
-                  <StyledEChartsErrorOverlay
-                    role="alert"
-                    data-testid="stEChartsChartError"
-                  >
-                    ECharts chart error: {renderError}
-                  </StyledEChartsErrorOverlay>
-                )}
-              </StyledEChartsChartStack>
-            </>
+            <StyledEChartsChartStack>
+              {/*
+                No `role` here on purpose. ECharts sets `role="img"` plus a
+                generated `aria-label` on this same element (`zr.dom`) whenever
+                `aria.enabled` is on, which is the default. Declaring the role
+                here too would leave it behind as an image with no accessible
+                name for users who opt out with `aria: {enabled: false}`.
+              */}
+              <StyledEChartsChartContainer
+                ref={containerRef}
+                className="stEChartsChart"
+                data-testid="stEChartsChart"
+                aria-busy={!hasRendered && renderError === null}
+                isDisabled={disabled && element.selectionActivated}
+              />
+              {renderError !== null && (
+                <StyledEChartsErrorOverlay
+                  role="alert"
+                  data-testid="stEChartsChartError"
+                >
+                  ECharts chart error: {renderError}
+                </StyledEChartsErrorOverlay>
+              )}
+            </StyledEChartsChartStack>
           )}
         </StyledToolbarElementContainer>
       </StyledEChartsChartFill>

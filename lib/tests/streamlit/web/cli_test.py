@@ -553,6 +553,17 @@ class CliTest(unittest.TestCase):
         assert "A Mapping is a generic container" not in result.output
         mock_get_ctx.assert_not_called()
 
+    def test_docs_command_rejects_nested_lookup_through_property(self) -> None:
+        """A property can only be the final lookup segment."""
+        result = self.runner.invoke(cli, ["docs", "st.context.headers.foo"])
+        assert result.exit_code != 0
+        assert "No public Streamlit command found" in result.output
+
+    def test_test_prog_name_command_succeeds(self) -> None:
+        """The hidden ``test prog_name`` command succeeds under ``streamlit test``."""
+        result = self.runner.invoke(cli, ["test", "prog_name"])
+        assert result.exit_code == 0
+
     def test_docs_command_namespace(self):
         """Tests the docs command returns the docstring of a namespace."""
         result = self.runner.invoke(cli, ["docs", "st.column_config"])
@@ -860,6 +871,46 @@ def test_main_run_handles_none_flag_options() -> None:
     _, _, args_, flag_opts = mock_run.call_args.args
     assert args_ == []
     assert flag_opts == {}
+
+
+@pytest.mark.parametrize(
+    "static_error",
+    [RuntimeError("boom"), AttributeError("missing")],
+    ids=["getattr_static_error", "getattr_static_attribute_error"],
+)
+def test_resolve_streamlit_command_returns_none_when_attribute_lookup_fails(
+    static_error: Exception,
+) -> None:
+    """Failed static or dynamic attribute lookups resolve to an unknown command."""
+    with (
+        patch("inspect.getattr_static", side_effect=static_error),
+        patch("builtins.getattr", side_effect=RuntimeError("boom")),
+    ):
+        assert cli._resolve_streamlit_command("button") is None
+
+
+def test_resolve_streamlit_command_returns_none_on_getattr_error() -> None:
+    """Unexpected getattr failures after a static lookup are treated as unknown."""
+    real_getattr = getattr
+
+    def _boom_getattr(obj: object, name: str, *args: object) -> object:
+        if name == "button":
+            raise RuntimeError("boom")
+        return real_getattr(obj, name, *args)
+
+    with patch("builtins.getattr", side_effect=_boom_getattr):
+        assert cli._resolve_streamlit_command("button") is None
+
+
+def test_format_command_docs_omits_blank_docstring() -> None:
+    """Objects without a docstring render as a header only."""
+
+    def _undocumented() -> None:
+        pass
+
+    formatted = cli._format_command_docs("st.undocumented", _undocumented)
+    assert formatted.startswith("st.undocumented")
+    assert "\n\n" not in formatted
 
 
 def test_init_command_runs_app_when_user_confirms(tmp_path: Path) -> None:

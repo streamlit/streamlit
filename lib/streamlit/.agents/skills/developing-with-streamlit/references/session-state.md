@@ -71,7 +71,7 @@ st.query_params["sort"] = sort  # don't do this when bind= handles sync
 Notes:
 - `bind="query-params"` requires `key=`. The only valid value is the exact string `"query-params"` (hyphen, not `"query_params"`); anything else is invalid. Not supported with `st.text_input(type="password")`.
 - When the value equals the default, the param is dropped from the URL to keep it clean.
-- A bound param can't be set or deleted through `st.query_params` — change it programmatically by assigning to `st.session_state[key]` *before* the widget renders, or from an `on_change` callback. Assigning after the widget has already rendered on the same run raises `StreamlitAPIException` (see [Modifying state after widget creation](#modifying-state-after-widget-creation)). Do not mix `bind=` with manual `st.query_params` reads/writes.
+- A bound param can't be set or deleted through `st.query_params` — change it programmatically by assigning to `st.session_state[key]` *before* the widget renders, or from an `on_change` callback. Assigning after the widget has already rendered on the same run raises `StreamlitWidgetAlreadyInstantiatedError` (see [Modifying state after widget creation](#modifying-state-after-widget-creation)). Do not mix `bind=` with manual `st.query_params` reads/writes.
 - Still render the value (e.g. `st.write(f"Sorting by: {sort}")`) if the app needs to show the current selection.
 - Works on input widgets generally. It's **not** supported on trigger/button widgets (`st.button`, `st.download_button`, `st.form_submit_button`), file and media inputs (`st.file_uploader`, `st.camera_input`, `st.audio_input`), `st.chat_input`, or `st.data_editor`, nor on selections from `st.dataframe`/charts — assume any other input widget supports it. (Listing the exceptions rather than every supported widget keeps this from going stale as new widgets ship.)
 - Multi-page apps: query params belong to the app URL, not an individual page, so a bound value persists in the URL across `st.navigation` page switches and is shared app-wide. If two pages bind widgets to the same `key=`, they share that value — use distinct keys per page when you don't want it to carry over.
@@ -79,7 +79,7 @@ Notes:
 
 ## Widget input constraints are mostly client-side
 
-Most widget input constraints—`options` allow-lists (`st.selectbox`, `st.multiselect`, `st.radio`), `min_value`/`max_value` (`st.slider`, `st.number_input`), `max_chars` (`st.text_input`), `disabled`, and `st.data_editor` column `validate`/`num_rows`—are primarily enforced in the browser for UX. Treat them as guardrails for normal users, **not** as a security boundary: a widget's return value (and its `st.session_state` entry) reflects what the client sent, and a modified or malicious client can submit values outside those constraints.
+Most widget input constraints—`options` allow-lists (`st.selectbox`, `st.multiselect`, `st.radio`), `min_value`/`max_value` (`st.slider`, `st.number_input`), `max_chars` / `validate` / `required` (`st.text_input`), `disabled`, and `st.data_editor` column `validate`/`num_rows`—are primarily enforced in the browser for UX. Treat them as guardrails for normal users, **not** as a security boundary: a widget's return value (and its `st.session_state` entry) reflects what the client sent, and a modified or malicious client can submit values outside those constraints.
 
 For any security-relevant or sensitive decision—authorization/role checks, database writes, file paths, spending or quota limits, or anything that must not exceed a declared bound—re-validate the value in your own script before acting on it:
 
@@ -106,7 +106,7 @@ By default, a keyed widget's value is lost when the widget stops being rendered 
 st.text_input("Name", key="name", persist_state="session")
 ```
 
-`persist_state` requires a `key` and is available on every widget that supports `bind="query-params"`. When both are set, `bind` takes precedence, so the value lives in the URL and persists across page switches regardless of the `persist_state` scope.
+`persist_state` requires a `key` and is available on most widgets that support `bind="query-params"` (not yet on `st.tabs`). When both are set, `bind` takes precedence, so the value lives in the URL and persists across page switches regardless of the `persist_state` scope.
 
 ## Callbacks
 
@@ -123,6 +123,8 @@ st.button("Add 5", on_click=increment, args=(5,))
 Access a widget's value in its own callback via `st.session_state.key`, not the return variable.
 
 Calling `st.rerun()` or `st.switch_page()` inside a callback ends that callback immediately (statements after the call don't run). Streamlit still runs the interaction's other callbacks before performing the rerun or navigation.
+
+`on_change` can also be `"ignore"` or `"rerun"` instead of a callback on some widgets. `"ignore"` updates the widget without a rerun; see [Skip reruns on individual widgets](performance.md#skip-reruns-on-individual-widgets).
 
 ## Initialization patterns
 
@@ -179,11 +181,43 @@ st.session_state.setdefault("cache", {})
 
 ### Modifying state after widget creation
 
-Cannot assign to a widget's state after the widget has rendered:
+You cannot assign to a widget's session state key after that widget has been instantiated on the current run. This raises `StreamlitWidgetAlreadyInstantiatedError`.
 
 ```python
 st.slider("Value", key="my_slider")
-st.session_state.my_slider = 50  # Raises StreamlitAPIException!
+st.session_state["my_slider"] = 50  # Raises StreamlitWidgetAlreadyInstantiatedError
+```
+
+Assign the value **before** creating the widget:
+
+```python
+st.session_state.setdefault("my_slider", 50)
+st.slider("Value", key="my_slider")
+```
+
+Or from an `on_change` / `on_click` callback (callbacks run before widgets are instantiated):
+
+```python
+def reset_slider():
+    st.session_state["my_slider"] = 50
+
+
+st.button("Reset", on_click=reset_slider)
+st.slider("Value", key="my_slider")
+```
+
+For widgets whose keys are read-only (see [Read-only widget keys](#read-only-widget-keys)), store values in a different session state key.
+
+### Read-only widget keys
+
+Some widgets are read-only in session state (buttons and button-like triggers, file and media inputs, `st.data_editor`, `st.form` keys, and chart or `ButtonColumn` selections). Creating one after assigning to its key raises `StreamlitValueAssignmentNotAllowedError`. Keep that key read-only and store values you need to set in a **different** session state key:
+
+```python
+def mark_done():
+    st.session_state["done"] = True
+
+
+st.button("Done", key="done_btn", on_click=mark_done)
 ```
 
 ### Mixing `value` parameter and session state

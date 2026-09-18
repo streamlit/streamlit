@@ -59,6 +59,15 @@ const getProps = (
 })
 
 describe("TextArea widget", () => {
+  beforeEach(() => {
+    // Default wider than hideWidgetDetails (180px) so Input Instructions tests
+    // do not depend on a leaked useResizeObserver mock from another case.
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [400],
+    })
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
     render(<TextArea {...props} />)
@@ -254,6 +263,53 @@ describe("TextArea widget", () => {
     await user.click(textArea)
 
     expect(screen.getByTestId("InputInstructions")).toBeInTheDocument()
+  })
+
+  it("initializes auto-expand height once width is available", () => {
+    const resizeObserverSpy = vi
+      .spyOn(UseResizeObserver, "useResizeObserver")
+      .mockReturnValue({
+        elementRef: { current: null },
+        values: [0],
+      })
+
+    const props = getProps(
+      {},
+      {
+        outerElement: new Element({ heightConfig: { useContent: true } }),
+      }
+    )
+    const { rerender } = render(<TextArea {...props} />)
+
+    expect(screen.getByRole("textbox")).toHaveStyle({ height: "2.5rem" })
+
+    // Restorable getter spy (same pattern as Toast.test.tsx). Do not spy
+    // `Element.prototype` here — that name is the protobuf Element import.
+    // Install measurable heights only after the zero-width mount so this
+    // pins TextArea's width-gated layout effect, not the auto-expand hook's
+    // initial measurement.
+    const scrollHeightSpy = vi
+      .spyOn(HTMLElement.prototype, "scrollHeight", "get")
+      .mockReturnValue(120)
+    const offsetHeightSpy = vi
+      .spyOn(HTMLElement.prototype, "offsetHeight", "get")
+      .mockReturnValue(40)
+
+    try {
+      resizeObserverSpy.mockReturnValue({
+        elementRef: { current: null },
+        values: [400],
+      })
+      // TextArea is memoized, so identical props would skip the rerender
+      // that should pick up the new observed width.
+      rerender(<TextArea {...props} fragmentId="after-width" />)
+
+      // 121px = scrollHeight 120 + ROUNDING_OFFSET 1
+      expect(screen.getByRole("textbox")).toHaveStyle({ height: "121px" })
+    } finally {
+      scrollHeightSpy.mockRestore()
+      offsetHeightSpy.mockRestore()
+    }
   })
 
   it("resets its value when form is cleared", async () => {
@@ -475,5 +531,161 @@ describe("TextArea query param binding", () => {
       true,
       undefined
     )
+  })
+})
+
+describe("on_change='ignore' mode", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Let a scheduled rerun flush before asserting whether one was sent.
+  async function flushScheduledRerun(): Promise<void> {
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+  }
+
+  it("passes triggerRerun: false when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true }, { widgetMgr })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<TextArea {...props} />)
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.type(screen.getByRole("textbox"), "testing")
+    await user.tab()
+
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "testing",
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("does not pass triggerRerun when ignoreRerun is false", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: false }, { widgetMgr })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<TextArea {...props} />)
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.type(screen.getByRole("textbox"), "testing")
+    await user.tab()
+
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "testing",
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).toHaveBeenCalled()
+  })
+
+  it("does not change form batching when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    let pendingFormIds = new Set<string>()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(newData => {
+        pendingFormIds = newData.formsWithPendingChanges
+      }),
+    })
+    const props = getProps(
+      {
+        ignoreRerun: true,
+        formId: "testForm",
+      },
+      { widgetMgr }
+    )
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<TextArea {...props} />)
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.type(screen.getByRole("textbox"), "a")
+
+    expect(setStringValueSpy).toHaveBeenCalledWith(props.element.id, "a", {
+      formId: "testForm",
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(pendingFormIds).toEqual(new Set(["testForm"]))
+  })
+
+  it("does not commit on keystroke outside a form when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ ignoreRerun: true })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<TextArea {...props} />)
+    setStringValueSpy.mockClear()
+
+    await user.type(screen.getByRole("textbox"), "hello")
+
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when ctrl+enter is pressed", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true }, { widgetMgr })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<TextArea {...props} />)
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.type(screen.getByRole("textbox"), "testing")
+    await user.keyboard("{Control>}{Enter}")
+
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "testing",
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
   })
 })

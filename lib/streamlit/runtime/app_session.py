@@ -84,7 +84,9 @@ _LOGGER: Final = get_logger(__name__)
 # to ``""`` — ``headless`` alone fires for every deployed app and would swamp the
 # metric, and "no agent harness" / "already installed" / "user dismissed" are
 # either already measurable from the page profile or simply not interesting.
-_REPORTED_NUDGE_SUPPRESSION_REASONS: Final = frozenset({"conflict", "check_failed"})
+_REPORTED_NUDGE_SUPPRESSION_REASONS: Final = frozenset(
+    {"conflict", "check_failed", "check_unreadable"}
+)
 
 
 def _close_script_event_loop(loop: asyncio.AbstractEventLoop) -> None:
@@ -1072,9 +1074,13 @@ class AppSession:
         # The apply_show_error_details flag applies the client.showErrorDetails
         # redaction. Without this flag, the session sends the internal message,
         # type, and stack trace of the error to the browser.
-        exception_utils.marshall(
-            msg.delta.new_element.exception, e, apply_show_error_details=True
-        )
+        try:
+            exception_utils.marshall(
+                msg.delta.new_element.exception, e, apply_show_error_details=True
+            )
+        except Exception:
+            # Marshalling the error must not replace the original failure.
+            _LOGGER.exception("Failed to marshall exception for the frontend")
         return msg
 
     def _handle_git_information_request(self) -> None:

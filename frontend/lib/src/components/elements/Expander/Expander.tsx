@@ -115,9 +115,9 @@ interface ExpanderIconProps {
  * Otherwise, it will render nothing.
  *
  * @param {string} icon - The icon to render.
- * @returns {ReactElement}
+ * @returns {ReactElement | null}
  */
-const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
+const ExpanderIcon = (props: ExpanderIconProps): ReactElement | null => {
   const { icon } = props
 
   return icon ? (
@@ -126,9 +126,7 @@ const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
       iconValue={icon}
       testid={STATUS_ICON_TEST_IDS[icon] || "stExpanderIcon"}
     />
-  ) : (
-    <></>
-  )
+  ) : null
 }
 
 export interface ExpanderProps {

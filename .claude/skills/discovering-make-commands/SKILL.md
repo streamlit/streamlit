@@ -39,7 +39,7 @@ update-frontend-typesync  Installs missing typescript typings for dependencies.
 update-snapshots          Update e2e playwright snapshots based on the latest completed CI run.
 update-snapshots-changed  Update e2e playwright snapshots of changed e2e files based on the latest completed CI run.
 update-material-icons     Update material icons based on latest Google material symbol version.
-update-emojis             Update emojis based on latest emoji version.
+update-emojis             Update emojis from Unicode's latest emoji-test.txt.
 update-notices            Update the notices file (licenses of frontend assets and dependencies).
 update-headers            Update all license headers.
 update-min-deps           Update minimum dependency constraints file.

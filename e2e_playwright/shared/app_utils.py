@@ -415,6 +415,36 @@ def type_date(date_input_field: Locator, *parts: str, commit: bool = True) -> No
         date_input_field.page.keyboard.press("Escape")
 
 
+def paste_into(locator: Locator, text: str) -> None:
+    """Dispatch a synthetic ``paste`` event carrying ``text`` on the given element.
+
+    Playwright's ``fill``/``press_sequentially`` never produce a ``paste``
+    event, so segmented widgets (``st.date_input``, ``st.time_input``) that
+    implement an ``onPaste`` handler need the event synthesized directly.
+
+    Parameters
+    ----------
+    locator : Locator
+        The element to dispatch the paste event on.
+
+    text : str
+        The clipboard text to paste.
+    """
+    locator.evaluate(
+        """(el, text) => {
+            const dt = new DataTransfer();
+            dt.setData('text/plain', text);
+            const event = new ClipboardEvent('paste', {
+                bubbles: true,
+                cancelable: true,
+            });
+            Object.defineProperty(event, 'clipboardData', { value: dt });
+            el.dispatchEvent(event);
+        }""",
+        text,
+    )
+
+
 def get_slider(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a slider with the given label.
 

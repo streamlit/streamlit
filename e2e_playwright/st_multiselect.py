@@ -442,3 +442,22 @@ with st.container(key="multiselect_wrap_auto_vertical"):
         wrap_options,
         default=wrap_options,
     )
+
+# --- on_change="ignore" multiselect ---
+# Run counter so test_multiselect_on_change_ignore can detect an unexpected rerun.
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)
+
+ignore_multi = st.multiselect(
+    "Ignore change multiselect",
+    ["alpha", "beta", "gamma"],
+    key="ignore_multi",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore multiselect value:", str(ignore_multi))
+
+if st.button("Apply ignore multiselect", key="apply_ignore_multiselect"):
+    st.write("Applied ignore multiselect value:", str(ignore_multi))

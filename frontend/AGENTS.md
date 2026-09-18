@@ -6,7 +6,7 @@
 - Framework: React v18
 - Styling: @emotion/styled v11
 - Build tool: vite v8
-- Testing: vitest v4 & react testing library v16
+- Testing: vitest v5 & react testing library v16
 - Package manager: yarn v4 with workspaces
 
 ## Key TypeScript Principles

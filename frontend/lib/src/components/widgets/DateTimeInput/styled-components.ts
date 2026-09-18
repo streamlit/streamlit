@@ -30,6 +30,7 @@ export {
   StyledClearButton,
   StyledDateField,
   StyledDateFieldContainer,
+  StyledDateFieldsScroller,
   StyledDateInputWrapper,
   StyledErrorIconContainer,
   StyledQuickSelectLabel as StyledPopoverTimeLabel,

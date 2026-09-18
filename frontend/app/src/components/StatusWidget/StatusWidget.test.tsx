@@ -372,4 +372,39 @@ describe("Running Icon", () => {
       expect(icon).toBeVisible()
     })
   })
+
+  it("keeps the previous status mounted while the running man is delayed", () => {
+    vi.setSystemTime(new Date("January 7, 2023 00:00:00"))
+
+    const { rerender } = render(
+      <StatusWidget
+        {...getProps({
+          scriptRunState: ScriptRunState.NOT_RUNNING,
+          showScriptChangedActions: true,
+        })}
+      />
+    )
+
+    expect(screen.getByText("File change.")).toBeVisible()
+    expect(
+      screen.queryByTestId("stStatusWidgetRunningManIcon")
+    ).not.toBeInTheDocument()
+
+    rerender(
+      <StatusWidget
+        {...getProps({
+          scriptRunState: ScriptRunState.RUNNING,
+          showScriptChangedActions: true,
+        })}
+      />
+    )
+
+    // Returning null during the delay takes the fade-out path, so the previous
+    // view stays mounted (CSSTransition may already have it non-visible).
+    expect(screen.queryByText("File change.")).toBeInTheDocument()
+    expect(screen.queryByTestId("stStatusWidget")).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stStatusWidgetRunningManIcon")
+    ).not.toBeInTheDocument()
+  })
 })

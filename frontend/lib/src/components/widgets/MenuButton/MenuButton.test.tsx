@@ -401,5 +401,24 @@ describe("MenuButton widget", () => {
 
       expect(screen.getByRole("menu")).toHaveAttribute("aria-label", "Menu")
     })
+
+    it("restores focus to the trigger after Escape closes the menu", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
+      render(<MenuButton {...props} />)
+
+      const button = screen.getByTestId("stMenuButtonButton")
+      await user.click(button)
+      await screen.findByTestId("stMenuButtonBody")
+
+      await user.keyboard("{Escape}")
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stMenuButtonBody")
+        ).not.toBeInTheDocument()
+      })
+      expect(button).toHaveFocus()
+    })
   })
 })
