@@ -111,7 +111,7 @@ customer = st.selectbox(
 )
 ```
 
-Past a few thousand, search. Pills keep the matches on screen, so picking one is a single click:
+Past a few thousand, search:
 
 ```python
 conn = st.connection("sql")
@@ -136,10 +136,12 @@ if len(term) >= 2:
         params={"term": like_pattern(term)},
         ttl=60,
     )["customer"]
-    customer = st.pills("Matches", matches, wrap=False, label_visibility="collapsed")
+    customer = st.selectbox(
+        "Matches", matches, index=None, label_visibility="collapsed"
+    )
 ```
 
-- `live="300ms"` debounces, so typing doesn't hit the database on every keystroke.
+- `live="300ms"` debounces, so typing doesn't hit the database on every keystroke, and `index=None` keeps the first match from applying before the user picks.
 - Escape `%` and `_` and declare an `escape` character, or a typed `%` matches far more than the user asked for.
 - Pass `ttl` as a number: `conn.query` caches forever by default and takes no `max_entries`.
 - `st.connection("sql")` binds `:name`; Snowflake binds `?` and uppercases unquoted columns.
