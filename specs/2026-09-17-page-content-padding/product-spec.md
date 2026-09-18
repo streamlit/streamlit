@@ -65,14 +65,21 @@ Hardcoded main block-container padding in `StyledAppViewBlockContainer`:
 
 | Context | Typical `padding-top` | Typical `padding-bottom` |
 | ------- | --------------------- | ------------------------ |
-| Normal app | `6rem` (`8rem` with top nav) | ~`10rem` when `st.bottom` empty |
-| Embedded + padding/toolbar | `6rem` | varies |
-| Embedded, minimal chrome | `2.25rem`–`4.5rem` | smaller |
+| Normal app (non-embedded) | `6rem` (`8rem` with top nav) | `10rem` when no `st.bottom`, else `1rem` (`spacing.lg`) |
+| Embedded + `show_padding` | `6rem` | same `10rem` / `1rem` rule as non-embedded |
+| Embedded, minimal chrome | `2.25rem`–`4.5rem` | `1rem` |
+
+Production wiring sets `showPadding = true` for every non-embedded app
+(`!isEmbed() \|\| isPaddingDisplayed()`), so the `10rem` bottom path is the normal-app
+default — not embed-only. The styled-component prop is named `bottomEmbedPadding` for
+historical reasons; do not read that name as “embed only.”
 
 Side padding is `theme.spacing.lg` (or `theme.sizes.wideSidePadding` in wide mode on
-large screens). Sidebar user content uses `paddingTop: spacing.twoXL` or `0` (when page
-nav is above) and `paddingBottom: sizes.sidebarTopSpace` (`6rem`) — also not
-configurable. No public theme or page-config option covers any of this.
+large screens). Sidebar user content uses `paddingTop: spacing.twoXL` when page nav is
+above the user content, otherwise `0`, and `paddingBottom: sizes.sidebarTopSpace`
+(`6rem`) — also not configurable. Above that, `StyledSidebarHeaderContainer` still
+contributes `headerHeight` plus `spacing.lg` bottom margin. No public theme or
+page-config option covers any of this.
 
 ### Workarounds today
 
@@ -176,7 +183,7 @@ only for variants in the *same* section (`baseRadius` vs `buttonRadius`, etc.).
 | ---------- | ---------- |
 | `theme.paddingTop` | Main top content inset |
 | `theme.paddingBottom` | Main bottom inset |
-| `theme.sidebar.paddingTop` | Sidebar top inset |
+| `theme.sidebar.paddingTop` | Gap below sidebar header/logo chrome |
 | `theme.sidebar.paddingBottom` | Sidebar bottom inset |
 
 - Pros: Matches `backgroundColor` / `borderColor`; natural under `[theme.sidebar]`;
@@ -225,14 +232,25 @@ applies sidebar overrides. **Padding keys must be special-cased** so main-area
 
 | Config | Effect |
 | ------ | ------ |
-| Neither set | Main keeps today’s `6rem`/`8rem`/~`10rem` paths; sidebar keeps today’s user-content paddings (`paddingTop`: `spacing.twoXL` or `0` when page nav is above; `paddingBottom`: `sizes.sidebarTopSpace` / `6rem`) |
+| Neither set | Main keeps today’s `6rem`/`8rem`/`10rem`/`1rem` paths; sidebar keeps today’s spacing (`paddingTop`: `spacing.twoXL` when page nav is above, else `0`; header still has `headerHeight` + `spacing.lg` margin; `paddingBottom`: `sizes.sidebarTopSpace` / `6rem`) |
 | Only `[theme]` set | Applies to **main only**; sidebar unchanged |
 | Only `[theme.sidebar]` set | Applies to **sidebar only**; main unchanged |
 | Both set | Each section uses its own value |
 
-Configured sidebar values replace those sidebar paddings directly. Sidebar has **no**
-overlapping header, so content-inset (header clearance + author gap) is a main-area
-construct only — sidebar `paddingTop` / `paddingBottom` are plain insets.
+**Sidebar top — gap after sidebar chrome:** unlike main, the sidebar header/logo row is
+in normal flow (not absolutely overlapping content). Today’s visible top gap with no page
+nav is mostly that header’s height + `spacing.lg` margin, while user-content `paddingTop`
+is already `0` — so a key that only wrote user-content padding could not tighten the
+no-nav case (negatives are rejected).
+
+When `theme.sidebar.paddingTop` is **set**, it is the author-controlled gap below the
+sidebar header/logo row: it replaces today’s header `marginBottom` **and** user-content
+`paddingTop` (including the page-nav `twoXL` branch). `"0"` means flush under the header
+row; the header row’s own height is still reserved. When **unset**, preserve today’s
+header margin + `twoXL`/`0` user-content behavior.
+
+`theme.sidebar.paddingBottom` replaces today’s user-content `paddingBottom`
+(`sidebarTopSpace` / `6rem`) directly.
 
 If scope must shrink, drop sidebar to a follow-up — don’t invent a second API later.
 
@@ -261,14 +279,17 @@ apps keep current look for compatibility.
 footer (“Made with Streamlit” is menu-only). `paddingBottom` replaces today’s large main
 breathing room.
 
-**`st.bottom`:** `theme.paddingBottom` customizes main-area space above `st.bottom` when
-that container is used (today main bottom padding already shrinks when `st.bottom` is
-present). It does not restyle padding inside `StyledBottomBlockContainer`. Sticky + spacer
-already prevents main content from scrolling under `st.bottom`.
+**`st.bottom`:** `theme.paddingBottom` customizes main-area bottom breathing room. Today,
+when `st.bottom` is present, main `paddingBottom` already falls from `10rem` to `1rem`
+(`showPadding && !hasBottom ? "10rem" : spacing.lg`) for both non-embedded and
+embedded+`show_padding`. A configured `paddingBottom` replaces that main-area value; it
+does not restyle padding inside `StyledBottomBlockContainer`. Sticky + spacer already
+prevents main content from scrolling under `st.bottom`.
 
 | Bottom element | Role |
 | -------------- | ---- |
-| Default ~`10rem` main bottom padding | Aesthetic room — what `paddingBottom` replaces |
+| Default `10rem` main bottom padding (no `st.bottom`) | Aesthetic room — what `paddingBottom` replaces when unset would have been `10rem` |
+| `1rem` when `st.bottom` is present (or embed without `show_padding`) | Today’s shrunk path; configured `paddingBottom` still replaces main-area padding |
 | `st.bottom` | Author sticky content; see rule above |
 | Header toolbar / deploy / status | Header area, not a footer |
 | Cloud “Manage app” | Host overlay in the bottom-right (~`2.75rem` tall); this API does not reserve space for it |
@@ -300,9 +321,9 @@ applies on top of real chrome clearance in those modes too.
 
 ### Behavior
 
-- **Defaults:** unset → preserve today’s hardcoded values (`6rem` / `8rem` top, ~`10rem`
-  bottom when no `st.bottom`, current sidebar spacing). No visual change for apps that set
-  nothing.
+- **Defaults:** unset → preserve today’s hardcoded values (`6rem` / `8rem` top; `10rem`
+  bottom when `showPadding && !hasBottom`, else `1rem`; current sidebar spacing). No
+  visual change for apps that set nothing.
 - **Inheritance:** see [Sidebar support](#sidebar-support) precedence table. Main padding
   does not flow into sidebar. v1 keys are not light/dark-scoped.
 - **Host themes:** same value grammar and section rules as `config.toml`.
