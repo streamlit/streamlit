@@ -138,10 +138,11 @@ function Radio({
               value={index.toString()}
             >
               <StyledRadioButton data-testid="stRadioOption">
-                {({ isSelected, isDisabled }) => (
+                {({ isSelected, isHovered, isDisabled }) => (
                   <StyledRadioRow>
                     <StyledRadioOuter
                       $isSelected={isSelected}
+                      $isHovered={isHovered}
                       $isDisabled={isDisabled}
                     >
                       <StyledRadioInner $isSelected={isSelected} />

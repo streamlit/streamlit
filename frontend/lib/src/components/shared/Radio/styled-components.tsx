@@ -124,30 +124,55 @@ export const StyledRadioRow = styled.div(({ theme }) => ({
 
 interface StyledRadioOuterProps {
   $isSelected: boolean
+  $isHovered: boolean
   $isDisabled: boolean
 }
 
 /**
  * Visual outer circle of the radio button indicator.
- * Background color reflects checked + enabled state.
+ *
+ * Unchecked uses the same border + fill model as `st.checkbox` / secondary
+ * button (`borderColor` stroke, `bgColor` → `darkenedBgMix15` on hover) so the
+ * fill can lighten without collapsing into the outline. Checked fills with
+ * primary; the white centre dot is `StyledRadioInner`.
+ *
  * No margin offset needed: the parent `StyledRadioRow` uses `align-items:
  * center` and contains only this circle and the option text, so centering is
  * automatic.
  */
 export const StyledRadioOuter = styled.div<StyledRadioOuterProps>(
-  ({ theme, $isSelected, $isDisabled }) => ({
-    width: theme.sizes.checkbox,
-    height: theme.sizes.checkbox,
-    flexShrink: 0,
-    borderRadius: "50%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor:
-      $isSelected && !$isDisabled
-        ? theme.colors.primary
-        : theme.colors.borderColor,
-  })
+  ({ theme, $isSelected, $isHovered, $isDisabled }) => {
+    let backgroundColor: string
+    let borderColor: string
+
+    if ($isDisabled) {
+      borderColor = theme.colors.borderColor
+      backgroundColor = theme.colors.bgColor
+    } else if ($isSelected) {
+      borderColor = theme.colors.primary
+      backgroundColor = theme.colors.primary
+    } else if ($isHovered) {
+      borderColor = theme.colors.borderColor
+      backgroundColor = theme.colors.darkenedBgMix15
+    } else {
+      borderColor = theme.colors.borderColor
+      backgroundColor = theme.colors.bgColor
+    }
+
+    return {
+      width: theme.sizes.checkbox,
+      height: theme.sizes.checkbox,
+      flexShrink: 0,
+      boxSizing: "border-box",
+      borderRadius: "50%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor,
+      border: `${theme.sizes.borderWidth} solid ${borderColor}`,
+      transition: "background-color 100ms ease, border-color 100ms ease",
+    }
+  }
 )
 
 interface StyledRadioInnerProps {
@@ -155,39 +180,23 @@ interface StyledRadioInnerProps {
 }
 
 /**
- * Inner circle of the radio button indicator. Changes both size and colour
- * to express checked vs unchecked:
+ * Centre dot of a selected radio. Unchecked fill lives on `StyledRadioOuter`
+ * (border + background), matching checkbox — this element collapses to zero
+ * size when unselected.
  *
- * - Checked: 37.5% of outer diameter (small centre dot), white so it is
- *   visible against the primary-coloured outer circle in both light and dark
- *   mode.
- * - Unchecked: outer − threeXS spacing (large fill leaving only a thin ring),
- *   `bgColor` so the fill blends with the page background, making only the
- *   thin `borderColor` ring visible.
- *
- * Sizes are pixel-rounded to prevent uneven-border artifacts from fractional
- * rem-to-px conversions.
+ * Checked size is 37.5% of the outer diameter, pixel-rounded to avoid uneven
+ * edges from fractional rem-to-px conversion.
  */
 export const StyledRadioInner = styled.div<StyledRadioInnerProps>(
   ({ theme, $isSelected }) => {
     const checkboxSize = Number.parseFloat(theme.sizes.checkbox)
-    const threeXSSpacing = Number.parseFloat(theme.spacing.threeXS)
-
     const outerPx = convertRemToPx(checkboxSize.toString())
     const checkedPx = Math.round(outerPx * 0.375)
-
-    let uncheckedPx = Math.round(
-      convertRemToPx((checkboxSize - threeXSSpacing).toString())
-    )
-    if (uncheckedPx >= outerPx) {
-      uncheckedPx -= 1
-    }
-
-    const size = $isSelected ? `${checkedPx}px` : `${uncheckedPx}px`
+    const size = $isSelected ? `${checkedPx}px` : "0"
 
     return {
       borderRadius: "50%",
-      backgroundColor: $isSelected ? theme.colors.white : theme.colors.bgColor,
+      backgroundColor: theme.colors.white,
       width: size,
       height: size,
     }
