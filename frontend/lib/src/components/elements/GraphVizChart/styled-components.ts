@@ -23,11 +23,9 @@ interface StyledGraphVizChartProps {
 
 export const StyledGraphVizChart = styled.div<StyledGraphVizChartProps>(
   ({ theme, shouldUseFullWidth, shouldUseFullHeight }) => ({
-    // Do not restyle SVG fonts after layout. Graphviz WASM sizes record/HTML
-    // labels using its own font metrics (Times-Roman 14pt unless the DOT sets
-    // fontname/fontsize). A later CSS font-family/font-size override cannot
-    // resize those nodes, so labels get trailing space proportional to length.
-    // See https://github.com/streamlit/streamlit/issues/7397
+    // Graphviz WASM sizes nodes with its own font metrics. A CSS font override
+    // after layout cannot resize those nodes and leaves trailing space that
+    // grows with label length (https://github.com/streamlit/streamlit/issues/7397).
 
     // Ensure SVG is allowed the full width/height in full screen mode
     "& svg": {

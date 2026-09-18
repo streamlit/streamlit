@@ -131,7 +131,7 @@ describe("GraphVizChart Element", () => {
     expect(graphviz).toHaveBeenCalled()
   })
 
-  it("does not override Graphviz SVG font metrics after layout", () => {
+  it("keeps Graphviz's own label fonts so node sizing stays correct", () => {
     render(<GraphVizChart {...getProps()} />)
 
     const chart = screen.getByTestId("stGraphVizChart")
@@ -144,9 +144,13 @@ describe("GraphVizChart Element", () => {
       .map(styleTag => styleTag.textContent ?? "")
       .join("\n")
 
+    // jsdom does not run Graphviz layout, so this only guards that the chart
+    // CSS cannot retarget descendant font-family / font-size. Match
+    // combinators with or without a space after the class (e.g. `.css-abc *`
+    // and `.css-abc>*`).
     expect(cssText).not.toMatch(
       new RegExp(
-        `\\.${emotionClass}\\s+[^{]*\\{[^}]*font-(?:family|size)`,
+        `\\.${emotionClass}(?=[^,{]*[\\s>+~*])[^{]*\\{[^}]*font-(?:family|size)`,
         "i"
       )
     )
