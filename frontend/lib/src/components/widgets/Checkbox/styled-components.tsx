@@ -157,7 +157,9 @@ export const StyledCheckboxIndicator =
         backgroundColor,
         boxShadow:
           $isFocusVisible && $isSelected ? theme.shadows.focusRing : "none",
-        "& svg": getCheckboxIndicatorSvgStyles(theme, $isDisabled),
+        "& svg": getCheckboxIndicatorSvgStyles(theme, {
+          isDisabled: $isDisabled,
+        }),
       }
     }
   )

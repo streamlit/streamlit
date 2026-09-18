@@ -24,7 +24,7 @@ import type { EmotionTheme } from "~lib/theme/types"
  * Used by `st.checkbox` (prop-driven) and DataFrame column-visibility menus
  * (CSS `data-*` / `:hover`-driven) so border/fill cannot drift apart.
  */
-export type CheckboxIndicatorVisualState = {
+type CheckboxIndicatorVisualState = {
   /** Checked or indeterminate — both use the primary fill. */
   isSelected: boolean
   isHovered: boolean
@@ -32,11 +32,13 @@ export type CheckboxIndicatorVisualState = {
 }
 
 /**
- * Border and fill for the checkbox indicator.
+ * Return border and fill so the indicator matches secondary-button hover
+ * and stays in sync across `st.checkbox` and DataFrame menus.
  *
- * Unchecked follows secondary-button colours: `lightenedBg05` at rest,
- * `darkenedBgMix15` on hover, with a `borderColor` stroke that stays distinct
- * from the fill.
+ * - Unchecked rest: `lightenedBg05` fill, `borderColor` stroke
+ * - Unchecked hover: `darkenedBgMix15` fill, `borderColor` stroke
+ * - Selected: `primary` fill and stroke (hover does not change this)
+ * - Disabled: dimmed fill; hover does not apply
  */
 export function getCheckboxIndicatorColors(
   theme: EmotionTheme,
@@ -68,7 +70,7 @@ export function getCheckboxIndicatorColors(
   }
 }
 
-/** Size, alignment, and transition shared by every checkbox indicator. */
+/** Shared indicator box so size, alignment, and hover transition stay identical at every call site. */
 export function getCheckboxIndicatorLayoutStyles(
   theme: EmotionTheme
 ): CSSObject {
@@ -77,7 +79,7 @@ export function getCheckboxIndicatorLayoutStyles(
     width: theme.sizes.checkbox,
     height: theme.sizes.checkbox,
     // Vertically center the indicator with the first text line.
-    // = (lineHeight × fontSize − indicatorSize) / 2
+    // = (lineHeight × fontSize − indicatorSize) / 2 = (1.5 × 0.875rem − 1rem) / 2 = 2.5px
     marginTop: `calc((${theme.lineHeights.small} * ${theme.fontSizes.sm} - ${theme.sizes.checkbox}) / 2)`,
     borderRadius: theme.radii.sm,
     display: "flex",
@@ -87,10 +89,10 @@ export function getCheckboxIndicatorLayoutStyles(
   }
 }
 
-/** Checkmark / dash SVG geometry and stroke colour. */
+/** Shared checkmark/dash geometry and stroke so the two checkbox call sites cannot drift. */
 export function getCheckboxIndicatorSvgStyles(
   theme: EmotionTheme,
-  isDisabled: boolean
+  { isDisabled }: { isDisabled: boolean }
 ): CSSObject {
   return {
     width: "65%",

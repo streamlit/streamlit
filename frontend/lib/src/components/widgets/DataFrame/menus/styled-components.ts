@@ -124,9 +124,11 @@ export const StyledCheckboxInput = styled.input({
  * Custom visual checkmark square for column-visibility rows.
  *
  * Colours come from `getCheckboxIndicatorColors` (same helper as `st.checkbox`)
- * so rest / hover / checked fills cannot drift. State is CSS-driven:
- * `data-checked` / `data-indeterminate` on this element, hover via the parent
- * `<label>`.
+ * so rest / hover / checked fills cannot drift.
+ *
+ * State is CSS-driven:
+ * - `data-checked` / `data-indeterminate` on this element → primary fill
+ * - hover on the parent row `<label>` → unchecked hover fill only
  */
 export const StyledCheckboxMark = styled.span(({ theme }) => {
   const rest = getCheckboxIndicatorColors(theme, {
@@ -163,7 +165,7 @@ export const StyledCheckboxMark = styled.span(({ theme }) => {
     "input:focus-visible + &": {
       boxShadow: theme.shadows.focusRing,
     },
-    "& svg": getCheckboxIndicatorSvgStyles(theme, false),
+    "& svg": getCheckboxIndicatorSvgStyles(theme, { isDisabled: false }),
   }
 })
 

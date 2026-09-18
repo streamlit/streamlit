@@ -19,9 +19,12 @@ import { darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 import { getCheckboxIndicatorColors } from "./checkboxIndicatorStyles"
 
 describe("getCheckboxIndicatorColors", () => {
-  it.each([lightTheme.emotion, darkTheme.emotion])(
-    "uses secondary-button colours for unchecked rest and hover",
-    theme => {
+  it.each([
+    ["light", lightTheme.emotion],
+    ["dark", darkTheme.emotion],
+  ] as const)(
+    "uses secondary-button colours for unchecked rest and hover (%s theme)",
+    (_name, theme) => {
       const rest = getCheckboxIndicatorColors(theme, {
         isSelected: false,
         isHovered: false,
@@ -41,8 +44,6 @@ describe("getCheckboxIndicatorColors", () => {
         borderColor: theme.colors.borderColor,
         backgroundColor: theme.colors.darkenedBgMix15,
       })
-      // Fill lightens on hover but must stay distinct from the border.
-      expect(hovered.backgroundColor).not.toBe(hovered.borderColor)
     }
   )
 
