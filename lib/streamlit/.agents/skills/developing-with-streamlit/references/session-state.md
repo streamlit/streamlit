@@ -37,6 +37,8 @@ name = st.text_input("Name", key="user_name")
 # st.session_state.user_name contains the same value as `name`
 ```
 
+Suggestion callables passed to `st.text_input(autocomplete=...)` run off the script thread and cannot read `st.session_state`. Bind any session or widget values at registration time with `functools.partial`.
+
 ## Syncing a widget to the URL (shareable links)
 
 To make a widget's value shareable through the page URL, pass `bind="query-params"` together with `key=`. Streamlit writes the value to the URL query string when it changes and restores it from the URL on load — **don't hand-roll `st.query_params`** for this. The `key=` becomes the query-parameter name.

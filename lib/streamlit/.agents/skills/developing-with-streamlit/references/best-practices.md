@@ -223,7 +223,34 @@ if submitted:
     results = search(query, category)
 ```
 
-For as-you-type search, use `st.text_input(..., type="search", live=True)` inside a `@st.fragment` instead of a form. Keep expensive work out of that fragment, or use a longer delay such as `live="500ms"`.
+For as-you-type search, use `st.text_input(..., type="search", live=True)` inside a `@st.fragment` instead of a form. Keep expensive work out of that fragment, or use a longer delay such as `live="500ms"`. For typeahead *hints* that should not rerun the app, pass a callable to `autocomplete` instead of `live=True` plus a hand-rolled list.
+
+```python
+# BAD: Rerun the app on every pause just to draw hint chips
+query = st.text_input("Product", live=True)
+st.write([p for p in products if query.lower() in p.lower()])
+
+# GOOD: Server-side suggestions without a rerun; bind session values with partial
+import functools
+
+
+@st.cache_data(ttl="10m")
+def search_products(text: str, *, category: str) -> list[str]:
+    return db.query(
+        "SELECT name FROM products WHERE category = ? AND name ILIKE ? LIMIT 10",
+        category,
+        f"{text}%",
+    )
+
+
+category = st.selectbox("Category", ["Fruit", "Dairy"])
+product = st.text_input(
+    "Product",
+    autocomplete=functools.partial(search_products, category=category),
+)
+```
+
+Do not use a callable `autocomplete` with `type="password"`. Treat `text` as untrusted input: parameterize queries rather than interpolating it into SQL or URLs. The callable runs on a worker thread, so `st.*` display commands and `st.session_state` raise there — bind context at registration time.
 
 Do not put expensive work unguarded inside tabs or expanders. Hidden tab content and collapsed expander content still compute unless you opt into dynamic state and guard the work.
 

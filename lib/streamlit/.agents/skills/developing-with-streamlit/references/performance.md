@@ -176,6 +176,8 @@ live_metrics()
 live_search()
 ```
 
+Use callable `autocomplete` on `st.text_input` when you only need typeahead hints; keep `live=True` for searches that must rerun to refresh results.
+
 For auto-refreshing metrics, use `run_every`:
 
 ```python

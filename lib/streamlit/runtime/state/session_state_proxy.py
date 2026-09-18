@@ -15,17 +15,27 @@
 from __future__ import annotations
 
 from collections.abc import Iterator, MutableMapping
+from contextvars import ContextVar
 from typing import Any, Final
 
 from streamlit import logger as _logger
 from streamlit import runtime
 from streamlit.elements.lib.utils import Key
+from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.state.common import require_valid_user_key
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import SessionState
 
 _LOGGER: Final = _logger.get_logger(__name__)
+
+# Set around user callables on backend-operation worker threads so
+# ``st.session_state`` raises instead of falling back to the process-global
+# mock (which would leak values across sessions). Unset on a bare
+# ``python app.py`` run so the mock still works.
+_WORKER_SESSION_STATE_BLOCKED: ContextVar[bool] = ContextVar(
+    "worker_session_state_blocked", default=False
+)
 
 
 _state_use_warning_already_displayed: bool = False
@@ -41,6 +51,14 @@ def get_session_state() -> SafeSessionState:
     st.session_state.
     """
     global _state_use_warning_already_displayed  # noqa: PLW0603
+    if _WORKER_SESSION_STATE_BLOCKED.get():
+        raise StreamlitAPIException(
+            "Session state is unavailable from backend-operation workers "
+            "(for example a text-input suggestion source). Bind values at "
+            "registration time with functools.partial.",
+            error_id="session-state-in-backend-operation-worker",
+        )
+
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
         get_script_run_ctx,
     )

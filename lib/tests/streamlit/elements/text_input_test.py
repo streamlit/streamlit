@@ -27,6 +27,7 @@ from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitBadTimeStringError,
+    StreamlitDuplicateElementId,
     StreamlitIncompatibleParametersError,
     StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
@@ -35,6 +36,8 @@ from streamlit.errors import (
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.TextInput_pb2 import TextInput
+from streamlit.runtime import Runtime
+from streamlit.runtime.metrics_util import _get_command_telemetry
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -1075,6 +1078,174 @@ class TextInputOnChangeModeTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue(1).new_element.text_input
         assert c.ignore_rerun is True
+
+
+def _echo_suggestions(text: str) -> list[str]:
+    return [text]
+
+
+def _empty_suggestions(_text: str) -> list[str]:
+    return []
+
+
+class TextInputAutocompleteTest(DeltaGeneratorTestCase):
+    """Callable ``autocomplete`` registration, identity, and AppTest helpers."""
+
+    def test_callable_autocomplete_registers_source(self) -> None:
+        """A callable autocomplete sets the suppression token and a source id."""
+        st.text_input("label", autocomplete=_echo_suggestions)
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.autocomplete == "st-suggestions"
+        assert c.HasField("autocomplete_source_id")
+        assert c.autocomplete_source_id
+
+    def test_callable_autocomplete_does_not_use_type_native_token(self) -> None:
+        """Callable mode must not apply the type's native autofill token."""
+        st.text_input("email", type="email", autocomplete=_empty_suggestions)
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.autocomplete == "st-suggestions"
+
+    def test_string_autocomplete_plus_password_still_works(self) -> None:
+        """A string autocomplete token is still valid with type=password."""
+        st.text_input("pw", type="password", autocomplete="new-password")
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.autocomplete == "new-password"
+        assert not c.HasField("autocomplete_source_id")
+
+    def test_callable_autocomplete_rejects_password(self) -> None:
+        """A callable autocomplete cannot be combined with type=password."""
+        with pytest.raises(StreamlitIncompatibleParametersError) as exc_info:
+            st.text_input("pw", type="password", autocomplete=_empty_suggestions)
+        assert "password" in str(exc_info.value).lower()
+
+    def test_invalid_autocomplete_type_raises(self) -> None:
+        """A non-str, non-callable autocomplete value is rejected."""
+        with pytest.raises(StreamlitInvalidParameterTypeError):
+            st.text_input("label", autocomplete=123)  # type: ignore[arg-type]
+
+    def test_callable_without_runtime_has_no_source_id(self) -> None:
+        """Without a runtime the field still renders, just without a source id."""
+        orig = Runtime._instance
+        Runtime._instance = None
+        try:
+            st.text_input("label", autocomplete=_echo_suggestions)
+        finally:
+            Runtime._instance = orig
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.autocomplete == "st-suggestions"
+        assert not c.HasField("autocomplete_source_id")
+
+    def _element_id(self, **kwargs: Any) -> str:
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.text_input("label", **kwargs)
+            return self.get_delta_from_queue().new_element.text_input.id
+
+    def test_unkeyed_callable_identity_is_stable(self) -> None:
+        """Two different callables hash to the same sentinel for unkeyed widgets."""
+
+        def suggest_a(text: str) -> list[str]:
+            return ["a"]
+
+        def suggest_b(text: str) -> list[str]:
+            return ["b"]
+
+        assert self._element_id(autocomplete=suggest_a) == self._element_id(
+            autocomplete=suggest_b
+        )
+
+    def test_keyed_identity_unaffected_by_autocomplete_mode(self) -> None:
+        """A keyed widget keeps its id when swapping callable and string autocomplete."""
+        assert self._element_id(key="k", autocomplete=_empty_suggestions) == (
+            self._element_id(key="k", autocomplete="email")
+        )
+
+    def test_unkeyed_string_vs_callable_changes_id(self) -> None:
+        """Switching between a string token and a callable changes an unkeyed id."""
+        assert self._element_id(autocomplete="email") != self._element_id(
+            autocomplete=_empty_suggestions
+        )
+
+    def test_duplicate_unkeyed_callables_raise(self) -> None:
+        """Two otherwise identical unkeyed inputs with callables collide."""
+
+        def suggest_a(text: str) -> list[str]:
+            return ["a"]
+
+        def suggest_b(text: str) -> list[str]:
+            return ["b"]
+
+        st.text_input("label", autocomplete=suggest_a)
+        with pytest.raises(StreamlitDuplicateElementId):
+            st.text_input("label", autocomplete=suggest_b)
+
+    def test_metrics_tracks_autocomplete_arg_type(self) -> None:
+        """Tracked autocomplete types distinguish callable, string, and unset."""
+        callable_cmd = _get_command_telemetry(
+            st.text_input, "text_input", "label", autocomplete=_empty_suggestions
+        )
+        string_cmd = _get_command_telemetry(
+            st.text_input, "text_input", "label", autocomplete="email"
+        )
+        unset_cmd = _get_command_telemetry(st.text_input, "text_input", "label")
+
+        callable_types = {arg.k: arg.t for arg in callable_cmd.args}
+        string_types = {arg.k: arg.t for arg in string_cmd.args}
+        unset_types = {arg.k: arg.t for arg in unset_cmd.args}
+
+        assert callable_types["autocomplete"] == "function"
+        assert string_types["autocomplete"] == "str"
+        assert "autocomplete" not in unset_types
+
+
+def test_apptest_has_autocomplete_and_get_suggestions() -> None:
+    """AppTest exposes has_autocomplete and the normalized suggestion list."""
+
+    def script():
+        import streamlit as st
+
+        def suggest(text: str) -> list[str]:
+            return [f"{text}-1", f"{text}-2"]
+
+        st.text_input("Product", autocomplete=suggest)
+
+    at = AppTest.from_function(script).run()
+    ti = at.text_input[0]
+    assert ti.has_autocomplete
+    assert ti.get_suggestions("ap") == ["ap-1", "ap-2"]
+
+
+def test_apptest_bare_str_source_returns_empty() -> None:
+    """A source that returns a bare string is normalized to [] in AppTest."""
+
+    def script():
+        import streamlit as st
+
+        def suggest(text: str) -> list[str]:
+            return text  # type: ignore[return-value]
+
+        st.text_input("Product", autocomplete=suggest)
+
+    at = AppTest.from_function(script).run()
+    assert at.text_input[0].get_suggestions("apple") == []
+
+
+def test_apptest_raising_source_returns_empty() -> None:
+    """A source that raises fails closed to [] in AppTest, matching the handler."""
+
+    def script():
+        import streamlit as st
+
+        def suggest(_text: str) -> list[str]:
+            raise RuntimeError("source failed")
+
+        st.text_input("Product", autocomplete=suggest)
+
+    at = AppTest.from_function(script).run()
+    assert at.text_input[0].get_suggestions("ap") == []
 
 
 class SomeObj:

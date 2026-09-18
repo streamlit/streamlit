@@ -27,6 +27,7 @@ from streamlit.components.v2.component_manager import BidiComponentManager
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.app_session import AppSession
+from streamlit.runtime.autocomplete_source_manager import AutocompleteSourceManager
 from streamlit.runtime.caching import (
     get_data_cache_stats_provider,
     get_resource_cache_stats_provider,
@@ -219,6 +220,7 @@ class Runtime:
         self._uploaded_file_mgr = config.uploaded_file_manager
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
         self._dataframe_source_mgr = DataframeSourceManager()
+        self._autocomplete_source_mgr = AutocompleteSourceManager()
         self._cache_storage_manager = config.cache_storage_manager
         self._script_cache = ScriptCache()
 
@@ -280,6 +282,10 @@ class Runtime:
     @property
     def dataframe_source_mgr(self) -> DataframeSourceManager:
         return self._dataframe_source_mgr
+
+    @property
+    def autocomplete_source_mgr(self) -> AutocompleteSourceManager:
+        return self._autocomplete_source_mgr
 
     @property
     def stats_mgr(self) -> StatsManager:

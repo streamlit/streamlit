@@ -24,21 +24,15 @@ import {
   Popover,
 } from "react-aria-components"
 
-import {
-  getBorderColor,
-  getOverlayZIndex,
-  getPopoverContainerStyle,
-} from "~lib/components/shared/Base/styled-components"
-import type { EmotionTheme } from "~lib/theme/types"
+import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 
-/**
- * Calculate the right inset for dropdown items, accounting for scrollbar
- * gutter and border width. Mirrors the helper in the shared Dropdown
- * styled-components so item padding matches between Selectbox and Multiselect.
- */
-function getRightInset(theme: EmotionTheme): string {
-  return `max(0px, calc(${theme.sizes.tagMarginInsideBorder} - var(--scrollbar-gutter-size, 0px)))`
-}
+import {
+  getDropdownEmptyStateStyles,
+  getDropdownItemHighlightStyles,
+  getDropdownListBoxItemStyles,
+  getDropdownListBoxStyles,
+  getDropdownPopoverStyles,
+} from "./dropdownStyles"
 
 /**
  * Outer row container for the ComboBox trigger: input + buttons.
@@ -156,67 +150,25 @@ export const StyledClearButton = styled(Button)(({ theme }) => ({
  * RAC's imperative inline style writes so Floating UI's transform takes over.
  */
 export const StyledPopover = styled(Popover)<{ $isInSidebar?: boolean }>(
-  ({ theme, $isInSidebar }) => ({
-    ...getPopoverContainerStyle(theme),
-    backgroundColor: $isInSidebar
-      ? theme.colors.secondaryBg
-      : theme.colors.bgColor,
-    zIndex: getOverlayZIndex(theme),
-    maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
-    overflow: "hidden",
-    // Override RAC's useOverlayPosition imperative style writes.
-    // Floating UI with strategy:"fixed" positions via transform: translate(x,y)
-    // while emitting top:0/left:0 as the origin. These !important overrides
-    // pin RAC's top/left to 0 so the transform controls placement. If a future
-    // Floating UI version switches to direct top/left positioning instead of
-    // transform, these overrides would need to be removed.
-
-    ...({
-      position: "fixed !important",
-      top: "0 !important",
-      left: "0 !important",
-      right: "auto !important",
-      bottom: "auto !important",
-    } as Record<string, string>),
-  })
+  ({ theme, $isInSidebar }) =>
+    getDropdownPopoverStyles(theme, { isInSidebar: $isInSidebar })
 )
 
 /**
  * The scrollable list of options. Removes default list styles and outline,
  * letting the popover control overflow.
  */
-export const StyledListBox = styled(ListBox)(({ theme }) => ({
-  outline: "none",
-  maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
-  overflowY: "auto",
-  overflowX: "hidden",
-  paddingTop: theme.spacing.none,
-  paddingBottom: theme.spacing.none,
-  paddingLeft: theme.spacing.none,
-  paddingRight: theme.spacing.none,
-  listStyle: "none",
-  margin: theme.spacing.none,
-}))
+export const StyledListBox = styled(ListBox)(({ theme }) =>
+  getDropdownListBoxStyles(theme)
+)
 
 /**
  * Message shown when filtering leaves the dropdown without any options.
  * Matches the empty state used by the Multiselect dropdown.
  */
-export const StyledEmptyState = styled.span(({ theme }) => ({
-  boxSizing: "border-box",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: "100%",
-  height: theme.sizes.emptyDropdownHeight,
-  padding: theme.spacing.sm,
-  color: theme.colors.fadedText60,
-  fontSize: theme.fontSizes.sm,
-  fontWeight: theme.fontWeights.normal,
-  lineHeight: theme.lineHeights.base,
-  textAlign: "center",
-  cursor: "not-allowed",
-}))
+export const StyledEmptyState = styled.span(({ theme }) =>
+  getDropdownEmptyStateStyles(theme)
+)
 
 interface StyledListBoxItemProps {
   $isCreatable?: boolean
@@ -233,40 +185,9 @@ interface StyledListBoxItemProps {
  */
 export const StyledListBoxItem = styled(ListBoxItem, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
-})<StyledListBoxItemProps>(({ theme, $isCreatable }) => ({
-  display: "flex",
-  alignItems: "center",
-  height: theme.sizes.dropdownItemHeight,
-  paddingLeft: theme.sizes.tagMarginInsideBorder,
-  paddingRight: getRightInset(theme),
-  cursor: "pointer",
-  background: "transparent",
-  fontSize: theme.fontSizes.sm,
-  fontWeight: theme.fontWeights.normal,
-  color: theme.colors.bodyText,
-  outline: "none",
-  position: "relative",
-  // Delegate the highlight to the inner pill wrapper.
-  "&[data-hovered] [data-item-hl], &[data-focused] [data-item-hl]": {
-    backgroundColor: theme.colors.darkenedBgMix15,
-  },
-  "&[data-disabled]": {
-    cursor: "not-allowed",
-    color: theme.colors.fadedText40,
-  },
-  ...($isCreatable && {
-    "&::before": {
-      content: '""',
-      position: "absolute",
-      top: 0,
-      left: theme.sizes.tagMarginInsideBorder,
-      right: theme.sizes.tagMarginInsideBorder,
-      height: theme.sizes.borderWidth,
-      backgroundColor: theme.colors.fadedText10,
-      transform: "translateY(-50%)",
-    },
-  }),
-}))
+})<StyledListBoxItemProps>(({ theme, $isCreatable }) =>
+  getDropdownListBoxItemStyles(theme, { isCreatable: $isCreatable })
+)
 
 /**
  * Inner pill wrapper rendered inside each `StyledListBoxItem`. Mirrors
@@ -275,17 +196,6 @@ export const StyledListBoxItem = styled(ListBoxItem, {
  * the hover/focus background, creating the "pill inside a row" visual that
  * matches the Multiselect dropdown.
  */
-export const StyledItemHighlight = styled.div(({ theme }) => ({
-  flexGrow: 1,
-  display: "flex",
-  alignItems: "center",
-  paddingLeft: theme.spacing.sm,
-  paddingRight: theme.spacing.sm,
-  height: theme.sizes.elementHighlightHeight,
-  borderRadius: theme.radii.md2,
-  background: "transparent",
-  overflow: "hidden",
-  whiteSpace: "nowrap",
-  transition: "background 50ms ease",
-  minWidth: 0,
-}))
+export const StyledItemHighlight = styled.div(({ theme }) =>
+  getDropdownItemHighlightStyles(theme)
+)

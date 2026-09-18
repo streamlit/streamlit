@@ -89,6 +89,9 @@ message BackendOperationRequest {
 
     // Lazy dataframe row chunk request
     DataframeChunkRequestPayload dataframe_chunk = 6;
+
+    // Autocomplete suggestion request for st.text_input.
+    AutocompleteRequestPayload autocomplete = 7;
   }
 }
 
@@ -115,4 +118,13 @@ message DataframeChunkRequestPayload {
   uint32 limit = 3;
   // Optional server-side sort state to apply before slicing.
   optional SortState sort = 4;
+}
+
+// Payload for autocomplete suggestion requests. Asks the backend to call a
+// registered suggestion source with the current text, without a script rerun.
+message AutocompleteRequestPayload {
+  // Session-scoped id of the registered suggestion source.
+  string source_id = 1;
+  // Current text in the input to complete.
+  string text = 2;
 }

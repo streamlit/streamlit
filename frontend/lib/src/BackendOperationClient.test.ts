@@ -361,4 +361,84 @@ describe("BackendOperationClient", () => {
     await expect(promise).resolves.toBeTruthy()
     expect(client.pendingCount).toBe(0)
   })
+
+  it("sends autocomplete requests and extracts the suggestion payload", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestAutocomplete({
+      sourceId: "source-1",
+      text: "ap",
+    })
+
+    expect(sendRequest).toHaveBeenCalledTimes(1)
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+    expect(request.requestId).toBeTruthy()
+    expect(request.sessionId).toBe("session-id")
+    expect(request.autocomplete?.sourceId).toBe("source-1")
+    expect(request.autocomplete?.text).toBe("ap")
+    expect(client.pendingCount).toBe(1)
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        autocomplete: {
+          sourceId: "source-1",
+          text: "ap",
+          suggestions: ["apple", "apricot"],
+        },
+      })
+    )
+
+    await expect(promise).resolves.toEqual({
+      sourceId: "source-1",
+      text: "ap",
+      suggestions: ["apple", "apricot"],
+    })
+    expect(client.pendingCount).toBe(0)
+  })
+
+  it("treats an empty autocomplete suggestion list as success", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestAutocomplete({
+      sourceId: "source-1",
+      text: "zz",
+    })
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        autocomplete: {
+          sourceId: "source-1",
+          text: "zz",
+          suggestions: [],
+        },
+      })
+    )
+
+    await expect(promise).resolves.toEqual({
+      sourceId: "source-1",
+      text: "zz",
+      suggestions: [],
+    })
+  })
+
+  it("allows eight seconds for autocomplete requests", async () => {
+    vi.useFakeTimers()
+    const client = createClient()
+
+    const promise = client.requestAutocomplete({
+      sourceId: "source-1",
+      text: "ap",
+    })
+    vi.advanceTimersByTime(7_999)
+    expect(client.pendingCount).toBe(1)
+
+    vi.advanceTimersByTime(1)
+    await expect(promise).rejects.toThrow("Request timed out")
+    expect(client.pendingCount).toBe(0)
+  })
 })

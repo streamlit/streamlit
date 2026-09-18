@@ -18,6 +18,12 @@ import styled from "@emotion/styled"
 import { Input as RAInput } from "react-aria-components"
 
 import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import {
+  getDropdownItemHighlightStyles,
+  getDropdownListBoxItemStyles,
+  getDropdownListBoxStyles,
+  getDropdownPopoverStyles,
+} from "~lib/components/shared/Dropdown/dropdownStyles"
 
 export const StyledTextInput = styled.div`
   position: relative;
@@ -134,6 +140,15 @@ export const StyledErrorEnhancer = styled.div(({ theme }) => ({
   paddingRight: theme.spacing.sm,
 }))
 
+export const StyledSpinnerEnhancer = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  paddingLeft: theme.spacing.xs,
+  paddingRight: theme.spacing.sm,
+  color: theme.colors.fadedText60,
+  flexShrink: 0,
+}))
+
 /**
  * Clear (×) button shown for `type="search"` inputs that hold a value. Mirrors
  * the clear-button styling used by other input widgets (e.g. st.number_input).
@@ -161,6 +176,7 @@ interface StyledInputInstructionsContainerProps {
   $hasErrorIcon: boolean
   $hasClearButton: boolean
   $hasPasswordToggle: boolean
+  $hasSpinner: boolean
 }
 
 /**
@@ -172,9 +188,20 @@ interface StyledInputInstructionsContainerProps {
  */
 export const StyledInputInstructionsContainer =
   styled.div<StyledInputInstructionsContainerProps>(
-    ({ theme, $hasErrorIcon, $hasClearButton, $hasPasswordToggle }) => {
+    ({
+      theme,
+      $hasErrorIcon,
+      $hasClearButton,
+      $hasPasswordToggle,
+      $hasSpinner,
+    }) => {
       const enhancerWidths: string[] = []
       if ($hasErrorIcon) {
+        enhancerWidths.push(
+          `${theme.spacing.xs} + ${theme.iconSizes.base} + ${theme.spacing.sm}`
+        )
+      }
+      if ($hasSpinner) {
         enhancerWidths.push(
           `${theme.spacing.xs} + ${theme.iconSizes.base} + ${theme.spacing.sm}`
         )
@@ -222,4 +249,23 @@ export const StyledPasswordToggle = styled.button(({ theme }) => ({
     borderRadius: theme.radii.default,
     boxShadow: `inset ${theme.shadows.focusRing}`,
   },
+}))
+
+export const StyledSuggestionsPopover = styled.div<{ $isInSidebar?: boolean }>(
+  ({ theme, $isInSidebar }) =>
+    getDropdownPopoverStyles(theme, { isInSidebar: $isInSidebar })
+)
+
+export const StyledSuggestionsList = styled.ul(({ theme }) =>
+  getDropdownListBoxStyles(theme)
+)
+
+export const StyledSuggestionsItem = styled.li(({ theme }) =>
+  getDropdownListBoxItemStyles(theme)
+)
+
+export const StyledSuggestionsHighlight = styled.div(({ theme }) => ({
+  ...getDropdownItemHighlightStyles(theme),
+  // Clicks must hit the row so Firefox still selects after preventDefault.
+  pointerEvents: "none",
 }))

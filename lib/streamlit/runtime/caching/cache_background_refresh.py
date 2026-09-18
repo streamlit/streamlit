@@ -145,11 +145,21 @@ class _BackgroundRefreshManager:
 
         try:
             executor = self._ensure_executor()
+            # Only propagate the backend-operation worker marker. A full
+            # copy_context() would also copy script-thread state such as
+            # fragment_id and in_cached_function into the refresh worker.
+            from streamlit.runtime.state.session_state_proxy import (
+                _WORKER_SESSION_STATE_BLOCKED,
+            )
+
+            blocked = _WORKER_SESSION_STATE_BLOCKED.get()
 
             def _runner() -> None:
+                token = _WORKER_SESSION_STATE_BLOCKED.set(blocked)
                 try:
                     task()
                 finally:
+                    _WORKER_SESSION_STATE_BLOCKED.reset(token)
                     slots.release()
 
             # ThreadPoolExecutor starts worker threads lazily on submit, so a

@@ -139,6 +139,10 @@ message BackendOperationResponse {
 
     // Response for lazy dataframe row chunk requests
     DataframeChunkResponsePayload dataframe_chunk = 6;
+
+    // Response for autocomplete suggestion requests. Numbering is per message,
+    // not per oneof, so the message-level `error_reason = 7` is already taken.
+    AutocompleteResponsePayload autocomplete = 8;
   }
 }
 
@@ -181,6 +185,18 @@ message DataframeChunkResponsePayload {
   bool end_of_stream = 3;
   // The requested rows as an Arrow IPC table.
   ArrowData arrow_data = 4;
+}
+
+// Response payload for autocomplete suggestion requests.
+message AutocompleteResponsePayload {
+  // Echoes the requested source id so the frontend can match the response.
+  string source_id = 1;
+  // Echoes the requested text so the frontend can drop responses that no
+  // longer match the current input.
+  string text = 2;
+  // Suggestions after the server-side caps: over-long items are dropped, never
+  // shortened, so each string is exactly what the source returned.
+  repeated string suggestions = 3;
 }
 
 // ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)

@@ -142,6 +142,26 @@ at.run()
 assert at.session_state["count"] == 1
 ```
 
+For `st.text_input` with a callable `autocomplete`, assert on the stored source without a browser. The suggestion dropdown itself is not simulated:
+
+```python
+from streamlit.testing.v1 import AppTest
+
+
+def script():
+    import streamlit as st
+
+    def suggest(text: str) -> list[str]:
+        return [w for w in ["apple", "apricot", "banana"] if w.startswith(text)]
+
+    st.text_input("Fruit", autocomplete=suggest)
+
+
+at = AppTest.from_function(script).run()
+assert at.text_input[0].has_autocomplete
+assert at.text_input[0].get_suggestions("ap") == ["apple", "apricot"]
+```
+
 ## Using pytest
 
 `AppTest` tests are plain functions — no fixtures or plugins required. `from_function` is convenient for testing a snippet inline without a separate file:
@@ -202,7 +222,7 @@ def test_status_filter():
 
 ## What AppTest can't simulate
 
-`AppTest` covers widget interaction and the elements your script produces, but it does **not** reproduce every front-end interaction. In particular, **selections on `st.dataframe` and charts** (click-to-select rows, Altair/Plotly selection events) can't be triggered through `AppTest` — there's no setter for them, so you can't assert on what a user's on-chart selection would return. The same applies to anything that only exists in the rendered browser: custom-component JavaScript, CSS, and scroll/resize behavior. Cover those with Playwright e2e tests instead.
+`AppTest` covers widget interaction and the elements your script produces, but it does **not** reproduce every front-end interaction. In particular, **selections on `st.dataframe` and charts** (click-to-select rows, Altair/Plotly selection events) can't be triggered through `AppTest` — there's no setter for them, so you can't assert on what a user's on-chart selection would return. The suggestion dropdown for callable `st.text_input(autocomplete=...)` is also browser-only; call `get_suggestions` on the stored source instead of simulating typing. The same applies to anything that only exists in the rendered browser: custom-component JavaScript, CSS, and scroll/resize behavior. Cover those with Playwright e2e tests instead.
 
 Elements that AppTest does not fully model (`st.progress`, `st.html`, `st.balloons`, `st.page_link`, and similar) do not break `.run()`. Inspect those nodes with `at.get("<type>")`; `.value` returns the element's main proto field where one exists (for example `40` for `st.progress(40)`) or `None` otherwise. Calling `.set_value()` or `.click()` on those nodes raises `AppTestError` — those names can exist as proto fields, but they are not interaction methods. For a keyed widget AppTest doesn't model, assign through `at.session_state` or use Playwright.
 

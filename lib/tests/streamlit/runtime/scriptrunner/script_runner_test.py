@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
+import threading
 import time
 import unittest
 from typing import TYPE_CHECKING, Any
@@ -1537,6 +1538,7 @@ class ScriptRunnerTest(unittest.TestCase):
 
         Runtime._instance.media_file_mgr.remove_orphaned_files.assert_not_called()
         Runtime._instance.dataframe_source_mgr.remove_orphaned_sources.assert_not_called()
+        Runtime._instance.autocomplete_source_mgr.remove_orphaned_sources.assert_not_called()
 
     def test_orphan_cleanup_runs_when_body_ran(self):
         """The counterpart to the skip case above.
@@ -1555,6 +1557,9 @@ class ScriptRunnerTest(unittest.TestCase):
 
         Runtime._instance.media_file_mgr.remove_orphaned_files.assert_called_once()
         Runtime._instance.dataframe_source_mgr.remove_orphaned_sources.assert_called_once()
+        Runtime._instance.autocomplete_source_mgr.remove_orphaned_sources.assert_called_once_with(
+            scriptrunner._session_id
+        )
 
     def test_stale_widget_removal_skipped_when_stopped_for_rerun(self):
         """A run stopped for rerun must reset triggers without dropping widgets.
@@ -1765,13 +1770,16 @@ class ScriptRunnerTest(unittest.TestCase):
         after a successful full-app run, before clearing fragment storage."""
         join_calls: list[int] = []
         original_join = ParallelFragmentCoordinator.join
+        scriptrunner = TestScriptRunner("good_script.py")
 
         def recording_join(self):
-            join_calls.append(1)
+            # The patch is process-wide; ignore leftover ScriptRunners from
+            # other tests that may still be shutting down.
+            if threading.current_thread() is scriptrunner._script_thread:
+                join_calls.append(1)
             return original_join(self)
 
         with patch.object(ParallelFragmentCoordinator, "join", recording_join):
-            scriptrunner = TestScriptRunner("good_script.py")
             scriptrunner.request_rerun(RerunData())
             scriptrunner.start()
             scriptrunner.join()
@@ -1786,13 +1794,14 @@ class ScriptRunnerTest(unittest.TestCase):
         exception and runs the script again."""
         drain_calls: list[int] = []
         original_drain = ParallelFragmentCoordinator.drain
+        scriptrunner = TestScriptRunner("rerun_once_then_finish.py")
 
         def recording_drain(self):
-            drain_calls.append(1)
+            if threading.current_thread() is scriptrunner._script_thread:
+                drain_calls.append(1)
             return original_drain(self)
 
         with patch.object(ParallelFragmentCoordinator, "drain", recording_drain):
-            scriptrunner = TestScriptRunner("rerun_once_then_finish.py")
             scriptrunner.request_rerun(RerunData())
             scriptrunner.start()
             scriptrunner.join()
