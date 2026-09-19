@@ -103,11 +103,7 @@ def test_checkbox_widget_display(
 def test_checkbox_unchecked_hover(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Hovering an unchecked checkbox uses the secondary-button hover fill.
-
-    The fill darkens on light themes and lightens on dark, with a border that
-    stays distinct from the fill.
-    """
+    """Verify unchecked checkbox hover matches the secondary button in both themes."""
     checkbox = get_checkbox(themed_app, "checkbox 2 (False)")
     label = checkbox.locator("label").first
 

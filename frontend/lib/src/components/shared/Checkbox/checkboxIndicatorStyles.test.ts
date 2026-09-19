@@ -23,7 +23,7 @@ describe("getCheckboxIndicatorColors", () => {
     ["light", lightTheme.emotion],
     ["dark", darkTheme.emotion],
   ] as const)(
-    "uses secondary-button colours for unchecked rest and hover (%s theme)",
+    "uses secondary-button colors for unchecked rest and hover (%s theme)",
     (_name, theme) => {
       const rest = getCheckboxIndicatorColors(theme, {
         isSelected: false,
@@ -61,7 +61,7 @@ describe("getCheckboxIndicatorColors", () => {
     })
   })
 
-  it("dims the fill when disabled", () => {
+  it("dims the selected fill when disabled and ignores hover", () => {
     const theme = lightTheme.emotion
     expect(
       getCheckboxIndicatorColors(theme, {

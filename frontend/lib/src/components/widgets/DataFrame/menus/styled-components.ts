@@ -123,26 +123,18 @@ export const StyledCheckboxInput = styled.input({
 /**
  * Custom visual checkmark square for column-visibility rows.
  *
- * Colours come from `getCheckboxIndicatorColors` (same helper as `st.checkbox`)
+ * Colors come from `getCheckboxIndicatorColors` (same helper as `st.checkbox`)
  * so rest and checked fills cannot drift.
  *
  * State is CSS-driven:
  * - `data-checked` / `data-indeterminate` on this element → primary fill
- * - The parent row already paints `darkenedBgMix15` on hover. This mark does
- *   not, or that translucent token would stack and the square would read
- *   stronger than `st.checkbox`.
+ * - The parent row already paints `darkenedBgMix15` on hover. Applying it to
+ *   the mark too would stack the translucent fill and make the square stronger
+ *   than `st.checkbox`.
  */
 export const StyledCheckboxMark = styled.span(({ theme }) => {
-  const rest = getCheckboxIndicatorColors(theme, {
-    isSelected: false,
-    isHovered: false,
-    isDisabled: false,
-  })
-  const selected = getCheckboxIndicatorColors(theme, {
-    isSelected: true,
-    isHovered: false,
-    isDisabled: false,
-  })
+  const rest = getCheckboxIndicatorColors(theme, { isSelected: false })
+  const selected = getCheckboxIndicatorColors(theme, { isSelected: true })
 
   return {
     ...getCheckboxIndicatorLayoutStyles(theme),

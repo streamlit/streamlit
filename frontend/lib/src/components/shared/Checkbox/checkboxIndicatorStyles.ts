@@ -21,21 +21,18 @@ import type { EmotionTheme } from "~lib/theme/types"
 
 /**
  * Visual state for the shared checkbox indicator (the square + checkmark).
- * Used by `st.checkbox` (prop-driven) and DataFrame column-visibility menus
- * (CSS `data-*`) so rest and selected colours cannot drift apart. The menu
- * mark does not use the hover state: the row already paints that token.
+ * `st.checkbox` drives it via props; DataFrame column-visibility marks drive it
+ * via CSS `data-*` attributes, so rest and selected colors cannot drift apart.
  */
 type CheckboxIndicatorVisualState = {
   /** Checked or indeterminate — both use the primary fill. */
   isSelected: boolean
-  isHovered: boolean
-  isDisabled: boolean
+  isHovered?: boolean
+  isDisabled?: boolean
 }
 
 /**
  * Return border and fill so the indicator matches secondary-button hover.
- * `st.checkbox` uses every state below. DataFrame menus use rest and selected
- * only — the row already paints `darkenedBgMix15`, so the mark must not.
  *
  * - Unchecked rest: `lightenedBg05` fill, `borderColor` stroke
  * - Unchecked hover: `darkenedBgMix15` fill, `borderColor` stroke
@@ -44,7 +41,11 @@ type CheckboxIndicatorVisualState = {
  */
 export function getCheckboxIndicatorColors(
   theme: EmotionTheme,
-  { isSelected, isHovered, isDisabled }: CheckboxIndicatorVisualState
+  {
+    isSelected,
+    isHovered = false,
+    isDisabled = false,
+  }: CheckboxIndicatorVisualState
 ): { borderColor: string; backgroundColor: string } {
   if (isDisabled) {
     return {
@@ -72,7 +73,7 @@ export function getCheckboxIndicatorColors(
   }
 }
 
-/** Shared indicator box so size, alignment, and hover transition stay identical at every call site. */
+/** Shared indicator box so size, alignment, and color transition stay identical at every call site. */
 export function getCheckboxIndicatorLayoutStyles(
   theme: EmotionTheme
 ): CSSObject {
