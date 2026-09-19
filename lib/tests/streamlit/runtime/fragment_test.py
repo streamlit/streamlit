@@ -44,6 +44,7 @@ from streamlit.runtime.fragment import (
     _check_not_parallel_worker,
     _dispatch_parallel_fragment,
     _fragment,
+    _FragmentLifetime,
     _reset_outside_wrappers,
     _run_parallel_fragment,
     fragment,
@@ -85,12 +86,14 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         *,
         parent_fragment_id: str | None = None,
         value: str | None = None,
+        lifetime: _FragmentLifetime = _FragmentLifetime.PARENT_SCOPED,
     ) -> None:
         fragment_value = fragment_id if value is None else value
         self._storage.register(
             fragment_id,
             fragment_value,
             parent_fragment_id=parent_fragment_id,
+            lifetime=lifetime,
         )
 
     def _set_fragment_chain(self, *fragment_ids: str) -> None:
@@ -161,6 +164,7 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         self._storage.clear()
         assert len(self._storage._fragments) == 0
         assert len(self._storage._parent_by_id) == 0
+        assert len(self._storage._lifetime_by_id) == 0
 
     def test_clear_with_new_fragment_ids(self):
         self._set_fragment("some_other_key", value="some_other_fragment")
@@ -303,6 +307,33 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 
         assert self._storage.contains("outer")
         assert self._storage.contains("inner")
+
+    def test_clear_stale_descendants_keeps_full_app_scoped_child(self):
+        """Full-app-scoped descendants survive parent fragment reruns."""
+        self._set_fragment("outer")
+        self._set_fragment(
+            "dialog",
+            parent_fragment_id="outer",
+            lifetime=_FragmentLifetime.FULL_APP_SCOPED,
+        )
+
+        removed = self._storage.clear_stale_descendants("outer", frozenset({"outer"}))
+
+        assert removed == []
+        assert self._storage.contains("dialog")
+
+    def test_full_app_clear_removes_full_app_scoped_child(self):
+        """Full app cleanup removes unregistered full-app-scoped fragments."""
+        self._set_fragment("outer")
+        self._set_fragment(
+            "dialog",
+            parent_fragment_id="outer",
+            lifetime=_FragmentLifetime.FULL_APP_SCOPED,
+        )
+
+        self._storage.clear(new_fragment_ids=frozenset({"outer"}))
+
+        assert not self._storage.contains("dialog")
 
     def test_clear_stale_descendants_preserves_sibling_branch(self):
         """Only siblings missing from this run are removed."""
