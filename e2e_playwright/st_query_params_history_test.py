@@ -108,10 +108,8 @@ def test_bound_widget_follows_url_on_browser_back(app: Page, app_base_url: str) 
     expect_prefixed_markdown(app, "Selected:", "3", exact_match=True)
 
     click_button(app, "Increment Query Param")
-    wait_for_app_run(app)
 
     select_radio_option(app, "5", label="Number")
-    wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Selected:", "5", exact_match=True)
     expect(app).not_to_have_url(re.compile(r"[?&]number=5(?:&|$)"))
@@ -123,8 +121,11 @@ def test_bound_widget_follows_url_on_browser_back(app: Page, app_base_url: str) 
     expect_prefixed_markdown(app, "Selected:", "3", exact_match=True)
 
     click_button(app, "Increment Query Param")
-    wait_for_app_run(app)
 
+    # Bound radio edits use replaceState, so selecting "5" replaced the
+    # ?number=3&value=1 entry rather than pushing a new one. Back therefore
+    # returns to the original ?number=3 entry, and the next increment yields
+    # value=1 again.
     expect(app).to_have_url(re.compile(r"[?&]number=3(?:&|$)"))
     expect(app).to_have_url(re.compile(r"[?&]value=1(?:&|$)"))
     expect_prefixed_markdown(app, "Selected:", "3", exact_match=True)

@@ -3388,7 +3388,7 @@ class OmitQueryBoundWidgetStatesTest(DeltaGeneratorTestCase):
         self.session_state = SessionState()
 
     def test_omit_query_bound_widget_states(self) -> None:
-        """Omit copies bound widget IDs out of the incoming proto and leaves unbound IDs."""
+        """Drop bound widget proto states and keep unbound ones."""
         widget_states = WidgetStatesProto()
         bound = widget_states.widgets.add()
         bound.id = "bound_widget"
@@ -3404,6 +3404,7 @@ class OmitQueryBoundWidgetStatesTest(DeltaGeneratorTestCase):
     def test_on_script_will_rerun_omits_bound_widgets_on_history_navigation(
         self,
     ) -> None:
+        """History navigation drops bound widget proto state and keeps unbound values."""
         widget_states = WidgetStatesProto()
         bound = widget_states.widgets.add()
         bound.id = "bound_widget"
