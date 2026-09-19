@@ -131,14 +131,15 @@ interface StyledRadioOuterProps {
 /**
  * Visual outer circle of the radio button indicator.
  *
- * Unchecked uses a `borderColor` stroke over a surface fill, and uses
- * `darkenedBgMix15` on hover like the secondary button and `st.toggle`
- * track. Checked fills with primary (including a matching stroke so
- * `border-color` can transition). Disabled draws no CSS border:
- * `borderColor` is translucent, so a stroke on top of the fill would
- * thicken the ring. In that case the outer is a `borderColor` disk and
- * `StyledRadioInner` is the white centre when selected or the `bgColor`
- * hole when not.
+ * - Checked: `primary` fill with a matching `primary` stroke, so `border-color`
+ *   has a value to transition from and to.
+ * - Enabled and unchecked: `bgColor` fill behind a `borderColor` stroke, which
+ *   switches to `darkenedBgMix15` on hover like the secondary button and the
+ *   `st.toggle` track.
+ * - Disabled: a `borderColor` disk with no CSS border. `borderColor` is
+ *   translucent, so a stroke over a matching fill would darken the rim.
+ *   `StyledRadioInner` supplies the white centre when selected and the
+ *   `bgColor` hole when not.
  *
  * No margin offset needed: the parent `StyledRadioRow` uses `align-items:
  * center` and contains only this circle and the option text, so centering is
@@ -188,8 +189,8 @@ interface StyledRadioInnerProps {
  *
  * - Selected: white dot, 37.5% of the outer diameter.
  * - Enabled and unchecked: size 0, because `StyledRadioOuter` paints the fill.
- * - Disabled and unchecked: `bgColor` disk inset by `threeXS`, leaving a
- *   hairline `borderColor` ring.
+ * - Disabled and unchecked: `bgColor` disk inset by `borderWidth` on each
+ *   side, leaving the same ring as the enabled CSS border.
  *
  * Sizes are pixel-rounded to avoid uneven edges from fractional rem-to-px
  * conversion.
@@ -204,14 +205,10 @@ export const StyledRadioInner = styled.div<StyledRadioInnerProps>(
     let backgroundColor = theme.colors.white
 
     if ($isDisabled && !$isSelected) {
-      const threeXSSpacing = Number.parseFloat(theme.spacing.threeXS)
-      let uncheckedPx = Math.round(
-        convertRemToPx((checkboxSize - threeXSSpacing).toString())
-      )
-      if (uncheckedPx >= outerPx) {
-        uncheckedPx -= 1
-      }
-      sizePx = uncheckedPx
+      // Match the enabled ring. `borderWidth` is a px token, so no rem
+      // conversion. `threeXS` would grow the ring when baseFontSize changes.
+      const borderPx = Number.parseFloat(theme.sizes.borderWidth)
+      sizePx = Math.max(0, Math.round(outerPx - 2 * borderPx))
       backgroundColor = theme.colors.bgColor
     }
 
