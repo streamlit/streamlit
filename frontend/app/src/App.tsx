@@ -338,7 +338,8 @@ export class App extends PureComponent<Props, State> {
   /**
    * True while a rerun triggered by browser back/forward is in flight.
    * The URL already reflects the target history entry, so the resulting
-   * PageInfo must not append another history entry.
+   * PageInfo must not append another history entry. Cleared only when the
+   * matching run finishes (not when a later non-history rerun is sent).
    */
   private historyNavigationRerunPending: boolean = false
 
@@ -2445,9 +2446,12 @@ export class App extends PureComponent<Props, State> {
 
     if (isHistoryNavigation) {
       this.historyNavigationRerunPending = true
-    } else {
-      this.historyNavigationRerunPending = false
     }
+    // Do not clear the marker on ordinary reruns here. A widget, timer,
+    // reconnect, or host rerun can be sent while a popstate run is still
+    // producing PageInfo; clearing early would make those messages pushState
+    // and recreate the restored history entry. Clear only when the matching
+    // run finishes (handleScriptFinished + hasReceivedNewSession).
 
     this.sendBackMsg(
       new BackMsg({

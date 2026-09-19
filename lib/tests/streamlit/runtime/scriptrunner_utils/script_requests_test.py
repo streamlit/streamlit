@@ -259,16 +259,26 @@ class ScriptRequestsTest(unittest.TestCase):
         assert reqs._rerun_data.fragment_id_queue == ["frag_a", "frag_b"]
         assert reqs._rerun_data.is_fragment_scoped_rerun is True
 
-    def test_union_keeps_history_navigation_when_either_rerun_is_history(self):
-        """Coalescing keeps history navigation if either request was popstate."""
+    def test_history_navigation_coalescing_matches_winning_request(self):
+        """History flag follows the newer request except across auto-reruns.
+
+        An ordinary widget/page rerun must last-win so its query string and
+        widget states stay consistent with URL-vs-widget precedence. An
+        auto-rerun must not drop a pending popstate restore.
+        """
         reqs = ScriptRequests()
         reqs.request_rerun(RerunData(is_history_navigation=True))
         reqs.request_rerun(RerunData())
-        assert reqs._rerun_data.is_history_navigation is True
+        assert reqs._rerun_data.is_history_navigation is False
 
         reqs = ScriptRequests()
         reqs.request_rerun(RerunData())
         reqs.request_rerun(RerunData(is_history_navigation=True))
+        assert reqs._rerun_data.is_history_navigation is True
+
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData(is_history_navigation=True))
+        reqs.request_rerun(RerunData(is_auto_rerun=True))
         assert reqs._rerun_data.is_history_navigation is True
 
     def test_full_app_clears_pending_fragment_scoped_rerun(self):

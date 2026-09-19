@@ -412,9 +412,16 @@ class ScriptRequests:
                 cached_message_hashes=new_data.cached_message_hashes,
                 is_fragment_scoped_rerun=is_fragment_scoped_rerun,
                 is_auto_rerun=new_data.is_auto_rerun,
+                # Prefer the newer request's flag so query_string / widget_states
+                # stay consistent with URL-vs-widget precedence. Only keep a
+                # pending history bit across an auto-rerun, which should not
+                # discard URL restore for bound widgets.
                 is_history_navigation=(
-                    self._rerun_data.is_history_navigation
-                    or new_data.is_history_navigation
+                    new_data.is_history_navigation
+                    or (
+                        self._rerun_data.is_history_navigation
+                        and new_data.is_auto_rerun
+                    )
                 ),
                 replay_trigger_states=coalesced_replay_states,
                 replay_trigger_values=coalesced_replay_values,

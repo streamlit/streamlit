@@ -2183,6 +2183,69 @@ describe("App", () => {
       expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", "/?after=1")
       expect(replaceStateSpy).not.toHaveBeenCalled()
     })
+
+    it("keeps replaceState for history PageInfo after a superseding widget rerun", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      window.history.pushState({}, "", "/?flying=spaghetti")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      const connectionManager = getMockConnectionManager()
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalled()
+      })
+
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      })
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      // PageInfo from the still-in-flight history run must not pushState.
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "from-history=1",
+      })
+
+      expect(replaceStateSpy).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/?from-history=1"
+      )
+      expect(pushStateSpy).not.toHaveBeenCalled()
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "after=1",
+      })
+
+      expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", "/?after=1")
+      expect(replaceStateSpy).not.toHaveBeenCalled()
+    })
   })
 
   describe("App.sendRerunBackMsg", () => {
