@@ -21,6 +21,7 @@ from e2e_playwright.shared.app_utils import (
     click_button,
     click_checkbox,
     expect_prefixed_markdown,
+    get_radio_option,
     goto_app,
     select_radio_option,
 )
@@ -123,6 +124,10 @@ def test_bound_widget_follows_url_on_browser_back_and_forward(
     expect(app).to_have_url(re.compile(r"[?&]number=5(?:&|$)"))
     expect(app).to_have_url(re.compile(r"[?&]value=2(?:&|$)"))
     expect_prefixed_markdown(app, "Selected:", "5", exact_match=True)
+    expect(get_radio_option(app, "5").get_by_role("radio")).to_be_checked()
+
+    # History reruns must replaceState, not push a duplicate entry.
+    history_length_before_back = app.evaluate("window.history.length")
 
     app.go_back()
     wait_for_app_run(app)
@@ -130,6 +135,7 @@ def test_bound_widget_follows_url_on_browser_back_and_forward(
     expect(app).to_have_url(re.compile(r"[?&]number=5(?:&|$)"))
     expect(app).to_have_url(re.compile(r"[?&]value=1(?:&|$)"))
     expect_prefixed_markdown(app, "Selected:", "5", exact_match=True)
+    expect(get_radio_option(app, "5").get_by_role("radio")).to_be_checked()
 
     app.go_back()
     wait_for_app_run(app)
@@ -137,6 +143,7 @@ def test_bound_widget_follows_url_on_browser_back_and_forward(
     expect(app).to_have_url(re.compile(r"[?&]number=3(?:&|$)"))
     expect(app).not_to_have_url(re.compile(r"[?&]value="))
     expect_prefixed_markdown(app, "Selected:", "3", exact_match=True)
+    expect(get_radio_option(app, "3").get_by_role("radio")).to_be_checked()
 
     app.go_forward()
     wait_for_app_run(app)
@@ -144,6 +151,13 @@ def test_bound_widget_follows_url_on_browser_back_and_forward(
     expect(app).to_have_url(re.compile(r"[?&]number=5(?:&|$)"))
     expect(app).to_have_url(re.compile(r"[?&]value=1(?:&|$)"))
     expect_prefixed_markdown(app, "Selected:", "5", exact_match=True)
+    expect(get_radio_option(app, "5").get_by_role("radio")).to_be_checked()
+    history_length_after_nav = app.evaluate("window.history.length")
+    assert history_length_after_nav == history_length_before_back, (
+        "history.length grew during back/forward; a history rerun pushed "
+        f"instead of replacing: before={history_length_before_back}, "
+        f"after={history_length_after_nav}"
+    )
 
     # Next rerun must use the restored URL, not stale widget state.
     click_button(app, "Increment Query Param")

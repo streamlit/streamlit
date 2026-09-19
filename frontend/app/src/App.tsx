@@ -337,7 +337,9 @@ export class App extends PureComponent<Props, State> {
 
   /**
    * History-navigation PageInfo should use replaceState, not pushState, so the
-   * restored back/forward entry is not duplicated.
+   * restored back/forward entry is not duplicated. Only relevant when the
+   * backend changes the query string during a history rerun; an unchanged
+   * query string never reaches the history API (see handlePageInfoChanged).
    *
    * State machine (no run id on PageInfo, so this is best-effort attribution):
    * - {@link rerunEpoch}: increments on every BackMsg.
@@ -2473,9 +2475,6 @@ export class App extends PureComponent<Props, State> {
     if (isHistoryNavigation) {
       this.historyNavigationEpoch = this.rerunEpoch
     }
-    // Non-history: leave historyNavigationEpoch set if a history request is
-    // still in flight, so late history PageInfo can replaceState until this
-    // run's NewSession (epoch mismatch clears it there).
 
     this.sendBackMsg(
       new BackMsg({

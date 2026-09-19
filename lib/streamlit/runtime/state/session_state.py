@@ -1794,6 +1794,11 @@ class SessionState:
         History navigation (``is_history_navigation``):
         - URL wins, including when the param is missing or invalid
         - Code-assigned ``st.session_state`` values for this run are overridden
+        - A missing param restores the widget default, including over a value
+          assigned in ``st.session_state`` before the widget call. That differs
+          from initial load, which leaves that assignment in place when the
+          param is absent. The history entry had no param, so the default is
+          the restored value.
 
         Returns True if the widget's value was resolved here (seeded from the URL,
         or reset to the default on history navigation), False otherwise.
@@ -1850,6 +1855,10 @@ class SessionState:
         is_history_navigation: bool,
     ) -> bool:
         """Force the widget default so a missing or invalid URL wins over stale state.
+
+        On history navigation this also overwrites a value assigned in
+        ``st.session_state`` before the widget call. Initial load does not:
+        there, an absent param leaves that assignment in place.
 
         Returns ``False`` without touching state on any other rerun.
         """
