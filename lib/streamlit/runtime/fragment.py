@@ -20,6 +20,7 @@ import threading
 from abc import abstractmethod
 from collections.abc import Callable, Container, Iterator, Sequence
 from copy import deepcopy
+from enum import Enum, auto
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol, TypeVar, overload
 
@@ -85,6 +86,13 @@ F = TypeVar("F", bound=Callable[..., Any])
 Fragment = Callable[[], Any]
 
 
+class _FragmentLifetime(Enum):
+    """The rerun boundary that can remove a fragment."""
+
+    PARENT_SCOPED = auto()
+    FULL_APP_SCOPED = auto()
+
+
 class FragmentStorage(Protocol):
     """A key-value store for Fragments. Used to implement the @st.fragment decorator.
 
@@ -122,6 +130,7 @@ class FragmentStorage(Protocol):
         *,
         parent_fragment_id: str | None = None,
         target_key: str | None = None,
+        lifetime: _FragmentLifetime = _FragmentLifetime.PARENT_SCOPED,
     ) -> None:
         """Store a fragment definition.
 
@@ -137,6 +146,12 @@ class FragmentStorage(Protocol):
             fragment id is indexed under this name so ``st.rerun(<key>)`` can
             resolve it. A name may map to several ids if the fragment function is
             called from multiple sites.
+
+        lifetime
+            The rerun boundary that can remove the fragment. Parent-scoped fragments
+            are removed when an enclosing fragment reruns without registering them.
+            Full-app-scoped fragments survive fragment reruns and are removed only
+            when a full app run does not register them.
         """
         raise NotImplementedError
 
@@ -260,6 +275,7 @@ class MemoryFragmentStorage(FragmentStorage):
         self._fragments: dict[str, Fragment] = {}
         # Enclosing fragment id for nested fragments; top-level fragments use None.
         self._parent_by_id: dict[str, str | None] = {}
+        self._lifetime_by_id: dict[str, _FragmentLifetime] = {}
         self._registration_sequence_by_id: dict[str, int] = {}
         self._registration_sequence = 0
         self._outside_wrappers: dict[tuple[str, str], OutsideContainerWrapper] = {}
@@ -311,6 +327,7 @@ class MemoryFragmentStorage(FragmentStorage):
     def _remove(self, fragment_id: str, *, evict_wrappers: bool = True) -> None:
         del self._fragments[fragment_id]
         self._parent_by_id.pop(fragment_id, None)
+        self._lifetime_by_id.pop(fragment_id, None)
         self._registration_sequence_by_id.pop(fragment_id, None)
         self._unindex_target_key(fragment_id)
         if evict_wrappers:
@@ -342,11 +359,13 @@ class MemoryFragmentStorage(FragmentStorage):
         *,
         parent_fragment_id: str | None = None,
         target_key: str | None = None,
+        lifetime: _FragmentLifetime = _FragmentLifetime.PARENT_SCOPED,
     ) -> None:
         with self._lock:
             self._registration_sequence += 1
             self._fragments[key] = fragment
             self._parent_by_id[key] = parent_fragment_id
+            self._lifetime_by_id[key] = lifetime
             self._registration_sequence_by_id[key] = self._registration_sequence
             self._index_target_key(key, target_key)
 
@@ -391,6 +410,10 @@ class MemoryFragmentStorage(FragmentStorage):
                 for fragment_id in self._fragments
                 if fragment_id != root_fragment_id
                 and fragment_id not in newly_registered_ids
+                and self._lifetime_by_id.get(
+                    fragment_id, _FragmentLifetime.PARENT_SCOPED
+                )
+                is _FragmentLifetime.PARENT_SCOPED
                 and root_fragment_id in self._iter_ancestor_ids(fragment_id)
             ]
             for fragment_id in to_remove:
@@ -548,6 +571,7 @@ def _fragment(
     parallel: bool = False,
     key: str | int | None = None,
     additional_hash_info: str = "",
+    lifetime: _FragmentLifetime = _FragmentLifetime.PARENT_SCOPED,
 ) -> Callable[[F], F] | F:
     """Contains the actual fragment logic.
 
@@ -735,6 +759,7 @@ def _fragment(
             wrapped_fragment,
             parent_fragment_id=parent_fragment_id_at_def,
             target_key=key,
+            lifetime=lifetime,
         )
 
         if run_every:

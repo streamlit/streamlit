@@ -445,3 +445,39 @@ if st.session_state.get("block_after_dialog_close"):
     st.session_state.block_after_dialog_close = False
 elif st.button("Open dialog that blocks after close"):
     dialog_closed_before_blocking()
+
+
+def rerun_dialog_parent() -> None:
+    st.rerun(scope="dialog_parent")
+
+
+@st.dialog("Parent fragment rerun dialog", dismissible=False)
+def parent_fragment_rerun_dialog() -> None:
+    if st.button("Increment parent fragment dialog"):
+        st.session_state.parent_fragment_dialog_clicks = (
+            st.session_state.get("parent_fragment_dialog_clicks", 0) + 1
+        )
+
+    st.write(
+        "Parent fragment dialog clicks: "
+        f"{st.session_state.get('parent_fragment_dialog_clicks', 0)}"
+    )
+
+    st.button("Rerun dialog parent", on_click=rerun_dialog_parent)
+
+    if st.button("Close parent fragment dialog"):
+        st.rerun()
+
+
+@st.fragment(key="dialog_parent")
+def dialog_parent_fragment() -> None:
+    st.session_state.dialog_parent_runs = (
+        st.session_state.get("dialog_parent_runs", 0) + 1
+    )
+    st.write(f"Dialog parent runs: {st.session_state.dialog_parent_runs}")
+
+    if st.button("Open parent fragment rerun dialog"):
+        parent_fragment_rerun_dialog()
+
+
+dialog_parent_fragment()
