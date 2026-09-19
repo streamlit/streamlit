@@ -95,8 +95,14 @@ def test_same_page_query_params_sync_on_browser_back_forward(
     expect_prefixed_markdown(app, "Query params:", "{'value': '2'}", exact_match=True)
 
 
-def test_bound_widget_follows_url_on_browser_back(app: Page, app_base_url: str) -> None:
-    """bind=query-params widgets follow the URL after browser back.
+def test_bound_widget_follows_url_on_browser_back_and_forward(
+    app: Page, app_base_url: str
+) -> None:
+    """Bound widgets restore sticky non-default URL values on back and forward.
+
+    Bound radio edits use replaceState, so Increment (pushState) is used to
+    create distinct history entries that each carry a different non-default
+    ``number`` value. Default ``1`` is never the restore target.
 
     Regression test for https://github.com/streamlit/streamlit/issues/13853
     """
@@ -107,25 +113,41 @@ def test_bound_widget_follows_url_on_browser_back(app: Page, app_base_url: str) 
     expect(app).to_have_url(re.compile(r"[?&]number=3(?:&|$)"))
     expect_prefixed_markdown(app, "Selected:", "3", exact_match=True)
 
+    # Entry A: ?number=3 → push Entry B: ?number=3&value=1
+    click_button(app, "Increment Query Param")
+    # replaceState on B: ?number=5&value=1 (5 is non-default, so it stays)
+    select_radio_option(app, "5", label="Number")
+    # push Entry C: ?number=5&value=2
     click_button(app, "Increment Query Param")
 
-    select_radio_option(app, "5", label="Number")
-
+    expect(app).to_have_url(re.compile(r"[?&]number=5(?:&|$)"))
+    expect(app).to_have_url(re.compile(r"[?&]value=2(?:&|$)"))
     expect_prefixed_markdown(app, "Selected:", "5", exact_match=True)
-    expect(app).not_to_have_url(re.compile(r"[?&]number=5(?:&|$)"))
+
+    app.go_back()
+    wait_for_app_run(app)
+
+    expect(app).to_have_url(re.compile(r"[?&]number=5(?:&|$)"))
+    expect(app).to_have_url(re.compile(r"[?&]value=1(?:&|$)"))
+    expect_prefixed_markdown(app, "Selected:", "5", exact_match=True)
 
     app.go_back()
     wait_for_app_run(app)
 
     expect(app).to_have_url(re.compile(r"[?&]number=3(?:&|$)"))
+    expect(app).not_to_have_url(re.compile(r"[?&]value="))
     expect_prefixed_markdown(app, "Selected:", "3", exact_match=True)
 
+    app.go_forward()
+    wait_for_app_run(app)
+
+    expect(app).to_have_url(re.compile(r"[?&]number=5(?:&|$)"))
+    expect(app).to_have_url(re.compile(r"[?&]value=1(?:&|$)"))
+    expect_prefixed_markdown(app, "Selected:", "5", exact_match=True)
+
+    # Next rerun must use the restored URL, not stale widget state.
     click_button(app, "Increment Query Param")
 
-    # Bound radio edits use replaceState, so selecting "5" replaced the
-    # ?number=3&value=1 entry rather than pushing a new one. Back therefore
-    # returns to the original ?number=3 entry, and the next increment yields
-    # value=1 again.
-    expect(app).to_have_url(re.compile(r"[?&]number=3(?:&|$)"))
-    expect(app).to_have_url(re.compile(r"[?&]value=1(?:&|$)"))
-    expect_prefixed_markdown(app, "Selected:", "3", exact_match=True)
+    expect(app).to_have_url(re.compile(r"[?&]number=5(?:&|$)"))
+    expect(app).to_have_url(re.compile(r"[?&]value=2(?:&|$)"))
+    expect_prefixed_markdown(app, "Selected:", "5", exact_match=True)

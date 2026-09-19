@@ -26,8 +26,8 @@ def history_page() -> None:
 def query_params_page() -> None:
     number = st.radio(
         "Number",
-        options=["3", "5"],
-        index=1,
+        options=["1", "3", "5"],
+        index=0,
         key="number",
         bind="query-params",
         horizontal=True,
