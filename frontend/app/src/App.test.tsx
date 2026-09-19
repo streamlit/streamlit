@@ -2245,6 +2245,72 @@ describe("App", () => {
       expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", "/?from-widget=1")
       expect(replaceStateSpy).not.toHaveBeenCalled()
     })
+
+    it("keeps replaceState across consecutive history NewSessions", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      window.history.pushState({}, "", "/?first=1")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      const connectionManager = getMockConnectionManager()
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalled()
+      })
+
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+
+      window.history.pushState({}, "", "/?second=1")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalled()
+      })
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      // First history NewSession must not end replaceState for the second
+      // history run that was already requested.
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "after-first-ns=1",
+      })
+
+      expect(replaceStateSpy).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/?after-first-ns=1"
+      )
+      expect(pushStateSpy).not.toHaveBeenCalled()
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "after-second-ns=1",
+      })
+
+      expect(replaceStateSpy).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/?after-second-ns=1"
+      )
+      expect(pushStateSpy).not.toHaveBeenCalled()
+    })
   })
 
   describe("App.sendRerunBackMsg", () => {
