@@ -2285,6 +2285,14 @@ describe("App", () => {
         ...NEW_SESSION_JSON,
         pageScriptHash: "spa_hash",
       })
+
+      // An interrupt finish from the first run must not drop the epoch for
+      // the still-current second history request.
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      )
+
       sendForwardMessage("pageInfoChanged", {
         queryString: "after-first-ns=1",
       })
@@ -2310,6 +2318,25 @@ describe("App", () => {
         "/?after-second-ns=1"
       )
       expect(pushStateSpy).not.toHaveBeenCalled()
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "after-success=1",
+      })
+
+      expect(pushStateSpy).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/?after-success=1"
+      )
+      expect(replaceStateSpy).not.toHaveBeenCalled()
     })
   })
 

@@ -2043,10 +2043,15 @@ export class App extends PureComponent<Props, State> {
       scriptRunFinishedFragmentIds: prevState.fragmentIdsThisRun,
     }))
 
-    // Only clear the pending history rerun when this finish belongs to the
-    // latest frontend-requested run. Stale finishes from interrupted or
-    // in-flight runs must not re-arm pushState for the current popstate rerun.
-    if (this.hasReceivedNewSession) {
+    // Only clear history replaceState when this finish belongs to the latest
+    // frontend-requested run *and* is not an interrupt. After consecutive
+    // back/forward, the first run's NewSession can set hasReceivedNewSession
+    // while a newer history request is current; that run's FINISHED_EARLY
+    // must not drop historyNavigationEpoch for the still-pending request.
+    if (
+      this.hasReceivedNewSession &&
+      status !== ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+    ) {
       this.historyNavigationRerunPending = false
       this.historyNavigationEpoch = null
     }
