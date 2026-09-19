@@ -225,7 +225,10 @@ function IFrame({
       // eslint-disable-next-line @typescript-eslint/no-deprecated
       scrolling={element.scrolling ? "auto" : "no"}
       sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
-      title="st.iframe"
+      // An iframe's accessible name is its `title` (WCAG H64). Python strips
+      // and drops empty/whitespace `alt`; keep a title when unset so the frame
+      // is never unnamed. Deprecated components.v1 callers leave `alt` unset.
+      title={element.alt?.trim() || "st.iframe"}
       tabIndex={element.tabIndex ?? undefined}
       width={contentWidth}
       height={contentHeight}
