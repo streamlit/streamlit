@@ -159,9 +159,29 @@ class DataEditorUtilTest(unittest.TestCase):
                 datetime.date(2021, 1, 1),
             ),
             (
-                100000,
+                7200,
                 ColumnDataKind.TIMEDELTA,
-                pd.Timedelta(100000),
+                pd.Timedelta(hours=2),
+            ),
+            (
+                1.5,
+                ColumnDataKind.TIMEDELTA,
+                pd.Timedelta(seconds=1.5),
+            ),
+            (
+                -7200,
+                ColumnDataKind.TIMEDELTA,
+                pd.Timedelta(hours=-2),
+            ),
+            (
+                "2 hours",
+                ColumnDataKind.TIMEDELTA,
+                pd.Timedelta(hours=2),
+            ),
+            (
+                float("inf"),
+                ColumnDataKind.TIMEDELTA,
+                None,
             ),
             (
                 [1, 2, 3],
@@ -393,6 +413,31 @@ class DataEditorUtilTest(unittest.TestCase):
         # List values should remain lists
         assert df.iat[0, 2] == ["a", "b"]
         assert isinstance(df.iat[0, 2], list)
+
+    def test_apply_cell_edits_incompatible_timedelta_does_not_raise(self):
+        """A finer-than-dtype duration edit must not crash the app."""
+        df = pd.DataFrame(
+            {"duration": pd.Series([pd.Timedelta(seconds=5)], dtype="timedelta64[s]")}
+        )
+        dataframe_schema = determine_dataframe_schema(df, _get_arrow_schema(df))
+
+        _apply_cell_edits(df, {0: {"duration": 90}}, dataframe_schema)
+        assert df.iat[0, 0] == pd.Timedelta(seconds=90)
+        # pandas 2+ may ignore 90.5s; older pandas may accept or upcast it.
+        _apply_cell_edits(df, {0: {"duration": 90.5}}, dataframe_schema)
+
+    def test_apply_row_additions_incompatible_timedelta_does_not_raise(self):
+        """A finer-than-dtype duration row add must not crash the app."""
+        df = pd.DataFrame(
+            {"duration": pd.Series([pd.Timedelta(seconds=5)], dtype="timedelta64[s]")}
+        )
+        dataframe_schema = determine_dataframe_schema(df, _get_arrow_schema(df))
+
+        _apply_row_additions(df, [{"duration": 90}], dataframe_schema)
+        assert len(df) == 2
+        assert df.iat[1, 0] == pd.Timedelta(seconds=90)
+        # pandas 2+ may skip 90.5s; older pandas may accept or upcast it.
+        _apply_row_additions(df, [{"duration": 90.5}], dataframe_schema)
 
     def test_apply_row_additions(self):
         """Test applying row additions to a DataFrame."""

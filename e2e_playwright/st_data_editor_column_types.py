@@ -49,15 +49,7 @@ st.subheader("Interval dtypes in pd.DataFrame")
 st.data_editor(INTERVAL_TYPES_DF, width="stretch", hide_index=True)
 
 st.subheader("Special types")
-st.data_editor(
-    SPECIAL_TYPES_DF,
-    width="stretch",
-    # Timedelta is only editable if it is explicitly configured as number column.
-    # Reason is that the timedelta is provided as nanoseconds as default, which
-    # quickly overflows the max value supported by Number in Javascript.
-    column_config={"timedelta": st.column_config.NumberColumn()},
-    hide_index=True,
-)
+st.data_editor(SPECIAL_TYPES_DF, width="stretch", hide_index=True)
 
 st.subheader("Period dtypes in pd.DataFrame")
 st.data_editor(PERIOD_TYPES_DF, width="stretch", hide_index=True)
