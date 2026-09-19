@@ -2215,7 +2215,8 @@ describe("App", () => {
       pushStateSpy.mockClear()
       replaceStateSpy.mockClear()
 
-      // PageInfo from the still-in-flight history run must not pushState.
+      // PageInfo from the still-in-flight history run (before the widget
+      // run's NewSession) must not pushState.
       sendForwardMessage("pageInfoChanged", {
         queryString: "from-history=1",
       })
@@ -2227,23 +2228,21 @@ describe("App", () => {
       )
       expect(pushStateSpy).not.toHaveBeenCalled()
 
+      // The superseding run's NewSession ends history replaceState so its
+      // own PageInfo can pushState instead of overwriting the restored entry.
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,
         pageScriptHash: "spa_hash",
       })
-      sendForwardMessage(
-        "scriptFinished",
-        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
-      )
 
       pushStateSpy.mockClear()
       replaceStateSpy.mockClear()
 
       sendForwardMessage("pageInfoChanged", {
-        queryString: "after=1",
+        queryString: "from-widget=1",
       })
 
-      expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", "/?after=1")
+      expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", "/?from-widget=1")
       expect(replaceStateSpy).not.toHaveBeenCalled()
     })
   })

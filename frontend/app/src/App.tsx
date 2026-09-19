@@ -338,10 +338,22 @@ export class App extends PureComponent<Props, State> {
   /**
    * True while a rerun triggered by browser back/forward is in flight.
    * The URL already reflects the target history entry, so the resulting
-   * PageInfo must not append another history entry. Cleared only when the
-   * matching run finishes (not when a later non-history rerun is sent).
+   * PageInfo must not append another history entry.
+   *
+   * Cleared when:
+   * - the matching history run finishes, or
+   * - a superseding non-history run's NewSession arrives (so that run's
+   *   PageInfo can pushState instead of overwriting the restored entry).
+   * In-flight history PageInfo before that NewSession still replaceStates.
    */
   private historyNavigationRerunPending: boolean = false
+
+  /**
+   * True after a history BackMsg until its NewSession arrives. Used to
+   * distinguish a history NewSession (keep pending) from a superseding
+   * non-history NewSession (clear pending so that run can pushState).
+   */
+  private awaitingHistoryNewSession: boolean = false
 
   // Active `run_every` auto-rerun timers, keyed by fragment id. These are
   // imperative resources (setInterval handles), so they live outside of React
@@ -1535,6 +1547,15 @@ export class App extends PureComponent<Props, State> {
     // after the latest rerun request:
     this.hasReceivedNewSession = true
 
+    // A superseding non-history rerun's NewSession ends history replaceState
+    // so this run's PageInfo can pushState (e.g. Increment after Back).
+    // History NewSessions keep the marker so their PageInfos still replaceState.
+    if (!this.awaitingHistoryNewSession) {
+      this.historyNavigationRerunPending = false
+    } else {
+      this.awaitingHistoryNewSession = false
+    }
+
     // First, handle initialization logic. Each NewSession message has
     // initialization data. If this is the _first_ time we're receiving
     // the NewSession message (or the first time since disconnect), we
@@ -2021,6 +2042,7 @@ export class App extends PureComponent<Props, State> {
     // in-flight runs must not re-arm pushState for the current popstate rerun.
     if (this.hasReceivedNewSession) {
       this.historyNavigationRerunPending = false
+      this.awaitingHistoryNewSession = false
     }
 
     if (
@@ -2446,12 +2468,15 @@ export class App extends PureComponent<Props, State> {
 
     if (isHistoryNavigation) {
       this.historyNavigationRerunPending = true
+      this.awaitingHistoryNewSession = true
+    } else {
+      // A widget/timer/reconnect/host rerun may be sent while a popstate run
+      // is still producing PageInfo. Keep replaceState until this new run's
+      // NewSession arrives so late history PageInfos do not pushState, but
+      // clear awaitingHistoryNewSession so that NewSession ends the marker
+      // before this run's PageInfos (which must pushState).
+      this.awaitingHistoryNewSession = false
     }
-    // Do not clear the marker on ordinary reruns here. A widget, timer,
-    // reconnect, or host rerun can be sent while a popstate run is still
-    // producing PageInfo; clearing early would make those messages pushState
-    // and recreate the restored history entry. Clear only when the matching
-    // run finishes (handleScriptFinished + hasReceivedNewSession).
 
     this.sendBackMsg(
       new BackMsg({
