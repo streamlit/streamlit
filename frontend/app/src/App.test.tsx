@@ -1914,6 +1914,70 @@ describe("App", () => {
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
       ).toBe("fresh=newvalue")
     })
+
+    it("reruns SPA apps on same-page popstate without navigation metadata", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...CURRENT_NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      const connectionManager = getMockConnectionManager()
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+
+      window.history.pushState({}, "", "/?mock_element_id=mock-element-03")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      })
+
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
+      ).toBe("mock_element_id=mock-element-03")
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript
+          .pageScriptHash
+      ).toBe("spa_hash")
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript
+          .isHistoryNavigation
+      ).toBe(true)
+    })
+
+    it("does not set isHistoryNavigation on ordinary widget reruns", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...CURRENT_NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      const connectionManager = getMockConnectionManager()
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      })
+
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript
+          .isHistoryNavigation
+      ).toBeFalsy()
+    })
   })
 
   describe("App.handlePageConfigChanged", () => {
@@ -1941,15 +2005,18 @@ describe("App", () => {
   // Please see https://github.com/streamlit/streamlit/issues/2887 for more context on this.
   describe("App.handlePageInfoChanged", () => {
     let pushStateSpy: MockInstance
+    let replaceStateSpy: MockInstance
 
     beforeEach(() => {
       window.history.pushState({}, "", "/")
 
       pushStateSpy = vi.spyOn(window.history, "pushState")
+      replaceStateSpy = vi.spyOn(window.history, "replaceState")
     })
 
     afterEach(() => {
       pushStateSpy.mockRestore()
+      replaceStateSpy.mockRestore()
       // Reset the value of document.location.pathname.
       window.history.pushState({}, "", "/")
     })
@@ -2054,6 +2121,222 @@ describe("App", () => {
         type: "SET_QUERY_PARAM",
         queryParams: `?${queryString}`,
       })
+    })
+
+    it("uses replaceState during a pending history rerun and pushState afterwards", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      window.history.pushState({}, "", "/?flying=spaghetti")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      const connectionManager = getMockConnectionManager()
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalled()
+      })
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      )
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "",
+      })
+
+      expect(replaceStateSpy).toHaveBeenLastCalledWith({}, "", "/")
+      expect(pushStateSpy).not.toHaveBeenCalled()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "second=1",
+      })
+
+      expect(replaceStateSpy).toHaveBeenLastCalledWith({}, "", "/?second=1")
+      expect(pushStateSpy).not.toHaveBeenCalled()
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "after=1",
+      })
+
+      expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", "/?after=1")
+      expect(replaceStateSpy).not.toHaveBeenCalled()
+    })
+
+    it("keeps replaceState for history PageInfo after a superseding widget rerun", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      window.history.pushState({}, "", "/?flying=spaghetti")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      const connectionManager = getMockConnectionManager()
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalled()
+      })
+
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      })
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      // PageInfo from the still-in-flight history run (before the widget
+      // run's NewSession) must not pushState.
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "from-history=1",
+      })
+
+      expect(replaceStateSpy).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/?from-history=1"
+      )
+      expect(pushStateSpy).not.toHaveBeenCalled()
+
+      // The superseding run's NewSession ends history replaceState so its
+      // own PageInfo can pushState instead of overwriting the restored entry.
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "from-widget=1",
+      })
+
+      expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", "/?from-widget=1")
+      expect(replaceStateSpy).not.toHaveBeenCalled()
+    })
+
+    it("keeps replaceState across consecutive history NewSessions", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      window.history.pushState({}, "", "/?first=1")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      const connectionManager = getMockConnectionManager()
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalled()
+      })
+
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+
+      window.history.pushState({}, "", "/?second=1")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalled()
+      })
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      // First history NewSession must not end replaceState for the second
+      // history run that was already requested.
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      // An interrupt finish from the first run must not drop the epoch for
+      // the still-current second history request.
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      )
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "after-first-ns=1",
+      })
+
+      expect(replaceStateSpy).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/?after-first-ns=1"
+      )
+      expect(pushStateSpy).not.toHaveBeenCalled()
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "after-second-ns=1",
+      })
+
+      expect(replaceStateSpy).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/?after-second-ns=1"
+      )
+      expect(pushStateSpy).not.toHaveBeenCalled()
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "after-success=1",
+      })
+
+      expect(pushStateSpy).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/?after-success=1"
+      )
+      expect(replaceStateSpy).not.toHaveBeenCalled()
     })
   })
 

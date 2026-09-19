@@ -1125,6 +1125,7 @@ class ScriptRunnerTest(unittest.TestCase):
             None,
             replay_trigger_states=replay,
             replay_trigger_values=None,
+            is_history_navigation=False,
         )
 
     @patch(
