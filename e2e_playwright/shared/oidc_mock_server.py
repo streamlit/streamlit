@@ -49,6 +49,10 @@ e = (
 
 NONCE_REGISTRY: dict[str, str] = {}
 
+# Records the query parameters of the most recent /logout request so tests can
+# assert how the RP-Initiated Logout URL was built. Exposed via /logout-info.
+LAST_LOGOUT_INFO: dict[str, Any] = {}
+
 
 def generate_token(payload: dict[str, Any]) -> str:
     # Create JWT header
@@ -159,10 +163,20 @@ def oidc_app(
         start_response(status, headers)
         return [json.dumps(jwks).encode()]
 
+    if path == "/logout-info":
+        # Expose the query parameters of the most recent /logout request.
+        status = "200 OK"
+        headers = [("Content-Type", "application/json")]
+        start_response(status, headers)
+        return [json.dumps(LAST_LOGOUT_INFO).encode()]
+
     if path == "/logout":
         # Handle OIDC end_session_endpoint
         # Redirect to post_logout_redirect_uri if provided
-        qs = parse_qs(environ.get("QUERY_STRING", ""))
+        query_string = environ.get("QUERY_STRING", "")
+        qs = parse_qs(query_string)
+        LAST_LOGOUT_INFO["query_string"] = query_string
+        LAST_LOGOUT_INFO["params"] = {key: value[0] for key, value in qs.items()}
         post_logout_redirect_uri = qs.get("post_logout_redirect_uri", [""])[0]
 
         if post_logout_redirect_uri:
