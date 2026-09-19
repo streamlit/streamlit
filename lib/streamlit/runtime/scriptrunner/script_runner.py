@@ -61,6 +61,7 @@ from streamlit.runtime.state import (
 )
 from streamlit.signal_util import Signal
 from streamlit.source_util import page_sort_key
+from streamlit.watcher import local_sources_watcher
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
@@ -567,13 +568,20 @@ class ScriptRunner:
         """A context for setting the ScriptRunner._execing flag.
 
         Used by _maybe_handle_execution_control_request to ensure that
-        we only handle requests while we're inside an exec() call
+        we only handle requests while we're inside an exec() call.
+
+        Also holds ``local_sources_watcher.script_execution()`` so
+        ``sys.modules`` eviction cannot run concurrently. Flush
+        (``on_script_run``) must stay outside this context; calling it
+        from here deadlocks.
         """
         if self._execing:
             raise RuntimeError("Nested set_execing_flag call")
         self._execing = True
         try:
-            yield
+            # User exec() runs inside script_execution(); flush must stay outside.
+            with local_sources_watcher.script_execution():
+                yield
         finally:
             self._execing = False
 
