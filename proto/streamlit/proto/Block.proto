@@ -136,6 +136,12 @@ message Block {
       MEDIUM = 2;
     }
 
+    enum DialogPosition {
+      CENTER = 0;
+      LEFT = 1;
+      RIGHT = 2;
+    }
+
     string title = 1;
     bool dismissible = 2;
     DialogWidth width = 3;
@@ -146,6 +152,9 @@ message Block {
 
     // Optional icon shown next to the dialog title.
     string icon = 6;
+
+    // Placement of the dialog. LEFT/RIGHT render it as a full-height side drawer.
+    DialogPosition position = 7;
   }
 
   message Form {

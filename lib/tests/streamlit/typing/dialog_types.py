@@ -59,6 +59,20 @@ if TYPE_CHECKING:
     assert_type(medium_dialog(), None)
     assert_type(large_dialog(), None)
 
+    # position - each literal option.
+    @dialog("Left", position="left")
+    def left_dialog() -> None: ...
+
+    @dialog("Center", position="center")
+    def center_dialog() -> None: ...
+
+    @dialog("Right", position="right")
+    def right_dialog() -> None: ...
+
+    assert_type(left_dialog(), None)
+    assert_type(center_dialog(), None)
+    assert_type(right_dialog(), None)
+
     # dismissible - both boolean values.
     @dialog("Dismissible", dismissible=True)
     def dismissible_dialog() -> None: ...
@@ -109,6 +123,7 @@ if TYPE_CHECKING:
     @dialog(
         "Everything",
         width="large",
+        position="left",
         dismissible=False,
         icon=":material/thumb_up:",
         on_dismiss="rerun",
@@ -123,6 +138,9 @@ if TYPE_CHECKING:
 
     # width only accepts "small", "medium", or "large".
     dialog("Bad width", width="invalid")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
+
+    # position only accepts "left", "center", or "right".
+    dialog("Bad position", position="top")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
     # dismissible must be a bool.
     dialog("Bad dismissible", dismissible="yes")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]

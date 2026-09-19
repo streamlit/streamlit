@@ -267,4 +267,177 @@ describe("Modal subcomponents", () => {
       maxWidth: "calc(100% - 1rem - 1rem)",
     })
   })
+
+  it.each([
+    {
+      position: "left" as const,
+      justifyContent: "flex-start",
+      side: "start",
+    },
+    {
+      position: "right" as const,
+      justifyContent: "flex-end",
+      side: "end",
+    },
+  ])(
+    "aligns a $position drawer overlay to the $side of the viewport",
+    ({ position, justifyContent }) => {
+      render(
+        <Modal isOpen position={position}>
+          <ModalBody>content</ModalBody>
+        </Modal>
+      )
+
+      expect(screen.getByTestId("stDialog")).toHaveStyle({
+        justifyContent,
+        alignItems: "stretch",
+        paddingTop: "0",
+        paddingBottom: "0",
+      })
+    }
+  )
+
+  it.each(["left", "right"] as const)(
+    "makes a %s drawer panel flush, full height, and square-cornered",
+    position => {
+      render(
+        <Modal isOpen position={position}>
+          <ModalBody>content</ModalBody>
+        </Modal>
+      )
+
+      const panel = document.querySelector("[role='dialog']")?.parentElement
+      expect(panel).toHaveStyle({
+        margin: "0",
+        height: "100%",
+        maxWidth: "calc(100% - 1.5rem)",
+        borderRadius: "0",
+      })
+    }
+  )
+
+  it("still dismisses a left-positioned dialog via Escape, close button, and overlay click", async () => {
+    const user = userEvent.setup()
+    const handleClose = vi.fn()
+    const { rerender } = render(
+      <Modal isOpen position="left" onClose={handleClose} />
+    )
+
+    await user.keyboard("{Escape}")
+    expect(handleClose).toHaveBeenCalledTimes(1)
+
+    handleClose.mockClear()
+    rerender(<Modal isOpen position="left" onClose={handleClose} />)
+    await user.click(screen.getByRole("button", { name: "Close" }))
+    expect(handleClose).toHaveBeenCalledTimes(1)
+
+    handleClose.mockClear()
+    rerender(<Modal isOpen position="left" onClose={handleClose} />)
+    await user.click(screen.getByTestId("stDialog"))
+    expect(handleClose).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(["left", "center", "right"] as const)(
+    "fades the overlay dim for a %s dialog",
+    position => {
+      render(
+        <Modal isOpen position={position}>
+          <ModalBody>content</ModalBody>
+        </Modal>
+      )
+
+      const css = Array.from(document.querySelectorAll("style"))
+        .map(el => el.textContent ?? "")
+        .join("\n")
+      expect(css).toContain("data-entering")
+      expect(css).toContain("background-color")
+    }
+  )
+
+  it.each(["left", "right"] as const)(
+    "slides a %s drawer in on enter",
+    position => {
+      render(
+        <Modal isOpen position={position}>
+          <ModalBody>content</ModalBody>
+        </Modal>
+      )
+
+      // jsdom does not compute CSS animation names from emotion stylesheets.
+      // Assert the enter keyframes are emitted so the drawer starts off-canvas.
+      const css = Array.from(document.querySelectorAll("style"))
+        .map(el => el.textContent ?? "")
+        .join("\n")
+      expect(css).toContain("data-entering")
+      expect(css).toContain(
+        position === "left" ? "translateX(-100%)" : "translateX(100%)"
+      )
+      // Overlay grey-out fades via background-color so the panel stays opaque.
+      expect(css).toContain("background-color")
+    }
+  )
+
+  it("does not dismiss a non-closeable left-positioned dialog", async () => {
+    const user = userEvent.setup()
+    const handleClose = vi.fn()
+
+    render(
+      <Modal isOpen position="left" closeable={false} onClose={handleClose} />
+    )
+
+    await user.keyboard("{Escape}")
+    await user.click(screen.getByTestId("stDialog"))
+
+    expect(handleClose).not.toHaveBeenCalled()
+    expect(
+      screen.queryByRole("button", { name: "Close" })
+    ).not.toBeInTheDocument()
+  })
+})
+
+describe("side drawer resize handle", () => {
+  it("does not render a resize handle on a centered dialog", () => {
+    render(<Modal isOpen />)
+
+    expect(
+      screen.queryByTestId("stDialogResizeHandle")
+    ).not.toBeInTheDocument()
+  })
+
+  it.each([
+    { position: "left" as const, edge: "right" },
+    { position: "right" as const, edge: "left" },
+  ])(
+    "places the $position drawer handle on the $edge edge",
+    ({ position, edge }) => {
+      render(
+        <Modal isOpen position={position}>
+          <ModalBody>content</ModalBody>
+        </Modal>
+      )
+
+      const handle = screen.getByTestId("stDialogResizeHandle")
+      expect(handle).toHaveStyle({
+        [edge]: "0",
+        cursor: "col-resize",
+      })
+      expect(handle).toHaveAttribute("aria-hidden", "true")
+    }
+  )
+
+  it("does not dismiss when the resize handle is clicked", async () => {
+    const user = userEvent.setup()
+    const handleClose = vi.fn()
+
+    render(
+      <Modal isOpen position="left" onClose={handleClose}>
+        <ModalBody>content</ModalBody>
+      </Modal>
+    )
+
+    await user.click(screen.getByTestId("stDialogResizeHandle"))
+
+    expect(handleClose).not.toHaveBeenCalled()
+    expect(screen.getByRole("dialog")).toBeVisible()
+  })
 })

@@ -59,7 +59,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.dataframe` | Display a dataframe as an interactive table. Supports column configuration, selection, sizing, sorting, and efficient data exploration. |
 | `st.date_input` | Display a date input widget. It can return a single date or a date range depending on the initial value. |
 | `st.datetime_input` | Display a date and time input widget. Use it when users need to choose precise timestamps rather than dates alone. |
-| `st.dialog` | Function decorator to create a modal dialog. Use it to isolate short workflows while preserving Streamlit's rerun model. |
+| `st.dialog` | Function decorator to create a modal dialog or a modal side drawer. Use it to isolate short workflows while preserving Streamlit's rerun model. |
 | `st.divider` | Display a horizontal rule. Use it to separate sections without adding a heavy layout container. |
 | `st.download_button` | Display a download button widget. Use it for generated files, reports, transformed data, or other app outputs. |
 | `st.echarts_chart` | Display an interactive Apache ECharts chart. Use it for ECharts-native visualizations. |
