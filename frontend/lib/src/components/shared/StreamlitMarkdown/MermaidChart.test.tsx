@@ -189,6 +189,28 @@ describe("MermaidChart", () => {
 
     const config = initialize.mock.calls[0][0]
     expect(config.securityLevel).toBe("strict")
+    // Mermaid 12 ELK/neo defaults: pin per type, not a top-level layout
+    // (that would switch mindmaps from cose-bilkent to dagre).
+    expect(config.layout).toBeUndefined()
+    expect(config.look).toBe("classic")
+    expect(config.flowchart).toEqual({
+      htmlLabels: false,
+      layout: "dagre",
+      look: "classic",
+    })
+    expect(config.state).toEqual({ layout: "dagre", look: "classic" })
+    expect(config.class).toEqual({ layout: "dagre", look: "classic" })
+    expect(config.er).toEqual({ layout: "dagre", look: "classic" })
+    expect(config.requirement).toEqual({
+      layout: "dagre",
+      look: "classic",
+    })
+    expect(config.usecase).toEqual({ layout: "dagre", look: "classic" })
+    expect(config.agentflow).toEqual({
+      layout: "dagre",
+      look: "classic",
+    })
+    expect(config.mindmap).toBeUndefined()
     // Locked set must include Mermaid defaults plus Streamlit hardening keys.
     expect(config.secure).toEqual([
       // Mermaid defaults
