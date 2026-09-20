@@ -244,6 +244,13 @@ function TextInput({
     if (!inForm) {
       return dirty && !isLive
     }
+    if (formsData === undefined) {
+      return widgetMgr.allowFormEnterToSubmit(formId)
+    }
+    const firstSubmitButton = formsData.submitButtons.get(formId)?.[0]
+    if (!firstSubmitButton) {
+      return false
+    }
     return widgetMgr.allowFormEnterToSubmit(formId)
   }, [inForm, dirty, isLive, widgetMgr, formId, formsData])
 
