@@ -2397,6 +2397,139 @@ describe("App", () => {
         vi.useRealTimers()
       }
     })
+
+    it("does not re-stick replaceState for auto-rerun after a widget supersedes history", async () => {
+      vi.useFakeTimers()
+      try {
+        renderApp(getProps())
+
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          pageScriptHash: "spa_hash",
+        })
+
+        window.history.pushState({}, "", "/?flying=spaghetti")
+        act(() => {
+          window.dispatchEvent(new PopStateEvent("popstate"))
+        })
+
+        const connectionManager = getMockConnectionManager()
+        await waitFor(() => {
+          expect(connectionManager.sendMessage).toHaveBeenCalled()
+        })
+
+        // @ts-expect-error
+        connectionManager.sendMessage.mockClear()
+        const widgetStateManager =
+          getStoredValue<WidgetStateManager>(WidgetStateManager)
+        widgetStateManager.sendUpdateWidgetsMessage(undefined)
+
+        await waitFor(() => {
+          expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+        })
+
+        // @ts-expect-error
+        connectionManager.sendMessage.mockClear()
+
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "frag",
+        })
+        act(() => {
+          vi.advanceTimersByTime(1000)
+        })
+
+        await waitFor(() => {
+          expect(connectionManager.sendMessage).toHaveBeenCalled()
+        })
+
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          pageScriptHash: "spa_hash",
+        })
+
+        pushStateSpy.mockClear()
+        replaceStateSpy.mockClear()
+
+        sendForwardMessage("pageInfoChanged", {
+          queryString: "from-widget-auto=1",
+        })
+
+        expect(pushStateSpy).toHaveBeenLastCalledWith(
+          {},
+          "",
+          "/?from-widget-auto=1"
+        )
+        expect(replaceStateSpy).not.toHaveBeenCalled()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it("does not re-stick replaceState for auto-rerun after history NewSession", async () => {
+      vi.useFakeTimers()
+      try {
+        renderApp(getProps())
+
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          pageScriptHash: "spa_hash",
+        })
+
+        window.history.pushState({}, "", "/?flying=spaghetti")
+        act(() => {
+          window.dispatchEvent(new PopStateEvent("popstate"))
+        })
+
+        const connectionManager = getMockConnectionManager()
+        await waitFor(() => {
+          expect(connectionManager.sendMessage).toHaveBeenCalled()
+        })
+
+        // History run has started — a later auto-rerun is a separate interrupt,
+        // not a pending coalesce.
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          pageScriptHash: "spa_hash",
+        })
+
+        // @ts-expect-error
+        connectionManager.sendMessage.mockClear()
+
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "frag",
+        })
+        act(() => {
+          vi.advanceTimersByTime(1000)
+        })
+
+        await waitFor(() => {
+          expect(connectionManager.sendMessage).toHaveBeenCalled()
+        })
+
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          pageScriptHash: "spa_hash",
+        })
+
+        pushStateSpy.mockClear()
+        replaceStateSpy.mockClear()
+
+        sendForwardMessage("pageInfoChanged", {
+          queryString: "from-separate-auto=1",
+        })
+
+        expect(pushStateSpy).toHaveBeenLastCalledWith(
+          {},
+          "",
+          "/?from-separate-auto=1"
+        )
+        expect(replaceStateSpy).not.toHaveBeenCalled()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
   })
 
   describe("App.sendRerunBackMsg", () => {

@@ -344,10 +344,11 @@ export class App extends PureComponent<Props, State> {
    * Attribution is best-effort (PageInfo has no run id):
    * - {@link rerunEpoch}: increments on every rerun request the frontend sends.
    * - {@link historyNavigationEpoch}: set to that epoch on a history BackMsg;
-   *   advanced with the epoch on an auto-rerun while a history restore is
-   *   pending (matches backend sticky coalescing); left unchanged on other
-   *   non-history BackMsgs; cleared on a superseding NewSession (epoch
-   *   mismatch) or on a successful finish for the latest run.
+   *   advanced with the epoch only for an auto-rerun that immediately follows
+   *   a still-pending history BackMsg (no NewSession yet, no intervening
+   *   non-history BackMsg) — matching backend sticky coalesce. Left unchanged
+   *   on other non-history BackMsgs; cleared on a superseding NewSession
+   *   (epoch mismatch) or on a successful finish for the latest run.
    * - PageInfo uses replaceState while historyNavigationEpoch !== null.
    * - FINISHED_EARLY_FOR_RERUN does not clear the epoch.
    *
@@ -2480,9 +2481,16 @@ export class App extends PureComponent<Props, State> {
     this.rerunEpoch += 1
     if (isHistoryNavigation) {
       this.historyNavigationEpoch = this.rerunEpoch
-    } else if (isAutoRerun && this.historyNavigationEpoch !== null) {
-      // Keep replaceState across auto-reruns that coalesce with a pending
-      // history restore (matches backend is_history_navigation sticky union).
+    } else if (
+      isAutoRerun &&
+      // Only re-stick while a history BackMsg is still awaiting NewSession
+      // (backend pending coalesce). Do not re-stick after the history run's
+      // NewSession (a later auto-rerun is a separate interrupt) or after a
+      // superseding widget BackMsg (epoch gap — last-wins already dropped the
+      // history bit on the backend).
+      !this.hasReceivedNewSession &&
+      this.historyNavigationEpoch === this.rerunEpoch - 1
+    ) {
       this.historyNavigationEpoch = this.rerunEpoch
     }
 
