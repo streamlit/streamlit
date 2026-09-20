@@ -259,7 +259,7 @@ class ScriptRequestsTest(unittest.TestCase):
         assert reqs._rerun_data.fragment_id_queue == ["frag_a", "frag_b"]
         assert reqs._rerun_data.is_fragment_scoped_rerun is True
 
-    def test_history_navigation_coalescing_matches_winning_request(self):
+    def test_newer_request_controls_history_flag_except_auto_rerun(self):
         """History flag follows the newer request except across auto-reruns.
 
         An ordinary widget/page rerun must last-win so its query string and

@@ -1157,9 +1157,9 @@ class SessionState:
     ) -> WidgetStatesProto:
         """Drop query-bound widgets so browser history can restore them from the URL.
 
-        Bound widgets are omitted before callback dispatch, so their ``on_change``
-        handlers do not run on back/forward. Values are restored later via URL
-        seeding, matching initial page load.
+        Omitting them before callback dispatch means their ``on_change`` handlers
+        do not run on back/forward. ``register_widget`` re-seeds the values from
+        the URL, matching initial page load.
         """
         if not self._query_param_bound_widget_ids:
             return widget_states
@@ -1606,9 +1606,9 @@ class SessionState:
             url_binding_resolved = self._handle_query_param_binding(
                 metadata, user_key, widget_id
             )
-            # History navigation (and any other URL/default resolution) may have
-            # discarded a frontend value captured above. Clear the wire labels so
-            # callers do not reconcile options against the pre-back value.
+            # Whenever the URL (or its absence) decided this widget's value, the
+            # wire labels captured above belong to a discarded frontend value.
+            # Clear them so callers do not reconcile options against it.
             if url_binding_resolved:
                 incoming_serialized_value = None
                 incoming_serialized_values = None
@@ -1653,12 +1653,13 @@ class SessionState:
             and not url_binding_resolved
         ):
             del self._new_widget_state[widget_id]
-            # The captured wire label belongs to the dropped frontend value, so
-            # it must not leak to callers. Otherwise a caller like st.selectbox
-            # could reconcile options against this attacker-controlled label (see
-            # resolve_value_against_options) and hand back an option that differs
-            # from the value we resolve below.
+            # The captured wire labels belong to the dropped frontend value, so
+            # they must not leak to callers. Otherwise a caller like st.selectbox
+            # or st.multiselect could reconcile options against this attacker-
+            # controlled label (see resolve_value_against_options) and hand back
+            # an option that differs from the value we resolve below.
             incoming_serialized_value = None
+            incoming_serialized_values = None
             if user_key is None or user_key not in self._new_session_state:
                 # No programmatic value is taking over resolution, so the discard
                 # itself changes the resolved value; flag the frontend to re-sync.
@@ -1794,11 +1795,10 @@ class SessionState:
         History navigation (``is_history_navigation``):
         - URL wins, including when the param is missing or invalid
         - Code-assigned ``st.session_state`` values for this run are overridden
-        - A missing param restores the widget default, including over a value
-          assigned in ``st.session_state`` before the widget call. That differs
-          from initial load, which leaves that assignment in place when the
-          param is absent. The history entry had no param, so the default is
-          the restored value.
+        - A missing param restores the widget default, overriding a value
+          assigned in ``st.session_state`` before the widget call. Initial load
+          leaves that assignment in place; on history navigation the restored
+          entry had no param, so the default is what the URL asks for.
 
         Returns True if the widget's value was resolved here (seeded from the URL,
         or reset to the default on history navigation), False otherwise.
@@ -1839,32 +1839,12 @@ class SessionState:
             metadata, user_key, widget_id, url_value
         ):
             return True
-        return self._restore_default_on_history_navigation(
-            metadata,
-            user_key,
-            widget_id,
-            is_history_navigation=is_history_navigation,
-        )
-
-    def _restore_default_on_history_navigation(
-        self,
-        metadata: WidgetMetadata[T],
-        user_key: str,
-        widget_id: str,
-        *,
-        is_history_navigation: bool,
-    ) -> bool:
-        """Force the widget default so a missing or invalid URL wins over stale state.
-
-        On history navigation this also overwrites a value assigned in
-        ``st.session_state`` before the widget call. Initial load does not:
-        there, an absent param leaves that assignment in place.
-
-        Returns ``False`` without touching state on any other rerun.
-        """
         if not is_history_navigation:
             return False
-
+        # The restored history entry carried no usable value for this param, so
+        # the default is what the URL asks for — even over a same-run
+        # st.session_state assignment. Initial load leaves that assignment in
+        # place when the param is absent.
         default_value = metadata.deserializer(None)
         self._new_widget_state.set_from_value(widget_id, default_value)
         self._new_session_state[user_key] = default_value

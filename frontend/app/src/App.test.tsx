@@ -1915,7 +1915,7 @@ describe("App", () => {
       ).toBe("fresh=newvalue")
     })
 
-    it("reruns SPA apps on same-page popstate without navigation metadata", async () => {
+    it("reruns same-page history before navigation metadata arrives", async () => {
       renderApp(getProps())
 
       sendForwardMessage("newSession", {
@@ -2337,6 +2337,65 @@ describe("App", () => {
         "/?after-success=1"
       )
       expect(replaceStateSpy).not.toHaveBeenCalled()
+    })
+
+    it("keeps replaceState across an auto-rerun after history navigation", async () => {
+      vi.useFakeTimers()
+      try {
+        renderApp(getProps())
+
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          pageScriptHash: "spa_hash",
+        })
+
+        window.history.pushState({}, "", "/?flying=spaghetti")
+        act(() => {
+          window.dispatchEvent(new PopStateEvent("popstate"))
+        })
+
+        const connectionManager = getMockConnectionManager()
+        await waitFor(() => {
+          expect(connectionManager.sendMessage).toHaveBeenCalled()
+        })
+
+        // @ts-expect-error
+        connectionManager.sendMessage.mockClear()
+
+        // A run_every flush after the history BackMsg must not end replaceState.
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "frag",
+        })
+        act(() => {
+          vi.advanceTimersByTime(1000)
+        })
+
+        await waitFor(() => {
+          expect(connectionManager.sendMessage).toHaveBeenCalled()
+        })
+
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          pageScriptHash: "spa_hash",
+        })
+
+        pushStateSpy.mockClear()
+        replaceStateSpy.mockClear()
+
+        sendForwardMessage("pageInfoChanged", {
+          queryString: "after-auto=1",
+        })
+
+        expect(replaceStateSpy).toHaveBeenLastCalledWith(
+          {},
+          "",
+          "/?after-auto=1"
+        )
+        expect(pushStateSpy).not.toHaveBeenCalled()
+      } finally {
+        vi.useRealTimers()
+      }
     })
   })
 

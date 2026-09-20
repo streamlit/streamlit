@@ -341,19 +341,19 @@ export class App extends PureComponent<Props, State> {
    * backend changes the query string during a history rerun; an unchanged
    * query string never reaches the history API (see handlePageInfoChanged).
    *
-   * State machine (no run id on PageInfo, so this is best-effort attribution):
-   * - {@link rerunEpoch}: increments on every BackMsg.
+   * Attribution is best-effort (PageInfo has no run id):
+   * - {@link rerunEpoch}: increments on every rerun request the frontend sends.
    * - {@link historyNavigationEpoch}: set to that epoch on a history BackMsg;
-   *   left unchanged on a non-history BackMsg so late history PageInfo can still
-   *   replaceState until the superseding run's NewSession; cleared on that
-   *   NewSession (epoch mismatch), or on a successful finish for the latest run.
+   *   advanced with the epoch on an auto-rerun while a history restore is
+   *   pending (matches backend sticky coalescing); left unchanged on other
+   *   non-history BackMsgs; cleared on a superseding NewSession (epoch
+   *   mismatch) or on a successful finish for the latest run.
    * - PageInfo uses replaceState while historyNavigationEpoch !== null.
+   * - FINISHED_EARLY_FOR_RERUN does not clear the epoch.
    *
-   * FINISHED_EARLY_FOR_RERUN does not clear the epoch (an interrupt from an
-   * older history request must not drop replaceState for a newer one).
-   *
-   * Residual: a stale history NewSession after a non-history BackMsg can clear
-   * the epoch early (same class of limitation as hasReceivedNewSession).
+   * Known limitation: a stale history NewSession after a newer non-history
+   * BackMsg can clear the epoch early (same class as hasReceivedNewSession).
+   * Closing that requires a run id on PageInfo.
    */
   private rerunEpoch: number = 0
   private historyNavigationEpoch: number | null = null
@@ -1920,7 +1920,14 @@ export class App extends PureComponent<Props, State> {
     // explicitly to onPageChange because syncQueryParams' setState has not
     // flushed yet, and preserve it across page changes.
     this.syncQueryParams(queryString)
-    this.onPageChange(pageScriptHash, queryString, true, true)
+    const preserveQueryParams = true
+    const isHistoryNavigation = true
+    this.onPageChange(
+      pageScriptHash,
+      queryString,
+      preserveQueryParams,
+      isHistoryNavigation
+    )
   }
 
   /**
@@ -2038,11 +2045,10 @@ export class App extends PureComponent<Props, State> {
       scriptRunFinishedFragmentIds: prevState.fragmentIdsThisRun,
     }))
 
-    // Only clear history replaceState when this finish belongs to the latest
-    // frontend-requested run *and* is not an interrupt. After consecutive
-    // back/forward, the first run's NewSession can set hasReceivedNewSession
-    // while a newer history request is current; that run's FINISHED_EARLY
-    // must not drop historyNavigationEpoch for the still-pending request.
+    // Clear history replaceState only on a real finish for the latest
+    // requested run. An interrupt (FINISHED_EARLY_FOR_RERUN) from an older
+    // history run must not drop the flag for a newer history request that is
+    // still pending.
     if (
       this.hasReceivedNewSession &&
       status !== ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
@@ -2473,6 +2479,10 @@ export class App extends PureComponent<Props, State> {
 
     this.rerunEpoch += 1
     if (isHistoryNavigation) {
+      this.historyNavigationEpoch = this.rerunEpoch
+    } else if (isAutoRerun && this.historyNavigationEpoch !== null) {
+      // Keep replaceState across auto-reruns that coalesce with a pending
+      // history restore (matches backend is_history_navigation sticky union).
       this.historyNavigationEpoch = this.rerunEpoch
     }
 

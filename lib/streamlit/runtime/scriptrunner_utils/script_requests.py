@@ -412,13 +412,16 @@ class ScriptRequests:
                 cached_message_hashes=new_data.cached_message_hashes,
                 is_fragment_scoped_rerun=is_fragment_scoped_rerun,
                 is_auto_rerun=new_data.is_auto_rerun,
-                # Prefer the newer request's flag so query_string / widget_states
-                # stay consistent with URL-vs-widget precedence. A widget
-                # interaction that lands while a history rerun is still pending
-                # therefore drops the history bit (the restored query string is
-                # kept; stale widget state can win). Only keep a pending history
-                # bit across an auto-rerun, which should not discard URL restore
-                # for bound widgets.
+                # Use the newer request's history flag. Preserve a pending flag
+                # only across an automatic rerun so a timer cannot cancel URL
+                # restoration. A widget interaction that lands while a history
+                # rerun is still pending therefore drops the history bit: the
+                # coalesced run keeps the restored query_string, but stale
+                # widget state can win and will not be written back to the URL
+                # (has_param is already true). Leaving that desync until the
+                # next interaction is an accepted limitation; writing the
+                # surviving widget value back would fight the user's click and
+                # the restored URL.
                 is_history_navigation=(
                     new_data.is_history_navigation
                     or (

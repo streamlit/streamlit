@@ -3381,7 +3381,7 @@ class MockScriptRunCtx:
 
 
 class OmitQueryBoundWidgetStatesTest(DeltaGeneratorTestCase):
-    """Tests for history-navigation widget-state filtering."""
+    """Bound widgets are dropped from incoming proto state so the URL can restore them."""
 
     def setUp(self) -> None:
         super().setUp()
@@ -3413,7 +3413,17 @@ class OmitQueryBoundWidgetStatesTest(DeltaGeneratorTestCase):
         unbound.id = "plain_widget"
         unbound.string_value = "keep"
 
+        bound_callback = MagicMock()
         self.session_state._query_param_bound_widget_ids.add("bound_widget")
+        self.session_state._set_widget_metadata(
+            WidgetMetadata(
+                id="bound_widget",
+                deserializer=lambda v: v,
+                serializer=lambda v: v,
+                value_type="string_value",
+                callback=bound_callback,
+            )
+        )
         self.session_state._set_widget_metadata(
             WidgetMetadata(
                 id="plain_widget",
@@ -3422,6 +3432,8 @@ class OmitQueryBoundWidgetStatesTest(DeltaGeneratorTestCase):
                 value_type="string_value",
             )
         )
+        self.session_state._old_state["bound_widget"] = "previous"
+        self.session_state._old_state["plain_widget"] = "previous"
 
         self.session_state.on_script_will_rerun(
             widget_states, is_history_navigation=True
@@ -3429,6 +3441,7 @@ class OmitQueryBoundWidgetStatesTest(DeltaGeneratorTestCase):
 
         assert "bound_widget" not in self.session_state._new_widget_state
         assert self.session_state._new_widget_state["plain_widget"] == "keep"
+        bound_callback.assert_not_called()
 
 
 class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
@@ -3546,15 +3559,16 @@ class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
 
         assert seeded is True
         assert self.session_state._new_widget_state["$$ID-hash-my_widget"] == "default"
+        assert self.session_state._new_session_state["my_widget"] == "default"
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=MockScriptRunCtx(is_history_navigation=True),
     )
-    def test_history_navigation_restores_default_from_url_param(
+    def test_history_navigation_restores_default_when_param_equals_default(
         self, mock_ctx: MagicMock
     ) -> None:
-        """Browser back can restore a default value even when it is in the URL."""
+        """Browser back restores the default when the URL param equals the default."""
         self.session_state._old_state["$$ID-hash-my_widget"] = "stale_value"
         self.session_state._query_param_bound_widget_ids.add("$$ID-hash-my_widget")
         self.query_params.set_initial_query_params("my_widget=default")
@@ -3567,6 +3581,7 @@ class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
 
         assert seeded is True
         assert self.session_state._new_widget_state["$$ID-hash-my_widget"] == "default"
+        assert self.session_state._new_session_state["my_widget"] == "default"
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -3591,6 +3606,30 @@ class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
         assert (
             self.session_state._new_widget_state["$$ID-hash-my_widget"] == "url_value"
         )
+        assert self.session_state._new_session_state["my_widget"] == "url_value"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(is_history_navigation=True),
+    )
+    def test_history_navigation_missing_param_wins_over_code_set_session_state(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Missing URL param on history navigation restores the default over code."""
+        self.session_state._old_state["$$ID-hash-my_widget"] = "old_value"
+        self.session_state._new_session_state["my_widget"] = "code_value"
+        self.session_state._query_param_bound_widget_ids.add("$$ID-hash-my_widget")
+        self.query_params.set_initial_query_params("")
+
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        seeded = self.session_state._handle_query_param_binding(
+            metadata, "my_widget", "$$ID-hash-my_widget"
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["$$ID-hash-my_widget"] == "default"
+        assert self.session_state._new_session_state["my_widget"] == "default"
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",

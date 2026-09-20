@@ -39,7 +39,7 @@ name = st.text_input("Name", key="user_name")
 
 ## Syncing a widget to the URL (shareable links)
 
-To make a widget's value shareable through the page URL, pass `bind="query-params"` together with `key=`. Streamlit writes the value to the URL query string when it changes and restores it from the URL on load — **don't hand-roll `st.query_params`** for this. The `key=` becomes the query-parameter name.
+To make a widget's value shareable through the page URL, pass `bind="query-params"` together with `key=`. Streamlit writes the value to the URL query string when it changes and restores it from the URL on load and on browser back/forward — **don't hand-roll `st.query_params`** for this. The `key=` becomes the query-parameter name.
 
 ```python
 # GOOD: one widget, automatic URL sync. Picking "Newest" -> ?sort=Newest;
@@ -70,6 +70,7 @@ st.query_params["sort"] = sort  # don't do this when bind= handles sync
 
 Notes:
 - `bind="query-params"` requires `key=`. The only valid value is the exact string `"query-params"` (hyphen, not `"query_params"`); anything else is invalid. Not supported with `st.text_input(type="password")`.
+- Browser back/forward restores the bound value from the URL (or the widget default if the param is missing). That restore does not fire `on_change`. A missing param on history navigation also overrides a value assigned in `st.session_state` before the widget call; initial load leaves that assignment in place.
 - When the value equals the default, the param is dropped from the URL to keep it clean.
 - A bound param can't be set or deleted through `st.query_params` — change it programmatically by assigning to `st.session_state[key]` *before* the widget renders, or from an `on_change` callback. Assigning after the widget has already rendered on the same run raises `StreamlitAPIException` (see [Modifying state after widget creation](#modifying-state-after-widget-creation)). Do not mix `bind=` with manual `st.query_params` reads/writes.
 - Still render the value (e.g. `st.write(f"Sorting by: {sort}")`) if the app needs to show the current selection.

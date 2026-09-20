@@ -101,9 +101,10 @@ def test_bound_widget_follows_url_on_browser_back_and_forward(
 ) -> None:
     """Bound widgets restore sticky non-default URL values on back and forward.
 
-    Bound radio edits use replaceState, so Increment (pushState) is used to
-    create distinct history entries that each carry a different non-default
-    ``number`` value. Default ``1`` is never the restore target.
+    Selecting a radio option replaces the current history entry, so this test
+    clicks the Increment Query Param button to push distinct entries that each
+    carry a different non-default ``number``. The default ``1`` is never the
+    restore target.
 
     Regression test for https://github.com/streamlit/streamlit/issues/13853
     """
