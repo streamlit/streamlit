@@ -34,13 +34,13 @@ Items 1–5 are the proposed contract. The only unresolved design is
 [left/right](#leftright-fast-follow-open).
 
 1. **[API surface](#api-surface)** — theming for v1; page-config-only rejected; optional
-   `st.set_page_config` override later if demand (page_config wins).
-2. **[Which properties](#which-properties)** — top + bottom this ship; left/right fast
-   follow.
+   `st.set_page_config` override later if demand (page_config takes precedence).
+2. **[Which properties](#which-properties)** — top + bottom in this release; left/right
+   fast follow.
 3. **[Option naming](#option-naming)** — prefer `paddingTop` / `paddingBottom`;
    alternative `appPadding*`; reject `mainPadding*`.
-4. **[Sidebar support](#sidebar-support)** — yes via `[theme.sidebar]`; main does not
-   leak.
+4. **[Sidebar support](#sidebar-support)** — yes via `[theme.sidebar]`; main values do
+   not apply to the sidebar.
 5. **[How values compose](#how-values-compose)** — prefer **A**: top = gap from Streamlit
    chrome to the first author widget. Bottom = aesthetic only (no footer, no Cloud
    “Manage app” floor).
@@ -67,7 +67,8 @@ Hardcoded main padding in `StyledAppViewBlockContainer`:
 | Non-embedded | `6rem` (`8rem` with top nav). Ignores both props below | `10rem` when no `st.bottom`, else `1rem` (`spacing.lg`) |
 | Embedded | `6rem` if `showPadding` or `showToolbar`; else `4.5rem` if header or sidebar chrome; else `2.25rem` | `10rem` only if `showPadding` and no `st.bottom`; otherwise `1rem` |
 
-Columns use props into `StyledAppViewBlockContainer`, not URL option strings.
+Those values come from computed props on `StyledAppViewBlockContainer`, not from
+`embed_options` URL strings.
 
 - `showPadding` = `!isEmbed() || isPaddingDisplayed()` (`embed_options=show_padding`).
   Always true outside embeds → `10rem` bottom is the normal-app default. Field name
@@ -134,7 +135,7 @@ st.set_page_config(margin_top=20, margin_bottom=50)
   still not shared across apps; no sidebar section; int pixels vs rem; grows a broad
   command; undercuts advanced theming adoption
 
-**Option 3 — Density preset only** (`layout="tight"` / `theme.density = "compact"`):
+**Option 4 — Density preset only** (`layout="tight"` / `theme.density = "compact"`):
 tiny API, no fine control. Only if review wants a smaller first ship.
 
 **Recommendation:** Ship Option 1 only for v1. Reject Option 2 as the only surface. Do
@@ -163,7 +164,9 @@ page_config (`ForwardMsg.page_config_changed`, mid-script) are already orthogona
 | Element / widget gap | ❌ | Gap tokens, not page chrome |
 
 Fast follow: `paddingLeft` / `paddingRight` or `paddingX` after the pass below — not
-indefinite deferral, not invented in the implementation PR.
+indefinite deferral, not invented in the implementation PR. Until then those names are
+unrecognized config keys (console warning + silent no-op). Docs should say vertical-only
+for v1 and point at the fast follow so authors do not assume left/right already work.
 
 #### Left/right fast follow (open)
 
@@ -184,7 +187,7 @@ Before shipping side keys, decide:
    is the real ask.
 3. Prefer symmetric `paddingX` unless asymmetry is needed.
 4. Main `paddingLeft` is gutter *inside* the main column — not sidebar width.
-5. **Mins:** do not copy header overlay clearance sideways; do decide whether
+5. **Minimums:** do not copy header overlay clearance sideways; do decide whether
    wide≥centered still imposes a floor.
 
 ### Option naming
@@ -215,9 +218,11 @@ under `[theme.sidebar]`.
 
 #### Value grammar
 
-Non-negative **`rem` or `px` only** (`"0"`, `"0rem"`, `"0px"` OK; prefer documenting rem).
-Reject negatives, `%`, `vh`/`vw`, `calc()`, unitless non-zero, other CSS. Invalid → warn
-+ fall back (like `baseRadius`). Host themes: same grammar — no arbitrary CSS strings.
+Non-negative **`rem` or `px`**. Prefer documenting rem. Bare unitless numbers are pixels
+(same as `parseRadius` / `parseFontSize`), e.g. `"16"` → `16px`. `"0"`, `"0rem"`, and
+`"0px"` are all valid. Reject negatives, `%`, `vh`/`vw`, `calc()`, and other CSS.
+Invalid values emit a warning and fall back to the unset hardcoded defaults, as
+`baseRadius` does. Host themes: same grammar — no arbitrary CSS strings.
 
 `parseFontSize` today rejects `"0rem"` / `"0px"` (bare `"0"` → `"0px"`). Padding parsing
 must allow all three zeros.
@@ -226,6 +231,11 @@ must allow all three zeros.
 
 **`[theme]` and `[theme.sidebar]` only.** Not `[theme.light]` / `[theme.dark]` (or their
 `.sidebar` sections): per-appearance padding would change page height on toggle.
+
+An unrecognized key such as `theme.light.paddingTop` is not rejected at parse time —
+`_set_option` logs that it is not a valid config option and ignores the value. Authors
+who scope padding per appearance get a console warning and no visual change. Docs should
+call that out; a clearer warning is optional in the implementation PR.
 
 Some options are already section-limited (`base`, `baseFontSize`, `showSidebarBorder` →
 `[theme]` only). Exact `[theme]` + `[theme.sidebar]` without light/dark is a new combo
@@ -249,23 +259,27 @@ If scope must shrink, drop sidebar to a follow-up — don’t invent a second AP
 
 ### How values compose
 
-Unset → today’s path. Set → replace that path; do not add legacy aesthetic bumps
-(including main top-nav `+2rem`).
+Unset → today’s path (including embed `showPadding` / `showToolbar` gates). Set →
+replace that path for that axis; do not add legacy aesthetic bumps (including main
+top-nav `+2rem`). Embed URL options do **not** clamp a configured value — a theme
+`paddingTop = "4rem"` applies even in a compact embed. Hosts that need compact embeds
+should leave the keys unset (or inject a deliberately small value).
 
 #### What does a configured top value mean?
 
 Today’s `6rem` / `8rem` / embed totals are **CSS `padding-top`**, which also clears the
 overlay header. A public key cannot mean that total without authors knowing
-`headerHeight`. Three readings:
+`headerHeight` (today `3.75rem`). Three readings:
 
 **A: Gap from Streamlit chrome → first author widget** ✅ PREFERRED
 
 Author sets breathing room under chrome; Streamlit still reserves chrome that is there
-(main: `headerHeight` when shown; sidebar: logo/collapse, plus page nav when present).
-`"0"` = flush under chrome, never underlap.
+(main: `headerHeight` when `hasHeader` / `hasHeaderUserContent` is true; sidebar:
+logo/collapse, plus page nav when present). On screen, `"0"` = flush under chrome, never
+underlap (see [Print](#behavior) for the exception).
 
-- Pros: Matches #6336; one number with/without top nav or embed chrome; `"0"` safe; same
-  meaning on main and sidebar
+- Pros: Matches #6336; one number with/without top nav or embed chrome; `"0"` safe on
+  screen; same meaning on main and sidebar
 - Cons: Value ≠ raw CSS `padding-top`; docs must say “gap under chrome”
 
 **B: Absolute CSS `padding-top`**
@@ -295,9 +309,18 @@ bottom on localhost and Cloud.
 
 #### Main top (A)
 
-CSS `padding-top` = `headerHeight` + author if header shown, else author alone. Do not
-substitute the author string for today’s `6rem` / `8rem` / embed totals. `"0"` with a
-header → `headerHeight` total (flush under the bar).
+Pin “header shown” to AppView’s `hasHeader` (`hasHeaderUserContent`), not whether
+`<Header>` is mounted — that node stays in the tree, including the transparent empty
+embed case that should use author-alone padding.
+
+CSS `padding-top` = `headerHeight` + author when `hasHeader` is true, else author alone.
+Do not substitute the author string for today’s `6rem` / `8rem` / embed totals. `"0"`
+with a header → `headerHeight` total (flush under the bar). Today’s token is
+`3.75rem`, so the implied unset author gaps are ~`2.25rem` (no top nav) and ~`4.25rem`
+(with top nav) — that is what makes the “Airier than default” `4rem` example actually
+airier. When composing with a px author value, use CSS
+`calc(${theme.sizes.headerHeight} + ${authorPadding})` so mixed units need no runtime
+conversion.
 
 Non-embedded defaults: `6rem` without top nav, `8rem` with
 ([#11836](https://github.com/streamlit/streamlit/pull/11836)). The +`2rem` is aesthetic,
@@ -305,8 +328,8 @@ not a taller header — when set, do **not** also add it.
 
 | Situation | Behavior |
 | --------- | -------- |
-| unset | Today’s `6rem` / `8rem` / embed paths |
-| set | `headerHeight` + author if header; author alone if not |
+| unset | Today’s `6rem` / `8rem` / embed paths (`showPadding` / `showToolbar` gates apply) |
+| set | `headerHeight` + author when `hasHeader`; author alone if not (embed gates do not clamp) |
 
 `client.toolbarMode` / `ui.hideTopBar` still choose chrome; these keys do not hide it.
 
@@ -346,16 +369,23 @@ spacer already prevent scroll-under.
 | ------- | ---- |
 | `10rem` / `1rem` paths | What `paddingBottom` replaces |
 | `st.bottom` | Author sticky content; internals out of scope |
-| Cloud “Manage app” | Corner overlay — no padding floor |
+| Cloud “Manage app” | Host overlay in the bottom-right; this API does not reserve space for it |
 
 ### Behavior
 
 - **Defaults / inheritance:** unset → [baseline](#what-authors-get-today). Main does not
   flow to sidebar. v1 not light/dark-scoped.
-- **Host themes:** same grammar and section rules as `config.toml`.
+- **Host themes:** same grammar and section rules as `config.toml`. Hosts may set padding
+  only as a **shared layout value** (same effective padding in light and dark);
+  implementation must not honor appearance-split padding. Cover both host paths in the
+  implementation PR: preloaded `LIGHT_THEME` / `DARK_THEME` merge independently today
+  (`getMergedLightTheme` / `getMergedDarkTheme`), and runtime `SET_CUSTOM_THEME_CONFIG`
+  (`setImportedTheme`) builds a custom theme from the host payload alone — so app
+  `config.toml` padding disappears unless the host includes it (same as other theme keys).
 - **Print:** main `paddingTop` → absolute `2.25rem` (no added `headerHeight`). When set,
-  author value replaces that `2.25rem`. Small values may overlap a printed logo
-  (accepted; unset print is already below `headerHeight`). Bottom / sidebar unchanged.
+  author value replaces that `2.25rem` with no chrome reservation — so small values may
+  overlap a printed logo (accepted exception to reading A’s on-screen “never underlap”
+  rule; unset print is already below `headerHeight`). Bottom / sidebar unchanged.
 - **Small viewports:** value unchanged across breakpoints. No mobile floor in v1.
 - **No runtime Python setter** — [#14172](https://github.com/streamlit/streamlit/issues/14172)
 
@@ -394,11 +424,14 @@ paddingBottom = "4rem"
 No Figma here. Implementation PR: screenshots / e2e + automated tests.
 
 - Visual: default; small inset + header/toolbar (focus-ring); top nav without +`2rem`;
-  sidebar ± page nav; embed minimal; host theme grammar; `st.bottom` / chat input; print
-  (small top may overlap logo); optional Cloud corner + near-zero bottom
-- Automated: parse/fallback in `theme/utils.ts`; config tests like `baseRadius`; AppView
-  unset `6rem`/`8rem`; set = `headerHeight` + author (author alone if no header; no
-  top-nav bump); sidebar non-inheritance
+  sidebar ± page nav; embed minimal unset vs set (author not clamped); host theme
+  grammar + shared light/dark padding; `st.bottom` / chat input; print (small top may
+  overlap logo); optional Cloud corner + near-zero bottom
+- Automated: parse/fallback in `theme/utils.ts` (including bare numbers as px and all
+  three zeros); config tests like `baseRadius`; AppView unset `6rem`/`8rem`; set =
+  `headerHeight` + author when `hasHeader` (author alone if not; no top-nav bump; no
+  embed clamp); sidebar non-inheritance; host `LIGHT_THEME`/`DARK_THEME` and
+  `SET_CUSTOM_THEME_CONFIG` paths
 
 Screenshots supplement assertions; they do not replace them.
 
@@ -411,4 +444,4 @@ Screenshots supplement assertions; they do not replace them.
 | No new dependencies | Yes |
 | Metrics collected | No — no v1 telemetry |
 | Any security/legal impact? | No — validated CSS lengths only |
-| Any docs changes needed? | Yes — theming docs + `references/theme.md`; point #6336 workarounds here |
+| Any docs changes needed? | Yes — theming docs + `references/theme.md`; point #6336 workarounds here; state vertical-only for v1 and that left/right keys are unrecognized until the fast follow |
