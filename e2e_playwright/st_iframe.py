@@ -123,7 +123,7 @@ with st.container(key="iframe_alt"):
     st.iframe(
         "<p style='margin:0;padding:8px;'>Named embed</p>",
         height=60,
-        alt="Streamlit documentation",
+        alt="Named embed demo content",
     )
 with st.container(key="iframe_no_alt"):
     st.iframe("<p style='margin:0;padding:8px;'>Unnamed embed</p>", height=60)

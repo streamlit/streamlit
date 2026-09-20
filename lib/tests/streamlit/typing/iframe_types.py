@@ -92,6 +92,7 @@ if TYPE_CHECKING:
             width="stretch",
             height=600,
             tab_index=0,
+            alt="Streamlit documentation",
         ),
         DeltaGenerator,
     )

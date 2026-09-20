@@ -130,8 +130,8 @@ def test_iframe_alt_sets_accessible_name(app: Page):
     must keep the existing `"st.iframe"` fallback rather than an empty title.
     """
     labeled = get_element_by_key(app, "iframe_alt").get_by_test_id("stIFrame")
-    expect(labeled).to_have_attribute("title", "Streamlit documentation")
-    expect(labeled).to_have_accessible_name("Streamlit documentation")
+    expect(labeled).to_have_attribute("title", "Named embed demo content")
+    expect(labeled).to_have_accessible_name("Named embed demo content")
 
     unlabeled = get_element_by_key(app, "iframe_no_alt").get_by_test_id("stIFrame")
     expect(unlabeled).to_have_attribute("title", "st.iframe")

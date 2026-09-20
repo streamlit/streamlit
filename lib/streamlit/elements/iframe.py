@@ -347,9 +347,10 @@ class IframeMixin:
             ``None`` (default), the title stays ``"st.iframe"``.
 
             An empty or whitespace-only string is treated the same as ``None``
-            and is logged. An iframe must have a title, so ``alt=""`` is not
-            decorative (that meaning is reserved for ``st.image`` /
-            ``st.pyplot``).
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+            An iframe must have a title, so empty ``alt`` keeps the
+            ``"st.iframe"`` fallback rather than becoming decorative.
 
             Describe the embedded content rather than repeating text that is
             already visible on the page.
