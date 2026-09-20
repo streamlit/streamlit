@@ -26,7 +26,7 @@ from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 BASELINE_CHARTS = 9
 REGRESSION_CHART_INDEX = 9
 ISSUE_14050_CHART_INDEX = 10
-NUM_CHARTS = 14
+NUM_CHARTS = 17
 
 
 def test_altair_chart_displays_correctly(
@@ -280,3 +280,17 @@ def test_geoshape_lookup_and_inline_featurecollection_render(
 
     assert_snapshot(lookup_chart, name="st_altair_chart-geoshape_lookup")
     assert_snapshot(inline_chart, name="st_altair_chart-geoshape_inline_geojson")
+
+
+def test_altair_chart_alt_sets_accessible_name(app: Page):
+    """`alt` becomes the Vega graphics-document accessible name."""
+    labeled = get_vega_graphics_document(get_element_by_key(app, "altair_alt"))
+    expect(labeled).to_have_accessible_name("Bar chart of categories A and B")
+
+    unlabeled = get_vega_graphics_document(get_element_by_key(app, "altair_no_alt"))
+    expect(unlabeled).to_have_accessible_name("")
+
+    overridden = get_vega_graphics_document(
+        get_element_by_key(app, "altair_alt_overrides_description")
+    )
+    expect(overridden).to_have_accessible_name("Streamlit alt overrides description")

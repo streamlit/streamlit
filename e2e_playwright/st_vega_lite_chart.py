@@ -223,3 +223,32 @@ st.vega_lite_chart(
     width="stretch",
     theme="streamlit",
 )
+
+# Accessible-name cases for `alt` (appended so existing nth indexes stay stable).
+_alt_df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+_alt_spec = {
+    "mark": "bar",
+    "encoding": {
+        "x": {"field": "a", "type": "ordinal"},
+        "y": {"field": "b", "type": "quantitative"},
+    },
+}
+
+with st.container(key="vega_lite_alt"):
+    st.vega_lite_chart(
+        _alt_df,
+        _alt_spec,
+        alt="Bar chart of values by category",
+        width="content",
+    )
+
+with st.container(key="vega_lite_no_alt"):
+    st.vega_lite_chart(_alt_df, _alt_spec, width="content")
+
+with st.container(key="vega_lite_alt_overrides_description"):
+    st.vega_lite_chart(
+        _alt_df,
+        {**_alt_spec, "description": "Spec description"},
+        alt="Streamlit alt overrides description",
+        width="content",
+    )

@@ -1067,6 +1067,7 @@ describe("useVegaElementPreprocessor", () => {
       overrides: {
         vegaLiteTheme?: string
         useWidth?: boolean
+        alt?: string
       } = {}
     ): Record<string, unknown> => {
       const useWidth = overrides.useWidth ?? useContainerWidth
@@ -1084,6 +1085,7 @@ describe("useVegaElementPreprocessor", () => {
             vegaLiteTheme: overrides.vegaLiteTheme ?? "streamlit",
             useContainerWidth: useWidth,
             spec: JSON.stringify(specInput),
+            alt: overrides.alt,
           }),
         }
       )
@@ -1235,6 +1237,31 @@ describe("useVegaElementPreprocessor", () => {
 
       const specWithoutDatasets = renderSpec({ mark: "bar" })
       expect(specWithoutDatasets).not.toHaveProperty("datasets")
+    })
+
+    it("sets description from alt when alt is non-empty", () => {
+      const spec = renderSpec(
+        { mark: "bar" },
+        { alt: "Accessible chart name" }
+      )
+      expect(spec.description).toBe("Accessible chart name")
+    })
+
+    it("preserves author description when alt is unset", () => {
+      const spec = renderSpec({
+        mark: "bar",
+        description: "Author description",
+      })
+      expect(spec.description).toBe("Author description")
+    })
+
+    it("overrides author description when alt is set", () => {
+      const spec = renderSpec(
+        { mark: "bar", description: "Author description" },
+        { alt: "Streamlit alt" }
+      )
+      expect(spec.description).toBe("Streamlit alt")
+      expect(spec.description).not.toBe("Author description")
     })
   })
 })

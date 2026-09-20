@@ -348,3 +348,20 @@ with st.container(key="altair_geoshape_inline"):
         .properties(width=400, height=200)
     )
     st.altair_chart(inline_chart, width="content")
+
+# Accessible-name cases for `alt` (appended so existing nth indexes stay stable).
+_alt_df = pd.DataFrame({"a": ["A", "B"], "b": [1, 2]})
+_alt_chart = alt.Chart(_alt_df).mark_bar().encode(x="a", y="b")
+
+with st.container(key="altair_alt"):
+    st.altair_chart(_alt_chart, alt="Bar chart of categories A and B", width="content")
+
+with st.container(key="altair_no_alt"):
+    st.altair_chart(_alt_chart, width="content")
+
+with st.container(key="altair_alt_overrides_description"):
+    st.altair_chart(
+        _alt_chart.properties(description="Altair description"),
+        alt="Streamlit alt overrides description",
+        width="content",
+    )

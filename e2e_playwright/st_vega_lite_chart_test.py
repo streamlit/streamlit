@@ -16,10 +16,14 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import check_top_level_class, get_button
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    get_button,
+    get_element_by_key,
+)
 from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 
-VEGA_LITE_CHART_COUNT = 12
+VEGA_LITE_CHART_COUNT = 15
 
 
 def test_vega_lite_chart(app: Page):
@@ -143,3 +147,17 @@ def test_vega_lite_chart_updates_with_slightly_different_data(
         vega_lite_charts.nth(11),
         name="st_vega_lite_chart-after_update",
     )
+
+
+def test_vega_lite_chart_alt_sets_accessible_name(app: Page):
+    """`alt` becomes the Vega graphics-document accessible name."""
+    labeled = get_vega_graphics_document(get_element_by_key(app, "vega_lite_alt"))
+    expect(labeled).to_have_accessible_name("Bar chart of values by category")
+
+    unlabeled = get_vega_graphics_document(get_element_by_key(app, "vega_lite_no_alt"))
+    expect(unlabeled).to_have_accessible_name("")
+
+    overridden = get_vega_graphics_document(
+        get_element_by_key(app, "vega_lite_alt_overrides_description")
+    )
+    expect(overridden).to_have_accessible_name("Streamlit alt overrides description")

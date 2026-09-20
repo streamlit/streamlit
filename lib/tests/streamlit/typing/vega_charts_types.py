@@ -199,6 +199,8 @@ if TYPE_CHECKING:
         altair_chart(chart, on_select="ignore", selection_mode="points"),
         DeltaGenerator,
     )
+    assert_type(altair_chart(chart, on_select="ignore", alt="Chart"), DeltaGenerator)
+    assert_type(altair_chart(chart, on_select="ignore", alt=None), DeltaGenerator)
 
     # on_select="rerun" / callable -> VegaLiteState
     assert_type(altair_chart(chart, on_select="rerun"), VegaLiteState)
@@ -209,6 +211,7 @@ if TYPE_CHECKING:
         altair_chart(chart, on_select="rerun", selection_mode=["p1", "p2"]),
         VegaLiteState,
     )
+    assert_type(altair_chart(chart, on_select="rerun", alt="Chart"), VegaLiteState)
     vega_lite_state = altair_chart(chart, on_select="rerun")
     assert_type(vega_lite_state.selection, ReadOnlyAttributeDictionary)
     assert_type(vega_lite_state["selection"], ReadOnlyAttributeDictionary)
@@ -222,6 +225,7 @@ if TYPE_CHECKING:
             use_container_width=None,
             on_select="rerun",
             selection_mode=("p1", "p2"),
+            alt="Selectable chart",
         ),
         VegaLiteState,
     )
@@ -242,12 +246,18 @@ if TYPE_CHECKING:
     assert_type(vega_lite_chart(data, spec, theme="streamlit"), DeltaGenerator)
     assert_type(vega_lite_chart(data, spec, key=None), DeltaGenerator)
     assert_type(vega_lite_chart(data, spec, use_container_width=False), DeltaGenerator)
+    assert_type(vega_lite_chart(data, spec, alt="Chart"), DeltaGenerator)
+    assert_type(vega_lite_chart(data, spec, alt=None), DeltaGenerator)
 
     # on_select="rerun" / callable -> VegaLiteState
     assert_type(vega_lite_chart(data, spec, on_select="rerun"), VegaLiteState)
     assert_type(vega_lite_chart(data, spec, on_select=my_callback), VegaLiteState)
     assert_type(
         vega_lite_chart(data, spec, on_select="rerun", selection_mode="points"),
+        VegaLiteState,
+    )
+    assert_type(
+        vega_lite_chart(data, spec, on_select="rerun", alt="Chart"),
         VegaLiteState,
     )
     assert_type(
@@ -261,6 +271,7 @@ if TYPE_CHECKING:
             use_container_width=None,
             on_select="rerun",
             selection_mode=["p1", "p2"],
+            alt="Selectable chart",
         ),
         VegaLiteState,
     )
