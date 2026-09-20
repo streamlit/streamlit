@@ -155,7 +155,8 @@ def test_vega_lite_chart_alt_sets_accessible_name(app: Page):
     expect(labeled).to_have_accessible_name("Bar chart of values by category")
 
     unlabeled = get_vega_graphics_document(get_element_by_key(app, "vega_lite_no_alt"))
-    expect(unlabeled).to_have_accessible_name("")
+    # vega-embed's default when the chart has no description.
+    expect(unlabeled).to_have_accessible_name("Vega visualization")
 
     overridden = get_vega_graphics_document(
         get_element_by_key(app, "vega_lite_alt_overrides_description")
