@@ -723,6 +723,55 @@ describe("Widget State Manager", () => {
       expect(widgetMgr.allowFormEnterToSubmit(formId)).toBe(false)
     })
 
+    it("keeps declaration order when every submit button remounts", () => {
+      const formId = "form"
+      const firstButton = new ButtonProto({ id: "first", disabled: true })
+      const secondButton = new ButtonProto({ id: "second" })
+      widgetMgr.addSubmitButton(formId, firstButton)
+      widgetMgr.addSubmitButton(formId, secondButton)
+      widgetMgr.removeSubmitButton(formId, firstButton)
+      widgetMgr.removeSubmitButton(formId, secondButton)
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "first", disabled: true })
+      )
+      widgetMgr.addSubmitButton(formId, new ButtonProto({ id: "second" }))
+      const submitButtons = formsData.submitButtons.get(formId)
+      expect(submitButtons?.map(button => button.id)).toEqual([
+        "first",
+        "second",
+      ])
+      expect(widgetMgr.allowFormEnterToSubmit(formId)).toBe(false)
+    })
+
+    it("appends a new button instead of filling a permanently removed slot", () => {
+      const formId = "form"
+      const firstButton = new ButtonProto({ id: "first" })
+      const secondButton = new ButtonProto({ id: "second" })
+      widgetMgr.addSubmitButton(formId, firstButton)
+      widgetMgr.addSubmitButton(formId, secondButton)
+      widgetMgr.removeSubmitButton(formId, firstButton)
+      widgetMgr.addSubmitButton(formId, new ButtonProto({ id: "third" }))
+      const submitButtons = formsData.submitButtons.get(formId)
+      expect(submitButtons?.map(button => button.id)).toEqual([
+        "second",
+        "third",
+      ])
+    })
+
+    it("appends in add order after the form list becomes empty", () => {
+      const formId = "form"
+      widgetMgr.addSubmitButton(formId, new ButtonProto({ id: "first" }))
+      widgetMgr.removeSubmitButton(formId, new ButtonProto({ id: "first" }))
+      widgetMgr.addSubmitButton(formId, new ButtonProto({ id: "second" }))
+      widgetMgr.addSubmitButton(formId, new ButtonProto({ id: "first" }))
+      const submitButtons = formsData.submitButtons.get(formId)
+      expect(submitButtons?.map(button => button.id)).toEqual([
+        "second",
+        "first",
+      ])
+    })
+
     it("replaces an existing submit button in place by id", () => {
       const formId = "form"
       widgetMgr.addSubmitButton(

@@ -337,10 +337,11 @@ export class WidgetStateManager {
   private scheduledFragmentId: string | undefined
 
   /**
-   * Index to restore when a form submit button is removed and immediately
-   * re-added. React runs effect cleanup (remove) before the next effect (add)
-   * when a button remounts; without this, ``addSubmitButton`` would append and
-   * change which button is treated as first for enter-to-submit.
+   * Live-list index at removal for a form submit button that may remount.
+   * These indices are not a snapshot of the full original list. They are
+   * discarded when the form's list becomes empty so a full remount batch
+   * re-adds buttons in declaration order. Without this, {@link addSubmitButton}
+   * would append and change which button is treated as first for enter-to-submit.
    */
   private readonly pendingSubmitButtonInsertIndex = new Map<string, number>()
 
@@ -1063,13 +1064,11 @@ export class WidgetStateManager {
   }
 
   /**
-   * Called by FormSubmitButton on creation. Add the SubmitButtonProto for
-   * the given form and update FormsData.
-   *
-   * If a button with the same id is already registered, it is replaced in
-   * place. If it was just removed (React remount), it is re-inserted at its
-   * previous index so enter-to-submit still keys off the first declared
-   * submit button.
+   * Registers or updates a form submit button while preserving Enter-to-submit
+   * order. If a button with the same id is already registered, it is replaced
+   * in place. If it was just removed (React remount of a subset of buttons),
+   * it is re-inserted at its previous live-list index so enter-to-submit still
+   * keys off the first declared submit button.
    */
   public addSubmitButton(
     formId: string,
@@ -1102,8 +1101,8 @@ export class WidgetStateManager {
   }
 
   /**
-   * Called by FormSubmitButton on creation. Remove the SubmitButtonProto for
-   * the given form, and update FormsData.
+   * Called by FormSubmitButton on unmount/cleanup. Remove the SubmitButtonProto
+   * for the given form, and update FormsData.
    */
   public removeSubmitButton(
     formId: string,
@@ -1119,8 +1118,14 @@ export class WidgetStateManager {
       return
     }
 
-    this.setPendingSubmitButtonInsertIndex(formId, submitButtonProto, index)
     const copySubmitButtons = submitButtons.filter((_, i) => i !== index)
+    if (copySubmitButtons.length === 0) {
+      // Full remount batch: React runs every cleanup then every setup.
+      // Discard shrinking-list indices so adds append in declaration order.
+      this.clearPendingSubmitButtonInsertIndicesForForm(formId)
+    } else {
+      this.setPendingSubmitButtonInsertIndex(formId, submitButtonProto, index)
+    }
     this.setSubmitButtons(formId, copySubmitButtons)
   }
 
@@ -1128,15 +1133,16 @@ export class WidgetStateManager {
     submitButtons: SubmitButtonProto[],
     submitButtonProto: SubmitButtonProto
   ): number {
+    const byReference = submitButtons.indexOf(submitButtonProto)
+    if (byReference >= 0) {
+      return byReference
+    }
     if (submitButtonProto.id) {
-      const byId = submitButtons.findIndex(
+      return submitButtons.findIndex(
         button => button.id === submitButtonProto.id
       )
-      if (byId >= 0) {
-        return byId
-      }
     }
-    return submitButtons.indexOf(submitButtonProto)
+    return -1
   }
 
   private submitButtonKey(
@@ -1179,16 +1185,19 @@ export class WidgetStateManager {
     }
   }
 
+  private clearPendingSubmitButtonInsertIndicesForForm(formId: string): void {
+    const prefix = `${formId}::`
+    for (const key of [...this.pendingSubmitButtonInsertIndex.keys()]) {
+      if (key.startsWith(prefix)) {
+        this.pendingSubmitButtonInsertIndex.delete(key)
+      }
+    }
+  }
+
   private setSubmitButtons(
     formId: string,
     submitButtons: Array<SubmitButtonProto>
   ): void {
-    if (submitButtons.length < 0) {
-      throw new Error(
-        `Bad submitButtons length ${submitButtons.length} (must be >= 0)`
-      )
-    }
-
     this.updateFormsData(draft => {
       draft.submitButtons.set(formId, submitButtons)
     })

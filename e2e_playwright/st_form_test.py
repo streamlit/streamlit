@@ -25,6 +25,7 @@ from e2e_playwright.shared.app_utils import (
     expect_label_truncated,
     expect_prefixed_markdown,
     get_element_by_key,
+    get_form_submit_button,
     reset_hovering,
     select_selectbox_option,
     type_time,
@@ -197,15 +198,13 @@ def test_form_submits_on_enter(app: Page):
 def test_form_disabled_submit_on_enter(app: Page):
     """Tests that submit on enter does not work when 1st submit button disabled."""
     form_7 = app.get_by_test_id("stForm").nth(6)
-    # Wait until the first submit button is registered as disabled so
-    # enter-to-submit instructions are computed against that state.
+    # Both submit buttons must be rendered with the first one disabled before
+    # checking enter-to-submit instructions.
     expect(form_7.get_by_test_id("stFormSubmitButton")).to_have_count(2)
     expect(
-        form_7.get_by_test_id("stFormSubmitButton").first.locator("button")
+        get_form_submit_button(form_7, "Form 7 - Disables Submit on Enter")
     ).to_be_disabled()
-    expect(
-        form_7.get_by_test_id("stFormSubmitButton").last.locator("button")
-    ).to_be_enabled()
+    expect(get_form_submit_button(form_7, "Form 7 - Second Submit")).to_be_enabled()
 
     text_input = form_7.get_by_test_id("stTextInput").locator("input")
     text_input.fill("Test")

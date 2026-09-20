@@ -65,8 +65,12 @@ export const FormSubmitButton = memo(function FormSubmitButton(
 
   useEffect(() => {
     widgetMgr.addSubmitButton(formId, element)
-    return () => widgetMgr.removeSubmitButton(formId, element)
   }, [widgetMgr, formId, element])
+
+  useEffect(() => {
+    return () => widgetMgr.removeSubmitButton(formId, element)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- omit element so proto updates replace in place via addSubmitButton
+  }, [widgetMgr, formId])
 
   const handleSubmit = useCallback((): void => {
     if (isDisabled) {

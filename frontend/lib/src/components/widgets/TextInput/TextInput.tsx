@@ -231,12 +231,21 @@ function TextInput({
 
   const { placeholder, formId, icon, maxChars } = element
   const inForm = isInForm({ formId })
+  // Subscribe so enter-to-submit instructions refresh when form buttons change.
+  // FormsContext is optional here because unit tests render without it.
+  const formsData = useContext(FormsContext)?.formsData
   // protobufjs optional uint32 is `null` when unset (prototype default), not
   // `undefined`. `0` is a live-on immediate commit and must not be treated as off.
   // isLive = configured on the proto. liveEnabled = configured and outside a form.
   const isLive = notNullOrUndefined(element.liveDebounceMs)
   const liveDebounceMs = element.liveDebounceMs ?? 0
   const liveEnabled = isLive && !inForm
+  const allowEnterToSubmit = useMemo(() => {
+    if (!inForm) {
+      return dirty && !isLive
+    }
+    return widgetMgr.allowFormEnterToSubmit(formId)
+  }, [inForm, dirty, isLive, widgetMgr, formId, formsData])
 
   // Skip script-driven setValue that would clobber live edits:
   // - dirty: keystrokes not yet committed. Drop the write entirely rather
@@ -540,16 +549,8 @@ function TextInput({
     return true
   }
 
-  // Re-render when form submit buttons are registered or updated so
-  // enter-to-submit instructions stay in sync with allowFormEnterToSubmit.
-  useContext(FormsContext)
-
   // Show "Please enter" instructions if in a form & allowed, or not in form
   // and dirty. Hide "Press Enter to apply" when live updates are on.
-  const allowEnterToSubmit = inForm
-    ? widgetMgr.allowFormEnterToSubmit(formId)
-    : dirty && !isLive
-
   const shouldShowInstructions =
     focused && width > convertRemToPx(theme.breakpoints.hideWidgetDetails)
 

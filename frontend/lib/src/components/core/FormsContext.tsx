@@ -25,7 +25,8 @@ export interface FormsContextProps {
    * when forms are updated. This FormsData instance should be updated
    * from that callback.
    *
-   * Consumed by: FormSubmitButton, TextInput
+   * Consumers subscribe to re-render when forms change: FormSubmitButton reads
+   * upload state, and TextInput refreshes its enter-to-submit hint.
    * @see FormSubmitButton
    * @see TextInput
    */
