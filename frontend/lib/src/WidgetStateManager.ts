@@ -1187,7 +1187,7 @@ export class WidgetStateManager {
 
   private clearPendingSubmitButtonInsertIndicesForForm(formId: string): void {
     const prefix = `${formId}::`
-    for (const key of [...this.pendingSubmitButtonInsertIndex.keys()]) {
+    for (const key of this.pendingSubmitButtonInsertIndex.keys()) {
       if (key.startsWith(prefix)) {
         this.pendingSubmitButtonInsertIndex.delete(key)
       }
