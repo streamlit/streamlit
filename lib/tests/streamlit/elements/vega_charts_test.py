@@ -1713,6 +1713,18 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         assert proto.alt == "Streamlit alt"
         assert json.loads(proto.spec)["description"] == "Spec description"
 
+    def test_vega_lite_chart_alt_handles_unhashable_description(self):
+        """Invalid non-hashable description must not crash when alt is set."""
+        with patch("streamlit.elements.vega_charts._LOGGER.warning") as mock_warning:
+            st.vega_lite_chart(
+                {"mark": "rect", "description": ["not", "a", "string"]},
+                alt="Streamlit alt",
+            )
+            mock_warning.assert_called_once()
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.alt == "Streamlit alt"
+
     def test_spec_in_arg1(self):
         """Test that it can be called with spec as the 1st arg."""
         st.vega_lite_chart({"mark": "rect"})

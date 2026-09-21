@@ -2081,9 +2081,9 @@ class VegaChartsMixin:
 
         alt : str or None
             A description of the chart for screen readers and other assistive
-            technologies. If this is ``None`` (default), Streamlit does not
-            provide an accessible name unless the chart already sets a
-            Vega-Lite ``description``.
+            technologies. If this is ``None`` (default), the chart keeps its
+            default Vega accessible name unless the spec sets a top-level
+            ``description``.
 
             An empty or whitespace-only string is treated the same as ``None``
             and is logged so authors notice the dual meaning of ``alt=""``
@@ -2118,7 +2118,7 @@ class VegaChartsMixin:
         ...     .encode(x="a", y="b", size="c", color="c", tooltip=["a", "b", "c"])
         ... )
         >>>
-        >>> st.altair_chart(chart)
+        >>> st.altair_chart(chart, alt="Scatter plot of a vs b sized by c")
 
         .. output::
            https://doc-vega-lite-chart.streamlit.app/
@@ -2332,9 +2332,9 @@ class VegaChartsMixin:
 
         alt : str or None
             A description of the chart for screen readers and other assistive
-            technologies. If this is ``None`` (default), Streamlit does not
-            provide an accessible name unless the chart already sets a
-            Vega-Lite ``description``.
+            technologies. If this is ``None`` (default), the chart keeps its
+            default Vega accessible name unless the spec sets a top-level
+            ``description``.
 
             An empty or whitespace-only string is treated the same as ``None``
             and is logged so authors notice the dual meaning of ``alt=""``
@@ -2373,6 +2373,7 @@ class VegaChartsMixin:
         ...             "color": {"field": "c", "type": "quantitative"},
         ...         },
         ...     },
+        ...     alt="Scatter plot of a vs b sized by c",
         ... )
 
         .. output::
@@ -2552,7 +2553,9 @@ class VegaChartsMixin:
 
         normalized_alt = normalize_alt(alt)
         existing_description = spec.get("description")
-        if normalized_alt is not None and existing_description not in {None, ""}:
+        # Truthiness avoids TypeError if description is a non-hashable invalid
+        # value (e.g. a list); None and "" stay silent.
+        if normalized_alt is not None and existing_description:
             _LOGGER.warning(
                 "The Vega-Lite / Altair chart already sets description=%r. "
                 "The alt=%r parameter overrides it for the accessible name.",
@@ -2562,10 +2565,11 @@ class VegaChartsMixin:
             )
 
         # Prevent the spec from changing across reruns:
-        # Keep Streamlit `alt` off the hashed JSON (applied on the frontend).
         vega_lite_proto.spec = _stabilize_vega_json_spec(json.dumps(spec))
 
         if normalized_alt is not None:
+            # Carry alt on its own proto field so it is not baked into the
+            # hashed spec JSON (applied on the frontend as description).
             vega_lite_proto.alt = normalized_alt
 
         if use_container_width is not None:
