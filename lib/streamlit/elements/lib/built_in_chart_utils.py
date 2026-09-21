@@ -261,8 +261,9 @@ def generate_chart(
             )
         )
 
-    # Bind interactive() results before returning. Altair 6.3 imports Self from
-    # typing (3.11+), so mypy with python_version=3.10 treats those methods as Any.
+    # Altair 6.3 annotates these methods with `typing.Self`, which mypy resolves to
+    # `Any` under `python_version = "3.10"`. Assign the results to typed locals so
+    # the returns don't trip mypy's `warn_return_any`.
     if (
         chart_type is ChartType.LINE
         and x_column is not None
