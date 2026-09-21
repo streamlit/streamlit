@@ -826,3 +826,117 @@ describe("step mode (type=STEP)", () => {
     expect(screen.queryByText("— running")).not.toBeInTheDocument()
   })
 })
+
+describe("Expander query param binding", () => {
+  it("registers query param binding on mount when queryParamKey is set", () => {
+    const widgetMgr = createWidgetMgr()
+    const props = getProps(
+      {
+        id: "expander-qp",
+        queryParamKey: "my_exp",
+        defaultExpanded: false,
+        expanded: true,
+      },
+      { widgetMgr }
+    )
+    vi.spyOn(widgetMgr, "registerQueryParamBinding")
+
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    expect(widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      "expander-qp",
+      "my_exp",
+      "bool_value",
+      false,
+      false,
+      undefined
+    )
+  })
+
+  it("uses defaultExpanded rather than expanded as the binding default", () => {
+    const widgetMgr = createWidgetMgr()
+    const props = getProps(
+      {
+        id: "expander-qp",
+        queryParamKey: "my_exp",
+        defaultExpanded: true,
+        expanded: false,
+      },
+      { widgetMgr }
+    )
+    vi.spyOn(widgetMgr, "registerQueryParamBinding")
+
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    expect(widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      "expander-qp",
+      "my_exp",
+      "bool_value",
+      true,
+      false,
+      undefined
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const widgetMgr = createWidgetMgr()
+    const props = getProps(
+      {
+        id: "expander-qp",
+        queryParamKey: "my_exp",
+      },
+      { widgetMgr }
+    )
+    const unregisterSpy = vi.spyOn(widgetMgr, "unregisterQueryParamBinding")
+
+    const { unmount } = render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    unregisterSpy.mockClear()
+
+    unmount()
+
+    expect(widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      "expander-qp"
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const widgetMgr = createWidgetMgr()
+    const props = getProps({ id: "expander-qp" }, { widgetMgr })
+    vi.spyOn(widgetMgr, "registerQueryParamBinding")
+
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    expect(widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+
+  it("does not register query param binding without widget id", () => {
+    const widgetMgr = createWidgetMgr()
+    const props = getProps({ queryParamKey: "my_exp" }, { widgetMgr })
+    vi.spyOn(widgetMgr, "registerQueryParamBinding")
+
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    expect(widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+})
