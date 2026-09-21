@@ -48,9 +48,9 @@ export function WidgetLabel({
   labelVisibility,
   htmlFor,
   required,
-}: LabelProps): React.ReactElement {
+}: LabelProps): React.ReactElement | null {
   if (isNullOrUndefined(label)) {
-    return <></>
+    return null
   }
 
   const labelIsVisible =

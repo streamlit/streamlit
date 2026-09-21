@@ -88,7 +88,7 @@
     "lodash-es": "^4.18.1",
     "loglevel": "^1.9.2",
     "mapbox-gl": "^1.13.2",
-    "marked": "^18.0.12",
+    "marked": "^18.0.13",
     "mdast-util-find-and-replace": "^3.0.2",
     "mermaid": "^11.17.2",
     "moment": "^2.30.1",
@@ -145,7 +145,7 @@
   ],
   "devDependencies": {
     "@swc/plugin-emotion": "^16.0.0",
-    "@testing-library/dom": "^10.4.1",
+    "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
@@ -168,7 +168,7 @@
     "typesync": "^0.14.3",
     "vite": "^8.3.0",
     "vite-plugin-dts": "^5.1.0",
-    "vitest": "^5.0.0",
+    "vitest": "^5.0.1",
     "vitest-fetch-mock": "^0.4.5"
   },
   "typesync": {

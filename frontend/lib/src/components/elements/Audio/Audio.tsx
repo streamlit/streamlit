@@ -40,7 +40,7 @@ function Audio({
 }: Readonly<AudioProps>): ReactElement {
   const audioRef = useRef<HTMLAudioElement>(null)
 
-  const { startTime, endTime, loop, autoplay } = element
+  const { startTime, endTime, loop, autoplay, alt } = element
 
   const preventAutoplay = useMemo<boolean>(() => {
     if (!element.id) {
@@ -174,6 +174,10 @@ function Audio({
         data-testid="stAudio"
         ref={audioRef}
         controls
+        // Only set an accessible name when the author provided one. Blank input
+        // is treated as absent: aria-label=" " computes to an empty accessible
+        // name, which is worse than having no aria-label at all.
+        aria-label={alt?.trim() || undefined}
         autoPlay={autoplay && !preventAutoplay}
         src={uri}
         onError={handleAudioError}

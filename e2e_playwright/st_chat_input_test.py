@@ -444,6 +444,73 @@ def test_app_with_bottom_chat_input(
     )
 
 
+def test_bottom_chat_input_initial_scroll(app: Page, app_base_url: str):
+    """Test that only automatic bottom positioning activates app autoscroll."""
+    app.set_viewport_size({"width": 1280, "height": 720})
+
+    def expect_main_to_stay_at_top(last_content: str) -> None:
+        expect(app.get_by_test_id("stAppScrollToBottomContainer")).not_to_be_attached()
+        expect(get_element_by_key(app, "initial_scroll")).to_be_visible()
+        expect(app.get_by_text("Dashboard heading", exact=True)).to_be_in_viewport()
+        expect(app.get_by_text(last_content, exact=True)).not_to_be_in_viewport()
+
+        main = app.get_by_test_id("stMain")
+        consecutive_zero_reads = 0
+
+        def scroll_stayed_at_top() -> bool:
+            nonlocal consecutive_zero_reads
+            if main.evaluate("(element) => element.scrollTop") != 0:
+                consecutive_zero_reads = 0
+                return False
+
+            consecutive_zero_reads += 1
+            return consecutive_zero_reads >= 5
+
+        wait_until(app, scroll_stayed_at_top, timeout=2000, interval=100)
+
+    def expect_main_to_start_at_bottom(last_content: str) -> None:
+        expect(app.get_by_test_id("stAppScrollToBottomContainer")).to_be_attached()
+        expect(app.get_by_text("Dashboard heading", exact=True)).not_to_be_in_viewport()
+        expect(app.get_by_text(last_content, exact=True)).to_be_in_viewport()
+
+    goto_chat_input(app, "initial_scroll")
+    expect_main_to_stay_at_top("Dashboard row 29")
+
+    # Explicit st.bottom placement must not opt into app autoscroll, even when
+    # the main area contains chat messages.
+    goto_app(
+        app,
+        build_app_url(
+            app_base_url,
+            query={"key": "initial_scroll", "messages": "true"},
+        ),
+    )
+    expect_main_to_stay_at_top("Transcript message 29")
+
+    # A top-level st.chat_input retains its established autoscroll behavior.
+    goto_app(
+        app,
+        build_app_url(
+            app_base_url,
+            query={"key": "initial_scroll", "placement": "automatic"},
+        ),
+    )
+    expect_main_to_start_at_bottom("Dashboard row 29")
+
+    goto_app(
+        app,
+        build_app_url(
+            app_base_url,
+            query={
+                "key": "initial_scroll",
+                "messages": "true",
+                "placement": "automatic",
+            },
+        ),
+    )
+    expect_main_to_start_at_bottom("Transcript message 29")
+
+
 @use_chat_input("bottom_max_chars")
 def test_submit_hover_state_with_input_value(
     themed_app: Page, assert_snapshot: ImageCompareFunction

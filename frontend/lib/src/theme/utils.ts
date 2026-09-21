@@ -42,12 +42,13 @@ import { fonts } from "./primitives/typography"
 import { baseTheme, darkTheme, lightTheme } from "./themeConfigs"
 import type {
   CachedTheme,
+  DerivedColors,
   EmotionTheme,
+  EmotionThemeColors,
   ThemeConfig,
   ThemeSelection,
   ThemeSpacing,
 } from "./types"
-import { DerivedColors, EmotionThemeColors } from "./types"
 
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"

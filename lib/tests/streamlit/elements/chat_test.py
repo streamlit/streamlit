@@ -189,9 +189,10 @@ class ChatTest(DeltaGeneratorTestCase):
         """Test that it selects inline position when nested in any of layout containers."""
         container_call().chat_input()
 
+        message = self.get_message_from_queue()
+        assert message.metadata.delta_path[0] != RootContainerProto.BOTTOM
         assert (
-            self.get_message_from_queue().metadata.delta_path[0]
-            != RootContainerProto.BOTTOM
+            message.delta.new_element.chat_input.is_auto_positioned_at_bottom is False
         )
 
     @parameterized.expand(
@@ -204,9 +205,30 @@ class ChatTest(DeltaGeneratorTestCase):
         """Test that it selects bottom position when called in the main dg."""
         container_call().chat_input()
 
+        message = self.get_message_from_queue()
+        assert message.metadata.delta_path[0] == RootContainerProto.BOTTOM
+        assert message.delta.new_element.chat_input.is_auto_positioned_at_bottom is True
+
+    @parameterized.expand(
+        [
+            ("context_manager", True),
+            ("method_call", False),
+        ]
+    )
+    def test_chat_input_in_explicit_bottom_is_not_auto_positioned(
+        self, _name: str, use_context_manager: bool
+    ) -> None:
+        """Test that explicit bottom placement is not automatic positioning."""
+        if use_context_manager:
+            with st.bottom:
+                st.chat_input()
+        else:
+            st.bottom.chat_input()
+
+        message = self.get_message_from_queue()
+        assert message.metadata.delta_path[0] == RootContainerProto.BOTTOM
         assert (
-            self.get_message_from_queue().metadata.delta_path[0]
-            == RootContainerProto.BOTTOM
+            message.delta.new_element.chat_input.is_auto_positioned_at_bottom is False
         )
 
     def test_supports_programmatic_value_assignment(self):

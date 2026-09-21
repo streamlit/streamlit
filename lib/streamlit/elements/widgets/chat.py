@@ -1070,10 +1070,9 @@ class ChatMixin:
                 "`st.chat_input()` can't be used in a `st.form()`."
             )
 
-        # Determine the position of the chat input:
-        # Use bottom position if chat input is within the main container
-        # either directly or within a vertical container. If it has any
-        # other container types as parents, we use inline position.
+        # Streamlit auto-moves a chat input into the bottom container only when it is
+        # called from the main app body with no layout ancestors. Calls already inside
+        # `st.bottom` or other containers stay where they were created.
         ancestor_block_types = set(self.dg._active_dg._ancestor_block_types)
         if (
             self.dg._active_dg._root_container == RootContainer.MAIN
@@ -1086,6 +1085,7 @@ class ChatMixin:
         chat_input_proto = ChatInputProto()
         chat_input_proto.id = element_id
         chat_input_proto.placeholder = str(placeholder)
+        chat_input_proto.is_auto_positioned_at_bottom = position == "bottom"
 
         if max_chars is not None:
             chat_input_proto.max_chars = max_chars
