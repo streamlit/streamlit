@@ -3494,7 +3494,7 @@ __metadata:
     vite: "npm:^8.3.0"
     vite-bundle-analyzer: "npm:^1.3.9"
     vite-plugin-terminal: "npm:^1.4.0"
-    vitest: "npm:^5.0.0"
+    vitest: "npm:^5.0.1"
   languageName: unknown
   linkType: soft
 
@@ -3508,7 +3508,7 @@ __metadata:
     typesync: "npm:^0.14.3"
     vite: "npm:^8.3.0"
     vite-plugin-dts: "npm:^5.1.0"
-    vitest: "npm:^5.0.0"
+    vitest: "npm:^5.0.1"
   languageName: unknown
   linkType: soft
 
@@ -3524,7 +3524,7 @@ __metadata:
     typesync: "npm:^0.14.3"
     vite: "npm:^8.3.0"
     vite-plugin-dts: "npm:^5.1.0"
-    vitest: "npm:^5.0.0"
+    vitest: "npm:^5.0.1"
     vitest-websocket-mock: "npm:^0.8.0"
   languageName: unknown
   linkType: soft
@@ -3651,7 +3651,7 @@ __metadata:
     vfile: "npm:^6.0.0"
     vite: "npm:^8.3.0"
     vite-plugin-dts: "npm:^5.1.0"
-    vitest: "npm:^5.0.0"
+    vitest: "npm:^5.0.1"
     vitest-fetch-mock: "npm:^0.4.5"
     wavesurfer.js: "npm:^7.12.12"
     xxhashjs: "npm:^0.2.2"
@@ -3689,7 +3689,7 @@ __metadata:
     typesync: "npm:^0.14.3"
     vite: "npm:^8.3.0"
     vite-plugin-dts: "npm:^5.1.0"
-    vitest: "npm:^5.0.0"
+    vitest: "npm:^5.0.1"
   languageName: unknown
   linkType: soft
 
@@ -5226,9 +5226,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitest/coverage-v8@npm:^5.0.0":
-  version: 5.0.0
-  resolution: "@vitest/coverage-v8@npm:5.0.0"
+"@vitest/coverage-v8@npm:^5.0.1":
+  version: 5.0.1
+  resolution: "@vitest/coverage-v8@npm:5.0.1"
   dependencies:
     "@bcoe/v8-coverage": "npm:^1.0.2"
     "@vitest/istanbul-lib-coverage": "npm:^1.0.0"
@@ -5239,12 +5239,12 @@ __metadata:
     std-env: "npm:^4.2.0"
     tinyrainbow: "npm:^3.1.1"
   peerDependencies:
-    "@vitest/browser": 5.0.0
-    vitest: 5.0.0
+    "@vitest/browser": 5.0.1
+    vitest: 5.0.1
   peerDependenciesMeta:
     "@vitest/browser":
       optional: true
-  checksum: 10c0/6d7f102af8f11f69df21ba343b4d101fbdb39ce5568bd2686c72cdf44e03934889328df297ebe4e12dbe1bc5e0a6d565bb9dfaf2fbca1958bf5e7770c7dc9675
+  checksum: 10c0/7f6dba018b7cd3303c625ff0c906bab971eef00214fac5d7edfd7ab3991bccbe7edf47f89273f49f7d2161e16fbdcc2b9938efd16f2da3bab8c31bf83777349e
   languageName: node
   linkType: hard
 
@@ -5286,12 +5286,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitest/mocker@npm:5.0.0":
-  version: 5.0.0
-  resolution: "@vitest/mocker@npm:5.0.0"
+"@vitest/mocker@npm:5.0.1":
+  version: 5.0.1
+  resolution: "@vitest/mocker@npm:5.0.1"
   dependencies:
     "@jridgewell/trace-mapping": "npm:0.3.31"
-    "@vitest/spy": "npm:5.0.0"
+    "@vitest/spy": "npm:5.0.1"
     estree-walker: "npm:^3.0.3"
     magic-string: "npm:^1.2.3"
   peerDependencies:
@@ -5302,14 +5302,14 @@ __metadata:
       optional: true
     vite:
       optional: true
-  checksum: 10c0/b1dde0ef270e8f9401204cb19c798114de416c3cf31e1d44d0029c4281b33e9a799251e3015aaaa2bdf5858c97a56857812dcf1e04dcfd4ebeedf194e6bcf3e6
+  checksum: 10c0/21f0456c7452d7f65449fc0f43f1ccbf222d353eb11fcf511b78b5b8c4ae38ac9ca286b56936d91856c483575cd86688f1b6dc00f02ffd85ed1108b12cf219cd
   languageName: node
   linkType: hard
 
-"@vitest/spy@npm:5.0.0":
-  version: 5.0.0
-  resolution: "@vitest/spy@npm:5.0.0"
-  checksum: 10c0/7521b4ef803bc89974a738cead7d3fcd789af805f3ea3f496108fc802b2bc09b22fe8e7a3cc0be3f92b647427aea528657e3e87dd0201e432f56e62f84f25ba8
+"@vitest/spy@npm:5.0.1":
+  version: 5.0.1
+  resolution: "@vitest/spy@npm:5.0.1"
+  checksum: 10c0/88838f6dda5237f0a40c365598ce7112922611e9157b390ca90c11760ae8697c37214f621263bfbe12e2bd27234df577cbbecc93de003ced366d23be24383c37
   languageName: node
   linkType: hard
 
@@ -7823,7 +7823,7 @@ __metadata:
     typescript: "npm:^6.0.3"
     typescript-v7: "npm:typescript@7.0.2"
     typesync: "npm:^0.14.3"
-    vitest: "npm:^5.0.0"
+    vitest: "npm:^5.0.1"
   peerDependencies:
     "@typescript-eslint/utils": ^8.70.0
     eslint: ^10.0.0
@@ -13944,7 +13944,7 @@ __metadata:
     typesync: "npm:^0.14.3"
     vite: "npm:^8.3.0"
     vite-plugin-dts: "npm:^5.1.0"
-    vitest: "npm:^5.0.0"
+    vitest: "npm:^5.0.1"
   peerDependencies:
     react: ^18.2.0
     react-dom: ^18.2.0
@@ -13964,7 +13964,7 @@ __metadata:
     "@testing-library/jest-dom": "npm:^7.0.1"
     "@testing-library/react": "npm:^16.3.3"
     "@types/node": "npm:>=24 <25"
-    "@vitest/coverage-v8": "npm:^5.0.0"
+    "@vitest/coverage-v8": "npm:^5.0.1"
     "@vitest/eslint-plugin": "npm:^1.6.27"
     eslint: "npm:^10.10.0"
     eslint-import-resolver-typescript: "npm:^4.4.5"
@@ -13984,7 +13984,7 @@ __metadata:
     react-dom: "npm:^18.2.0"
     typescript: "npm:^6.0.3"
     typescript-eslint: "npm:^8.70.0"
-    vitest: "npm:^5.0.0"
+    vitest: "npm:^5.0.1"
     vitest-canvas-mock: "npm:^1.2.0"
   languageName: unknown
   linkType: soft
@@ -15726,12 +15726,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vitest@npm:^5.0.0":
-  version: 5.0.0
-  resolution: "vitest@npm:5.0.0"
+"vitest@npm:^5.0.1":
+  version: 5.0.1
+  resolution: "vitest@npm:5.0.1"
   dependencies:
     "@types/chai": "npm:^5.2.2"
-    "@vitest/mocker": "npm:5.0.0"
+    "@vitest/mocker": "npm:5.0.1"
     chai: "npm:^6.2.2"
     es-module-lexer: "npm:^2.3.2"
     expect-type: "npm:^1.4.0"
@@ -15747,12 +15747,12 @@ __metadata:
     "@edge-runtime/vm": "*"
     "@opentelemetry/api": ^1.9.0
     "@types/node": ^22.0.0 || >=24.0.0
-    "@vitest/browser-playwright": 5.0.0
-    "@vitest/browser-preview": 5.0.0
+    "@vitest/browser-playwright": 5.0.1
+    "@vitest/browser-preview": 5.0.1
     "@vitest/browser-webdriverio": ^5.0.0-beta.5 || >=5.0.0
-    "@vitest/coverage-istanbul": 5.0.0
-    "@vitest/coverage-v8": 5.0.0
-    "@vitest/ui": 5.0.0
+    "@vitest/coverage-istanbul": 5.0.1
+    "@vitest/coverage-v8": 5.0.1
+    "@vitest/ui": 5.0.1
     happy-dom: "*"
     jsdom: "*"
     vite: ^6.4.0 || ^7.0.0 || ^8.0.0
@@ -15783,7 +15783,7 @@ __metadata:
       optional: false
   bin:
     vitest: ./vitest.mjs
-  checksum: 10c0/de56a0f2e989949e42cdf31150ef5c0c138c04950d14b158f618f8bd4dc9b7f1e9a20c98a2763c9fef0d2b5a97d86456a73dd18ebb8b2b99dd0837efd8688634
+  checksum: 10c0/1b49fe8eb7274ffd43ca5a29cccbcc942cf991488020a74114f3a725a1168c549d47820715b8ed3f521a0cd9ccc0013ab9511cc6e0f8e0a5bdfb751e3ddc4d2d
   languageName: node
   linkType: hard
 
