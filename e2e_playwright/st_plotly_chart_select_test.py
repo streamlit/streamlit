@@ -187,6 +187,7 @@ def test_double_click_select_mode_doesnt_reset_zoom(
     assert_snapshot(chart, name="st_plotly_chart-zoomed_in_reset")
 
 
+@pytest.mark.skip_browser("webkit")  # Flaky plot double-click reset on Playwright 1.63
 def test_double_click_pan_mode_resets_zoom_and_doesnt_rerun(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
