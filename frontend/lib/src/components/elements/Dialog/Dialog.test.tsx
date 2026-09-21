@@ -114,7 +114,7 @@ describe("Dialog container", () => {
 
     expect(screen.getByText("test")).toBeVisible()
     await user.click(screen.getByLabelText("Close"))
-    // dialog should be closed by clicking outside and, thus, the content should be gone
+    // Close dismisses the dialog, so the content should unmount
     expect(screen.queryByText("test")).not.toBeInTheDocument()
   })
 

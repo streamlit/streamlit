@@ -566,6 +566,8 @@ export default defineConfig([
       "preserve-caught-error": "error",
       "vitest/no-focused-tests": "error",
       "vitest/no-commented-out-tests": "error",
+      "vitest/no-duplicate-hooks": "error",
+      "vitest/require-to-throw-message": "error",
     },
   },
   // Specific test files that need to access window.__streamlit for testing the config module itself
