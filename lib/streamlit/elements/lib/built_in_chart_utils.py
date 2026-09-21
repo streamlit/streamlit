@@ -261,17 +261,22 @@ def generate_chart(
             )
         )
 
+    # Altair 6.3 annotates these methods with `typing.Self`, which mypy resolves to
+    # `Any` under `python_version = "3.10"`. Assign the results to typed locals so
+    # the returns don't trip mypy's `warn_return_any`.
     if (
         chart_type is ChartType.LINE
         and x_column is not None
         # This is using the new selection API that was added in Altair 5.0.0
         and is_altair_version_5_or_greater
     ):
-        return _add_improved_hover_tooltips(
+        layer_chart: alt.LayerChart = _add_improved_hover_tooltips(
             chart, x_column, chart_width, chart_height, len(df)
         ).interactive()
+        return layer_chart
 
-    return chart.interactive()
+    interactive_chart: alt.Chart = chart.interactive()
+    return interactive_chart
 
 
 def _add_improved_hover_tooltips(
