@@ -2253,6 +2253,31 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
     """Test our built-in chart commands."""
 
     @parameterized.expand(ST_CHART_ARGS)
+    def test_built_in_chart_alt(self, chart_command: Callable, _altair_type: str):
+        """Non-empty alt is marshalled; omitted/None/blank leave the field unset."""
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["a", "b"])
+
+        chart_command(df, alt="Accessible chart name")
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.HasField("alt")
+        assert proto.alt == "Accessible chart name"
+
+        chart_command(df)
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+        chart_command(df, alt=None)
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+        chart_command(df, alt="  ")
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+    @parameterized.expand(ST_CHART_ARGS)
     def test_empty_chart(self, chart_command: Callable, altair_type: str):
         """Test arrow chart with no arguments."""
         EXPECTED_DATAFRAME = pd.DataFrame()
