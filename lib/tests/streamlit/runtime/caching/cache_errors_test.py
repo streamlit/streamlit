@@ -67,7 +67,7 @@ def test_get_return_value_type_without_module() -> None:
 def test_cache_replay_closure_error_names_layout_block(
     cache_type: CacheType, decorator_name: str
 ) -> None:
-    """Constructor names the external layout block and lists every remedy."""
+    """Message uses 'that layout block' and lists every remedy."""
 
     def cached_fn() -> None:
         pass
