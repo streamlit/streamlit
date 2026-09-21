@@ -150,7 +150,7 @@
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
     "@types/d3-graphviz": "^3.1.0",
-    "@types/d3-selection": "~3.0.11",
+    "@types/d3-selection": "~3.0.12",
     "@types/hast": "^3.0.5",
     "@types/hoist-non-react-statics": "~3.3.7",
     "@types/lodash": "~4.17.25",
