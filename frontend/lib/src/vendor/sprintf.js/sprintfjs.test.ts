@@ -323,7 +323,9 @@ describe("sprintf", () => {
     })
 
     it("throws for invalid format", () => {
-      expect(() => sprintf("%z", 42)).toThrow("[sprintf] unexpected placeholder")
+      expect(() => sprintf("%z", 42)).toThrow(
+        "[sprintf] unexpected placeholder"
+      )
     })
 
     it("throws for mixing named and positional arguments", () => {
