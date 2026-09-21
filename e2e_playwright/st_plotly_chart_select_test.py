@@ -212,9 +212,10 @@ def test_double_click_pan_mode_resets_zoom_and_doesnt_rerun(
     _check_toolbar_visibility(chart)
     assert_snapshot(chart, name="st_plotly_chart-panned")
 
-    # Hover to position the cursor for a more reliable double click
+    # Double-click inside the plot so Plotly resets axes. Page-absolute
+    # coordinates can land on the modebar or legend depending on layout.
     chart.hover()
-    app.mouse.dblclick(675, 400)
+    chart.dblclick(position={"x": 250, "y": 220})
     wait_for_app_run(app, 3000)
 
     # Hover chart to show toolbar:
