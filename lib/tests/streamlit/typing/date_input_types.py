@@ -140,6 +140,14 @@ if TYPE_CHECKING:
         ),
         date,
     )
+    assert_type(date_input("foo", date(2024, 1, 1), on_change=None), date)
+    assert_type(date_input("foo", date(2024, 1, 1), on_change="rerun"), date)
+    assert_type(date_input("foo", date(2024, 1, 1), on_change="ignore"), date)
+    assert_type(date_input("foo", value=None, on_change="ignore"), date | None)
+    assert_type(
+        date_input("foo", (date(2024, 1, 1), date(2024, 1, 31)), on_change="ignore"),
+        DateWidgetRangeReturn,
+    )
 
     # Test with key
     assert_type(date_input("foo", date(2024, 1, 1), key="unique_key"), date)
