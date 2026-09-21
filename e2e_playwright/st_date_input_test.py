@@ -1120,6 +1120,10 @@ def test_date_input_on_change_ignore(app: Page):
     expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
     expect_prefixed_markdown(app, "Ignore date value:", "2025-01-15")
     expect(app).to_have_url(re.compile(r"[?&]ignore_date=2025-02-01"))
+    spinbuttons = date_field.get_by_role("spinbutton")
+    expect(spinbuttons.nth(0)).to_have_text("2025")
+    expect(spinbuttons.nth(1)).to_have_text("02")
+    expect(spinbuttons.nth(2)).to_have_text("01")
 
     # A later rerun should send the buffered value.
     app.get_by_role("button", name="Apply ignore date", exact=True).click()
@@ -1142,8 +1146,15 @@ def test_date_input_on_change_ignore(app: Page):
     expect(app.get_by_text("Runs: 3", exact=True)).not_to_be_visible()
     expect(app.get_by_text("Ignore date value: 2025-02-01", exact=True)).to_be_visible()
     expect(app).to_have_url(re.compile(r"[?&]ignore_date=2025-02-20"))
+    expect(spinbuttons.nth(0)).to_have_text("2025")
+    expect(spinbuttons.nth(1)).to_have_text("02")
+    expect(spinbuttons.nth(2)).to_have_text("20")
 
     # Bound ignore-mode values persist across reload via the URL.
     app.reload()
     wait_for_app_loaded(app)
     expect_prefixed_markdown(app, "Ignore date value:", "2025-02-20")
+    spinbuttons = date_field.get_by_role("spinbutton")
+    expect(spinbuttons.nth(0)).to_have_text("2025")
+    expect(spinbuttons.nth(1)).to_have_text("02")
+    expect(spinbuttons.nth(2)).to_have_text("20")
