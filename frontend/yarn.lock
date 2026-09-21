@@ -2309,9 +2309,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@microlink/react-json-view@npm:^1.31.33":
-  version: 1.31.33
-  resolution: "@microlink/react-json-view@npm:1.31.33"
+"@microlink/react-json-view@npm:^1.31.34":
+  version: 1.31.34
+  resolution: "@microlink/react-json-view@npm:1.31.34"
   dependencies:
     react-base16-styling: "npm:~0.10.0"
     react-lifecycles-compat: "npm:~3.0.4"
@@ -2319,7 +2319,7 @@ __metadata:
   peerDependencies:
     react: ">= 15"
     react-dom: ">= 15"
-  checksum: 10c0/e62a3bbcff16495707b1c751c0399e303d2ca1dfa6255a763efbd727974c965510d85f6b6fba456a1f4d1d17a7ad59af92d0f2b8e260eaf5fc5a033febca5077
+  checksum: 10c0/4afce16a7893f06090cdd3f49a46683ed263438aed7bc6db1d952fb33abcdb20200e850eec2d5e7bbcfc0933aa8c6b84a8f4e9547f48d13dc932598961367a5f
   languageName: node
   linkType: hard
 
@@ -3062,15 +3062,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@playwright/cli@npm:^0.1.19":
-  version: 0.1.19
-  resolution: "@playwright/cli@npm:0.1.19"
+"@playwright/cli@npm:^0.1.20":
+  version: 0.1.20
+  resolution: "@playwright/cli@npm:0.1.20"
   dependencies:
-    playwright: "npm:1.63.0-alpha-2026-08-31"
-    playwright-core: "npm:1.63.0-alpha-2026-08-31"
+    playwright: "npm:1.64.0-alpha-2026-09-14"
+    playwright-core: "npm:1.64.0-alpha-2026-09-14"
   bin:
     playwright-cli: playwright-cli.js
-  checksum: 10c0/e26d8666935fb2bbdf63a970b597cd8eaf868d57aff739fb158852ea92891fbce7952e8360e280d250bd15ad22dacaad928b80b5029eff4e558053c8a1522d8b
+  checksum: 10c0/764e00fa7dda566bc643ed09539283d28368df6bca9b401b072bd14926f506e08c4a18d154cfb2d2bee5a59c9491b90ba405e3fd652ce99b5935413dc60ce05f
   languageName: node
   linkType: hard
 
@@ -3563,7 +3563,7 @@ __metadata:
     "@luma.gl/core": "npm:^9.4.1"
     "@luma.gl/engine": "npm:^9.4.1"
     "@luma.gl/shadertools": "npm:^9.4.1"
-    "@microlink/react-json-view": "npm:^1.31.33"
+    "@microlink/react-json-view": "npm:^1.31.34"
     "@sindresorhus/slugify": "npm:^3.0.1"
     "@streamlit/component-v2-lib": "workspace:^"
     "@streamlit/connection": "workspace:^"
@@ -3608,9 +3608,9 @@ __metadata:
     marked: "npm:^18.0.13"
     mdast-util-find-and-replace: "npm:^3.0.2"
     mermaid: "npm:^11.17.2"
-    moment: "npm:^2.30.1"
+    moment: "npm:^2.31.0"
     moment-duration-format: "npm:^2.3.2"
-    moment-timezone: "npm:^0.6.3"
+    moment-timezone: "npm:^0.6.4"
     native-file-system-adapter: "npm:^3.0.1"
     node-emoji: "npm:^2.2.0"
     numbro: "npm:^2.5.0"
@@ -3621,7 +3621,7 @@ __metadata:
     react-aria: "npm:^3.52.1"
     react-aria-components: "npm:^1.21.1"
     react-color: "npm:^2.18.1"
-    react-dropzone: "npm:^20.1.1"
+    react-dropzone: "npm:^20.1.2"
     react-feather: "npm:^2.0.10"
     react-map-gl: "npm:^5.3.21"
     react-markdown: "npm:^10.1.0"
@@ -4624,11 +4624,11 @@ __metadata:
   linkType: hard
 
 "@types/node@npm:>=24 <25":
-  version: 24.13.4
-  resolution: "@types/node@npm:24.13.4"
+  version: 24.13.5
+  resolution: "@types/node@npm:24.13.5"
   dependencies:
     undici-types: "npm:~7.18.0"
-  checksum: 10c0/a12196e984cb09ead549651217b4b395961ea011f3a3791a9f78311d70b5f3be343c6fc935376553c06a34c14d963d4f637ad7829837b0c88cf441919f422893
+  checksum: 10c0/f6c7f564e7b16670bc72ce119f2aaba0f6d6ebb886c13d8cd3656a96e4825d91d826be3d0995fc776df4e19eceb4d3074e5e18d54ce1aebd3f6e0ba12b9108cb
   languageName: node
   linkType: hard
 
@@ -11367,19 +11367,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"moment-timezone@npm:^0.6.0, moment-timezone@npm:^0.6.3":
-  version: 0.6.3
-  resolution: "moment-timezone@npm:0.6.3"
+"moment-timezone@npm:^0.6.0, moment-timezone@npm:^0.6.4":
+  version: 0.6.4
+  resolution: "moment-timezone@npm:0.6.4"
   dependencies:
     moment: "npm:^2.29.4"
-  checksum: 10c0/004965d8932ef7e164fe2f98b10b52bd266932468a281b862dd5c484e63e9502307c99ce5df3eb304da83002dc8077ad5f285d3c6d52c24e2dbfc69721026bda
+  checksum: 10c0/10beaac82940adc57eda7f51dae48c41b01e9ad966842693b9c9f19f17a5d36faf1ce096fe6ab50cc73664f838e832a95092e5570e1a3f2f4e04138f7346c793
   languageName: node
   linkType: hard
 
-"moment@npm:>=2.14.0, moment@npm:^2.29.4, moment@npm:^2.30.1":
-  version: 2.30.1
-  resolution: "moment@npm:2.30.1"
-  checksum: 10c0/865e4279418c6de666fca7786607705fd0189d8a7b7624e2e56be99290ac846f90878a6f602e34b4e0455c549b85385b1baf9966845962b313699e7cb847543a
+"moment@npm:>=2.14.0, moment@npm:^2.29.4, moment@npm:^2.31.0":
+  version: 2.31.0
+  resolution: "moment@npm:2.31.0"
+  checksum: 10c0/3755b186b8ff62c565685ce69dde55bf46003c0329139be5c8dd7845cd567bfd7d02be3a13e379a25acb9e98f6b87136c4776745e440615a4f5ca8dd9a8815b9
   languageName: node
   linkType: hard
 
@@ -12280,23 +12280,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"playwright-core@npm:1.63.0-alpha-2026-08-31":
-  version: 1.63.0-alpha-2026-08-31
-  resolution: "playwright-core@npm:1.63.0-alpha-2026-08-31"
+"playwright-core@npm:1.64.0-alpha-2026-09-14":
+  version: 1.64.0-alpha-2026-09-14
+  resolution: "playwright-core@npm:1.64.0-alpha-2026-09-14"
   bin:
     playwright-core: cli.js
-  checksum: 10c0/502654b75f156c1dad1f546b6da549c00e52ca1569b48137bd213b06584786f8fd62ca02ad7a053c6338dd602be44b1d4fe6e679fe79903f02efa6f2bd9a2f0d
+  checksum: 10c0/060e1260ffe2ee7cf2cca45be7113b5a0673ebd84ce851427c3f09ba2684e220442d062d62841c065a3f25468f32c4b69516bde04e0d9416e2fdac1f738f1314
   languageName: node
   linkType: hard
 
-"playwright@npm:1.63.0-alpha-2026-08-31":
-  version: 1.63.0-alpha-2026-08-31
-  resolution: "playwright@npm:1.63.0-alpha-2026-08-31"
+"playwright@npm:1.64.0-alpha-2026-09-14":
+  version: 1.64.0-alpha-2026-09-14
+  resolution: "playwright@npm:1.64.0-alpha-2026-09-14"
   dependencies:
-    playwright-core: "npm:1.63.0-alpha-2026-08-31"
+    playwright-core: "npm:1.64.0-alpha-2026-09-14"
   bin:
     playwright: cli.js
-  checksum: 10c0/c97543b9661ffa54ecc5e4bc5a69f48bd1aa46f6712700a36b706fc557cb4971299e7d00e2d4fd640fd80e7cf0e7b2aa0234c930fa1f1936b5fc1ed05b8c98c8
+  checksum: 10c0/925eea07bf161476b0ee3f0719ee7023afe8de870063615a827ea7b9571d1a00dc58f712a5f723298f19acad8fe4bcd139c0b57f70f2725f1ea27017350e2378
   languageName: node
   linkType: hard
 
@@ -12870,9 +12870,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-dropzone@npm:^20.1.1":
-  version: 20.1.1
-  resolution: "react-dropzone@npm:20.1.1"
+"react-dropzone@npm:^20.1.2":
+  version: 20.1.2
+  resolution: "react-dropzone@npm:20.1.2"
   dependencies:
     attr-accept: "npm:^4.0.0"
     file-selector: "npm:^5.0.0"
@@ -12882,7 +12882,7 @@ __metadata:
   peerDependenciesMeta:
     "@types/react":
       optional: true
-  checksum: 10c0/6f84f9c59b90dc9494f47f8b7a76f40913736e283892aad2e2edaebf58a97308e1d359c56154757f05fb8059deabc585b7fcc701951adaaaa90d2c7b13df5be4
+  checksum: 10c0/bd7942180283304f143b0a314f1f8687d395434943a405b6dceb2b731aa635e3f5d8533478771d500cf7e98e7c3a41e3a7d3ba1d391bc8422aaec4833bbff20f
   languageName: node
   linkType: hard
 
@@ -13959,7 +13959,7 @@ __metadata:
     "@eslint-react/eslint-plugin": "npm:^5.19.1"
     "@eslint/compat": "npm:^2.1.1"
     "@eslint/js": "npm:^10.0.1"
-    "@playwright/cli": "npm:^0.1.19"
+    "@playwright/cli": "npm:^0.1.20"
     "@testing-library/dom": "npm:^10.4.2"
     "@testing-library/jest-dom": "npm:^7.0.1"
     "@testing-library/react": "npm:^16.3.3"
