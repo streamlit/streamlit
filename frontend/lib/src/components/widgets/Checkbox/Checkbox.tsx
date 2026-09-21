@@ -172,11 +172,12 @@ function Checkbox({
       aria-label={element.label}
     >
       <StyledCheckboxButton $truncate={truncate}>
-        {({ isSelected, isFocusVisible, isDisabled: isDisab }) => (
+        {({ isSelected, isFocusVisible, isHovered, isDisabled: isDisab }) => (
           <>
             <StyledCheckboxIndicator
               $isSelected={isSelected}
               $isFocusVisible={isFocusVisible}
+              $isHovered={isHovered}
               $isDisabled={isDisab}
             >
               {isSelected && (
@@ -218,6 +219,10 @@ function updateWidgetMgrState(
     formId: element.formId,
     fragmentId,
     fromUser: vws.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
   })
 }
 

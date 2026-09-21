@@ -54,6 +54,14 @@ import {
 } from "./arrowFormatUtils"
 import { DataFrameCellType } from "./arrowTypeUtils"
 
+const PERIOD_DAY_PANDAS_TYPE = {
+  field_name: "p",
+  name: "p",
+  pandas_type: "object",
+  numpy_type: "period[D]",
+  metadata: null,
+}
+
 describe("format", () => {
   it("null", () => {
     expect(
@@ -425,13 +433,7 @@ describe("format", () => {
       format(BigInt(5), {
         type: DataFrameCellType.DATA,
         arrowField: new Field("p", new Int64(), true),
-        pandasType: {
-          field_name: "p",
-          name: "p",
-          pandas_type: "object",
-          numpy_type: "period[D]",
-          metadata: null,
-        },
+        pandasType: PERIOD_DAY_PANDAS_TYPE,
       })
     ).toEqual("5")
   })
@@ -445,13 +447,7 @@ describe("format", () => {
       format(BigInt(5), {
         type: DataFrameCellType.DATA,
         arrowField: new Field("p", new Int64(), true, meta),
-        pandasType: {
-          field_name: "p",
-          name: "p",
-          pandas_type: "object",
-          numpy_type: "period[D]",
-          metadata: null,
-        },
+        pandasType: PERIOD_DAY_PANDAS_TYPE,
       })
     ).toEqual("5")
   })

@@ -38,7 +38,10 @@ from streamlit.components.v1.component_registry import (
     ComponentRegistry,
     _get_module_name,
 )
-from streamlit.components.v1.custom_component import CustomComponent
+from streamlit.components.v1.custom_component import (
+    CustomComponent,
+    MarshallComponentException,
+)
 from streamlit.dataframe_util import (
     is_pandas_version_less_than,
     is_pyarrow_version_less_than,
@@ -220,6 +223,23 @@ class DeclareComponentTest(unittest.TestCase):
         assert (
             ComponentRegistry.instance().get_module_name(component.name) == module_name
         )
+
+    def test_module_name_from_main_uses_filename(self) -> None:
+        """Scripts executed as ``__main__`` use the filename as the module name."""
+        caller_frame = MagicMock()
+        module = MagicMock()
+        module.__name__ = "__main__"
+        with (
+            patch(
+                "streamlit.components.v1.component_registry.inspect.getmodule",
+                return_value=module,
+            ),
+            patch(
+                "streamlit.components.v1.component_registry.inspect.getfile",
+                return_value="/tmp/my_component.py",
+            ),
+        ):
+            assert _get_module_name(caller_frame=caller_frame) == "my_component"
 
     def test_get_registered_components(self):
         component1 = components.declare_component("test1", url=URL)
@@ -411,6 +431,18 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         assert self.test_component.name == proto.component_name
         self.assertJSONEqual({"key": None, "default": None}, proto.json_args)
         assert str(proto.special_args) == "[]"
+
+    def test_positional_args_need_a_label(self) -> None:
+        """Positional arguments are rejected because they need a label."""
+        with pytest.raises(MarshallComponentException, match="needs a label"):
+            self.test_component("positional")
+
+    def test_unserializable_json_args_raise(self) -> None:
+        """Values that cannot be JSON-encoded raise MarshallComponentException."""
+        with pytest.raises(
+            MarshallComponentException, match="Could not convert component args"
+        ):
+            self.test_component(bad=object())
 
     def test_bytes_args(self):
         self.test_component(foo=b"foo", bar=b"bar")

@@ -53,6 +53,20 @@ def _sanitize_url_path(title: str) -> str:
     return path
 
 
+def _raise_if_nested_url_path(url_path: str) -> None:
+    """Reject nested URL pathnames until they are supported."""
+    # Browsers would resolve static assets relative to the nested page URL,
+    # so a path like foo/bar would look for assets under /foo/ instead of the app root.
+    if "/" in url_path:
+        raise StreamlitAPIException(
+            f"The `url_path` `{url_path}` cannot include `/`. "
+            "Streamlit does not support nested URL pathnames yet, so use a single "
+            "path segment (e.g. `foo_bar`). To upvote support for nested pathnames, "
+            "see GitHub issue [#8971](https://github.com/streamlit/streamlit/issues/8971).",
+            error_id="page-nested-url-path",
+        )
+
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -111,10 +125,14 @@ class Page:
 
     icon : str or None
         An optional emoji or icon to display next to the page title and label.
-        If ``icon`` is ``None`` (default), no icon is displayed next to the
-        page label in the navigation menu, and a Streamlit icon is displayed
-        next to the title (in the browser tab). If ``icon`` is a string, the
-        following options are valid:
+        If ``icon`` is ``None`` (default) and the page is defined by a file,
+        Streamlit uses a leading emoji in the filename, if present. Otherwise,
+        no icon is displayed next to the page label in the navigation menu,
+        and the default Streamlit icon is displayed next to the title (in the
+        browser tab). Pass ``icon=""`` to show no icon next to the page label
+        and keep the default browser-tab icon, even when the filename contains
+        an emoji. If ``icon`` is a non-empty string, the following options
+        are valid:
 
         - A single-character emoji. For example, you can set ``icon="🚨"``
             or ``icon="🔥"``. Emoji short codes are not supported.
@@ -144,8 +162,10 @@ class Page:
 
         The default page will have a pathname of ``""``, indicating the root
         URL of the app. If you set ``default=True``, ``url_path`` is ignored.
-        ``url_path`` can't include forward slashes; paths can't include
-        subdirectories.
+        ``url_path`` can't include forward slashes because Streamlit doesn't
+        support nested URL pathnames yet. To upvote support for nested
+        pathnames, see GitHub issue
+        `#8971 <https://github.com/streamlit/streamlit/issues/8971>`_.
 
     default : bool
         Whether this page is the default page to be shown when the app is
@@ -283,9 +303,7 @@ class Page:
             self._external_url = page
             self._page: Path | Callable[[], None] | None = None
             self._title: str = title
-            if icon is not None:
-                validate_icon_or_emoji(icon)
-            self._icon: str = icon or ""
+            self._icon: str = validate_icon_or_emoji(icon)
             # For external URLs, use a sanitized version of title as url_path if not provided
             self._url_path: str = (
                 _sanitize_url_path(title) if url_path is None else url_path
@@ -301,11 +319,7 @@ class Page:
                         "`title` that can be converted to a valid URL path."
                     ),
                 )
-            if "/" in self._url_path:
-                raise StreamlitAPIException(
-                    "The URL path cannot contain a nested path (e.g. foo/bar).",
-                    error_id="page-nested-url-path",
-                )
+            _raise_if_nested_url_path(self._url_path)
 
             self._can_be_called: bool = False
             return
@@ -358,9 +372,10 @@ class Page:
         self._title = title or inferred_name.replace("_", " ")
 
         if icon is not None:
-            # validate user provided icon.
-            validate_icon_or_emoji(icon)
-        self._icon = icon or inferred_icon
+            # An explicit icon wins, including icon="", which means no icon.
+            self._icon = validate_icon_or_emoji(icon)
+        else:
+            self._icon = validate_icon_or_emoji(inferred_icon)
 
         if self._title.strip() == "":
             raise StreamlitMissingRequiredParameterError(
@@ -379,14 +394,7 @@ class Page:
                 )
 
             self._url_path = stripped_url_path
-            if "/" in self._url_path:
-                raise StreamlitAPIException(
-                    "The URL path cannot contain a nested path (e.g. foo/bar).",
-                    error_id="page-nested-url-path",
-                )
-
-        if self._icon:
-            validate_icon_or_emoji(self._icon)
+            _raise_if_nested_url_path(self._url_path)
 
         # used by st.navigation to ordain a page as runnable
         self._can_be_called = False

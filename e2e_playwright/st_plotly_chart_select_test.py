@@ -32,6 +32,8 @@ def _check_toolbar_visibility(chart_element: Locator):
     )
     expect(fullscreen_button).to_be_visible()
     expect(fullscreen_button).to_have_css("opacity", "1")
+    # plotly.js v4 adds a "Share chart…" modebar button by default.
+    expect(chart_element.locator("[data-title='Share chart...']")).to_have_count(0)
 
 
 def test_box_select_on_scatter_chart_displays_a_df(app: Page):
@@ -185,6 +187,7 @@ def test_double_click_select_mode_doesnt_reset_zoom(
     assert_snapshot(chart, name="st_plotly_chart-zoomed_in_reset")
 
 
+@pytest.mark.skip_browser("webkit")  # Flaky plot double-click reset on Playwright 1.63
 def test_double_click_pan_mode_resets_zoom_and_doesnt_rerun(
     app: Page, assert_snapshot: ImageCompareFunction
 ):

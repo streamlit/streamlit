@@ -401,3 +401,13 @@ st.write("Ignore slider value:", ignore_slider)
 
 if st.button("Apply ignore slider", key="apply_ignore"):
     st.write("Applied ignore slider value:", ignore_slider)
+
+# Slider with reversed min/max (swapped to [1, 10]; value stays inside the range).
+reversed_bounds_value = st.slider(
+    "Reversed bounds slider",
+    min_value=10,
+    max_value=1,
+    value=5,
+    key="reversed_bounds_slider",
+)
+st.write("Reversed bounds slider value:", reversed_bounds_value)

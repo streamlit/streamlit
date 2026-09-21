@@ -37,7 +37,7 @@ from e2e_playwright.shared.app_utils import (
     open_popover,
 )
 
-MULTISELECT_COUNT = 38
+MULTISELECT_COUNT = 39
 
 
 def _get_multiselect_input(locator: Locator | Page, label: str) -> Locator:
@@ -1159,3 +1159,63 @@ def test_multiselect_wrap(app: Page, assert_snapshot: ImageCompareFunction):
         get_element_by_key(app, "multiselect_wrap_true"),
         name="st_multiselect-wrap_true",
     )
+
+
+def test_multiselect_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun and sends value on next rerun."""
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    # The app writes str(ignore_multi), so the empty default is markdown "[]".
+    expect_prefixed_markdown(app, "Ignore multiselect value:", "[]")
+    # Default is omitted from the URL.
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_multi="))
+
+    ignore_input = _get_multiselect_input(app, "Ignore change multiselect")
+
+    # Filtering does not commit the value, so Python and the URL remain unchanged.
+    ignore_input.click()
+    ignore_input.fill("be")
+    expect(ignore_input).to_have_value("be")
+    wait_for_app_run(app)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore multiselect value:", "[]")
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_multi="))
+
+    # Reset the combobox so the later option click does not toggle an already-open dropdown.
+    # Two Escapes: first clears filter text, second closes the dropdown.
+    ignore_input.press("Escape")
+    _close_dropdown(app)
+
+    # Choosing an option updates the URL without rerunning the app.
+    select_for_multiselect(app, "Ignore change multiselect", "beta", True)
+
+    # Extra settle on top of select_for_multiselect's wait_for_app_run, to catch a delayed rerun.
+    wait_for_app_run(app)
+
+    # Verify no rerun occurred (run count should still be 1)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(
+        get_multiselect(app, "Ignore change multiselect").locator('span[title="beta"]')
+    ).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore multiselect value:", "[]")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_multi=beta"))
+
+    # Click button to trigger a rerun - buffered value should be sent
+    app.get_by_role("button", name="Apply ignore multiselect", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Ignore multiselect value: ['beta']", exact=True)
+    ).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore multiselect value: ['beta']", exact=True)
+    ).to_be_visible()
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(
+        get_multiselect(app, "Ignore change multiselect").locator('span[title="beta"]')
+    ).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore multiselect value:", "['beta']")

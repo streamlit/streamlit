@@ -296,6 +296,25 @@ v_bound_clear = st.selectbox(
 )
 st.write("bound select clear value:", v_bound_clear)
 
+# --- on_change="ignore" selectbox ---
+# Run counter so test_selectbox_on_change_ignore can detect an unexpected rerun.
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)
+
+ignore_select = st.selectbox(
+    "Ignore change selectbox",
+    ["alpha", "beta", "gamma"],
+    key="ignore_select",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore selectbox value:", ignore_select)
+
+if st.button("Apply ignore selectbox", key="apply_ignore_selectbox"):
+    st.write("Applied ignore selectbox value:", ignore_select)
+
 # Regression test for https://github.com/streamlit/streamlit/issues/16181:
 # a selectbox near the bottom of the sidebar must flip its dropdown up and stay
 # within the viewport instead of opening downward and overflowing. The

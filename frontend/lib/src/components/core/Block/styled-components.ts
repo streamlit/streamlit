@@ -83,7 +83,7 @@ export const StyledSpace = styled.div({
   height: "100%",
 })
 
-const GLOBAL_ELEMENTS = ["balloons", "snow"]
+const GLOBAL_ELEMENTS = new Set(["balloons", "snow"])
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
   ({
     theme,
@@ -143,7 +143,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
           minHeight: 0,
         }
       : {}),
-    ...(GLOBAL_ELEMENTS.includes(elementType)
+    ...(GLOBAL_ELEMENTS.has(elementType)
       ? {
           // Global elements are rendered in their delta position, but they
           // are not part of the flexbox layout. We apply a negative margin

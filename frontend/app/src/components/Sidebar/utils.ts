@@ -24,7 +24,7 @@ export const DEFAULT_WIDTH = "300"
  * `max-width` convention (exclusive upper bound).
  */
 export function calculateMaxBreakpoint(value: string): number {
-  return parseInt(value, 10) - 0.02
+  return Number.parseInt(value, 10) - 0.02
 }
 
 export function shouldCollapse(

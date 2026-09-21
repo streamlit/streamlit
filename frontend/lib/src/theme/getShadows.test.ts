@@ -199,8 +199,8 @@ describe("createShadows", () => {
       const lightShadows = createShadows(lightThemeColors)
       const darkShadows = createShadows(darkThemeColors)
 
-      expect(Object.keys(lightShadows).sort()).toEqual(
-        Object.keys(darkShadows).sort()
+      expect(Object.keys(lightShadows).toSorted()).toEqual(
+        Object.keys(darkShadows).toSorted()
       )
     })
 

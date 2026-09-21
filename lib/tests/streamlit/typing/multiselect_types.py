@@ -121,6 +121,16 @@ if TYPE_CHECKING:
     assert_type(multiselect("foo", ["a", "b"], select_all=False), list[str])
     assert_type(multiselect("foo", ["a", "b"], select_all=1000), list[str])
 
+    # Check on_change parameter modes
+    assert_type(multiselect("foo", [1, 2, 3], on_change=None), list[int])
+    assert_type(multiselect("foo", [1, 2, 3], on_change="rerun"), list[int])
+    assert_type(multiselect("foo", [1, 2, 3], on_change="ignore"), list[int])
+    assert_type(multiselect("foo", [1, 2, 3], on_change=lambda: None), list[int])
+    assert_type(
+        multiselect("foo", [1, 2, 3], accept_new_options=True, on_change="ignore"),
+        list[int | str],
+    )
+
     def on_multiselect_change(prefix: str) -> None: ...
 
     # Non-literal accept_new_options returns the union of both result types.

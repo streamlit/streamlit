@@ -223,3 +223,16 @@ class ConfigOptionTest(unittest.TestCase):
 
         assert c.deprecated
         assert c.is_expired()
+
+    @parameterized.expand(
+        [
+            ("expiration_date", {"deprecation_text": "Use the new option."}),
+            ("deprecation_text", {"expiration_date": "2099-01-01"}),
+        ]
+    )
+    def test_deprecated_requires_field(
+        self, required_field: str, option_kwargs: dict[str, str]
+    ) -> None:
+        """Deprecated options must declare both expiration date and deprecation text."""
+        with pytest.raises(ValueError, match=f"{required_field} is required"):
+            ConfigOption("section.name", deprecated=True, **option_kwargs)

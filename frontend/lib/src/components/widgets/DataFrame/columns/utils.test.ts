@@ -351,15 +351,15 @@ describe("toSafeNumber", () => {
     [null, null],
     [undefined, null],
     ["", null],
-    ["foo", NaN],
-    [["foo"], NaN],
+    ["foo", Number.NaN],
+    [["foo"], Number.NaN],
     [
       {
         foo: "bar",
       },
-      NaN,
+      Number.NaN,
     ],
-    [[], NaN],
+    [[], Number.NaN],
     ["123", 123],
     ["123 ", 123],
     [" 123 ", 123],
@@ -464,7 +464,7 @@ describe("toSafeDate", () => {
     // empty string
     ["", null],
     // invalid number
-    [NaN, undefined],
+    [Number.NaN, undefined],
     // invalid string
     ["foo", undefined],
     // valid date string
@@ -566,7 +566,7 @@ describe("truncateDecimals", () => {
   )
 
   it("returns NaN unchanged", () => {
-    expect(truncateDecimals(NaN, 2)).toBeNaN()
+    expect(truncateDecimals(Number.NaN, 2)).toBeNaN()
   })
 })
 

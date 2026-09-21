@@ -139,6 +139,21 @@ class ScriptRunnerTest(unittest.TestCase):
         self._assert_control_events(scriptrunner, [ScriptRunnerEvent.SHUTDOWN])
         self._assert_text_deltas(scriptrunner, [])
 
+    def test_script_thread_is_daemon(self) -> None:
+        """The script thread must be a daemon so the process can exit when the
+        user script is stuck in a tight loop with no st.* interrupt points.
+        """
+        scriptrunner = TestScriptRunner("good_script.py")
+        # Stop before the script runs so we don't actually execute it; we only
+        # care about the thread's daemon flag, which is set in start().
+        scriptrunner.request_stop()
+        scriptrunner.start()
+        try:
+            assert scriptrunner._script_thread is not None
+            assert scriptrunner._script_thread.daemon is True
+        finally:
+            scriptrunner.join()
+
     def test_callable_entrypoint_runs_on_full_rerun(self):
         """Callable entrypoints run on full reruns without compiling the script path."""
         call_count = 0
@@ -1216,6 +1231,58 @@ class ScriptRunnerTest(unittest.TestCase):
         scriptrunner.join()
 
         patched_call_callbacks.assert_called_once()
+
+    @patch("streamlit.runtime.state.session_state.SessionState.on_script_will_rerun")
+    def test_replay_only_request_prepares_session_state(
+        self, patched_on_script_will_rerun: MagicMock
+    ) -> None:
+        """A replay-only request prepares session state without fresh widget state."""
+        replay = WidgetStates()
+        _create_widget("button", replay).trigger_value = True
+        scriptrunner = TestScriptRunner(
+            "good_script.py",
+            RerunData(widget_states=None, replay_trigger_states=replay),
+        )
+
+        scriptrunner.start()
+        scriptrunner.join()
+
+        patched_on_script_will_rerun.assert_called_once_with(
+            None,
+            replay_trigger_states=replay,
+            replay_trigger_values=None,
+        )
+
+    @patch(
+        "streamlit.runtime.state.safe_session_state.SafeSessionState.on_script_finished"
+    )
+    @patch("streamlit.runtime.state.session_state.SessionState.on_script_will_rerun")
+    def test_replay_only_preemption_happens_before_script_start(
+        self,
+        patched_on_script_will_rerun: MagicMock,
+        patched_on_script_finished: MagicMock,
+    ) -> None:
+        """Replay-only preemption restarts before the first script execution."""
+        replay = WidgetStates()
+        _create_widget("button", replay).trigger_value = True
+        scriptrunner = TestScriptRunner(
+            "good_script.py",
+            RerunData(widget_states=None, replay_trigger_states=replay),
+        )
+        patched_on_script_will_rerun.side_effect = lambda *_, **__: (
+            scriptrunner.request_rerun(RerunData())
+        )
+
+        scriptrunner.start()
+        scriptrunner.join()
+
+        assert not scriptrunner.script_thread_exceptions
+        assert [
+            call.kwargs["remove_stale_widgets"]
+            for call in patched_on_script_finished.call_args_list
+            if "remove_stale_widgets" in call.kwargs
+        ] == [False, True]
+        assert scriptrunner.text_deltas() == [text_utf]
 
     @patch("streamlit.elements.exception._exception")
     @patch("streamlit.runtime.state.session_state.SessionState._call_callbacks")

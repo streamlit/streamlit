@@ -149,6 +149,10 @@ bar = (
 st.echarts_chart(bar)
 ```
 
+**Plain text in the option.** ECharts renders `title`, `legend`, axis labels, and similar
+strings as plain text. Streamlit markdown is not applied inside `spec` (`title.text` of
+`**Bold**` shows the asterisks). Put formatted copy in `st.markdown` next to the chart.
+
 **DataFrames in `dataset.source`.** ECharts' [`dataset`](https://echarts.apache.org/handbook/en/concepts/dataset/)
 API lets multiple series share one data source. To *Embrace the Python Ecosystem*, Streamlit
 accepts a dataframe-like object (pandas, Polars, PyArrow, …) as `dataset.source` — on a single
@@ -226,7 +230,9 @@ When `theme="streamlit"` (default), the chart automatically matches the active S
   margins than ECharts' percentage-based defaults, and axis labels and names kept inside them) so
   the plot fills its container like other Streamlit charts. Margins on a side that carries a
   title, legend, or bottom-anchored `dataZoom`/`visualMap`/`timeline` are left to ECharts so those
-  components aren't clipped.
+  components aren't clipped. When more than one of those bottom-anchored controls would share
+  the footer, Streamlit stacks them; a default-bottom legend that would sit on the same strip
+  is moved to the top. Explicit `top`/`bottom` values in the spec are preserved.
 - **Dark / light mode** — the chart re-themes automatically when the user toggles the theme
   (via ECharts' `darkMode` plus themed colors), with no Python rerun required. Light/dark
   re-theming uses `chart.setTheme(...)` on the bundled ECharts `^6.1.0`, which preserves the
@@ -532,6 +538,25 @@ st.echarts_chart(
         "series": [{"type": "bar", "data": [5, 20, 36, 10, 10]}],
     }
 )
+```
+
+#### Streamlit theme vs ECharts default
+
+`theme="streamlit"` (default) applies Streamlit colors, fonts, and plot layout. `theme=None`
+leaves the spec's styling to ECharts' built-in default theme (axis ticks, grid, palette).
+
+```python
+import streamlit as st
+
+spec = {
+    "xAxis": {"type": "category", "data": ["A", "B", "C", "D", "E"]},
+    "yAxis": {"type": "value"},
+    "series": [{"type": "bar", "data": [5, 20, 36, 10, 10]}],
+}
+
+col1, col2 = st.columns(2)
+col1.echarts_chart(spec)
+col2.echarts_chart(spec, theme=None)
 ```
 
 #### Line chart with tooltip and legend

@@ -187,8 +187,8 @@ function translateLogoHeight(theme: EmotionTheme, size: string): string {
 export const StyledLogo = styled.img<StyledLogoProps>(({ theme, size }) => ({
   height: translateLogoHeight(theme, size),
   // Extra margin to align small logo with sidebar collapse arrow
-  marginTop: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
-  marginBottom: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
+  marginTop: size === "small" ? theme.spacing.xs : theme.spacing.twoXS,
+  marginBottom: size === "small" ? theme.spacing.xs : theme.spacing.twoXS,
   marginLeft: theme.spacing.none,
   zIndex: theme.zIndices.header,
   objectFit: "contain",
@@ -203,8 +203,8 @@ export const StyledIconLogo = styled.div<StyledLogoProps>(
     alignItems: "center",
     justifyContent: "flex-start",
     height: translateLogoHeight(theme, size),
-    marginTop: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
-    marginBottom: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
+    marginTop: size === "small" ? theme.spacing.xs : theme.spacing.twoXS,
+    marginBottom: size === "small" ? theme.spacing.xs : theme.spacing.twoXS,
     marginLeft: theme.spacing.none,
     zIndex: theme.zIndices.header,
     fontSize: translateLogoHeight(theme, size),

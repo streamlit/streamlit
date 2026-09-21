@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
-import styled from "@emotion/styled"
+import styled, { CSSObject } from "@emotion/styled"
 import {
   RadioButton as RARadioButton,
   RadioField as RARadioField,
   RadioGroup as RARadioGroup,
+  Text as RAText,
 } from "react-aria-components"
 
+import type { EmotionTheme } from "~lib/theme/types"
 import { convertRemToPx } from "~lib/theme/utils"
 
 interface StyledRadioGroupProps {
@@ -59,30 +61,43 @@ export const StyledRadioGroup = styled(RARadioGroup, {
  * selection state to its `RadioButton` child via context. `RadioButton` must
  * nest inside this field.
  *
- * It needs no styles of its own — as a block-level flex item it shrink-wraps the
- * label, so `StyledRadioGroup`'s `alignItems` and `gap` still apply to the
- * option's visible box.
+ * Stacks the clickable label above the caption, which sits outside the label so
+ * React Aria can expose it as the option's `aria-describedby` target rather than
+ * folding it into the accessible name.
  *
- * Keep state-driven styles on the label's class: React Aria also sets
- * `data-selected`/`data-disabled` on this div, so styling both elements would
- * apply those rules twice.
+ * Owns the text colour, including the disabled variant, so the label and the
+ * caption dim together. React Aria marks both this element and the label
+ * `data-disabled`, so they split state-driven styles: colour here, `cursor` on
+ * the label.
  */
-export const StyledRadioField = styled(RARadioField)()
+export const StyledRadioField = styled(RARadioField)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  color: theme.colors.bodyText,
+  "&[data-disabled]": {
+    color: theme.colors.fadedText40,
+  },
+}))
 
 /**
  * Clickable `<label>` for each radio option. It wraps the hidden input, the
  * circle indicator (`StyledRadioOuter`/`StyledRadioInner`), and the option text,
- * so the whole row is a click target. It stays a plain block container: the
- * children own the circle-and-text alignment so the caption can sit outside that
- * row without manual offset calculations.
+ * so the whole row is a click target. It stays a plain block container:
+ * `StyledRadioRow` owns circle-and-text alignment, so the field can stack the
+ * caption below the label with no offset maths.
  *
- * React Aria sets `data-focus-visible`, `data-disabled`, `data-selected` and
- * friends as data attributes — we use those for state-driven styles.
+ * React Aria sets `data-focus-visible`, `data-hovered`, `data-pressed` and
+ * friends here as data attributes — we use those for state-driven styles.
+ * `data-disabled` and `data-selected` also appear on `StyledRadioField`, which
+ * owns the colour; this element owns `cursor`.
+ *
+ * No `user-select` rule: React Aria's `usePress` suppresses selection for the
+ * duration of a press, so a standing rule would only stop users copying the
+ * option text. This matches `st.checkbox` and `st.toggle`.
  */
 export const StyledRadioButton = styled(RARadioButton)(({ theme }) => ({
   display: "block",
   cursor: "pointer",
-  userSelect: "none",
   paddingLeft: theme.spacing.none,
   paddingRight: theme.spacing.threeXS,
   marginTop: theme.spacing.none,
@@ -94,23 +109,6 @@ export const StyledRadioButton = styled(RARadioButton)(({ theme }) => ({
     cursor: "not-allowed",
   },
 }))
-
-interface StyledRadioContentProps {
-  $isDisabled: boolean
-}
-
-/**
- * Flex column that wraps all visible content (option row + caption) for a
- * single radio option. Owns the disabled text-colour so both the option label
- * and the caption dim together without each needing their own prop.
- */
-export const StyledRadioContent = styled.div<StyledRadioContentProps>(
-  ({ theme, $isDisabled }) => ({
-    display: "flex",
-    flexDirection: "column",
-    color: $isDisabled ? theme.colors.fadedText40 : theme.colors.bodyText,
-  })
-)
 
 /**
  * Flex row that contains only the radio circle and the option label text.
@@ -126,82 +124,134 @@ export const StyledRadioRow = styled.div(({ theme }) => ({
 
 interface StyledRadioOuterProps {
   $isSelected: boolean
+  $isHovered: boolean
   $isDisabled: boolean
 }
 
 /**
  * Visual outer circle of the radio button indicator.
- * Background color reflects checked + enabled state.
+ *
+ * - Checked: `primary` fill with a matching `primary` stroke, so `border-color`
+ *   has a value to transition from and to.
+ * - Enabled and unchecked: `bgColor` fill behind a `borderColor` stroke, which
+ *   switches to `darkenedBgMix15` on hover like the secondary button and the
+ *   `st.toggle` track.
+ * - Disabled: a `borderColor` disk with no CSS border. `borderColor` is
+ *   translucent, so a stroke over a matching fill would darken the rim.
+ *   `StyledRadioInner` supplies the white centre when selected and the
+ *   `bgColor` hole when not.
+ *
  * No margin offset needed: the parent `StyledRadioRow` uses `align-items:
  * center` and contains only this circle and the option text, so centering is
  * automatic.
  */
 export const StyledRadioOuter = styled.div<StyledRadioOuterProps>(
-  ({ theme, $isSelected, $isDisabled }) => ({
-    width: theme.sizes.checkbox,
-    height: theme.sizes.checkbox,
-    flexShrink: 0,
-    borderRadius: "50%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor:
-      $isSelected && !$isDisabled
-        ? theme.colors.primary
-        : theme.colors.borderColor,
-  })
+  ({ theme, $isSelected, $isHovered, $isDisabled }) => {
+    let backgroundColor: string
+    let border = "none"
+
+    if ($isDisabled) {
+      backgroundColor = theme.colors.borderColor
+    } else if ($isSelected) {
+      border = `${theme.sizes.borderWidth} solid ${theme.colors.primary}`
+      backgroundColor = theme.colors.primary
+    } else if ($isHovered) {
+      border = `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`
+      backgroundColor = theme.colors.darkenedBgMix15
+    } else {
+      border = `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`
+      backgroundColor = theme.colors.bgColor
+    }
+
+    return {
+      width: theme.sizes.checkbox,
+      height: theme.sizes.checkbox,
+      flexShrink: 0,
+      boxSizing: "border-box",
+      borderRadius: "50%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor,
+      border,
+      transition: "background-color 100ms ease, border-color 100ms ease",
+    }
+  }
 )
 
 interface StyledRadioInnerProps {
   $isSelected: boolean
+  $isDisabled: boolean
 }
 
 /**
- * Inner circle of the radio button indicator. Changes both size and colour
- * to express checked vs unchecked:
+ * Centre of the radio indicator.
  *
- * - Checked: 37.5% of outer diameter (small centre dot), white so it is
- *   visible against the primary-coloured outer circle in both light and dark
- *   mode.
- * - Unchecked: outer − threeXS spacing (large fill leaving only a thin ring),
- *   `bgColor` so the fill blends with the page background, making only the
- *   thin `borderColor` ring visible.
+ * - Selected: white dot, 37.5% of the outer diameter.
+ * - Enabled and unchecked: size 0, because `StyledRadioOuter` paints the fill.
+ * - Disabled and unchecked: `bgColor` disk inset by `borderWidth` on each
+ *   side, leaving the same ring as the enabled CSS border.
  *
- * Sizes are pixel-rounded to prevent uneven-border artifacts from fractional
- * rem-to-px conversions.
+ * Sizes are pixel-rounded to avoid uneven edges from fractional rem-to-px
+ * conversion.
  */
 export const StyledRadioInner = styled.div<StyledRadioInnerProps>(
-  ({ theme, $isSelected }) => {
-    const checkboxSize = parseFloat(theme.sizes.checkbox)
-    const threeXSSpacing = parseFloat(theme.spacing.threeXS)
-
+  ({ theme, $isSelected, $isDisabled }) => {
+    const checkboxSize = Number.parseFloat(theme.sizes.checkbox)
     const outerPx = convertRemToPx(checkboxSize.toString())
     const checkedPx = Math.round(outerPx * 0.375)
 
-    let uncheckedPx = Math.round(
-      convertRemToPx((checkboxSize - threeXSSpacing).toString())
-    )
-    if (uncheckedPx >= outerPx) {
-      uncheckedPx -= 1
-    }
+    let sizePx = $isSelected ? checkedPx : 0
+    let backgroundColor = theme.colors.white
 
-    const size = $isSelected ? `${checkedPx}px` : `${uncheckedPx}px`
+    if ($isDisabled && !$isSelected) {
+      // Match the enabled ring. `borderWidth` is a px token, so no rem
+      // conversion. `threeXS` would grow the ring when baseFontSize changes.
+      const borderPx = Number.parseFloat(theme.sizes.borderWidth)
+      sizePx = Math.max(0, Math.round(outerPx - 2 * borderPx))
+      backgroundColor = theme.colors.bgColor
+    }
 
     return {
       borderRadius: "50%",
-      backgroundColor: $isSelected ? theme.colors.white : theme.colors.bgColor,
-      width: size,
-      height: size,
+      backgroundColor,
+      width: `${sizePx}px`,
+      height: `${sizePx}px`,
     }
   }
 )
 
 /**
- * Indents the caption text so it aligns with the option label (i.e. starts
- * after the radio circle + gap), not with the circle itself.
- * `paddingLeft = circle width + row gap` is derived entirely from theme tokens
- * with no hardcoded values.
+ * Aligns caption and spacer text with the label so the two cannot drift.
+ * `paddingLeft` clears the circle. `paddingRight` matches the label's so a
+ * caption wider than its label cannot shift later options in a horizontal group.
  */
-export const StyledRadioCaption = styled.div(({ theme }) => ({
+const captionBoxStyles = ({ theme }: { theme: EmotionTheme }): CSSObject => ({
   paddingLeft: `calc(${theme.sizes.checkbox} + ${theme.spacing.sm})`,
-}))
+  paddingRight: theme.spacing.threeXS,
+})
+
+/**
+ * The caption, rendered as React Aria's `description` slot so it reaches the
+ * option's `aria-describedby` instead of joining its accessible name.
+ *
+ * - Rendered as a `<div>` (`elementType="div"`) because `StreamlitMarkdown` wraps
+ *   its output in a `<div>`, which is invalid inside `Text`'s default `<span>`.
+ * - Blank captions render nothing rather than an empty `Text`: React Aria drops
+ *   the description id unless this slot mounts content.
+ * - No `cursor` rule: it is not a click target, so the default text cursor
+ *   signals selectable prose.
+ */
+export const StyledRadioCaption = styled(RAText)(captionBoxStyles)
+
+/**
+ * Keeps horizontal options without captions aligned with captioned ones, without
+ * claiming the `description` slot.
+ *
+ * - A plain `div`, not a `Text`: it holds no description, and a `Text` here
+ *   would either claim the `description` slot or need `slot={null}` to opt out
+ *   of it.
+ * - `Radio` fills it with a non-breaking space rather than setting a height,
+ *   because only a real caption line box matches the height exactly.
+ */
+export const StyledRadioCaptionSpacer = styled.div(captionBoxStyles)

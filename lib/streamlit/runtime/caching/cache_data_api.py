@@ -522,10 +522,21 @@ class CacheDataAPI:
         `Caching overview
         <https://docs.streamlit.io/develop/concepts/architecture/caching>`_.
 
+        Cached functions can be synchronous or asynchronous. To cache an asynchronous
+        function, define it with ``async def``. Calling a cached asynchronous function
+        returns an awaitable, which you must await (for example, with ``asyncio.run``).
+        On a cache miss, Streamlit runs the function and caches its awaited return
+        value. On a cache hit, Streamlit returns the cached value without rerunning
+        the function. The caller is responsible for driving the awaitable.
+
         .. note::
-            Caching async functions is not supported. To upvote this feature,
-            see GitHub issue `#8308
-            <https://github.com/streamlit/streamlit/issues/8308>`_.
+            Calls to a decorated coroutine function remain awaitable, but
+            ``inspect.iscoroutinefunction`` does not identify the decorated callable
+            as a coroutine function. Callback frameworks that rely on this check
+            should receive a separate ``async def`` adapter that awaits the cached
+            function. ``inspect.unwrap`` bypasses caching. For details, see GitHub
+            issue `#16803
+            <https://github.com/streamlit/streamlit/issues/16803>`_.
 
         Parameters
         ----------
@@ -599,6 +610,9 @@ class CacheDataAPI:
               value. To change how long expired values can be returned, use the
               ``runner.cacheBackgroundRefreshTTLMultiplier`` configuration option.
               This mode requires a ``ttl`` and can't be used with ``persist``.
+              It is not supported for coroutine functions. To upvote support for
+              this combination, see GitHub issue `#16800
+              <https://github.com/streamlit/streamlit/issues/16800>`_.
 
             .. note::
                 A function that refreshes in the background can't use session-specific
@@ -626,6 +640,23 @@ class CacheDataAPI:
         >>>
         >>> d3 = fetch_and_clean_data(DATA_URL_2)
         >>> # This is a different URL, so the function executes.
+
+        To cache an async function, await the decorated function from an async entry
+        point:
+
+        >>> import asyncio
+        >>> import streamlit as st
+        >>>
+        >>> @st.cache_data
+        ... async def load_config():
+        ...     await asyncio.sleep(1)
+        ...     return {"env": "prod"}
+        >>>
+        >>> async def main():
+        ...     config = await load_config()
+        ...     st.write(config)
+        >>>
+        >>> asyncio.run(main())
 
         To set the ``persist`` parameter, use this command as follows:
 
@@ -853,6 +884,13 @@ class DataCache(Cache[R]):
         """Write a value and associated messages to the cache.
         The value must be pickleable.
         """
+        pickled_entry = self._pickle_result(value_key, value, messages)
+        self.storage.set(value_key, pickled_entry)
+
+    def _pickle_result(
+        self, value_key: str, value: R, messages: list[MsgData]
+    ) -> bytes:
+        """Serialize a value and its replay messages for storage."""
         try:
             main_id = st._main._id
             sidebar_id = st.sidebar._id
@@ -870,7 +908,36 @@ class DataCache(Cache[R]):
             pickled_entry = pickle.dumps(entry)
         except (pickle.PicklingError, TypeError) as exc:
             raise CacheError(f"Failed to pickle {value_key}") from exc
-        self.storage.set(value_key, pickled_entry)
+        return pickled_entry
+
+    @gather_metrics("_cache_data_object")
+    def write_result_if_current(
+        self,
+        value_key: str,
+        value: R,
+        messages: list[MsgData],
+        *,
+        invalidation_token: cache_utils.CacheInvalidationToken,
+    ) -> bool:
+        """Write an async foreground result if no relevant clear invalidated it."""
+        if not self._invalidation_token_is_current(value_key, invalidation_token):
+            return False
+
+        # Serialize outside the lock. If clear wins during serialization, the check
+        # under the lock discards the result without touching storage.
+        try:
+            pickled_entry = self._pickle_result(value_key, value, messages)
+        except CacheError:
+            # An invalidated result is returned without being cached, so its
+            # serializability is no longer relevant.
+            if not self._invalidation_token_is_current(value_key, invalidation_token):
+                return False
+            raise
+        with self._write_lock:
+            if not self._invalidation_token_is_current(value_key, invalidation_token):
+                return False
+            self.storage.set(value_key, pickled_entry)
+            return True
 
     def write_background_refresh_result(
         self,

@@ -109,6 +109,17 @@ if TYPE_CHECKING:
         selectbox("foo", ["a", "b"], index=None, persist_state="session"), str | None
     )
 
+    # Check on_change parameter modes
+    assert_type(selectbox("foo", [1, 2, 3], on_change=None), int)
+    assert_type(selectbox("foo", [1, 2, 3], on_change="rerun"), int)
+    assert_type(selectbox("foo", [1, 2, 3], on_change="ignore"), int)
+    assert_type(selectbox("foo", [1, 2, 3], on_change=lambda: None), int)
+    assert_type(selectbox("foo", [1, 2, 3], index=None, on_change="ignore"), int | None)
+    assert_type(
+        selectbox("foo", [1, 2, 3], accept_new_options=True, on_change="ignore"),
+        int | str,
+    )
+
     def on_selectbox_change(prefix: str) -> None: ...
 
     # Common parameters combined

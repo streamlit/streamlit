@@ -405,7 +405,11 @@ function getStoredValue<T>(
   Type: unknown
 ): T {
   const mocked = vi.mocked(Type as (...args: unknown[]) => T)
-  return mocked.mock.results[mocked.mock.results.length - 1].value as T
+  const last = mocked.mock.results.at(-1)
+  if (!last) {
+    throw new Error("Expected a mock result")
+  }
+  return last.value as T
 }
 
 function getMockConnectionManager(isConnected = false): ConnectionManager {
@@ -1815,6 +1819,101 @@ describe("App", () => {
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
       ).toBe("mykey=myvalue")
     })
+
+    it("uses current URL query params when browser history stays on the same page", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...CURRENT_NEW_SESSION_JSON,
+        pageScriptHash: "top_hash",
+      })
+      sendForwardMessage("navigation", {
+        ...THIS_NAVIGATION_JSON,
+        pageScriptHash: "top_hash",
+      })
+
+      // Simulate stale query params stored from an earlier server update.
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "stale=oldvalue",
+      })
+
+      const connectionManager = getMockConnectionManager()
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+      // @ts-expect-error
+      hostCommunicationMgr.sendMessageToHost.mockClear()
+
+      // Simulate browser back/forward changing URL query params on same page.
+      window.history.pushState({}, "", "/?fresh=newvalue")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      })
+
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "SET_QUERY_PARAM",
+        queryParams: "?fresh=newvalue",
+      })
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
+      ).toBe("fresh=newvalue")
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript
+          .pageScriptHash
+      ).toBe("top_hash")
+    })
+
+    it("uses current URL query params when same-page popstate URL has a fragment", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...CURRENT_NEW_SESSION_JSON,
+        pageScriptHash: "top_hash",
+      })
+      sendForwardMessage("navigation", {
+        ...THIS_NAVIGATION_JSON,
+        pageScriptHash: "top_hash",
+      })
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "stale=oldvalue",
+      })
+
+      const connectionManager = getMockConnectionManager()
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+      // @ts-expect-error
+      hostCommunicationMgr.sendMessageToHost.mockClear()
+
+      window.history.pushState({}, "", "/?fresh=newvalue#section")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      })
+
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "SET_QUERY_PARAM",
+        queryParams: "?fresh=newvalue",
+      })
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
+      ).toBe("fresh=newvalue")
+    })
   })
 
   describe("App.handlePageConfigChanged", () => {
@@ -1874,8 +1973,9 @@ describe("App", () => {
     it("does not override the pathname when resetting query params", () => {
       renderApp(getProps())
       const pathname = "/foo/bar/"
-      // Set the value of document.location.pathname to pathname.
-      window.history.pushState({}, "", pathname)
+      // Seed a query string so that resetting it is an actual URL change.
+      window.history.pushState({}, "", `${pathname}?flying=spaghetti`)
+      pushStateSpy.mockClear()
 
       sendForwardMessage("pageInfoChanged", {
         queryString: "",
@@ -1886,8 +1986,9 @@ describe("App", () => {
 
     it("resets query params as expected when at the root pathname", () => {
       renderApp(getProps())
-      // Note: One would typically set the value of document.location.pathname to '/' here,
-      // However, this is already taking place in beforeEach().
+      // Seed a query string so that resetting it is an actual URL change.
+      window.history.pushState({}, "", "/?flying=spaghetti")
+      pushStateSpy.mockClear()
 
       sendForwardMessage("pageInfoChanged", {
         queryString: "",
@@ -1909,6 +2010,50 @@ describe("App", () => {
 
       const expectedUrl = `/?${queryString}`
       expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", expectedUrl)
+    })
+
+    it("does not push history when the query string is unchanged", () => {
+      renderApp(getProps())
+      const queryString = "flying=spaghetti&monster=omg"
+      window.history.pushState({}, "", `/?${queryString}`)
+      pushStateSpy.mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString,
+      })
+
+      expect(pushStateSpy).not.toHaveBeenCalled()
+    })
+
+    it("does not push history when resetting already-empty query params", () => {
+      renderApp(getProps())
+      pushStateSpy.mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "",
+      })
+
+      expect(pushStateSpy).not.toHaveBeenCalled()
+    })
+
+    it("still sends SET_QUERY_PARAM to the host when the query string is unchanged", () => {
+      renderApp(getProps())
+      const queryString = "flying=spaghetti&monster=omg"
+      window.history.pushState({}, "", `/?${queryString}`)
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      ;(hostCommunicationMgr.sendMessageToHost as Mock).mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString,
+      })
+
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "SET_QUERY_PARAM",
+        queryParams: `?${queryString}`,
+      })
     })
   })
 
@@ -3357,6 +3502,55 @@ describe("App", () => {
           screen.queryByText("Here is some other text")
         ).not.toBeInTheDocument()
       })
+    })
+
+    it("logs a throwing script-finished handler and still runs later handlers", async () => {
+      const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+      try {
+        let appInstance: App | null = null
+
+        render(
+          <RootStyleProvider theme={getDefaultTheme()}>
+            <WindowDimensionsProvider>
+              <App
+                {...getProps()}
+                ref={instance => {
+                  appInstance = instance
+                }}
+              />
+            </WindowDimensionsProvider>
+          </RootStyleProvider>
+        )
+
+        expect(appInstance).not.toBeNull()
+
+        const handlerError = new Error("handler boom")
+        const throwingHandler = vi.fn(() => {
+          throw handlerError
+        })
+        const laterHandler = vi.fn()
+
+        act(() => {
+          appInstance?.addScriptFinishedHandler(throwingHandler)
+          appInstance?.addScriptFinishedHandler(laterHandler)
+        })
+
+        sendForwardMessage(
+          "scriptFinished",
+          ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+        )
+
+        await waitFor(() => {
+          expect(laterHandler).toHaveBeenCalledTimes(1)
+        })
+        expect(throwingHandler).toHaveBeenCalledTimes(1)
+        expect(logErrorSpy).toHaveBeenCalledWith(
+          "Script finished handler failed",
+          handlerError
+        )
+      } finally {
+        logErrorSpy.mockRestore()
+      }
     })
   })
 
@@ -5389,6 +5583,42 @@ describe("App", () => {
         type: "CUSTOM_PARENT_MESSAGE",
         message: "random string",
       })
+    })
+
+    it("uses host UPDATE_FROM_QUERY_PARAMS for rerun without echoing SET_QUERY_PARAM", async () => {
+      const hostCommunicationMgr = prepareHostCommunicationManager()
+      const connectionManager = getMockConnectionManager(true)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+      })
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "stale=oldvalue",
+      })
+
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+      // @ts-expect-error
+      hostCommunicationMgr.sendMessageToHost.mockClear()
+
+      fireWindowPostMessage({
+        type: "UPDATE_FROM_QUERY_PARAMS",
+        queryParams: "?fresh=newvalue",
+      })
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      })
+
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
+      ).toBe("fresh=newvalue")
+
+      const setQueryParamCalls = (
+        hostCommunicationMgr.sendMessageToHost as Mock
+      ).mock.calls.filter(call => call[0]?.type === "SET_QUERY_PARAM")
+      expect(setQueryParamCalls).toHaveLength(0)
     })
 
     it("properly handles TERMINATE_WEBSOCKET_CONNECTION & RESTART_WEBSOCKET_CONNECTION messages", () => {

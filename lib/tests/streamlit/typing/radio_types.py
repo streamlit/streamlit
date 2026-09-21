@@ -55,6 +55,13 @@ if TYPE_CHECKING:
     assert_type(radio("foo", ["a", "b"], bind=None), str)
     assert_type(radio("foo", ["a", "b"], index=None, bind="query-params"), str | None)
 
+    # Check on_change parameter modes
+    assert_type(radio("foo", [1, 2, 3], on_change=None), int)
+    assert_type(radio("foo", [1, 2, 3], on_change="rerun"), int)
+    assert_type(radio("foo", [1, 2, 3], on_change="ignore"), int)
+    assert_type(radio("foo", [1, 2, 3], on_change=lambda: None), int)
+    assert_type(radio("foo", [1, 2, 3], index=None, on_change="ignore"), int | None)
+
     def on_radio_change(prefix: str) -> None: ...
 
     # Common parameters combined

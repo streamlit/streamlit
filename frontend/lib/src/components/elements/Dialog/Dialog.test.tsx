@@ -364,5 +364,30 @@ describe("Dialog container", () => {
 
       expect(input).toHaveValue("test")
     })
+
+    it("does not intercept R keydown from a select in a non-dismissible dialog", () => {
+      const props = getProps({ dismissible: false })
+      render(
+        <Dialog {...props}>
+          <select aria-label="Test select">
+            <option value="r">r</option>
+          </select>
+        </Dialog>
+      )
+
+      // Dispatch on the select so event.target is SELECT and the allow-typing path runs.
+      const target = screen.getByLabelText("Test select")
+      const event = new KeyboardEvent("keydown", {
+        key: "r",
+        bubbles: true,
+        cancelable: true,
+      })
+      const stopImmediateSpy = vi.spyOn(event, "stopImmediatePropagation")
+
+      const wasDefaultPrevented = !target.dispatchEvent(event)
+
+      expect(wasDefaultPrevented).toBe(false)
+      expect(stopImmediateSpy).not.toHaveBeenCalled()
+    })
   })
 })

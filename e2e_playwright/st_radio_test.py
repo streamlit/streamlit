@@ -31,10 +31,11 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     get_radio,
     get_radio_option,
+    reset_hovering,
     select_radio_option,
 )
 
-NUM_RADIO_ELEMENTS = 22
+NUM_RADIO_ELEMENTS = 23
 
 
 def test_radio_widget_rendering(
@@ -91,6 +92,24 @@ def test_radio_widget_rendering(
     )
 
 
+def test_radio_option_hover(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Snapshot hover on an unselected radio option.
+
+    Hovers the unselected option so the selected option's primary fill cannot be
+    mistaken for the hover style.
+    """
+    radio = get_radio(themed_app, "radio 1 (default)")
+    # Exact match: has_text="male" also matches the selected "female" option.
+    unselected = get_radio_option(radio, re.compile(r"^male$"))
+
+    reset_hovering(themed_app)
+    expect(radio.locator("[data-hovered]")).to_have_count(0)
+
+    unselected.hover()
+    expect(unselected).to_have_attribute("data-hovered", "true")
+    assert_snapshot(radio, name="st_radio-option_hover")
+
+
 def test_radio_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
     """Test width examples via label targeting."""
     assert_snapshot(
@@ -112,6 +131,94 @@ def test_radio_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
 def test_help_tooltip_works(app: Page):
     element_with_help = get_radio(app, "radio 12 (with callback, help)")
     expect_help_tooltip(app, element_with_help, "help text")
+
+
+def test_captions_are_option_descriptions_not_labels(app: Page):
+    """Captions reach assistive tech as descriptions, not as part of the name."""
+    with_captions = get_radio(app, "radio 10 (with captions)")
+
+    # The accessible name is the option text alone. Captions also render as
+    # sibling nodes, which this snapshot deliberately leaves unpinned: the
+    # contract under test is the names, not how caption markdown nests.
+    expect(with_captions).to_match_aria_snapshot(
+        """
+        - radiogroup "radio 10 (with captions)":
+          - radio "A" [checked]
+          - radio "B"
+          - radio "C"
+          - radio "D"
+          - radio "E"
+          - radio "F"
+          - radio "G"
+        """
+    )
+
+    # The caption is reachable instead through aria-describedby.
+    option_a = get_radio_option(with_captions, "A").get_by_role("radio")
+    caption_a = with_captions.get_by_test_id("stRadioCaption").filter(
+        has_text="bold text"
+    )
+    expect(caption_a).to_have_text("bold text")
+    expect(caption_a).to_have_attribute("id", re.compile(r"\S"))
+    caption_id = caption_a.get_attribute("id")
+    assert caption_id is not None  # narrowed for the type checker
+    # Match the caption's id as one entry rather than the whole value, so a
+    # group-level description added later cannot break this.
+    expect(option_a).to_have_attribute(
+        "aria-describedby", re.compile(rf"(^|\s){re.escape(caption_id)}(\s|$)")
+    )
+
+    # An empty caption must not point the description at blank content.
+    horizontal = get_radio(app, "radio 11 (horizontal, captions)")
+    # "maybe" is the option whose caption is "".
+    no_caption = get_radio_option(horizontal, "maybe").get_by_role("radio")
+    expect(no_caption).not_to_have_attribute("aria-describedby")
+
+    # A sibling in the same group still gets one, so the check above is not just
+    # observing a group-wide absence.
+    with_caption = get_radio_option(horizontal, "yes").get_by_role("radio")
+    expect(with_caption).to_have_attribute("aria-describedby", re.compile(r"\S"))
+
+    # The caption is not a click target: it is supplementary text outside the
+    # label, so clicking it must leave the selection alone. Assert the input's
+    # checked state, not the written value: a regression would trigger a rerun,
+    # during which the value still reads "A".
+    option_b = get_radio_option(with_captions, "B").get_by_role("radio")
+    with_captions.get_by_text("italics text").click()
+    expect(option_b).not_to_be_checked()
+    expect(option_a).to_be_checked()
+
+    # Clicking the label right above it does select, which proves the page was
+    # live and the caption click was ignored rather than merely not seen yet.
+    get_radio_option(with_captions, "B").click()
+    wait_for_app_run(app)
+    expect(option_b).to_be_checked()
+
+    # Caption links stay navigable because captions sit outside the option label,
+    # where React Aria cancels clicks. Assert the click survives uncancelled
+    # rather than the href, which would pass even when navigation is blocked.
+    # Reads defaultPrevented on document, after React's delegated handlers, then
+    # suppresses the navigation itself — the same trick st_link_button_test.py
+    # uses to avoid flaky popups.
+    caption_link = with_captions.get_by_test_id("stRadioCaption").get_by_role(
+        "link", name="link text"
+    )
+    # Seeded so a probe that never runs is distinguishable from a cancelled click.
+    app.evaluate("() => { window.__captionLinkPrevented = 'listener never fired' }")
+    app.evaluate(
+        "() => document.addEventListener('click', e => {"
+        "  window.__captionLinkPrevented = e.defaultPrevented;"
+        "  e.preventDefault();"
+        "}, {once: true})"
+    )
+    caption_link.click()
+    assert app.evaluate("() => window.__captionLinkPrevented") is False
+
+    # Caption and option text are both selectable: neither carries a user-select
+    # rule. Check option A, not the B just clicked — react-aria's usePress sets
+    # `user-select: none` inline on a pressed label and clears it after pointer-up.
+    expect(caption_a).not_to_have_css("user-select", "none")
+    expect(get_radio_option(with_captions, "A")).not_to_have_css("user-select", "none")
 
 
 def test_radio_has_correct_default_values(app: Page):
@@ -179,8 +286,8 @@ def test_set_value_correctly_when_click(app: Page):
     # radio 9 (markdown options) -> italics text
     select_radio_option(app, option="italics text", label="radio 9 (markdown options)")
 
-    # radio 10 (with captions) -> B (match at start to avoid caption text)
-    select_radio_option(app, option=re.compile(r"^B"), label="radio 10 (with captions)")
+    # radio 10 (with captions) -> B
+    select_radio_option(app, option="B", label="radio 10 (with captions)")
 
     # radio 11 (horizontal, captions) -> maybe
     select_radio_option(app, option="maybe", label="radio 11 (horizontal, captions)")
@@ -392,3 +499,43 @@ def test_radio_query_param_non_clearable_empty_value(page: Page, app_port: int):
     # Non-clearable radio should reject empty value, show default "cat"
     expect_prefixed_markdown(page, "bound radio value:", "cat")
     expect(page).not_to_have_url(re.compile(r"[?&]bound_radio="))
+
+
+def test_radio_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun, updates bound query params
+    on commit, and sends the buffered value on the next rerun.
+    """
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore radio value:", "alpha")
+    # Default is omitted from the URL.
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_radio="))
+
+    ignore_radio = get_radio(app, "Ignore change radio")
+
+    # Choosing an option updates the URL without rerunning the app.
+    select_radio_option(app, option="beta", label="Ignore change radio")
+
+    # Catch a delayed rerun that select_radio_option's wait might miss.
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(get_radio_option(ignore_radio, "beta").get_by_role("radio")).to_be_checked()
+    expect_prefixed_markdown(app, "Ignore radio value:", "alpha")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_radio=beta"))
+
+    # A later rerun should send the buffered value.
+    app.get_by_role("button", name="Apply ignore radio", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore radio value: beta", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore radio value: beta", exact=True)
+    ).to_be_visible()
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(get_radio_option(ignore_radio, "beta").get_by_role("radio")).to_be_checked()
+    expect_prefixed_markdown(app, "Ignore radio value:", "beta")

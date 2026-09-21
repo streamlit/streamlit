@@ -38,7 +38,7 @@ type OptionalReactElements = ReactElement | ReactElement[] | null | undefined
  * Usage:
  * ```typescript
  * const elements = RenderNodeVisitor.collectReactElements(props, disableFullscreen)
- * return <>{elements}</>
+ * return elements
  * ```
  */
 export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> {
@@ -158,7 +158,7 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
    *
    * @example
    * const ChildRenderer = (props) => {
-   *   return <>{RenderNodeVisitor.collectReactElements(props, false)}</>
+   *   return RenderNodeVisitor.collectReactElements(props, false)
    * }
    */
   static collectReactElements(props: BlockPropsWithoutWidth): ReactElement[] {

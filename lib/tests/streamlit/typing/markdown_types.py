@@ -14,16 +14,20 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from typing_extensions import assert_type
 
 if TYPE_CHECKING:
+    import sympy
+
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.markdown import MarkdownMixin
 
     markdown = MarkdownMixin().markdown
     caption = MarkdownMixin().caption
+    latex = MarkdownMixin().latex
+    divider = MarkdownMixin().divider
     badge = MarkdownMixin().badge
 
     # =====================================================================
@@ -103,12 +107,165 @@ if TYPE_CHECKING:
     markdown("Text", wrap="yes")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # =====================================================================
-    # st.caption wrap
+    # st.caption return type tests
     # =====================================================================
 
+    # Basic usage - returns DeltaGenerator
+    assert_type(caption("This explains something above."), DeltaGenerator)
+    assert_type(caption("A caption with _italics_"), DeltaGenerator)
+
+    # body is SupportsStr, so non-str values should work
+    assert_type(caption(42), DeltaGenerator)
+
+    # unsafe_allow_html parameter (positional-or-keyword)
+    assert_type(caption("<p>HTML content</p>", unsafe_allow_html=True), DeltaGenerator)
+    assert_type(caption("Safe text", unsafe_allow_html=False), DeltaGenerator)
+    assert_type(caption("<p>HTML</p>", True), DeltaGenerator)
+
+    # help parameter (keyword-only)
+    assert_type(caption("Note", help="This is help text"), DeltaGenerator)
+    assert_type(caption("Note", help=None), DeltaGenerator)
+
+    # width parameter (keyword-only)
+    assert_type(caption("Note", width="stretch"), DeltaGenerator)
+    assert_type(caption("Note", width="content"), DeltaGenerator)
+    assert_type(caption("Note", width=300), DeltaGenerator)
+
+    # text_alignment parameter (keyword-only)
+    assert_type(caption("Note", text_alignment="left"), DeltaGenerator)
+    assert_type(caption("Note", text_alignment="center"), DeltaGenerator)
+    assert_type(caption("Note", text_alignment="right"), DeltaGenerator)
+    assert_type(caption("Note", text_alignment="justify"), DeltaGenerator)
+
+    # wrap parameter (keyword-only)
     assert_type(caption("Note", wrap=True), DeltaGenerator)
     assert_type(caption("Note", wrap=False), DeltaGenerator)
+
+    # All parameters combined
+    assert_type(
+        caption(
+            "A footnote",
+            unsafe_allow_html=False,
+            help="Additional information",
+            width="stretch",
+            text_alignment="center",
+            wrap=False,
+        ),
+        DeltaGenerator,
+    )
+
+    # =====================================================================
+    # Invalid st.caption usages - should NOT type check
+    # =====================================================================
+
+    # Invalid width value (not "stretch", "content", or int)
+    caption("Note", width="auto")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    caption("Note", width="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    caption("Note", width=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Invalid text_alignment value (not "left", "center", "right", or "justify")
+    caption("Note", text_alignment="start")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Invalid wrap value (must be bool)
     caption("Note", wrap="yes")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Invalid unsafe_allow_html type (must be bool)
+    caption("Note", unsafe_allow_html="yes")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Invalid help type
+    caption("Note", help=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Passing keyword-only parameters as positional
+    caption("Note", False, "help text")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
+
+    # Missing required body argument
+    caption()  # type: ignore[call-arg]  # ty: ignore[missing-argument]
+
+    # st.caption does not take markdown-only keywords
+    caption("Note", anchors=False)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
+
+    # =====================================================================
+    # st.latex return type tests
+    # =====================================================================
+
+    # Basic usage - returns DeltaGenerator
+    assert_type(latex(r"a + b"), DeltaGenerator)
+
+    # body is SupportsStr, so non-str values should work
+    assert_type(latex(42), DeltaGenerator)
+
+    # Stand-in for optional unstubbed sympy.Expr (same pattern as graphviz/plotly)
+    sympy_expr = cast("sympy.Expr", object())
+    assert_type(latex(sympy_expr), DeltaGenerator)
+
+    # help parameter (keyword-only)
+    assert_type(latex(r"x^2", help="Quadratic"), DeltaGenerator)
+    assert_type(latex(r"x^2", help=None), DeltaGenerator)
+
+    # width parameter (keyword-only)
+    assert_type(latex(r"x^2", width="content"), DeltaGenerator)
+    assert_type(latex(r"x^2", width="stretch"), DeltaGenerator)
+    assert_type(latex(r"x^2", width=300), DeltaGenerator)
+
+    # All parameters combined
+    assert_type(
+        latex(
+            r"E = mc^2",
+            help="Mass-energy equivalence",
+            width="stretch",
+        ),
+        DeltaGenerator,
+    )
+
+    # =====================================================================
+    # Invalid st.latex usages - should NOT type check
+    # =====================================================================
+
+    # Invalid width value (not "stretch", "content", or int)
+    latex(r"x^2", width="auto")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    latex(r"x^2", width=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Invalid help type
+    latex(r"x^2", help=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Passing keyword-only parameters as positional
+    latex(r"x^2", "help")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
+
+    # Missing required body argument
+    latex()  # type: ignore[call-arg]  # ty: ignore[missing-argument]
+
+    # st.latex does not take markdown-only keywords
+    latex(r"x^2", text_alignment="center")  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
+    latex(r"x^2", wrap=False)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
+
+    # =====================================================================
+    # st.divider return type tests
+    # =====================================================================
+
+    # No-arg call is valid (width is optional) and returns DeltaGenerator
+    assert_type(divider(), DeltaGenerator)
+
+    # width is keyword-only; accepts only "stretch" or an int (not "content")
+    assert_type(divider(width="stretch"), DeltaGenerator)
+    assert_type(divider(width=300), DeltaGenerator)
+
+    # =====================================================================
+    # Invalid st.divider usages - should NOT type check
+    # =====================================================================
+
+    # Invalid width value (not "stretch" or int)
+    # "content" is accepted by sibling markdown commands but NOT by st.divider
+    divider(width="content")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    divider(width="auto")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    divider(width=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Passing width as positional argument (should be keyword-only)
+    divider("stretch")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
+
+    # st.divider does not take markdown-only keywords
+    divider(help="A rule")  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
+    divider(text_alignment="center")  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
+    divider(wrap=False)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
 
     # =====================================================================
     # st.badge return type tests

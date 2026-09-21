@@ -51,7 +51,17 @@ import {
   getContextualFillColor,
   LAYER_TYPE_TO_FILL_FUNCTION,
 } from "./utils/colors"
-import { jsonConverter } from "./utils/jsonConverter"
+import { convertDeckJson } from "./utils/jsonConverter"
+import {
+  getProvidedViews,
+  isMapCompatibleViewSpec,
+  PYDECK_UNSET_MAP_STYLE,
+  sanitizeDeckParameters,
+  withDefaultMapViewIds,
+} from "./utils/mapShell"
+
+// Manually created by Carto for Streamlit stats only — not a paid/secure key.
+const CARTO_STREAMLIT_API_KEY = "x7g2plm9yq8vfrc"
 
 /**
  * Extracted type from the DeckGL library since it is not exported correctly.
@@ -99,7 +109,7 @@ const HTML_ESCAPE_MAP: Record<string, string> = {
  * @returns {string} - The HTML-escaped string.
  */
 const escapeHtml = (value: unknown): string =>
-  String(value).replace(/[&<>"']/g, char => HTML_ESCAPE_MAP[char])
+  String(value).replaceAll(/[&<>"']/g, char => HTML_ESCAPE_MAP[char])
 
 export type UseDeckGlProps = Omit<DeckGLProps, "width"> & {
   isLightTheme: boolean
@@ -136,7 +146,7 @@ const interpolate = (
   const matchedVariables = body.match(/{(.*?)}/g)
   if (matchedVariables) {
     matchedVariables.forEach((match: string) => {
-      const variable = match.substring(1, match.length - 1)
+      const variable = match.slice(1, match.length - 1)
 
       let rawValue: unknown
       if (Object.hasOwn(info.object, variable)) {
@@ -430,24 +440,21 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
   const deck = useMemo<DeckObject>(() => {
     const jsonCopy = { ...parsedPydeckJson }
+    jsonCopy.views = withDefaultMapViewIds(jsonCopy.views)
 
-    // If unset, use either the light or dark style based on Streamlit's theme.
-    if (!jsonCopy.mapStyle) {
-      jsonCopy.mapStyle = isLightTheme
-        ? "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
-        : "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+    // pydeck map_provider=None writes this sentinel instead of omitting mapStyle.
+    const hadUnsetMapStyleSentinel =
+      jsonCopy.mapStyle === PYDECK_UNSET_MAP_STYLE
+    if (hadUnsetMapStyleSentinel) {
+      delete jsonCopy.mapStyle
     }
 
     const isUsingCarto =
-      jsonCopy?.mapProvider == "carto" ||
-      (jsonCopy?.mapStyle && jsonCopy.mapStyle?.indexOf("cartocdn") >= 0)
+      jsonCopy?.mapProvider === "carto" ||
+      (jsonCopy?.mapStyle && jsonCopy.mapStyle?.includes("cartocdn") === true)
 
     if (isUsingCarto && !jsonCopy.cartoKey) {
-      // This key was manually created by Carto just for Streamlit. It is NOT
-      // connected to any paid accounts, or secure API access, or anything of
-      // the sort. It's is just used for Carto to be able to separate Streamlit
-      // usage from other types in their own internal stats.
-      jsonCopy.cartoKey = "x7g2plm9yq8vfrc"
+      jsonCopy.cartoKey = CARTO_STREAMLIT_API_KEY
     }
 
     if (jsonCopy.layers) {
@@ -568,9 +575,36 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       })
     }
 
-    delete jsonCopy?.views // We are not using views. This avoids a console warning.
+    const converted = convertDeckJson(jsonCopy) as DeckObject
+    const providedViews = getProvidedViews(converted.views)
 
-    return jsonConverter.convert(jsonCopy) as DeckObject
+    // Carto after convert so unknown @@type (null → MapView) still gets tiles.
+    let { mapStyle, cartoKey } = converted
+    if (
+      !hadUnsetMapStyleSentinel &&
+      !mapStyle &&
+      isMapCompatibleViewSpec(providedViews)
+    ) {
+      mapStyle = isLightTheme
+        ? "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+        : "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+    }
+
+    if (
+      !cartoKey &&
+      typeof mapStyle === "string" &&
+      mapStyle.includes("cartocdn")
+    ) {
+      cartoKey = CARTO_STREAMLIT_API_KEY
+    }
+
+    return {
+      ...converted,
+      views: providedViews,
+      mapStyle,
+      cartoKey,
+      parameters: sanitizeDeckParameters(converted.parameters),
+    }
   }, [
     data.selection.indices,
     isLightTheme,
@@ -592,10 +626,8 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
           return diffArg
         }
 
-        return {
-          ...diffArg,
-          [key]: deck.initialViewState[key],
-        }
+        diffArg[key] = deck.initialViewState[key]
+        return diffArg
       }, {})
 
       setViewState(existing => ({ ...existing, ...diff }))

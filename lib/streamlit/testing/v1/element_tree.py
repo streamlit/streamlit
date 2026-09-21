@@ -28,6 +28,7 @@ from typing import (
     Any,
     ClassVar,
     Generic,
+    NoReturn,
     TypeAlias,
     TypeVar,
     cast,
@@ -94,8 +95,17 @@ if TYPE_CHECKING:
     from streamlit.proto.Toast_pb2 import Toast as ToastProto
     from streamlit.runtime.state.safe_session_state import SafeSessionState
     from streamlit.testing.v1.app_test import AppTest
+    from streamlit.typing import ChatInputValue
 
 T = TypeVar("T")
+
+# Public ``get()`` names that are not the node ``type`` string.
+_GET_TYPE_ALIASES: dict[str, str] = {
+    "datetime_input": "date_time_input",
+    "columns": "column",
+    "help": "help_info",
+    "tabs": "tab",
+}
 
 
 def _unknown_element_content(proto: Any) -> Any:
@@ -179,8 +189,35 @@ class Element(ABC):
         ...
 
     def __getattr__(self, name: str) -> Any:
-        """Fallback attempt to get an attribute from the proto."""
+        """Look up missing names on the element's proto, except AppTest interactions.
+
+        ``set_value`` and ``click`` are unsupported AppTest interactions even when a
+        proto defines those names as fields (pagination's ``set_value`` is a bool).
+        Other missing names still fall through to the proto.
+        """
+        if name in {"set_value", "click"}:
+
+            def unsupported_interaction(*_args: Any, **_kwargs: Any) -> None:
+                self._raise_unsupported_interaction(name)
+
+            return unsupported_interaction
         return getattr(self.proto, name)
+
+    def _raise_unsupported_interaction(self, method: str) -> NoReturn:
+        """Raise AppTestError: typed widgets already have interaction methods; other nodes do not."""
+        key_part = f" (key={self.key!r})" if self.key else ""
+        if isinstance(self, Widget):
+            raise AppTestError(
+                f"{method}() is not supported for {self.type}{key_part}. "
+                "Use set_value() or one of this widget's typed interaction "
+                "methods."
+            )
+        raise AppTestError(
+            f"{method}() is not supported for {self.type}{key_part}. "
+            "AppTest can inspect this element but does not implement "
+            "interactions for it. Set its value through at.session_state if it "
+            "has a key, or use a Playwright e2e test."
+        )
 
     def run(self, *, timeout: float | None = None) -> AppTest:
         """Run the ``AppTest`` script which contains the element.
@@ -522,9 +559,15 @@ class ChatInput(Widget):
         return ws
 
     @property
-    def value(self) -> str | None:
-        """The value of the widget. (str)"""  # noqa: D400
-        if self._value:
+    def value(self) -> str | ChatInputValue | None:
+        """The pending or last submitted chat input value.
+
+        Before ``.run()``, a pending ``set_value`` is that string (including ``""``).
+        After ``.run()``, this is a plain ``str`` for a text-only chat input, a
+        ``ChatInputValue`` when ``accept_file`` or ``accept_audio`` is enabled, and
+        ``None`` when nothing was submitted.
+        """
+        if self._value is not None:
             return self._value
         state = self.root.session_state
         assert state
@@ -900,7 +943,7 @@ class Metric(Element):
 class ButtonGroup(Widget, Generic[T]):
     """A representation of ``st.pills`` and ``st.segmented_control``."""
 
-    _value: T | list[T] | None
+    _value: T | list[T] | InitialValue | None
 
     proto: ButtonGroupProto = field(repr=False)
     options: list[str]
@@ -908,6 +951,7 @@ class ButtonGroup(Widget, Generic[T]):
 
     def __init__(self, proto: ButtonGroupProto, root: ElementTree) -> None:
         super().__init__(proto, root)
+        self._value = InitialValue()
         self.type = "button_group"
         # Store formatted content strings for value serialization
         self.options = [opt.content for opt in proto.options]
@@ -935,7 +979,7 @@ class ButtonGroup(Widget, Generic[T]):
         For single-select mode, returns a single value (or None if nothing selected).
         For multi-select mode, returns a list of values.
         """
-        if self._value is not None:
+        if not isinstance(self._value, InitialValue):
             return self._value
         state = self.root.session_state
         assert state
@@ -951,12 +995,10 @@ class ButtonGroup(Widget, Generic[T]):
         """The formatted string values for the current selection."""
         format_func = self.format_func
         value = self.value
+        if value is None:
+            return []
         if self._is_single_select:
-            # Single-select: value is a single item or None
-            if value is None:
-                return []
             return [_format_value_for_widget(format_func, value)]
-        # Multi-select: value is a list
         return [
             _format_value_for_widget(format_func, v) for v in cast("list[T]", value)
         ]
@@ -983,8 +1025,7 @@ class ButtonGroup(Widget, Generic[T]):
         """
         if self._is_single_select:
             return self.set_value(v)
-        # Multi-select: add to list
-        current = cast("list[T]", self.value)
+        current = list(cast("list[T]", self.value) or [])
         if v in current:
             return self
         new = current.copy()
@@ -1001,8 +1042,7 @@ class ButtonGroup(Widget, Generic[T]):
             if self.value == v:
                 return self.set_value(None)
             return self
-        # Multi-select: remove from list
-        current = cast("list[T]", self.value)
+        current = list(cast("list[T]", self.value) or [])
         if v not in current:
             return self
         new = current.copy()
@@ -2366,7 +2406,22 @@ class Block:
         return ElementList(self.get("warning"))  # type: ignore
 
     def get(self, element_type: str) -> Sequence[Node]:
-        return [e for e in self if e.type == element_type]
+        """Return nodes for an AppTest collection name or a node type.
+
+        Public names that differ from ``Node.type`` (for example
+        ``datetime_input`` vs ``date_time_input``) are accepted. Node type
+        names (usually the proto field name) keep working. ``pills`` /
+        ``segmented_control`` / ``container`` use the same filtering as the
+        matching attributes.
+        """
+        if element_type == "pills":
+            return list(self.pills)
+        if element_type == "segmented_control":
+            return list(self.segmented_control)
+        if element_type == "container":
+            return list(self.container)
+        resolved = _GET_TYPE_ALIASES.get(element_type, element_type)
+        return [e for e in self if e.type == resolved]
 
     def run(self, *, timeout: float | None = None) -> AppTest:
         """Run the script with updated widget values.
@@ -2576,6 +2631,123 @@ class Tab(Block):
 Node: TypeAlias = Element | Block
 
 
+def _widget_form_id(node: Widget) -> str:
+    """Return the widget's form id, or ``""`` if it is not in a form."""
+    return getattr(node.proto, "form_id", "") or ""
+
+
+def _submitted_form_ids(tree: ElementTree) -> set[str]:
+    """Form ids whose submit button is triggered for this ``.run()``."""
+    submitted: set[str] = set()
+    for node in tree:
+        if isinstance(node, Button) and node._value:
+            form_id = _widget_form_id(node)
+            if form_id:
+                submitted.add(form_id)
+    return submitted
+
+
+def _form_clear_flags(tree: ElementTree) -> dict[str, bool]:
+    """Map form id → ``clear_on_submit`` for every form in ``tree``."""
+    flags: dict[str, bool] = {}
+    for node in tree:
+        if getattr(node, "type", None) != "form":
+            continue
+        proto = getattr(node, "proto", None)
+        form = getattr(proto, "form", None)
+        if form is not None:
+            flags[form.form_id] = bool(form.clear_on_submit)
+    return flags
+
+
+def _unset_value_marker(node: Widget) -> tuple[str, Any]:
+    """Attribute name and unset marker so serialization uses the committed value.
+
+    Each widget class uses a different "not staged" marker: ``InitialValue``,
+    ``None``, or ``False`` for buttons.
+    """
+    if isinstance(node, FileUploader):
+        return ("_files", InitialValue())
+    if isinstance(node, (Button, DownloadButton)):
+        return ("_value", False)
+    if isinstance(
+        node,
+        (
+            DateInput,
+            DateTimeInput,
+            Feedback,
+            NumberInput,
+            Radio,
+            Selectbox,
+            TextArea,
+            TextInput,
+            TimeInput,
+            ButtonGroup,
+        ),
+    ):
+        return ("_value", InitialValue())
+    return ("_value", None)
+
+
+def _has_pending_value(node: Widget) -> bool:
+    """Return True if the test staged a value on this widget since the last run.
+
+    ``None`` is a real staged value for widgets whose unset marker is
+    ``InitialValue`` (for example ``selectbox.select_index(None)``).
+    """
+    attr, sentinel = _unset_value_marker(node)
+    current = getattr(node, attr)
+    if isinstance(sentinel, InitialValue):
+        return not isinstance(current, InitialValue)
+    return current is not sentinel
+
+
+def _use_form_clear_defaults(
+    node: Widget,
+    *,
+    submitted: set[str],
+    cleared: set[str],
+    form_clears: dict[str, bool],
+) -> bool:
+    """Return True if this widget should serialize its form's proto default.
+
+    Gating on the form's *current* ``clear_on_submit`` is an AppTest
+    approximation: the frontend stages cleared defaults into the form's pending
+    widget states even if the next render sets ``clear_on_submit=False``.
+    """
+    form_id = _widget_form_id(node)
+    return bool(
+        form_id
+        and form_id in submitted
+        and form_id in cleared
+        and form_clears.get(form_id)
+        and not isinstance(node, (Button, DownloadButton))
+        and not _has_pending_value(node)
+    )
+
+
+def _record_submitted_form_clears(
+    runner: AppTest, submitted: set[str], form_clears: dict[str, bool]
+) -> None:
+    """Remember which submitted forms should send defaults on the next submit."""
+    for form_id in submitted:
+        if form_clears.get(form_id):
+            runner._cleared_form_ids.add(form_id)
+        else:
+            runner._cleared_form_ids.discard(form_id)
+
+
+def _cleared_widget_state(node: Widget) -> WidgetState:
+    """``WidgetState`` that deserializes to the widget's declared default.
+
+    An unset value oneof makes ``session_state`` call ``deserializer(None)``,
+    which is the canonical default path and does not re-run ``format_func``.
+    """
+    ws = WidgetState()
+    ws.id = node.id
+    return ws
+
+
 def get_widget_state(node: Node) -> WidgetState | None:
     if isinstance(node, Widget):
         return node._widget_state
@@ -2630,12 +2802,48 @@ class ElementTree(Block):
     @property
     def session_state(self) -> SafeSessionState:
         assert self._runner is not None
-        return self._runner.session_state
+        # Widget internals need SafeSessionState; AppTest.session_state is the
+        # dict-like wrapper testers use.
+        return self._runner._session_state
 
     def get_widget_states(self) -> WidgetStates:
+        """Serialize widget values for the next script run.
+
+        Form widgets are included so a new ScriptRunner does not cull them, but
+        uncommitted ``set_value`` / ``click`` is ignored until that form's
+        submit button is triggered. After ``clear_on_submit``, the next submit
+        serializes proto defaults for widgets the test has not set again.
+        """
+        submitted = _submitted_form_ids(self)
+        form_clears = _form_clear_flags(self)
+        runner = self._runner
+        cleared: set[str] = runner._cleared_form_ids if runner is not None else set()
+
         ws = WidgetStates()
         for node in self:
-            w = get_widget_state(node)
+            if not isinstance(node, Widget):
+                continue
+            form_id = _widget_form_id(node)
+
+            if _use_form_clear_defaults(
+                node,
+                submitted=submitted,
+                cleared=cleared,
+                form_clears=form_clears,
+            ):
+                ws.widgets.append(_cleared_widget_state(node))
+                continue
+
+            restore: tuple[str, Any] | None = None
+            if form_id and form_id not in submitted:
+                attr, sentinel = _unset_value_marker(node)
+                restore = (attr, getattr(node, attr))
+                setattr(node, attr, sentinel)
+            try:
+                w = get_widget_state(node)
+            finally:
+                if restore is not None:
+                    setattr(node, restore[0], restore[1])
             if w is not None:
                 ws.widgets.append(w)
 
@@ -2652,8 +2860,12 @@ class ElementTree(Block):
         """
         assert self._runner is not None
 
+        submitted = _submitted_form_ids(self)
+        form_clears = _form_clear_flags(self)
         widget_states = self.get_widget_states()
-        return self._runner._run(widget_states, timeout=timeout)
+        result = self._runner._run(widget_states, timeout=timeout)
+        _record_submitted_form_clears(self._runner, submitted, form_clears)
+        return result
 
     def __repr__(self) -> str:
         return format_dict(self.children)
@@ -2693,9 +2905,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 elif alert_format == AlertProto.Format.WARNING:
                     new_node = Warning(elt.alert, root=root)
                 else:
-                    raise ValueError(
-                        f"Unknown alert type with format {elt.alert.format}"
-                    )
+                    new_node = UnknownElement(elt, root=root)
             elif ty == "dataframe":
                 new_node = Dataframe(elt.dataframe, root=root)
             elif ty == "table":
@@ -2736,7 +2946,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 elif elt.heading.tag == HeadingProtoTag.SUBHEADER_TAG.value:
                     new_node = Subheader(elt.heading, root=root)
                 else:
-                    raise ValueError(f"Unknown heading type with tag {elt.heading.tag}")
+                    new_node = UnknownElement(elt, root=root)
             elif ty == "imgs":
                 new_node = Image(elt.imgs, root=root)
             elif ty == "json":
@@ -2751,9 +2961,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 elif elt.markdown.element_type == MarkdownProto.Type.DIVIDER:
                     new_node = Divider(elt.markdown, root=root)
                 else:
-                    raise ValueError(
-                        f"Unknown markdown type {elt.markdown.element_type}"
-                    )
+                    new_node = UnknownElement(elt, root=root)
             elif ty == "menu_button":
                 new_node = MenuButton(elt.menu_button, root=root)
             elif ty == "metric":
@@ -2772,7 +2980,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 elif elt.slider.type == SliderProto.Type.SELECT_SLIDER:
                     new_node = SelectSlider(elt.slider, root=root)
                 else:
-                    raise ValueError(f"Slider with unknown type {elt.slider}")
+                    new_node = UnknownElement(elt, root=root)
             elif ty == "text":
                 new_node = Text(elt.text, root=root)
             elif ty == "text_area":

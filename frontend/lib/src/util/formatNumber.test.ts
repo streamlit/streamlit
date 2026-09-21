@@ -40,7 +40,7 @@ describe("formatNumber", () => {
   })
 
   it("returns empty string for NaN", () => {
-    expect(formatNumber(NaN)).toBe("")
+    expect(formatNumber(Number.NaN)).toBe("")
   })
 
   it("returns empty string for Infinity", () => {

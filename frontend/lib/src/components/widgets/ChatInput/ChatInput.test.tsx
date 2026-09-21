@@ -145,10 +145,10 @@ const createRecordingController = (): WaveformController => ({
 
 /** Returns the controller events from the most recent useWaveformController call. */
 const getWaveformEvents = (): WaveformControllerEvents => {
-  const lastCall =
-    useWaveformControllerMock.mock.calls[
-      useWaveformControllerMock.mock.calls.length - 1
-    ]
+  const lastCall = useWaveformControllerMock.mock.calls.at(-1)
+  if (!lastCall) {
+    throw new Error("Expected useWaveformController to have been called")
+  }
   return lastCall[0].events as WaveformControllerEvents
 }
 
@@ -428,6 +428,46 @@ describe("ChatInput widget", () => {
 
       const button = screen.getByTestId("stChatInputSubmitButton")
       expect(button).not.toBeDisabled()
+    })
+
+    it("submits an attachment with explicit empty text", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        acceptFile: ChatInputProto.AcceptFile.SINGLE,
+        maxUploadSizeMb: 50,
+      })
+      const spy = vi.spyOn(props.widgetMgr, "setChatInputValue")
+      render(<ChatInput {...props} />)
+
+      const file = new File(["attachment contents"], "attachment.txt", {
+        type: "text/plain",
+      })
+      const uploadButton = screen.getByTestId("stChatInputFileUploadButton")
+      const fileInput = uploadButton.querySelector("input") as HTMLInputElement
+      await user.upload(fileInput, file)
+
+      const submitButton = screen.getByTestId("stChatInputSubmitButton")
+      await waitFor(() => {
+        expect(submitButton).toBeEnabled()
+      })
+      await user.click(submitButton)
+
+      expect(spy).toHaveBeenCalledWith(
+        props.element.id,
+        expect.objectContaining({
+          data: "",
+          fileUploaderState: expect.objectContaining({
+            uploadedFileInfo: [
+              expect.objectContaining({
+                fileId: "attachment.txt",
+                name: "attachment.txt",
+                size: file.size,
+              }),
+            ],
+          }),
+        }),
+        { formId: undefined, fragmentId: undefined, fromUser: true }
+      )
     })
 
     it("disables submit button when files are uploading", async () => {
@@ -810,7 +850,7 @@ describe("ChatInput widget", () => {
         screen
           .getAllByTestId("stFileChipName")
           .map(el => el.getAttribute("title"))
-          .sort()
+          .toSorted()
       ).toEqual(["folder/file1.txt", "folder/file2.txt"])
     })
 
@@ -1897,7 +1937,7 @@ describe("ChatInput widget", () => {
     })
   })
 
-  it("shows a drop overlay while files are dragged over the window", () => {
+  const renderChatInputWithFileDrop = (): void => {
     render(
       <ChatInput
         {...getProps({
@@ -1906,28 +1946,72 @@ describe("ChatInput widget", () => {
         })}
       />
     )
+  }
 
+  const dispatchWindowEvent = (
+    type: string,
+    properties: Record<string, unknown> = {}
+  ): void => {
     act(() => {
-      const dragOver = new Event("dragover", {
-        bubbles: true,
-        cancelable: true,
-      })
-      Object.defineProperty(dragOver, "dataTransfer", {
-        value: { types: ["Files"] },
-      })
-      window.dispatchEvent(dragOver)
+      const event = new Event(type, { bubbles: true, cancelable: true })
+      // jsdom's Event has no dataTransfer/clientX/clientY, and those fields
+      // are read-only on real drag events, so set them via defineProperty.
+      for (const [key, value] of Object.entries(properties)) {
+        Object.defineProperty(event, key, { value })
+      }
+      window.dispatchEvent(event)
     })
+  }
+
+  const startFileDrag = (): void => {
+    dispatchWindowEvent("dragover", { dataTransfer: { types: ["Files"] } })
+  }
+
+  it("shows a drop overlay while files are dragged over the window", () => {
+    renderChatInputWithFileDrop()
+    startFileDrag()
 
     expect(screen.getByText("Drag and drop a file here")).toBeVisible()
 
-    act(() => {
-      window.dispatchEvent(
-        new Event("drop", { bubbles: true, cancelable: true })
-      )
-    })
+    dispatchWindowEvent("drop")
 
     expect(
       screen.queryByText("Drag and drop a file here")
     ).not.toBeInTheDocument()
+  })
+
+  it.each(["top-left", "bottom-right"] as const)(
+    "hides the drop overlay when the drag leaves the window at the %s",
+    corner => {
+      renderChatInputWithFileDrop()
+      startFileDrag()
+
+      expect(screen.getByText("Drag and drop a file here")).toBeVisible()
+
+      const coordinates =
+        corner === "top-left"
+          ? { clientX: 0, clientY: 0 }
+          : {
+              // Default jsdom / WindowDimensionsProvider viewport is 1024x768.
+              clientX: 1024,
+              clientY: 768,
+            }
+      dispatchWindowEvent("dragleave", coordinates)
+
+      expect(
+        screen.queryByText("Drag and drop a file here")
+      ).not.toBeInTheDocument()
+    }
+  )
+
+  it("keeps the drop overlay when dragleave stays inside the window", () => {
+    renderChatInputWithFileDrop()
+    startFileDrag()
+
+    expect(screen.getByText("Drag and drop a file here")).toBeVisible()
+
+    dispatchWindowEvent("dragleave", { clientX: 40, clientY: 40 })
+
+    expect(screen.getByText("Drag and drop a file here")).toBeVisible()
   })
 })

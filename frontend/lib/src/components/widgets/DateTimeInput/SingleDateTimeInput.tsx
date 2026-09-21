@@ -79,6 +79,7 @@ import {
   StyledClearButton,
   StyledDateField,
   StyledDateFieldContainer,
+  StyledDateFieldsScroller,
   StyledDateInputWrapper,
   StyledErrorIconContainer,
   StyledPopoverTimeField,
@@ -444,7 +445,7 @@ function SingleDateTimeInput({
     } else {
       const segments =
         triggerRef.current?.querySelectorAll<HTMLElement>(SEGMENT_SELECTOR)
-      const lastSegment = segments?.[segments.length - 1]
+      const lastSegment = segments ? Array.from(segments).at(-1) : undefined
       if (lastSegment) {
         lastSegment.focus()
       } else {
@@ -633,9 +634,10 @@ function SingleDateTimeInput({
       const wrapper = triggerRef.current
       if (!wrapper) return
       const segments = wrapper.querySelectorAll<HTMLElement>(SEGMENT_SELECTOR)
+      const segmentList = Array.from(segments)
       const isLeavingField =
-        (!e.shiftKey && e.target === segments[segments.length - 1]) ||
-        (e.shiftKey && e.target === segments[0])
+        (!e.shiftKey && e.target === segmentList.at(-1)) ||
+        (e.shiftKey && e.target === segmentList[0])
       if (isLeavingField) {
         // Commit before closing, as the popover's own Tab handler does. Leaving
         // it to the blur that follows would run the commit after the popover has
@@ -794,32 +796,34 @@ function SingleDateTimeInput({
         onPaste={handlePaste}
         onKeyDownCapture={handleFieldKeyDown}
       >
-        <I18nProvider locale="en-US">
-          <StyledDateField>
-            <DateField<CalendarDateTime>
-              // Remount on form clear. React Aria keeps its own display state
-              // for segments the user has typed but not completed, and with
-              // `value` already null there is no prop change to re-seed it — so a
-              // time typed before `clear_on_submit` would stay on screen, and
-              // because dismissal completes a value from what is visible, it would
-              // also commit.
-              key={formResetKey}
-              aria-label={label}
-              aria-describedby={error ? errorId : undefined}
-              isInvalid={!!error}
-              value={displayValue}
-              onChange={handleFieldChange}
-              minValue={minDateTime ?? undefined}
-              maxValue={maxDateTime ?? undefined}
-              granularity="minute"
-              hourCycle={24}
-              shouldForceLeadingZeros
-              isDisabled={disabled}
-            >
-              <ReorderedSegments format={format} includeTime />
-            </DateField>
-          </StyledDateField>
-        </I18nProvider>
+        <StyledDateFieldsScroller data-testid="stDateTimeInputFieldsScroller">
+          <I18nProvider locale="en-US">
+            <StyledDateField>
+              <DateField<CalendarDateTime>
+                // Remount on form clear. React Aria keeps its own display state
+                // for segments the user has typed but not completed, and with
+                // `value` already null there is no prop change to re-seed it — so a
+                // time typed before `clear_on_submit` would stay on screen, and
+                // because dismissal completes a value from what is visible, it would
+                // also commit.
+                key={formResetKey}
+                aria-label={label}
+                aria-describedby={error ? errorId : undefined}
+                isInvalid={!!error}
+                value={displayValue}
+                onChange={handleFieldChange}
+                minValue={minDateTime ?? undefined}
+                maxValue={maxDateTime ?? undefined}
+                granularity="minute"
+                hourCycle={24}
+                shouldForceLeadingZeros
+                isDisabled={disabled}
+              >
+                <ReorderedSegments format={format} includeTime />
+              </DateField>
+            </StyledDateField>
+          </I18nProvider>
+        </StyledDateFieldsScroller>
         <StyledTrailingIcons>
           {error && (
             <StyledErrorIconContainer data-testid="stDateTimeInputError">
@@ -850,7 +854,7 @@ function SingleDateTimeInput({
         </StyledTrailingIcons>
         {error && (
           <StyledVisuallyHidden id={errorId} role="alert">
-            {error.replace(/\*\*/g, "")}
+            {error.replaceAll("**", "")}
           </StyledVisuallyHidden>
         )}
       </StyledDateInputWrapper>

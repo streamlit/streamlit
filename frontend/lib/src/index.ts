@@ -234,6 +234,7 @@ export {
   isScrollingHidden,
   isToolbarDisplayed,
   makeElementWithInfoText,
+  normalizeQueryString,
   notUndefined,
   preserveEmbedQueryParams,
   setCookie,

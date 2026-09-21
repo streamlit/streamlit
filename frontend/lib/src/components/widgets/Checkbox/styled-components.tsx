@@ -22,6 +22,11 @@ import {
   SwitchField as RASwitchField,
 } from "react-aria-components"
 
+import {
+  getCheckboxIndicatorColors,
+  getCheckboxIndicatorLayoutStyles,
+  getCheckboxIndicatorSvgStyles,
+} from "~lib/components/shared/Checkbox/checkboxIndicatorStyles"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import type { EmotionTheme } from "~lib/theme/types"
 import { LabelVisibilityOptions } from "~lib/util/utils"
@@ -130,58 +135,31 @@ export const StyledCheckboxButton = styled(RACheckboxButton, {
 interface StyledCheckboxIndicatorProps {
   $isSelected: boolean
   $isFocusVisible: boolean
+  $isHovered: boolean
   $isDisabled: boolean
 }
 
 export const StyledCheckboxIndicator =
   styled.div<StyledCheckboxIndicatorProps>(
-    ({ theme, $isSelected, $isFocusVisible, $isDisabled }) => {
-      let borderColor: string
-      let backgroundColor: string
-
-      if ($isDisabled) {
-        borderColor = theme.colors.borderColor
-        backgroundColor = $isSelected
-          ? theme.colors.fadedText40
-          : theme.colors.lightenedBg05
-      } else if ($isSelected) {
-        borderColor = theme.colors.primary
-        backgroundColor = theme.colors.primary
-      } else {
-        borderColor = theme.colors.borderColor
-        backgroundColor = theme.colors.lightenedBg05
-      }
+    ({ theme, $isSelected, $isFocusVisible, $isHovered, $isDisabled }) => {
+      const { borderColor, backgroundColor } = getCheckboxIndicatorColors(
+        theme,
+        {
+          isSelected: $isSelected,
+          isHovered: $isHovered,
+          isDisabled: $isDisabled,
+        }
+      )
 
       return {
-        flexShrink: 0,
-        width: theme.sizes.checkbox,
-        height: theme.sizes.checkbox,
-        // Vertically center the indicator with the first text line.
-        // = (lineHeight × fontSize − indicatorSize) / 2 = (1.5 × 0.875rem − 1rem) / 2 = 2.5px
-        marginTop: `calc((${theme.lineHeights.small} * ${theme.fontSizes.sm} - ${theme.sizes.checkbox}) / 2)`,
-        borderRadius: theme.radii.sm,
+        ...getCheckboxIndicatorLayoutStyles(theme),
         border: `${theme.sizes.borderWidth} solid ${borderColor}`,
         backgroundColor,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
         boxShadow:
           $isFocusVisible && $isSelected ? theme.shadows.focusRing : "none",
-        transition: "background-color 100ms ease, border-color 100ms ease",
-
-        "& svg": {
-          width: "65%",
-          height: "65%",
-          fill: "none",
-          stroke: $isDisabled
-            ? hasLightBackgroundColor(theme)
-              ? theme.colors.bgColor
-              : theme.colors.bodyText
-            : theme.colors.white,
-          strokeWidth: "2.5px",
-          strokeLinecap: "round",
-          strokeLinejoin: "round",
-        },
+        "& svg": getCheckboxIndicatorSvgStyles(theme, {
+          isDisabled: $isDisabled,
+        }),
       }
     }
   )

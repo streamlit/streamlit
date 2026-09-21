@@ -70,6 +70,61 @@ class PyDeckTest(DeltaGeneratorTestCase):
         ]
         assert el.deck_gl_json_chart.tooltip == ""
 
+    def test_orbit_view_parameters_and_no_basemap_are_serialized(self) -> None:
+        """OrbitView, WebGL parameters, and map_provider=None survive to_json()."""
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[pdk.Layer("PointCloudLayer", data=[{"x": 0, "y": 0, "z": 0}])],
+                initial_view_state=pdk.ViewState(
+                    target=[0, 0, 0], zoom=5, rotation_x=15, rotation_orbit=30
+                ),
+                views=[pdk.View(type="OrbitView", controller=True)],
+                map_provider=None,
+                parameters={"cull": True},
+            )
+        )
+
+        actual = json.loads(
+            self.get_delta_from_queue().new_element.deck_gl_json_chart.json
+        )
+
+        assert actual["views"][0]["@@type"] == "OrbitView"
+        assert actual["views"][0]["controller"] is True
+        assert actual["parameters"]["cull"] is True
+        assert not actual.get("mapProvider")
+        # pydeck 0.9.2+ writes "__MAP_STYLE__"; 0.8 keeps the default "dark".
+        assert actual["mapStyle"] in {"__MAP_STYLE__", "dark"}
+        assert actual["initialViewState"]["target"] == [0, 0, 0]
+        assert "latitude" not in actual["initialViewState"]
+
+    def test_layer_extensions_serialized(self) -> None:
+        """Extension @@type dicts on a pydeck Layer appear in the chart JSON sent to the frontend."""
+
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[
+                    pdk.Layer(
+                        "ScatterplotLayer",
+                        data=df1,
+                        get_filter_value="lat",
+                        filter_range=[0, 10],
+                        extensions=[
+                            {"@@type": "DataFilterExtension", "filterSize": 1},
+                        ],
+                    ),
+                ]
+            )
+        )
+
+        layer = json.loads(
+            self.get_delta_from_queue().new_element.deck_gl_json_chart.json
+        )["layers"][0]
+        assert layer["extensions"] == [
+            {"@@type": "DataFilterExtension", "filterSize": 1}
+        ]
+        assert layer["getFilterValue"] == "@@=lat"
+        assert layer["filterRange"] == [0, 10]
+
     def test_with_tooltip(self):
         """Test that pydeck object with tooltip works."""
 
