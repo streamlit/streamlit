@@ -349,7 +349,8 @@ with st.container(key="altair_geoshape_inline"):
     )
     st.altair_chart(inline_chart, width="content")
 
-# Accessible-name cases for `alt` (appended so existing nth indexes stay stable).
+# Keep accessible-name cases last because existing E2E assertions use positional
+# chart indexes.
 _a11y_df = pd.DataFrame({"a": ["A", "B"], "b": [1, 2]})
 _a11y_chart = alt.Chart(_a11y_df).mark_bar().encode(x="a", y="b")
 

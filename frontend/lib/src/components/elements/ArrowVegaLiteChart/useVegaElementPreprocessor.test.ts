@@ -1261,7 +1261,6 @@ describe("useVegaElementPreprocessor", () => {
         { alt: "Streamlit alt" }
       )
       expect(spec.description).toBe("Streamlit alt")
-      expect(spec.description).not.toBe("Author description")
     })
   })
 })

@@ -2553,8 +2553,9 @@ class VegaChartsMixin:
 
         normalized_alt = normalize_alt(alt)
         existing_description = spec.get("description")
-        # Truthiness avoids TypeError if description is a non-hashable invalid
-        # value (e.g. a list); None and "" stay silent.
+        # Warn when alt replaces an existing chart description. Truthiness
+        # covers None and empty strings and does not crash on invalid
+        # non-string values (e.g. a list).
         if normalized_alt is not None and existing_description:
             _LOGGER.warning(
                 "The Vega-Lite / Altair chart already sets description=%r. "
@@ -2587,6 +2588,9 @@ class VegaChartsMixin:
             vega_lite_proto.form_id = current_form_id(self.dg)
 
             ctx = get_script_run_ctx()
+            # Include `alt` like other stable kwargs. Changing `alt` remounts an
+            # unkeyed selection chart. Keyed charts ignore it because
+            # key_as_main_identity stays {"selection_mode"}.
             vega_lite_proto.id = compute_and_register_element_id(
                 "vega_lite_chart",
                 user_key=key,

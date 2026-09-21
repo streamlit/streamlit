@@ -1713,8 +1713,8 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         assert proto.alt == "Streamlit alt"
         assert json.loads(proto.spec)["description"] == "Spec description"
 
-    def test_vega_lite_chart_alt_handles_unhashable_description(self):
-        """Invalid non-hashable description must not crash when alt is set."""
+    def test_vega_lite_chart_alt_handles_invalid_list_description(self):
+        """An invalid list description does not prevent alt from being applied."""
         with patch("streamlit.elements.vega_charts._LOGGER.warning") as mock_warning:
             st.vega_lite_chart(
                 {"mark": "rect", "description": ["not", "a", "string"]},
@@ -1724,6 +1724,14 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.vega_lite_chart
         assert proto.alt == "Streamlit alt"
+
+    def test_vega_lite_chart_alt_preserves_adversarial_plain_text(self):
+        """Quotes and angle brackets stay literal on the proto (no HTML path)."""
+        adversarial = 'Chart of "A < B" & sales <script>alert(1)</script>'
+        st.vega_lite_chart({"mark": "rect"}, alt=adversarial)
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.HasField("alt")
+        assert proto.alt == adversarial
 
     def test_spec_in_arg1(self):
         """Test that it can be called with spec as the 1st arg."""

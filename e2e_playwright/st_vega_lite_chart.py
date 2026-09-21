@@ -224,7 +224,8 @@ st.vega_lite_chart(
     theme="streamlit",
 )
 
-# Accessible-name cases for `alt` (appended so existing nth indexes stay stable).
+# Keep accessible-name cases last because existing E2E assertions use positional
+# chart indexes.
 _a11y_df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
 _a11y_spec = {
     "mark": "bar",
