@@ -1372,6 +1372,50 @@ describe("useEChartsSelections", () => {
     })
   })
 
+  it("still prunes pixel-only brush areas while the widget is disabled", () => {
+    const pixelOnly = createBrushSelection({
+      brushId: "brush-0",
+      brushIndex: 0,
+      areas: [
+        {
+          brushType: "rect",
+          range: [
+            [10, 20],
+            [30, 40],
+          ],
+        },
+      ],
+    })
+    const withCoord = createBrushSelection({
+      brushId: "brush-1",
+      brushIndex: 1,
+      areas: [{ brushType: "lineX", coordRange: [1, 3] }],
+    })
+    widgetMgr.getElementState.mockImplementation((_id: string, key: string) =>
+      key === "brushSelection" ? [pixelOnly, withCoord] : undefined
+    )
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr, undefined, true)
+    )
+    const chart = createFakeChart()
+
+    act(() => {
+      result.current.prunePixelOnlyBrushAfterResize(chart)
+    })
+
+    expect(result.current.isSelectionActivated).toBe(false)
+    expect(widgetMgr.setElementState).toHaveBeenCalledWith(
+      "chart-id",
+      "brushSelection",
+      [{ ...pixelOnly, areas: [], selected: [] }, withCoord]
+    )
+    expect(chart.dispatchAction).toHaveBeenCalledWith({
+      type: "brush",
+      brushIndex: 0,
+      areas: [],
+    })
+  })
+
   it("prunes mixed brushes after bind without a user-gesture rerun", () => {
     const pixelOnly = createBrushSelection({
       brushId: "brush-0",

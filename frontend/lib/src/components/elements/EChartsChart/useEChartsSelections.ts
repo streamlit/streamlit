@@ -495,7 +495,7 @@ function buildSelectedGroups(
 
   return Array.from(groups.values())
     .filter(group => group.dataIndices.size > 0)
-    .sort(
+    .toSorted(
       (left, right) =>
         left.seriesIndex - right.seriesIndex ||
         compareDataTypes(left.dataType, right.dataType)
@@ -510,7 +510,7 @@ function buildSelectedGroups(
         series_id: seriesId,
         series_name: seriesName,
         data_type: group.dataType,
-        data_indices: Array.from(group.dataIndices).sort(
+        data_indices: Array.from(group.dataIndices).toSorted(
           (left, right) => left - right
         ),
       }
@@ -528,8 +528,8 @@ function buildSelectedGroups(
 function buildAreas(
   brushSelection: BrushSelection[]
 ): Array<Record<string, unknown>> {
-  return [...brushSelection]
-    .sort((left, right) => left.brushIndex - right.brushIndex)
+  return brushSelection
+    .toSorted((left, right) => left.brushIndex - right.brushIndex)
     .flatMap(brush =>
       (brush.areas ?? [])
         .filter(
@@ -888,7 +888,11 @@ export function useEChartsSelections(
 
   const prunePixelOnlyBrushAfterResize = useCallback(
     (chart: EChartsSelectionInstance): void => {
-      if (!chartId || !isSelectionActivated) {
+      // Gate on the proto flag, not ``isSelectionActivated``. Script-run
+      // disable still records ``lastPositiveSizeRef``, so skipping prune
+      // here would consume the size change and leave pixel-only overlays
+      // (and mixed-brush hit indices) stale after the run.
+      if (!chartId || !element.selectionActivated) {
         return
       }
       const current = widgetMgr.getElementState<BrushSelection[]>(
@@ -961,7 +965,7 @@ export function useEChartsSelections(
         Boolean(formId)
       )
     },
-    [chartId, formId, isSelectionActivated, widgetMgr, writeSelection]
+    [chartId, formId, element.selectionActivated, widgetMgr, writeSelection]
   )
 
   const bindSelections = useCallback(
