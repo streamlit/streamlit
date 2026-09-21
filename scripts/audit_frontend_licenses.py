@@ -77,6 +77,11 @@ PACKAGE_EXCEPTIONS: set[PackageInfo] = {
         "UNKNOWN",
     ),
     (
+        # MIT license: https://github.com/mapbox/jsonlint
+        "@mapbox/jsonlint-lines-primitives@npm:2.0.3",
+        "UNKNOWN",
+    ),
+    (
         # Mapbox Web SDK license: https://github.com/mapbox/mapbox-gl-js/blob/main/LICENSE.txt
         "mapbox-gl@npm:1.13.3",
         "SEE LICENSE IN LICENSE.txt",
