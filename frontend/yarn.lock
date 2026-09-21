@@ -3461,7 +3461,7 @@ __metadata:
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/utils": "workspace:^"
     "@swc/plugin-emotion": "npm:^16.0.0"
-    "@testing-library/dom": "npm:^10.4.1"
+    "@testing-library/dom": "npm:^10.4.2"
     "@testing-library/jest-dom": "npm:^7.0.1"
     "@testing-library/react": "npm:^16.3.3"
     "@testing-library/user-event": "npm:^14.6.7"
@@ -3570,7 +3570,7 @@ __metadata:
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/utils": "workspace:^"
     "@swc/plugin-emotion": "npm:^16.0.0"
-    "@testing-library/dom": "npm:^10.4.1"
+    "@testing-library/dom": "npm:^10.4.2"
     "@testing-library/jest-dom": "npm:^7.0.1"
     "@testing-library/react": "npm:^16.3.3"
     "@testing-library/user-event": "npm:^14.6.7"
@@ -3675,7 +3675,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@streamlit/typescript-config@workspace:typescript-config"
   dependencies:
-    "@testing-library/dom": "npm:^10.4.1"
+    "@testing-library/dom": "npm:^10.4.2"
     "@testing-library/jest-dom": "npm:^7.0.1"
     typescript: "npm:^6.0.3"
     typescript-v7: "npm:typescript@7.0.2"
@@ -3863,9 +3863,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@testing-library/dom@npm:^10.4.1":
-  version: 10.4.1
-  resolution: "@testing-library/dom@npm:10.4.1"
+"@testing-library/dom@npm:^10.4.2":
+  version: 10.4.2
+  resolution: "@testing-library/dom@npm:10.4.2"
   dependencies:
     "@babel/code-frame": "npm:^7.10.4"
     "@babel/runtime": "npm:^7.12.5"
@@ -3875,7 +3875,7 @@ __metadata:
     lz-string: "npm:^1.5.0"
     picocolors: "npm:1.1.1"
     pretty-format: "npm:^27.0.2"
-  checksum: 10c0/19ce048012d395ad0468b0dbcc4d0911f6f9e39464d7a8464a587b29707eed5482000dad728f5acc4ed314d2f4d54f34982999a114d2404f36d048278db815b1
+  checksum: 10c0/22c3aded3a54fc4f1a0c54aa75a881bb65e45f0128f3c5c881f9e571e593c6364c036f71b733dd0856ff2ba0debd59106e206f6764ee771dd8ed7cf82ceaa618
   languageName: node
   linkType: hard
 
@@ -13930,7 +13930,7 @@ __metadata:
   resolution: "streamlit-component-lib@workspace:component-lib"
   dependencies:
     "@streamlit/typescript-config": "workspace:^"
-    "@testing-library/dom": "npm:^10.4.1"
+    "@testing-library/dom": "npm:^10.4.2"
     "@testing-library/react": "npm:^16.3.3"
     "@types/hoist-non-react-statics": "npm:^3.3.7"
     "@types/node": "npm:>=24 <25"
@@ -13960,7 +13960,7 @@ __metadata:
     "@eslint/compat": "npm:^2.1.1"
     "@eslint/js": "npm:^10.0.1"
     "@playwright/cli": "npm:^0.1.19"
-    "@testing-library/dom": "npm:^10.4.1"
+    "@testing-library/dom": "npm:^10.4.2"
     "@testing-library/jest-dom": "npm:^7.0.1"
     "@testing-library/react": "npm:^16.3.3"
     "@types/node": "npm:>=24 <25"
