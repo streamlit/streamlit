@@ -76,7 +76,7 @@ describe("Dialog container", () => {
       </Dialog>
     )
 
-    expect(() => screen.getByText("test")).toThrow()
+    expect(screen.queryByText("test")).not.toBeInTheDocument()
   })
 
   it("renders an icon when provided", () => {
@@ -115,7 +115,7 @@ describe("Dialog container", () => {
     expect(screen.getByText("test")).toBeVisible()
     await user.click(screen.getByLabelText("Close"))
     // dialog should be closed by clicking outside and, thus, the content should be gone
-    expect(() => screen.getByText("test")).toThrow()
+    expect(screen.queryByText("test")).not.toBeInTheDocument()
   })
 
   it("should not close when not dismissible", () => {
@@ -128,7 +128,7 @@ describe("Dialog container", () => {
 
     expect(screen.getByText("test")).toBeVisible()
     // close button - and hence dismiss - does not exist
-    expect(() => screen.getByLabelText("Close")).toThrow()
+    expect(screen.queryByLabelText("Close")).not.toBeInTheDocument()
   })
 
   it("should handle modal close events when dismissible", async () => {
@@ -147,7 +147,7 @@ describe("Dialog container", () => {
     await user.click(closeButton)
 
     // Dialog should be closed (content no longer visible)
-    expect(() => screen.getByText("test content")).toThrow()
+    expect(screen.queryByText("test content")).not.toBeInTheDocument()
   })
 
   describe("on_dismiss functionality", () => {
@@ -268,7 +268,7 @@ describe("Dialog container", () => {
       )
 
       // No close button should exist, so no way to trigger dismiss event
-      expect(() => screen.getByLabelText("Close")).toThrow()
+      expect(screen.queryByLabelText("Close")).not.toBeInTheDocument()
       expect(mockWidgetMgr.setTriggerValue).not.toHaveBeenCalled()
     })
   })

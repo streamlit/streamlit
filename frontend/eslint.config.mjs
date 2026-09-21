@@ -547,9 +547,12 @@ export default defineConfig([
       "testing-library/prefer-find-by": "error",
       // Enforce consistent use of it() over test()
       "vitest/consistent-test-it": ["error", { fn: "it" }],
-      // Oxlint vitest/no-focused-tests and no-commented-out-tests own these.
+      // Oxlint owns these vitest checks. Keep ESLint copies off so
+      // suppressions do not fork if the recommended preset grows.
       "vitest/no-focused-tests": "off",
       "vitest/no-commented-out-tests": "off",
+      "vitest/no-duplicate-hooks": "off",
+      "vitest/require-to-throw-message": "off",
       "no-restricted-imports": getNoRestrictedImports([], true),
     },
   },
