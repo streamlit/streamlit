@@ -115,7 +115,7 @@ effect of that element, because the referenced block might not exist when
 the replay happens.
 
 How to fix this:
-* Move the creation of $THING inside {func_name}.
+* Move the creation of that layout block inside {func_name}.
 * Move the call to the streamlit element outside of {func_name}.
 * Remove the `@st.{decorator_name}` decorator from {func_name}.
             """

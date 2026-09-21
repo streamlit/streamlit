@@ -20,11 +20,13 @@ import streamlit as st
 from streamlit.elements import exception
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from streamlit.runtime.caching.cache_errors import (
+    CacheReplayClosureError,
     UnhashableParamError,
     UnserializableReturnValueError,
     get_cached_func_name_md,
     get_return_value_type,
 )
+from streamlit.runtime.caching.cache_type import CacheType
 from tests import testutil
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -53,6 +55,33 @@ def test_get_return_value_type_with_module() -> None:
 def test_get_return_value_type_without_module() -> None:
     """Values without a ``__module__`` attribute fall back to the type name."""
     assert get_return_value_type(42) == "`int`"
+
+
+@pytest.mark.parametrize(
+    ("cache_type", "decorator_name"),
+    [
+        (CacheType.DATA, "cache_data"),
+        (CacheType.RESOURCE, "cache_resource"),
+    ],
+)
+def test_cache_replay_closure_error_names_layout_block(
+    cache_type: CacheType, decorator_name: str
+) -> None:
+    """Message uses 'that layout block' and lists every remedy."""
+
+    def cached_fn() -> None:
+        pass
+
+    message = str(CacheReplayClosureError(cache_type, cached_fn))
+
+    assert "$THING" not in message
+    assert "* Move the creation of that layout block inside `cached_fn()`." in message
+    assert (
+        "* Move the call to the streamlit element outside of `cached_fn()`." in message
+    )
+    assert (
+        f"* Remove the `@st.{decorator_name}` decorator from `cached_fn()`." in message
+    )
 
 
 class CacheErrorsTest(DeltaGeneratorTestCase):
