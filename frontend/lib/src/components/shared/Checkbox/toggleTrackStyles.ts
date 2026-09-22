@@ -26,15 +26,15 @@ type ToggleTrackVisualState = {
 }
 
 /**
- * Return the track fill so off-state chrome matches secondary-button hover
- * without following a custom `theme.borderColor`.
+ * Return the `st.toggle` track fill. Off and disabled tracks are a fill, not a
+ * stroke, so they do not follow the configurable `theme.borderColor`.
  *
  * - Off rest / disabled: `fadedText10` (same default look as `borderColor`,
- *   but not the configurable border token — toggles are a fill, not a stroke)
+ *   but not the configurable border token)
  * - Off hover: `darkenedBgMix15` (same as unchecked radio/checkbox hover)
  * - On: `primary` (hover does not change this)
  */
-export function getToggleTrackColors(
+export function getToggleTrackColor(
   theme: EmotionTheme,
   { isSelected, isHovered = false, isDisabled = false }: ToggleTrackVisualState
 ): string {

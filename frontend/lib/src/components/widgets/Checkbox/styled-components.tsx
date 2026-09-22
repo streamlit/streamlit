@@ -27,7 +27,7 @@ import {
   getCheckboxIndicatorLayoutStyles,
   getCheckboxIndicatorSvgStyles,
 } from "~lib/components/shared/Checkbox/checkboxIndicatorStyles"
-import { getToggleTrackColors } from "~lib/components/shared/Checkbox/toggleTrackStyles"
+import { getToggleTrackColor } from "~lib/components/shared/Checkbox/toggleTrackStyles"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import type { EmotionTheme } from "~lib/theme/types"
 import { LabelVisibilityOptions } from "~lib/util/utils"
@@ -188,7 +188,7 @@ export const StyledToggleTrack = styled.div<StyledToggleTrackProps>(
       paddingLeft: theme.spacing.threeXS,
       paddingRight: theme.spacing.threeXS,
       borderRadius: theme.radii.full,
-      backgroundColor: getToggleTrackColors(theme, {
+      backgroundColor: getToggleTrackColor(theme, {
         isSelected: $isSelected,
         isHovered: $isHovered,
         isDisabled: $isDisabled,

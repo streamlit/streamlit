@@ -17,17 +17,17 @@
 import { darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 import { createEmotionTheme } from "~lib/theme/utils"
 
-import { getToggleTrackColors } from "./toggleTrackStyles"
+import { getToggleTrackColor } from "./toggleTrackStyles"
 
-describe("getToggleTrackColors", () => {
+describe("getToggleTrackColor", () => {
   it.each([
     ["light", lightTheme.emotion],
     ["dark", darkTheme.emotion],
   ] as const)(
-    "uses fadedText10 for off rest so custom borderColor does not bleed (%s theme)",
+    "uses fadedText10 for off rest, matching default borderColor (%s theme)",
     (_name, theme) => {
       expect(
-        getToggleTrackColors(theme, {
+        getToggleTrackColor(theme, {
           isSelected: false,
           isHovered: false,
           isDisabled: false,
@@ -41,7 +41,7 @@ describe("getToggleTrackColors", () => {
     const theme = lightTheme.emotion
 
     expect(
-      getToggleTrackColors(theme, {
+      getToggleTrackColor(theme, {
         isSelected: false,
         isHovered: true,
         isDisabled: false,
@@ -53,7 +53,7 @@ describe("getToggleTrackColors", () => {
     const theme = lightTheme.emotion
 
     expect(
-      getToggleTrackColors(theme, {
+      getToggleTrackColor(theme, {
         isSelected: true,
         isHovered: true,
         isDisabled: false,
@@ -61,18 +61,18 @@ describe("getToggleTrackColors", () => {
     ).toBe(theme.colors.primary)
   })
 
-  it("ignores hover when disabled and keeps fadedText10", () => {
+  it("uses fadedText10 when disabled, including selected and hovered", () => {
     const theme = lightTheme.emotion
 
     expect(
-      getToggleTrackColors(theme, {
+      getToggleTrackColor(theme, {
         isSelected: false,
         isHovered: true,
         isDisabled: true,
       })
     ).toBe(theme.colors.fadedText10)
     expect(
-      getToggleTrackColors(theme, {
+      getToggleTrackColor(theme, {
         isSelected: true,
         isHovered: true,
         isDisabled: true,
@@ -84,10 +84,30 @@ describe("getToggleTrackColors", () => {
     const theme = createEmotionTheme({ borderColor: "#00008B" })
 
     expect(
-      getToggleTrackColors(theme, {
+      getToggleTrackColor(theme, {
         isSelected: false,
         isHovered: false,
         isDisabled: false,
+      })
+    ).toBe(theme.colors.fadedText10)
+    expect(theme.colors.fadedText10).not.toBe(theme.colors.borderColor)
+  })
+
+  it("does not follow a custom theme.borderColor when disabled", () => {
+    const theme = createEmotionTheme({ borderColor: "#00008B" })
+
+    expect(
+      getToggleTrackColor(theme, {
+        isSelected: false,
+        isHovered: true,
+        isDisabled: true,
+      })
+    ).toBe(theme.colors.fadedText10)
+    expect(
+      getToggleTrackColor(theme, {
+        isSelected: true,
+        isHovered: true,
+        isDisabled: true,
       })
     ).toBe(theme.colors.fadedText10)
     expect(theme.colors.fadedText10).not.toBe(theme.colors.borderColor)
