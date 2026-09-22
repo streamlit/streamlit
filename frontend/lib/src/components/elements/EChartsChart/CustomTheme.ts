@@ -1179,8 +1179,10 @@ export function withDefaultSeriesCursor(
  * Apply Streamlit ``alt`` as ECharts ``aria.label.description``.
  *
  * Forces ``aria.enabled`` so an authored name cannot be silenced by
- * ``aria: {enabled: false}``. Timeline specs nest ``aria`` under
- * ``baseOption``, matching where Streamlit already fills ``aria.enabled``.
+ * ``aria: {enabled: false}``. Timeline specs nest chart ``aria`` under
+ * ``baseOption`` (matching Streamlit's ``aria.enabled`` fill); per-tick
+ * ``options[*]`` and responsive ``media[*].option`` overlays can still
+ * redefine ``aria``, so those variants are stamped too.
  */
 export function applyAltToOption(
   option: EChartsOptionObject,
@@ -1208,11 +1210,59 @@ export function applyAltToOption(
     }
   }
 
-  if (isPlainObject(option.baseOption)) {
+  // Stamp ``media[*].option`` overlays without naming the parent node itself.
+  const applyToMediaEntries = (
+    target: EChartsOptionObject
+  ): EChartsOptionObject => {
+    const media = target.media
+    if (!Array.isArray(media)) {
+      return target
+    }
     return {
-      ...option,
-      baseOption: withDescription(option.baseOption as EChartsOptionObject),
+      ...target,
+      media: media.map(entry => {
+        if (!isPlainObject(entry)) {
+          return entry
+        }
+        const mediaEntry = entry as Record<string, unknown>
+        if (!isPlainObject(mediaEntry.option)) {
+          return entry
+        }
+        return {
+          ...mediaEntry,
+          option: withDescription(mediaEntry.option as EChartsOptionObject),
+        }
+      }),
     }
   }
-  return withDescription(option)
+
+  // Name a chart option node and any nested media overrides under it.
+  const applyToVariant = (target: EChartsOptionObject): EChartsOptionObject =>
+    applyToMediaEntries(withDescription(target))
+
+  let result: EChartsOptionObject
+  if (isPlainObject(option.baseOption)) {
+    // Timeline wrapper: ECharts reads chart aria from baseOption, not the root.
+    result = {
+      ...option,
+      baseOption: applyToVariant(option.baseOption as EChartsOptionObject),
+    }
+    // Responsive media can sit beside baseOption on the timeline root.
+    result = applyToMediaEntries(result)
+  } else {
+    result = applyToVariant(option)
+  }
+
+  if (Array.isArray(result.options)) {
+    result = {
+      ...result,
+      options: result.options.map(tick =>
+        isPlainObject(tick)
+          ? applyToVariant(tick as EChartsOptionObject)
+          : tick
+      ),
+    }
+  }
+
+  return result
 }

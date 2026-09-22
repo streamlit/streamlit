@@ -368,6 +368,84 @@ describe("applyStreamlitOptionDefaults", () => {
       },
     })
     expect(result.aria).toBeUndefined()
+    expect(result.options).toEqual([
+      {
+        series: [],
+        aria: {
+          enabled: true,
+          label: { description: "Timeline chart name" },
+        },
+      },
+    ])
+  })
+
+  it("applyAltToOption overrides aria on timeline option ticks", () => {
+    const result = applyAltToOption(
+      {
+        baseOption: {
+          series: [],
+          aria: { enabled: false, label: { description: "Base author" } },
+        },
+        options: [
+          {
+            series: [],
+            aria: {
+              enabled: false,
+              label: { description: "Tick author" },
+            },
+          },
+        ],
+      },
+      "Streamlit alt"
+    )
+
+    expect((result.baseOption as Record<string, unknown>).aria).toEqual({
+      enabled: true,
+      label: { description: "Streamlit alt" },
+    })
+    expect((result.options as Array<Record<string, unknown>>)[0].aria).toEqual(
+      {
+        enabled: true,
+        label: { description: "Streamlit alt" },
+      }
+    )
+  })
+
+  it("applyAltToOption overrides aria on media option overlays", () => {
+    const result = applyAltToOption(
+      {
+        series: [],
+        media: [
+          {
+            query: { maxWidth: 500 },
+            option: {
+              series: [],
+              aria: {
+                enabled: false,
+                label: { description: "Narrow author" },
+              },
+            },
+          },
+        ],
+      },
+      "Streamlit alt"
+    )
+
+    expect(result.aria).toEqual({
+      enabled: true,
+      label: { description: "Streamlit alt" },
+    })
+    expect(
+      (
+        (result.media as Array<Record<string, unknown>>)[0].option as Record<
+          string,
+          unknown
+        >
+      ).aria
+    ).toEqual({
+      enabled: true,
+      label: { description: "Streamlit alt" },
+    })
   })
 
   it("preserves user colors (top-level and per-series)", () => {
