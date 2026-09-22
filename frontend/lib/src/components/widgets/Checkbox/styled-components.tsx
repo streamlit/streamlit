@@ -27,6 +27,7 @@ import {
   getCheckboxIndicatorLayoutStyles,
   getCheckboxIndicatorSvgStyles,
 } from "~lib/components/shared/Checkbox/checkboxIndicatorStyles"
+import { getToggleTrackColor } from "~lib/components/shared/Checkbox/toggleTrackStyles"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import type { EmotionTheme } from "~lib/theme/types"
 import { LabelVisibilityOptions } from "~lib/util/utils"
@@ -177,16 +178,6 @@ interface StyledToggleTrackProps {
 
 export const StyledToggleTrack = styled.div<StyledToggleTrackProps>(
   ({ theme, $isSelected, $isHovered, $isDisabled }) => {
-    let backgroundColor: string
-
-    if ($isSelected && !$isDisabled) {
-      backgroundColor = theme.colors.primary
-    } else if ($isHovered && !$isDisabled) {
-      backgroundColor = theme.colors.darkenedBgMix15
-    } else {
-      backgroundColor = theme.colors.borderColor
-    }
-
     return {
       flexShrink: 0,
       // Vertically center the track with the first text line — mirrors the
@@ -197,7 +188,11 @@ export const StyledToggleTrack = styled.div<StyledToggleTrackProps>(
       paddingLeft: theme.spacing.threeXS,
       paddingRight: theme.spacing.threeXS,
       borderRadius: theme.radii.full,
-      backgroundColor,
+      backgroundColor: getToggleTrackColor(theme, {
+        isSelected: $isSelected,
+        isHovered: $isHovered,
+        isDisabled: $isDisabled,
+      }),
       display: "flex",
       alignItems: "center",
       transition: "background-color 150ms ease",
