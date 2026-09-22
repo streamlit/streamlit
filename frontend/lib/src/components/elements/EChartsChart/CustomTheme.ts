@@ -1174,3 +1174,45 @@ export function withDefaultSeriesCursor(
   }
   return result
 }
+
+/**
+ * Apply Streamlit ``alt`` as ECharts ``aria.label.description``.
+ *
+ * Forces ``aria.enabled`` so an authored name cannot be silenced by
+ * ``aria: {enabled: false}``. Timeline specs nest ``aria`` under
+ * ``baseOption``, matching where Streamlit already fills ``aria.enabled``.
+ */
+export function applyAltToOption(
+  option: EChartsOptionObject,
+  alt: string
+): EChartsOptionObject {
+  const withDescription = (
+    target: EChartsOptionObject
+  ): EChartsOptionObject => {
+    const aria = isPlainObject(target.aria)
+      ? { ...(target.aria as Record<string, unknown>) }
+      : {}
+    const label = isPlainObject(aria.label)
+      ? { ...(aria.label as Record<string, unknown>) }
+      : {}
+    return {
+      ...target,
+      aria: {
+        ...aria,
+        enabled: true,
+        label: {
+          ...label,
+          description: alt,
+        },
+      },
+    }
+  }
+
+  if (isPlainObject(option.baseOption)) {
+    return {
+      ...option,
+      baseOption: withDescription(option.baseOption as EChartsOptionObject),
+    }
+  }
+  return withDescription(option)
+}

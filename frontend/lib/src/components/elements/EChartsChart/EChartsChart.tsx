@@ -46,6 +46,7 @@ import { ensureError } from "~lib/util/ErrorHandling"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
+  applyAltToOption,
   applyStreamlitOptionDefaults,
   buildStreamlitEChartsTheme,
   EChartsOptionObject,
@@ -270,14 +271,21 @@ export function EChartsChart({
     if (!option) {
       return null
     }
-    return withDefaultSeriesCursor(
+    let prepared = withDefaultSeriesCursor(
       applyStreamlitOptionDefaults(option, element.theme, theme)
     )
+    // Proto `alt` wins over generated / author aria.label.description and
+    // forces aria.enabled so the chart stays named.
+    if (element.alt) {
+      prepared = applyAltToOption(prepared, element.alt)
+    }
+    return prepared
     // `theme` is read only for rem→px insets (spacing, title size, baseFontSize).
     // eslint-disable-next-line react-hooks/exhaustive-deps -- color-only theme copies must not re-apply the option
   }, [
     option,
     element.theme,
+    element.alt,
     spacing.sm,
     spacing.md,
     spacing.lg,

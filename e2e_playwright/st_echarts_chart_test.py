@@ -28,7 +28,7 @@ from e2e_playwright.shared.app_utils import (
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
 # (including the one inside the collapsed expander).
-_EXPECTED_CHART_COUNT = 15
+_EXPECTED_CHART_COUNT = 18
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
 
@@ -282,3 +282,17 @@ def test_themed_snapshots(themed_app: Page, assert_snapshot: ImageCompareFunctio
         chart = _get_chart(themed_app, key)
         expect(chart.locator("canvas")).to_be_visible()
         assert_snapshot(chart, name=name)
+
+
+def test_echarts_chart_alt_sets_accessible_name(app: Page):
+    """`alt` becomes the ECharts chart's accessible name."""
+    labeled = _get_chart(app, "c_echarts_alt")
+    expect(labeled).to_have_accessible_name("Bar chart of categories A, B, and C")
+
+    unlabeled = _get_chart(app, "c_echarts_no_alt")
+    # ECharts generates a data-derived name when aria.enabled is on.
+    expect(unlabeled).to_have_attribute("role", "img")
+    assert unlabeled.get_attribute("aria-label")
+
+    overridden = _get_chart(app, "c_echarts_alt_overrides_description")
+    expect(overridden).to_have_accessible_name("Streamlit alt overrides description")

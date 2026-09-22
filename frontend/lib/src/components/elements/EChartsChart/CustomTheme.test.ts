@@ -20,6 +20,7 @@ import { darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 import { convertRemToPx } from "~lib/theme/utils"
 
 import {
+  applyAltToOption,
   applyStreamlitOptionDefaults,
   buildStreamlitEChartsTheme,
   type EChartsOptionObject,
@@ -336,6 +337,37 @@ describe("applyStreamlitOptionDefaults", () => {
     )
 
     expect(result.aria).toEqual({ enabled: false })
+  })
+
+  it("applyAltToOption forces enabled and sets label.description", () => {
+    const result = applyAltToOption(
+      { aria: { enabled: false }, series: [] },
+      "Accessible chart name"
+    )
+
+    expect(result.aria).toEqual({
+      enabled: true,
+      label: { description: "Accessible chart name" },
+    })
+  })
+
+  it("applyAltToOption writes aria onto baseOption for timeline specs", () => {
+    const result = applyAltToOption(
+      {
+        baseOption: { series: [] },
+        options: [{ series: [] }],
+      },
+      "Timeline chart name"
+    )
+
+    expect(result.baseOption).toEqual({
+      series: [],
+      aria: {
+        enabled: true,
+        label: { description: "Timeline chart name" },
+      },
+    })
+    expect(result.aria).toBeUndefined()
   })
 
   it("preserves user colors (top-level and per-series)", () => {

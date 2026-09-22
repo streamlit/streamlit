@@ -98,13 +98,20 @@ function applyMockEchartsAria(option: Record<string, unknown>): void {
   if (!dom) {
     return
   }
-  const aria = option.aria as { enabled?: boolean } | undefined
+  const aria = option.aria as
+    | { enabled?: boolean; label?: { description?: string } }
+    | undefined
   const enabled = aria?.enabled !== false
   if (!enabled) {
     // ECharts 6.1 leaves stale role/aria-label behind when ARIA is disabled.
     return
   }
   dom.setAttribute("role", "img")
+  const description = aria?.label?.description
+  if (typeof description === "string" && description.length > 0) {
+    dom.setAttribute("aria-label", description)
+    return
+  }
   const series = option.series
   const seriesList = Array.isArray(series) ? series : series ? [series] : []
   const hasPoints = seriesList.some(entry => {
@@ -282,6 +289,76 @@ describe("EChartsChart", () => {
     render(<Wrapper element={createElement({ spec })} />)
 
     expect(screen.getByTestId("stEChartsChart")).not.toHaveAttribute("role")
+  })
+
+  it("sets the accessible name from proto alt", () => {
+    render(
+      <Wrapper element={createElement({ alt: "Bar chart of categories" })} />
+    )
+
+    const [appliedOption] = mockChart.setOption.mock.calls[0]
+    expect(appliedOption.aria).toEqual({
+      enabled: true,
+      label: { description: "Bar chart of categories" },
+    })
+    const chart = screen.getByTestId("stEChartsChart")
+    expect(chart).toHaveAttribute("role", "img")
+    expect(chart).toHaveAccessibleName("Bar chart of categories")
+  })
+
+  it("keeps an accessible name from alt on an empty series", () => {
+    const spec = JSON.stringify({
+      xAxis: { type: "category", data: [] },
+      yAxis: { type: "value" },
+      series: [{ type: "bar", data: [] }],
+    })
+    render(
+      <Wrapper
+        element={createElement({ spec, alt: "Empty bar chart placeholder" })}
+      />
+    )
+
+    const chart = screen.getByTestId("stEChartsChart")
+    expect(chart).toHaveAttribute("role", "img")
+    expect(chart).toHaveAccessibleName("Empty bar chart placeholder")
+  })
+
+  it("forces aria.enabled when alt is set even if the option disables it", () => {
+    const spec = JSON.stringify({
+      ...JSON.parse(DEFAULT_SPEC),
+      aria: { enabled: false },
+    })
+    render(
+      <Wrapper
+        element={createElement({ spec, alt: "Named despite aria disabled" })}
+      />
+    )
+
+    const [appliedOption] = mockChart.setOption.mock.calls[0]
+    expect(appliedOption.aria.enabled).toBe(true)
+    expect(appliedOption.aria.label.description).toBe(
+      "Named despite aria disabled"
+    )
+    expect(screen.getByTestId("stEChartsChart")).toHaveAccessibleName(
+      "Named despite aria disabled"
+    )
+  })
+
+  it("overrides an author aria.label.description with alt", () => {
+    const spec = JSON.stringify({
+      ...JSON.parse(DEFAULT_SPEC),
+      aria: {
+        enabled: true,
+        label: { description: "Author description" },
+      },
+    })
+    render(<Wrapper element={createElement({ spec, alt: "Streamlit alt" })} />)
+
+    const [appliedOption] = mockChart.setOption.mock.calls[0]
+    expect(appliedOption.aria.label.description).toBe("Streamlit alt")
+    expect(screen.getByTestId("stEChartsChart")).toHaveAccessibleName(
+      "Streamlit alt"
+    )
   })
 
   it("disposes and re-initializes the instance when the renderer changes", () => {

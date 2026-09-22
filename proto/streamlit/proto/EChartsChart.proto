@@ -34,7 +34,12 @@ message EChartsChart {
   // Renderer passed to echarts.init.
   Renderer renderer = 6;
 
-  // Next ID: 7
+  // Accessible name for the chart (author `alt`). Applied on the frontend as
+  // ECharts `aria.label.description` (→ aria-label on role="img"). Never
+  // written into the wire `spec` JSON.
+  optional string alt = 7;
+
+  // Next ID: 8
 
   // Available renderers:
   enum Renderer {
