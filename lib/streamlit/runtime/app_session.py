@@ -556,6 +556,7 @@ class AppSession:
                 page_name=client_state.page_name,
                 fragment_id=fragment_id or None,
                 is_auto_rerun=client_state.is_auto_rerun,
+                is_history_navigation=client_state.is_history_navigation,
                 cached_message_hashes=frozenset(client_state.cached_message_hashes),
                 context_info=client_state.context_info,
             )
