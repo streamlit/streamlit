@@ -302,6 +302,12 @@ if TYPE_CHECKING:
     # Invalid stack value for area_chart.
     area_chart(data, stack="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
+    # Invalid alt value (must be a string or None).
+    line_chart(data, alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    area_chart(data, alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    bar_chart(data, alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    scatter_chart(data, alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
     # Invalid theme value for altair_chart (only "streamlit" or None).
     altair_chart(chart, theme="dark")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
 
