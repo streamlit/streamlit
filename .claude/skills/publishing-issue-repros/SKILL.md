@@ -107,14 +107,24 @@ Never force-push the wiki. If a concurrent update causes the push to fail, run
 
 ## Result
 
-The published app is available at:
+The issue explorer discovers the wiki reproduction and **runs** it at:
 
 ```text
-https://issues.streamlit.app/agent_wiki_explorer?file=issues/<N>/repro_app.py
+https://issues.streamlit.app/?issue=gh-<N>
 ```
 
-The issue explorer also discovers the wiki reproduction automatically. A curated
-`st-issues/issues/gh-<N>/app.py` takes precedence if one exists.
+This is the link to share on the issue. The explorer caches its wiki clone for ten
+minutes, so a freshly published repro can take that long to show up; its "Refresh data"
+button clears the cache. A curated `st-issues/issues/gh-<N>/app.py` takes precedence if
+one exists.
+
+To link the artifacts as **source text** instead — for example the investigation notes —
+use the agent wiki explorer, which renders each file with `st.code` rather than running
+it:
+
+```text
+https://issues.streamlit.app/agent_wiki_explorer?file=issues/<N>/investigation.md
+```
 
 ## Related skills
 

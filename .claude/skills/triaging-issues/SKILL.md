@@ -50,8 +50,10 @@ step on explicit confirmation.
    already exists on the wiki remote, tell the user it's a refresh and confirm before
    replacing it. Never publish without explicit confirmation.
 
-5. **Report the published link:**
-   `https://issues.streamlit.app/agent_wiki_explorer?file=issues/<N>/repro_app.py`.
+5. **Report the published link:** `https://issues.streamlit.app/?issue=gh-<N>`, which
+   runs the reproduction in the issue explorer. Do not report an
+   `agent_wiki_explorer?file=...` URL as the app — that page renders files as source
+   text; use it only when linking artifacts such as `investigation.md`.
 
 ## Related skills
 
