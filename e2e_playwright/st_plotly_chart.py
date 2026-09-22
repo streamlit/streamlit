@@ -261,3 +261,23 @@ fig.update_layout(
     title_font_size=30,
 )
 st.plotly_chart(fig, theme="streamlit")
+
+# Accessible-name scenarios for the keyed E2E alt test.
+_SIMPLE_ALT_FIG = go.Figure(
+    data=[go.Scatter(x=[1, 2, 3], y=[1, 3, 2], mode="markers")],
+    layout={
+        "height": 300,
+        "width": 400,
+        "margin": {"l": 40, "r": 20, "t": 20, "b": 40},
+    },
+)
+
+with st.container(key="c_plotly_alt"):
+    st.plotly_chart(
+        _SIMPLE_ALT_FIG,
+        key="plotly_alt",
+        alt="Scatter of sepal width vs length",
+    )
+
+with st.container(key="c_plotly_no_alt"):
+    st.plotly_chart(_SIMPLE_ALT_FIG, key="plotly_no_alt")

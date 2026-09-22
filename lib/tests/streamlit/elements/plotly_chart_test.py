@@ -85,6 +85,85 @@ class PyDeckTest(DeltaGeneratorTestCase):
         assert el.plotly_chart.spec != ""
         assert el.plotly_chart.config != ""
 
+    def test_plotly_chart_alt(self):
+        """A non-empty alt is stored on the proto; omitted/None/blank leave it unset."""
+        import plotly.graph_objs as go
+
+        data = [go.Scatter(x=[1, 2], y=[1, 2])]
+
+        st.plotly_chart(data, alt="Scatter of x versus y")
+        el = self.get_delta_from_queue().new_element.plotly_chart
+        assert el.HasField("alt")
+        assert el.alt == "Scatter of x versus y"
+
+        # Plotly always registers an element ID, so clear between same-spec calls.
+        self.script_run_ctx.shared.widget_ids_this_run.clear()
+        st.plotly_chart(data)
+        assert not self.get_delta_from_queue().new_element.plotly_chart.HasField("alt")
+
+        self.script_run_ctx.shared.widget_ids_this_run.clear()
+        st.plotly_chart(data, alt=None)
+        assert not self.get_delta_from_queue().new_element.plotly_chart.HasField("alt")
+
+        self.script_run_ctx.shared.widget_ids_this_run.clear()
+        st.plotly_chart(data, alt="  ")
+        assert not self.get_delta_from_queue().new_element.plotly_chart.HasField("alt")
+
+    def test_plotly_chart_alt_strips_whitespace(self):
+        """Leading and trailing whitespace is stripped from alt."""
+        import plotly.graph_objs as go
+
+        st.plotly_chart(
+            [go.Scatter(x=[1, 2], y=[1, 2])], alt="  Scatter of x versus y  "
+        )
+        el = self.get_delta_from_queue().new_element.plotly_chart
+        assert el.HasField("alt")
+        assert el.alt == "Scatter of x versus y"
+
+    def test_plotly_chart_alt_preserves_adversarial_plain_text(self):
+        """Quotes and angle brackets stay literal on the proto (no HTML path)."""
+        import plotly.graph_objs as go
+
+        adversarial = 'Chart of "A < B" & sales <script>alert(1)</script>'
+        st.plotly_chart([go.Scatter(x=[1, 2], y=[1, 2])], alt=adversarial)
+        el = self.get_delta_from_queue().new_element.plotly_chart
+        assert el.HasField("alt")
+        assert el.alt == adversarial
+
+    def test_plotly_chart_alt_is_included_in_element_id(self):
+        """Changing only alt must change the element ID (unkeyed)."""
+        import plotly.graph_objs as go
+
+        data = [go.Scatter(x=[1, 2], y=[1, 2])]
+
+        def chart_id(**kwargs: object) -> str:
+            self.script_run_ctx.shared.widget_ids_this_run.clear()
+            st.plotly_chart(data, **kwargs)
+            return self.get_delta_from_queue().new_element.plotly_chart.id
+
+        with_alt = chart_id(alt="First description")
+        with_other_alt = chart_id(alt="A totally different description")
+
+        assert with_alt != ""
+        assert with_alt != with_other_alt
+        assert chart_id(alt="First description") == with_alt
+
+    def test_keyed_plotly_chart_id_changes_when_alt_changes(self):
+        """Keyed charts still remount when alt changes (key_as_main_identity=False)."""
+        import plotly.graph_objs as go
+
+        data = [go.Scatter(x=[1, 2], y=[1, 2])]
+
+        st.plotly_chart(data, key="stable_alt", alt="First name")
+        id_a = self.get_delta_from_queue().new_element.plotly_chart.id
+
+        self.script_run_ctx.shared.reset()
+        self.clear_queue()
+
+        st.plotly_chart(data, key="stable_alt", alt="Second name")
+        id_b = self.get_delta_from_queue().new_element.plotly_chart.id
+        assert id_a != id_b
+
     def test_works_with_element_replay(self):
         """Test that element replay works for plotly if used as non-widget element."""
         import plotly.graph_objs as go

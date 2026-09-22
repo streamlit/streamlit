@@ -156,6 +156,52 @@ describe("PlotlyChart Component", () => {
     expect(MockPlot).toHaveBeenCalled()
   })
 
+  describe("alt (accessible name)", () => {
+    it("sets aria-label when alt is provided", () => {
+      renderComponent({
+        element: new PlotlyChartProto({
+          ...DEFAULT_ELEMENT,
+          alt: "Scatter of sepal width vs length",
+        }),
+      })
+      expect(screen.getByTestId("stPlotlyChart")).toHaveAttribute(
+        "aria-label",
+        "Scatter of sepal width vs length"
+      )
+    })
+
+    it("omits aria-label entirely when alt is not provided", () => {
+      renderComponent()
+      // An empty aria-label is worse than none, so the attribute must be
+      // absent rather than present-but-empty.
+      expect(screen.getByTestId("stPlotlyChart")).not.toHaveAttribute(
+        "aria-label"
+      )
+    })
+
+    it.each([
+      ["an empty string", ""],
+      ["whitespace only", "   "],
+    ])("omits aria-label when alt is %s", (_label, alt) => {
+      renderComponent({
+        element: new PlotlyChartProto({ ...DEFAULT_ELEMENT, alt }),
+      })
+      expect(screen.getByTestId("stPlotlyChart")).not.toHaveAttribute(
+        "aria-label"
+      )
+    })
+
+    it("does not set role=img (modebar buttons must stay operable)", () => {
+      renderComponent({
+        element: new PlotlyChartProto({
+          ...DEFAULT_ELEMENT,
+          alt: "Named chart",
+        }),
+      })
+      expect(screen.getByTestId("stPlotlyChart")).not.toHaveAttribute("role")
+    })
+  })
+
   it("initializes figure state correctly", () => {
     renderComponent()
     expect(applyTheming).toHaveBeenCalledWith(

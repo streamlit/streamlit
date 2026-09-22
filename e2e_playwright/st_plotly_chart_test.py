@@ -17,8 +17,10 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
-from e2e_playwright.shared.app_utils import check_top_level_class
+from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
+
+_EXPECTED_CHART_COUNT = 16
 
 
 # Only do chromium as this can create a lot of screenshots
@@ -43,7 +45,9 @@ def test_plotly_has_consistent_visuals(
         "st_plotly_chart-histogram_chart",
         "st_plotly_chart-line_chart_specific_height_width",
     ]
-    expect(themed_app.get_by_test_id("stPlotlyChart")).to_have_count(14)
+    expect(themed_app.get_by_test_id("stPlotlyChart")).to_have_count(
+        _EXPECTED_CHART_COUNT
+    )
     for i, name in enumerate(snapshot_names):
         assert_snapshot(
             themed_app.get_by_test_id("stPlotlyChart").nth(i),
@@ -140,8 +144,20 @@ def test_plotly_with_custom_theme(app: Page, assert_snapshot: ImageCompareFuncti
     wait_for_app_loaded(app)
 
     plotly_elements = app.get_by_test_id("stPlotlyChart")
-    expect(plotly_elements).to_have_count(14)
+    expect(plotly_elements).to_have_count(_EXPECTED_CHART_COUNT)
 
     # Take a snapshot of the single mark chart, shows it applies the first color
     # from chartCategoricalColors (orange):
     assert_snapshot(plotly_elements.nth(6), name="st_plotly_chart-custom-theme")
+
+
+def test_plotly_chart_alt_sets_accessible_name(app: Page):
+    """`alt` becomes the Plotly chart container's accessible name."""
+    labeled = get_element_by_key(app, "c_plotly_alt").get_by_test_id("stPlotlyChart")
+    expect(labeled).to_have_accessible_name("Scatter of sepal width vs length")
+
+    unlabeled = get_element_by_key(app, "c_plotly_no_alt").get_by_test_id(
+        "stPlotlyChart"
+    )
+    expect(unlabeled).not_to_have_attribute("aria-label")
+    expect(unlabeled).to_have_accessible_name("")

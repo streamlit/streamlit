@@ -35,6 +35,12 @@ message PlotlyChart {
   // JSON-serialized dict with Plotly's config object.
   string config = 11;
 
+  // Accessible name for the chart (author `alt`). Applied on the frontend as
+  // aria-label on the chart container. Omit when unset.
+  optional string alt = 12;
+
+  // Next ID: 13
+
   // Available selection modes:
   enum SelectionMode {
     POINTS = 0; // Point selection mode

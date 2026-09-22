@@ -502,6 +502,11 @@ export function PlotlyChart({
       ref={containerRef}
       className="stPlotlyChart"
       data-testid="stPlotlyChart"
+      // Only set an accessible name when the author provided one. Blank input
+      // is treated as absent: aria-label=" " computes to an empty accessible
+      // name, which is worse than having no aria-label at all. No role="img":
+      // Plotly's modebar has focusable buttons that must stay operable.
+      aria-label={element.alt?.trim() || undefined}
     >
       <Plot
         data={plotlyFigure.data}
