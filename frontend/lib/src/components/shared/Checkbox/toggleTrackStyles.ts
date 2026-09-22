@@ -17,7 +17,7 @@
 import type { EmotionTheme } from "~lib/theme/types"
 
 /**
- * Visual state for the `st.toggle` track fill.
+ * Inputs that choose which theme token fills the `st.toggle` track.
  */
 type ToggleTrackVisualState = {
   isSelected: boolean
