@@ -1542,7 +1542,7 @@ class VegaChartsMixin:
         >>>
         >>> df = pd.DataFrame(rng(0).standard_normal((20, 3)), columns=["a", "b", "c"])
         >>>
-        >>> st.bar_chart(df)
+        >>> st.bar_chart(df, alt="Bar chart of columns a, b, and c")
 
         .. output::
            https://doc-bar-chart.streamlit.app/
