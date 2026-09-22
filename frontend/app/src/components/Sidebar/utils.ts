@@ -93,7 +93,7 @@ export function clampSidebarWidth(width: number): number {
  * `fadedText20` (alpha 0.3). Already-opaque custom `borderColor` values clamp
  * at 1, so their hover feedback is only the wider gradient fade.
  */
-export const SIDEBAR_RESIZE_HANDLE_HOVER_ALPHA_BUMP = 0.1
+const SIDEBAR_RESIZE_HANDLE_HOVER_ALPHA_BUMP = 0.1
 
 /**
  * Increase `borderColor` opacity for a visible sidebar border on hover.
