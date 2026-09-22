@@ -15,9 +15,10 @@
  */
 
 import styled from "@emotion/styled"
-import { parseToRgba, rgba } from "color2k"
 
 import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
+
+import { getSidebarResizeHandleBackgroundImage } from "./utils"
 
 /**
  * Returns the horizontal spacing for the sidebar, taking into consideration
@@ -131,13 +132,7 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
 export const RESIZE_HANDLE_WIDTH = "8px"
 
 export const StyledResizeHandle = styled.div(({ theme }) => {
-  // When the border is already visible, increase its opacity on hover so the
-  // resize affordance is still discoverable while staying on borderColor
-  // (darker in light themes / lighter in dark themes).
-  const [r, g, b, a] = parseToRgba(theme.colors.borderColor)
-  const hoverBorderColor = theme.showSidebarBorder
-    ? rgba(r, g, b, Math.min(1, a + 0.1))
-    : theme.colors.borderColor
+  const { borderColor } = theme.colors
 
   return {
     position: "absolute",
@@ -146,11 +141,17 @@ export const StyledResizeHandle = styled.div(({ theme }) => {
     cursor: "col-resize",
     zIndex: theme.zIndices.sidebarMobile,
     backgroundImage: theme.showSidebarBorder
-      ? `linear-gradient(to right, transparent 20%, ${theme.colors.borderColor} 28%, transparent 36%)`
+      ? getSidebarResizeHandleBackgroundImage(borderColor, {
+          showSidebarBorder: true,
+          isHovered: false,
+        })
       : "none",
 
     "&:hover": {
-      backgroundImage: `linear-gradient(to right, transparent 20%, ${hoverBorderColor} 28%, transparent 44%)`,
+      backgroundImage: getSidebarResizeHandleBackgroundImage(borderColor, {
+        showSidebarBorder: theme.showSidebarBorder,
+        isHovered: true,
+      }),
     },
   }
 })

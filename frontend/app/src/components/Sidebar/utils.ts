@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { parseToRgba, rgba } from "color2k"
+
 import { PageConfig } from "@streamlit/protobuf"
 import { localStorageAvailable } from "@streamlit/utils"
 
@@ -82,4 +84,39 @@ export function clampSidebarWidth(width: number): number {
     return Number.parseInt(DEFAULT_WIDTH, 10)
   }
   return Math.min(600, Math.max(200, width))
+}
+
+/**
+ * Border color for the sidebar resize handle on hover.
+ *
+ * When the border is already visible, increase its opacity so the resize
+ * affordance is still discoverable while staying on `borderColor` (darker in
+ * light themes / lighter in dark themes).
+ */
+export function getSidebarResizeHandleHoverBorderColor(
+  borderColor: string,
+  showSidebarBorder: boolean
+): string {
+  if (!showSidebarBorder) {
+    return borderColor
+  }
+
+  const [r, g, b, a] = parseToRgba(borderColor)
+  return rgba(r, g, b, Math.min(1, a + 0.1))
+}
+
+/** CSS `background-image` gradient for the sidebar resize handle border line. */
+export function getSidebarResizeHandleBackgroundImage(
+  borderColor: string,
+  {
+    showSidebarBorder,
+    isHovered,
+  }: { showSidebarBorder: boolean; isHovered: boolean }
+): string {
+  const color = isHovered
+    ? getSidebarResizeHandleHoverBorderColor(borderColor, showSidebarBorder)
+    : borderColor
+  const fadeEnd = isHovered ? "44%" : "36%"
+
+  return `linear-gradient(to right, transparent 20%, ${color} 28%, transparent ${fadeEnd})`
 }
