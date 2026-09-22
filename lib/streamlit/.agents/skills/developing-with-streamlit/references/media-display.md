@@ -18,7 +18,7 @@ st.video("https://youtu.be/<id>")  # YouTube URLs work
 st.video("clip.mp4", subtitles="captions.vtt")
 ```
 
-Accepts a path, URL, or bytes. Supports `start_time` / `end_time`, `autoplay`, `muted`, `loop`, and subtitles.
+Accepts a path, URL, or bytes. Supports `start_time` / `end_time`, `autoplay`, `muted`, `loop`, subtitles, and `alt` for a screen-reader name.
 
 ## Audio: st.audio
 
@@ -27,7 +27,7 @@ st.audio("track.mp3")
 st.audio(samples, sample_rate=44100)  # a NumPy sample array
 ```
 
-Accepts a path, URL, bytes, or a NumPy sample array (with `sample_rate`). Supports `start_time`, `autoplay`, and `loop`.
+Accepts a path, URL, bytes, or a NumPy sample array (with `sample_rate`). Supports `start_time`, `autoplay`, `loop`, and `alt` for a screen-reader name.
 
 ## PDFs: st.pdf
 

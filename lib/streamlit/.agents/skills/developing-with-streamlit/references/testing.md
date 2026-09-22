@@ -103,6 +103,13 @@ at.get_by_key("filters")  # unique key, any type
 
 Do not `set_value`, `click`, or otherwise update a disabled widget — that raises `AppTestError` (from `streamlit.testing.v1`), matching a browser user who cannot interact with it.
 
+Widgets inside `st.form` batch like the browser: `set_value` stages the new value (`.value` updates immediately for inspection), but `.run()` does not apply it until that form's submit button is clicked.
+
+```python
+at.text_input[0].set_value("Ada")  # staged only; the script still sees the last committed value
+at.button[0].click().run()  # form submit applies it
+```
+
 The same `AppTest` instance keeps fragment registrations across `.run()` calls, so a callback can target `@st.fragment(key=...)` registered on an earlier run.
 
 ## Asserting on results

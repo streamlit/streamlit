@@ -74,6 +74,7 @@ Notes:
 - A bound param can't be set or deleted through `st.query_params` — change it programmatically by assigning to `st.session_state[key]` *before* the widget renders, or from an `on_change` callback. Assigning after the widget has already rendered on the same run raises `StreamlitWidgetAlreadyInstantiatedError` (see [Modifying state after widget creation](#modifying-state-after-widget-creation)). Do not mix `bind=` with manual `st.query_params` reads/writes.
 - Still render the value (e.g. `st.write(f"Sorting by: {sort}")`) if the app needs to show the current selection.
 - Works on input widgets generally. It's **not** supported on trigger/button widgets (`st.button`, `st.download_button`, `st.form_submit_button`), file and media inputs (`st.file_uploader`, `st.camera_input`, `st.audio_input`), `st.chat_input`, or `st.data_editor`, nor on selections from `st.dataframe`/charts — assume any other input widget supports it. (Listing the exceptions rather than every supported widget keeps this from going stale as new widgets ship.)
+- Also works on `st.tabs` (selected tab label) and `st.expander` (open/closed). Binding those containers tracks state even with the default `on_change="ignore"`, so `.open` is usable and toggling reruns the app.
 - Multi-page apps: query params belong to the app URL, not an individual page, so a bound value persists in the URL across `st.navigation` page switches and is shared app-wide. If two pages bind widgets to the same `key=`, they share that value — use distinct keys per page when you don't want it to carry over.
 - To keep a value across reruns or page switches *without* exposing it in the URL, use `persist_state` instead (see [Persisting widget values](#persisting-widget-values-persist_state)); when both are set, `bind` takes precedence.
 
@@ -106,7 +107,7 @@ By default, a keyed widget's value is lost when the widget stops being rendered 
 st.text_input("Name", key="name", persist_state="session")
 ```
 
-`persist_state` requires a `key` and is available on most widgets that support `bind="query-params"` (not yet on `st.tabs`). When both are set, `bind` takes precedence, so the value lives in the URL and persists across page switches regardless of the `persist_state` scope.
+`persist_state` requires a `key` and is available on most widgets that support `bind="query-params"` (not yet on `st.tabs` or `st.expander`). When both are set, `bind` takes precedence, so the value lives in the URL and persists across page switches regardless of the `persist_state` scope.
 
 ## Callbacks
 
