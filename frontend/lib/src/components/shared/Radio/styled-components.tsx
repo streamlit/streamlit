@@ -135,7 +135,7 @@ interface StyledRadioOuterProps {
  *   has a value to transition from and to.
  * - Enabled and unchecked: `bgColor` fill behind a `borderColor` stroke, which
  *   switches to `darkenedBgMix15` on hover like the secondary button and the
- *   `st.toggle` track.
+ *   `st.toggle` off track.
  * - Disabled: a `borderColor` disk with no CSS border. `borderColor` is
  *   translucent, so a stroke over a matching fill would darken the rim.
  *   `StyledRadioInner` supplies the white centre when selected and the
