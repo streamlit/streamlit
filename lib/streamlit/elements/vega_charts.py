@@ -987,7 +987,13 @@ class VegaChartsMixin:
         ...     }
         ... )
         >>>
-        >>> st.line_chart(df, x="col1", y="col2", color="col3")
+        >>> st.line_chart(
+        ...     df,
+        ...     x="col1",
+        ...     y="col2",
+        ...     color="col3",
+        ...     alt="Three series over a shared x-axis",
+        ... )
 
         .. output::
            https://doc-line-chart1.streamlit.app/
@@ -1250,7 +1256,13 @@ class VegaChartsMixin:
         ...     }
         ... )
         >>>
-        >>> st.area_chart(df, x="col1", y="col2", color="col3")
+        >>> st.area_chart(
+        ...     df,
+        ...     x="col1",
+        ...     y="col2",
+        ...     color="col3",
+        ...     alt="Three series over a shared x-axis",
+        ... )
 
         .. output::
            https://doc-area-chart1.streamlit.app/
@@ -1542,7 +1554,7 @@ class VegaChartsMixin:
         >>>
         >>> df = pd.DataFrame(rng(0).standard_normal((20, 3)), columns=["a", "b", "c"])
         >>>
-        >>> st.bar_chart(df, alt="Bar chart of columns a, b, and c")
+        >>> st.bar_chart(df)
 
         .. output::
            https://doc-bar-chart.streamlit.app/
@@ -1572,7 +1584,13 @@ class VegaChartsMixin:
         ...     }
         ... )
         >>>
-        >>> st.bar_chart(df, x="col1", y="col2", color="col3")
+        >>> st.bar_chart(
+        ...     df,
+        ...     x="col1",
+        ...     y="col2",
+        ...     color="col3",
+        ...     alt="Values by group across the x-axis",
+        ... )
 
         .. output::
            https://doc-bar-chart1.streamlit.app/
@@ -1890,6 +1908,7 @@ class VegaChartsMixin:
         ...     y="col2",
         ...     color="col4",
         ...     size="col3",
+        ...     alt="col2 versus col1, sized by col3",
         ... )
 
         .. output::
