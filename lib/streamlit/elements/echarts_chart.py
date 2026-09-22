@@ -730,9 +730,9 @@ class EChartsMixin:
             When both ``alt`` and an author ``aria.label.description`` are set,
             ``alt`` overrides that description for the accessible name. A
             non-empty ``alt`` also keeps the chart named even if the option
-            sets ``aria.enabled`` to ``False``. Because ECharts already names
-            itself by default, a vague ``alt`` can be a regression — prefer a
-            short, specific sentence. This is a short description of the
+            sets ``aria.enabled`` to ``False``. Because ECharts already generates
+            a data-derived name, prefer a short, specific description; a vague
+            one can be worse than none. This is a short description of the
             chart, not a full text alternative for dense graphics.
 
         Examples
@@ -854,10 +854,14 @@ class EChartsMixin:
         normalized_option = _normalize_spec(spec)
         normalized_alt = normalize_alt(alt)
 
-        existing_description = _author_aria_label_description(normalized_option)
-        # Warn when alt replaces an author aria.label.description. Truthiness
-        # covers None and empty strings.
-        if normalized_alt is not None and existing_description:
+        # Only walk option variants when alt is present; the common path skips it.
+        existing_description = (
+            _author_aria_label_description(normalized_option)
+            if normalized_alt is not None
+            else None
+        )
+        # Log when alt will replace a description the author already set in the option.
+        if existing_description:
             _LOGGER.warning(
                 "The ECharts option already sets aria.label.description=%r. "
                 "The alt=%r parameter overrides it for the accessible name.",
@@ -890,8 +894,9 @@ class EChartsMixin:
         # and replaying its entry animation. Unkeyed charts skip the ID
         # entirely so they stay off the widget path.
         if key is not None:
-            # Include `alt` like other stable kwargs. Keyed charts ignore it
-            # because key_as_main_identity is True.
+            # Pass alt like other kwargs so hashing stays consistent if unkeyed
+            # IDs are added later. key_as_main_identity=True means a keyed ID
+            # does not change with alt.
             echarts_chart_proto.id = compute_and_register_element_id(
                 "echarts_chart",
                 user_key=key,

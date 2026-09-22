@@ -347,8 +347,7 @@ with st.container(key="c_stretch_height"):
         height="stretch",
     )
 
-# Keep accessible-name cases last because existing E2E assertions use positional
-# chart indexes / expected counts.
+# Keep the accessible-name scenarios together for their shared keyed E2E test.
 with st.container(key="c_echarts_alt"):
     st.echarts_chart(
         {

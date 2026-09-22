@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 from playwright.sync_api import Dialog, Locator, Page, expect
 
@@ -292,7 +294,8 @@ def test_echarts_chart_alt_sets_accessible_name(app: Page):
     unlabeled = _get_chart(app, "c_echarts_no_alt")
     # ECharts generates a data-derived name when aria.enabled is on.
     expect(unlabeled).to_have_attribute("role", "img")
-    assert unlabeled.get_attribute("aria-label")
+    expect(unlabeled).to_have_attribute("aria-label", re.compile(r"\S"))
 
     overridden = _get_chart(app, "c_echarts_alt_overrides_description")
     expect(overridden).to_have_accessible_name("Streamlit alt overrides description")
+    expect(overridden).not_to_have_accessible_name("Author ECharts description")
