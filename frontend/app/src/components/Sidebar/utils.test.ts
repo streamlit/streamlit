@@ -26,6 +26,7 @@ import {
   getSidebarResizeHandleBackgroundImage,
   getSidebarResizeHandleHoverBorderColor,
   shouldCollapse,
+  SIDEBAR_RESIZE_HANDLE_HOVER_ALPHA_BUMP,
 } from "./utils"
 
 const MIN_SIDEBAR_WIDTH = 200
@@ -148,14 +149,14 @@ describe("getSidebarResizeHandleHoverBorderColor", () => {
   it("increases borderColor opacity when showSidebarBorder is true", () => {
     const borderColor = transparentize("#000000", 0.8)
     const [r, g, b, a] = parseToRgba(borderColor)
-    const expected = rgba(r, g, b, a + 0.1)
+    const expected = rgba(r, g, b, a + SIDEBAR_RESIZE_HANDLE_HOVER_ALPHA_BUMP)
 
     expect(getSidebarResizeHandleHoverBorderColor(borderColor, true)).toBe(
       expected
     )
   })
 
-  it("preserves custom borderColor rgb while increasing alpha", () => {
+  it("preserves the rgb of an opaque custom borderColor", () => {
     const borderColor = "#00008B"
     const [r, g, b] = parseToRgba(borderColor)
 
@@ -176,12 +177,13 @@ describe("getSidebarResizeHandleHoverBorderColor", () => {
     const lightBorderColor = lightTheme.emotion.colors.borderColor
     const darkBorderColor = darkTheme.emotion.colors.borderColor
 
-    expect(
-      getSidebarResizeHandleHoverBorderColor(lightBorderColor, true)
-    ).not.toBe(lightBorderColor)
-    expect(
-      getSidebarResizeHandleHoverBorderColor(darkBorderColor, true)
-    ).not.toBe(darkBorderColor)
+    for (const borderColor of [lightBorderColor, darkBorderColor]) {
+      const [, , , alpha] = parseToRgba(borderColor)
+      const [, , , hoverAlpha] = parseToRgba(
+        getSidebarResizeHandleHoverBorderColor(borderColor, true)
+      )
+      expect(hoverAlpha).toBeGreaterThan(alpha)
+    }
   })
 })
 
@@ -190,20 +192,14 @@ describe("getSidebarResizeHandleBackgroundImage", () => {
     const borderColor = "#cccccc"
 
     expect(
-      getSidebarResizeHandleBackgroundImage(borderColor, {
-        showSidebarBorder: true,
-        isHovered: false,
-      })
+      getSidebarResizeHandleBackgroundImage(borderColor, { isHovered: false })
     ).toContain("transparent 36%")
     expect(
-      getSidebarResizeHandleBackgroundImage(borderColor, {
-        showSidebarBorder: true,
-        isHovered: true,
-      })
+      getSidebarResizeHandleBackgroundImage(borderColor, { isHovered: true })
     ).toContain("transparent 44%")
   })
 
-  it("uses stronger borderColor on hover when showSidebarBorder is true", () => {
+  it("uses the provided borderColor in the gradient", () => {
     const borderColor = transparentize("#000000", 0.8)
     const hoverBorderColor = getSidebarResizeHandleHoverBorderColor(
       borderColor,
@@ -211,8 +207,7 @@ describe("getSidebarResizeHandleBackgroundImage", () => {
     )
 
     expect(
-      getSidebarResizeHandleBackgroundImage(borderColor, {
-        showSidebarBorder: true,
+      getSidebarResizeHandleBackgroundImage(hoverBorderColor, {
         isHovered: true,
       })
     ).toBe(
@@ -220,16 +215,13 @@ describe("getSidebarResizeHandleBackgroundImage", () => {
     )
   })
 
-  it("keeps borderColor unchanged on hover when showSidebarBorder is false", () => {
+  it("keeps the provided borderColor when building a rest gradient", () => {
     const borderColor = "#cccccc"
 
     expect(
-      getSidebarResizeHandleBackgroundImage(borderColor, {
-        showSidebarBorder: false,
-        isHovered: true,
-      })
+      getSidebarResizeHandleBackgroundImage(borderColor, { isHovered: false })
     ).toBe(
-      `linear-gradient(to right, transparent 20%, ${borderColor} 28%, transparent 44%)`
+      `linear-gradient(to right, transparent 20%, ${borderColor} 28%, transparent 36%)`
     )
   })
 })

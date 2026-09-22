@@ -18,7 +18,10 @@ import styled from "@emotion/styled"
 
 import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
 
-import { getSidebarResizeHandleBackgroundImage } from "./utils"
+import {
+  getSidebarResizeHandleBackgroundImage,
+  getSidebarResizeHandleHoverBorderColor,
+} from "./utils"
 
 /**
  * Returns the horizontal spacing for the sidebar, taking into consideration
@@ -133,6 +136,10 @@ export const RESIZE_HANDLE_WIDTH = "8px"
 
 export const StyledResizeHandle = styled.div(({ theme }) => {
   const { borderColor } = theme.colors
+  const hoverBorderColor = getSidebarResizeHandleHoverBorderColor(
+    borderColor,
+    theme.showSidebarBorder
+  )
 
   return {
     position: "absolute",
@@ -142,16 +149,17 @@ export const StyledResizeHandle = styled.div(({ theme }) => {
     zIndex: theme.zIndices.sidebarMobile,
     backgroundImage: theme.showSidebarBorder
       ? getSidebarResizeHandleBackgroundImage(borderColor, {
-          showSidebarBorder: true,
           isHovered: false,
         })
       : "none",
 
     "&:hover": {
-      backgroundImage: getSidebarResizeHandleBackgroundImage(borderColor, {
-        showSidebarBorder: theme.showSidebarBorder,
-        isHovered: true,
-      }),
+      backgroundImage: getSidebarResizeHandleBackgroundImage(
+        hoverBorderColor,
+        {
+          isHovered: true,
+        }
+      ),
     },
   }
 })

@@ -87,11 +87,21 @@ export function clampSidebarWidth(width: number): number {
 }
 
 /**
- * Border color for the sidebar resize handle on hover.
+ * Alpha increase applied to a visible sidebar border on hover.
  *
- * When the border is already visible, increase its opacity so the resize
- * affordance is still discoverable while staying on `borderColor` (darker in
- * light themes / lighter in dark themes).
+ * Matches the default theme step from `fadedText10` (alpha 0.2) to
+ * `fadedText20` (alpha 0.3). Already-opaque custom `borderColor` values clamp
+ * at 1, so their hover feedback is only the wider gradient fade.
+ */
+export const SIDEBAR_RESIZE_HANDLE_HOVER_ALPHA_BUMP = 0.1
+
+/**
+ * Increase `borderColor` opacity on hover when the sidebar border is already visible.
+ *
+ * Keep the same RGB so the line gets darker in light themes and lighter in
+ * dark themes. The +0.1 alpha step matches `fadedText10` → `fadedText20`.
+ * When the border is hidden, the line appearing on hover is feedback enough,
+ * so the color is returned unchanged.
  */
 export function getSidebarResizeHandleHoverBorderColor(
   borderColor: string,
@@ -102,21 +112,20 @@ export function getSidebarResizeHandleHoverBorderColor(
   }
 
   const [r, g, b, a] = parseToRgba(borderColor)
-  return rgba(r, g, b, Math.min(1, a + 0.1))
+  return rgba(r, g, b, Math.min(1, a + SIDEBAR_RESIZE_HANDLE_HOVER_ALPHA_BUMP))
 }
 
-/** CSS `background-image` gradient for the sidebar resize handle border line. */
+/**
+ * Build the sidebar resize-handle border as a CSS gradient.
+ *
+ * Hover uses a wider fade (44% vs 36%). Pass the already-resolved line color —
+ * including any hover opacity bump — as `borderColor`.
+ */
 export function getSidebarResizeHandleBackgroundImage(
   borderColor: string,
-  {
-    showSidebarBorder,
-    isHovered,
-  }: { showSidebarBorder: boolean; isHovered: boolean }
+  { isHovered }: { isHovered: boolean }
 ): string {
-  const color = isHovered
-    ? getSidebarResizeHandleHoverBorderColor(borderColor, showSidebarBorder)
-    : borderColor
   const fadeEnd = isHovered ? "44%" : "36%"
 
-  return `linear-gradient(to right, transparent 20%, ${color} 28%, transparent ${fadeEnd})`
+  return `linear-gradient(to right, transparent 20%, ${borderColor} 28%, transparent ${fadeEnd})`
 }
