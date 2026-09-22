@@ -136,10 +136,11 @@ export const RESIZE_HANDLE_WIDTH = "8px"
 
 export const StyledResizeHandle = styled.div(({ theme }) => {
   const { borderColor } = theme.colors
-  const hoverBorderColor = getSidebarResizeHandleHoverBorderColor(
-    borderColor,
-    theme.showSidebarBorder
-  )
+  // When the border is already visible, bump opacity on hover. Hidden-border
+  // hover still reveals the un-bumped borderColor via the gradient below.
+  const hoverBorderColor = theme.showSidebarBorder
+    ? getSidebarResizeHandleHoverBorderColor(borderColor)
+    : borderColor
 
   return {
     position: "absolute",

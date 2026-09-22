@@ -96,21 +96,16 @@ export function clampSidebarWidth(width: number): number {
 export const SIDEBAR_RESIZE_HANDLE_HOVER_ALPHA_BUMP = 0.1
 
 /**
- * Increase `borderColor` opacity on hover when the sidebar border is already visible.
+ * Increase `borderColor` opacity for a visible sidebar border on hover.
  *
  * Keep the same RGB so the line gets darker in light themes and lighter in
- * dark themes. The +0.1 alpha step matches `fadedText10` → `fadedText20`.
- * When the border is hidden, the line appearing on hover is feedback enough,
- * so the color is returned unchanged.
+ * dark themes. Callers should only apply this when `showSidebarBorder` is
+ * true — when the border is hidden, the line appearing on hover is feedback
+ * enough.
  */
 export function getSidebarResizeHandleHoverBorderColor(
-  borderColor: string,
-  showSidebarBorder: boolean
+  borderColor: string
 ): string {
-  if (!showSidebarBorder) {
-    return borderColor
-  }
-
   const [r, g, b, a] = parseToRgba(borderColor)
   return rgba(r, g, b, Math.min(1, a + SIDEBAR_RESIZE_HANDLE_HOVER_ALPHA_BUMP))
 }
@@ -118,8 +113,9 @@ export function getSidebarResizeHandleHoverBorderColor(
 /**
  * Build the sidebar resize-handle border as a CSS gradient.
  *
- * Hover uses a wider fade (44% vs 36%). Pass the already-resolved line color —
- * including any hover opacity bump — as `borderColor`.
+ * The stops place a ~1px line about 2px into the 8px hit target. Hover uses a
+ * wider fade (44% vs 36%). Pass the already-resolved line color — including
+ * any hover opacity bump — as `borderColor`.
  */
 export function getSidebarResizeHandleBackgroundImage(
   borderColor: string,
