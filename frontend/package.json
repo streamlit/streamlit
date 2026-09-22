@@ -80,7 +80,7 @@
     "eslint-plugin-testing-library": "^7.16.2",
     "globals": "^17.12.0",
     "jiti": "^2.7.0",
-    "knip": "^6.35.1",
+    "knip": "^6.36.0",
     "oxfmt": "^0.68.0",
     "oxlint": "^1.83.0",
     "react": "^18.2.0",
