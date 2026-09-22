@@ -76,6 +76,13 @@ if TYPE_CHECKING:
     assert_type(iframe("https://example.com", tab_index=1), DeltaGenerator)
 
     # =====================================================================
+    # Test alt parameter
+    # =====================================================================
+
+    assert_type(iframe("https://example.com", alt="Docs"), DeltaGenerator)
+    assert_type(iframe("https://example.com", alt=None), DeltaGenerator)
+
+    # =====================================================================
     # Test combined parameters
     # =====================================================================
 
@@ -85,6 +92,7 @@ if TYPE_CHECKING:
             width="stretch",
             height=600,
             tab_index=0,
+            alt="Streamlit documentation",
         ),
         DeltaGenerator,
     )
@@ -108,3 +116,6 @@ if TYPE_CHECKING:
         ),
         DeltaGenerator,
     )
+
+    # Invalid alt value (must be a string or None)
+    iframe("https://example.com", alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]

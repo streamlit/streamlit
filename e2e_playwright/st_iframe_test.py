@@ -18,12 +18,17 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class, expect_warning
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    expect_warning,
+    get_element_by_key,
+)
 
 # Total number of st.iframe elements in the test app
 # 1: HTML string, 2: Fixed dims, 3: Data URL, 4: Stretch width, 5: Content width,
 # 6: Tab index, 7: Auto-sizing height, 8: Auto-sizing both, 9: String file path
-ST_IFRAME_COUNT = 9
+# 10: alt set, 11: alt omitted (keyed containers)
+ST_IFRAME_COUNT = 11
 
 
 def test_iframe_elements_render(app: Page):
@@ -116,6 +121,21 @@ def test_iframe_from_string_file_path(app: Page):
     iframe_body = string_path_iframe.content_frame.locator("body")
     expect(iframe_body).to_contain_text("test_div.html")
     expect(iframe_body).not_to_contain_text("This is a div with some inline styles.")
+
+
+def test_iframe_alt_sets_accessible_name(app: Page):
+    """Test that `st.iframe` exposes `alt` as the frame's accessible name.
+
+    Asserts the computed name. An iframe's name is its `title`; omitting `alt`
+    must keep the existing `"st.iframe"` fallback rather than an empty title.
+    """
+    labeled = get_element_by_key(app, "iframe_alt").get_by_test_id("stIFrame")
+    expect(labeled).to_have_attribute("title", "Named embed demo content")
+    expect(labeled).to_have_accessible_name("Named embed demo content")
+
+    unlabeled = get_element_by_key(app, "iframe_no_alt").get_by_test_id("stIFrame")
+    expect(unlabeled).to_have_attribute("title", "st.iframe")
+    expect(unlabeled).to_have_accessible_name("st.iframe")
 
 
 def test_check_top_level_class(app: Page):

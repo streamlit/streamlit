@@ -225,7 +225,10 @@ function IFrame({
       // eslint-disable-next-line @typescript-eslint/no-deprecated
       scrolling={element.scrolling ? "auto" : "no"}
       sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
-      title="st.iframe"
+      // An iframe always needs an accessible name (WCAG H64), so fall back to
+      // "st.iframe" whenever `alt` is unset or blank, including deprecated
+      // `components.v1` embeds, which never send `alt`.
+      title={element.alt?.trim() || "st.iframe"}
       tabIndex={element.tabIndex ?? undefined}
       width={contentWidth}
       height={contentHeight}
