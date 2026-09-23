@@ -101,27 +101,6 @@ CacheScope: TypeAlias = Literal["global", "session"]
 RefreshMode: TypeAlias = Literal["foreground", "background"]
 
 
-def _reject_awaitable_return_value(
-    cache_type: CacheType, func: Callable[..., Any], value: Any
-) -> None:
-    """Raise if a synchronous cached function returned an awaitable.
-
-    Closes unstarted native coroutines so Python does not warn that they were
-    never awaited. Leaves started coroutines and other awaitables untouched
-    because the caller may still own their lifecycle.
-    """
-    if not inspect.isawaitable(value):
-        return
-
-    if (
-        inspect.iscoroutine(value)
-        and inspect.getcoroutinestate(value) == inspect.CORO_CREATED
-    ):
-        value.close()
-
-    raise CachedFunctionReturnedAwaitableError(cache_type, func, value)
-
-
 # Unset or invalid config still hard-expires background caches at 2 * ttl.
 _DEFAULT_BACKGROUND_REFRESH_TTL_MULTIPLIER: Final = 2.0
 
@@ -159,6 +138,27 @@ class CacheInvalidationToken:
 AsyncComputeClaim: TypeAlias = tuple[
     concurrent.futures.Future[None], bool, CacheInvalidationToken | None
 ]
+
+
+def _reject_awaitable_return_value(
+    cache_type: CacheType, func: Callable[..., Any], value: Any
+) -> None:
+    """Raise if a synchronous cached function returned an awaitable.
+
+    Closes unstarted native coroutines so Python does not warn that they were
+    never awaited. Leaves started coroutines and other awaitables untouched
+    because the caller may still own their lifecycle.
+    """
+    if not inspect.isawaitable(value):
+        return
+
+    if (
+        inspect.iscoroutine(value)
+        and inspect.getcoroutinestate(value) == inspect.CORO_CREATED
+    ):
+        value.close()
+
+    raise CachedFunctionReturnedAwaitableError(cache_type, func, value)
 
 
 def _warn_background_refresh_ttl_multiplier(configured: object, reason: str) -> None:
