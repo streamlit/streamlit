@@ -312,9 +312,8 @@ large_df = pd.DataFrame(
 
 st.subheader("Fixed dimensions with custom index (scrollable)")
 indexed_df = large_df.set_index(large_df.columns[0])
-# Accessible-name scenario: reuse this existing scrollable table so
-# TOTAL_TABLE_ELEMENTS stays stable. Author alt lives on <table>; the scroll
-# wrapper keeps its separate "Scrollable table" region label.
+# The author alt lands on <table>; the scroll wrapper keeps its separate
+# "Scrollable table" region label.
 with st.container(key="table_with_alt"):
     st.table(
         indexed_df,

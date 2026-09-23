@@ -28,7 +28,7 @@ import { FALLBACK_HEADER_ROW_OFFSET_REM, Table, TableProps } from "./Table"
 
 const getProps = (
   data: Uint8Array,
-  elementOverrides?: Partial<TableProto>
+  elementOverrides?: Partial<TableProto.$Properties>
 ): TableProps => ({
   element: TableProto.create({
     borderMode: TableProto.BorderMode.ALL,

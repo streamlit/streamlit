@@ -400,7 +400,7 @@ class HideIndexHideHeaderTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.table
         assert proto.hide_index is True
 
-    def test_table_alt(self):
+    def test_table_alt(self) -> None:
         """A non-empty alt is stored on the proto; omitted/None/blank leave it unset."""
         df = pd.DataFrame({"A": [1, 2]})
 
@@ -421,7 +421,7 @@ class HideIndexHideHeaderTest(DeltaGeneratorTestCase):
         st.table(df, alt="  ")
         assert not self.get_delta_from_queue().new_element.table.HasField("alt")
 
-    def test_table_alt_strips_whitespace(self):
+    def test_table_alt_strips_whitespace(self) -> None:
         """Leading and trailing whitespace is stripped from alt."""
         df = pd.DataFrame({"A": [1, 2]})
         st.table(df, alt="  Confusion matrix of species  ")
@@ -429,7 +429,7 @@ class HideIndexHideHeaderTest(DeltaGeneratorTestCase):
         assert el.HasField("alt")
         assert el.alt == "Confusion matrix of species"
 
-    def test_table_alt_preserves_adversarial_plain_text(self):
+    def test_table_alt_preserves_adversarial_plain_text(self) -> None:
         """Quotes and angle brackets stay literal on the proto (no HTML path)."""
         adversarial = 'Table of "A < B" & values <script>alert(1)</script>'
         st.table(pd.DataFrame({"A": [1]}), alt=adversarial)
