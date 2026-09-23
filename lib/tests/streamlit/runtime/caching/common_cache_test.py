@@ -1409,7 +1409,7 @@ class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
     ):
         """Streamlit closes the rejected coroutine, serves stale data, and starts cooldown."""
         call_count = [0]
-        created_coroutines = []
+        created_coroutines: list[Any] = []
 
         async def operation() -> int:
             return 42
