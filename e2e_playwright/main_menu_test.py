@@ -346,7 +346,7 @@ def test_auto_rerun_toggle_with_custom_border_color(
     expect(toggle).to_be_visible()
     expect(toggle).to_have_attribute("aria-checked", "false")
 
-    assert_snapshot(toggle, name="main_menu-auto_rerun-custom-border-color")
+    assert_snapshot(toggle, name="main_menu-auto_rerun-custom-theme")
 
 
 def test_rerun_visible_in_dev_mode(app: Page):
