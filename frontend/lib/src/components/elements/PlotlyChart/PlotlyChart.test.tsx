@@ -166,12 +166,11 @@ describe("PlotlyChart Component", () => {
       })
       // figure (not img) keeps descendants non-presentational so Plotly's
       // modebar buttons remain in the accessibility tree.
-      const chart = screen.getByTestId("stPlotlyChart")
-      expect(chart).toHaveAttribute("role", "figure")
-      expect(chart).toHaveAttribute(
-        "aria-label",
-        "Scatter plot of three sample points"
-      )
+      expect(
+        screen.getByRole("figure", {
+          name: "Scatter plot of three sample points",
+        })
+      ).toBeVisible()
     })
 
     it("omits role and aria-label entirely when alt is not provided", () => {

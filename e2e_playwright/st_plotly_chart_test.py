@@ -156,6 +156,10 @@ def test_plotly_chart_alt_sets_accessible_name(app: Page):
     labeled = get_element_by_key(app, "plotly_alt").get_by_test_id("stPlotlyChart")
     expect(labeled).to_have_attribute("role", "figure")
     expect(labeled).to_have_accessible_name("Scatter plot of three sample points")
+    # role=figure (not img) keeps modebar buttons in the a11y tree. Hover so
+    # Plotly shows the modebar; aria-label matches data-title.
+    labeled.hover()
+    expect(labeled.get_by_role("button", name="Fullscreen")).to_be_visible()
 
     unlabeled = get_element_by_key(app, "plotly_no_alt").get_by_test_id("stPlotlyChart")
     expect(unlabeled).not_to_have_attribute("role")
