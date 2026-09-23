@@ -178,7 +178,7 @@ class GraphvizTest(DeltaGeneratorTestCase):
             st.graphviz_chart(graph, height=invalid_height)
 
     def test_graphviz_chart_alt(self):
-        """A non-empty alt is stored on the proto; omitted/None/blank leave it unset."""
+        """A non-empty alt is stored on the proto; omitted/None leave it unset."""
         graph = graphviz.Digraph()
         graph.edge("Hello", "World")
 
@@ -197,7 +197,13 @@ class GraphvizTest(DeltaGeneratorTestCase):
             "alt"
         )
 
-        st.graphviz_chart(graph, alt="  ")
+    @parameterized.expand(["", "   "])
+    def test_graphviz_chart_empty_alt_is_unset(self, blank_alt: str):
+        """Empty or whitespace-only alt must not set the proto field."""
+        graph = graphviz.Digraph()
+        graph.edge("Hello", "World")
+
+        st.graphviz_chart(graph, alt=blank_alt)
         assert not self.get_delta_from_queue().new_element.graphviz_chart.HasField(
             "alt"
         )

@@ -141,7 +141,7 @@ st.graphviz_chart(malicious_graph)
 
 # Accessible-name scenarios. Wrapped in keyed containers because
 # st.graphviz_chart has no key parameter.
-SIMPLE_ALT_DOT = "digraph { Hello -> World }"
+SIMPLE_ALT_DOT = "digraph AltHelloWorld { Hello -> World }"
 
 with st.container(key="c_graphviz_alt"):
     st.graphviz_chart(

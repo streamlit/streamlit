@@ -150,11 +150,10 @@ function GraphVizChart({
     heightConfig?.useStretch,
   ])
 
-  // Only name the container when the author provided a non-blank alt.
-  // Blank input is treated as absent: aria-label=" " computes to an empty
-  // accessible name, which is worse than none. role="figure" (not "img")
-  // is required to legally expose aria-label on this otherwise-generic div
-  // without making GraphViz SVG links presentational.
+  // Name the container only when alt is non-blank. A whitespace aria-label
+  // computes to an empty accessible name, which is worse than none.
+  // Use role="figure" rather than "img" so GraphViz SVG links stay in the
+  // accessibility tree.
   const accessibleName = element.alt?.trim() || undefined
 
   return (

@@ -68,11 +68,10 @@ def exit_fullscreen(app: Page) -> None:
 
 def test_initial_setup(app: Page):
     """Initial setup: ensure charts are loaded."""
-    # 15 baseline charts + the named linked alt fixture. The two anonymous
-    # SIMPLE_ALT_DOT charts do not emit svg > g > title.
+    # 15 baseline charts + 2 named SIMPLE_ALT_DOT fixtures + the linked alt fixture.
     expect(
         app.get_by_test_id("stGraphVizChart").locator("svg > g > title")
-    ).to_have_count(16)
+    ).to_have_count(18)
 
 
 def test_graphviz_chart_alt_sets_accessible_name(app: Page):
