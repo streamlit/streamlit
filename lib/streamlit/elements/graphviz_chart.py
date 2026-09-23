@@ -142,7 +142,7 @@ class GraphvizMixin:
         >>> graph.edge("new", "runmem")
         >>> graph.edge("sleep", "runmem")
         >>>
-        >>> st.graphviz_chart(graph)
+        >>> st.graphviz_chart(graph, alt="Flow chart of process states")
 
         Or you can render the chart from the graph using GraphViz's Dot
         language:
@@ -184,9 +184,8 @@ class GraphvizMixin:
             )
             width = "stretch" if use_container_width else "content"
 
-        # Generate element ID from delta path. Graphviz does not use
-        # compute_and_register_element_id; do not invent ID hashing solely for
-        # alt (alt-text product spec).
+        # The element ID hashes only the delta path, so `alt` does not affect
+        # it and changing `alt` never remounts the chart.
         delta_path = self.dg._get_delta_path_str()
         element_id = calc_hash(delta_path.encode())
 

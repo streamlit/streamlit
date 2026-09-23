@@ -155,7 +155,7 @@ with st.container(key="c_graphviz_no_alt"):
 # Named chart with a safe SVG link so e2e can assert role=figure does not
 # hide GraphViz URL nodes from the accessibility tree.
 linked = graphviz.Digraph("linked")
-linked.node("Docs", URL="https://example.com/graphviz-docs")
+linked.node("Docs", URL="#graphviz-docs")
 with st.container(key="c_graphviz_alt_link"):
     st.graphviz_chart(
         linked,

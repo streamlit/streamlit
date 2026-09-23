@@ -68,7 +68,8 @@ def exit_fullscreen(app: Page) -> None:
 
 def test_initial_setup(app: Page):
     """Initial setup: ensure charts are loaded."""
-    # 15 baseline charts + 2 named SIMPLE_ALT_DOT fixtures + the linked alt fixture.
+    # 15 baseline + 3 alt fixtures (both SIMPLE_ALT_DOT digraphs are named
+    # AltHelloWorld, plus the linked chart) = 18 titled SVGs.
     expect(
         app.get_by_test_id("stGraphVizChart").locator("svg > g > title")
     ).to_have_count(18)
