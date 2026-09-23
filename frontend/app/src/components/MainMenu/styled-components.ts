@@ -22,6 +22,7 @@ import {
   EmotionTheme,
   getOverlayZIndex,
   getPopoverContainerStyle,
+  getToggleTrackColor,
   hasLightBackgroundColor,
 } from "@streamlit/lib"
 
@@ -292,10 +293,10 @@ export const StyledToggleTrack = styled.div<StyledToggleProps>(
     minHeight: theme.sizes.checkbox,
     padding: `0 ${theme.spacing.threeXS}`,
     borderRadius: theme.radii.full,
-    backgroundColor:
-      isChecked && !isDisabled
-        ? theme.colors.primary
-        : theme.colors.borderColor,
+    backgroundColor: getToggleTrackColor(theme, {
+      isSelected: isChecked,
+      isDisabled,
+    }),
     transition: "background-color 100ms ease",
   })
 )

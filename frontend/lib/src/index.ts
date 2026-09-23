@@ -191,6 +191,7 @@ export {
 } from "./theme/themeConfigs"
 export { globalStyles } from "./theme/globalStyles"
 export { hasLightBackgroundColor } from "./theme/getColors"
+export { getToggleTrackColor } from "./components/shared/Checkbox/toggleTrackStyles"
 export type {
   CachedTheme,
   EmotionTheme,
