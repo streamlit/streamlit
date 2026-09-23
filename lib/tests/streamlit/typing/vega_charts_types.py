@@ -76,6 +76,8 @@ if TYPE_CHECKING:
     assert_type(line_chart(data, height=400), DeltaGenerator)
     assert_type(line_chart(data, use_container_width=True), DeltaGenerator)
     assert_type(line_chart(data, use_container_width=None), DeltaGenerator)
+    assert_type(line_chart(data, alt="Monthly revenue by region"), DeltaGenerator)
+    assert_type(line_chart(data, alt=None), DeltaGenerator)
     assert_type(
         line_chart(
             data,
@@ -87,6 +89,7 @@ if TYPE_CHECKING:
             width=500,
             height=400,
             use_container_width=None,
+            alt="Line chart of a vs b and c",
         ),
         DeltaGenerator,
     )
@@ -103,6 +106,8 @@ if TYPE_CHECKING:
     assert_type(area_chart(data, stack="center"), DeltaGenerator)
     assert_type(area_chart(data, stack="layered"), DeltaGenerator)
     assert_type(area_chart(data, stack=None), DeltaGenerator)
+    assert_type(area_chart(data, alt="Area chart of counts over time"), DeltaGenerator)
+    assert_type(area_chart(data, alt=None), DeltaGenerator)
     assert_type(
         area_chart(
             data,
@@ -115,6 +120,7 @@ if TYPE_CHECKING:
             width="stretch",
             height="content",
             use_container_width=True,
+            alt="Normalized area chart",
         ),
         DeltaGenerator,
     )
@@ -131,6 +137,8 @@ if TYPE_CHECKING:
     assert_type(bar_chart(data, sort="a"), DeltaGenerator)
     assert_type(bar_chart(data, stack="layered"), DeltaGenerator)
     assert_type(bar_chart(data, stack=None), DeltaGenerator)
+    assert_type(bar_chart(data, alt="Revenue by product line"), DeltaGenerator)
+    assert_type(bar_chart(data, alt=None), DeltaGenerator)
     assert_type(
         bar_chart(
             data,
@@ -145,6 +153,7 @@ if TYPE_CHECKING:
             width=500,
             height=400,
             use_container_width=None,
+            alt="Horizontal bar chart",
         ),
         DeltaGenerator,
     )
@@ -160,6 +169,8 @@ if TYPE_CHECKING:
     assert_type(scatter_chart(data, size=100), DeltaGenerator)
     assert_type(scatter_chart(data, size=12.5), DeltaGenerator)
     assert_type(scatter_chart(data, size=None), DeltaGenerator)
+    assert_type(scatter_chart(data, alt="Scatter of a vs b"), DeltaGenerator)
+    assert_type(scatter_chart(data, alt=None), DeltaGenerator)
     assert_type(
         scatter_chart(
             data,
@@ -172,6 +183,7 @@ if TYPE_CHECKING:
             width="content",
             height="stretch",
             use_container_width=True,
+            alt="Scatter chart with size",
         ),
         DeltaGenerator,
     )
@@ -289,6 +301,12 @@ if TYPE_CHECKING:
 
     # Invalid stack value for area_chart.
     area_chart(data, stack="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Invalid alt value (must be a string or None).
+    line_chart(data, alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    area_chart(data, alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    bar_chart(data, alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    scatter_chart(data, alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid theme value for altair_chart (only "streamlit" or None).
     altair_chart(chart, theme="dark")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]

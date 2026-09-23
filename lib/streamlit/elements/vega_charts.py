@@ -806,6 +806,7 @@ class VegaChartsMixin:
         width: Width = "stretch",
         height: Height = "content",
         use_container_width: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator:
         """Display a line chart.
 
@@ -930,6 +931,18 @@ class VegaChartsMixin:
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), the chart keeps its
+            default Vega accessible name.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            This is a short description of the chart, not a full text
+            alternative for dense graphics.
+
         Examples
         --------
         **Example 1: Basic line chart from a dataframe**
@@ -974,7 +987,13 @@ class VegaChartsMixin:
         ...     }
         ... )
         >>>
-        >>> st.line_chart(df, x="col1", y="col2", color="col3")
+        >>> st.line_chart(
+        ...     df,
+        ...     x="col1",
+        ...     y="col2",
+        ...     color="col3",
+        ...     alt="Three series over a shared x-axis",
+        ... )
 
         .. output::
            https://doc-line-chart1.streamlit.app/
@@ -1026,6 +1045,7 @@ class VegaChartsMixin:
                 theme="streamlit",
                 width=width,
                 height=height,
+                alt=alt,
             ),
         )
 
@@ -1043,6 +1063,7 @@ class VegaChartsMixin:
         width: Width = "stretch",
         height: Height = "content",
         use_container_width: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator:
         """Display an area chart.
 
@@ -1179,6 +1200,18 @@ class VegaChartsMixin:
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), the chart keeps its
+            default Vega accessible name.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            This is a short description of the chart, not a full text
+            alternative for dense graphics.
+
         Examples
         --------
         **Example 1: Basic area chart from a dataframe**
@@ -1223,7 +1256,13 @@ class VegaChartsMixin:
         ...     }
         ... )
         >>>
-        >>> st.area_chart(df, x="col1", y="col2", color="col3")
+        >>> st.area_chart(
+        ...     df,
+        ...     x="col1",
+        ...     y="col2",
+        ...     color="col3",
+        ...     alt="Three series over a shared x-axis",
+        ... )
 
         .. output::
            https://doc-area-chart1.streamlit.app/
@@ -1312,6 +1351,7 @@ class VegaChartsMixin:
                 theme="streamlit",
                 width=width,
                 height=height,
+                alt=alt,
             ),
         )
 
@@ -1331,6 +1371,7 @@ class VegaChartsMixin:
         width: Width = "stretch",
         height: Height = "content",
         use_container_width: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator:
         """Display a bar chart.
 
@@ -1487,6 +1528,18 @@ class VegaChartsMixin:
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), the chart keeps its
+            default Vega accessible name.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            This is a short description of the chart, not a full text
+            alternative for dense graphics.
+
         Examples
         --------
         **Example 1: Basic bar chart from a dataframe**
@@ -1531,7 +1584,13 @@ class VegaChartsMixin:
         ...     }
         ... )
         >>>
-        >>> st.bar_chart(df, x="col1", y="col2", color="col3")
+        >>> st.bar_chart(
+        ...     df,
+        ...     x="col1",
+        ...     y="col2",
+        ...     color="col3",
+        ...     alt="Values by group across the x-axis",
+        ... )
 
         .. output::
            https://doc-bar-chart1.streamlit.app/
@@ -1640,6 +1699,7 @@ class VegaChartsMixin:
                 theme="streamlit",
                 width=width,
                 height=height,
+                alt=alt,
             ),
         )
 
@@ -1657,6 +1717,7 @@ class VegaChartsMixin:
         width: Width = "stretch",
         height: Height = "content",
         use_container_width: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator:
         """Display a scatterplot chart.
 
@@ -1787,6 +1848,18 @@ class VegaChartsMixin:
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), the chart keeps its
+            default Vega accessible name.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            This is a short description of the chart, not a full text
+            alternative for dense graphics.
+
         Examples
         --------
         **Example 1: Basic scatter chart from a dataframe**
@@ -1835,6 +1908,7 @@ class VegaChartsMixin:
         ...     y="col2",
         ...     color="col4",
         ...     size="col3",
+        ...     alt="col2 versus col1, sized by col3",
         ... )
 
         .. output::
@@ -1890,6 +1964,7 @@ class VegaChartsMixin:
                 theme="streamlit",
                 width=width,
                 height=height,
+                alt=alt,
             ),
         )
 
