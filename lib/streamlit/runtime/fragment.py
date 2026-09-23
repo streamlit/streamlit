@@ -405,20 +405,66 @@ class MemoryFragmentStorage(FragmentStorage):
         """
 
         with self._lock:
-            to_remove = [
+            stale_candidates = [
                 fragment_id
                 for fragment_id in self._fragments
                 if fragment_id != root_fragment_id
                 and fragment_id not in newly_registered_ids
-                and self._lifetime_by_id.get(
-                    fragment_id, _FragmentLifetime.PARENT_SCOPED
-                )
-                is _FragmentLifetime.PARENT_SCOPED
                 and root_fragment_id in self._iter_ancestor_ids(fragment_id)
+            ]
+
+            fragments_to_remove: set[str] = set()
+            while True:
+                newly_stale = {
+                    fragment_id
+                    for fragment_id in stale_candidates
+                    if fragment_id not in fragments_to_remove
+                    and self._should_remove_stale_fragment(
+                        fragment_id,
+                        root_fragment_id=root_fragment_id,
+                        newly_registered_ids=newly_registered_ids,
+                        fragments_to_remove=fragments_to_remove,
+                    )
+                }
+                if not newly_stale:
+                    break
+                fragments_to_remove.update(newly_stale)
+
+            to_remove = [
+                fragment_id
+                for fragment_id in stale_candidates
+                if fragment_id in fragments_to_remove
             ]
             for fragment_id in to_remove:
                 self._remove(fragment_id)
             return to_remove
+
+    def _should_remove_stale_fragment(
+        self,
+        fragment_id: str,
+        *,
+        root_fragment_id: str,
+        newly_registered_ids: frozenset[str],
+        fragments_to_remove: Container[str],
+    ) -> bool:
+        if fragment_id in newly_registered_ids:
+            return False
+
+        if (
+            self._lifetime_by_id.get(fragment_id, _FragmentLifetime.PARENT_SCOPED)
+            is _FragmentLifetime.FULL_APP_SCOPED
+        ):
+            return False
+
+        parent_fragment_id = self._parent_by_id.get(fragment_id)
+        if parent_fragment_id is None:
+            return False
+
+        return (
+            parent_fragment_id == root_fragment_id
+            or parent_fragment_id in newly_registered_ids
+            or parent_fragment_id in fragments_to_remove
+        )
 
     def registration_sequence(self) -> int:
         with self._lock:

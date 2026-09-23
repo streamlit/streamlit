@@ -867,21 +867,23 @@ def test_dialog_remains_responsive_after_parent_fragment_rerun(app: Page):
         dialog.get_by_text("Parent fragment dialog clicks: 1", exact=True)
     ).to_be_visible()
 
-    parent_runs = app.get_by_text(re.compile(r"^Dialog parent runs: \d+$"))
-    parent_runs_text = parent_runs.text_content()
-    assert parent_runs_text is not None
-    current_parent_runs = int(parent_runs_text.rsplit(" ", maxsplit=1)[-1])
+    nested_increment_button = get_button(dialog, "Increment nested dialog fragment")
+    nested_increment_button.click()
+    expect(dialog.get_by_text("Nested dialog clicks: 1", exact=True)).to_be_visible()
+
+    expect(app.get_by_text("Dialog parent runs: 2", exact=True)).to_be_visible()
 
     get_button(dialog, "Rerun dialog parent").click()
-    expect(
-        app.get_by_text(f"Dialog parent runs: {current_parent_runs + 1}", exact=True)
-    ).to_be_visible()
+    expect(app.get_by_text("Dialog parent runs: 3", exact=True)).to_be_visible()
     expect(dialog).to_be_visible()
 
     increment_button.click()
     expect(
         dialog.get_by_text("Parent fragment dialog clicks: 2", exact=True)
     ).to_be_visible()
+
+    nested_increment_button.click()
+    expect(dialog.get_by_text("Nested dialog clicks: 2", exact=True)).to_be_visible()
     expect_no_exception(app)
 
     get_button(dialog, "Close parent fragment dialog").click()

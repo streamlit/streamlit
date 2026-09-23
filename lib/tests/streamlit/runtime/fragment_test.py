@@ -322,6 +322,114 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         assert removed == []
         assert self._storage.contains("dialog")
 
+    def test_should_remove_missing_direct_child_of_root(self):
+        """The cleanup root is authoritative for its missing direct child."""
+        self._set_fragment("outer")
+        self._set_fragment("inner", parent_fragment_id="outer")
+
+        assert self._storage._should_remove_stale_fragment(
+            "inner",
+            root_fragment_id="outer",
+            newly_registered_ids=frozenset(),
+            fragments_to_remove=frozenset(),
+        )
+
+    def test_should_not_remove_reregistered_fragment(self):
+        """A fragment registered during this root execution is current."""
+        self._set_fragment("outer")
+        self._set_fragment("inner", parent_fragment_id="outer")
+
+        assert not self._storage._should_remove_stale_fragment(
+            "inner",
+            root_fragment_id="outer",
+            newly_registered_ids=frozenset({"inner"}),
+            fragments_to_remove=frozenset(),
+        )
+
+    def test_should_remove_child_of_reregistered_parent(self):
+        """A missing child is stale when its parent executed."""
+        self._set_fragment_chain("outer", "inner", "leaf")
+
+        assert self._storage._should_remove_stale_fragment(
+            "leaf",
+            root_fragment_id="outer",
+            newly_registered_ids=frozenset({"inner"}),
+            fragments_to_remove=frozenset(),
+        )
+
+    def test_should_remove_child_of_removed_parent(self):
+        """Removal propagates through missing parent-scoped fragments."""
+        self._set_fragment_chain("outer", "inner", "leaf")
+
+        assert self._storage._should_remove_stale_fragment(
+            "leaf",
+            root_fragment_id="outer",
+            newly_registered_ids=frozenset(),
+            fragments_to_remove=frozenset({"inner"}),
+        )
+
+    def test_should_not_remove_full_app_scoped_fragment(self):
+        """A full-app-scoped fragment survives fragment-only cleanup."""
+        self._set_fragment("outer")
+        self._set_fragment(
+            "dialog",
+            parent_fragment_id="outer",
+            lifetime=_FragmentLifetime.FULL_APP_SCOPED,
+        )
+
+        assert not self._storage._should_remove_stale_fragment(
+            "dialog",
+            root_fragment_id="outer",
+            newly_registered_ids=frozenset(),
+            fragments_to_remove=frozenset(),
+        )
+
+    def test_clear_stale_descendants_preserves_retained_dialog_subtree(self):
+        """An unexecuted retained dialog keeps its previously registered subtree."""
+        self._set_fragment("outer")
+        self._set_fragment(
+            "dialog",
+            parent_fragment_id="outer",
+            lifetime=_FragmentLifetime.FULL_APP_SCOPED,
+        )
+        self._set_fragment("nested", parent_fragment_id="dialog")
+
+        removed = self._storage.clear_stale_descendants("outer", frozenset())
+
+        assert removed == []
+        assert self._storage.contains("dialog")
+        assert self._storage.contains("nested")
+
+    def test_clear_stale_descendants_reconciles_reregistered_dialog_subtree(self):
+        """A retained dialog that executed still owns cleanup of its missing children."""
+        self._set_fragment("outer")
+        self._set_fragment(
+            "dialog",
+            parent_fragment_id="outer",
+            lifetime=_FragmentLifetime.FULL_APP_SCOPED,
+        )
+        self._set_fragment("nested", parent_fragment_id="dialog")
+
+        removed = self._storage.clear_stale_descendants("outer", frozenset({"dialog"}))
+
+        assert removed == ["nested"]
+        assert self._storage.contains("dialog")
+        assert not self._storage.contains("nested")
+
+    def test_dialog_root_cleanup_removes_missing_nested_fragment(self):
+        """A dialog rerun is authoritative for its parent-scoped children."""
+        self._set_fragment(
+            "dialog",
+            lifetime=_FragmentLifetime.FULL_APP_SCOPED,
+        )
+        self._set_fragment("nested", parent_fragment_id="dialog")
+
+        removed = self._storage.clear_stale_descendants("dialog", frozenset())
+
+        assert removed == ["nested"]
+        assert self._storage.contains("dialog")
+        assert not self._storage.contains("nested")
+
     def test_full_app_clear_removes_full_app_scoped_child(self):
         """Full app cleanup removes unregistered full-app-scoped fragments."""
         self._set_fragment("outer")

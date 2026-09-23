@@ -447,8 +447,19 @@ elif st.button("Open dialog that blocks after close"):
     dialog_closed_before_blocking()
 
 
+# Regression coverage for #17011: a dialog and its nested fragment must remain
+# interactive when only the fragment that opened the dialog reruns.
 def rerun_dialog_parent() -> None:
     st.rerun(scope="dialog_parent")
+
+
+@st.fragment
+def nested_dialog_fragment() -> None:
+    if st.button("Increment nested dialog fragment"):
+        st.session_state.nested_dialog_clicks = (
+            st.session_state.get("nested_dialog_clicks", 0) + 1
+        )
+    st.write(f"Nested dialog clicks: {st.session_state.get('nested_dialog_clicks', 0)}")
 
 
 @st.dialog("Parent fragment rerun dialog", dismissible=False)
@@ -464,6 +475,7 @@ def parent_fragment_rerun_dialog() -> None:
     )
 
     st.button("Rerun dialog parent", on_click=rerun_dialog_parent)
+    nested_dialog_fragment()
 
     if st.button("Close parent fragment dialog"):
         st.rerun()

@@ -24,6 +24,7 @@ import pytest
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.RootContainer_pb2 import RootContainer
+from streamlit.runtime.fragment import MemoryFragmentStorage, _FragmentLifetime
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -96,6 +97,21 @@ class DialogDeltaPathTest(DeltaGeneratorTestCase):
             if msg.HasField("delta")
             and msg.delta.WhichOneof("type") == "add_block"
             and msg.delta.add_block.WhichOneof("type") == block_type
+        ]
+
+    def test_dialog_fragment_uses_full_app_lifetime(self) -> None:
+        """The dialog backing fragment survives fragment-only parent reruns."""
+
+        @st.dialog("Full-app-scoped dialog")
+        def my_dialog() -> None:
+            st.write("content")
+
+        my_dialog()
+
+        storage = self.script_run_ctx.fragment_storage
+        assert isinstance(storage, MemoryFragmentStorage)
+        assert list(storage._lifetime_by_id.values()) == [
+            _FragmentLifetime.FULL_APP_SCOPED
         ]
 
     def test_dialog_open_reuses_event_container_path(self) -> None:
