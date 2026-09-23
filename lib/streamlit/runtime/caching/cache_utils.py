@@ -106,7 +106,9 @@ def _reject_awaitable_return_value(
 ) -> None:
     """Raise if a synchronous cached function returned an awaitable.
 
-    Closes unstarted native coroutines before raising; other awaitables are left as-is.
+    Closes unstarted native coroutines so Python does not warn that they were
+    never awaited. Leaves started coroutines and other awaitables untouched
+    because the caller may still own their lifecycle.
     """
     if not inspect.isawaitable(value):
         return
@@ -115,9 +117,6 @@ def _reject_awaitable_return_value(
         inspect.iscoroutine(value)
         and inspect.getcoroutinestate(value) == inspect.CORO_CREATED
     ):
-        # Close unstarted native coroutines so Python does not emit an
-        # unawaited-coroutine warning. Leave started coroutines and other awaitables
-        # untouched; the caller may still own their lifecycle.
         value.close()
 
     raise CachedFunctionReturnedAwaitableError(cache_type, func, value)
