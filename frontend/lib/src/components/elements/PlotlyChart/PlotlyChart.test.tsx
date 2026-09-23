@@ -157,38 +157,41 @@ describe("PlotlyChart Component", () => {
   })
 
   describe("alt (accessible name)", () => {
-    it("sets aria-label when alt is provided", () => {
+    it("sets role=figure and aria-label when alt is provided", () => {
       renderComponent({
         element: new PlotlyChartProto({
           ...DEFAULT_ELEMENT,
-          alt: "Scatter of sepal width vs length",
+          alt: "Scatter plot of three sample points",
         }),
       })
-      expect(screen.getByTestId("stPlotlyChart")).toHaveAttribute(
+      const chart = screen.getByTestId("stPlotlyChart")
+      expect(chart).toHaveAttribute("role", "figure")
+      expect(chart).toHaveAttribute(
         "aria-label",
-        "Scatter of sepal width vs length"
+        "Scatter plot of three sample points"
       )
     })
 
-    it("omits aria-label entirely when alt is not provided", () => {
+    it("omits role and aria-label entirely when alt is not provided", () => {
       renderComponent()
       // An empty aria-label is worse than none, so the attribute must be
-      // absent rather than present-but-empty.
-      expect(screen.getByTestId("stPlotlyChart")).not.toHaveAttribute(
-        "aria-label"
-      )
+      // absent rather than present-but-empty. Unlabeled charts also omit
+      // role so their accessibility tree stays unchanged.
+      const chart = screen.getByTestId("stPlotlyChart")
+      expect(chart).not.toHaveAttribute("role")
+      expect(chart).not.toHaveAttribute("aria-label")
     })
 
     it.each([
       ["an empty string", ""],
       ["whitespace only", "   "],
-    ])("omits aria-label when alt is %s", (_label, alt) => {
+    ])("omits role and aria-label when alt is %s", (_label, alt) => {
       renderComponent({
         element: new PlotlyChartProto({ ...DEFAULT_ELEMENT, alt }),
       })
-      expect(screen.getByTestId("stPlotlyChart")).not.toHaveAttribute(
-        "aria-label"
-      )
+      const chart = screen.getByTestId("stPlotlyChart")
+      expect(chart).not.toHaveAttribute("role")
+      expect(chart).not.toHaveAttribute("aria-label")
     })
 
     it("does not set role=img (modebar buttons must stay operable)", () => {
@@ -198,7 +201,11 @@ describe("PlotlyChart Component", () => {
           alt: "Named chart",
         }),
       })
-      expect(screen.getByTestId("stPlotlyChart")).not.toHaveAttribute("role")
+      // figure (not img) keeps descendants non-presentational so Plotly's
+      // modebar buttons remain in the accessibility tree.
+      const chart = screen.getByTestId("stPlotlyChart")
+      expect(chart).toHaveAttribute("role", "figure")
+      expect(chart).not.toHaveAttribute("role", "img")
     })
   })
 

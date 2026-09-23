@@ -154,10 +154,14 @@ def test_plotly_with_custom_theme(app: Page, assert_snapshot: ImageCompareFuncti
 def test_plotly_chart_alt_sets_accessible_name(app: Page):
     """`alt` becomes the Plotly chart container's accessible name."""
     labeled = get_element_by_key(app, "c_plotly_alt").get_by_test_id("stPlotlyChart")
-    expect(labeled).to_have_accessible_name("Scatter of sepal width vs length")
+    expect(labeled).to_have_attribute("role", "figure")
+    expect(labeled).to_have_accessible_name("Scatter plot of three sample points")
+    # role=figure (not img) keeps Plotly's modebar in the accessibility tree.
+    expect(labeled.locator(".modebar-btn").first).to_be_visible()
 
     unlabeled = get_element_by_key(app, "c_plotly_no_alt").get_by_test_id(
         "stPlotlyChart"
     )
+    expect(unlabeled).not_to_have_attribute("role")
     expect(unlabeled).not_to_have_attribute("aria-label")
     expect(unlabeled).to_have_accessible_name("")

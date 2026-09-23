@@ -149,7 +149,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         assert chart_id(alt="First description") == with_alt
 
     def test_keyed_plotly_chart_id_changes_when_alt_changes(self):
-        """Keyed charts still remount when alt changes (key_as_main_identity=False)."""
+        """Even with an author key, changing only alt remounts the chart."""
         import plotly.graph_objs as go
 
         data = [go.Scatter(x=[1, 2], y=[1, 2])]

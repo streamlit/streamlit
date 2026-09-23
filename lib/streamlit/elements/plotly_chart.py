@@ -625,8 +625,7 @@ class PlotlyMixin:
 
         alt : str or None
             A description of the chart for screen readers and other assistive
-            technologies. Streamlit maps this to ``aria-label`` on the chart
-            container. If this is ``None`` (default), Streamlit does not
+            technologies. If this is ``None`` (default), Streamlit does not
             provide an accessible name for the chart.
 
             An empty or whitespace-only string is treated the same as ``None``
@@ -774,14 +773,14 @@ class PlotlyMixin:
         normalized_alt = normalize_alt(alt)
         if normalized_alt is not None:
             # Carry alt on its own proto field so it is not baked into the
-            # wire spec JSON (applied on the frontend as aria-label).
+            # wire spec JSON (frontend applies it as the chart accessible name).
             plotly_chart_proto.alt = normalized_alt
 
         ctx = get_script_run_ctx()
 
-        # ID is computed for all Plotly charts (keyed and unkeyed) so remount
-        # recovery works. key_as_main_identity=False always: kwargs including
-        # alt participate in the hash even when a user key is set.
+        # Compute an ID for every Plotly chart so the frontend can restore
+        # state after remount. Always hash command kwargs (including alt),
+        # even when the author set a key, so changing alt remounts the chart.
         plotly_chart_proto.id = compute_and_register_element_id(
             "plotly_chart",
             user_key=key,

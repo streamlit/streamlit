@@ -262,8 +262,9 @@ fig.update_layout(
 )
 st.plotly_chart(fig, theme="streamlit")
 
-# Accessible-name scenarios for the keyed E2E alt test.
-_SIMPLE_ALT_FIG = go.Figure(
+# Wrapped in keyed containers so the alt test can target these without
+# relying on chart position. They differ only in `alt`.
+SIMPLE_ALT_FIG = go.Figure(
     data=[go.Scatter(x=[1, 2, 3], y=[1, 3, 2], mode="markers")],
     layout={
         "height": 300,
@@ -274,10 +275,10 @@ _SIMPLE_ALT_FIG = go.Figure(
 
 with st.container(key="c_plotly_alt"):
     st.plotly_chart(
-        _SIMPLE_ALT_FIG,
+        SIMPLE_ALT_FIG,
         key="plotly_alt",
-        alt="Scatter of sepal width vs length",
+        alt="Scatter plot of three sample points",
     )
 
 with st.container(key="c_plotly_no_alt"):
-    st.plotly_chart(_SIMPLE_ALT_FIG, key="plotly_no_alt")
+    st.plotly_chart(SIMPLE_ALT_FIG, key="plotly_no_alt")

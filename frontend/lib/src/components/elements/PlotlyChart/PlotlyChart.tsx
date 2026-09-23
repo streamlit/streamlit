@@ -497,16 +497,20 @@ export function PlotlyChart({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [plotlyFigure.layout?.dragmode])
 
+  // Only name the container when the author provided a non-blank alt.
+  // Blank input is treated as absent: aria-label=" " computes to an empty
+  // accessible name, which is worse than none. role="figure" (not "img")
+  // is required to legally expose aria-label on this otherwise-generic div
+  // without making Plotly's focusable modebar presentational.
+  const accessibleName = element.alt?.trim() || undefined
+
   return (
     <StyledPlotlyChartContainer
       ref={containerRef}
       className="stPlotlyChart"
       data-testid="stPlotlyChart"
-      // Only set an accessible name when the author provided one. Blank input
-      // is treated as absent: aria-label=" " computes to an empty accessible
-      // name, which is worse than having no aria-label at all. No role="img":
-      // Plotly's modebar has focusable buttons that must stay operable.
-      aria-label={element.alt?.trim() || undefined}
+      role={accessibleName ? "figure" : undefined}
+      aria-label={accessibleName}
     >
       <Plot
         data={plotlyFigure.data}
