@@ -119,6 +119,7 @@ st.mermaid_chart("graph TD\n" + "\n".join(f"    N{i} --> N{i + 1}" for i in rang
 
 # Accessibility: keyed so e2e can assert accessible names without shifting
 # existing snapshot indices (charts above stay at the same nth offsets).
+# Unlabeled baseline: first flowchart uses key="mermaid_without_alt".
 with st.container(key="mermaid_with_alt"):
     st.mermaid_chart(
         "graph TD\n    A --> B",

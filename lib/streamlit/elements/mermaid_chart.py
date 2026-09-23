@@ -54,7 +54,11 @@ def _strip_mermaid_accessibility_directives(body: str) -> tuple[str, bool]:
 
 
 def _apply_alt_as_acc_title(body: str, normalized_alt: str) -> str:
-    """Strip existing accessibility directives and prepend accTitle.
+    """Strip existing accessibility directives and insert ``accTitle``.
+
+    Mermaid requires the diagram type before accessibility directives;
+    placing ``accTitle`` first fails with "No diagram type detected".
+    Insert after the first non-empty line (the diagram type).
 
     ``normalized_alt`` must already be stripped plain text with no newlines
     (as returned by ``normalize_alt``).
@@ -67,9 +71,15 @@ def _apply_alt_as_acc_title(body: str, normalized_alt: str) -> str:
             "for the accessible name.",
             normalized_alt,
         )
-    # Prepend before the diagram type line so the frontend's type fallback
-    # still sees the first non-directive line when alt is later omitted.
-    return f"accTitle: {normalized_alt}\n{stripped}"
+
+    lines = stripped.splitlines(keepends=True)
+    insert_at = 0
+    for i, line in enumerate(lines):
+        if line.strip():
+            insert_at = i + 1
+            break
+    lines.insert(insert_at, f"accTitle: {normalized_alt}\n")
+    return "".join(lines)
 
 
 class MermaidChartMixin:

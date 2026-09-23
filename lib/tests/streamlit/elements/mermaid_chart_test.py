@@ -109,12 +109,12 @@ graph LR
                 assert getattr(el.width_config, field_name) == field_value
 
     def test_mermaid_chart_with_alt(self) -> None:
-        """Non-blank alt is injected as accTitle in the markdown body."""
+        """Non-blank alt is injected as accTitle after the diagram type."""
         st.mermaid_chart("graph TD\n    A --> B", alt="Decision flow")
 
         element = self.get_delta_from_queue().new_element.markdown
         assert element.body == (
-            "````mermaid\naccTitle: Decision flow\ngraph TD\n    A --> B\n````"
+            "````mermaid\ngraph TD\naccTitle: Decision flow\n    A --> B\n````"
         )
 
     def test_mermaid_chart_alt_strips_whitespace(self) -> None:
@@ -197,13 +197,13 @@ def test_strip_mermaid_accessibility_directives(
     assert _strip_mermaid_accessibility_directives(body) == expected
 
 
-def test_apply_alt_as_acc_title_prepends() -> None:
-    """accTitle is prepended at the top of the body after stripping."""
+def test_apply_alt_as_acc_title_inserts_after_diagram_type() -> None:
+    """accTitle is inserted after the diagram type line, not before it."""
     body = "flowchart TD\naccTitle: Old\nA --> B"
     with patch("streamlit.elements.mermaid_chart._LOGGER.warning") as mock_warning:
         result = _apply_alt_as_acc_title(body, "New title")
 
-    assert result == "accTitle: New title\nflowchart TD\nA --> B"
+    assert result == "flowchart TD\naccTitle: New title\nA --> B"
     mock_warning.assert_called_once()
 
 
@@ -212,5 +212,11 @@ def test_apply_alt_as_acc_title_no_warning_without_directives() -> None:
     with patch("streamlit.elements.mermaid_chart._LOGGER.warning") as mock_warning:
         result = _apply_alt_as_acc_title("flowchart TD\nA --> B", "New title")
 
-    assert result == "accTitle: New title\nflowchart TD\nA --> B"
+    assert result == "flowchart TD\naccTitle: New title\nA --> B"
     mock_warning.assert_not_called()
+
+
+def test_apply_alt_as_acc_title_skips_leading_blank_lines() -> None:
+    """Leading blank lines are preserved; accTitle still follows the type."""
+    result = _apply_alt_as_acc_title("\ngraph TD\n    A --> B", "Decision flow")
+    assert result == "\ngraph TD\naccTitle: Decision flow\n    A --> B"
