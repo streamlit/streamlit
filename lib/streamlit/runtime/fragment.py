@@ -176,10 +176,10 @@ class FragmentStorage(Protocol):
     ) -> list[str]:
         """Remove stale parent-scoped descendants of ``root_fragment_id``.
 
-        A missing fragment is stale when its parent is the cleanup root, was
-        re-registered during the root execution, or was also removed.
-        A retained full-app-scoped fragment stops removal from propagating into its
-        previously registered subtree.
+        Starting at the cleanup root, re-registered children are retained and
+        reconciled recursively. Missing parent-scoped children are removed along
+        with their stale parent-scoped descendants. A missing full-app-scoped
+        child and its previously registered subtree are retained.
 
         Returns the removed fragment IDs so callers can react, such as cancelling
         frontend auto-rerun timers.
@@ -407,75 +407,46 @@ class MemoryFragmentStorage(FragmentStorage):
     ) -> list[str]:
         """Drop stale parent-scoped descendants under ``root_fragment_id``.
 
-        A descendant is stale when its parent was re-registered during the root
-        execution or was also removed. A retained full-app-scoped fragment stops
-        removal from propagating into its previously registered subtree.
+        Traverse from the cleanup root through children that executed or are being
+        removed. A retained full-app-scoped child stops traversal into its
+        previously registered subtree.
         """
 
         with self._lock:
-            stale_candidates = [
-                fragment_id
-                for fragment_id in self._fragments
-                if fragment_id != root_fragment_id
-                and fragment_id not in newly_registered_ids
-                and root_fragment_id in self._iter_ancestor_ids(fragment_id)
-            ]
-
-            fragments_to_remove: set[str] = set()
-            # Each pass propagates removal one parent level. A retained full-app-
-            # scoped fragment never enters fragments_to_remove, so its subtree remains.
-            while True:
-                newly_stale = {
+            children_by_parent: dict[str | None, list[str]] = {}
+            for fragment_id, parent_fragment_id in self._parent_by_id.items():
+                children_by_parent.setdefault(parent_fragment_id, []).append(
                     fragment_id
-                    for fragment_id in stale_candidates
-                    if fragment_id not in fragments_to_remove
-                    and self._should_remove_stale_fragment(
-                        fragment_id,
-                        root_fragment_id=root_fragment_id,
-                        newly_registered_ids=newly_registered_ids,
-                        fragments_to_remove=fragments_to_remove,
-                    )
-                }
-                if not newly_stale:
-                    break
-                fragments_to_remove.update(newly_stale)
+                )
 
-            to_remove = [
-                fragment_id
-                for fragment_id in stale_candidates
-                if fragment_id in fragments_to_remove
-            ]
+            parents_to_reconcile = [root_fragment_id]
+            visited_ids = {root_fragment_id}
+            to_remove: list[str] = []
+            parent_index = 0
+
+            while parent_index < len(parents_to_reconcile):
+                parent_fragment_id = parents_to_reconcile[parent_index]
+                parent_index += 1
+
+                for fragment_id in children_by_parent.get(parent_fragment_id, []):
+                    if fragment_id in visited_ids:
+                        continue
+                    visited_ids.add(fragment_id)
+
+                    if fragment_id in newly_registered_ids:
+                        parents_to_reconcile.append(fragment_id)
+                    elif (
+                        self._lifetime_by_id.get(
+                            fragment_id, _FragmentLifetime.PARENT_SCOPED
+                        )
+                        is not _FragmentLifetime.FULL_APP_SCOPED
+                    ):
+                        to_remove.append(fragment_id)
+                        parents_to_reconcile.append(fragment_id)
+
             for fragment_id in to_remove:
                 self._remove(fragment_id)
             return to_remove
-
-    def _should_remove_stale_fragment(
-        self,
-        fragment_id: str,
-        *,
-        root_fragment_id: str,
-        newly_registered_ids: frozenset[str],
-        fragments_to_remove: Container[str],
-    ) -> bool:
-        """Return whether a missing fragment is stale in this root execution."""
-        if fragment_id in newly_registered_ids:
-            return False
-
-        if (
-            self._lifetime_by_id.get(fragment_id, _FragmentLifetime.PARENT_SCOPED)
-            is _FragmentLifetime.FULL_APP_SCOPED
-        ):
-            return False
-
-        parent_fragment_id = self._parent_by_id.get(fragment_id)
-        if parent_fragment_id is None:
-            return False
-
-        return (
-            parent_fragment_id == root_fragment_id
-            or parent_fragment_id in newly_registered_ids
-            or parent_fragment_id in fragments_to_remove
-        )
 
     def registration_sequence(self) -> int:
         with self._lock:
