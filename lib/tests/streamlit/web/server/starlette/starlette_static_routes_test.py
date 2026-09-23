@@ -18,15 +18,19 @@ from __future__ import annotations
 
 import os
 from typing import TYPE_CHECKING
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from starlette.applications import Starlette
+from starlette.responses import RedirectResponse
 from starlette.routing import Mount
+from starlette.staticfiles import StaticFiles
 from starlette.testclient import TestClient
 
 from streamlit.web.server.starlette.starlette_static_routes import (
     _RESERVED_STATIC_PATH_SUFFIXES,
     STATIC_ASSET_CACHE_MAX_AGE_SECONDS,
+    create_streamlit_static_assets_routes,
     create_streamlit_static_handler,
 )
 
@@ -514,6 +518,18 @@ class TestCacheHeadersOnRedirects:
             assert response.headers["Cache-Control"] == "no-cache"
             assert "immutable" not in response.headers["Cache-Control"]
 
+    def test_apply_cache_headers_skips_redirect_status_codes(
+        self, tmp_path: Path
+    ) -> None:
+        """Redirect responses keep their own cache headers."""
+        static_files = create_streamlit_static_handler(
+            directory=str(tmp_path), base_url=None
+        )
+        response = RedirectResponse(url="/elsewhere", status_code=302)
+        original = dict(response.headers)
+        static_files._apply_cache_headers(response, "index.html")
+        assert dict(response.headers) == original
+
     def test_regular_html_has_no_cache(self, static_app: TestClient) -> None:
         """Test that regular HTML files have no-cache header (not redirect)."""
         response = static_app.get("/index.html")
@@ -604,3 +620,68 @@ class TestSymlinkSupport:
 
             assert response.status_code == 200
             assert response.text == "body { color: red; }"
+
+
+class TestStaticHandlerSecurityAndLifecycle:
+    """Edge cases for ASGI dispatch, unsafe paths, and missing assets."""
+
+    @pytest.mark.anyio
+    async def test_non_http_scopes_are_delegated(self, tmp_path: Path) -> None:
+        """Non-HTTP ASGI scopes fall through to Starlette's StaticFiles."""
+        static_files = create_streamlit_static_handler(
+            directory=str(tmp_path), base_url=None
+        )
+        scope = {"type": "websocket"}
+        receive = AsyncMock()
+        send = AsyncMock()
+
+        # Starlette's StaticFiles only accepts HTTP scopes. The Streamlit
+        # wrapper still must delegate non-HTTP scopes instead of applying
+        # its HTTP-only security checks.
+        with patch.object(
+            StaticFiles, "__call__", new_callable=AsyncMock
+        ) as super_call:
+            await static_files(scope, receive, send)
+            super_call.assert_awaited_once_with(scope, receive, send)
+
+    @pytest.mark.anyio
+    async def test_unsafe_relative_path_returns_400(self, tmp_path: Path) -> None:
+        """Path traversal segments are rejected before filesystem access."""
+        static_files = create_streamlit_static_handler(
+            directory=str(tmp_path), base_url=None
+        )
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": "/../../etc/passwd",
+            "query_string": b"",
+            "root_path": "",
+            "headers": [],
+        }
+        response_status = 0
+        response_body = b""
+
+        async def receive() -> dict[str, object]:
+            return {"type": "http.request", "body": b""}
+
+        async def send(message: dict[str, object]) -> None:
+            nonlocal response_status, response_body
+            if message["type"] == "http.response.start":
+                response_status = message["status"]
+            elif message["type"] == "http.response.body":
+                response_body += message.get("body", b"")
+
+        await static_files(scope, receive, send)
+
+        assert response_status == 400
+        assert response_body == b"Bad Request"
+
+    def test_missing_static_directory_yields_no_asset_routes(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Production static serving is skipped when the assets dir is absent."""
+        monkeypatch.setattr(
+            "streamlit.web.server.starlette.starlette_static_routes.file_util.get_static_dir",
+            lambda: "/definitely/not/a/real/static/dir",
+        )
+        assert create_streamlit_static_assets_routes(base_url=None) == []

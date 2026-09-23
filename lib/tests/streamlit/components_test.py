@@ -71,6 +71,24 @@ URL = "http://not.a.real.url:3001"
 PATH = "not/a/real/path"
 
 
+def test_components_v1_compat_module_reexports_public_symbols() -> None:
+    """Legacy ``components.py`` re-exports keep older custom components working."""
+    from streamlit.components.v1 import components as compat
+    from streamlit.components.v1.component_registry import declare_component
+    from streamlit.runtime.state import register_widget
+
+    assert compat.declare_component is declare_component
+    assert compat.CustomComponent is CustomComponent
+    assert compat.MarshallComponentException is MarshallComponentException
+    assert compat.register_widget is register_widget
+    assert set(compat.__all__) == {
+        "CustomComponent",
+        "MarshallComponentException",
+        "declare_component",
+        "register_widget",
+    }
+
+
 def _serialize_dataframe_arg(key: str, value: Any) -> SpecialArg:
     special_arg = SpecialArg()
     special_arg.key = key

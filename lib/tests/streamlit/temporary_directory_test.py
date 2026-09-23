@@ -31,3 +31,8 @@ class TemporaryFileTest(unittest.TestCase):
         with TemporaryDirectory(dir=dir.path) as temp_fname:
             assert os.path.exists(temp_fname)
         assert not os.path.exists(temp_fname)
+
+    def test_repr_includes_class_name(self) -> None:
+        """repr() includes the class name before the directory is created."""
+        temp_dir = TemporaryDirectory()
+        assert "TemporaryDirectory" in repr(temp_dir)

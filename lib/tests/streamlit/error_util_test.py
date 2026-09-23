@@ -95,6 +95,19 @@ class ErrorUtilTest(unittest.TestCase):
             handle_uncaught_app_exception(Exception("boom!"))
             mock_logger.assert_called_once()
 
+    def test_handle_uncaught_app_exception_falls_back_when_rich_fails(self) -> None:
+        """Rich formatting failures fall back to the standard logger."""
+        with (
+            testutil.patch_config_options({"logger.enableRich": True}),
+            patch(
+                "streamlit.error_util._print_rich_exception",
+                side_effect=RuntimeError("rich failed"),
+            ),
+            patch("streamlit.error_util._LOGGER.error") as mock_logger,
+        ):
+            handle_uncaught_app_exception(Exception("boom!"))
+            mock_logger.assert_called_once()
+
     @patch(
         "streamlit.error_util.exception._exception",
         side_effect=RuntimeError("display failed"),

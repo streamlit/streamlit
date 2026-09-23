@@ -29,7 +29,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
+from streamlit.runtime.parallel_coordinator import (
+    ParallelFragmentCoordinator,
+    _scoped_ctx_attach,
+)
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
@@ -509,3 +512,33 @@ def test_submit_with_none_ctx(coordinator):
     assert done.wait(timeout=1.0)
     _wait_for_outstanding_zero(coordinator)
     assert holder[0] is None
+
+
+def test_scoped_ctx_attach_restores_previous_context() -> None:
+    """A worker that already had a ScriptRunContext gets it back after the block."""
+    thread = threading.current_thread()
+    previous = object()
+    inner = MagicMock()
+    setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, previous)
+    try:
+        with _scoped_ctx_attach(inner):  # type: ignore[arg-type]
+            assert getattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME) is inner
+        assert getattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME) is previous
+    finally:
+        delattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME)
+
+
+def test_scoped_ctx_attach_ignores_missing_attr_on_cleanup() -> None:
+    """Cleanup must not fail if another thread already cleared the attribute."""
+    thread = threading.current_thread()
+    previous = getattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None)
+    had_previous = hasattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME)
+    if had_previous:
+        delattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME)
+    try:
+        with _scoped_ctx_attach(MagicMock()):
+            delattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME)
+        assert not hasattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME)
+    finally:
+        if had_previous:
+            setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, previous)
