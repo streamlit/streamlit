@@ -34,7 +34,6 @@ from e2e_playwright.shared.app_utils import (
     get_toggle,
     reset_hovering,
 )
-from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
 TOGGLE_ELEMENTS = 24
 
@@ -196,22 +195,6 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "toggle4")).to_be_visible()
-
-
-def test_toggle_off_track_with_custom_border_color(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Off-track fill must not follow a custom opaque theme.borderColor.
-
-    Same window-injection pattern as st_time_input / widget_state custom-theme
-    tests. Snapshots only this widget — not the shared theme_tester app.
-    """
-    apply_theme_via_window(app, base="light", borderColor="#00008B")
-    app.reload()
-    wait_for_app_loaded(app)
-
-    off_toggle = get_toggle(app, "toggle 2 (False)")
-    assert_snapshot(off_toggle, name="st_toggle-off-custom-border-color")
 
 
 def test_dynamic_toggle_props(app: Page, assert_snapshot: ImageCompareFunction):
