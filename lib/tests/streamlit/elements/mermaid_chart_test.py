@@ -16,7 +16,16 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
+import pytest
+from parameterized import parameterized
+
 import streamlit as st
+from streamlit.elements.mermaid_chart import (
+    _apply_alt_as_acc_title,
+    _strip_mermaid_accessibility_directives,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -98,3 +107,110 @@ graph LR
                 assert el.markdown.body == "````mermaid\ngraph TD\n    A --> B\n````"
                 assert el.width_config.WhichOneof("width_spec") == expected_width_spec
                 assert getattr(el.width_config, field_name) == field_value
+
+    def test_mermaid_chart_with_alt(self) -> None:
+        """Non-blank alt is injected as accTitle in the markdown body."""
+        st.mermaid_chart("graph TD\n    A --> B", alt="Decision flow")
+
+        element = self.get_delta_from_queue().new_element.markdown
+        assert element.body == (
+            "````mermaid\naccTitle: Decision flow\ngraph TD\n    A --> B\n````"
+        )
+
+    def test_mermaid_chart_alt_strips_whitespace(self) -> None:
+        """Leading and trailing whitespace is stripped from alt."""
+        st.mermaid_chart("graph TD\n    A --> B", alt="  Decision flow  ")
+
+        element = self.get_delta_from_queue().new_element.markdown
+        assert "accTitle: Decision flow\n" in element.body
+        assert "accTitle:   Decision flow" not in element.body
+
+    @parameterized.expand([("",), ("   ",), ("\t\n",)])
+    def test_mermaid_chart_blank_alt_is_noop(self, blank_alt: str) -> None:
+        """Empty or whitespace-only alt leaves the body unchanged."""
+        diagram = "graph TD\n    A --> B"
+        st.mermaid_chart(diagram, alt=blank_alt)
+
+        element = self.get_delta_from_queue().new_element.markdown
+        assert element.body == f"````mermaid\n{diagram}\n````"
+        assert "accTitle:" not in element.body
+
+    def test_mermaid_chart_alt_none_is_noop(self) -> None:
+        """Explicit alt=None leaves the body unchanged."""
+        diagram = "graph TD\n    A --> B"
+        st.mermaid_chart(diagram, alt=None)
+
+        element = self.get_delta_from_queue().new_element.markdown
+        assert element.body == f"````mermaid\n{diagram}\n````"
+
+    def test_mermaid_chart_alt_overrides_existing_directives(self) -> None:
+        """alt replaces existing accTitle/accDescr and logs a warning."""
+        diagram = (
+            "flowchart TD\naccTitle: Old title\naccDescr: Old description\nA --> B"
+        )
+        with patch("streamlit.elements.mermaid_chart._LOGGER.warning") as mock_warning:
+            st.mermaid_chart(diagram, alt="Streamlit alt")
+
+        element = self.get_delta_from_queue().new_element.markdown
+        assert "accTitle: Streamlit alt\n" in element.body
+        assert "Old title" not in element.body
+        assert "Old description" not in element.body
+        assert "accDescr:" not in element.body
+        mock_warning.assert_called_once()
+        assert mock_warning.call_args.kwargs.get("stack_info") is not True
+
+    def test_mermaid_chart_alt_preserves_adversarial_text(self) -> None:
+        """Adversarial plain text is preserved literally inside accTitle."""
+        adversarial = 'Title with "quotes" & <tags> and `ticks`'
+        st.mermaid_chart("graph TD\n    A --> B", alt=adversarial)
+
+        element = self.get_delta_from_queue().new_element.markdown
+        assert f"accTitle: {adversarial}\n" in element.body
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        ("flowchart TD\nA --> B", ("flowchart TD\nA --> B", False)),
+        (
+            "flowchart TD\naccTitle: Checkout\nA --> B",
+            ("flowchart TD\nA --> B", True),
+        ),
+        (
+            "flowchart TD\naccDescr: Steps\nA --> B",
+            ("flowchart TD\nA --> B", True),
+        ),
+        (
+            "flowchart TD\naccTitle: Title\naccDescr: Desc\nA --> B",
+            ("flowchart TD\nA --> B", True),
+        ),
+        (
+            "flowchart TD\naccDescr {\n  First line\n  Second line\n}\nA --> B",
+            ("flowchart TD\nA --> B", True),
+        ),
+    ],
+)
+def test_strip_mermaid_accessibility_directives(
+    body: str, expected: tuple[str, bool]
+) -> None:
+    """Strip single-line and multi-line Mermaid accessibility directives."""
+    assert _strip_mermaid_accessibility_directives(body) == expected
+
+
+def test_apply_alt_as_acc_title_prepends() -> None:
+    """accTitle is prepended at the top of the body after stripping."""
+    body = "flowchart TD\naccTitle: Old\nA --> B"
+    with patch("streamlit.elements.mermaid_chart._LOGGER.warning") as mock_warning:
+        result = _apply_alt_as_acc_title(body, "New title")
+
+    assert result == "accTitle: New title\nflowchart TD\nA --> B"
+    mock_warning.assert_called_once()
+
+
+def test_apply_alt_as_acc_title_no_warning_without_directives() -> None:
+    """No override warning when the body has no accessibility directives."""
+    with patch("streamlit.elements.mermaid_chart._LOGGER.warning") as mock_warning:
+        result = _apply_alt_as_acc_title("flowchart TD\nA --> B", "New title")
+
+    assert result == "accTitle: New title\nflowchart TD\nA --> B"
+    mock_warning.assert_not_called()

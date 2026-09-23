@@ -19,7 +19,8 @@ import streamlit as st
 st.header("Mermaid Chart Types")
 
 st.subheader("Flowchart")
-st.mermaid_chart("""
+with st.container(key="mermaid_without_alt"):
+    st.mermaid_chart("""
 graph TD
     A[Start] --> B{Decision}
     B -->|Yes| C[OK]
@@ -115,3 +116,11 @@ st.mermaid_chart("graph LR\n    A --> B --> C", width="content")
 
 st.subheader("Tall diagram")
 st.mermaid_chart("graph TD\n" + "\n".join(f"    N{i} --> N{i + 1}" for i in range(12)))
+
+# Accessibility: keyed so e2e can assert accessible names without shifting
+# existing snapshot indices (charts above stay at the same nth offsets).
+with st.container(key="mermaid_with_alt"):
+    st.mermaid_chart(
+        "graph TD\n    A --> B",
+        alt="Decision flow from start to cancel",
+    )

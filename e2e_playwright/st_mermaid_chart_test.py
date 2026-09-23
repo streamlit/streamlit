@@ -19,15 +19,16 @@ import re
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import get_element_by_key
 
 
 def test_mermaid_charts_render(app: Page):
     """Test that all mermaid chart types render correctly."""
     mermaid_charts = app.get_by_test_id("stMermaidChart")
-    expect(mermaid_charts).to_have_count(9)
+    expect(mermaid_charts).to_have_count(10)
 
     # Check that each chart contains an img element with blob URL (rendered mermaid)
-    for i in range(9):
+    for i in range(10):
         img = mermaid_charts.nth(i).locator("img")
         expect(img).to_be_visible()
         expect(img).to_have_attribute("src", re.compile(r"^blob:"))
@@ -132,3 +133,21 @@ def test_toolbar_download_png(app: Page):
 
     download_button = toolbar.get_by_role("button", name="Download as PNG")
     download_button.click()
+
+
+def test_mermaid_chart_alt_sets_accessible_name(app: Page):
+    """`alt` becomes the Mermaid img accessible name via injected accTitle."""
+    labeled = get_element_by_key(app, "mermaid_with_alt").get_by_test_id(
+        "stMermaidChart"
+    )
+    expect(labeled.locator("img")).to_have_accessible_name(
+        "Decision flow from start to cancel"
+    )
+
+    unlabeled = get_element_by_key(app, "mermaid_without_alt").get_by_test_id(
+        "stMermaidChart"
+    )
+    expect(unlabeled.locator("img")).to_have_accessible_name("Mermaid flowchart")
+    expect(unlabeled.locator("img")).not_to_have_accessible_name(
+        "Decision flow from start to cancel"
+    )

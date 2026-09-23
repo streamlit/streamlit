@@ -64,3 +64,25 @@ pie title Pets
     assert_type(mermaid_chart("graph TD\n    A --> B", width="stretch"), DeltaGenerator)
     assert_type(mermaid_chart("graph TD\n    A --> B", width="content"), DeltaGenerator)
     assert_type(mermaid_chart("graph TD\n    A --> B", width=100), DeltaGenerator)
+
+    # =====================================================================
+    # Test alt parameter
+    # =====================================================================
+
+    assert_type(
+        mermaid_chart("graph TD\n    A --> B", alt="Decision flow"),
+        DeltaGenerator,
+    )
+    assert_type(mermaid_chart("graph TD\n    A --> B", alt=None), DeltaGenerator)
+
+    assert_type(
+        mermaid_chart(
+            "graph TD\n    A --> B",
+            width="content",
+            alt="Decision flow",
+        ),
+        DeltaGenerator,
+    )
+
+    # Invalid alt value (must be a string or None)
+    mermaid_chart("graph TD\n    A --> B", alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
