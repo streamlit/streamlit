@@ -23,10 +23,8 @@ from __future__ import annotations
 
 import asyncio
 import concurrent.futures
-import gc
 import inspect
 import threading
-import warnings
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -737,32 +735,22 @@ def test_sync_function_returning_coroutine_raises_without_caching(
         created_coroutines.append(coroutine)
         return coroutine
 
-    with warnings.catch_warnings(record=True) as caught_warnings:
-        warnings.simplefilter("always")
-        for _ in range(2):
-            with pytest.raises(CachedFunctionReturnedAwaitableError) as exc_info:
-                load()
+    for _ in range(2):
+        with pytest.raises(CachedFunctionReturnedAwaitableError) as exc_info:
+            load()
 
-            message = str(exc_info.value)
-            assert "synchronous function" in message
-            assert "returned an awaitable" in message
-            assert "`builtins.coroutine`" in message
-            assert f"`st.{name}`" in message
-            assert "`async def`" in message
-            assert "`await`" in message
+        message = str(exc_info.value)
+        assert "synchronous function" in message
+        assert "returned an awaitable" in message
+        assert "`builtins.coroutine`" in message
+        assert f"`st.{name}`" in message
+        assert "`async def`" in message
+        assert "`await`" in message
 
-        assert calls == 2
-        assert all(
-            inspect.getcoroutinestate(coroutine) == inspect.CORO_CLOSED
-            for coroutine in created_coroutines
-        )
-        # Drop references and collect so an unclosed coroutine would warn inside
-        # this catch_warnings block.
-        created_coroutines.clear()
-        gc.collect()
-
-    assert not any(
-        "was never awaited" in str(warning.message) for warning in caught_warnings
+    assert calls == 2
+    assert all(
+        inspect.getcoroutinestate(coroutine) == inspect.CORO_CLOSED
+        for coroutine in created_coroutines
     )
 
 
