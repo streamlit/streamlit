@@ -528,12 +528,12 @@ class StMapWidthHeightTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.map(mock_df, **kwargs)
 
-    def test_map_alt(self):
+    def test_map_alt_sets_proto_field_and_drops_blank_values(self):
         """A non-empty alt is stored on the proto; omitted/None/blank leave it unset."""
-        st.map(mock_df, alt="Delivery hubs across the Pacific Northwest")
+        st.map(mock_df, alt="Sample points near San Francisco")
         el = self.get_delta_from_queue().new_element.deck_gl_json_chart
         assert el.HasField("alt")
-        assert el.alt == "Delivery hubs across the Pacific Northwest"
+        assert el.alt == "Sample points near San Francisco"
 
         st.map(mock_df)
         assert not self.get_delta_from_queue().new_element.deck_gl_json_chart.HasField(
@@ -552,10 +552,10 @@ class StMapWidthHeightTest(DeltaGeneratorTestCase):
 
     def test_map_alt_strips_whitespace(self):
         """Leading and trailing whitespace is stripped from alt."""
-        st.map(mock_df, alt="  Delivery hubs across the Pacific Northwest  ")
+        st.map(mock_df, alt="  Sample points near San Francisco  ")
         el = self.get_delta_from_queue().new_element.deck_gl_json_chart
         assert el.HasField("alt")
-        assert el.alt == "Delivery hubs across the Pacific Northwest"
+        assert el.alt == "Sample points near San Francisco"
 
     def test_map_alt_preserves_adversarial_plain_text(self):
         """Quotes and angle brackets stay literal on the proto (no HTML path)."""

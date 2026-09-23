@@ -580,12 +580,12 @@ def alt_chart_subtest():
 
     # st.pydeck_chart with the default on_select="ignore" emits no st-key-*
     # class, so wrap each chart in a keyed container to target it.
-    with st.container(key="c_pydeck_alt"):
+    with st.container(key="pydeck_with_alt"):
         st.pydeck_chart(
             deck,
             alt="Scatter map of sample points near San Francisco",
         )
-    with st.container(key="c_pydeck_no_alt"):
+    with st.container(key="pydeck_without_alt"):
         st.pydeck_chart(deck)
 
 

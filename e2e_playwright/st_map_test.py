@@ -21,7 +21,7 @@ from e2e_playwright.shared.toolbar_utils import (
     assert_fullscreen_toolbar_button_interactions,
 )
 
-MAP_ELEMENT_COUNT = 7
+MAP_ELEMENT_COUNT = 5
 PIXEL_THRESHOLD = 0.1
 
 
@@ -125,16 +125,20 @@ def test_map_alt_sets_accessible_name(app: Page):
         MAP_ELEMENT_COUNT, timeout=15000
     )
 
-    labeled = get_element_by_key(app, "c_map_alt").get_by_test_id("stDeckGlJsonChart")
+    labeled = get_element_by_key(app, "map_with_alt").get_by_test_id(
+        "stDeckGlJsonChart"
+    )
     expect(labeled).to_have_attribute("role", "figure")
     expect(labeled).to_have_accessible_name(
         "Scatter map of sample points near San Francisco"
     )
-    # role=figure (not img) keeps the Streamlit toolbar operable.
+    # role=figure (not img) keeps the Streamlit toolbar operable. Playwright
+    # treats opacity:0 as visible, so assert the toolbar is actually revealed.
     labeled.hover()
+    expect(labeled.get_by_test_id("stElementToolbar")).to_have_css("opacity", "1")
     expect(labeled.get_by_role("button", name="Fullscreen")).to_be_visible()
 
-    unlabeled = get_element_by_key(app, "c_map_no_alt").get_by_test_id(
+    unlabeled = get_element_by_key(app, "map_without_alt").get_by_test_id(
         "stDeckGlJsonChart"
     )
     expect(unlabeled).not_to_have_attribute("role")

@@ -896,14 +896,14 @@ class PydeckCallbackTest(DeltaGeneratorTestCase):
         assert el.deck_gl_json_chart.id == ""
         assert el.deck_gl_json_chart.selection_mode == []
 
-    def test_pydeck_chart_alt(self):
+    def test_pydeck_chart_alt_sets_proto_field_and_drops_blank_values(self):
         """A non-empty alt is stored on the proto; omitted/None/blank leave it unset."""
         deck = pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df1)])
 
-        st.pydeck_chart(deck, alt="Delivery hubs across the Pacific Northwest")
+        st.pydeck_chart(deck, alt="Sample points near San Francisco")
         el = self.get_delta_from_queue().new_element.deck_gl_json_chart
         assert el.HasField("alt")
-        assert el.alt == "Delivery hubs across the Pacific Northwest"
+        assert el.alt == "Sample points near San Francisco"
 
         st.pydeck_chart(deck)
         assert not self.get_delta_from_queue().new_element.deck_gl_json_chart.HasField(
@@ -924,11 +924,11 @@ class PydeckCallbackTest(DeltaGeneratorTestCase):
         """Leading and trailing whitespace is stripped from alt."""
         st.pydeck_chart(
             pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df1)]),
-            alt="  Delivery hubs across the Pacific Northwest  ",
+            alt="  Sample points near San Francisco  ",
         )
         el = self.get_delta_from_queue().new_element.deck_gl_json_chart
         assert el.HasField("alt")
-        assert el.alt == "Delivery hubs across the Pacific Northwest"
+        assert el.alt == "Sample points near San Francisco"
 
     def test_pydeck_chart_alt_preserves_adversarial_plain_text(self):
         """Quotes and angle brackets stay literal on the proto (no HTML path)."""

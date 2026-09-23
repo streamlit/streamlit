@@ -221,9 +221,8 @@ class MapMixin:
             and is logged so authors notice the dual meaning of ``alt=""``
             across commands (decorative only on ``st.image`` / ``st.pyplot``).
 
-            Prefer a short, specific description; a vague one can be worse than
-            none. This is a short description of the map, not a full text
-            alternative for dense graphics.
+            Keep this to a short description of the visual; it is not a full
+            text alternative for dense graphics.
 
         Examples
         --------
@@ -236,7 +235,7 @@ class MapMixin:
         >>>     columns=["lat", "lon"],
         >>> )
         >>>
-        >>> st.map(df, alt="Delivery hubs across the Pacific Northwest")
+        >>> st.map(df, alt="Sample points near San Francisco")
 
         .. output::
            https://doc-map.streamlit.app/
@@ -296,8 +295,7 @@ class MapMixin:
 
         normalized_alt = normalize_alt(alt)
         if normalized_alt is not None:
-            # st.map does not use compute_and_register_element_id; do not invent
-            # ID hashing solely for alt (alt-text product spec).
+            # st.map has no element ID today. Do not start hashing one just to include alt.
             map_proto.alt = normalized_alt
 
         return self.dg._enqueue(

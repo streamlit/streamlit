@@ -49,7 +49,9 @@ st.map(simple_map_df)
 ### Simple map with zoom
 """
 
-st.map(simple_map_df, zoom=8)
+# Keyed for unlabeled `alt` e2e targeting; st.map has no key parameter.
+with st.container(key="map_without_alt"):
+    st.map(simple_map_df, zoom=8)
 
 
 """
@@ -78,18 +80,11 @@ st.map(
 ### Simple map with defined width and height
 """
 
-st.map(simple_map_df, width=200, height=250)
-
-# Accessible-name scenarios. Wrapped in keyed containers because st.map has no
-# key parameter. They differ only in `alt`.
-with st.container(key="c_map_alt"):
+# Keyed for labeled `alt` e2e targeting; st.map has no key parameter.
+with st.container(key="map_with_alt"):
     st.map(
         simple_map_df,
-        zoom=8,
         width=200,
-        height=200,
+        height=250,
         alt="Scatter map of sample points near San Francisco",
     )
-
-with st.container(key="c_map_no_alt"):
-    st.map(simple_map_df, zoom=8, width=200, height=200)

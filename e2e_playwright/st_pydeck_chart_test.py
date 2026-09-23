@@ -279,20 +279,21 @@ def test_pydeck_chart_alt_sets_accessible_name(app: Page) -> None:
     """`alt` becomes the pydeck chart container's accessible name."""
     select_subtest(app, "alt_chart_subtest")
 
-    labeled = get_element_by_key(app, "c_pydeck_alt").get_by_test_id(
+    labeled = get_element_by_key(app, "pydeck_with_alt").get_by_test_id(
         "stDeckGlJsonChart"
     )
     expect(labeled).to_have_attribute("role", "figure")
     expect(labeled).to_have_accessible_name(
         "Scatter map of sample points near San Francisco"
     )
-    # role=figure (not img) keeps the Streamlit toolbar operable. Mapbox zoom
-    # controls are chromium-only in CI (see other pydeck tests), so assert
-    # Fullscreen only — same as the map alt e2e.
+    # role=figure (not img) keeps the Streamlit toolbar operable. Playwright
+    # treats opacity:0 as visible, so assert the toolbar is actually revealed.
+    # Mapbox zoom controls are chromium-only in CI, so assert Fullscreen only.
     labeled.hover()
+    expect(labeled.get_by_test_id("stElementToolbar")).to_have_css("opacity", "1")
     expect(labeled.get_by_role("button", name="Fullscreen")).to_be_visible()
 
-    unlabeled = get_element_by_key(app, "c_pydeck_no_alt").get_by_test_id(
+    unlabeled = get_element_by_key(app, "pydeck_without_alt").get_by_test_id(
         "stDeckGlJsonChart"
     )
     expect(unlabeled).not_to_have_attribute("role")
