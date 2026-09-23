@@ -293,6 +293,8 @@ export const StyledToggleTrack = styled.div<StyledToggleProps>(
     minHeight: theme.sizes.checkbox,
     padding: `0 ${theme.spacing.threeXS}`,
     borderRadius: theme.radii.full,
+    // Omit isHovered: the row already uses darkenedBgMix15 for &:hover /
+    // :focus-visible; passing hover here would make the off track match the row.
     backgroundColor: getToggleTrackColor(theme, {
       isSelected: isChecked,
       isDisabled,

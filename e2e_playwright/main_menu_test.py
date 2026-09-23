@@ -335,7 +335,9 @@ def test_auto_rerun_toggle_with_custom_border_color(
 ):
     """Auto-rerun off track must not follow a custom opaque theme.borderColor.
 
-    Follow-up to the st.toggle track token fix: MainMenu uses the same helper.
+    The unchecked track is a surface filled with `fadedText10`, not a border, so
+    it must stay neutral even when the theme sets an opaque `borderColor`
+    (same rule as `st.toggle`).
     """
     apply_theme_via_window(app, base="light", borderColor="#00008B")
     app.reload()

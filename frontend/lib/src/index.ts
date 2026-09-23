@@ -74,6 +74,7 @@ export {
   getOverlayZIndex,
   getPopoverContainerStyle,
 } from "./components/shared/Base/styled-components"
+export { getToggleTrackColor } from "./components/shared/Checkbox/toggleTrackStyles"
 export {
   default as BaseButton,
   BaseButtonKind,
@@ -191,7 +192,6 @@ export {
 } from "./theme/themeConfigs"
 export { globalStyles } from "./theme/globalStyles"
 export { hasLightBackgroundColor } from "./theme/getColors"
-export { getToggleTrackColor } from "./components/shared/Checkbox/toggleTrackStyles"
 export type {
   CachedTheme,
   EmotionTheme,
