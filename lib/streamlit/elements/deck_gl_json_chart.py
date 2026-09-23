@@ -40,7 +40,12 @@ from streamlit.elements.lib.layout_utils import (
     create_layout_config,
 )
 from streamlit.elements.lib.policies import check_widget_policies
-from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
+from streamlit.elements.lib.utils import (
+    Key,
+    compute_and_register_element_id,
+    normalize_alt,
+    to_key,
+)
 from streamlit.errors import (
     StreamlitIncompatibleParametersError,
     StreamlitInvalidParameterTypeError,
@@ -330,6 +335,7 @@ class PydeckMixin:
         selection_mode: SelectionMode = "single-object",
         on_select: Literal["ignore"] = "ignore",
         key: Key | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator: ...
 
     @overload
@@ -344,6 +350,7 @@ class PydeckMixin:
         # No default: omitted on_select must match the "ignore" overload.
         on_select: Literal["rerun"] | WidgetCallback,
         key: Key | None = None,
+        alt: str | None = None,
     ) -> PydeckState: ...
 
     @gather_metrics("pydeck_chart")
@@ -357,6 +364,7 @@ class PydeckMixin:
         selection_mode: SelectionMode = "single-object",
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         key: Key | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator | PydeckState:
         """Draw a chart using the PyDeck library.
 
@@ -485,6 +493,19 @@ class PydeckMixin:
             Additionally, if ``key`` is provided, it will be used as a
             CSS class name prefixed with ``st-key-``.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), Streamlit does not
+            provide an accessible name for the chart.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            Prefer a short, specific description; a vague one can be worse than
+            none. This is a short description of the chart, not a full text
+            alternative for dense graphics.
+
         Returns
         -------
         element or PydeckState
@@ -590,6 +611,12 @@ class PydeckMixin:
         if mapbox_token:
             pydeck_proto.mapbox_token = mapbox_token
 
+        normalized_alt = normalize_alt(alt)
+        if normalized_alt is not None:
+            # Keep alt off the pydeck JSON so it is not baked into the wire
+            # spec. Frontend applies it as the chart accessible name.
+            pydeck_proto.alt = normalized_alt
+
         key = to_key(key)
         is_selection_activated = on_select != "ignore"
 
@@ -616,6 +643,9 @@ class PydeckMixin:
             )
             pydeck_proto.form_id = current_form_id(self.dg)
 
+            # Pass alt as a normal kwarg for unkeyed charts. With a user key,
+            # key_as_main_identity limits the hash to selection_mode, so alt
+            # changes do not remount keyed selection charts (spec).
             pydeck_proto.id = compute_and_register_element_id(
                 "deck_gl_json_chart",
                 user_key=key,
@@ -629,6 +659,7 @@ class PydeckMixin:
                 selection_mode=selection_mode,
                 use_container_width=use_container_width,
                 spec=spec,
+                alt=normalized_alt,
             )
 
             serde = PydeckSelectionSerde()

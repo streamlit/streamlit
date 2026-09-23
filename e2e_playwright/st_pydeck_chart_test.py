@@ -18,6 +18,7 @@ from playwright.sync_api import Locator, Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    get_element_by_key,
     select_selectbox_option,
 )
 from e2e_playwright.shared.pydeck_utils import wait_for_chart_canvas
@@ -211,7 +212,6 @@ def test_height_parameter(app: Page, assert_snapshot: ImageCompareFunction) -> N
     )
 
     # For height="stretch", snapshot the entire container to verify stretching
-    from e2e_playwright.shared.app_utils import get_element_by_key
 
     stretch_container = get_element_by_key(app, "test_height_stretch")
     wait_for_chart_canvas(pydeck_charts.nth(2))
@@ -273,3 +273,25 @@ def select_subtest(app: Page, name: str) -> Locator:
     app.wait_for_timeout(10000)
 
     return pydeck_charts
+
+
+def test_pydeck_chart_alt_sets_accessible_name(app: Page) -> None:
+    """`alt` becomes the pydeck chart container's accessible name."""
+    select_subtest(app, "alt_chart_subtest")
+
+    labeled = get_element_by_key(app, "pydeck_alt").get_by_test_id("stDeckGlJsonChart")
+    expect(labeled).to_have_attribute("role", "figure")
+    expect(labeled).to_have_accessible_name(
+        "Scatter map of sample points near San Francisco"
+    )
+    # role=figure (not img) keeps toolbar / Mapbox zoom controls operable.
+    labeled.hover()
+    expect(labeled.get_by_role("button", name="Fullscreen")).to_be_visible()
+    expect(labeled.get_by_role("button", name="Zoom In")).to_be_visible()
+
+    unlabeled = get_element_by_key(app, "pydeck_no_alt").get_by_test_id(
+        "stDeckGlJsonChart"
+    )
+    expect(unlabeled).not_to_have_attribute("role")
+    expect(unlabeled).not_to_have_attribute("aria-label")
+    expect(unlabeled).to_have_accessible_name("")

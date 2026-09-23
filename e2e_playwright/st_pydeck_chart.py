@@ -558,6 +558,34 @@ def globe_view_subtest():
     )
 
 
+def alt_chart_subtest():
+    st.write("## Accessible name (`alt`)")
+
+    deck = pdk.Deck(
+        initial_view_state=pdk.ViewState(
+            latitude=37.76,
+            longitude=-122.4,
+            zoom=11,
+        ),
+        layers=[
+            pdk.Layer(
+                "ScatterplotLayer",
+                data=random_scatter_sf,
+                get_position="[lon, lat]",
+                get_color="[200, 30, 0, 160]",
+                get_radius=100,
+            ),
+        ],
+    )
+
+    st.pydeck_chart(
+        deck,
+        key="pydeck_alt",
+        alt="Scatter map of sample points near San Francisco",
+    )
+    st.pydeck_chart(deck, key="pydeck_no_alt")
+
+
 SUBTESTS = {k: v for k, v in globals().items() if k.endswith("_subtest")}
 
 subtest = SUBTESTS[st.selectbox("Test to run", SUBTESTS.keys())]

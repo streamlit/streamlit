@@ -79,3 +79,17 @@ st.map(
 """
 
 st.map(simple_map_df, width=200, height=250)
+
+# Accessible-name scenarios. Wrapped in keyed containers because st.map has no
+# key parameter. They differ only in `alt`.
+with st.container(key="c_map_alt"):
+    st.map(
+        simple_map_df,
+        zoom=8,
+        width=200,
+        height=200,
+        alt="Scatter map of sample points near San Francisco",
+    )
+
+with st.container(key="c_map_no_alt"):
+    st.map(simple_map_df, zoom=8, width=200, height=200)

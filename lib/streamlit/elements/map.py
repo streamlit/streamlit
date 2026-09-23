@@ -38,6 +38,7 @@ from streamlit.elements.lib.layout_utils import (
     WidthWithoutContent,
     create_layout_config,
 )
+from streamlit.elements.lib.utils import normalize_alt
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -98,6 +99,7 @@ class MapMixin:
         width: WidthWithoutContent = "stretch",
         height: HeightWithoutContent = 500,
         use_container_width: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator:
         """Display a map with a scatterplot overlaid onto it.
 
@@ -210,6 +212,19 @@ class MapMixin:
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
+        alt : str or None
+            A description of the map for screen readers and other assistive
+            technologies. If this is ``None`` (default), Streamlit does not
+            provide an accessible name for the map.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            Prefer a short, specific description; a vague one can be worse than
+            none. This is a short description of the map, not a full text
+            alternative for dense graphics.
+
         Examples
         --------
         >>> import pandas as pd
@@ -278,6 +293,12 @@ class MapMixin:
         deck_gl_json = to_deckgl_json(data, latitude, longitude, size, color, zoom)
 
         marshall(map_proto, deck_gl_json)
+
+        normalized_alt = normalize_alt(alt)
+        if normalized_alt is not None:
+            # st.map does not use compute_and_register_element_id; do not invent
+            # ID hashing solely for alt (alt-text product spec).
+            map_proto.alt = normalized_alt
 
         return self.dg._enqueue(
             "deck_gl_json_chart", map_proto, layout_config=layout_config

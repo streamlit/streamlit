@@ -16,12 +16,12 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class
+from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
 from e2e_playwright.shared.toolbar_utils import (
     assert_fullscreen_toolbar_button_interactions,
 )
 
-MAP_ELEMENT_COUNT = 5
+MAP_ELEMENT_COUNT = 7
 PIXEL_THRESHOLD = 0.1
 
 
@@ -117,3 +117,26 @@ def test_st_map_clicking_on_fullscreen_toolbar_button(
         # The pydeck tests are a lot flakier than need be so increase the pixel threshold
         pixel_threshold=PIXEL_THRESHOLD,
     )
+
+
+def test_map_alt_sets_accessible_name(app: Page):
+    """`alt` becomes the map container's accessible name."""
+    expect(app.get_by_test_id("stDeckGlJsonChart")).to_have_count(
+        MAP_ELEMENT_COUNT, timeout=15000
+    )
+
+    labeled = get_element_by_key(app, "c_map_alt").get_by_test_id("stDeckGlJsonChart")
+    expect(labeled).to_have_attribute("role", "figure")
+    expect(labeled).to_have_accessible_name(
+        "Scatter map of sample points near San Francisco"
+    )
+    # role=figure (not img) keeps the Streamlit toolbar operable.
+    labeled.hover()
+    expect(labeled.get_by_role("button", name="Fullscreen")).to_be_visible()
+
+    unlabeled = get_element_by_key(app, "c_map_no_alt").get_by_test_id(
+        "stDeckGlJsonChart"
+    )
+    expect(unlabeled).not_to_have_attribute("role")
+    expect(unlabeled).not_to_have_attribute("aria-label")
+    expect(unlabeled).to_have_accessible_name("")
