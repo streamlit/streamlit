@@ -262,8 +262,7 @@ fig.update_layout(
 )
 st.plotly_chart(fig, theme="streamlit")
 
-# Wrapped in keyed containers so the alt test can target these without
-# relying on chart position. They differ only in `alt`.
+# Differ only in `alt`; keyed so the e2e test can target them directly.
 SIMPLE_ALT_FIG = go.Figure(
     data=[go.Scatter(x=[1, 2, 3], y=[1, 3, 2], mode="markers")],
     layout={
@@ -273,12 +272,9 @@ SIMPLE_ALT_FIG = go.Figure(
     },
 )
 
-with st.container(key="c_plotly_alt"):
-    st.plotly_chart(
-        SIMPLE_ALT_FIG,
-        key="plotly_alt",
-        alt="Scatter plot of three sample points",
-    )
-
-with st.container(key="c_plotly_no_alt"):
-    st.plotly_chart(SIMPLE_ALT_FIG, key="plotly_no_alt")
+st.plotly_chart(
+    SIMPLE_ALT_FIG,
+    key="plotly_alt",
+    alt="Scatter plot of three sample points",
+)
+st.plotly_chart(SIMPLE_ALT_FIG, key="plotly_no_alt")

@@ -164,6 +164,8 @@ describe("PlotlyChart Component", () => {
           alt: "Scatter plot of three sample points",
         }),
       })
+      // figure (not img) keeps descendants non-presentational so Plotly's
+      // modebar buttons remain in the accessibility tree.
       const chart = screen.getByTestId("stPlotlyChart")
       expect(chart).toHaveAttribute("role", "figure")
       expect(chart).toHaveAttribute(
@@ -192,20 +194,6 @@ describe("PlotlyChart Component", () => {
       const chart = screen.getByTestId("stPlotlyChart")
       expect(chart).not.toHaveAttribute("role")
       expect(chart).not.toHaveAttribute("aria-label")
-    })
-
-    it("does not set role=img (modebar buttons must stay operable)", () => {
-      renderComponent({
-        element: new PlotlyChartProto({
-          ...DEFAULT_ELEMENT,
-          alt: "Named chart",
-        }),
-      })
-      // figure (not img) keeps descendants non-presentational so Plotly's
-      // modebar buttons remain in the accessibility tree.
-      const chart = screen.getByTestId("stPlotlyChart")
-      expect(chart).toHaveAttribute("role", "figure")
-      expect(chart).not.toHaveAttribute("role", "img")
     })
   })
 
