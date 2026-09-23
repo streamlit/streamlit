@@ -110,9 +110,8 @@ class DialogDeltaPathTest(DeltaGeneratorTestCase):
 
         storage = self.script_run_ctx.fragment_storage
         assert isinstance(storage, MemoryFragmentStorage)
-        assert list(storage._lifetime_by_id.values()) == [
-            _FragmentLifetime.FULL_APP_SCOPED
-        ]
+        (fragment_id,) = storage._fragments
+        assert storage._lifetime_by_id[fragment_id] is _FragmentLifetime.FULL_APP_SCOPED
 
     def test_dialog_open_reuses_event_container_path(self) -> None:
         """A dialog opened from a fragment re-sends its block at the same path.
