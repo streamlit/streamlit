@@ -228,10 +228,9 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     })
   }, [setSelection])
 
-  // Only name the container when the author provided a non-blank alt.
-  // Blank input is treated as absent: aria-label=" " computes to an empty
-  // accessible name, which is worse than none. role="figure" (not "img")
-  // keeps toolbar and Mapbox navigation controls operable.
+  // Name the chart only when alt is non-blank. Pair aria-label with
+  // role="figure" so the name is exposed on this generic div without
+  // role="img", which would make the toolbar and Mapbox controls presentational.
   const accessibleName = element.alt?.trim() || undefined
 
   return (

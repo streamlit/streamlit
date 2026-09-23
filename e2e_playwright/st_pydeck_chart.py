@@ -578,8 +578,8 @@ def alt_chart_subtest():
         ],
     )
 
-    # Keyed containers: with on_select="ignore" (default), pydeck's key does
-    # not register an element id / st-key-* class.
+    # st.pydeck_chart with the default on_select="ignore" emits no st-key-*
+    # class, so wrap each chart in a keyed container to target it.
     with st.container(key="c_pydeck_alt"):
         st.pydeck_chart(
             deck,

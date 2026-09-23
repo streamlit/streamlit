@@ -558,7 +558,8 @@ class PydeckMixin:
         ...                 get_radius=200,
         ...             ),
         ...         ],
-        ...     )
+        ...     ),
+        ...     alt="Hexagon and scatter map of sample points near San Francisco",
         ... )
 
         .. output::
@@ -613,8 +614,7 @@ class PydeckMixin:
 
         normalized_alt = normalize_alt(alt)
         if normalized_alt is not None:
-            # Keep alt off the pydeck JSON so it is not baked into the wire
-            # spec. Frontend applies it as the chart accessible name.
+            # Carry alt on its own proto field instead of the pydeck JSON, which is hashed into the element ID.
             pydeck_proto.alt = normalized_alt
 
         key = to_key(key)
@@ -643,16 +643,14 @@ class PydeckMixin:
             )
             pydeck_proto.form_id = current_form_id(self.dg)
 
-            # Pass alt as a normal kwarg for unkeyed charts. With a user key,
-            # key_as_main_identity limits the hash to selection_mode, so alt
-            # changes do not remount keyed selection charts (spec).
             pydeck_proto.id = compute_and_register_element_id(
                 "deck_gl_json_chart",
                 user_key=key,
-                # When a key is provided, only selection_mode affects the element ID.
-                # This allows selection state to persist across data/spec changes.
-                # Note: This can lead to orphaned selections if data length shrinks,
-                # but the frontend handles this by sanitizing invalid indices.
+                # Only selection_mode is hashed when a key is given, so alt
+                # changes never reset selection state; unkeyed charts hash alt
+                # like any other stable kwarg. Note: This can lead to orphaned
+                # selections if data length shrinks, but the frontend handles
+                # this by sanitizing invalid indices.
                 key_as_main_identity={"selection_mode"},
                 dg=self.dg,
                 is_selection_activated=is_selection_activated,

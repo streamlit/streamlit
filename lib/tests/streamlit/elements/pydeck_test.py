@@ -628,6 +628,48 @@ class PyDeckElementIdStabilityTest(DeltaGeneratorTestCase):
             # IDs should be different because selection_mode is in key_as_main_identity
             assert id1 != id2
 
+    def test_pydeck_chart_alt_included_in_id_when_selection_activated(self):
+        """When selections are on, changing only alt changes the element ID."""
+        deck = pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df1, id="layer")])
+
+        def chart_id(**kwargs: object) -> str:
+            self.script_run_ctx.shared.widget_ids_this_run.clear()
+            st.pydeck_chart(deck, on_select="rerun", **kwargs)
+            return self.get_delta_from_queue().new_element.deck_gl_json_chart.id
+
+        with_alt = chart_id(alt="First description")
+        with_other_alt = chart_id(alt="A totally different description")
+
+        assert with_alt != ""
+        assert with_alt != with_other_alt
+        assert chart_id(alt="First description") == with_alt
+
+    def test_pydeck_chart_alt_does_not_create_id_when_selection_ignored(self):
+        """When on_select is ignore, alt does not invent element-ID hashing."""
+        st.pydeck_chart(
+            pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df1)]),
+            on_select="ignore",
+            alt="Named map",
+        )
+        el = self.get_delta_from_queue().new_element.deck_gl_json_chart
+        assert el.HasField("alt")
+        assert el.id == ""
+
+    def test_keyed_pydeck_chart_id_stable_when_alt_changes(self):
+        """With a key, alt is outside key_as_main_identity so ID stays stable."""
+        deck = pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df1, id="layer")])
+
+        st.pydeck_chart(deck, key="stable_alt", on_select="rerun", alt="First name")
+        id_a = self.get_delta_from_queue().new_element.deck_gl_json_chart.id
+
+        self.script_run_ctx.shared.reset()
+        self.clear_queue()
+
+        st.pydeck_chart(deck, key="stable_alt", on_select="rerun", alt="Second name")
+        id_b = self.get_delta_from_queue().new_element.deck_gl_json_chart.id
+        assert id_a == id_b
+        assert id_a != ""
+
 
 class PydeckSelectionSerdeTest(DeltaGeneratorTestCase):
     """Test PydeckSelectionSerde serialization and deserialization."""
@@ -898,48 +940,6 @@ class PydeckCallbackTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element.deck_gl_json_chart
         assert el.HasField("alt")
         assert el.alt == adversarial
-
-    def test_pydeck_chart_alt_included_in_id_when_selection_activated(self):
-        """When selections are on, changing only alt changes the element ID."""
-        deck = pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df1, id="layer")])
-
-        def chart_id(**kwargs: object) -> str:
-            self.script_run_ctx.shared.widget_ids_this_run.clear()
-            st.pydeck_chart(deck, on_select="rerun", **kwargs)
-            return self.get_delta_from_queue().new_element.deck_gl_json_chart.id
-
-        with_alt = chart_id(alt="First description")
-        with_other_alt = chart_id(alt="A totally different description")
-
-        assert with_alt != ""
-        assert with_alt != with_other_alt
-        assert chart_id(alt="First description") == with_alt
-
-    def test_pydeck_chart_alt_does_not_create_id_when_selection_ignored(self):
-        """When on_select is ignore, alt does not invent element-ID hashing."""
-        st.pydeck_chart(
-            pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df1)]),
-            on_select="ignore",
-            alt="Named map",
-        )
-        el = self.get_delta_from_queue().new_element.deck_gl_json_chart
-        assert el.HasField("alt")
-        assert el.id == ""
-
-    def test_keyed_pydeck_chart_id_stable_when_alt_changes(self):
-        """With a key, alt is outside key_as_main_identity so ID stays stable."""
-        deck = pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df1, id="layer")])
-
-        st.pydeck_chart(deck, key="stable_alt", on_select="rerun", alt="First name")
-        id_a = self.get_delta_from_queue().new_element.deck_gl_json_chart.id
-
-        self.script_run_ctx.shared.reset()
-        self.clear_queue()
-
-        st.pydeck_chart(deck, key="stable_alt", on_select="rerun", alt="Second name")
-        id_b = self.get_delta_from_queue().new_element.deck_gl_json_chart.id
-        assert id_a == id_b
-        assert id_a != ""
 
     def test_invalid_on_select_raises_exception(self):
         """Test that an invalid on_select value raises StreamlitValueError."""

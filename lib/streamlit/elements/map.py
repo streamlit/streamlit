@@ -236,7 +236,7 @@ class MapMixin:
         >>>     columns=["lat", "lon"],
         >>> )
         >>>
-        >>> st.map(df)
+        >>> st.map(df, alt="Delivery hubs across the Pacific Northwest")
 
         .. output::
            https://doc-map.streamlit.app/
