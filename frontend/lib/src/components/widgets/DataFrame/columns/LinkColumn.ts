@@ -32,10 +32,14 @@ import {
 } from "./utils"
 
 /**
- * Ligature name for `:material/open_in_new:`. Glide truncates canvas text with
- * `max = cellWidth / 4` before `fillText`, so this 11-character name never
- * matches the icon font in narrow columns. The Material Symbols Rounded
- * codepoint is a single character and is not truncated.
+ * Keep `:material/open_in_new:` visible in narrow cells by using its
+ * single-character Material Symbols codepoint. Glide truncates canvas text
+ * to `cellWidth / 4` characters before `fillText`, which slices this
+ * 11-character ligature name in columns narrower than ~44px.
+ *
+ * `OPEN_IN_NEW_CODEPOINT` is U+E89E from the upstream `.codepoints` file
+ * that `scripts/update_material_icon_font_and_names.py` downloads alongside
+ * the font. Other material icons in narrow cells: #17094.
  */
 const OPEN_IN_NEW_ICON = "open_in_new"
 const OPEN_IN_NEW_CODEPOINT = "\uE89E"
@@ -88,7 +92,8 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
       configuredDisplayText.startsWith(":material/") &&
       isMaterialIcon(configuredDisplayText)
     ) {
-      // Use the icon name so the icon font can correctly resolve the glyph.
+      // Use the ligature name so the icon font can resolve the glyph, except
+      // for open_in_new, which uses a codepoint so Glide cannot truncate it.
       const iconName = parseIconPackEntry(configuredDisplayText).icon
       configuredDisplayText =
         iconName === OPEN_IN_NEW_ICON ? OPEN_IN_NEW_CODEPOINT : iconName

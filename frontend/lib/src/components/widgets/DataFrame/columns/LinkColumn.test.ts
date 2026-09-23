@@ -243,7 +243,7 @@ describe("LinkColumn", () => {
     expect(cell.displayData).toBe("https://roadmap.streamlit.app")
   })
 
-  it("displays material icon when display_text is a material icon", () => {
+  it("displays the open_in_new material icon as a single-character codepoint", () => {
     const mockColumn = LinkColumn({
       ...MOCK_LINK_COLUMN_PROPS,
       columnTypeOptions: { display_text: ":material/open_in_new:" },
@@ -253,14 +253,14 @@ describe("LinkColumn", () => {
 
     // Single-character codepoint so glide cannot truncate the ligature name.
     expect(cell.displayData).toBe("\uE89E")
-    expect(cell.displayData).toHaveLength(1)
+    expect(cell.copyData).toBe("https://streamlit.io")
     // Should center align when using icon
     expect(cell.contentAlign).toBe("center")
     // Should have theme override for icon font
     expect(cell.themeOverride).toBeDefined()
   })
 
-  it("passes other material icons through as ligature names", () => {
+  it("leaves other material icons as ligature names, which Glide can still truncate", () => {
     const mockColumn = LinkColumn({
       ...MOCK_LINK_COLUMN_PROPS,
       columnTypeOptions: {
