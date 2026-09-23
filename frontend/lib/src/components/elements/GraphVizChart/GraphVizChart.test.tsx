@@ -166,6 +166,39 @@ describe("GraphVizChart Element", () => {
     )
   })
 
+  describe("alt (accessible name)", () => {
+    it("sets role=figure with accessible name when alt is provided", () => {
+      render(
+        <GraphVizChart
+          {...getProps({ alt: "Directed graph of Hello to World" })}
+        />
+      )
+      // figure (not img) keeps SVG link descendants non-presentational.
+      expect(
+        screen.getByRole("figure", {
+          name: "Directed graph of Hello to World",
+        })
+      ).toBeVisible()
+    })
+
+    it("omits role and aria-label when alt is not provided", () => {
+      render(<GraphVizChart {...getProps()} />)
+      const chart = screen.getByTestId("stGraphVizChart")
+      expect(chart).not.toHaveAttribute("role")
+      expect(chart).not.toHaveAttribute("aria-label")
+    })
+
+    it.each([
+      ["an empty string", ""],
+      ["whitespace only", "   "],
+    ])("omits role and aria-label when alt is %s", (_label, alt) => {
+      render(<GraphVizChart {...getProps({ alt })} />)
+      const chart = screen.getByTestId("stGraphVizChart")
+      expect(chart).not.toHaveAttribute("role")
+      expect(chart).not.toHaveAttribute("aria-label")
+    })
+  })
+
   const renderWithSvgLink = (
     attributes: Record<string, string>
   ): Element | null => {

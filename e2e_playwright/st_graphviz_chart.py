@@ -138,3 +138,26 @@ st.subheader("Dangerous link sanitization")
 malicious_graph = graphviz.Digraph("malicious")
 malicious_graph.node("ClickMe", URL="javascript:alert('xss')")
 st.graphviz_chart(malicious_graph)
+
+# Accessible-name scenarios. Wrapped in keyed containers because
+# st.graphviz_chart has no key parameter.
+SIMPLE_ALT_DOT = "digraph { Hello -> World }"
+
+with st.container(key="c_graphviz_alt"):
+    st.graphviz_chart(
+        SIMPLE_ALT_DOT,
+        alt="Directed graph of Hello to World",
+    )
+
+with st.container(key="c_graphviz_no_alt"):
+    st.graphviz_chart(SIMPLE_ALT_DOT)
+
+# Named chart with a safe SVG link so e2e can assert role=figure does not
+# hide GraphViz URL nodes from the accessibility tree.
+linked = graphviz.Digraph("linked")
+linked.node("Docs", URL="https://example.com/graphviz-docs")
+with st.container(key="c_graphviz_alt_link"):
+    st.graphviz_chart(
+        linked,
+        alt="Graph with a linked Docs node",
+    )

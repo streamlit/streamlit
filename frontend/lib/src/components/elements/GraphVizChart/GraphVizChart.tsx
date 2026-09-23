@@ -150,6 +150,13 @@ function GraphVizChart({
     heightConfig?.useStretch,
   ])
 
+  // Only name the container when the author provided a non-blank alt.
+  // Blank input is treated as absent: aria-label=" " computes to an empty
+  // accessible name, which is worse than none. role="figure" (not "img")
+  // is required to legally expose aria-label on this otherwise-generic div
+  // without making GraphViz SVG links presentational.
+  const accessibleName = element.alt?.trim() || undefined
+
   return (
     <StyledToolbarElementContainer
       width={width ?? 0}
@@ -175,6 +182,8 @@ function GraphVizChart({
         shouldUseFullWidth={isFullScreen || shouldUseContainerWidth}
         shouldUseFullHeight={isFullScreen || shouldUseContainerHeight}
         ref={elementRef}
+        role={accessibleName ? "figure" : undefined}
+        aria-label={accessibleName}
       />
     </StyledToolbarElementContainer>
   )
