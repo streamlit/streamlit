@@ -860,7 +860,7 @@ class EChartsMixin:
             if normalized_alt is not None
             else None
         )
-        # Log when alt will replace a description the author already set in the option.
+        # Authors can also set this on the option; log so they see that alt wins.
         if existing_description:
             _LOGGER.warning(
                 "The ECharts option already sets aria.label.description=%r. "
@@ -894,9 +894,8 @@ class EChartsMixin:
         # and replaying its entry animation. Unkeyed charts skip the ID
         # entirely so they stay off the widget path.
         if key is not None:
-            # Pass alt like other kwargs so hashing stays consistent if unkeyed
-            # IDs are added later. key_as_main_identity=True means a keyed ID
-            # does not change with alt.
+            # Hash alt like other kwargs. key_as_main_identity=True keeps a
+            # keyed ID stable when only alt changes.
             echarts_chart_proto.id = compute_and_register_element_id(
                 "echarts_chart",
                 user_key=key,

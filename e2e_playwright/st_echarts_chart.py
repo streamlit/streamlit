@@ -347,7 +347,8 @@ with st.container(key="c_stretch_height"):
         height="stretch",
     )
 
-# Keep the accessible-name scenarios together for their shared keyed E2E test.
+# Accessible-name scenarios (labeled, unlabeled, and alt overriding an author
+# description). One E2E test covers all three.
 with st.container(key="c_echarts_alt"):
     st.echarts_chart(
         {

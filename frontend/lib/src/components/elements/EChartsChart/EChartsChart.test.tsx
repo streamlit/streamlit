@@ -99,11 +99,19 @@ function applyMockEchartsAria(option: Record<string, unknown>): void {
     return
   }
   const aria = option.aria as
-    | { enabled?: boolean; label?: { description?: string } }
+    | {
+        enabled?: boolean
+        label?: { enabled?: boolean; description?: string }
+      }
     | undefined
   const enabled = aria?.enabled !== false
   if (!enabled) {
     // ECharts 6.1 leaves stale role/aria-label behind when ARIA is disabled.
+    return
+  }
+  // ECharts setLabel returns before writing role/aria-label when label.enabled
+  // is false.
+  if (aria?.label?.enabled === false) {
     return
   }
   dom.setAttribute("role", "img")
@@ -123,9 +131,8 @@ function applyMockEchartsAria(option: Record<string, unknown>): void {
   })
   if (hasPoints) {
     dom.setAttribute("aria-label", "This is a chart.")
-  } else {
-    dom.removeAttribute("aria-label")
   }
+  // ECharts 6.1 returns without clearing aria-label when seriesCnt < 1.
 }
 
 describe("EChartsChart", () => {
@@ -299,7 +306,7 @@ describe("EChartsChart", () => {
     const [appliedOption] = mockChart.setOption.mock.calls[0]
     expect(appliedOption.aria).toEqual({
       enabled: true,
-      label: { description: "Bar chart of categories" },
+      label: { enabled: true, description: "Bar chart of categories" },
     })
     const chart = screen.getByTestId("stEChartsChart")
     expect(chart).toHaveAttribute("role", "img")
@@ -323,6 +330,39 @@ describe("EChartsChart", () => {
     expect(chart).toHaveAccessibleName("Empty bar chart placeholder")
   })
 
+  it("clears a previous alt when it is omitted on an empty series", () => {
+    // Keyed charts reuse zr.dom. ECharts 6.1 leaves a prior aria-label when
+    // the next option has no description and no series data.
+    const emptySpec = JSON.stringify({
+      xAxis: { type: "category", data: [] },
+      yAxis: { type: "value" },
+      series: [{ type: "bar", data: [] }],
+    })
+    const { rerender } = render(
+      <Wrapper
+        element={createElement({
+          spec: emptySpec,
+          alt: "Temporary loading label",
+          id: "stable_empty",
+        })}
+      />
+    )
+    const chart = screen.getByTestId("stEChartsChart")
+    expect(chart).toHaveAccessibleName("Temporary loading label")
+
+    rerender(
+      <Wrapper
+        element={createElement({
+          spec: emptySpec,
+          id: "stable_empty",
+        })}
+      />
+    )
+
+    expect(chart).not.toHaveAttribute("aria-label")
+    expect(chart).not.toHaveAttribute("role")
+  })
+
   it("forces aria.enabled when alt is set even if the option disables it", () => {
     const spec = JSON.stringify({
       ...JSON.parse(DEFAULT_SPEC),
@@ -336,6 +376,7 @@ describe("EChartsChart", () => {
 
     const [appliedOption] = mockChart.setOption.mock.calls[0]
     expect(appliedOption.aria.enabled).toBe(true)
+    expect(appliedOption.aria.label.enabled).toBe(true)
     expect(appliedOption.aria.label.description).toBe(
       "Named despite aria disabled"
     )
@@ -355,6 +396,7 @@ describe("EChartsChart", () => {
     render(<Wrapper element={createElement({ spec, alt: "Streamlit alt" })} />)
 
     const [appliedOption] = mockChart.setOption.mock.calls[0]
+    expect(appliedOption.aria.label.enabled).toBe(true)
     expect(appliedOption.aria.label.description).toBe("Streamlit alt")
     expect(screen.getByTestId("stEChartsChart")).toHaveAccessibleName(
       "Streamlit alt"

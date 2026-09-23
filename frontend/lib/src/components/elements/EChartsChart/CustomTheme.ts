@@ -1178,11 +1178,12 @@ export function withDefaultSeriesCursor(
 /**
  * Apply Streamlit ``alt`` as ECharts ``aria.label.description``.
  *
- * Forces ``aria.enabled`` so an authored name cannot be silenced by
- * ``aria: {enabled: false}``. Timeline specs nest chart ``aria`` under
- * ``baseOption`` (matching Streamlit's ``aria.enabled`` fill); per-tick
- * ``options[*]`` and responsive ``media[*].option`` overlays can still
- * redefine ``aria``, so those variants are stamped too.
+ * Forces ``aria.enabled`` and ``aria.label.enabled`` so an authored name
+ * cannot be silenced by ``aria: {enabled: false}`` or
+ * ``aria: {label: {enabled: false}}``. Timeline specs nest chart ``aria``
+ * under ``baseOption`` (matching Streamlit's ``aria.enabled`` fill);
+ * per-tick ``options[*]`` and responsive ``media[*].option`` overlays can
+ * still redefine ``aria``, so those variants are stamped too.
  */
 export function applyAltToOption(
   option: EChartsOptionObject,
@@ -1204,6 +1205,9 @@ export function applyAltToOption(
         enabled: true,
         label: {
           ...label,
+          // ECharts setLabel returns early when label.enabled is false,
+          // before writing role / aria-label — force it on with alt.
+          enabled: true,
           description: alt,
         },
       },
