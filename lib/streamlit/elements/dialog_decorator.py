@@ -111,6 +111,8 @@ def _dialog_decorator(
             _fragment(
                 dialog_content,
                 additional_hash_info=get_object_name(non_optional_func),
+                # The dialog stays mounted in event_dg when its opener fragment
+                # reruns, so keep its callable until a full app rerun.
                 lifetime=_FragmentLifetime.FULL_APP_SCOPED,
             ),
         )
