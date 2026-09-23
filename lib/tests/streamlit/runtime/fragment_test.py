@@ -335,6 +335,26 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         assert removed == []
         assert self._storage.contains("dialog")
 
+    def test_full_app_clear_removes_dialog_retained_from_removed_parent(self):
+        """Full app cleanup removes a retained dialog whose parent was removed."""
+        self._set_fragment_chain("outer", "inner")
+        self._set_fragment(
+            "dialog",
+            parent_fragment_id="inner",
+            lifetime=_FragmentLifetime.FULL_APP_SCOPED,
+        )
+
+        removed = self._storage.clear_stale_descendants("outer", frozenset())
+
+        assert removed == ["inner"]
+        assert not self._storage.contains("inner")
+        assert self._storage.contains("dialog")
+        assert self._storage._parent_by_id["dialog"] == "inner"
+
+        self._storage.clear(new_fragment_ids=frozenset({"outer"}))
+
+        assert not self._storage.contains("dialog")
+
     def test_clear_stale_descendants_preserves_retained_dialog_subtree(self):
         """An unexecuted retained dialog keeps its previously registered subtree."""
         self._set_fragment("outer")
