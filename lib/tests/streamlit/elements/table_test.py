@@ -400,6 +400,43 @@ class HideIndexHideHeaderTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.table
         assert proto.hide_index is True
 
+    def test_table_alt(self):
+        """A non-empty alt is stored on the proto; omitted/None/blank leave it unset."""
+        df = pd.DataFrame({"A": [1, 2]})
+
+        st.table(df, alt="Confusion matrix of predicted vs actual species")
+        el = self.get_delta_from_queue().new_element.table
+        assert el.HasField("alt")
+        assert el.alt == "Confusion matrix of predicted vs actual species"
+
+        st.table(df)
+        assert not self.get_delta_from_queue().new_element.table.HasField("alt")
+
+        st.table(df, alt=None)
+        assert not self.get_delta_from_queue().new_element.table.HasField("alt")
+
+        st.table(df, alt="")
+        assert not self.get_delta_from_queue().new_element.table.HasField("alt")
+
+        st.table(df, alt="  ")
+        assert not self.get_delta_from_queue().new_element.table.HasField("alt")
+
+    def test_table_alt_strips_whitespace(self):
+        """Leading and trailing whitespace is stripped from alt."""
+        df = pd.DataFrame({"A": [1, 2]})
+        st.table(df, alt="  Confusion matrix of species  ")
+        el = self.get_delta_from_queue().new_element.table
+        assert el.HasField("alt")
+        assert el.alt == "Confusion matrix of species"
+
+    def test_table_alt_preserves_adversarial_plain_text(self):
+        """Quotes and angle brackets stay literal on the proto (no HTML path)."""
+        adversarial = 'Table of "A < B" & values <script>alert(1)</script>'
+        st.table(pd.DataFrame({"A": [1]}), alt=adversarial)
+        el = self.get_delta_from_queue().new_element.table
+        assert el.HasField("alt")
+        assert el.alt == adversarial
+
 
 def test_marshall_table_styler_requires_string_uuid() -> None:
     """Styler marshalling raises when ``default_uuid`` is not a string."""
