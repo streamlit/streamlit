@@ -122,8 +122,9 @@ graph LR
         st.mermaid_chart("graph TD\n    A --> B", alt="  Decision flow  ")
 
         element = self.get_delta_from_queue().new_element.markdown
-        assert "accTitle: Decision flow\n" in element.body
-        assert "accTitle:   Decision flow" not in element.body
+        assert element.body == (
+            "````mermaid\ngraph TD\naccTitle: Decision flow\n    A --> B\n````"
+        )
 
     @parameterized.expand([("",), ("   ",), ("\t\n",)])
     def test_mermaid_chart_blank_alt_is_noop(self, blank_alt: str) -> None:
@@ -157,7 +158,9 @@ graph LR
         assert "Old description" not in element.body
         assert "accDescr:" not in element.body
         mock_warning.assert_called_once()
-        assert mock_warning.call_args.kwargs.get("stack_info") is not True
+        assert mock_warning.call_args.kwargs.get("stack_info") is True
+        # Replaced directives are included in the warning for debugging.
+        assert "Old title" in str(mock_warning.call_args)
 
     def test_mermaid_chart_alt_preserves_adversarial_text(self) -> None:
         """Adversarial plain text is preserved literally inside accTitle."""
@@ -166,6 +169,25 @@ graph LR
 
         element = self.get_delta_from_queue().new_element.markdown
         assert f"accTitle: {adversarial}\n" in element.body
+
+    def test_mermaid_chart_alt_collapses_multiline(self) -> None:
+        """Interior newlines in alt become spaces so Mermaid stays one statement."""
+        st.mermaid_chart("graph TD\n    A --> B", alt="Revenue chart\nby quarter")
+
+        element = self.get_delta_from_queue().new_element.markdown
+        assert element.body == (
+            "````mermaid\ngraph TD\naccTitle: Revenue chart by quarter\n    A --> B\n````"
+        )
+
+    def test_mermaid_chart_alt_one_line_body(self) -> None:
+        """accTitle is inserted on its own line even when body has no newlines."""
+        st.mermaid_chart("graph TD; A-->B", alt="One line flow")
+
+        element = self.get_delta_from_queue().new_element.markdown
+        # Fence always adds a trailing newline after body.
+        assert element.body == (
+            "````mermaid\ngraph TD; A-->B\naccTitle: One line flow\n\n````"
+        )
 
 
 @pytest.mark.parametrize(
@@ -205,6 +227,7 @@ def test_apply_alt_as_acc_title_inserts_after_diagram_type() -> None:
 
     assert result == "flowchart TD\naccTitle: New title\nA --> B"
     mock_warning.assert_called_once()
+    assert mock_warning.call_args.kwargs.get("stack_info") is True
 
 
 def test_apply_alt_as_acc_title_no_warning_without_directives() -> None:
@@ -220,3 +243,45 @@ def test_apply_alt_as_acc_title_skips_leading_blank_lines() -> None:
     """Leading blank lines are preserved; accTitle still follows the type."""
     result = _apply_alt_as_acc_title("\ngraph TD\n    A --> B", "Decision flow")
     assert result == "\ngraph TD\naccTitle: Decision flow\n    A --> B"
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        (
+            "%% comment\ngraph TD\n    A --> B",
+            "%% comment\ngraph TD\naccTitle: Named\n    A --> B",
+        ),
+        (
+            "%%{init: {'theme': 'dark'}}%%\ngraph TD\n    A --> B",
+            "%%{init: {'theme': 'dark'}}%%\ngraph TD\naccTitle: Named\n    A --> B",
+        ),
+        (
+            "---\ntitle: Meta\n---\ngraph TD\n    A --> B",
+            "---\ntitle: Meta\n---\ngraph TD\naccTitle: Named\n    A --> B",
+        ),
+        (
+            "%% lead\n---\ntitle: Meta\n---\n%% more\ngraph TD\n    A --> B",
+            "%% lead\n---\ntitle: Meta\n---\n%% more\ngraph TD\naccTitle: Named\n    A --> B",
+        ),
+    ],
+)
+def test_apply_alt_as_acc_title_skips_preamble(body: str, expected: str) -> None:
+    """accTitle follows the diagram type after comments, init, and frontmatter."""
+    assert _apply_alt_as_acc_title(body, "Named") == expected
+
+
+def test_apply_alt_as_acc_title_one_line_body() -> None:
+    """Missing trailing newline on the type line still yields a separate accTitle line."""
+    assert (
+        _apply_alt_as_acc_title("graph TD; A-->B", "One line")
+        == "graph TD; A-->B\naccTitle: One line\n"
+    )
+
+
+def test_apply_alt_as_acc_title_collapses_multiline_alt() -> None:
+    """Newlines inside alt are collapsed before injection."""
+    assert (
+        _apply_alt_as_acc_title("graph TD\nA-->B", "Line one\nLine two")
+        == "graph TD\naccTitle: Line one Line two\nA-->B"
+    )

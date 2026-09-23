@@ -84,5 +84,5 @@ pie title Pets
         DeltaGenerator,
     )
 
-    # Invalid alt value (must be a string or None)
+    # Invalid alt value (static typing accepts only str or None; runtime coercion is tested separately)
     mermaid_chart("graph TD\n    A --> B", alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]

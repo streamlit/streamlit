@@ -136,7 +136,7 @@ def test_toolbar_download_png(app: Page):
 
 
 def test_mermaid_chart_alt_sets_accessible_name(app: Page):
-    """`alt` becomes the Mermaid img accessible name via injected accTitle."""
+    """Assert alt sets the mermaid image accessible name; unlabeled charts keep the type-derived name."""
     labeled = get_element_by_key(app, "mermaid_with_alt").get_by_test_id(
         "stMermaidChart"
     )
@@ -150,4 +150,12 @@ def test_mermaid_chart_alt_sets_accessible_name(app: Page):
     expect(unlabeled.locator("img")).to_have_accessible_name("Mermaid flowchart")
     expect(unlabeled.locator("img")).not_to_have_accessible_name(
         "Decision flow from start to cancel"
+    )
+
+    # Non-flowchart grammar: sequence diagram also receives injected accTitle.
+    sequence = get_element_by_key(app, "mermaid_sequence_with_alt").get_by_test_id(
+        "stMermaidChart"
+    )
+    expect(sequence.locator("img")).to_have_accessible_name(
+        "User to app to server API handshake"
     )

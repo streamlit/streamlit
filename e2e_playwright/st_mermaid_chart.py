@@ -30,7 +30,9 @@ graph TD
 """)
 
 st.subheader("Sequence Diagram")
-st.mermaid_chart("""
+with st.container(key="mermaid_sequence_with_alt"):
+    st.mermaid_chart(
+        """
 sequenceDiagram
     participant User
     participant App
@@ -39,7 +41,9 @@ sequenceDiagram
     App->>Server: API request
     Server-->>App: Response
     App-->>User: Update UI
-""")
+""",
+        alt="User to app to server API handshake",
+    )
 
 st.subheader("Class Diagram")
 st.mermaid_chart("""
@@ -117,8 +121,8 @@ st.mermaid_chart("graph LR\n    A --> B --> C", width="content")
 st.subheader("Tall diagram")
 st.mermaid_chart("graph TD\n" + "\n".join(f"    N{i} --> N{i + 1}" for i in range(12)))
 
-# Accessibility: keyed so e2e can assert accessible names without shifting
-# existing snapshot indices (charts above stay at the same nth offsets).
+# Keyed for accessible-name assertions. Appended last so the nth offsets
+# used by the snapshot tests above stay stable.
 # Unlabeled baseline: first flowchart uses key="mermaid_without_alt".
 with st.container(key="mermaid_with_alt"):
     st.mermaid_chart(
