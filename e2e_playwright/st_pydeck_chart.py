@@ -578,12 +578,15 @@ def alt_chart_subtest():
         ],
     )
 
-    st.pydeck_chart(
-        deck,
-        key="pydeck_alt",
-        alt="Scatter map of sample points near San Francisco",
-    )
-    st.pydeck_chart(deck, key="pydeck_no_alt")
+    # Keyed containers: with on_select="ignore" (default), pydeck's key does
+    # not register an element id / st-key-* class.
+    with st.container(key="c_pydeck_alt"):
+        st.pydeck_chart(
+            deck,
+            alt="Scatter map of sample points near San Francisco",
+        )
+    with st.container(key="c_pydeck_no_alt"):
+        st.pydeck_chart(deck)
 
 
 SUBTESTS = {k: v for k, v in globals().items() if k.endswith("_subtest")}

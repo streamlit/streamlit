@@ -279,7 +279,9 @@ def test_pydeck_chart_alt_sets_accessible_name(app: Page) -> None:
     """`alt` becomes the pydeck chart container's accessible name."""
     select_subtest(app, "alt_chart_subtest")
 
-    labeled = get_element_by_key(app, "pydeck_alt").get_by_test_id("stDeckGlJsonChart")
+    labeled = get_element_by_key(app, "c_pydeck_alt").get_by_test_id(
+        "stDeckGlJsonChart"
+    )
     expect(labeled).to_have_attribute("role", "figure")
     expect(labeled).to_have_accessible_name(
         "Scatter map of sample points near San Francisco"
@@ -289,7 +291,7 @@ def test_pydeck_chart_alt_sets_accessible_name(app: Page) -> None:
     expect(labeled.get_by_role("button", name="Fullscreen")).to_be_visible()
     expect(labeled.get_by_role("button", name="Zoom In")).to_be_visible()
 
-    unlabeled = get_element_by_key(app, "pydeck_no_alt").get_by_test_id(
+    unlabeled = get_element_by_key(app, "c_pydeck_no_alt").get_by_test_id(
         "stDeckGlJsonChart"
     )
     expect(unlabeled).not_to_have_attribute("role")
