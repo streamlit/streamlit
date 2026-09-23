@@ -18,6 +18,7 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Width,
@@ -367,6 +368,15 @@ class ColorPickerMixin:
             color_picker_proto,
             layout_config=layout_config,
             has_one_shot_effect=widget_state.value_changed,
+            agent_props=agent_spec.element(
+                "color_picker",
+                key=element_id,
+                action="value",
+                label=label,
+                help=help,
+                disabled=disabled,
+                label_visibility=label_visibility,
+            ),
         )
         return widget_state.value
 

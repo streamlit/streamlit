@@ -48,6 +48,7 @@ def save_element_message(
     used_dg_id: str,
     returned_dg_id: str,
     layout_config: LayoutConfig | None = None,
+    agent_props: str | None = None,
 ) -> None:
     """Save the message for an element to a thread-local callstack, so it can
     be used later to replay the element when a cache-decorated function's
@@ -60,6 +61,7 @@ def save_element_message(
         used_dg_id,
         returned_dg_id,
         layout_config,
+        agent_props,
     )
     CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_element_message(
         delta_type,
@@ -68,6 +70,7 @@ def save_element_message(
         used_dg_id,
         returned_dg_id,
         layout_config,
+        agent_props,
     )
 
 
@@ -76,16 +79,17 @@ def save_block_message(
     invoked_dg_id: str,
     used_dg_id: str,
     returned_dg_id: str,
+    agent_props: str | None = None,
 ) -> None:
     """Save the message for a block to a thread-local callstack, so it can
     be used later to replay the block when a cache-decorated function's
     execution is skipped.
     """
     CACHE_DATA_MESSAGE_REPLAY_CTX.save_block_message(
-        block_proto, invoked_dg_id, used_dg_id, returned_dg_id
+        block_proto, invoked_dg_id, used_dg_id, returned_dg_id, agent_props
     )
     CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_block_message(
-        block_proto, invoked_dg_id, used_dg_id, returned_dg_id
+        block_proto, invoked_dg_id, used_dg_id, returned_dg_id, agent_props
     )
 
 

@@ -19,6 +19,7 @@ import types
 from collections import ChainMap, UserDict
 from typing import TYPE_CHECKING, Any, Final, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.errors import StreamlitInvalidParameterTypeError
 from streamlit.logger import get_logger
@@ -169,7 +170,14 @@ class JsonMixin:
 
         layout_config = create_layout_config(width=width)
 
-        return self.dg._enqueue("json", json_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "json",
+            json_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "json", body=json_proto.body, expanded=expanded
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

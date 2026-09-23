@@ -33,6 +33,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_spec, data_offload
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMappingInput,
@@ -1253,6 +1254,25 @@ class ArrowMixin:
             width=width, height=height if height != "auto" else None
         )
 
+        # The schema, row counts, and row preview deliberately stay out of this
+        # description: they are derived facts rather than parameters, and how
+        # much of them to include is a response-budget decision only the
+        # snapshot serializer can make. It reads them from `arrow_data`.
+        agent_props = agent_spec.element(
+            "dataframe",
+            data_url=data_offload.serve_arrow_over_http(
+                proto.arrow_data.data, coordinates=self.dg._get_delta_path_str()
+            ),
+            # st.dataframe selections and st.data_editor edits are read-only
+            # through this interface.
+            support="read_only_in_v1",
+            column_config=column_config,
+            column_order=list(column_order) if column_order else None,
+            hide_index=hide_index,
+            selection_mode=sorted(selection_mode_set) or None,
+            row_height=row_height,
+        )
+
         if is_selection_activated:
             # If selection events are activated, we need to register the dataframe
             # element as a widget.
@@ -1324,6 +1344,7 @@ class ArrowMixin:
                     proto,
                     layout_config=layout_config,
                     has_one_shot_effect=True,
+                    agent_props=agent_props,
                 )
                 # Eagerly wrap like deserialize so nested selection identity
                 # stays stable on this one-shot programmatic path.
@@ -1335,9 +1356,16 @@ class ArrowMixin:
                     }
                 )
 
-            self.dg._enqueue("dataframe", proto, layout_config=layout_config)
+            self.dg._enqueue(
+                "dataframe",
+                proto,
+                layout_config=layout_config,
+                agent_props=agent_props,
+            )
             return DataframeState(widget_state.value)
-        return self.dg._enqueue("dataframe", proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "dataframe", proto, layout_config=layout_config, agent_props=agent_props
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

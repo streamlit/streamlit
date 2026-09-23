@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Any, Final
 from streamlit import config
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 from streamlit.web.server.server_util import get_cookie_secret
+from streamlit.web.server.starlette.starlette_agent_routes import create_agent_routes
 from streamlit.web.server.starlette.starlette_app_utils import (
     generate_random_hex_string,
 )
@@ -185,6 +186,9 @@ def create_streamlit_routes(runtime: Runtime) -> list[BaseRoute]:
 
     # Add auth routes:
     routes.extend(create_auth_routes(base_url))
+
+    # Add the agent API route (no-op unless server.enableAgentApi is set):
+    routes.extend(create_agent_routes(runtime, base_url))
 
     # Add app static routes if enabled:
     if config.get_option("server.enableStaticServing"):

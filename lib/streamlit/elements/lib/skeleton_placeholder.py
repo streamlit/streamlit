@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal
 
 from typing_extensions import Self
 
+from streamlit.elements.lib import agent_spec
 from streamlit.errors import NoSessionContext
 from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.runtime.scriptrunner import add_script_run_ctx, enqueue_message
@@ -100,6 +101,9 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
             "skeleton",
             self._skeleton_proto,
             layout_config=self._layout_config,
+            # A placeholder for content that has not arrived, so there is
+            # nothing for a client to read yet.
+            agent_props=agent_spec.element("skeleton"),
         )
 
     def __getattr__(self, name: str) -> Any:
