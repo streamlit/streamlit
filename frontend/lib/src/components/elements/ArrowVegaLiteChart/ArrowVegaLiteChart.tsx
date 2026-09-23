@@ -164,6 +164,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
       id: elementProto.id,
       selectionMode: elementProto.selectionMode,
       formId: elementProto.formId,
+      alt: elementProto.alt ?? "",
     }),
     // elementHash is intentionally included as a stability anchor for memoization
     // eslint-disable-next-line react-hooks/exhaustive-deps

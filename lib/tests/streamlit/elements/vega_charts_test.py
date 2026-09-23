@@ -223,6 +223,70 @@ class AltairChartTest(DeltaGeneratorTestCase):
         assert proto.selection_mode == []
         assert proto.id == ""
         assert proto.form_id == ""
+        assert not proto.HasField("alt")
+
+    def test_altair_chart_alt(self):
+        """Non-empty alt is marshalled; omitted/None/blank leave the field unset."""
+        df = pd.DataFrame({"a": ["A", "B"], "b": [1, 2]})
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
+
+        st.altair_chart(chart, alt="Bar chart of categories")
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.HasField("alt")
+        assert proto.alt == "Bar chart of categories"
+        assert "description" not in json.loads(proto.spec)
+
+        st.altair_chart(chart)
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+        st.altair_chart(chart, alt=None)
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+    @parameterized.expand(
+        [
+            ("",),
+            ("   ",),
+        ]
+    )
+    def test_altair_chart_empty_alt_is_treated_as_unset(self, blank_alt: str):
+        """Empty or whitespace-only alt must not set the proto field."""
+        df = pd.DataFrame({"a": ["A", "B"], "b": [1, 2]})
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
+        st.altair_chart(chart, alt=blank_alt)
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+    def test_altair_chart_strips_alt_whitespace(self):
+        """Leading and trailing whitespace are stripped before marshalling."""
+        df = pd.DataFrame({"a": ["A", "B"], "b": [1, 2]})
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
+        st.altair_chart(chart, alt="  Bar chart of categories  ")
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.HasField("alt")
+        assert proto.alt == "Bar chart of categories"
+
+    def test_altair_chart_alt_does_not_mutate_spec_description(self):
+        """Author description stays in hashed JSON when alt is also set."""
+        df = pd.DataFrame({"a": ["A", "B"], "b": [1, 2]})
+        chart = (
+            alt.Chart(df)
+            .mark_bar()
+            .encode(x="a", y="b")
+            .properties(description="Altair description")
+        )
+        with patch("streamlit.elements.vega_charts._LOGGER.warning") as mock_warning:
+            st.altair_chart(chart, alt="Streamlit alt")
+            mock_warning.assert_called_once()
+            assert mock_warning.call_args.kwargs.get("stack_info") is True
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.alt == "Streamlit alt"
+        assert json.loads(proto.spec)["description"] == "Altair description"
 
     def test_altair_chart_uses_convert_anything_to_df(self):
         """Test that st.altair_chart uses convert_anything_to_df to convert input data."""
@@ -1595,6 +1659,79 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.vega_lite_chart
         assert not proto.HasField("data")
         assert json.loads(proto.spec) == merge_dicts(autosize_spec, {"mark": "rect"})
+        assert not proto.HasField("alt")
+
+    def test_vega_lite_chart_alt(self):
+        """Non-empty alt is marshalled; omitted/None/blank leave the field unset."""
+        st.vega_lite_chart({"mark": "rect"}, alt="A rectangle chart")
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.HasField("alt")
+        assert proto.alt == "A rectangle chart"
+        assert "description" not in json.loads(proto.spec)
+
+        st.vega_lite_chart({"mark": "rect"})
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+        st.vega_lite_chart({"mark": "rect"}, alt=None)
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+    @parameterized.expand(
+        [
+            ("",),
+            ("   ",),
+        ]
+    )
+    def test_vega_lite_chart_empty_alt_is_treated_as_unset(self, blank_alt: str):
+        """Empty or whitespace-only alt must not set the proto field."""
+        st.vega_lite_chart({"mark": "rect"}, alt=blank_alt)
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+    def test_vega_lite_chart_strips_alt_whitespace(self):
+        """Leading and trailing whitespace are stripped before marshalling."""
+        st.vega_lite_chart({"mark": "rect"}, alt="  A rectangle chart  ")
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.HasField("alt")
+        assert proto.alt == "A rectangle chart"
+
+    def test_vega_lite_chart_alt_does_not_mutate_spec_description(self):
+        """Author description stays in hashed JSON when alt is also set."""
+        with patch("streamlit.elements.vega_charts._LOGGER.warning") as mock_warning:
+            st.vega_lite_chart(
+                {"mark": "rect", "description": "Spec description"},
+                alt="Streamlit alt",
+            )
+            mock_warning.assert_called_once()
+            assert mock_warning.call_args.kwargs.get("stack_info") is True
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.alt == "Streamlit alt"
+        assert json.loads(proto.spec)["description"] == "Spec description"
+
+    def test_vega_lite_chart_alt_handles_invalid_list_description(self):
+        """An invalid list description does not prevent alt from being applied."""
+        with patch("streamlit.elements.vega_charts._LOGGER.warning") as mock_warning:
+            st.vega_lite_chart(
+                {"mark": "rect", "description": ["not", "a", "string"]},
+                alt="Streamlit alt",
+            )
+            mock_warning.assert_called_once()
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.alt == "Streamlit alt"
+
+    def test_vega_lite_chart_alt_preserves_adversarial_plain_text(self):
+        """Quotes and angle brackets stay literal on the proto (no HTML path)."""
+        adversarial = 'Chart of "A < B" & sales <script>alert(1)</script>'
+        st.vega_lite_chart({"mark": "rect"}, alt=adversarial)
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.HasField("alt")
+        assert proto.alt == adversarial
 
     def test_spec_in_arg1(self):
         """Test that it can be called with spec as the 1st arg."""
@@ -4679,6 +4816,60 @@ class VegaChartsSelectionsStableIdTest(DeltaGeneratorTestCase):
             id2 = c2.id
 
             # ID should be stable since key and selection_mode are the same
+            assert id1 == id2
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_selection_id_changes_with_alt_when_unkeyed(self):
+        """Unkeyed selection charts include alt in the element identity hash."""
+        df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        point = alt.selection_point(name="my_selection")
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
+
+        def chart_id(**kwargs: object) -> str:
+            self.script_run_ctx.shared.widget_ids_this_run.clear()
+            st.altair_chart(chart, on_select="rerun", **kwargs)
+            return self.get_delta_from_queue().new_element.vega_lite_chart.id
+
+        with_alt = chart_id(alt="First description")
+        with_other_alt = chart_id(alt="A totally different description")
+
+        assert with_alt != ""
+        assert with_alt != with_other_alt
+        assert chart_id(alt="First description") == with_alt
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_selection_id_stable_when_keyed_alt_changes(self):
+        """Keyed selection charts ignore alt for identity (key_as_main_identity)."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+            point = alt.selection_point(name="my_selection")
+            chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
+
+            st.altair_chart(
+                chart,
+                key="keyed_alt_chart",
+                on_select="rerun",
+                alt="First description",
+            )
+            id1 = self.get_delta_from_queue().new_element.vega_lite_chart.id
+
+            st.altair_chart(
+                chart,
+                key="keyed_alt_chart",
+                on_select="rerun",
+                alt="A totally different description",
+            )
+            id2 = self.get_delta_from_queue().new_element.vega_lite_chart.id
+
             assert id1 == id2
 
     @unittest.skipIf(
