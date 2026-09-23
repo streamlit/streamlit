@@ -81,8 +81,7 @@ def run_theme_tester_app():
             with checkbox_col:
                 st.checkbox("Check", value=True)
             with toggle_col:
-                st.toggle("Toggle on", value=True)
-                st.toggle("Toggle off", value=False)
+                st.toggle("Toggle", value=True)
             st.radio(
                 "Radio",
                 options=["Option 1", "Option 2"],
