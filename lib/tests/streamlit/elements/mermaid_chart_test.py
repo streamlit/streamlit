@@ -24,7 +24,8 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.elements.mermaid_chart import (
     _apply_alt_marker,
-    _strip_mermaid_accessibility_directives,
+    _find_author_accessibility_directives,
+    _strip_prior_st_alt_markers,
 )
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -146,7 +147,7 @@ graph LR
         assert element.body == f"````mermaid\n{diagram}\n````"
 
     def test_mermaid_chart_alt_overrides_existing_directives(self) -> None:
-        """alt replaces existing accTitle/accDescr and logs a warning."""
+        """alt overrides author directives for the accessible name; source keeps them."""
         diagram = (
             "flowchart TD\naccTitle: Old title\naccDescr: Old description\nA --> B"
         )
@@ -155,10 +156,9 @@ graph LR
 
         element = self.get_delta_from_queue().new_element.markdown
         assert "%% stAlt: Streamlit alt\n" in element.body
-        assert "Old title" not in element.body
-        assert "Old description" not in element.body
-        assert "accTitle:" not in element.body
-        assert "accDescr:" not in element.body
+        # Author directives stay in the source; FE prefers %% stAlt: for the name.
+        assert "accTitle: Old title" in element.body
+        assert "accDescr: Old description" in element.body
         mock_warning.assert_called_once()
         assert mock_warning.call_args.kwargs.get("stack_info") is True
         assert "Old title" in str(mock_warning.call_args)
@@ -223,53 +223,54 @@ graph LR
 @pytest.mark.parametrize(
     ("body", "expected"),
     [
-        ("flowchart TD\nA --> B", ("flowchart TD\nA --> B", [])),
+        ("flowchart TD\nA --> B", []),
         (
             "flowchart TD\naccTitle: Checkout\nA --> B",
-            ("flowchart TD\nA --> B", ["accTitle: Checkout"]),
+            ["accTitle: Checkout"],
         ),
         (
             "flowchart TD\naccDescr: Steps\nA --> B",
-            ("flowchart TD\nA --> B", ["accDescr: Steps"]),
+            ["accDescr: Steps"],
         ),
         (
             "flowchart TD\naccTitle: Title\naccDescr: Desc\nA --> B",
-            ("flowchart TD\nA --> B", ["accTitle: Title", "accDescr: Desc"]),
+            ["accTitle: Title", "accDescr: Desc"],
         ),
         (
             "flowchart TD\naccDescr {\n  First line\n  Second line\n}\nA --> B",
-            ("flowchart TD\nA --> B", ["accDescr {\n  First line\n  Second line\n}"]),
-        ),
-        (
-            # Brace-form trailing whitespace must not eat the next line's indent.
-            "timeline\n    accDescr {\n      x\n    }\n    2021 : A\n    2022 : B",
-            (
-                "timeline\n    2021 : A\n    2022 : B",
-                ["accDescr {\n      x\n    }"],
-            ),
-        ),
-        (
-            "%% stAlt: Old\nflowchart TD\nA --> B",
-            ("flowchart TD\nA --> B", ["%% stAlt: Old"]),
+            ["accDescr {\n  First line\n  Second line\n}"],
         ),
     ],
 )
-def test_strip_mermaid_accessibility_directives(
-    body: str, expected: tuple[str, list[str]]
-) -> None:
-    """Strip stAlt / accTitle / accDescr and return the removed directive text."""
-    assert _strip_mermaid_accessibility_directives(body) == expected
+def test_find_author_accessibility_directives(body: str, expected: list[str]) -> None:
+    """Detect author accTitle / accDescr without removing them from the body."""
+    assert _find_author_accessibility_directives(body) == expected
+
+
+def test_strip_prior_st_alt_markers_only() -> None:
+    """Only prior %% stAlt: markers are removed from the source."""
+    body = "%% stAlt: Old\nflowchart TD\naccTitle: Keep\nA --> B"
+    assert _strip_prior_st_alt_markers(body) == "flowchart TD\naccTitle: Keep\nA --> B"
 
 
 def test_apply_alt_marker_inserts_before_diagram_type() -> None:
-    """%% stAlt is inserted before the diagram type after stripping directives."""
+    """%% stAlt is inserted before the diagram type; author directives stay."""
     body = "flowchart TD\naccTitle: Old\nA --> B"
     with patch("streamlit.elements.mermaid_chart._LOGGER.warning") as mock_warning:
         result = _apply_alt_marker(body, "New title")
 
-    assert result == "%% stAlt: New title\nflowchart TD\nA --> B"
+    assert result == "%% stAlt: New title\nflowchart TD\naccTitle: Old\nA --> B"
     mock_warning.assert_called_once()
     assert mock_warning.call_args.kwargs.get("stack_info") is True
+
+
+def test_apply_alt_marker_no_warning_when_replacing_only_st_alt() -> None:
+    """Replacing a prior %% stAlt: marker is silent (not an author directive)."""
+    with patch("streamlit.elements.mermaid_chart._LOGGER.warning") as mock_warning:
+        result = _apply_alt_marker("%% stAlt: Old\nflowchart TD\nA --> B", "New")
+
+    assert result == "%% stAlt: New\nflowchart TD\nA --> B"
+    mock_warning.assert_not_called()
 
 
 def test_apply_alt_marker_no_warning_without_directives() -> None:
@@ -285,6 +286,20 @@ def test_apply_alt_marker_skips_leading_blank_lines() -> None:
     """Leading blank lines are preserved; %% stAlt still precedes the type."""
     result = _apply_alt_marker("\ngraph TD\n    A --> B", "Decision flow")
     assert result == "\n%% stAlt: Decision flow\ngraph TD\n    A --> B"
+
+
+def test_apply_alt_marker_preserves_frontmatter_and_labels() -> None:
+    """YAML frontmatter and flowchart content are unchanged when alt is applied."""
+    body = (
+        "---\ntitle: Meta\naccTitle: NotADirective\n---\n"
+        "flowchart TD\n"
+        '    A["accTitle: Label"]\n'
+        "    A --> B"
+    )
+    result = _apply_alt_marker(body, "Named")
+    assert result.startswith("---\ntitle: Meta\naccTitle: NotADirective\n---\n")
+    assert 'A["accTitle: Label"]' in result
+    assert "%% stAlt: Named\n" in result
 
 
 @pytest.mark.parametrize(
@@ -341,13 +356,16 @@ def test_apply_alt_marker_inserts_comment_not_acc_title_on_mindmap() -> None:
     )
 
 
-def test_apply_alt_marker_preserves_mindmap_acc_title_nodes() -> None:
-    """mindmap nodes named like accTitle: … must not be stripped when alt is set."""
-    body = "mindmap\n    root((App))\n        accTitle: Sales\n        Other"
-    assert _apply_alt_marker(body, "App taxonomy") == (
-        "%% stAlt: App taxonomy\n"
-        "mindmap\n"
-        "    root((App))\n"
-        "        accTitle: Sales\n"
-        "        Other"
-    )
+@pytest.mark.parametrize(
+    "body",
+    [
+        "mindmap\n    root((App))\n        accTitle: Sales\n        Other",
+        "kanban\n  Column1\n    accTitle: Sales",
+        "block-beta\n  columns 1\n  accTitle: Sales",
+    ],
+)
+def test_apply_alt_marker_preserves_acc_title_shaped_content(body: str) -> None:
+    """accTitle-shaped content lines survive on mindmap / kanban / block-beta."""
+    result = _apply_alt_marker(body, "App taxonomy")
+    assert "%% stAlt: App taxonomy\n" in result
+    assert "accTitle: Sales" in result

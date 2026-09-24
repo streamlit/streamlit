@@ -135,8 +135,8 @@ def test_toolbar_download_png(app: Page):
     download_button.click()
 
 
-def test_mermaid_chart_alt_sets_accessible_name(app: Page):
-    """Assert alt sets the mermaid image accessible name; unlabeled charts keep the type-derived name."""
+def test_mermaid_chart_accessible_names(app: Page):
+    """Verify authored and fallback accessible names across Mermaid grammars."""
     labeled = get_element_by_key(app, "mermaid_with_alt").get_by_test_id(
         "stMermaidChart"
     )

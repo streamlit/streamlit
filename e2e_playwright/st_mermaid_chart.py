@@ -127,6 +127,7 @@ st.mermaid_chart("graph TD\n" + "\n".join(f"    N{i} --> N{i + 1}" for i in rang
 
 # Keyed for accessible-name assertions. Appended last so the nth offsets
 # used by the snapshot tests above stay stable.
+st.subheader("Alt text")
 with st.container(key="mermaid_with_alt"):
     st.mermaid_chart(
         "graph TD\n    A --> B",
