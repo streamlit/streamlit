@@ -34,6 +34,7 @@ from typing import (
     Final,
     Generic,
     Literal,
+    Protocol,
     TypeAlias,
     TypeVar,
     cast,
@@ -597,6 +598,7 @@ class CachedFuncInfo(Generic[P, R]):
         show_time: bool = False,
         scope: CacheScope = "global",
         refresh_mode: RefreshMode = "foreground",
+        task: bool = False,
     ) -> None:
         self.func = func
         self.hash_funcs = hash_funcs
@@ -604,6 +606,7 @@ class CachedFuncInfo(Generic[P, R]):
         self.show_time = show_time
         self.scope = scope
         self.refresh_mode = refresh_mode
+        self.task = task
         if inspect.isasyncgenfunction(func):
             raise StreamlitAPIException(
                 "Async-generator functions cannot be cached. Async generators produce "
@@ -620,6 +623,15 @@ class CachedFuncInfo(Generic[P, R]):
                 detail=(
                     "Background refresh is not supported for coroutine functions "
                     '(`async def`). Use `refresh_mode="foreground"` instead.'
+                ),
+            )
+        if self.is_async and task:
+            raise StreamlitValueError(
+                "task",
+                ["False"],
+                detail=(
+                    "Coroutine functions (`async def`) cannot be run as tasks. Await "
+                    "the cached coroutine instead."
                 ),
             )
 
@@ -645,6 +657,19 @@ class CachedFuncInfo(Generic[P, R]):
         This is responsible for handling cache scope correctly.
         """
         raise NotImplementedError
+
+
+class TaskCachedFunc(Protocol[P, R]):
+    """The call signature of a cached function declared with ``task=True``.
+
+    The runtime object is an ordinary ``CachedFunc``; this protocol is how the
+    decorator's overloads tell callers that calling it yields a handle rather than
+    the function's return value.
+    """
+
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> cache_task.Task[R]: ...
+
+    def clear(self, *args: Any, **kwargs: Any) -> None: ...
 
 
 def make_cached_func_wrapper(info: CachedFuncInfo[P, R]) -> CachedFunc[P, R]:
@@ -705,6 +730,12 @@ class CachedFunc(Generic[P, R]):
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
         """The wrapper. We'll only call our underlying function on a cache miss."""
+
+        if self._info.task:
+            # Declared with task=True: hand back a handle rather than blocking.
+            # The declared return type describes the underlying function, so the
+            # decorator's overloads carry the Task[R] type to callers.
+            return cast("R", self._get_or_create_task(args, kwargs))
 
         spinner_message: str | None = None
         if isinstance(self._info.show_spinner, str):
