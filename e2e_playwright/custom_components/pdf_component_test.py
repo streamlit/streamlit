@@ -385,3 +385,21 @@ def test_st_pdf_different_heights_snapshots(
     wait_until(app, _is_max_height_reached, timeout=7000)
 
     assert_snapshot(pdf_container, name="st_pdf-height_maximum")
+
+
+def test_st_pdf_accessible_names(app: Page):
+    """Verify authored and omitted alt map to the viewer accessible name."""
+    _select_pdf_scenario(app, "altText")
+    wait_for_app_run(app)
+
+    containers = app.get_by_test_id("pdf-container")
+    expect(containers).to_have_count(2)
+
+    labeled = containers.nth(0)
+    unlabeled = containers.nth(1)
+
+    expect(labeled).to_have_accessible_name("Q3 2026 financial report")
+    expect(labeled).to_have_attribute("role", "region")
+    # Playwright requires a value for not_to_have_attribute.
+    expect(unlabeled).not_to_have_attribute("aria-label", re.compile(r".+"))
+    expect(unlabeled).not_to_have_attribute("role", "region")

@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
 from streamlit import url_util
 from streamlit.elements.lib.layout_utils import validate_height
+from streamlit.elements.lib.utils import normalize_alt
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidParameterTypeError,
@@ -59,6 +60,7 @@ class PdfMixin:
         *,
         height: HeightWithoutContent = 500,
         key: str | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator:
         """Display a PDF viewer.
 
@@ -98,10 +100,32 @@ class PdfMixin:
               larger. If the viewer is not in a parent container, the height
               of the viewer matches the height of its content.
 
+        key : str or None
+            An optional string to uniquely identify this component instance.
+            If this is ``None`` (default), identity is derived from the
+            component's arguments. Providing a stable ``key`` avoids remounting
+            when other arguments change.
+
+        alt : str or None
+            A short, plain-text accessible name for the PDF viewer. Streamlit
+            forwards this to ``streamlit-pdf``, which sets ``aria-label`` (and
+            ``role="region"``) on the viewer root. If this is ``None``
+            (default), the viewer has no accessible name.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            Describe what the document is rather than repeating text that is
+            already visible on the page. This names the viewer for assistive
+            technologies; it is not a full text alternative for the PDF's
+            contents.
+
         Examples
         --------
         >>> st.pdf("https://example.com/sample.pdf")
         >>> st.pdf("https://example.com/sample.pdf", height=600)
+        >>> st.pdf("report.pdf", alt="Q3 2026 financial report")
         """
         # Validate data parameter early
         if data is None:
@@ -118,7 +142,9 @@ class PdfMixin:
         if pdf_component is None:
             return self._show_pdf_warning()
 
-        return self._call_pdf_component(pdf_component, data, height, key)
+        return self._call_pdf_component(
+            pdf_component, data, height, key, normalize_alt(alt)
+        )
 
     def _call_pdf_component(
         self,
@@ -126,6 +152,7 @@ class PdfMixin:
         data: PdfData,
         height: HeightWithoutContent,
         key: str | None,
+        normalized_alt: str | None,
     ) -> DeltaGenerator:
         """Call the custom PDF component with the provided data."""
         # Validate height parameter after confirming component is available
@@ -175,11 +202,17 @@ class PdfMixin:
         else:
             component_height = str(height)
 
-        result = pdf_component(
-            file=file_param,
-            height=component_height,
-            key=key,
-        )
+        # Only forward alt when set so unlabeled st.pdf still works on older
+        # streamlit-pdf builds that reject unexpected kwargs.
+        component_kwargs: dict[str, Any] = {
+            "file": file_param,
+            "height": component_height,
+            "key": key,
+        }
+        if normalized_alt is not None:
+            component_kwargs["alt"] = normalized_alt
+
+        result = pdf_component(**component_kwargs)
         return cast("DeltaGenerator", result)
 
     def _show_pdf_warning(self) -> DeltaGenerator:

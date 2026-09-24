@@ -9,4 +9,6 @@ streamlit-folium
 streamlit-option-menu
 streamlit-url-fragment
 streamlit-bokeh
-streamlit-pdf
+# Temporary: pin the streamlit-pdf PR branch until 2.1.0 (alt support) is
+# published on PyPI. Replace with `streamlit-pdf>=2.1.0` before merge.
+streamlit-pdf @ git+https://github.com/mayagbarnes/streamlit-pdf.git@feat/pdf-viewer-alt
