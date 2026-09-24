@@ -1492,7 +1492,9 @@ class SessionState:
             )
         }
 
-        # Re-add the preserved values under their user keys.
+        # Persist/bind unmount: copy the current widget value onto the user
+        # key so remount restores the last edit. This overwrites a leftover
+        # pre-registration user-key entry if one exists.
         self._old_state.update(preserved_by_key)
 
         # A keyed widget can remount under a new element id this run (e.g. after
@@ -1743,13 +1745,18 @@ class SessionState:
         # - persist_state preserved a value under the user key or widget id
         # - a previous-run user-key write happened before the widget first
         #   registered (setdefault / session_state assignment while off-screen)
-        # Unmounting a persist_state=None widget still resets it when cleanup
-        # drops the widget id and no independent user-key entry remains.
-        # A user-key written before first registration is ordinary session
-        # state: later compaction stores the live value under the widget id, so
-        # the original user-key entry is not refreshed. After unmount the
-        # widget id is dropped and remount adopts that original user-key value,
-        # not the last widget edit.
+        #
+        # What remount shows after hide/show:
+        # - persist_state="session", or "page" on the same page: cleanup copies
+        #   the current widget value onto the user key, so remount restores the
+        #   last edit (not an earlier setdefault).
+        # - persist_state=None with no independent user-key entry: cleanup drops
+        #   the widget id and remount resets to the element default.
+        # - persist_state=None after a user-key write before first registration:
+        #   that user-key entry is ordinary session state and is not refreshed
+        #   (later compaction stores the live value under the widget id). After
+        #   unmount the widget id is dropped, so remount adopts the original
+        #   user-key value rather than the last edit.
         # Overlap with restored_bound_value is harmless; both only feed the
         # OR below.
         restored_session_state_value = False
