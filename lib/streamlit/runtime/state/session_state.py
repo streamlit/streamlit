@@ -1456,6 +1456,30 @@ class SessionState:
                     key, user_key, ctx.page_script_hash
                 )
 
+        # persist_state=None keyed widgets that already registered must reset
+        # both the UI and st.session_state[key] on remount (#3512, #17119).
+        # Compaction stores the live value under the widget id; dropping that
+        # id would otherwise leave the user key absent, so a later setdefault
+        # re-seeds it and the remounted widget can show the default while
+        # session_state still holds the previous value. Pin the element default
+        # under the user key when there is no independent leftover from a
+        # write that happened before first registration (#17093 / #17106).
+        for widget_id, metadata in self._new_widget_state.widget_metadata.items():
+            if (
+                metadata.persist_state is not None
+                or widget_id not in wid_key_map
+                or _should_preserve(widget_id)
+                or not _is_stale_widget(
+                    metadata,
+                    active_widget_ids,
+                    ctx.fragment_ids_this_run,
+                )
+            ):
+                continue
+            user_key = wid_key_map[widget_id]
+            if user_key not in self._old_state:
+                self._old_state[user_key] = deepcopy(metadata.deserializer(None))
+
         # A "page"-scoped value must not outlive a page switch. The widget may
         # never re-register on the new page (that page might not render it), so
         # we can't rely on the registration-time reset — drop any value left
@@ -1750,8 +1774,10 @@ class SessionState:
         # - persist_state="session", or "page" on the same page: cleanup copies
         #   the current widget value onto the user key, so remount restores the
         #   last edit (not an earlier setdefault).
-        # - persist_state=None with no independent user-key entry: cleanup drops
-        #   the widget id and remount resets to the element default.
+        # - persist_state=None after the widget already registered, with no
+        #   independent leftover user-key: cleanup drops the widget id and pins
+        #   the element default under the user key, so remount resets both the
+        #   UI and st.session_state[key] in the same run.
         # - persist_state=None after a user-key write before first registration:
         #   that user-key entry is ordinary session state and is not refreshed
         #   (later compaction stores the live value under the widget id). After
