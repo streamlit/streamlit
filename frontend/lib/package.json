@@ -66,7 +66,7 @@
     "@luma.gl/core": "^9.4.1",
     "@luma.gl/engine": "^9.4.1",
     "@luma.gl/shadertools": "^9.4.1",
-    "@microlink/react-json-view": "^1.31.34",
+    "@microlink/react-json-view": "^1.31.36",
     "@sindresorhus/slugify": "^3.0.1",
     "@streamlit/component-v2-lib": "workspace:^",
     "@streamlit/connection": "workspace:^",
