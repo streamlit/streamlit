@@ -54,7 +54,8 @@ export function GlobalHotkeys({
     const activeKeys = new Set<string>()
 
     const handleKeyDown = (event: KeyboardEvent): void => {
-      // Synthetic keydown events can omit `key` (for example Chrome autofill).
+      // Skip events with a non-string `key` so `normalizeKey` does not throw
+      // (synthetic `Event`s from hosts, extensions, or tests omit `key`).
       if (typeof event.key !== "string") {
         return
       }
@@ -83,7 +84,8 @@ export function GlobalHotkeys({
     }
 
     const handleKeyUp = (event: KeyboardEvent): void => {
-      // Synthetic keyup events can omit `key` (for example Chrome autofill).
+      // Skip events with a non-string `key` so `normalizeKey` does not throw
+      // (synthetic `Event`s from hosts, extensions, or tests omit `key`).
       if (typeof event.key !== "string") {
         return
       }

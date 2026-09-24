@@ -90,9 +90,14 @@ describe("GlobalHotkeys", () => {
         listenerErrors.push(event.error)
         event.preventDefault()
       }
+      // jsdom reports throwing listeners as window `error` events instead of
+      // throwing from `dispatchEvent`.
       window.addEventListener("error", onError)
-      document.dispatchEvent(new Event(eventType))
-      window.removeEventListener("error", onError)
+      try {
+        document.dispatchEvent(new Event(eventType))
+      } finally {
+        window.removeEventListener("error", onError)
+      }
 
       expect(listenerErrors).toEqual([])
       expect(onKeyDown).not.toHaveBeenCalled()
