@@ -28,10 +28,6 @@ interface StyledHeaderProps {
 
 export const StyledHeader = styled.header<StyledHeaderProps>(
   ({ theme, isTransparentBackground }) => ({
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
     display: "flex",
     alignItems: "center",
     height: theme.sizes.headerHeight,
@@ -42,6 +38,7 @@ export const StyledHeader = styled.header<StyledHeaderProps>(
     zIndex: theme.zIndices.header,
     pointerEvents: isTransparentBackground ? "none" : "auto",
     fontSize: theme.fontSizes.sm,
+    flexShrink: 0,
     "@media print": {
       position: "absolute",
       background: "transparent",

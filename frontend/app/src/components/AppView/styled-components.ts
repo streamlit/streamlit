@@ -49,7 +49,8 @@ export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
     width: theme.sizes.full,
     overflow: disableScrolling ? "hidden" : "auto",
     alignItems: "center",
-    height: `100dvh`,
+    minHeight: 0,
+    flex: 1,
 
     "&:focus": {
       outline: "none",
@@ -64,7 +65,7 @@ export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
         left: 0,
         right: 0,
         bottom: 0,
-        height: `100dvh`,
+        // height: `100dvh`,
       },
     },
 
@@ -145,19 +146,16 @@ export const StyledAppViewBlockContainer =
       const littlePadding = "2.25rem"
 
       // Top padding logic per specification:
+      // The header is now part of the layout flow, so we don't need
+      // the complex logic to avoid overlap. We can use a simpler padding.
       let topPadding = littlePadding // Default: 2.25rem
-
       if (!embedded) {
-        // Non-embedded apps always get 6rem or 8rem
-        topPadding = hasTopNav ? "8rem" : "6rem"
+        topPadding = hasTopNav ? "5.5rem" : "3.5rem"
       } else if (showPadding || showToolbar) {
-        // 6rem if embedded with show_padding or show_toolbar
-        topPadding = "6rem"
+        topPadding = "3.5rem"
       } else if (hasHeader || hasSidebar) {
-        // 4.5rem if embedded with header but no padding/toolbar
-        topPadding = "4.5rem"
+        topPadding = "2rem"
       }
-      // Otherwise use default: 2.25rem if embedded with no header and no padding/toolbar
 
       const bottomEmbedPadding =
         showPadding && !hasBottom ? "10rem" : theme.spacing.lg
@@ -228,6 +226,8 @@ export const StyledMainContent = styled.div(({ theme }) => ({
   width: theme.sizes.full,
   minWidth: 0,
   height: `100dvh`,
+  display: "flex",
+  flexDirection: "column",
 
   // Apply relative positioning only on desktop to fix header positioning when sidebar opens.
   // On mobile, relative positioning is omitted to allow the sidebar to properly overlay
