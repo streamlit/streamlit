@@ -46,12 +46,17 @@ if TYPE_CHECKING:
     assert_type(pdf("file.pdf", key="my_pdf"), DeltaGenerator)
     assert_type(pdf("file.pdf", key=None), DeltaGenerator)
 
+    # pdf with alt parameter - str or None
+    assert_type(pdf("file.pdf", alt="Q3 2026 financial report"), DeltaGenerator)
+    assert_type(pdf("file.pdf", alt=None), DeltaGenerator)
+
     # pdf with all parameters combined
     assert_type(
         pdf(
             "file.pdf",
             height="stretch",
             key="my_pdf",
+            alt="Q3 2026 financial report",
         ),
         DeltaGenerator,
     )
