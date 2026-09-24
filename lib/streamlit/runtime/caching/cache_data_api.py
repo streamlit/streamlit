@@ -44,6 +44,7 @@ from streamlit.runtime.caching.cache_utils import (
     CachedFuncInfo,
     CacheScope,
     RefreshMode,
+    TaskCachedFunc,
     get_session_id_or_throw,
     make_cached_func_wrapper,
     validate_refresh_mode,
@@ -111,6 +112,7 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
         hash_funcs: HashFuncsDict | None = None,
         scope: CacheScope = "global",
         refresh_mode: RefreshMode = "foreground",
+        task: bool = False,
     ) -> None:
         super().__init__(
             func,
@@ -119,6 +121,7 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
             show_time=show_time,
             scope=scope,
             refresh_mode=refresh_mode,
+            task=task,
         )
         self.persist = persist
         self.max_entries = max_entries
@@ -440,6 +443,22 @@ class CacheDataAPI:
     @overload
     def __call__(self, func: Callable[P, R]) -> CachedFunc[P, R]: ...
 
+    # Decorator with arguments, declared with task=True
+    @overload
+    def __call__(
+        self,
+        *,
+        task: Literal[True],
+        ttl: float | timedelta | str | None = None,
+        max_entries: int | None = None,
+        show_spinner: bool | str = True,
+        show_time: bool = False,
+        persist: CachePersistType | bool = None,
+        hash_funcs: HashFuncsDict | None = None,
+        scope: CacheScope = "global",
+        refresh_mode: RefreshMode = "foreground",
+    ) -> Callable[[Callable[P, R]], TaskCachedFunc[P, R]]: ...
+
     # Decorator with arguments
     @overload
     def __call__(
@@ -453,6 +472,7 @@ class CacheDataAPI:
         hash_funcs: HashFuncsDict | None = None,
         scope: CacheScope = "global",
         refresh_mode: RefreshMode = "foreground",
+        task: Literal[False] = False,
     ) -> Callable[[Callable[P, R]], CachedFunc[P, R]]: ...
 
     def __call__(
@@ -467,7 +487,12 @@ class CacheDataAPI:
         hash_funcs: HashFuncsDict | None = None,
         scope: CacheScope = "global",
         refresh_mode: RefreshMode = "foreground",
-    ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
+        task: bool = False,
+    ) -> (
+        CachedFunc[P, R]
+        | Callable[[Callable[P, R]], CachedFunc[P, R]]
+        | Callable[[Callable[P, R]], TaskCachedFunc[P, R]]
+    ):
         return self._decorator(
             func,  # ty: ignore[invalid-argument-type]
             ttl=ttl,
@@ -478,6 +503,7 @@ class CacheDataAPI:
             hash_funcs=hash_funcs,
             scope=scope,
             refresh_mode=refresh_mode,
+            task=task,
         )
 
     def _decorator(
@@ -492,6 +518,7 @@ class CacheDataAPI:
         hash_funcs: HashFuncsDict | None = None,
         scope: CacheScope = "global",
         refresh_mode: RefreshMode = "foreground",
+        task: bool = False,
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         """Decorator to cache functions that return data (e.g. dataframe transforms, database queries, ML inference).
 
@@ -620,6 +647,27 @@ class CacheDataAPI:
                 as arguments instead. The function also shouldn't contain Streamlit
                 commands that display elements. Streamlit doesn't replay these elements
                 for cached results and shows a warning when the function creates them.
+
+        task : bool
+            Whether to run the function without blocking the script. If this is
+            ``False`` (default), calling the function returns its value and the app
+            waits for it. If this is ``True``, calling the function returns
+            immediately with one of the following:
+
+            - The cached value, if it is ready.
+            - ``st.RUNNING``, while the function is still computing.
+            - ``st.TaskError``, carrying the raised exception as ``.exception``, if
+              the function failed.
+
+            Streamlit reruns the app when the function finishes. Apps requesting the
+            same value at the same time share a single computation, and every one of
+            them reruns when it finishes.
+
+            .. note::
+                A function that runs as a task can't use session-specific features
+                such as ``st.session_state``, and Streamlit doesn't replay display
+                commands it issues. Pass any required session values as arguments
+                instead.
 
         Examples
         --------
@@ -771,6 +819,7 @@ class CacheDataAPI:
                     hash_funcs=hash_funcs,
                     scope=scope,
                     refresh_mode=refresh_mode,
+                    task=task,
                 )
             )
 
@@ -788,6 +837,7 @@ class CacheDataAPI:
                 hash_funcs=hash_funcs,
                 scope=scope,
                 refresh_mode=refresh_mode,
+                task=task,
             )
         )
 

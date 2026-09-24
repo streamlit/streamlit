@@ -128,6 +128,10 @@ from streamlit.runtime.caching import (
     cache_resource as _cache_resource,
     cache_data as _cache_data,
 )
+from streamlit.runtime.caching.cache_task import (
+    RUNNING as _RUNNING,
+    TaskError as _TaskError,
+)
 from streamlit.runtime.connection_factory import (
     connection_factory as _connection,
 )
@@ -289,6 +293,10 @@ context = _ContextProxy()
 # Caching
 cache_data = _cache_data
 cache_resource = _cache_resource
+
+# Placeholders returned by a cached function declared with task=True
+RUNNING = _RUNNING
+TaskError = _TaskError
 
 # Namespaces
 column_config = _column_config

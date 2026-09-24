@@ -39,6 +39,7 @@ than dropping them: a dropped task would leave the session waiting forever.
 from __future__ import annotations
 
 import copy
+import enum
 import threading
 import weakref
 from concurrent.futures import ThreadPoolExecutor
@@ -139,6 +140,33 @@ class Task(Generic[T]):
         # Each reader gets its own copy so that sessions sharing one task can't
         # observe each other's mutations, matching st.cache_data's copy semantics.
         return cast("T", copy.deepcopy(self._snapshot.value))
+
+
+class Running(enum.Enum):
+    """The type of ``st.RUNNING``, the placeholder for an unfinished task.
+
+    A single-member enum rather than a bare object, so that type checkers narrow
+    ``value is st.RUNNING`` and leave the function's own return type in the
+    other branch.
+    """
+
+    RUNNING = "RUNNING"
+
+    def __repr__(self) -> str:
+        return "RUNNING"
+
+
+RUNNING: Final = Running.RUNNING
+
+
+@dataclass(frozen=True)
+class TaskError:
+    """The placeholder a task-mode cached function returns after it raised."""
+
+    exception: BaseException
+
+    def __repr__(self) -> str:
+        return f"TaskError({self.exception!r})"
 
 
 def completed_task(value: T) -> Task[T]:
