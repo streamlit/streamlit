@@ -337,13 +337,15 @@ export class WidgetStateManager {
   private scheduledFragmentId: string | undefined
 
   /**
-   * Live-list index at removal for a form submit button that may remount.
-   * These indices are not a snapshot of the full original list. They are
-   * discarded when the form's list becomes empty so a full remount batch
-   * re-adds buttons in declaration order. Without this, {@link addSubmitButton}
-   * would append and change which button is treated as first for enter-to-submit.
+   * First-seen ordinal of each form submit button id, keyed by formId.
+   * Partial remounts must not append; ordinals are first-seen, and a form's
+   * map is cleared when its live list becomes empty so a full remount appends
+   * in declaration order.
    */
-  private readonly pendingSubmitButtonInsertIndex = new Map<string, number>()
+  private readonly submitButtonFirstSeenOrdinals = new Map<
+    string,
+    Map<string, number>
+  >()
 
   /**
    * Tracks whether we've already logged a mixed-fragmentId warning for the
@@ -1066,9 +1068,9 @@ export class WidgetStateManager {
   /**
    * Registers or updates a form submit button while preserving Enter-to-submit
    * order. If a button with the same id is already registered, it is replaced
-   * in place. If it was just removed (React remount of a subset of buttons),
-   * it is re-inserted at its previous live-list index so enter-to-submit still
-   * keys off the first declared submit button.
+   * in place. If it remounts while siblings remain, it is re-inserted using its
+   * first-seen ordinal so enter-to-submit still keys off the first declared
+   * submit button.
    */
   public addSubmitButton(
     formId: string,
@@ -1082,27 +1084,26 @@ export class WidgetStateManager {
     if (existingIndex >= 0) {
       submitButtons[existingIndex] = submitButtonProto
     } else {
-      const savedIndex = this.getPendingSubmitButtonInsertIndex(
+      const insertIndex = this.getSubmitButtonFirstSeenInsertIndex(
         formId,
-        submitButtonProto
+        submitButtonProto,
+        submitButtons
       )
-      if (
-        savedIndex !== undefined &&
-        savedIndex >= 0 &&
-        savedIndex <= submitButtons.length
-      ) {
-        submitButtons.splice(savedIndex, 0, submitButtonProto)
+      if (insertIndex !== undefined) {
+        submitButtons.splice(insertIndex, 0, submitButtonProto)
       } else {
         submitButtons.push(submitButtonProto)
       }
+      this.recordSubmitButtonFirstSeenOrdinal(formId, submitButtonProto)
     }
-    this.clearPendingSubmitButtonInsertIndex(formId, submitButtonProto)
     this.setSubmitButtons(formId, submitButtons)
   }
 
   /**
    * Called by FormSubmitButton on unmount/cleanup. Remove the SubmitButtonProto
-   * for the given form, and update FormsData.
+   * for the given form, and update FormsData. First-seen ordinals are kept
+   * while siblings remain so a partial remount restores declaration order;
+   * they are cleared when the live list becomes empty.
    */
   public removeSubmitButton(
     formId: string,
@@ -1115,16 +1116,17 @@ export class WidgetStateManager {
 
     const index = this.indexOfSubmitButton(submitButtons, submitButtonProto)
     if (index < 0) {
+      LOG.warn(
+        `Failed to unregister form submit button for form "${formId}" ` +
+          `(id: "${submitButtonProto.id}"): neither proto reference nor id ` +
+          `matched the live list`
+      )
       return
     }
 
     const copySubmitButtons = submitButtons.filter((_, i) => i !== index)
     if (copySubmitButtons.length === 0) {
-      // Full remount batch: React runs every cleanup then every setup.
-      // Discard shrinking-list indices so adds append in declaration order.
-      this.clearPendingSubmitButtonInsertIndicesForForm(formId)
-    } else {
-      this.setPendingSubmitButtonInsertIndex(formId, submitButtonProto, index)
+      this.submitButtonFirstSeenOrdinals.delete(formId)
     }
     this.setSubmitButtons(formId, copySubmitButtons)
   }
@@ -1145,52 +1147,62 @@ export class WidgetStateManager {
     return -1
   }
 
-  private submitButtonKey(
-    formId: string,
-    submitButtonProto: SubmitButtonProto
-  ): string | undefined {
-    return submitButtonProto.id
-      ? `${formId}::${submitButtonProto.id}`
-      : undefined
-  }
-
-  private getPendingSubmitButtonInsertIndex(
-    formId: string,
-    submitButtonProto: SubmitButtonProto
-  ): number | undefined {
-    const key = this.submitButtonKey(formId, submitButtonProto)
-    return key === undefined
-      ? undefined
-      : this.pendingSubmitButtonInsertIndex.get(key)
-  }
-
-  private setPendingSubmitButtonInsertIndex(
+  /**
+   * Insert index that preserves first-seen order among the live list.
+   * Partial remounts must not append. Returns undefined for a new id so the
+   * caller appends and records a first-seen ordinal.
+   */
+  private getSubmitButtonFirstSeenInsertIndex(
     formId: string,
     submitButtonProto: SubmitButtonProto,
-    index: number
-  ): void {
-    const key = this.submitButtonKey(formId, submitButtonProto)
-    if (key !== undefined) {
-      this.pendingSubmitButtonInsertIndex.set(key, index)
+    liveButtons: SubmitButtonProto[]
+  ): number | undefined {
+    const buttonId = submitButtonProto.id
+    if (!buttonId) {
+      return undefined
     }
+    const ordinals = this.submitButtonFirstSeenOrdinals.get(formId)
+    if (ordinals === undefined) {
+      return undefined
+    }
+    const ordinal = ordinals.get(buttonId)
+    if (ordinal === undefined) {
+      return undefined
+    }
+
+    let insertIndex = 0
+    for (const liveButton of liveButtons) {
+      if (!liveButton.id) {
+        continue
+      }
+      const liveOrdinal = ordinals.get(liveButton.id)
+      if (liveOrdinal !== undefined && liveOrdinal < ordinal) {
+        insertIndex += 1
+      }
+    }
+    return insertIndex
   }
 
-  private clearPendingSubmitButtonInsertIndex(
+  /**
+   * Records a first-seen ordinal for a newly registered button id. Ordinals
+   * are first-seen and are not updated on remount; they are cleared when the
+   * form's live list becomes empty.
+   */
+  private recordSubmitButtonFirstSeenOrdinal(
     formId: string,
     submitButtonProto: SubmitButtonProto
   ): void {
-    const key = this.submitButtonKey(formId, submitButtonProto)
-    if (key !== undefined) {
-      this.pendingSubmitButtonInsertIndex.delete(key)
+    const buttonId = submitButtonProto.id
+    if (!buttonId) {
+      return
     }
-  }
-
-  private clearPendingSubmitButtonInsertIndicesForForm(formId: string): void {
-    const prefix = `${formId}::`
-    for (const key of this.pendingSubmitButtonInsertIndex.keys()) {
-      if (key.startsWith(prefix)) {
-        this.pendingSubmitButtonInsertIndex.delete(key)
-      }
+    let ordinals = this.submitButtonFirstSeenOrdinals.get(formId)
+    if (ordinals === undefined) {
+      ordinals = new Map()
+      this.submitButtonFirstSeenOrdinals.set(formId, ordinals)
+    }
+    if (!ordinals.has(buttonId)) {
+      ordinals.set(buttonId, ordinals.size)
     }
   }
 

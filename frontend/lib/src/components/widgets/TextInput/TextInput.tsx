@@ -244,12 +244,10 @@ function TextInput({
     if (!inForm) {
       return dirty && !isLive
     }
+    // FormsContext is optional because unit tests render without it.
+    // Keep reading formsData so this memo still subscribes when buttons change.
     if (formsData === undefined) {
       return widgetMgr.allowFormEnterToSubmit(formId)
-    }
-    const firstSubmitButton = formsData.submitButtons.get(formId)?.[0]
-    if (!firstSubmitButton) {
-      return false
     }
     return widgetMgr.allowFormEnterToSubmit(formId)
   }, [inForm, dirty, isLive, widgetMgr, formId, formsData])

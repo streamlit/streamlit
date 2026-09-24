@@ -744,6 +744,28 @@ describe("Widget State Manager", () => {
       expect(widgetMgr.allowFormEnterToSubmit(formId)).toBe(false)
     })
 
+    it("keeps first-seen order when two of three submit buttons remount", () => {
+      const formId = "form"
+      const buttonA = new ButtonProto({ id: "A", disabled: true })
+      const buttonB = new ButtonProto({ id: "B" })
+      const buttonC = new ButtonProto({ id: "C" })
+      widgetMgr.addSubmitButton(formId, buttonA)
+      widgetMgr.addSubmitButton(formId, buttonB)
+      widgetMgr.addSubmitButton(formId, buttonC)
+
+      widgetMgr.removeSubmitButton(formId, buttonA)
+      widgetMgr.removeSubmitButton(formId, buttonB)
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "A", disabled: true })
+      )
+      widgetMgr.addSubmitButton(formId, new ButtonProto({ id: "B" }))
+
+      const submitButtons = formsData.submitButtons.get(formId)
+      expect(submitButtons?.map(button => button.id)).toEqual(["A", "B", "C"])
+      expect(widgetMgr.allowFormEnterToSubmit(formId)).toBe(false)
+    })
+
     it("appends a new button instead of filling a permanently removed slot", () => {
       const formId = "form"
       const firstButton = new ButtonProto({ id: "first" })
@@ -789,6 +811,38 @@ describe("Widget State Manager", () => {
       ])
       expect(submitButtons?.[0].disabled).toBe(false)
       expect(widgetMgr.allowFormEnterToSubmit(formId)).toBe(true)
+    })
+
+    it("removes a replaced submit button when given the original proto", () => {
+      const formId = "form"
+      const originalFirstButton = new ButtonProto({
+        id: "first",
+        disabled: true,
+      })
+      widgetMgr.addSubmitButton(formId, originalFirstButton)
+      widgetMgr.addSubmitButton(formId, new ButtonProto({ id: "second" }))
+      widgetMgr.addSubmitButton(formId, new ButtonProto({ id: "first" }))
+
+      widgetMgr.removeSubmitButton(formId, originalFirstButton)
+
+      const submitButtons = formsData.submitButtons.get(formId)
+      expect(submitButtons).toHaveLength(1)
+      expect(submitButtons?.map(button => button.id)).toEqual(["second"])
+    })
+
+    it("logs a warning when remove cannot match a submit button", () => {
+      const formId = "form"
+      widgetMgr.addSubmitButton(formId, new ButtonProto({ id: "first" }))
+      const logger = getLogger("WidgetStateManager")
+      const warnSpy = vi.spyOn(logger, "warn")
+
+      widgetMgr.removeSubmitButton(formId, new ButtonProto())
+
+      expect(warnSpy).toHaveBeenCalledTimes(1)
+      expect(
+        formsData.submitButtons.get(formId)?.map(button => button.id)
+      ).toEqual(["first"])
+      warnSpy.mockRestore()
     })
 
     it("updates formsWithUploads", () => {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useEffect } from "react"
+import { memo, ReactElement, useCallback, useEffect, useRef } from "react"
 
 import { Button as ButtonProto } from "@streamlit/protobuf"
 
@@ -62,14 +62,17 @@ export const FormSubmitButton = memo(function FormSubmitButton(
   }
 
   const isDisabled = disabled || hasInProgressUpload
+  const elementRef = useRef(element)
+  elementRef.current = element
 
   useEffect(() => {
     widgetMgr.addSubmitButton(formId, element)
   }, [widgetMgr, formId, element])
 
+  // Keep element out of this effect's deps so proto updates replace in place
+  // via addSubmitButton instead of remove-then-add.
   useEffect(() => {
-    return () => widgetMgr.removeSubmitButton(formId, element)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- omit element so proto updates replace in place via addSubmitButton
+    return () => widgetMgr.removeSubmitButton(formId, elementRef.current)
   }, [widgetMgr, formId])
 
   const handleSubmit = useCallback((): void => {
