@@ -43,7 +43,11 @@ if TYPE_CHECKING:
 MAX_COOKIE_BYTES: Final = 4096
 # Distinguishes zlib-compressed payloads from JSON, which starts with `{` or `[`.
 _COMPRESSED_COOKIE_PREFIX: Final = "z:"
+# Upper bound on sibling cookies; more than this would blow past typical
+# proxy Cookie header limits anyway.
 _MAX_COOKIE_CHUNKS: Final = 32
+# uvicorn and many reverse proxies reject Cookie headers longer than 8KiB.
+_MAX_COOKIE_HEADER_BYTES: Final = 8192
 _PROVIDER_TOKEN_ALGORITHM: Final = "HS256"  # noqa: S105
 # joserfc emits SecurityWarning when the symmetric key is shorter than 14 bytes
 # (112 bits). We track the same threshold to surface a one-time Streamlit-level
@@ -464,6 +468,24 @@ def _signed_cookie_size(
     return len(cookie_name) + 1 + len(signed_value) + cookie_attr_size
 
 
+def _cookie_request_header_size(
+    create_signed_value_fn: Callable[[str, str], bytes],
+    cookies: list[tuple[str, str]],
+) -> int:
+    """Return the Cookie request-header size for these unsigned name/value pairs.
+
+    The browser sends ``name=signed_value`` pairs separated by ``"; "``.
+    Set-Cookie attributes are not included.
+    """
+    if not cookies:
+        return 0
+    sizes = [
+        len(name) + 1 + len(create_signed_value_fn(name, value))
+        for name, value in cookies
+    ]
+    return sum(sizes) + 2 * (len(sizes) - 1)
+
+
 def _compress_cookie_payload(serialized: str) -> str:
     """Return a compact, ASCII-safe encoding of a large cookie payload.
 
@@ -479,7 +501,11 @@ def _compress_cookie_payload(serialized: str) -> str:
 
 
 def _decompress_cookie_payload(payload: bytes) -> bytes | None:
-    """Decode a compressed cookie payload, or return uncompressed bytes as-is."""
+    """Return the original bytes, or ``None`` if a ``z:`` payload is corrupt.
+
+    Payloads that do not start with ``z:`` are returned unchanged so legacy
+    JSON cookies keep working.
+    """
     prefix = _COMPRESSED_COOKIE_PREFIX.encode("ascii")
     if not payload.startswith(prefix):
         return payload
@@ -489,7 +515,7 @@ def _decompress_cookie_payload(payload: bytes) -> bytes | None:
         padded = encoded + b"=" * ((4 - len(encoded) % 4) % 4)
         return zlib.decompress(base64.urlsafe_b64decode(padded))
     except (ValueError, zlib.error, binascii.Error):
-        _LOGGER.exception("Failed to decompress cookie payload")
+        _LOGGER.warning("Failed to decompress cookie payload")
         return None
 
 
@@ -523,7 +549,7 @@ def set_cookie_with_chunks(
         return
 
     _LOGGER.debug(
-        "Cookie size (%d bytes) exceeds browser limit. Splitting into multiple cookies.",
+        "Signed cookie size (%d bytes) exceeds the browser limit; compressing the payload.",
         actual_cookie_size,
     )
     payload = _compress_cookie_payload(serialized_cookie_value)
@@ -557,10 +583,12 @@ def _set_split_cookie(
     """Split a large cookie value into multiple smaller cookies.
 
     Uses the fewest chunks whose independently signed cookies each stay within
-    ``MAX_COOKIE_BYTES``. The main cookie always exists and either contains the
-    whole value or the chunk count. Additional chunks are stored as
-    cookie_name_1, cookie_name_2, etc.
+    ``MAX_COOKIE_BYTES``. The main cookie contains either the whole value or the
+    chunk count; additional chunks use names such as ``cookie_name_1``.
     """
+    too_large_error = StreamlitAuthError(
+        f"Cookie '{cookie_name}' is too large to split into browser-sized pieces."
+    )
     for chunk_count in range(1, _MAX_COOKIE_CHUNKS + 1):
         chunk_len = max(1, (len(value) + chunk_count - 1) // chunk_count)
         chunks = [value[i : i + chunk_len] for i in range(0, len(value), chunk_len)]
@@ -573,6 +601,20 @@ def _set_split_cookie(
             for name, chunk in zip(chunk_names, chunks, strict=True)
         ):
             continue
+
+        if len(chunks) == 1:
+            header_cookies = [(cookie_name, chunks[0])]
+        else:
+            header_cookies = [
+                (cookie_name, f"chunks-{len(chunks)}"),
+                *zip(chunk_names, chunks, strict=True),
+            ]
+        if (
+            _cookie_request_header_size(create_signed_value_fn, header_cookies)
+            > _MAX_COOKIE_HEADER_BYTES
+        ):
+            # More chunks add header overhead, so further splits cannot recover.
+            raise too_large_error
 
         if len(chunks) == 1:
             set_single_cookie_fn(cookie_name, chunks[0])
@@ -589,9 +631,7 @@ def _set_split_cookie(
         )
         return
 
-    raise StreamlitAuthError(
-        f"Cookie '{cookie_name}' is too large to split into browser-sized pieces."
-    )
+    raise too_large_error
 
 
 _chunks_regex = re.compile(rb"chunks-(\d+)")
@@ -601,11 +641,11 @@ def get_cookie_with_chunks(
     get_single_cookie_fn: Callable[[str], bytes | None],
     cookie_name: str,
 ) -> bytes | None:
-    """Get a cookie, reconstructing from chunks if it was split.
+    """Reconstruct a cookie that may be compressed and/or split.
 
-    If a count cookie exists, the main cookie contains the first chunk,
-    and additional chunks are in cookie_name_1, cookie_name_2, etc.
-    If no count cookie exists, the main cookie contains the entire value.
+    - If the main cookie is ``chunks-N``, join ``{name}_1`` … ``{name}_N`` and
+      decompress when the payload starts with ``z:``.
+    - Otherwise return the main cookie, decompressing a ``z:`` payload if present.
 
     Args:
         get_single_cookie_fn: Function to get a single cookie (cookie_name) -> bytes | None

@@ -167,25 +167,25 @@ async def _set_auth_cookie(
     user_info: dict[str, Any],
     tokens: dict[str, Any],
     *,
-    request: Request | None = None,
+    request: Request,
 ) -> None:
-    """Set the auth cookies with signed user info and tokens.
+    """Set signed user and token cookies.
 
-    This cookie uses itsdangerous signing. Cookies may be split into multiple
-    chunks if they exceed browser limits. Numbered leftover chunk cookies from
-    a previous login are cleared so they cannot keep inflating the Cookie
-    header after a smaller cookie is written.
+    Cookies use itsdangerous signing and may be split into multiple chunks if
+    they exceed browser limits. Numbered leftover chunk cookies from a previous
+    login are cleared so they cannot keep inflating the Cookie header after a
+    smaller cookie is written.
     """
 
     def set_single_cookie(cookie_name: str, value: str) -> None:
         _set_single_cookie(response, cookie_name, value)
 
     _delete_legacy_root_auth_cookies(response)
-    if request is not None:
-        if tokens:
-            _clear_cookie_chunk_siblings(response, request, TOKENS_COOKIE_NAME)
-        else:
-            _clear_single_auth_cookie_and_chunks(response, request, TOKENS_COOKIE_NAME)
+    _clear_cookie_chunk_siblings(response, request, USER_COOKIE_NAME)
+    if tokens:
+        _clear_cookie_chunk_siblings(response, request, TOKENS_COOKIE_NAME)
+    else:
+        _clear_single_auth_cookie_and_chunks(response, request, TOKENS_COOKIE_NAME)
 
     cookie_attr_size = _get_auth_cookie_attribute_size()
     set_cookie_with_chunks(

@@ -896,6 +896,7 @@ class TestAuthCookieFlags:
             captured_calls.append((cookie_name, cookie_attr_size))
 
         response = PlainTextResponse("ok")
+        request = Request({"type": "http", "headers": []})
         original_set_cookie_with_chunks = starlette_auth_routes.set_cookie_with_chunks
         starlette_auth_routes.set_cookie_with_chunks = mock_set_cookie_with_chunks
         try:
@@ -904,6 +905,7 @@ class TestAuthCookieFlags:
                     response,
                     {"email": "user@example.com"},
                     {"access_token": "token"},
+                    request=request,
                 )
             )
         finally:
@@ -919,6 +921,56 @@ class TestAuthCookieFlags:
             (USER_COOKIE_NAME, expected_attr_size),
             (TOKENS_COOKIE_NAME, expected_attr_size),
         ]
+
+    @patch_config_options(
+        {"server.cookieSecret": "test-secret", "server.baseUrlPath": ""}
+    )
+    def test_set_auth_cookie_clears_leftover_user_and_token_chunks(self) -> None:
+        """A smaller re-login deletes leftover numbered chunk cookies for both names."""
+        cookie_header = (
+            f"{USER_COOKIE_NAME}=chunks-2; {USER_COOKIE_NAME}_1=old1; "
+            f"{USER_COOKIE_NAME}_2=old2; {TOKENS_COOKIE_NAME}=chunks-3; "
+            f"{TOKENS_COOKIE_NAME}_1=t1; {TOKENS_COOKIE_NAME}_2=t2; "
+            f"{TOKENS_COOKIE_NAME}_3=t3"
+        )
+        request = Request(
+            {
+                "type": "http",
+                "headers": [(b"cookie", cookie_header.encode("latin-1"))],
+            }
+        )
+        response = PlainTextResponse("ok")
+        asyncio.run(
+            starlette_auth_routes._set_auth_cookie(
+                response,
+                {"email": "user@example.com"},
+                {"id_token": "id-token"},
+                request=request,
+            )
+        )
+
+        set_cookie_headers = response.headers.getlist("set-cookie")
+
+        def _is_deleted(cookie_name: str) -> bool:
+            return any(
+                header.startswith(f"{cookie_name}=") and "Max-Age=0" in header
+                for header in set_cookie_headers
+            )
+
+        def _is_set(cookie_name: str) -> bool:
+            return any(
+                header.startswith(f"{cookie_name}=")
+                and f"Max-Age={AUTH_COOKIE_MAX_AGE_SECONDS}" in header
+                for header in set_cookie_headers
+            )
+
+        assert _is_deleted(f"{USER_COOKIE_NAME}_1")
+        assert _is_deleted(f"{USER_COOKIE_NAME}_2")
+        assert _is_deleted(f"{TOKENS_COOKIE_NAME}_1")
+        assert _is_deleted(f"{TOKENS_COOKIE_NAME}_2")
+        assert _is_deleted(f"{TOKENS_COOKIE_NAME}_3")
+        assert _is_set(USER_COOKIE_NAME)
+        assert _is_set(TOKENS_COOKIE_NAME)
 
     @patch_config_options(
         {"server.cookieSecret": "test-secret", "server.baseUrlPath": ""}

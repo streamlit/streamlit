@@ -88,18 +88,18 @@ def fake_oidc_server(
 ) -> Generator[AsyncSubprocess, None, None]:
     """Fixture that starts and stops the OIDC app server."""
 
-    is_success = getattr(request, "param", "success")
-    large_tokens = is_success == "success_large_tokens"
-    success = is_success != "failure"
+    scenario = getattr(request, "param", "success")
+    is_large_token_scenario = scenario == "success_large_tokens"
+    is_successful_scenario = scenario != "failure"
 
     cmd = [
         "python",
         "shared/oidc_mock_server.py",
         "--port",
         str(oidc_server_port),
-        "--success" if success else "--failure",
+        "--success" if is_successful_scenario else "--failure",
     ]
-    if large_tokens:
+    if is_large_token_scenario:
         cmd.append("--large-tokens")
 
     oidc_server_proc = AsyncSubprocess(cmd, cwd=".")
@@ -175,8 +175,10 @@ def test_login_successful_with_large_oidc_tokens(app: Page, app_base_url: str):
     _click_and_wait_for_oauth_redirect(app, "TEST LOGIN", app_base_url)
 
     expect_markdown(app, "authtest@example.com")
-    expect_markdown(app, "YOU ARE LOGGED IN")
+    expect_markdown(app, "John Doe")
     expect_markdown(app, "TOKENS AVAILABLE")
+    expect_markdown(app, "HAS ID TOKEN")
+    expect_markdown(app, "HAS ACCESS TOKEN")
     not_logged_in = app.get_by_test_id("stMarkdownContainer").filter(
         has_text="NOT LOGGED IN"
     )
