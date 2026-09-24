@@ -15,6 +15,7 @@
 """Metrics dashboard template.
 
 Demonstrates:
+- KPI row of bordered ``st.metric`` values with deltas and sparklines
 - Time series visualization with Altair (line, area, bar, point charts)
 - Metric cards with chart/table toggle and popover filters
 - Time range filtering (1M, 6M, 1Y, QTD, YTD, All)
@@ -50,6 +51,7 @@ st.set_page_config(
 
 TIME_RANGES = ["1M", "6M", "1Y", "QTD", "YTD", "All"]
 CHART_HEIGHT = 300
+KPI_HEIGHT = 215  # Rendered height of a bordered st.metric with a sparkline
 
 # Per-metric generation settings. Replace with the metrics you actually track.
 METRIC_CONFIG: dict[str, dict[str, float]] = {
@@ -301,6 +303,32 @@ def render_point_chart(
 
 
 # =============================================================================
+# KPI Card Component
+# =============================================================================
+
+
+@st.fragment(parallel=True)
+def kpi_card(label: str, metric_name: str) -> None:
+    """Display a bordered KPI card: the latest 7-day average and its 4-week change.
+
+    Like the metric cards, each KPI is a parallel fragment that loads its own
+    (cached) data inside ``st.skeleton``.
+    """
+    with st.skeleton(height=KPI_HEIGHT):
+        # The last 4 weeks (29 daily points) of the 7-day average: the value is
+        # the latest point, the delta compares it to the first one.
+        trend = load_metric(metric_name)["value_7d_ma"].tail(29)
+        st.metric(
+            label,
+            f"{trend.iloc[-1]:,.0f}",
+            f"{trend.iloc[-1] / trend.iloc[0] - 1:+.1%}",
+            delta_description="vs. 4 weeks ago",
+            chart_data=trend,
+            border=True,
+        )
+
+
+# =============================================================================
 # Metric Card Component
 # =============================================================================
 
@@ -427,8 +455,15 @@ def render_page_header(title: str) -> None:
 # Page header
 render_page_header("# :material/monitoring: Metrics Dashboard")
 
-# Each card loads its own data; as parallel fragments they load concurrently on
-# the first run instead of blocking on each other.
+# Each KPI and card loads its own data; as parallel fragments they load
+# concurrently on the first run instead of blocking on each other.
+
+# KPI row: horizontal containers wrap on narrow screens.
+with st.container(horizontal=True):
+    kpi_card("Active users", "users")
+    kpi_card("Sessions", "sessions")
+    kpi_card("Revenue", "revenue")
+    kpi_card("Conversions", "conversions")
 
 # Row 1: Users and Sessions
 row1 = st.columns(2)
