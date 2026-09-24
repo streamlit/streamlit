@@ -63,7 +63,7 @@ Do not use the deprecated `st.components.v1.html` or `st.components.v1.iframe` c
 
 ## Layout
 
-Use `width` instead of deprecated `use_container_width`. Data elements like dataframes and charts stretch by default; buttons default to `width="content"`.
+Use `width` instead of deprecated `use_container_width`. Dataframes and most charts stretch by default; buttons default to `width="content"`.
 
 ```python
 # BAD: Deprecated

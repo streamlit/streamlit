@@ -81,7 +81,7 @@ Step 4: Check if app is running and offer to run it
 
 **Goal:** Determine what the user needs and load the appropriate guidance.
 
-**IMPORTANT — `use_container_width` is deprecated.** Never add `use_container_width` to new code. Use `width="stretch"` or `width="content"` instead. Data elements like dataframes and charts stretch to fill their container by default, but buttons (`st.button`, `st.download_button`, `st.form_submit_button`) default to `width="content"`; pass `width="stretch"` to make a button fill its container. Remove `use_container_width` when you encounter it.
+**IMPORTANT — `use_container_width` is deprecated.** Never add `use_container_width` to new code. Use `width="stretch"` or `width="content"` instead. Dataframes and most charts stretch to fill their container by default, but buttons (`st.button`, `st.download_button`, `st.form_submit_button`) default to `width="content"`; pass `width="stretch"` to make a button fill its container. Remove `use_container_width` when you encounter it.
 
 ### Proactively Look Up API Details
 

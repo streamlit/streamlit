@@ -74,7 +74,7 @@ st.echarts_chart(
 
 ## Deprecated: `use_container_width`
 
-**Do not use `use_container_width`.** It is deprecated — Streamlit elements now stretch to fill their container by default. Use the `width` parameter instead: `width="stretch"` (equivalent to `use_container_width=True`) or `width="content"` (equivalent to `use_container_width=False`). Remove `use_container_width` when you see it, and never add it to new code.
+**Do not use `use_container_width`.** It is deprecated — dataframes and most charts now stretch to fill their container by default. Use the `width` parameter instead: `width="stretch"` (equivalent to `use_container_width=True`) or `width="content"` (equivalent to `use_container_width=False`). Remove `use_container_width` when you see it, and never add it to new code.
 
 ```python
 # BAD: deprecated parameter
