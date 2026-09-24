@@ -372,6 +372,7 @@ describe("Dialog container", () => {
           <div>test content</div>
         </Dialog>
       )
+      expect(screen.getByText("test content")).toBeVisible()
 
       const event = new Event("keydown", { bubbles: true, cancelable: true })
       const stopImmediateSpy = vi.spyOn(event, "stopImmediatePropagation")
