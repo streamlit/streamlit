@@ -63,15 +63,19 @@ Do not use the deprecated `st.components.v1.html` or `st.components.v1.iframe` c
 
 ## Layout
 
-Use `width` instead of deprecated `use_container_width`.
+Use `width` instead of deprecated `use_container_width`. Data elements like dataframes and charts stretch by default; buttons default to `width="content"`.
 
 ```python
 # BAD: Deprecated
 st.dataframe(df, use_container_width=True)
+st.download_button("Download CSV", df.to_csv(), "orders.csv", use_container_width=True)
 
 # GOOD: Default is stretch; set content width only when needed
 st.dataframe(df)
 st.dataframe(df, width="content")
+
+# GOOD: Buttons fit their content by default; stretch them explicitly
+st.download_button("Download CSV", df.to_csv(), "orders.csv", width="stretch")
 ```
 
 Prefer horizontal containers for responsive rows, and reserve columns for fixed grids or specific width ratios.
