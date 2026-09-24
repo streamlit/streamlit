@@ -19,8 +19,12 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
 from e2e_playwright.shared.app_utils import (
     click_button,
     click_checkbox,
+    click_toggle,
     expect_markdown,
     get_element_by_key,
+    get_number_input,
+    get_text_input,
+    select_selectbox_option,
 )
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
@@ -144,4 +148,50 @@ def test_show_widget_border_when_disabled(
     widget_container = get_element_by_key(app, "widget_container")
     assert_snapshot(
         widget_container, name="widget_state-show_widget_border_when_disabled"
+    )
+
+
+def test_delayed_number_input_adopts_prior_session_state_default(app: Page):
+    """A keyed number_input first shown after setdefault must render the stored
+    value, and a follow-up rerun must not clobber it.
+
+    Related to: https://github.com/streamlit/streamlit/issues/17093
+    """
+    click_toggle(app, "Show foo")
+
+    expect(get_number_input(app, "Foo").locator("input").first).to_have_value("100.00")
+    expect_markdown(app, "You entered: 100.0")
+
+    click_button(app, "Rerun delayed-widget tests")
+
+    expect(get_number_input(app, "Foo").locator("input").first).to_have_value("100.00")
+    expect_markdown(app, "You entered: 100.0")
+
+
+def test_conditional_text_input_adopts_prior_session_state_default(app: Page):
+    """A keyed text_input revealed by a selectbox must render the setdefault
+    value, and hiding it must not clear that user key.
+
+    Related to: https://github.com/streamlit/streamlit/issues/9082
+    """
+    expect(get_text_input(app, "input 1").locator("input").first).to_have_value(
+        "input 1"
+    )
+    expect(get_text_input(app, "input 2").locator("input").first).to_have_value(
+        "input 2"
+    )
+
+    select_selectbox_option(app, "select delayed input", "B")
+    expect(get_text_input(app, "input 3").locator("input").first).to_have_value(
+        "input 3"
+    )
+
+    select_selectbox_option(app, "select delayed input", "A")
+    expect(get_text_input(app, "input 2").locator("input").first).to_have_value(
+        "input 2"
+    )
+
+    select_selectbox_option(app, "select delayed input", "B")
+    expect(get_text_input(app, "input 3").locator("input").first).to_have_value(
+        "input 3"
     )

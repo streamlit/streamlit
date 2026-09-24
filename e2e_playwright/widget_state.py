@@ -89,3 +89,28 @@ with st.container(key="widget_container"):
         )
         st.chat_input("st.chat_input", disabled=disabled)
         st.audio_input("st.audio_input", disabled=disabled)
+
+st.header("Delayed first mount after session-state default")
+# Test for https://github.com/streamlit/streamlit/issues/17093
+# and https://github.com/streamlit/streamlit/issues/9082
+#
+# A user key stored while the keyed widget is not registered must be adopted
+# by the widget UI on first mount. A follow-up rerun must not clobber it.
+
+st.session_state.setdefault("foo", 100.0)
+st.session_state.setdefault("input1", "input 1")
+st.session_state.setdefault("input2", "input 2")
+st.session_state.setdefault("input3", "input 3")
+
+if st.toggle("Show foo"):
+    foo = st.number_input("Foo", key="foo")
+    st.write("You entered:", foo)
+
+st.text_input("input 1", key="input1")
+select = st.selectbox("select delayed input", ["A", "B"])
+if select == "A":
+    st.text_input("input 2", key="input2")
+else:
+    st.text_input("input 3", key="input3")
+
+st.button("Rerun delayed-widget tests")

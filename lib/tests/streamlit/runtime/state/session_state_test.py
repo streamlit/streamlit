@@ -4760,10 +4760,12 @@ class RegisterWidgetValueChangedTest(DeltaGeneratorTestCase):
     ) -> None:
         """On normal same-page rerun with param already present, value_changed
         should be False (no restore needed)."""
+        widget_id = "$$ID-hash-my_widget"
         self.session_state._old_state["my_widget"] = "custom_value"
-        self.session_state._set_key_widget_mapping("$$ID-hash-my_widget", "my_widget")
+        self.session_state._set_key_widget_mapping(widget_id, "my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
         self.query_params.set_with_no_forward_msg("my_widget", "custom_value")
-        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+        metadata = _create_test_widget_metadata(widget_id)
 
         result = self.session_state.register_widget(metadata, user_key="my_widget")
 
@@ -4793,19 +4795,20 @@ class RegisterWidgetValueChangedTest(DeltaGeneratorTestCase):
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=MockScriptRunCtx(),
     )
-    def test_value_changed_false_for_non_persisted_remount(
+    def test_value_changed_true_when_prior_run_user_key_exists(
         self, mock_ctx: MagicMock
     ) -> None:
-        """A plain (persist_state=None) widget does not signal value_changed
-        on remount, so the restore behavior is specific to persisted widgets."""
+        """A previous-run user-key value (setdefault / assignment while the
+        widget was unregistered) must set value_changed so the frontend adopts
+        it instead of the widget default. See issues #17093 and #9082."""
         widget_id = "$$ID-hash-my_widget"
         self.session_state._old_state["my_widget"] = "custom_value"
-        self.session_state._set_key_widget_mapping(widget_id, "my_widget")
         metadata = _create_persist_state_metadata(widget_id, None)
 
         result = self.session_state.register_widget(metadata, user_key="my_widget")
 
-        assert result.value_changed is False
+        assert result.value == "custom_value"
+        assert result.value_changed is True
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -4846,6 +4849,47 @@ class RegisterWidgetValueChangedTest(DeltaGeneratorTestCase):
         result = self.session_state.register_widget(metadata, user_key="my_widget")
 
         assert result.value == "custom_value"
+        assert result.value_changed is True
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_value_changed_false_after_non_persisted_unmount(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A persist_state=None widget that was registered then hidden resets
+        to the default on remount. Cleanup drops the widget id; no independent
+        user-key value remains, so the frontend is not told to restore."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, None)
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
+        self.session_state._compact_state()
+        self.session_state._remove_stale_widgets(frozenset())
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "default"
+        assert result.value_changed is False
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_same_run_user_key_assignment_still_sets_value_changed(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A same-run session_state write immediately before the widget still
+        sets value_changed, whether or not persist_state is set."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, None)
+        self.session_state._new_session_state["my_widget"] = "same_run_value"
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "same_run_value"
         assert result.value_changed is True
 
 
@@ -4910,6 +4954,7 @@ class ConditionalRemountBoundBehaviorTest(DeltaGeneratorTestCase):
 
         remounted = self.session_state.register_widget(metadata, user_key="my_widget")
         assert remounted.value == "default"
+        assert remounted.value_changed is False
         assert "my_widget" not in self.query_params._query_params
 
 

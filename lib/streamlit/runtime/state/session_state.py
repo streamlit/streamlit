@@ -1736,19 +1736,26 @@ class SessionState:
             else:
                 self.query_params.discard_param_no_forward_msg(user_key)
 
-        # A persist_state widget resolving to a non-default value from a previous
-        # run (preserved while unmounted, or a compacted programmatic set) must
-        # tell the frontend to adopt the backend value on (re)mount. Otherwise it
-        # renders at its default and the next rerun overwrites the preserved value.
-        # For a bind + persist_state widget this can overlap with
-        # restored_bound_value; that is harmless since both only feed the OR below.
+        # A keyed widget resolving to a non-default value already in old state
+        # must tell the frontend to adopt that value on (re)mount. Otherwise it
+        # renders at its default and the next rerun overwrites the stored value.
+        # This covers persist_state remounts (value preserved under the user key
+        # or widget id) and a previous-run user-key assignment that happened
+        # before the widget first registered (setdefault / session_state write
+        # while the widget was not on screen). persist_state=None unmount still
+        # resets: cleanup drops the widget id, and no independent user-key entry
+        # remains unless one was set as ordinary user state. For a bind +
+        # persist_state widget this can overlap with restored_bound_value; that
+        # is harmless since both only feed the OR below.
         restored_persisted_value = False
         if (
-            metadata.persist_state is not None
-            and user_key is not None
+            user_key is not None
             and not self.is_new_state_value(user_key)
             and widget_id not in self._new_widget_state
-            and (widget_id in self._old_state or user_key in self._old_state)
+            and (
+                user_key in self._old_state
+                or (metadata.persist_state is not None and widget_id in self._old_state)
+            )
         ):
             default_value = metadata.deserializer(None)
             if widget_value != default_value:
@@ -1760,8 +1767,8 @@ class SessionState:
         # - a bound value was restored to the URL — the frontend renders the
         #   widget for the first time on this page and must use the backend's
         #   resolved value instead of the widget's default;
-        # - a persisted value was restored from session state on (re)mount, for
-        #   the same reason;
+        # - a previous-run user-key or persist_state value was restored from
+        #   session state on (re)mount, for the same reason;
         # - a "page"-scoped value was dropped on a page switch, so the frontend
         #   must fall back to the default for the reused widget id.
         widget_value_changed = (
