@@ -43,8 +43,8 @@ def test_chart_sizing(app: Page):
     """
     mermaid_charts = app.get_by_test_id("stMermaidChart")
 
-    # The "Content width" chart (second to last) must render at a visible,
-    # non-zero size rather than collapsing to 0x0.
+    # The content-width chart (nth 7) must render at a visible, non-zero size
+    # rather than collapsing to 0x0.
     content_img = mermaid_charts.nth(7).locator("img")
     expect(content_img).to_be_visible()
     content_box = content_img.bounding_box()
@@ -52,7 +52,7 @@ def test_chart_sizing(app: Page):
     assert content_box["width"] > 50, content_box
     assert content_box["height"] > 20, content_box
 
-    # The tall chart (last) must not be clamped to a short strip: its height
+    # The tall chart (nth 8) must not be clamped to a short strip: its height
     # should clearly exceed the previous 25rem (~400px) inline max-height.
     tall_img = mermaid_charts.nth(8).locator("img")
     expect(tall_img).to_be_visible()
@@ -148,14 +148,19 @@ def test_mermaid_chart_alt_sets_accessible_name(app: Page):
         "stMermaidChart"
     )
     expect(unlabeled.locator("img")).to_have_accessible_name("Mermaid flowchart")
-    expect(unlabeled.locator("img")).not_to_have_accessible_name(
-        "Decision flow from start to cancel"
-    )
 
-    # Non-flowchart grammar: sequence diagram also receives injected accTitle.
+    # Non-flowchart grammars: sequence and mindmap (accTitle-unsafe) both work.
     sequence = get_element_by_key(app, "mermaid_sequence_with_alt").get_by_test_id(
         "stMermaidChart"
     )
     expect(sequence.locator("img")).to_have_accessible_name(
         "User to app to server API handshake"
+    )
+
+    mindmap = get_element_by_key(app, "mermaid_mindmap_with_alt").get_by_test_id(
+        "stMermaidChart"
+    )
+    expect(mindmap.locator("img")).to_be_visible()
+    expect(mindmap.locator("img")).to_have_accessible_name(
+        "Streamlit element and widget taxonomy"
     )

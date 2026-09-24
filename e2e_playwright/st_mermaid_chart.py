@@ -97,7 +97,9 @@ gantt
 """)
 
 st.subheader("Mind Map")
-st.mermaid_chart("""
+with st.container(key="mermaid_mindmap_with_alt"):
+    st.mermaid_chart(
+        """
 mindmap
     root((Streamlit))
         Elements
@@ -112,7 +114,9 @@ mindmap
             Columns
             Tabs
             Containers
-""")
+""",
+        alt="Streamlit element and widget taxonomy",
+    )
 
 # Sizing regression cases (kept last so existing snapshot indices are stable).
 st.subheader("Content width")
@@ -123,7 +127,6 @@ st.mermaid_chart("graph TD\n" + "\n".join(f"    N{i} --> N{i + 1}" for i in rang
 
 # Keyed for accessible-name assertions. Appended last so the nth offsets
 # used by the snapshot tests above stay stable.
-# Unlabeled baseline: first flowchart uses key="mermaid_without_alt".
 with st.container(key="mermaid_with_alt"):
     st.mermaid_chart(
         "graph TD\n    A --> B",

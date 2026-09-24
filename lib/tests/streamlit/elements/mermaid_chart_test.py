@@ -23,7 +23,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.mermaid_chart import (
-    _apply_alt_as_acc_title,
+    _apply_alt_marker,
     _strip_mermaid_accessibility_directives,
 )
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -109,12 +109,12 @@ graph LR
                 assert getattr(el.width_config, field_name) == field_value
 
     def test_mermaid_chart_with_alt(self) -> None:
-        """Non-blank alt is injected as accTitle after the diagram type."""
+        """Non-blank alt is injected as a %% stAlt comment before the diagram type."""
         st.mermaid_chart("graph TD\n    A --> B", alt="Decision flow")
 
         element = self.get_delta_from_queue().new_element.markdown
         assert element.body == (
-            "````mermaid\ngraph TD\naccTitle: Decision flow\n    A --> B\n````"
+            "````mermaid\n%% stAlt: Decision flow\ngraph TD\n    A --> B\n````"
         )
 
     def test_mermaid_chart_alt_strips_whitespace(self) -> None:
@@ -123,7 +123,7 @@ graph LR
 
         element = self.get_delta_from_queue().new_element.markdown
         assert element.body == (
-            "````mermaid\ngraph TD\naccTitle: Decision flow\n    A --> B\n````"
+            "````mermaid\n%% stAlt: Decision flow\ngraph TD\n    A --> B\n````"
         )
 
     @parameterized.expand([("",), ("   ",), ("\t\n",)])
@@ -134,6 +134,7 @@ graph LR
 
         element = self.get_delta_from_queue().new_element.markdown
         assert element.body == f"````mermaid\n{diagram}\n````"
+        assert "%% stAlt:" not in element.body
         assert "accTitle:" not in element.body
 
     def test_mermaid_chart_alt_none_is_noop(self) -> None:
@@ -153,96 +154,110 @@ graph LR
             st.mermaid_chart(diagram, alt="Streamlit alt")
 
         element = self.get_delta_from_queue().new_element.markdown
-        assert "accTitle: Streamlit alt\n" in element.body
+        assert "%% stAlt: Streamlit alt\n" in element.body
         assert "Old title" not in element.body
         assert "Old description" not in element.body
+        assert "accTitle:" not in element.body
         assert "accDescr:" not in element.body
         mock_warning.assert_called_once()
         assert mock_warning.call_args.kwargs.get("stack_info") is True
-        # Replaced directives are included in the warning for debugging.
         assert "Old title" in str(mock_warning.call_args)
 
     def test_mermaid_chart_alt_preserves_adversarial_text(self) -> None:
-        """Adversarial plain text is preserved literally inside accTitle."""
+        """Adversarial plain text is preserved literally inside %% stAlt."""
         adversarial = 'Title with "quotes" & <tags> and `ticks`'
         st.mermaid_chart("graph TD\n    A --> B", alt=adversarial)
 
         element = self.get_delta_from_queue().new_element.markdown
-        assert f"accTitle: {adversarial}\n" in element.body
+        assert f"%% stAlt: {adversarial}\n" in element.body
 
     def test_mermaid_chart_alt_collapses_multiline(self) -> None:
-        """Interior newlines in alt become spaces so Mermaid stays one statement."""
+        """Interior newlines in alt become spaces so Mermaid stays one comment."""
         st.mermaid_chart("graph TD\n    A --> B", alt="Revenue chart\nby quarter")
 
         element = self.get_delta_from_queue().new_element.markdown
         assert element.body == (
-            "````mermaid\ngraph TD\naccTitle: Revenue chart by quarter\n    A --> B\n````"
+            "````mermaid\n%% stAlt: Revenue chart by quarter\ngraph TD\n    A --> B\n````"
         )
 
     def test_mermaid_chart_alt_one_line_body(self) -> None:
-        """accTitle is inserted on its own line even when body has no newlines."""
+        """%% stAlt is inserted on its own line even when body has no newlines."""
         st.mermaid_chart("graph TD; A-->B", alt="One line flow")
 
         element = self.get_delta_from_queue().new_element.markdown
-        # Fence always adds a trailing newline after body.
         assert element.body == (
-            "````mermaid\ngraph TD; A-->B\naccTitle: One line flow\n\n````"
+            "````mermaid\n%% stAlt: One line flow\ngraph TD; A-->B\n````"
         )
+
+    def test_mermaid_chart_alt_works_on_mindmap(self) -> None:
+        """mindmap rejects accTitle; %% stAlt must still be injected without rewriting nodes."""
+        diagram = "mindmap\n    root((App))\n        Leaf"
+        st.mermaid_chart(diagram, alt="App taxonomy")
+
+        element = self.get_delta_from_queue().new_element.markdown
+        assert element.body == (
+            "````mermaid\n%% stAlt: App taxonomy\nmindmap\n    root((App))\n        Leaf\n````"
+        )
+        assert "accTitle:" not in element.body
 
 
 @pytest.mark.parametrize(
     ("body", "expected"),
     [
-        ("flowchart TD\nA --> B", ("flowchart TD\nA --> B", False)),
+        ("flowchart TD\nA --> B", ("flowchart TD\nA --> B", [])),
         (
             "flowchart TD\naccTitle: Checkout\nA --> B",
-            ("flowchart TD\nA --> B", True),
+            ("flowchart TD\nA --> B", ["accTitle: Checkout"]),
         ),
         (
             "flowchart TD\naccDescr: Steps\nA --> B",
-            ("flowchart TD\nA --> B", True),
+            ("flowchart TD\nA --> B", ["accDescr: Steps"]),
         ),
         (
             "flowchart TD\naccTitle: Title\naccDescr: Desc\nA --> B",
-            ("flowchart TD\nA --> B", True),
+            ("flowchart TD\nA --> B", ["accTitle: Title", "accDescr: Desc"]),
         ),
         (
             "flowchart TD\naccDescr {\n  First line\n  Second line\n}\nA --> B",
-            ("flowchart TD\nA --> B", True),
+            ("flowchart TD\nA --> B", ["accDescr {\n  First line\n  Second line\n}"]),
+        ),
+        (
+            "%% stAlt: Old\nflowchart TD\nA --> B",
+            ("flowchart TD\nA --> B", ["%% stAlt: Old"]),
         ),
     ],
 )
 def test_strip_mermaid_accessibility_directives(
-    body: str, expected: tuple[str, bool]
+    body: str, expected: tuple[str, list[str]]
 ) -> None:
-    """Strip single-line and multi-line Mermaid accessibility directives."""
+    """Strip stAlt / accTitle / accDescr and return the removed directive text."""
     assert _strip_mermaid_accessibility_directives(body) == expected
 
 
-def test_apply_alt_as_acc_title_inserts_after_diagram_type() -> None:
-    """accTitle is inserted after the diagram type line, not before it."""
+def test_apply_alt_marker_inserts_before_diagram_type() -> None:
+    """%% stAlt is inserted before the diagram type after stripping directives."""
     body = "flowchart TD\naccTitle: Old\nA --> B"
     with patch("streamlit.elements.mermaid_chart._LOGGER.warning") as mock_warning:
-        result = _apply_alt_as_acc_title(body, "New title")
+        result = _apply_alt_marker(body, "New title")
 
-    assert result == "flowchart TD\naccTitle: New title\nA --> B"
+    assert result == "%% stAlt: New title\nflowchart TD\nA --> B"
     mock_warning.assert_called_once()
     assert mock_warning.call_args.kwargs.get("stack_info") is True
 
 
-def test_apply_alt_as_acc_title_no_warning_without_directives() -> None:
+def test_apply_alt_marker_no_warning_without_directives() -> None:
     """No override warning when the body has no accessibility directives."""
     with patch("streamlit.elements.mermaid_chart._LOGGER.warning") as mock_warning:
-        result = _apply_alt_as_acc_title("flowchart TD\nA --> B", "New title")
+        result = _apply_alt_marker("flowchart TD\nA --> B", "New title")
 
-    assert result == "flowchart TD\naccTitle: New title\nA --> B"
+    assert result == "%% stAlt: New title\nflowchart TD\nA --> B"
     mock_warning.assert_not_called()
 
 
-def test_apply_alt_as_acc_title_skips_leading_blank_lines() -> None:
-    """Leading blank lines are preserved; accTitle still follows the type."""
-    result = _apply_alt_as_acc_title("\ngraph TD\n    A --> B", "Decision flow")
-    assert result == "\ngraph TD\naccTitle: Decision flow\n    A --> B"
+def test_apply_alt_marker_skips_leading_blank_lines() -> None:
+    """Leading blank lines are preserved; %% stAlt still precedes the type."""
+    result = _apply_alt_marker("\ngraph TD\n    A --> B", "Decision flow")
+    assert result == "\n%% stAlt: Decision flow\ngraph TD\n    A --> B"
 
 
 @pytest.mark.parametrize(
@@ -250,38 +265,50 @@ def test_apply_alt_as_acc_title_skips_leading_blank_lines() -> None:
     [
         (
             "%% comment\ngraph TD\n    A --> B",
-            "%% comment\ngraph TD\naccTitle: Named\n    A --> B",
+            "%% comment\n%% stAlt: Named\ngraph TD\n    A --> B",
         ),
         (
             "%%{init: {'theme': 'dark'}}%%\ngraph TD\n    A --> B",
-            "%%{init: {'theme': 'dark'}}%%\ngraph TD\naccTitle: Named\n    A --> B",
+            "%%{init: {'theme': 'dark'}}%%\n%% stAlt: Named\ngraph TD\n    A --> B",
+        ),
+        (
+            "%%{\ninit: {'theme': 'dark'}\n}%%\ngraph TD\n    A --> B",
+            "%%{\ninit: {'theme': 'dark'}\n}%%\n%% stAlt: Named\ngraph TD\n    A --> B",
         ),
         (
             "---\ntitle: Meta\n---\ngraph TD\n    A --> B",
-            "---\ntitle: Meta\n---\ngraph TD\naccTitle: Named\n    A --> B",
+            "---\ntitle: Meta\n---\n%% stAlt: Named\ngraph TD\n    A --> B",
         ),
         (
             "%% lead\n---\ntitle: Meta\n---\n%% more\ngraph TD\n    A --> B",
-            "%% lead\n---\ntitle: Meta\n---\n%% more\ngraph TD\naccTitle: Named\n    A --> B",
+            "%% lead\n---\ntitle: Meta\n---\n%% more\n%% stAlt: Named\ngraph TD\n    A --> B",
         ),
     ],
 )
-def test_apply_alt_as_acc_title_skips_preamble(body: str, expected: str) -> None:
-    """accTitle follows the diagram type after comments, init, and frontmatter."""
-    assert _apply_alt_as_acc_title(body, "Named") == expected
+def test_apply_alt_marker_skips_preamble(body: str, expected: str) -> None:
+    """%% stAlt precedes the diagram type after comments, init, and frontmatter."""
+    assert _apply_alt_marker(body, "Named") == expected
 
 
-def test_apply_alt_as_acc_title_one_line_body() -> None:
-    """Missing trailing newline on the type line still yields a separate accTitle line."""
+def test_apply_alt_marker_one_line_body() -> None:
+    """One-line bodies get %% stAlt on a preceding line."""
     assert (
-        _apply_alt_as_acc_title("graph TD; A-->B", "One line")
-        == "graph TD; A-->B\naccTitle: One line\n"
+        _apply_alt_marker("graph TD; A-->B", "One line")
+        == "%% stAlt: One line\ngraph TD; A-->B"
     )
 
 
-def test_apply_alt_as_acc_title_collapses_multiline_alt() -> None:
+def test_apply_alt_marker_collapses_multiline_alt() -> None:
     """Newlines inside alt are collapsed before injection."""
     assert (
-        _apply_alt_as_acc_title("graph TD\nA-->B", "Line one\nLine two")
-        == "graph TD\naccTitle: Line one Line two\nA-->B"
+        _apply_alt_marker("graph TD\nA-->B", "Line one\nLine two")
+        == "%% stAlt: Line one Line two\ngraph TD\nA-->B"
+    )
+
+
+def test_apply_alt_marker_mindmap_safe() -> None:
+    """mindmap keeps rendering because %% stAlt is a comment, not a node."""
+    assert (
+        _apply_alt_marker("mindmap\n    root((App))", "Taxonomy")
+        == "%% stAlt: Taxonomy\nmindmap\n    root((App))"
     )

@@ -30,37 +30,48 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = get_logger(__name__)
 
-# Strip the same accTitle / accDescr forms the frontend reads for the img
-# accessible name (MermaidChart.tsx): single-line directives plus
-# multi-line accDescr { ... }.
+# Match MermaidChart.tsx's accessible-name sources so a Python-injected marker
+# is the only author name when alt is set: Streamlit's parser-ignored
+# ``%% stAlt:`` marker, plus Mermaid accTitle / accDescr forms.
+_ST_ALT_LINE: Final = re.compile(r"^\s*%%\s*stAlt\s*:[^\n]*\n?", re.MULTILINE)
 _ACC_TITLE_LINE: Final = re.compile(r"^\s*accTitle\s*:[^\n]*\n?", re.MULTILINE)
 _ACC_DESCR_LINE: Final = re.compile(r"^\s*accDescr\s*:[^\n]*\n?", re.MULTILINE)
 _ACC_DESCR_BLOCK: Final = re.compile(r"^\s*accDescr\s*\{[^}]*\}\s*\n?", re.MULTILINE)
 
+# Marker written into the diagram source when ``alt`` is set. Mermaid treats
+# ``%%`` lines as comments in every grammar; ``accTitle`` is not safe for
+# mindmap / kanban / block-beta and similar types.
+_ST_ALT_PREFIX: Final = "%% stAlt: "
 
-def _strip_mermaid_accessibility_directives(body: str) -> tuple[str, bool]:
-    """Remove accTitle / accDescr directives, returning the body and whether any were found."""
-    stripped, title_count = _ACC_TITLE_LINE.subn("", body)
-    stripped, descr_line_count = _ACC_DESCR_LINE.subn("", stripped)
-    stripped, descr_block_count = _ACC_DESCR_BLOCK.subn("", stripped)
-    removed = (title_count + descr_line_count + descr_block_count) > 0
+
+def _strip_mermaid_accessibility_directives(body: str) -> tuple[str, list[str]]:
+    """Remove stAlt / accTitle / accDescr directives.
+
+    Returns the cleaned body and each removed directive (whitespace-trimmed),
+    so override warnings can report exactly what was stripped.
+    """
+    removed: list[str] = []
+
+    def _sub_collecting(pattern: re.Pattern[str], text: str) -> str:
+        def _replacer(match: re.Match[str]) -> str:
+            removed.append(match.group(0).strip())
+            return ""
+
+        return pattern.sub(_replacer, text)
+
+    stripped = _sub_collecting(_ST_ALT_LINE, body)
+    stripped = _sub_collecting(_ACC_TITLE_LINE, stripped)
+    stripped = _sub_collecting(_ACC_DESCR_LINE, stripped)
+    stripped = _sub_collecting(_ACC_DESCR_BLOCK, stripped)
     return stripped, removed
-
-
-def _collect_accessibility_directive_text(body: str) -> list[str]:
-    """Return stripped matches of accTitle / accDescr directives in ``body``."""
-    found: list[str] = []
-    for pattern in (_ACC_TITLE_LINE, _ACC_DESCR_LINE, _ACC_DESCR_BLOCK):
-        found.extend(match.group(0).strip() for match in pattern.finditer(body))
-    return found
 
 
 def _skip_mermaid_preamble(lines: list[str]) -> int:
     """Index of the diagram-type line after blank, ``%%``, and YAML frontmatter.
 
-    Mermaid strips comments, ``%%{init}%%`` directives, and ``---`` frontmatter
-    before detecting the diagram type, so ``accTitle`` must follow that type
-    line — not an earlier preamble line.
+    Mermaid strips comments, ``%%{init}%%`` directives (including multiline),
+    and ``---`` frontmatter before detecting the diagram type. The ``%% stAlt:``
+    marker is inserted just before that type line.
     """
     i = 0
     n = len(lines)
@@ -68,6 +79,15 @@ def _skip_mermaid_preamble(lines: list[str]) -> int:
         stripped = lines[i].strip()
         if not stripped:
             i += 1
+            continue
+        if stripped.startswith("%%{"):
+            # Single- or multi-line init/config directive until }%%.
+            if "}%%" not in stripped:
+                i += 1
+                while i < n and "}%%" not in lines[i]:
+                    i += 1
+            if i < n:
+                i += 1
             continue
         if stripped.startswith("%%"):
             i += 1
@@ -83,38 +103,32 @@ def _skip_mermaid_preamble(lines: list[str]) -> int:
     return i
 
 
-def _apply_alt_as_acc_title(body: str, normalized_alt: str) -> str:
-    """Strip existing accessibility directives and insert ``accTitle``.
+def _apply_alt_marker(body: str, normalized_alt: str) -> str:
+    """Strip existing accessibility directives and insert ``%% stAlt:``.
 
-    Mermaid requires the diagram type before accessibility directives;
-    placing ``accTitle`` first fails with "No diagram type detected".
-    Insert after the diagram type line, skipping blank lines, ``%%``
-    comments/directives, and YAML ``---`` frontmatter.
+    Uses a Mermaid comment marker rather than ``accTitle`` so every diagram
+    grammar Streamlit ships (including mindmap, kanban, block-beta) keeps
+    rendering. The frontend maps ``%% stAlt:`` to the ``<img>`` accessible name.
 
     ``normalized_alt`` comes from ``normalize_alt`` (outer-stripped). Interior
-    whitespace is collapsed so a multi-line ``alt`` cannot inject extra Mermaid
-    statements.
+    whitespace is collapsed so a multi-line ``alt`` cannot inject extra lines.
     """
-    existing = _collect_accessibility_directive_text(body)
     stripped, removed = _strip_mermaid_accessibility_directives(body)
-    # Collapse interior whitespace so newlines in alt cannot become diagram lines.
     single_line_alt = " ".join(normalized_alt.split())
     if removed:
         _LOGGER.warning(
             "The Mermaid diagram already sets accessibility directives %r. "
             "The alt=%r parameter overrides them for the accessible name.",
-            existing,
+            removed,
             single_line_alt,
             stack_info=True,
         )
 
     lines = stripped.splitlines(keepends=True)
-    type_at = _skip_mermaid_preamble(lines)
-    insert_at = type_at + 1 if type_at < len(lines) else type_at
+    insert_at = _skip_mermaid_preamble(lines)
     if insert_at > 0 and not lines[insert_at - 1].endswith("\n"):
-        # One-line bodies have no trailing newline; ensure accTitle starts a line.
         lines[insert_at - 1] += "\n"
-    lines.insert(insert_at, f"accTitle: {single_line_alt}\n")
+    lines.insert(insert_at, f"{_ST_ALT_PREFIX}{single_line_alt}\n")
     return "".join(lines)
 
 
@@ -162,8 +176,9 @@ class MermaidChartMixin:
             and is logged so authors notice the dual meaning of ``alt=""``
             across commands (decorative only on ``st.image`` / ``st.pyplot``).
 
-            When ``alt`` is set, Streamlit inserts it into ``body`` as Mermaid
-            ``accTitle`` (visible via Copy Source), replacing any ``accTitle`` /
+            When ``alt`` is set, Streamlit inserts it into ``body`` as a
+            Mermaid comment (``%% stAlt: …``, visible via Copy Source) so every
+            diagram type keeps rendering, and replaces any ``accTitle`` /
             ``accDescr`` already present. Describe what the diagram shows
             rather than repeating text that is already visible on the page.
             This is a short name, not a full text alternative for a dense
@@ -193,7 +208,7 @@ class MermaidChartMixin:
         """
         normalized_alt = normalize_alt(alt)
         if normalized_alt is not None:
-            body = _apply_alt_as_acc_title(body, normalized_alt)
+            body = _apply_alt_marker(body, normalized_alt)
 
         # Dynamically calculate the fence length to be longer than any backtick
         # sequence in the body, ensuring the fence cannot be prematurely closed.

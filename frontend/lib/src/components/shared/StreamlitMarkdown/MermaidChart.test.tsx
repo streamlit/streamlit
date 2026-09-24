@@ -245,6 +245,25 @@ describe("MermaidChart", () => {
 
     it.each([
       {
+        name: "Streamlit stAlt marker",
+        source: [
+          "mindmap",
+          "%% stAlt: Streamlit taxonomy",
+          "root((App))",
+        ].join("\n"),
+        expectedAlt: "Streamlit taxonomy",
+      },
+      {
+        name: "stAlt preferred over accTitle",
+        source: [
+          "flowchart TD",
+          "%% stAlt: From Streamlit",
+          "accTitle: From Mermaid",
+          "A-->B",
+        ].join("\n"),
+        expectedAlt: "From Streamlit",
+      },
+      {
         name: "title and description",
         source: [
           "flowchart TD",
