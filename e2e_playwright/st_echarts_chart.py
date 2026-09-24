@@ -346,3 +346,44 @@ with st.container(key="c_stretch_height"):
         key="stretch_height",
         height="stretch",
     )
+
+# Accessible-name scenarios (labeled, unlabeled, and alt overriding an author
+# description). One E2E test covers all three.
+with st.container(key="c_echarts_alt"):
+    st.echarts_chart(
+        {
+            "xAxis": {"type": "category", "data": ["A", "B", "C"]},
+            "yAxis": {"type": "value"},
+            "series": [{"type": "bar", "data": [12, 24, 18]}],
+            **_NO_ANIM,
+        },
+        key="echarts_alt",
+        height=_HEIGHT,
+        alt="Bar chart of categories A, B, and C",
+    )
+
+with st.container(key="c_echarts_no_alt"):
+    st.echarts_chart(
+        {
+            "xAxis": {"type": "category", "data": ["A", "B", "C"]},
+            "yAxis": {"type": "value"},
+            "series": [{"type": "bar", "data": [12, 24, 18]}],
+            **_NO_ANIM,
+        },
+        key="echarts_no_alt",
+        height=_HEIGHT,
+    )
+
+with st.container(key="c_echarts_alt_overrides_description"):
+    st.echarts_chart(
+        {
+            "xAxis": {"type": "category", "data": ["A", "B", "C"]},
+            "yAxis": {"type": "value"},
+            "series": [{"type": "bar", "data": [12, 24, 18]}],
+            "aria": {"label": {"description": "Author ECharts description"}},
+            **_NO_ANIM,
+        },
+        key="echarts_alt_overrides_description",
+        height=_HEIGHT,
+        alt="Streamlit alt overrides description",
+    )
