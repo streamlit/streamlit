@@ -23,9 +23,15 @@ import streamlit as st
 df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
 
 st.subheader("Dataframe alt")
-st.dataframe(df, alt="Top 20 customers by revenue", key="df_labeled")
-st.dataframe(df, key="df_unlabeled")
+# Display-only dataframe keys are not element IDs — wrap unlabeled (and labeled)
+# cases in keyed containers so e2e can target them without nth().
+with st.container(key="df_labeled"):
+    st.dataframe(df, alt="Top 20 customers by revenue")
+with st.container(key="df_unlabeled"):
+    st.dataframe(df)
 
 st.subheader("Data editor alt")
-st.data_editor(df, alt="Editable customer list", key="editor_labeled")
-st.data_editor(df, key="editor_unlabeled")
+with st.container(key="editor_labeled"):
+    st.data_editor(df, alt="Editable customer list", key="editor_labeled_widget")
+with st.container(key="editor_unlabeled"):
+    st.data_editor(df, key="editor_unlabeled_widget")

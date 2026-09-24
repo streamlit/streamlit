@@ -240,6 +240,12 @@ describe("DataFrame widget", () => {
     // Outer wrapper stays unnamed so the toolbar is outside the named region.
     expect(screen.getByTestId("stDataFrame")).not.toHaveAttribute("role")
     expect(screen.getByTestId("stDataFrame")).not.toHaveAttribute("aria-label")
+    // Glide still mounts under the named host and is not aria-hidden
+    // (unit tests mock DataEditor as mock-data-editor).
+    const glideEditor = screen.getByTestId("mock-data-editor")
+    expect(glideEditor).toBeVisible()
+    expect(gridHost).toContainElement(glideEditor)
+    expect(gridHost).not.toHaveAttribute("aria-hidden")
   })
 
   it("omits role and aria-label when alt is not provided", () => {

@@ -14,22 +14,38 @@
 
 from playwright.sync_api import Page, expect
 
+from e2e_playwright.shared.app_utils import get_element_by_key
+
 
 def test_dataframe_and_data_editor_accessible_names(app: Page):
     """Verify authored and omitted alt map to the grid host accessible name."""
     # Name lives on stDataFrameResizable (grid host under the toolbar), not the
     # outer stDataFrame wrapper that also hosts toolbar actions.
-    grids = app.get_by_test_id("stDataFrameResizable")
-    expect(grids).to_have_count(4)
+    labeled_df = get_element_by_key(app, "df_labeled").get_by_test_id(
+        "stDataFrameResizable"
+    )
+    unlabeled_df = get_element_by_key(app, "df_unlabeled").get_by_test_id(
+        "stDataFrameResizable"
+    )
+    labeled_editor = get_element_by_key(app, "editor_labeled").get_by_test_id(
+        "stDataFrameResizable"
+    )
+    unlabeled_editor = get_element_by_key(app, "editor_unlabeled").get_by_test_id(
+        "stDataFrameResizable"
+    )
 
-    expect(grids.nth(0)).to_have_accessible_name("Top 20 customers by revenue")
-    expect(grids.nth(0)).to_have_attribute("role", "region")
+    expect(labeled_df).to_have_accessible_name("Top 20 customers by revenue")
+    expect(labeled_df).to_have_attribute("role", "region")
+    expect(app.get_by_role("region", name="Top 20 customers by revenue")).to_have_count(
+        1
+    )
 
-    expect(grids.nth(1)).to_have_accessible_name("")
-    expect(grids.nth(1)).not_to_have_attribute("role", "region")
+    expect(unlabeled_df).to_have_accessible_name("")
+    expect(unlabeled_df).not_to_have_attribute("role", "region")
 
-    expect(grids.nth(2)).to_have_accessible_name("Editable customer list")
-    expect(grids.nth(2)).to_have_attribute("role", "region")
+    expect(labeled_editor).to_have_accessible_name("Editable customer list")
+    expect(labeled_editor).to_have_attribute("role", "region")
+    expect(app.get_by_role("region", name="Editable customer list")).to_have_count(1)
 
-    expect(grids.nth(3)).to_have_accessible_name("")
-    expect(grids.nth(3)).not_to_have_attribute("role", "region")
+    expect(unlabeled_editor).to_have_accessible_name("")
+    expect(unlabeled_editor).not_to_have_attribute("role", "region")

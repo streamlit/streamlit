@@ -981,6 +981,7 @@ class DataEditorStableIdTest(DeltaGeneratorTestCase):
             column_config={"a": "A"},
             row_height=25,
             placeholder="Empty",
+            alt="First description",
         )
         id2 = self._get_id(
             df,
@@ -991,6 +992,7 @@ class DataEditorStableIdTest(DeltaGeneratorTestCase):
             column_config={"a": "Renamed A"},
             row_height=35,
             placeholder="Nothing here",
+            alt="A totally different description",
         )
 
         assert id1 == id2
@@ -1120,7 +1122,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.placeholder == "N/A"
 
-    def test_data_editor_alt(self) -> None:
+    def test_data_editor_marshals_nonempty_alt_and_omits_blank_values(self) -> None:
         """A non-empty alt is stored on the proto; omitted/None/blank leave it unset."""
         df = pd.DataFrame({"A": [1, 2]})
 
