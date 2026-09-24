@@ -249,9 +249,6 @@ if "runs" not in st.session_state:
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
 
-# Keep Apply above the field so a type-then-click is not intercepted by the
-# calendar popover (placement is bottom-start).
-apply_clicked = st.button("Apply ignore date", key="apply_ignore_date")
 ignore_date = st.date_input(
     "Ignore change date input",
     value=date(2025, 1, 15),
@@ -263,5 +260,5 @@ ignore_date = st.date_input(
 )
 st.write("Ignore date value:", ignore_date)
 
-if apply_clicked:
+if st.button("Apply ignore date", key="apply_ignore_date"):
     st.write("Applied ignore date value:", ignore_date)
