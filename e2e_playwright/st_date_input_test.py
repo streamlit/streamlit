@@ -1135,19 +1135,9 @@ def test_date_input_on_change_ignore(app: Page):
         app.get_by_text("Applied ignore date value: 2025-02-01", exact=True)
     ).to_be_visible()
 
-    # Type a new date and close the popover (Escape). Clicking Apply while the
-    # calendar overlay is open is intercepted on webkit/firefox. Close-commit is
-    # the same path as blur; handleBlur + ignoreRerun is covered in unit tests.
-    type_date(date_field, "2025", "02", "10")
-    wait_for_app_run(app)
-    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
-    expect(app.get_by_text("Runs: 3", exact=True)).not_to_be_visible()
-    expect(app.get_by_text("Ignore date value: 2025-02-01", exact=True)).to_be_visible()
-    expect(app).to_have_url(re.compile(r"[?&]ignore_date=2025-02-10"))
-    expect(spinbuttons.nth(0)).to_have_text("2025")
-    expect(spinbuttons.nth(1)).to_have_text("02")
-    expect(spinbuttons.nth(2)).to_have_text("10")
-
+    # Type-then-click: Apply lives in the sidebar so the calendar overlay cannot
+    # intercept it. Blur/close commits the dirty value, then the button reruns.
+    type_date(date_field, "2025", "02", "10", commit=False)
     app.get_by_role("button", name="Apply ignore date", exact=True).click()
     wait_for_app_run(app)
 
@@ -1156,6 +1146,7 @@ def test_date_input_on_change_ignore(app: Page):
     expect(
         app.get_by_text("Applied ignore date value: 2025-02-10", exact=True)
     ).to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_date=2025-02-10"))
 
     # Calendar selection commits immediately without a rerun, and updates the URL.
     date_field.get_by_role("spinbutton").first.click()

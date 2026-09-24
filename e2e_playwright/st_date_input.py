@@ -260,5 +260,7 @@ ignore_date = st.date_input(
 )
 st.write("Ignore date value:", ignore_date)
 
-if st.button("Apply ignore date", key="apply_ignore_date"):
+# Sidebar keeps Apply out from under the calendar overlay so a type-then-click
+# can blur-commit the dirty field and rerun in one action.
+if st.sidebar.button("Apply ignore date", key="apply_ignore_date"):
     st.write("Applied ignore date value:", ignore_date)
