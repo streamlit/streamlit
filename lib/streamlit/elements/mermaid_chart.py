@@ -30,13 +30,16 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = get_logger(__name__)
 
-# Match MermaidChart.tsx's accessible-name sources so a Python-injected marker
-# is the only author name when alt is set: Streamlit's parser-ignored
-# ``%% stAlt:`` marker, plus Mermaid accTitle / accDescr forms.
+# When alt is set, strip every source the frontend would treat as an author
+# name so the injected ``%% stAlt:`` marker is the only one.
 _ST_ALT_LINE: Final = re.compile(r"^\s*%%\s*stAlt\s*:[^\n]*\n?", re.MULTILINE)
 _ACC_TITLE_LINE: Final = re.compile(r"^\s*accTitle\s*:[^\n]*\n?", re.MULTILINE)
 _ACC_DESCR_LINE: Final = re.compile(r"^\s*accDescr\s*:[^\n]*\n?", re.MULTILINE)
-_ACC_DESCR_BLOCK: Final = re.compile(r"^\s*accDescr\s*\{[^}]*\}\s*\n?", re.MULTILINE)
+# Trailing whitespace must stay same-line ([^\S\n]*); bare \s* would eat the
+# next line's indentation on whitespace-sensitive grammars (e.g. timeline).
+_ACC_DESCR_BLOCK: Final = re.compile(
+    r"^\s*accDescr\s*\{[^}]*\}[^\S\n]*\n?", re.MULTILINE
+)
 
 # Marker written into the diagram source when ``alt`` is set. Mermaid treats
 # ``%%`` lines as comments in every grammar; ``accTitle`` is not safe for
@@ -67,11 +70,10 @@ def _strip_mermaid_accessibility_directives(body: str) -> tuple[str, list[str]]:
 
 
 def _skip_mermaid_preamble(lines: list[str]) -> int:
-    """Index of the diagram-type line after blank, ``%%``, and YAML frontmatter.
+    """Skip leading comments, ``%%{init}%%`` directives, and YAML frontmatter.
 
-    Mermaid strips comments, ``%%{init}%%`` directives (including multiline),
-    and ``---`` frontmatter before detecting the diagram type. The ``%% stAlt:``
-    marker is inserted just before that type line.
+    The ``%% stAlt:`` marker is inserted immediately before the diagram type
+    so init directives and frontmatter stay at the start of the source.
     """
     i = 0
     n = len(lines)
@@ -80,6 +82,7 @@ def _skip_mermaid_preamble(lines: list[str]) -> int:
         if not stripped:
             i += 1
             continue
+        # %%{ must be handled before %% so multiline init is skipped as one block.
         if stripped.startswith("%%{"):
             # Single- or multi-line init/config directive until }%%.
             if "}%%" not in stripped:
@@ -177,12 +180,12 @@ class MermaidChartMixin:
             across commands (decorative only on ``st.image`` / ``st.pyplot``).
 
             When ``alt`` is set, Streamlit inserts it into ``body`` as a
-            Mermaid comment (``%% stAlt: …``, visible via Copy Source) so every
-            diagram type keeps rendering, and replaces any ``accTitle`` /
-            ``accDescr`` already present. Describe what the diagram shows
-            rather than repeating text that is already visible on the page.
-            This is a short name, not a full text alternative for a dense
-            diagram.
+            Mermaid comment (``%% stAlt: …``, visible via Copy Source),
+            collapsing any line breaks in ``alt`` to spaces so every diagram
+            type keeps rendering, and replaces any ``accTitle`` / ``accDescr``
+            already present. Describe what the diagram shows rather than
+            repeating text that is already visible on the page. This is a
+            short name, not a full text alternative for a dense diagram.
 
         Examples
         --------

@@ -132,8 +132,8 @@ function extractAccessibilityInfo(source: string): {
 }
 
 /**
- * Streamlit-authored accessible name injected by ``st.mermaid_chart(alt=...)``.
- * Uses a ``%%`` comment so every Mermaid grammar ignores it (unlike ``accTitle``).
+ * Streamlit-authored accessible name from st.mermaid_chart(alt=...).
+ * Uses a %% comment so every Mermaid grammar ignores it (unlike accTitle).
  */
 function extractStreamlitAlt(source: string): string | undefined {
   const match = /^\s*%%\s*stAlt\s*:\s*(.+)$/m.exec(source)
@@ -142,7 +142,7 @@ function extractStreamlitAlt(source: string): string | undefined {
 
 /**
  * Generates accessible alt text for a mermaid diagram.
- * Prefers Streamlit's ``%% stAlt:`` marker, then author accTitle/accDescr,
+ * Prefers Streamlit's %% stAlt: marker, then author accTitle/accDescr,
  * then a type-derived fallback.
  */
 function getAltText(source: string): string {

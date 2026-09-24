@@ -43,7 +43,7 @@ def test_chart_sizing(app: Page):
     """
     mermaid_charts = app.get_by_test_id("stMermaidChart")
 
-    # The content-width chart (nth 7) must render at a visible, non-zero size
+    # The "Content width" chart must render at a visible, non-zero size
     # rather than collapsing to 0x0.
     content_img = mermaid_charts.nth(7).locator("img")
     expect(content_img).to_be_visible()
@@ -52,7 +52,7 @@ def test_chart_sizing(app: Page):
     assert content_box["width"] > 50, content_box
     assert content_box["height"] > 20, content_box
 
-    # The tall chart (nth 8) must not be clamped to a short strip: its height
+    # The "Tall diagram" chart must not be clamped to a short strip: its height
     # should clearly exceed the previous 25rem (~400px) inline max-height.
     tall_img = mermaid_charts.nth(8).locator("img")
     expect(tall_img).to_be_visible()

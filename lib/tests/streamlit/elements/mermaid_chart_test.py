@@ -200,6 +200,25 @@ graph LR
         )
         assert "accTitle:" not in element.body
 
+    def test_mermaid_chart_blank_alt_preserves_existing_acc_title(self) -> None:
+        """Empty alt is non-decorative: author accTitle stays in the marshalled body."""
+        diagram = "flowchart TD\naccTitle: Author title\nA --> B"
+        st.mermaid_chart(diagram, alt="")
+
+        element = self.get_delta_from_queue().new_element.markdown
+        assert element.body == f"````mermaid\n{diagram}\n````"
+        assert "accTitle: Author title" in element.body
+        assert "%% stAlt:" not in element.body
+
+    def test_mermaid_chart_alt_with_backticks_lengthens_fence(self) -> None:
+        """Fence length is computed after injection so backticks in alt cannot close early."""
+        st.mermaid_chart("graph TD\nA-->B", alt="Uses ```` four ticks")
+
+        element = self.get_delta_from_queue().new_element.markdown
+        assert element.body.startswith("`````mermaid\n")
+        assert "%% stAlt: Uses ```` four ticks\n" in element.body
+        assert element.body.endswith("\n`````")
+
 
 @pytest.mark.parametrize(
     ("body", "expected"),
@@ -220,6 +239,14 @@ graph LR
         (
             "flowchart TD\naccDescr {\n  First line\n  Second line\n}\nA --> B",
             ("flowchart TD\nA --> B", ["accDescr {\n  First line\n  Second line\n}"]),
+        ),
+        (
+            # Brace-form trailing whitespace must not eat the next line's indent.
+            "timeline\n    accDescr {\n      x\n    }\n    2021 : A\n    2022 : B",
+            (
+                "timeline\n    2021 : A\n    2022 : B",
+                ["accDescr {\n      x\n    }"],
+            ),
         ),
         (
             "%% stAlt: Old\nflowchart TD\nA --> B",
@@ -306,8 +333,8 @@ def test_apply_alt_marker_collapses_multiline_alt() -> None:
     )
 
 
-def test_apply_alt_marker_mindmap_safe() -> None:
-    """mindmap keeps rendering because %% stAlt is a comment, not a node."""
+def test_apply_alt_marker_inserts_comment_not_acc_title_on_mindmap() -> None:
+    """mindmap gets %% stAlt, not accTitle (which would become a node)."""
     assert (
         _apply_alt_marker("mindmap\n    root((App))", "Taxonomy")
         == "%% stAlt: Taxonomy\nmindmap\n    root((App))"

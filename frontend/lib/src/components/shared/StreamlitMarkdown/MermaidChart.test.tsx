@@ -245,7 +245,16 @@ describe("MermaidChart", () => {
 
     it.each([
       {
-        name: "Streamlit stAlt marker",
+        name: "Streamlit stAlt marker before diagram type",
+        source: [
+          "%% stAlt: Streamlit taxonomy",
+          "mindmap",
+          "root((App))",
+        ].join("\n"),
+        expectedAlt: "Streamlit taxonomy",
+      },
+      {
+        name: "Streamlit stAlt marker after diagram type",
         source: [
           "mindmap",
           "%% stAlt: Streamlit taxonomy",
@@ -299,15 +308,12 @@ describe("MermaidChart", () => {
         ].join("\n"),
         expectedAlt: "First line Second line",
       },
-    ])(
-      "uses $name from accessibility directives",
-      async ({ source, expectedAlt }) => {
-        render(<MermaidChart source={source} />)
+    ])("uses $name for the image alt", async ({ source, expectedAlt }) => {
+      render(<MermaidChart source={source} />)
 
-        const img = await waitForChartImage()
-        expect(img).toHaveAttribute("alt", expectedAlt)
-      }
-    )
+      const img = await waitForChartImage()
+      expect(img).toHaveAttribute("alt", expectedAlt)
+    })
 
     it.each([
       {
