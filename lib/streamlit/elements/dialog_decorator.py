@@ -26,7 +26,11 @@ from streamlit.errors import (
     StreamlitInvalidLayoutContextError,
     StreamlitMissingRequiredParameterError,
 )
-from streamlit.runtime.fragment import _check_not_parallel_worker, _fragment
+from streamlit.runtime.fragment import (
+    _check_not_parallel_worker,
+    _fragment,
+    _FragmentLifetime,
+)
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.type_util import get_object_name
 
@@ -105,7 +109,11 @@ def _dialog_decorator(
         fragmented_dialog_content = cast(
             "Callable[[], None]",
             _fragment(
-                dialog_content, additional_hash_info=get_object_name(non_optional_func)
+                dialog_content,
+                additional_hash_info=get_object_name(non_optional_func),
+                # The dialog stays mounted in event_dg when its opener fragment
+                # reruns, so keep its callable until a full app rerun.
+                lifetime=_FragmentLifetime.FULL_APP_SCOPED,
             ),
         )
 
