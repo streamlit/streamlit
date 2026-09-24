@@ -894,8 +894,6 @@ class EChartsMixin:
         # and replaying its entry animation. Unkeyed charts skip the ID
         # entirely so they stay off the widget path.
         if key is not None:
-            # Hash alt like other kwargs. key_as_main_identity=True keeps a
-            # keyed ID stable when only alt changes.
             echarts_chart_proto.id = compute_and_register_element_id(
                 "echarts_chart",
                 user_key=key,
