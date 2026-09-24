@@ -181,6 +181,58 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.placeholder == "-"
 
+    def test_dataframe_alt(self) -> None:
+        """A non-empty alt is stored on the proto; omitted/None/blank leave it unset."""
+        df = pd.DataFrame({"A": [1, 2]})
+
+        st.dataframe(df, alt="Top 20 customers by revenue")
+        el = self.get_delta_from_queue().new_element.dataframe
+        assert el.HasField("alt")
+        assert el.alt == "Top 20 customers by revenue"
+
+        st.dataframe(df)
+        assert not self.get_delta_from_queue().new_element.dataframe.HasField("alt")
+
+        st.dataframe(df, alt=None)
+        assert not self.get_delta_from_queue().new_element.dataframe.HasField("alt")
+
+        st.dataframe(df, alt="")
+        assert not self.get_delta_from_queue().new_element.dataframe.HasField("alt")
+
+        st.dataframe(df, alt="  ")
+        assert not self.get_delta_from_queue().new_element.dataframe.HasField("alt")
+
+    def test_dataframe_alt_strips_whitespace(self) -> None:
+        """Leading and trailing whitespace is stripped from alt."""
+        st.dataframe(pd.DataFrame({"A": [1]}), alt="  Top customers  ")
+        el = self.get_delta_from_queue().new_element.dataframe
+        assert el.HasField("alt")
+        assert el.alt == "Top customers"
+
+    def test_dataframe_alt_preserves_adversarial_plain_text(self) -> None:
+        """Quotes and angle brackets stay literal on the proto (no HTML path)."""
+        adversarial = 'Grid of "A < B" & values <script>alert(1)</script>'
+        st.dataframe(pd.DataFrame({"A": [1]}), alt=adversarial)
+        el = self.get_delta_from_queue().new_element.dataframe
+        assert el.HasField("alt")
+        assert el.alt == adversarial
+
+    def test_selectable_dataframe_alt_is_included_in_element_id(self) -> None:
+        """Changing only alt remounts a selection-activated dataframe."""
+        df = pd.DataFrame({"A": [1, 2]})
+
+        def dataframe_id(**kwargs: object) -> str:
+            self.script_run_ctx.shared.widget_ids_this_run.clear()
+            st.dataframe(df, on_select="rerun", **kwargs)
+            return self.get_delta_from_queue().new_element.dataframe.id
+
+        with_alt = dataframe_id(alt="First description")
+        with_other_alt = dataframe_id(alt="A totally different description")
+
+        assert with_alt != ""
+        assert with_alt != with_other_alt
+        assert dataframe_id(alt="First description") == with_alt
+
     def test_uuid(self):
         df = mock_data_frame()
         styler = df.style

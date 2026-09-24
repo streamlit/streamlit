@@ -937,6 +937,14 @@ function DataFrame({
   // disabled in that case.
   const isSearchOpen = canSearch && showSearch
 
+  // Grid-level accessible name from author alt. Blank is treated as absent.
+  // Applied on a host wrapping Resizable (under the toolbar), not the outer
+  // stDataFrame wrapper, so the named region is the data surface.
+  // re-resizable's props type omits HTML a11y attributes, so we name a wrapper
+  // rather than casting onto Resizable. role="region" (not "img") keeps Glide's
+  // operable canvas / a11y tree available. Never aria-hidden the canvas.
+  const accessibleName = element.alt?.trim() || undefined
+
   return (
     <StyledResizableContainer
       className="stDataFrame"
@@ -1095,309 +1103,322 @@ function DataFrame({
           />
         )}
       </Toolbar>
-      <Resizable
+      <div
         data-testid="stDataFrameResizable"
-        ref={resizableRef}
-        defaultSize={resizableSize}
-        style={{
-          border: `${gridTheme.tableBorderWidth}px solid ${gridTheme.glideTheme.borderColor}`,
-          borderRadius: `${gridTheme.tableBorderRadius}`,
-        }}
-        minHeight={minHeight}
-        maxHeight={maxHeight}
-        minWidth={minWidth}
-        // The maxWidth is not calculated correctly for content width
-        // dataframes in horizontal layouts, so it is disabled. The
-        // resize handles are also disabled so that the dataframe cannot be
-        // stretched beyond the container width.
-        maxWidth={disableResize ? undefined : maxWidth}
-        size={resizableSize}
-        enable={{
-          top: false,
-          right: false,
-          bottom: false,
-          left: false,
-          topRight: false,
-          bottomRight: !disableResize,
-          bottomLeft: false,
-          topLeft: false,
-        }}
-        grid={[1, rowHeight]}
-        snapGap={rowHeight / 3}
-        onResizeStop={(_event, _direction, _ref, _delta) => {
-          if (resizableRef.current) {
-            const borderThreshold = 2 * gridTheme.tableBorderWidth
-            setResizableSize({
-              width: resizableRef.current.size.width,
-              height:
-                // Add additional pixels if it is stretched to full width
-                // to allow the full cell border to be visible
-                maxHeight - resizableRef.current.size.height ===
-                borderThreshold
-                  ? resizableRef.current.size.height + borderThreshold
-                  : resizableRef.current.size.height,
-            })
-          }
-        }}
+        role={accessibleName ? "region" : undefined}
+        aria-label={accessibleName}
       >
-        <GlideDataEditor
-          // The className is used in styled components:
-          className="stDataFrameGlideDataEditor"
-          data-testid="stDataFrameGlideDataEditor"
-          ref={dataEditorRef}
-          columns={glideColumns}
-          rows={isEmptyTable ? 1 : numRows}
-          minColumnWidth={gridTheme.minColumnWidth}
-          maxColumnWidth={gridTheme.maxColumnWidth}
-          maxColumnAutoWidth={gridTheme.maxColumnAutoWidth}
-          rowHeight={rowHeight}
-          headerHeight={gridTheme.defaultHeaderHeight}
-          getCellContent={isEmptyTable ? getEmptyStateContent : getCellContent}
-          onCellClicked={isEmptyTable ? undefined : onCellClicked}
-          onColumnResize={canResizeColumns ? onColumnResize : undefined}
-          // Configure resize indicator to only show on the header:
-          resizeIndicator={"header"}
-          // Freeze all index columns:
-          freezeColumns={freezeColumns}
-          smoothScrollX={true}
-          smoothScrollY={true}
-          // Show borders between cells:
-          verticalBorder={true}
-          // Activate copy to clipboard functionality:
-          getCellsForSelection={true}
-          // Deactivate row markers and numbers:
-          rowMarkers={"none"}
-          // Deactivate selections:
-          rangeSelect={supportsRectangleSelection ? "rect" : "cell"}
-          columnSelect={"none"}
-          rowSelect={"none"}
-          // Enable interactive column reordering:
-          onColumnMoved={
-            // Column selection is not compatible with column reordering.
-            isColumnSelectionActivated ? undefined : onColumnMoved
-          }
-          // Enable tooltips and row hovering theme on hover of a cell or column header:
-          onItemHovered={(args: GridMouseEventArgs) => {
-            handleRowHover?.(args)
-            handleTooltips?.(args)
+        <Resizable
+          ref={resizableRef}
+          defaultSize={resizableSize}
+          style={{
+            border: `${gridTheme.tableBorderWidth}px solid ${gridTheme.glideTheme.borderColor}`,
+            borderRadius: `${gridTheme.tableBorderRadius}`,
           }}
-          // Activate keybindings:
-          keybindings={{
-            downFill: true,
-            copy: !isClipboardCopyDisabled,
-            ...(isCellSelectionActivated || isLargeTable || isLazy
-              ? {
-                  // Deactivate select all to prevent potential performance issues
-                  // with too many selected cells being processed for cell selection.
-                  // For lazy dataframes this also prevents triggering load
-                  // requests for the entire dataset.
-                  selectAll: false,
-                }
-              : {}),
+          minHeight={minHeight}
+          maxHeight={maxHeight}
+          minWidth={minWidth}
+          // The maxWidth is not calculated correctly for content width
+          // dataframes in horizontal layouts, so it is disabled. The
+          // resize handles are also disabled so that the dataframe cannot be
+          // stretched beyond the container width.
+          maxWidth={disableResize ? undefined : maxWidth}
+          size={resizableSize}
+          enable={{
+            top: false,
+            right: false,
+            bottom: false,
+            left: false,
+            topRight: false,
+            bottomRight: !disableResize,
+            bottomLeft: false,
+            topLeft: false,
           }}
-          // Request chunks for the visible range (plus a small buffer) when the
-          // user scrolls a lazy dataframe.
-          onVisibleRegionChanged={isLazy ? onVisibleRegionChanged : undefined}
-          // Search needs to be activated manually, to support search
-          // via the toolbar. Disabled for lazy dataframes since search would
-          // only operate on loaded chunks.
-          onKeyDown={event => {
-            if (
-              canSearch &&
-              (event.ctrlKey || event.metaKey) &&
-              event.key === "f"
-            ) {
-              setShowSearch(cv => !cv)
-              event.stopPropagation()
-              event.preventDefault()
-            }
-          }}
-          showSearch={isSearchOpen}
-          searchResults={!isSearchOpen ? [] : undefined}
-          onSearchClose={() => {
-            setShowSearch(false)
-            clearTooltip()
-          }}
-          // Header click is used for column sorting:
-          onHeaderClicked={(columnIdx: number, _event) => {
-            if (
-              !isColumnSortable(columns[columnIdx]) ||
-              isColumnSelectionActivated
-            ) {
-              // Deactivate sorting for empty state, large dataframes, columns
-              // that aren't sortable in the current mode (e.g. the index column
-              // in lazy mode), or when column selection is activated.
-              return
-            }
-
-            // Hide search before sorting to clear search results
-            if (showSearch) {
-              setShowSearch(false)
-            }
-
-            handleSortWithSelectionPreservation(() =>
-              sortColumn(columnIdx, "auto")
-            )
-          }}
-          gridSelection={gridSelection}
-          // We don't have to react to "onSelectionCleared" since
-          // we already correctly process selections in
-          // the "onGridSelectionChange" callback.
-          onGridSelectionChange={(newSelection: GridSelection) => {
-            // Guard against spurious cell selections from overlay clicks outside
-            // the table bounds. Row/column selections are always allowed because
-            // isFocused may be stale when the user clicks back into the grid.
-            // Touch devices bypass the guard entirely.
-            const hasRowOrColumnSelection =
-              newSelection.rows.length > 0 || newSelection.columns.length > 0
-            if (isFocused || isTouchDevice || hasRowOrColumnSelection) {
-              processSelectionChange(newSelection)
-              if (tooltip !== undefined) {
-                // Remove the tooltip on every grid selection change:
-                clearTooltip()
-              }
-              // Close menus:
-              setShowMenu(undefined)
-              setShowColumnVisibilityMenu(false)
-              clearButtonActionMenu()
-            }
-          }}
-          theme={gridTheme.glideTheme}
-          getRowThemeOverride={getRowThemeOverride}
-          onMouseMove={(args: GridMouseEventArgs) => {
-            // Determine if the dataframe is focused or not
-            if (args.kind === "out-of-bounds" && isFocused) {
-              setIsFocused(false)
-            } else if (args.kind !== "out-of-bounds" && !isFocused) {
-              setIsFocused(true)
-            }
-          }}
-          // Add shadow for index columns and header on scroll:
-          fixedShadowX={true}
-          fixedShadowY={true}
-          experimental={{
-            // Deactivate the native scrollbar override to optimize our
-            // scrollbars to always behave like overlay scrollbars.
-            scrollbarWidthOverride: 0,
-            // Add negative padding to the right and bottom to allow the scrollbars
-            // to overlay the table:
-            paddingBottom: hasHorizontalScroll
-              ? -scrollbarGutterSize
-              : undefined,
-            paddingRight: hasVerticalScroll ? -scrollbarGutterSize : undefined,
-          }}
-          provideEditor={provideEditor}
-          // Apply custom rendering (e.g. for missing or required cells):
-          drawCell={drawCell}
-          // Add support for additional cells:
-          customRenderers={customRenderers}
-          // Custom image editor to render single images:
-          imageEditorOverride={ImageCellEditor}
-          // Add our custom SVG header icons:
-          headerIcons={gridTheme.headerIcons}
-          // Add support for user input validation:
-          validateCell={validateCell}
-          // Open column context menu:
-          onHeaderMenuClick={(columnIdx, screenPosition) => {
-            // There is an issue that clicking on the column visibility menu
-            // can trigger a menu click event on the column header.
-            // To prevent another menu from opening, we check if column
-            // visibility menu open state.
-            // https://github.com/streamlit/streamlit/pull/12233
-            if (!showColumnVisibilityMenu) {
-              setShowMenu({
-                columnIdx,
-                headerBounds: screenPosition,
+          grid={[1, rowHeight]}
+          snapGap={rowHeight / 3}
+          onResizeStop={(_event, _direction, _ref, _delta) => {
+            if (resizableRef.current) {
+              const borderThreshold = 2 * gridTheme.tableBorderWidth
+              setResizableSize({
+                width: resizableRef.current.size.width,
+                height:
+                  // Add additional pixels if it is stretched to full width
+                  // to allow the full cell border to be visible
+                  maxHeight - resizableRef.current.size.height ===
+                  borderThreshold
+                    ? resizableRef.current.size.height + borderThreshold
+                    : resizableRef.current.size.height,
               })
             }
           }}
-          // The default setup is read only, and therefore we deactivate paste here:
-          onPaste={false}
-          // Activate features required for row selection:
-          {...(isRowSelectionActivated && {
-            rowMarkers: {
-              // Apply style settings for the row markers column:
-              kind: "checkbox-visible",
-              // Use circle style for single-row-required mode (radio-like behavior)
-              checkboxStyle: isRequiredRowSelectionActivated
-                ? "circle"
-                : "square",
-              theme: {
-                bgCell: gridTheme.glideTheme.bgHeader,
-                bgCellMedium: gridTheme.glideTheme.bgHeader,
-                // Use a lighter color for the checkboxes in the row markers column,
-                // otherwise its a bit too prominent:
-                textMedium: gridTheme.glideTheme.textLight,
+        >
+          <GlideDataEditor
+            // The className is used in styled components:
+            className="stDataFrameGlideDataEditor"
+            data-testid="stDataFrameGlideDataEditor"
+            ref={dataEditorRef}
+            columns={glideColumns}
+            rows={isEmptyTable ? 1 : numRows}
+            minColumnWidth={gridTheme.minColumnWidth}
+            maxColumnWidth={gridTheme.maxColumnWidth}
+            maxColumnAutoWidth={gridTheme.maxColumnAutoWidth}
+            rowHeight={rowHeight}
+            headerHeight={gridTheme.defaultHeaderHeight}
+            getCellContent={
+              isEmptyTable ? getEmptyStateContent : getCellContent
+            }
+            onCellClicked={isEmptyTable ? undefined : onCellClicked}
+            onColumnResize={canResizeColumns ? onColumnResize : undefined}
+            // Configure resize indicator to only show on the header:
+            resizeIndicator={"header"}
+            // Freeze all index columns:
+            freezeColumns={freezeColumns}
+            smoothScrollX={true}
+            smoothScrollY={true}
+            // Show borders between cells:
+            verticalBorder={true}
+            // Activate copy to clipboard functionality:
+            getCellsForSelection={true}
+            // Deactivate row markers and numbers:
+            rowMarkers={"none"}
+            // Deactivate selections:
+            rangeSelect={supportsRectangleSelection ? "rect" : "cell"}
+            columnSelect={"none"}
+            rowSelect={"none"}
+            // Enable interactive column reordering:
+            onColumnMoved={
+              // Column selection is not compatible with column reordering.
+              isColumnSelectionActivated ? undefined : onColumnMoved
+            }
+            // Enable tooltips and row hovering theme on hover of a cell or column header:
+            onItemHovered={(args: GridMouseEventArgs) => {
+              handleRowHover?.(args)
+              handleTooltips?.(args)
+            }}
+            // Activate keybindings:
+            keybindings={{
+              downFill: true,
+              copy: !isClipboardCopyDisabled,
+              ...(isCellSelectionActivated || isLargeTable || isLazy
+                ? {
+                    // Deactivate select all to prevent potential performance issues
+                    // with too many selected cells being processed for cell selection.
+                    // For lazy dataframes this also prevents triggering load
+                    // requests for the entire dataset.
+                    selectAll: false,
+                  }
+                : {}),
+            }}
+            // Request chunks for the visible range (plus a small buffer) when the
+            // user scrolls a lazy dataframe.
+            onVisibleRegionChanged={
+              isLazy ? onVisibleRegionChanged : undefined
+            }
+            // Search needs to be activated manually, to support search
+            // via the toolbar. Disabled for lazy dataframes since search would
+            // only operate on loaded chunks.
+            onKeyDown={event => {
+              if (
+                canSearch &&
+                (event.ctrlKey || event.metaKey) &&
+                event.key === "f"
+              ) {
+                setShowSearch(cv => !cv)
+                event.stopPropagation()
+                event.preventDefault()
+              }
+            }}
+            showSearch={isSearchOpen}
+            searchResults={!isSearchOpen ? [] : undefined}
+            onSearchClose={() => {
+              setShowSearch(false)
+              clearTooltip()
+            }}
+            // Header click is used for column sorting:
+            onHeaderClicked={(columnIdx: number, _event) => {
+              if (
+                !isColumnSortable(columns[columnIdx]) ||
+                isColumnSelectionActivated
+              ) {
+                // Deactivate sorting for empty state, large dataframes, columns
+                // that aren't sortable in the current mode (e.g. the index column
+                // in lazy mode), or when column selection is activated.
+                return
+              }
+
+              // Hide search before sorting to clear search results
+              if (showSearch) {
+                setShowSearch(false)
+              }
+
+              handleSortWithSelectionPreservation(() =>
+                sortColumn(columnIdx, "auto")
+              )
+            }}
+            gridSelection={gridSelection}
+            // We don't have to react to "onSelectionCleared" since
+            // we already correctly process selections in
+            // the "onGridSelectionChange" callback.
+            onGridSelectionChange={(newSelection: GridSelection) => {
+              // Guard against spurious cell selections from overlay clicks outside
+              // the table bounds. Row/column selections are always allowed because
+              // isFocused may be stale when the user clicks back into the grid.
+              // Touch devices bypass the guard entirely.
+              const hasRowOrColumnSelection =
+                newSelection.rows.length > 0 || newSelection.columns.length > 0
+              if (isFocused || isTouchDevice || hasRowOrColumnSelection) {
+                processSelectionChange(newSelection)
+                if (tooltip !== undefined) {
+                  // Remove the tooltip on every grid selection change:
+                  clearTooltip()
+                }
+                // Close menus:
+                setShowMenu(undefined)
+                setShowColumnVisibilityMenu(false)
+                clearButtonActionMenu()
+              }
+            }}
+            theme={gridTheme.glideTheme}
+            getRowThemeOverride={getRowThemeOverride}
+            onMouseMove={(args: GridMouseEventArgs) => {
+              // Determine if the dataframe is focused or not
+              if (args.kind === "out-of-bounds" && isFocused) {
+                setIsFocused(false)
+              } else if (args.kind !== "out-of-bounds" && !isFocused) {
+                setIsFocused(true)
+              }
+            }}
+            // Add shadow for index columns and header on scroll:
+            fixedShadowX={true}
+            fixedShadowY={true}
+            experimental={{
+              // Deactivate the native scrollbar override to optimize our
+              // scrollbars to always behave like overlay scrollbars.
+              scrollbarWidthOverride: 0,
+              // Add negative padding to the right and bottom to allow the scrollbars
+              // to overlay the table:
+              paddingBottom: hasHorizontalScroll
+                ? -scrollbarGutterSize
+                : undefined,
+              paddingRight: hasVerticalScroll
+                ? -scrollbarGutterSize
+                : undefined,
+            }}
+            provideEditor={provideEditor}
+            // Apply custom rendering (e.g. for missing or required cells):
+            drawCell={drawCell}
+            // Add support for additional cells:
+            customRenderers={customRenderers}
+            // Custom image editor to render single images:
+            imageEditorOverride={ImageCellEditor}
+            // Add our custom SVG header icons:
+            headerIcons={gridTheme.headerIcons}
+            // Add support for user input validation:
+            validateCell={validateCell}
+            // Open column context menu:
+            onHeaderMenuClick={(columnIdx, screenPosition) => {
+              // There is an issue that clicking on the column visibility menu
+              // can trigger a menu click event on the column header.
+              // To prevent another menu from opening, we check if column
+              // visibility menu open state.
+              // https://github.com/streamlit/streamlit/pull/12233
+              if (!showColumnVisibilityMenu) {
+                setShowMenu({
+                  columnIdx,
+                  headerBounds: screenPosition,
+                })
+              }
+            }}
+            // The default setup is read only, and therefore we deactivate paste here:
+            onPaste={false}
+            // Activate features required for row selection:
+            {...(isRowSelectionActivated && {
+              rowMarkers: {
+                // Apply style settings for the row markers column:
+                kind: "checkbox-visible",
+                // Use circle style for single-row-required mode (radio-like behavior)
+                checkboxStyle: isRequiredRowSelectionActivated
+                  ? "circle"
+                  : "square",
+                theme: {
+                  bgCell: gridTheme.glideTheme.bgHeader,
+                  bgCellMedium: gridTheme.glideTheme.bgHeader,
+                  // Use a lighter color for the checkboxes in the row markers column,
+                  // otherwise its a bit too prominent:
+                  textMedium: gridTheme.glideTheme.textLight,
+                },
               },
-            },
-            rowSelectionMode: isMultiRowSelectionActivated ? "multi" : "auto",
-            rowSelect: disabled
-              ? "none"
-              : isMultiRowSelectionActivated
+              rowSelectionMode: isMultiRowSelectionActivated
                 ? "multi"
-                : "single",
-            rowSelectionBlending: "additive",
-            rangeSelectionBlending: "additive",
-          })}
-          // Activate features required for column selection:
-          {...(isColumnSelectionActivated && {
-            columnSelect: disabled
-              ? "none"
-              : isMultiColumnSelectionActivated
+                : "auto",
+              rowSelect: disabled
+                ? "none"
+                : isMultiRowSelectionActivated
+                  ? "multi"
+                  : "single",
+              rowSelectionBlending: "additive",
+              rangeSelectionBlending: "additive",
+            })}
+            // Activate features required for column selection:
+            {...(isColumnSelectionActivated && {
+              columnSelect: disabled
+                ? "none"
+                : isMultiColumnSelectionActivated
+                  ? "multi"
+                  : "single",
+              columnSelectionBlending: "additive",
+              columnSelectionMode: isMultiColumnSelectionActivated
                 ? "multi"
-                : "single",
-            columnSelectionBlending: "additive",
-            columnSelectionMode: isMultiColumnSelectionActivated
-              ? "multi"
-              : "auto",
-            rangeSelectionBlending: "additive",
-          })}
-          // Activate features required for cell selection:
-          {...(isCellSelectionActivated && {
-            rangeSelect: isMultiCellSelectionActivated ? "rect" : "cell",
-            // Allow mixing cell selections with row and column selections:
-            rangeSelectionBlending: "additive",
-          })}
-          // If element is editable, enable editing features:
-          {...(canEdit && {
-            // Support fill handle for bulk editing:
-            fillHandle: supportsFillHandle,
-            // Support editing:
-            onCellEdited,
-            // Flush edits before an outside click can trigger a rerun.
-            isOutsideClick: handleOutsideClick,
-            onFinishedEditing: handleFinishedEditing,
-            // Support pasting data for bulk editing:
-            onPaste,
-            // Support deleting cells & rows:
-            onDelete,
-          })}
-          // If element allows adding rows (DYNAMIC or ADD_ONLY), enable trailing row
-          // and deactivate sorting:
-          {...(canAddRows && {
-            trailingRowOptions: {
-              sticky: false,
-              tint: true,
-            },
-            onRowAppended,
-            // Deactivate sorting for modes that allow adding rows:
-            onHeaderClicked: undefined,
-          })}
-          // If element allows deleting rows (DYNAMIC or DELETE_ONLY), enable row selection:
-          {...(canDeleteRows && {
-            rowMarkers: {
-              kind: "checkbox",
-              checkboxStyle: "square",
-              theme: {
-                bgCell: gridTheme.glideTheme.bgHeader,
-                bgCellMedium: gridTheme.glideTheme.bgHeader,
+                : "auto",
+              rangeSelectionBlending: "additive",
+            })}
+            // Activate features required for cell selection:
+            {...(isCellSelectionActivated && {
+              rangeSelect: isMultiCellSelectionActivated ? "rect" : "cell",
+              // Allow mixing cell selections with row and column selections:
+              rangeSelectionBlending: "additive",
+            })}
+            // If element is editable, enable editing features:
+            {...(canEdit && {
+              // Support fill handle for bulk editing:
+              fillHandle: supportsFillHandle,
+              // Support editing:
+              onCellEdited,
+              // Flush edits before an outside click can trigger a rerun.
+              isOutsideClick: handleOutsideClick,
+              onFinishedEditing: handleFinishedEditing,
+              // Support pasting data for bulk editing:
+              onPaste,
+              // Support deleting cells & rows:
+              onDelete,
+            })}
+            // If element allows adding rows (DYNAMIC or ADD_ONLY), enable trailing row
+            // and deactivate sorting:
+            {...(canAddRows && {
+              trailingRowOptions: {
+                sticky: false,
+                tint: true,
               },
-            },
-            rowSelectionMode: "multi",
-            rowSelect: disabled ? "none" : "multi",
-          })}
-        />
-      </Resizable>
+              onRowAppended,
+              // Deactivate sorting for modes that allow adding rows:
+              onHeaderClicked: undefined,
+            })}
+            // If element allows deleting rows (DYNAMIC or DELETE_ONLY), enable row selection:
+            {...(canDeleteRows && {
+              rowMarkers: {
+                kind: "checkbox",
+                checkboxStyle: "square",
+                theme: {
+                  bgCell: gridTheme.glideTheme.bgHeader,
+                  bgCellMedium: gridTheme.glideTheme.bgHeader,
+                },
+              },
+              rowSelectionMode: "multi",
+              rowSelect: disabled ? "none" : "multi",
+            })}
+          />
+        </Resizable>
+      </div>
       {tooltip?.content && (
         <Tooltip
           top={tooltip.top}

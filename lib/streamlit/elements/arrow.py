@@ -53,7 +53,12 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
-from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
+from streamlit.elements.lib.utils import (
+    Key,
+    compute_and_register_element_id,
+    normalize_alt,
+    to_key,
+)
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitIncompatibleParametersError,
@@ -642,6 +647,7 @@ class ArrowMixin:
         row_height: int | None = None,
         placeholder: str | None = None,
         lazy: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator: ...
 
     @overload
@@ -662,6 +668,7 @@ class ArrowMixin:
         row_height: int | None = None,
         placeholder: str | None = None,
         lazy: bool | None = None,
+        alt: str | None = None,
     ) -> DataframeState: ...
 
     @gather_metrics("dataframe")
@@ -682,6 +689,7 @@ class ArrowMixin:
         row_height: int | None = None,
         placeholder: str | None = None,
         lazy: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator | DataframeState:
         """Display a dataframe as an interactive table.
 
@@ -938,6 +946,20 @@ class ArrowMixin:
                 supported. Server-side sorting is supported. To use these
                 features, set ``lazy=False``.
 
+        alt : str or None
+            A short, plain-text accessible name for the dataframe. If this is
+            ``None`` (default), the grid has no element-level accessible name.
+            Cell values remain available through the grid's own accessibility
+            tree.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            Prefer naming what the data is (for example, "Top 20 customers by
+            revenue") rather than pasting cell contents. This is a short name
+            for findability, not a full text alternative for the table.
+
         Returns
         -------
         element or DataframeState
@@ -1142,6 +1164,10 @@ class ArrowMixin:
 
         proto = DataframeProto()
 
+        normalized_alt = normalize_alt(alt)
+        if normalized_alt is not None:
+            proto.alt = normalized_alt
+
         if row_height:
             proto.row_height = row_height
 
@@ -1294,6 +1320,7 @@ class ArrowMixin:
                 selection_default=selection_default_json,
                 row_height=row_height,
                 placeholder=placeholder,
+                alt=normalized_alt,
             )
 
             serde = DataframeSelectionSerde(

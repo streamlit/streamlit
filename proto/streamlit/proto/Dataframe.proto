@@ -61,6 +61,11 @@ message Dataframe {
   // left empty for lazy dataframes.
   optional LazyDataframe lazy_data = 14;
 
+  // Author-provided accessible name for the grid (st.dataframe / st.data_editor).
+  // When unset, the grid has no element-level name; Glide's canvas cell
+  // accessibility tree stays available either way.
+  optional string alt = 15;
+
   // Available editing modes:
   enum EditingMode {
     READ_ONLY = 0; // Read-only table.
