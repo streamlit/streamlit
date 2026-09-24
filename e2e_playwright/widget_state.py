@@ -69,6 +69,8 @@ if select == "A":
 else:
     st.text_input("input 3", key="input3")
 
+st.write("input2 state:", repr(st.session_state.get("input2")))
+
 st.header("Test for input change & button click in one motion")
 # Test for https://github.com/streamlit/streamlit/issues/10007
 

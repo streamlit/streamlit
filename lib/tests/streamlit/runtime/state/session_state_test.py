@@ -2338,6 +2338,35 @@ def test_serializable_check_off():
         assert not at.exception
 
 
+def test_keyed_unmount_resets_widget_and_session_state() -> None:
+    """A registered persist_state=None widget remounts at the default on both
+    the widget and st.session_state[key] in the same run. See issue #17119.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        st.session_state.setdefault("input2", "input 2")
+        st.session_state.setdefault("input3", "input 3")
+
+        select = st.selectbox("select delayed input", ["A", "B"])
+        if select == "A":
+            st.text_input("input 2", key="input2")
+        else:
+            st.text_input("input 3", key="input3")
+
+    at = AppTest.from_function(script).run()
+    assert at.text_input(key="input2").value == "input 2"
+    assert at.session_state["input2"] == "input 2"
+
+    at.selectbox[0].set_value("B").run()
+    at.text_input(key="input3").input("edited").run()
+    at.selectbox[0].set_value("A").run()
+
+    assert at.text_input(key="input2").value == ""
+    assert at.session_state["input2"] == ""
+
+
 def check_roundtrip(widget_id: str, value: Any) -> None:
     session_state = _raw_session_state()
     wid = session_state._get_widget_id(widget_id)
@@ -4208,7 +4237,8 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
         self.session_state._compact_state()
         self.session_state._remove_stale_widgets(frozenset())
 
-        assert "my_widget" not in self.session_state._old_state
+        assert widget_id not in self.session_state._old_state
+        assert self.session_state._old_state["my_widget"] == "default"
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -4467,7 +4497,8 @@ class PersistStatePreservationTest(DeltaGeneratorTestCase):
             self.session_state._compact_state()
             self.session_state._remove_stale_widgets(frozenset())
 
-        assert "my_widget" not in self.session_state._old_state
+        assert widget_id not in self.session_state._old_state
+        assert self.session_state._old_state["my_widget"] == "default"
 
     def test_persist_state_page_kept_during_fragment_rerun_same_page(self) -> None:
         """A persist_state="page" widget keeps its value across a fragment rerun:
@@ -4874,6 +4905,7 @@ class RegisterWidgetValueChangedTest(DeltaGeneratorTestCase):
 
         assert result.value == "custom_value"
         assert result.value_changed is True
+        assert self.session_state["my_widget"] == "custom_value"
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -4883,8 +4915,8 @@ class RegisterWidgetValueChangedTest(DeltaGeneratorTestCase):
         self, mock_ctx: MagicMock
     ) -> None:
         """A persist_state=None widget that was registered then hidden resets
-        to the default on remount. Cleanup drops the widget id; no independent
-        user-key value remains, so the frontend is not told to restore."""
+        to the default on remount. Cleanup pins that default under the user
+        key so st.session_state[key] matches the UI on the same run."""
         widget_id = "$$ID-hash-my_widget"
         metadata = _create_persist_state_metadata(widget_id, None)
 
@@ -4893,10 +4925,41 @@ class RegisterWidgetValueChangedTest(DeltaGeneratorTestCase):
         self.session_state._compact_state()
         self.session_state._remove_stale_widgets(frozenset())
 
+        assert widget_id not in self.session_state._old_state
+        assert self.session_state._old_state["my_widget"] == "default"
+
         result = self.session_state.register_widget(metadata, user_key="my_widget")
 
         assert result.value == "default"
         assert result.value_changed is False
+        assert self.session_state["my_widget"] == "default"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_registered_unmount_does_not_reseed_from_setdefault(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A setdefault after an already-registered persist_state=None unmount
+        is a no-op because cleanup pinned the default. Remount resets both
+        sides instead of adopting the setdefault value. See issue #17119."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, None)
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
+        self.session_state._compact_state()
+        self.session_state._remove_stale_widgets(frozenset())
+
+        if "my_widget" not in self.session_state:
+            self.session_state._new_session_state["my_widget"] = "custom_value"
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "default"
+        assert result.value_changed is False
+        assert self.session_state["my_widget"] == "default"
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -4974,11 +5037,13 @@ class ConditionalRemountBoundBehaviorTest(DeltaGeneratorTestCase):
         self.session_state._compact_state()
         self.session_state._remove_stale_widgets(frozenset())
 
-        assert "my_widget" not in self.session_state._old_state
+        assert widget_id not in self.session_state._old_state
+        assert self.session_state._old_state["my_widget"] == "default"
 
         remounted = self.session_state.register_widget(metadata, user_key="my_widget")
         assert remounted.value == "default"
         assert remounted.value_changed is False
+        assert self.session_state["my_widget"] == "default"
         assert "my_widget" not in self.query_params._query_params
 
 

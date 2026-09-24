@@ -73,11 +73,14 @@ def test_doesnt_save_widget_state_on_redisplay(app: Page):
 def test_doesnt_save_widget_state_on_redisplay_with_keyed_widget(app: Page):
     """Keyed persist_state=None widgets reset on redisplay unless a user key was
     set before first mount. That stored default is adopted on delayed first
-    mount and on remount after hide, not the last widget edit.
+    mount and on remount after hide, not the last widget edit. An already-
+    registered remount resets both the widget UI and st.session_state[key]
+    in the same run.
 
     Related to: https://github.com/streamlit/streamlit/issues/3512
     Related to: https://github.com/streamlit/streamlit/issues/17093
     Related to: https://github.com/streamlit/streamlit/issues/9082
+    Related to: https://github.com/streamlit/streamlit/issues/17119
     """
     click_checkbox(app, "Display widgets")
     click_checkbox(app, "Show goodbye")
@@ -135,6 +138,7 @@ def test_doesnt_save_widget_state_on_redisplay_with_keyed_widget(app: Page):
     input2 = get_text_input(app, "input 2").locator("input").first
     expect(input2).to_have_value("")
     expect(input2).not_to_have_value("input 2")
+    expect_markdown(app, "input2 state: ''")
 
     select_selectbox_option(app, "select delayed input", "B")
     input3 = get_text_input(app, "input 3").locator("input").first
