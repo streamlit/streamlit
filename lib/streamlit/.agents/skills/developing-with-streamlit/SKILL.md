@@ -23,6 +23,44 @@ Invoke this skill when the user's request involves:
 
 **Trigger phrases:** "streamlit", "st.", "st.App", "dashboard", "app.py", "beautify app", "make it look better", "style", "CSS", "color", "background", "theme", "button", "slow rerun", "session state", "performance", "faster", "cache", "chat", "agentic", "chain of thought"
 
+## Best practices quick reference
+
+**IMPORTANT — `use_container_width` is deprecated.** Never add `use_container_width` to new code. Streamlit elements now stretch to fill their container by default. Use `width="stretch"` or `width="content"` instead. Remove `use_container_width` when you encounter it.
+
+Apply these defaults unless the user's app or request clearly needs a different approach. For examples, read `references/best-practices.md`.
+- Do not use `use_container_width`; use `width="stretch"` or `width="content"` instead.
+- Prefer native Streamlit elements over recreating UI with custom HTML. This includes UI created with `st.html`, `st.markdown(..., unsafe_allow_html=True)`, or deprecated `st.components.v1.html`. Use custom HTML only when no native element provides the required UI or behavior.
+- Do not use the deprecated `st.components.v1.html` or `st.components.v1.iframe` commands. Use `st.iframe` for iframe-based rendering of URLs or HTML, and use `st.html` for HTML/CSS that should render directly in the app; `st.html` ignores JavaScript by default unless `unsafe_allow_javascript=True`.
+- Do not apply CSS to style the app unless the user actively requests it. Use native Streamlit features and `.streamlit/config.toml` to customize the appearance; see the [theming reference](references/theme.md).
+- Prefer Material Symbols icons (`:material/icon_name:`) over emojis for navigation, buttons, and labels. Use emojis sparingly, only when they add a special touch.
+- Prefer sentence casing over title casing, including titles and widget labels.
+- Do not use empty widget labels; use `label_visibility="collapsed"` or `label_visibility="hidden"` when a visible label is not desired.
+- Use `st.container(border=True)` for simple visual grouping. Prefer `st.container(horizontal=True)` over `st.columns` for responsive row layouts; use `st.columns` only for fixed grids or precise width ratios.
+- Prefer `st.navigation` and `st.Page` with an `app_pages/` folder over the legacy `pages/` directory, `st.page_link`, or other multipage-app v1 patterns.
+- Always cache compute-intensive or expensive data-loading code. Use `st.cache_data` for serializable data and `st.cache_resource` for shared resources like API clients, raw connectors, and models; do not wrap `st.connection`, which is already cached. Include appropriate `ttl` and/or `max_entries` limits to prevent unbounded growth. Cache the expensive source data, then apply cheap interactive filters outside the cached function.
+- Order scripts so fast UI (titles, layout, widgets) renders before slow computation. Streamlit streams elements top to bottom and temporarily greys out (marks stale) not-yet-redrawn elements from the previous run while a slow step is in progress, clearing each as the new run recreates it; put slow work last, reserve output slots with `st.container()`, or isolate slow sections in fragments.
+- Use `st.fragment` for independent sections that should rerun separately from the rest of the app, such as auto-refreshing charts or controls that do not need to rerun the full page.
+- Use `st.form` to batch related inputs and rerun only on submit, especially when intermediate widget changes would trigger expensive work.
+- Do not put expensive work unguarded inside `st.tabs` or `st.expander`; hidden or collapsed content still computes unless you use dynamic open-state gating or an explicit conditional.
+- Use `st.secrets` for credentials. Never hard-code secrets in app code, never commit `.streamlit/secrets.toml`, and use parameterized queries for user-provided values.
+- Prefer Vega-based charts (`st.altair_chart`, `st.line_chart`, `st.area_chart`, `st.scatter_chart`, `st.bar_chart`, `st.vega_lite_chart`) over `st.pyplot` and Plotly. Use `st.echarts_chart` when you already have an Apache ECharts option or a `pyecharts` chart.
+- Prefer `st.segmented_control` over `st.radio(..., horizontal=True)`.
+- Use `st.pills` for a multiselect with a small number of options that fit on one line.
+- Initialize `st.session_state` in one clear place, avoid module-level mutable state for per-user data, and set widget `key` values when widgets repeat, parameters change dynamically, or code needs programmatic access.
+- Keep page files as direct scripts; do not wrap page bodies in functions. Move shared business logic into modules.
+
+## Proactively Look Up API Details
+
+When selecting a Streamlit command, discovering functionality that may be newer than the agent's knowledge cutoff, validating available functionality, or using unfamiliar parameters, proactively look up the relevant local docs before coding:
+
+```bash
+streamlit docs st.<command>
+```
+
+Run this with the Streamlit installation relevant to the app being edited. Use `references/api-reference.md` to discover available public `st` commands and namespaces, then use `streamlit docs st.<command>` for exact signatures, parameters, and docstrings.
+
+When annotating Streamlit-owned values returned by commands or stored in Session State, import the curated public types from `streamlit.typing` (also available as `st.typing`) instead of their internal implementation modules. See `references/api-reference.md` for the available types.
+
 ## Workflow
 
 ```
@@ -80,44 +118,6 @@ Step 4: Check if app is running and offer to run it
 ### Step 2: Identify Task Type and Route to Reference
 
 **Goal:** Determine what the user needs and load the appropriate guidance.
-
-**IMPORTANT — `use_container_width` is deprecated.** Never add `use_container_width` to new code. Streamlit elements now stretch to fill their container by default. Use `width="stretch"` or `width="content"` instead. Remove `use_container_width` when you encounter it.
-
-### Proactively Look Up API Details
-
-When selecting a Streamlit command, discovering functionality that may be newer than the agent's knowledge cutoff, validating available functionality, or using unfamiliar parameters, proactively look up the relevant local docs before coding:
-
-```bash
-streamlit docs st.<command>
-```
-
-Run this with the Streamlit installation relevant to the app being edited. Use `references/api-reference.md` to discover available public `st` commands and namespaces, then use `streamlit docs st.<command>` for exact signatures, parameters, and docstrings.
-
-When annotating Streamlit-owned values returned by commands or stored in Session State, import the curated public types from `streamlit.typing` (also available as `st.typing`) instead of their internal implementation modules. See `references/api-reference.md` for the available types.
-
-### Best practices quick reference
-
-Apply these defaults unless the user's app or request clearly needs a different approach. For examples, read `references/best-practices.md`.
-- Do not use `use_container_width`; use `width="stretch"` or `width="content"` instead.
-- Prefer native Streamlit elements over recreating UI with custom HTML. This includes UI created with `st.html`, `st.markdown(..., unsafe_allow_html=True)`, or deprecated `st.components.v1.html`. Use custom HTML only when no native element provides the required UI or behavior.
-- Do not use the deprecated `st.components.v1.html` or `st.components.v1.iframe` commands. Use `st.iframe` for iframe-based rendering of URLs or HTML, and use `st.html` for HTML/CSS that should render directly in the app; `st.html` ignores JavaScript by default unless `unsafe_allow_javascript=True`.
-- Do not apply CSS to style the app unless the user actively requests it. Use native Streamlit features and `.streamlit/config.toml` to customize the appearance; see the [theming reference](references/theme.md).
-- Prefer Material Symbols icons (`:material/icon_name:`) over emojis for navigation, buttons, and labels. Use emojis sparingly, only when they add a special touch.
-- Prefer sentence casing over title casing, including titles and widget labels.
-- Do not use empty widget labels; use `label_visibility="collapsed"` or `label_visibility="hidden"` when a visible label is not desired.
-- Use `st.container(border=True)` for simple visual grouping. Prefer `st.container(horizontal=True)` over `st.columns` for responsive row layouts; use `st.columns` only for fixed grids or precise width ratios.
-- Prefer `st.navigation` and `st.Page` with an `app_pages/` folder over the legacy `pages/` directory, `st.page_link`, or other multipage-app v1 patterns.
-- Always cache compute-intensive or expensive data-loading code. Use `st.cache_data` for serializable data and `st.cache_resource` for shared resources like API clients, raw connectors, and models; do not wrap `st.connection`, which is already cached. Include appropriate `ttl` and/or `max_entries` limits to prevent unbounded growth. Cache the expensive source data, then apply cheap interactive filters outside the cached function.
-- Order scripts so fast UI (titles, layout, widgets) renders before slow computation. Streamlit streams elements top to bottom and temporarily greys out (marks stale) not-yet-redrawn elements from the previous run while a slow step is in progress, clearing each as the new run recreates it; put slow work last, reserve output slots with `st.container()`, or isolate slow sections in fragments.
-- Use `st.fragment` for independent sections that should rerun separately from the rest of the app, such as auto-refreshing charts or controls that do not need to rerun the full page.
-- Use `st.form` to batch related inputs and rerun only on submit, especially when intermediate widget changes would trigger expensive work.
-- Do not put expensive work unguarded inside `st.tabs` or `st.expander`; hidden or collapsed content still computes unless you use dynamic open-state gating or an explicit conditional.
-- Use `st.secrets` for credentials. Never hard-code secrets in app code, never commit `.streamlit/secrets.toml`, and use parameterized queries for user-provided values.
-- Prefer Vega-based charts (`st.altair_chart`, `st.line_chart`, `st.area_chart`, `st.scatter_chart`, `st.bar_chart`, `st.vega_lite_chart`) over `st.pyplot` and Plotly. Use `st.echarts_chart` when you already have an Apache ECharts option or a `pyecharts` chart.
-- Prefer `st.segmented_control` over `st.radio(..., horizontal=True)`.
-- Use `st.pills` for a multiselect with a small number of options that fit on one line.
-- Initialize `st.session_state` in one clear place, avoid module-level mutable state for per-user data, and set widget `key` values when widgets repeat, parameters change dynamically, or code needs programmatic access.
-- Keep page files as direct scripts; do not wrap page bodies in functions. Move shared business logic into modules.
 
 ### Reference routing table
 
