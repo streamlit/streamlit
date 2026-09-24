@@ -51,7 +51,7 @@ st.set_page_config(
 
 TIME_RANGES = ["1M", "6M", "1Y", "QTD", "YTD", "All"]
 CHART_HEIGHT = 300
-KPI_HEIGHT = 215  # Rendered height of a bordered st.metric with a sparkline
+KPI_HEIGHT = 215  # Approximate height of a bordered st.metric with a sparkline
 
 # Per-metric generation settings. Replace with the metrics you actually track.
 METRIC_CONFIG: dict[str, dict[str, float]] = {
@@ -318,11 +318,14 @@ def kpi_card(label: str, metric_name: str) -> None:
         # The last 4 weeks (29 daily points) of the 7-day average: the value is
         # the latest point, the delta compares it to the first one.
         trend = load_metric(metric_name)["value_7d_ma"].tail(29)
+        change = round(trend.iloc[-1] / trend.iloc[0] - 1, 3)
         st.metric(
             label,
             f"{trend.iloc[-1]:,.0f}",
-            f"{trend.iloc[-1] / trend.iloc[0] - 1:+.1%}",
+            # String deltas like "+0.0%" still get an arrow; pass 0 when flat.
+            f"{change:+.1%}" if change else 0,
             delta_description="vs. 4 weeks ago",
+            help="7-day average",
             chart_data=trend,
             border=True,
         )
