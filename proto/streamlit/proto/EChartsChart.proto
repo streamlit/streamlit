@@ -35,8 +35,7 @@ message EChartsChart {
   Renderer renderer = 6;
 
   // Accessible name for the chart (author `alt`). Applied on the frontend as
-  // ECharts `aria.label.description` (→ aria-label on role="img"). Never
-  // written into the wire `spec` JSON.
+  // ECharts `aria.label.description` (→ aria-label on role="img").
   optional string alt = 7;
 
   // Next ID: 8
