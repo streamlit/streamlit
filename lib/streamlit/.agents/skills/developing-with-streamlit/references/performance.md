@@ -14,8 +14,8 @@ def load_data(path):
     return pd.read_csv(path)
 
 
-# GOOD: Cached, bounded with a TTL
-@st.cache_data(ttl="1h")
+# GOOD: Cached, bounded with max_entries
+@st.cache_data(max_entries=100)
 def load_data(path):
     return pd.read_csv(path)
 ```
