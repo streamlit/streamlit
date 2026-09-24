@@ -254,8 +254,9 @@ class TableMixin:
             and is logged so authors notice the dual meaning of ``alt=""``
             across commands (decorative only on ``st.image`` / ``st.pyplot``).
 
-            Prefer a short, specific description; a vague one can be worse than
-            none. This is a short description of the table, not a full text
+            Prefer a short, specific description. Describe what the data shows
+            rather than repeating text that is already visible on the page.
+            This is a short description of the table, not a full text
             alternative for dense data.
 
         Examples
