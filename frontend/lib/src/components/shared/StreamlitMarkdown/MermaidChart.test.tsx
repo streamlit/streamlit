@@ -273,6 +273,16 @@ describe("MermaidChart", () => {
         expectedAlt: "From Streamlit",
       },
       {
+        name: "empty stAlt does not capture the next line",
+        source: [
+          "%% stAlt:",
+          "accTitle: Checkout",
+          "flowchart TD",
+          "A-->B",
+        ].join("\n"),
+        expectedAlt: "Checkout",
+      },
+      {
         name: "title and description",
         source: [
           "flowchart TD",

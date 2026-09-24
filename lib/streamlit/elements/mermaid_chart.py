@@ -30,8 +30,9 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = get_logger(__name__)
 
-# When alt is set, strip every source the frontend would treat as an author
-# name so the injected ``%% stAlt:`` marker is the only one.
+# When alt is set, strip prior ``%% stAlt:`` markers so the injected marker is
+# the only Streamlit name. Also strip Mermaid ``accTitle`` / ``accDescr`` on
+# grammars that treat those as directives (not diagram content).
 _ST_ALT_LINE: Final = re.compile(r"^\s*%%\s*stAlt\s*:[^\n]*\n?", re.MULTILINE)
 _ACC_TITLE_LINE: Final = re.compile(r"^\s*accTitle\s*:[^\n]*\n?", re.MULTILINE)
 _ACC_DESCR_LINE: Final = re.compile(r"^\s*accDescr\s*:[^\n]*\n?", re.MULTILINE)
@@ -46,12 +47,40 @@ _ACC_DESCR_BLOCK: Final = re.compile(
 # mindmap / kanban / block-beta and similar types.
 _ST_ALT_PREFIX: Final = "%% stAlt: "
 
+# Grammars where a line like ``accTitle: …`` is diagram content (a node/column),
+# not a Mermaid accessibility directive. Stripping those lines would delete
+# nodes when ``alt`` is set.
+_TYPES_WITH_ACC_TITLE_AS_CONTENT: Final = frozenset(
+    {
+        "mindmap",
+        "kanban",
+        "block",
+        "block-beta",
+    }
+)
 
-def _strip_mermaid_accessibility_directives(body: str) -> tuple[str, list[str]]:
-    """Remove stAlt / accTitle / accDescr directives.
+
+def _diagram_type_keyword(body: str) -> str | None:
+    """Return the Mermaid diagram-type keyword, or None if it cannot be found."""
+    lines = body.splitlines(keepends=True)
+    type_at = _skip_mermaid_preamble(lines)
+    if type_at >= len(lines):
+        return None
+    first_token = lines[type_at].strip().split(None, 1)[0]
+    return first_token.lower() if first_token else None
+
+
+def _strip_mermaid_accessibility_directives(
+    body: str, *, strip_acc_directives: bool = True
+) -> tuple[str, list[str]]:
+    """Remove stAlt and, when safe, accTitle / accDescr directives.
 
     Returns the cleaned body and each removed directive (whitespace-trimmed),
     so override warnings can report exactly what was stripped.
+
+    When ``strip_acc_directives`` is False (mindmap and similar), only prior
+    ``%% stAlt:`` markers are removed so content lines like ``accTitle: Sales``
+    are preserved.
     """
     removed: list[str] = []
 
@@ -63,9 +92,10 @@ def _strip_mermaid_accessibility_directives(body: str) -> tuple[str, list[str]]:
         return pattern.sub(_replacer, text)
 
     stripped = _sub_collecting(_ST_ALT_LINE, body)
-    stripped = _sub_collecting(_ACC_TITLE_LINE, stripped)
-    stripped = _sub_collecting(_ACC_DESCR_LINE, stripped)
-    stripped = _sub_collecting(_ACC_DESCR_BLOCK, stripped)
+    if strip_acc_directives:
+        stripped = _sub_collecting(_ACC_TITLE_LINE, stripped)
+        stripped = _sub_collecting(_ACC_DESCR_LINE, stripped)
+        stripped = _sub_collecting(_ACC_DESCR_BLOCK, stripped)
     return stripped, removed
 
 
@@ -116,7 +146,11 @@ def _apply_alt_marker(body: str, normalized_alt: str) -> str:
     ``normalized_alt`` comes from ``normalize_alt`` (outer-stripped). Interior
     whitespace is collapsed so a multi-line ``alt`` cannot inject extra lines.
     """
-    stripped, removed = _strip_mermaid_accessibility_directives(body)
+    type_keyword = _diagram_type_keyword(body)
+    strip_acc_directives = type_keyword not in _TYPES_WITH_ACC_TITLE_AS_CONTENT
+    stripped, removed = _strip_mermaid_accessibility_directives(
+        body, strip_acc_directives=strip_acc_directives
+    )
     single_line_alt = " ".join(normalized_alt.split())
     if removed:
         _LOGGER.warning(

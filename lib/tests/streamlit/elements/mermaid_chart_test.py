@@ -339,3 +339,15 @@ def test_apply_alt_marker_inserts_comment_not_acc_title_on_mindmap() -> None:
         _apply_alt_marker("mindmap\n    root((App))", "Taxonomy")
         == "%% stAlt: Taxonomy\nmindmap\n    root((App))"
     )
+
+
+def test_apply_alt_marker_preserves_mindmap_acc_title_nodes() -> None:
+    """mindmap nodes named like accTitle: … must not be stripped when alt is set."""
+    body = "mindmap\n    root((App))\n        accTitle: Sales\n        Other"
+    assert _apply_alt_marker(body, "App taxonomy") == (
+        "%% stAlt: App taxonomy\n"
+        "mindmap\n"
+        "    root((App))\n"
+        "        accTitle: Sales\n"
+        "        Other"
+    )
