@@ -35,11 +35,9 @@ _LOGGER: Final = get_logger(__name__)
 # %% stAlt:, and context-free stripping can delete mindmap nodes, YAML
 # values, or multiline labels that happen to match those patterns.
 _ST_ALT_LINE: Final = re.compile(r"^\s*%%\s*stAlt\s*:[^\n]*\n?", re.MULTILINE)
-_ACC_TITLE_LINE: Final = re.compile(r"^\s*accTitle\s*:[^\n]*\n?", re.MULTILINE)
-_ACC_DESCR_LINE: Final = re.compile(r"^\s*accDescr\s*:[^\n]*\n?", re.MULTILINE)
-_ACC_DESCR_BLOCK: Final = re.compile(
-    r"^\s*accDescr\s*\{[^}]*\}[^\S\n]*\n?", re.MULTILINE
-)
+_ACC_TITLE_DIRECTIVE: Final = re.compile(r"^accTitle\s*:.*")
+_ACC_DESCR_LINE_DIRECTIVE: Final = re.compile(r"^accDescr\s*:.*")
+_ACC_DESCR_BLOCK_START: Final = re.compile(r"^accDescr\s*\{")
 
 # Marker written into the diagram source when ``alt`` is set. Mermaid treats
 # ``%%`` lines as comments in every grammar; ``accTitle`` is not safe for
@@ -47,11 +45,59 @@ _ACC_DESCR_BLOCK: Final = re.compile(
 _ST_ALT_PREFIX: Final = "%% stAlt: "
 
 
+def _line_indent(line: str) -> int:
+    """Return the leading space/tab count of ``line`` (excluding the newline)."""
+    return len(line) - len(line.lstrip(" \t"))
+
+
 def _find_author_accessibility_directives(body: str) -> list[str]:
-    """Return whitespace-trimmed author accTitle / accDescr lines in ``body``."""
+    """Return top-level author ``accTitle`` / ``accDescr`` directives in ``body``.
+
+    Only lines at or above the diagram-type indent (after comments, init, and
+    YAML frontmatter) count. Indented content — mindmap / kanban / block-beta
+    nodes, flowchart labels, YAML values inside frontmatter — is ignored so
+    ``alt`` does not warn about false overrides.
+    """
+    lines = body.splitlines(keepends=True)
+    type_idx = _skip_mermaid_preamble(lines)
+    if type_idx >= len(lines):
+        return []
+
+    type_indent = _line_indent(lines[type_idx])
     found: list[str] = []
-    for pattern in (_ACC_TITLE_LINE, _ACC_DESCR_LINE, _ACC_DESCR_BLOCK):
-        found.extend(match.group(0).strip() for match in pattern.finditer(body))
+    i = type_idx + 1
+    n = len(lines)
+    while i < n:
+        line = lines[i]
+        if not line.strip():
+            i += 1
+            continue
+        if _line_indent(line) > type_indent:
+            i += 1
+            continue
+
+        stripped = line.strip()
+        if _ACC_TITLE_DIRECTIVE.match(stripped) or _ACC_DESCR_LINE_DIRECTIVE.match(
+            stripped
+        ):
+            found.append(stripped)
+            i += 1
+            continue
+
+        if _ACC_DESCR_BLOCK_START.match(stripped):
+            block_lines = [stripped]
+            if "}" not in stripped:
+                i += 1
+                while i < n:
+                    block_lines.append(lines[i].rstrip("\r\n"))
+                    if "}" in lines[i]:
+                        break
+                    i += 1
+            found.append("\n".join(block_lines))
+            i += 1
+            continue
+
+        i += 1
     return found
 
 

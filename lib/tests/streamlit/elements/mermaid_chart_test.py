@@ -240,10 +240,23 @@ graph LR
             "flowchart TD\naccDescr {\n  First line\n  Second line\n}\nA --> B",
             ["accDescr {\n  First line\n  Second line\n}"],
         ),
+        # Indented content / frontmatter values are not directives.
+        (
+            "mindmap\n    root((App))\n        accTitle: Sales\n        Other",
+            [],
+        ),
+        (
+            "---\ntitle: Meta\naccTitle: NotADirective\n---\nflowchart TD\nA --> B",
+            [],
+        ),
+        (
+            'flowchart TD\n    A["accTitle: Label"]\n    A --> B',
+            [],
+        ),
     ],
 )
 def test_find_author_accessibility_directives(body: str, expected: list[str]) -> None:
-    """Detect author accTitle / accDescr without removing them from the body."""
+    """Detect top-level author accTitle / accDescr; ignore content-shaped lines."""
     assert _find_author_accessibility_directives(body) == expected
 
 
@@ -296,10 +309,12 @@ def test_apply_alt_marker_preserves_frontmatter_and_labels() -> None:
         '    A["accTitle: Label"]\n'
         "    A --> B"
     )
-    result = _apply_alt_marker(body, "Named")
+    with patch("streamlit.elements.mermaid_chart._LOGGER.warning") as mock_warning:
+        result = _apply_alt_marker(body, "Named")
     assert result.startswith("---\ntitle: Meta\naccTitle: NotADirective\n---\n")
     assert 'A["accTitle: Label"]' in result
     assert "%% stAlt: Named\n" in result
+    mock_warning.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -365,7 +380,9 @@ def test_apply_alt_marker_inserts_comment_not_acc_title_on_mindmap() -> None:
     ],
 )
 def test_apply_alt_marker_preserves_acc_title_shaped_content(body: str) -> None:
-    """accTitle-shaped content lines survive on mindmap / kanban / block-beta."""
-    result = _apply_alt_marker(body, "App taxonomy")
+    """accTitle-shaped content survives; no false override warning."""
+    with patch("streamlit.elements.mermaid_chart._LOGGER.warning") as mock_warning:
+        result = _apply_alt_marker(body, "App taxonomy")
     assert "%% stAlt: App taxonomy\n" in result
     assert "accTitle: Sales" in result
+    mock_warning.assert_not_called()
