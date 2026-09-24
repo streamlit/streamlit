@@ -14,9 +14,12 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import re
 import warnings
+import zlib
 from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta, timezone
 from functools import cache
@@ -38,11 +41,9 @@ if TYPE_CHECKING:
 
 
 MAX_COOKIE_BYTES: Final = 4096
-# Safety buffer for signing overhead to account for edge cases, rounding, and potential
-# variations in signing implementations (e.g., longer timestamps after year 2286)
-SIGNING_OVERHEAD_SAFETY_BUFFER: Final = 50
-# Base64 encoding of 1 byte = 4 bytes, so overhead = total - 4
-SINGLE_BYTE_BASE64_SIZE: Final = 4
+# Distinguishes zlib-compressed payloads from JSON, which starts with `{` or `[`.
+_COMPRESSED_COOKIE_PREFIX: Final = "z:"
+_MAX_COOKIE_CHUNKS: Final = 32
 _PROVIDER_TOKEN_ALGORITHM: Final = "HS256"  # noqa: S105
 # joserfc emits SecurityWarning when the symmetric key is shorter than 14 bytes
 # (112 bits). We track the same threshold to surface a one-time Streamlit-level
@@ -128,6 +129,27 @@ def get_expose_tokens_config() -> list[str]:
         )
 
     return res
+
+
+def get_tokens_to_store(token_payload: Mapping[str, Any]) -> dict[str, str]:
+    """Select which OAuth tokens should be persisted in auth cookies.
+
+    Always retains the ID token when available so logout can send an
+    ``id_token_hint`` to providers that support RP-initiated logout. The
+    access token is only persisted when ``expose_tokens`` explicitly opts in.
+    """
+    stored_tokens: dict[str, str] = {}
+
+    id_token = token_payload.get("id_token")
+    if isinstance(id_token, str):
+        stored_tokens["id_token"] = id_token
+
+    if "access" in get_expose_tokens_config():
+        access_token = token_payload.get("access_token")
+        if isinstance(access_token, str):
+            stored_tokens["access_token"] = access_token
+
+    return stored_tokens
 
 
 def get_redirect_uri(auth_section: AttrDict) -> str | None:
@@ -431,6 +453,46 @@ def generate_default_provider_section(auth_section: AttrDict) -> dict[str, Any]:
     return default_provider_section
 
 
+def _signed_cookie_size(
+    create_signed_value_fn: Callable[[str, str], bytes],
+    cookie_name: str,
+    value: str,
+    cookie_attr_size: int,
+) -> int:
+    """Return ``name=value`` plus attribute bytes for a signed cookie."""
+    signed_value = create_signed_value_fn(cookie_name, value)
+    return len(cookie_name) + 1 + len(signed_value) + cookie_attr_size
+
+
+def _compress_cookie_payload(serialized: str) -> str:
+    """Return a compact, ASCII-safe encoding of a large cookie payload.
+
+    itsdangerous already zlib-compresses when signing, so a size check on the
+    signed JSON can pass a 4KB limit while the uncompressed JSON is tens of
+    kilobytes. Splitting that uncompressed JSON then re-signing each slice
+    explodes the Cookie header. Compressing *before* splitting keeps the
+    stored fragments small.
+    """
+    compressed = zlib.compress(serialized.encode("utf-8"))
+    encoded = base64.urlsafe_b64encode(compressed).decode("ascii")
+    return f"{_COMPRESSED_COOKIE_PREFIX}{encoded}"
+
+
+def _decompress_cookie_payload(payload: bytes) -> bytes | None:
+    """Decode a compressed cookie payload, or return uncompressed bytes as-is."""
+    prefix = _COMPRESSED_COOKIE_PREFIX.encode("ascii")
+    if not payload.startswith(prefix):
+        return payload
+
+    encoded = payload[len(prefix) :]
+    try:
+        padded = encoded + b"=" * ((4 - len(encoded) % 4) % 4)
+        return zlib.decompress(base64.urlsafe_b64decode(padded))
+    except (ValueError, zlib.error, binascii.Error):
+        _LOGGER.exception("Failed to decompress cookie payload")
+        return None
+
+
 def set_cookie_with_chunks(
     set_single_cookie_fn: Callable[[str, str], None],
     create_signed_value_fn: Callable[[str, str], bytes],
@@ -449,50 +511,39 @@ def set_cookie_with_chunks(
         cookie_attr_size: Number of attribute bytes appended to each cookie.
     """
     serialized_cookie_value = json.dumps(value)
+    actual_cookie_size = _signed_cookie_size(
+        create_signed_value_fn,
+        cookie_name,
+        serialized_cookie_value,
+        cookie_attr_size,
+    )
 
-    # Calculate actual cookie size using the provided signing function
-    signed_value = create_signed_value_fn(cookie_name, serialized_cookie_value)
-
-    # Cookie format: "name=value" + cookie attributes
-    actual_cookie_size = len(cookie_name) + 1 + len(signed_value) + cookie_attr_size
-
-    # Check if cookie needs to be split
-    if actual_cookie_size > MAX_COOKIE_BYTES:
-        _LOGGER.debug(
-            "Cookie size (%d bytes) exceeds browser limit. Splitting into multiple cookies.",
-            actual_cookie_size,
-        )
-        _set_split_cookie(
-            set_single_cookie_fn,
-            create_signed_value_fn,
-            cookie_name,
-            serialized_cookie_value,
-            cookie_attr_size=cookie_attr_size,
-        )
-    else:
+    if actual_cookie_size <= MAX_COOKIE_BYTES:
         set_single_cookie_fn(cookie_name, serialized_cookie_value)
+        return
 
+    _LOGGER.debug(
+        "Cookie size (%d bytes) exceeds browser limit. Splitting into multiple cookies.",
+        actual_cookie_size,
+    )
+    payload = _compress_cookie_payload(serialized_cookie_value)
+    compressed_size = _signed_cookie_size(
+        create_signed_value_fn,
+        cookie_name,
+        payload,
+        cookie_attr_size,
+    )
+    if compressed_size <= MAX_COOKIE_BYTES:
+        set_single_cookie_fn(cookie_name, payload)
+        return
 
-def _calculate_signing_overhead(
-    create_signed_value_fn: Callable[[str, str], bytes],
-    cookie_name: str,
-) -> int:
-    """Calculate the server's signing overhead by measuring the size difference.
-
-    This empirically measures the overhead added by the signing function (e.g., itsdangerous
-    create_signed_value) by signing a minimal test value and computing the difference.
-
-    Args:
-        create_signed_value_fn: Function to create a signed cookie value
-        cookie_name: Name of the cookie (affects overhead due to length prefix)
-
-    Returns
-    -------
-        The number of bytes added by signing (excluding the base64-encoded value)
-    """
-    test_value = "x"  # Minimal test value (1 byte)
-    signed = create_signed_value_fn(cookie_name, test_value)
-    return len(signed) - SINGLE_BYTE_BASE64_SIZE
+    _set_split_cookie(
+        set_single_cookie_fn,
+        create_signed_value_fn,
+        cookie_name,
+        payload,
+        cookie_attr_size=cookie_attr_size,
+    )
 
 
 def _set_split_cookie(
@@ -505,61 +556,41 @@ def _set_split_cookie(
 ) -> None:
     """Split a large cookie value into multiple smaller cookies.
 
-    The main cookie always exists and either contains the whole value or the chunk count.
-    Additional chunks are stored as cookie_name_1, cookie_name_2, etc.
-
-    Args:
-        set_single_cookie_fn: Function to set a single cookie (cookie_name, value)
-        create_signed_value_fn: Function to create a signed cookie value
-        cookie_name: Name of the cookie
-        value: Serialized string value to split and store
-        cookie_attr_size: Number of attribute bytes appended to each cookie.
+    Uses the fewest chunks whose independently signed cookies each stay within
+    ``MAX_COOKIE_BYTES``. The main cookie always exists and either contains the
+    whole value or the chunk count. Additional chunks are stored as
+    cookie_name_1, cookie_name_2, etc.
     """
-    # Calculate overhead empirically from the actual signing function, plus safety buffer
-    signing_overhead = (
-        _calculate_signing_overhead(create_signed_value_fn, cookie_name)
-        + SIGNING_OVERHEAD_SAFETY_BUFFER
-    )
+    for chunk_count in range(1, _MAX_COOKIE_CHUNKS + 1):
+        chunk_len = max(1, (len(value) + chunk_count - 1) // chunk_count)
+        chunks = [value[i : i + chunk_len] for i in range(0, len(value), chunk_len)]
+        if not chunks:
+            chunks = [""]
+        chunk_names = [f"{cookie_name}_{i + 1}" for i in range(len(chunks))]
+        if any(
+            _signed_cookie_size(create_signed_value_fn, name, chunk, cookie_attr_size)
+            > MAX_COOKIE_BYTES
+            for name, chunk in zip(chunk_names, chunks, strict=True)
+        ):
+            continue
 
-    # Available space for the signed value:
-    # MAX_COOKIE_BYTES - cookie_name - "=" (1 byte) - cookie attributes
-    available_for_signed_value = (
-        MAX_COOKIE_BYTES - len(cookie_name) - 1 - cookie_attr_size
-    )
+        if len(chunks) == 1:
+            set_single_cookie_fn(cookie_name, chunks[0])
+            return
 
-    # Space available for the base64-encoded value (after subtracting signing overhead)
-    available_for_base64_value = available_for_signed_value - signing_overhead
+        set_single_cookie_fn(cookie_name, f"chunks-{len(chunks)}")
+        for name, chunk in zip(chunk_names, chunks, strict=True):
+            set_single_cookie_fn(name, chunk)
 
-    # If there is not enough space for the base64-encoded value, raise an error.
-    # We need at least 4 bytes for a minimal base64-encoded value.
-    if (
-        available_for_base64_value < SINGLE_BYTE_BASE64_SIZE
-    ):  # pragma: no cover - defensive
-        raise StreamlitAuthError("Not enough space available for the signed value.")
-
-    # Convert from base64 space to raw value space (base64 has 4/3 expansion ratio)
-    chunk_size = (available_for_base64_value * 3) // 4
-    chunks = []
-    for i in range(0, len(value), chunk_size):
-        chunk = value[i : i + chunk_size]
-        chunks.append(chunk)
-
-    if len(chunks) == 1:
-        set_single_cookie_fn(cookie_name, chunks[0])
+        _LOGGER.info(
+            "Split cookie '%s' into %d chunks",
+            cookie_name,
+            len(chunks),
+        )
         return
 
-    # Store count in the main cookie
-    set_single_cookie_fn(cookie_name, f"chunks-{len(chunks)}")
-
-    # Store remaining chunks as cookie_name_1, cookie_name_2, etc.
-    for i in range(len(chunks)):
-        chunk_name = f"{cookie_name}_{i + 1}"
-        set_single_cookie_fn(chunk_name, chunks[i])
-
-    _LOGGER.info(
-        "Split cookie '%s' into %d chunks",
-        cookie_name,
-        len(chunks),
+    raise StreamlitAuthError(
+        f"Cookie '{cookie_name}' is too large to split into browser-sized pieces."
     )
 
 
@@ -590,7 +621,7 @@ def get_cookie_with_chunks(
 
     match = _chunks_regex.match(cookie_value)
     if match is None:
-        return cookie_value
+        return _decompress_cookie_payload(cookie_value)
 
     # Parse chunk count
     try:
@@ -611,7 +642,7 @@ def get_cookie_with_chunks(
         chunks.append(chunk_value)
 
     reconstructed_value = b"".join(chunks)
-    return reconstructed_value
+    return _decompress_cookie_payload(reconstructed_value)
 
 
 def validate_auth_credentials(provider: str) -> None:

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import builtins
+import json
 from http.cookies import SimpleCookie
 from typing import Any
 from unittest.mock import MagicMock
@@ -446,6 +447,73 @@ def test_auth_callback_sets_signed_cookie(monkeypatch: pytest.MonkeyPatch) -> No
         assert '"is_logged_in": true' in payload.lower()
 
 
+@patch_config_options({"server.cookieSecret": "test-secret"})
+def test_auth_callback_omits_access_token_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Access tokens are not persisted unless expose_tokens opts in."""
+
+    async def _dummy_authorize_access_token(self, request: Any) -> dict[str, Any]:
+        return {
+            "userinfo": {"email": "user@example.com"},
+            "id_token": "id-tok",
+            "access_token": "access-tok",
+        }
+
+    class _DummyClient:
+        async def authorize_access_token(self, request: Any) -> dict[str, Any]:
+            return await _dummy_authorize_access_token(self, request)
+
+    monkeypatch.setattr(
+        starlette_auth_routes,
+        "_create_oauth_client",
+        lambda provider: (_DummyClient(), "/redirect"),
+    )
+    monkeypatch.setattr(
+        starlette_auth_routes,
+        "_get_provider_by_state",
+        lambda request, state: "default",
+    )
+    monkeypatch.setattr(
+        starlette_auth_routes,
+        "_get_origin_from_secrets",
+        lambda: "http://testserver",
+    )
+
+    def no_exposed_tokens() -> list[str]:
+        return []
+
+    monkeypatch.setattr(
+        "streamlit.auth_util.get_expose_tokens_config",
+        no_exposed_tokens,
+    )
+
+    app = Starlette(routes=create_auth_routes(""))
+    with TestClient(app) as client:
+        response = client.get("/oauth2callback?state=abc", follow_redirects=False)
+        assert response.status_code == 302
+
+        tokens_header = next(
+            (
+                header
+                for header in response.headers.get_list("set-cookie")
+                if header.startswith(f"{TOKENS_COOKIE_NAME}=")
+            ),
+            None,
+        )
+        assert tokens_header is not None
+        cookies = SimpleCookie()
+        cookies.load(tokens_header)
+        decoded = starlette_app_utils.decode_signed_value(
+            "test-secret",
+            TOKENS_COOKIE_NAME,
+            cookies[TOKENS_COOKIE_NAME].value,
+        )
+        assert decoded is not None
+        payload = json.loads(decoded)
+        assert payload == {"id_token": "id-tok"}
+
+
 def test_login_initializes_session(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that login endpoint initializes a session for OAuth flow."""
     captured_session: dict[str, Any] | None = None
@@ -861,7 +929,10 @@ class TestAuthCookieFlags:
         """Test that auth cookie is set with correct security flags."""
 
         async def _dummy_authorize_access_token(self, request: Any) -> dict[str, Any]:
-            return {"userinfo": {"email": "user@example.com"}}
+            return {
+                "userinfo": {"email": "user@example.com"},
+                "id_token": "test-id-token",
+            }
 
         class _DummyClient:
             async def authorize_access_token(self, request: Any) -> dict[str, Any]:
@@ -936,7 +1007,10 @@ class TestAuthCookieFlags:
         """Test that auth cookie path matches the configured baseUrlPath."""
 
         async def _dummy_authorize_access_token(self, request: Any) -> dict[str, Any]:
-            return {"userinfo": {"email": "user@example.com"}}
+            return {
+                "userinfo": {"email": "user@example.com"},
+                "id_token": "test-id-token",
+            }
 
         class _DummyClient:
             async def authorize_access_token(self, request: Any) -> dict[str, Any]:

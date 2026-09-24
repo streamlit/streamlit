@@ -30,6 +30,7 @@ from streamlit.auth_util import (
     get_origin_from_redirect_uri,
     get_redirect_uri,
     get_secrets_auth_section,
+    get_tokens_to_store,
     get_validated_redirect_uri,
     set_cookie_with_chunks,
 )
@@ -162,18 +163,29 @@ def _get_cookie_path() -> str:
 
 
 async def _set_auth_cookie(
-    response: Response, user_info: dict[str, Any], tokens: dict[str, Any]
+    response: Response,
+    user_info: dict[str, Any],
+    tokens: dict[str, Any],
+    *,
+    request: Request | None = None,
 ) -> None:
     """Set the auth cookies with signed user info and tokens.
 
     This cookie uses itsdangerous signing. Cookies may be split into multiple
-    chunks if they exceed browser limits.
+    chunks if they exceed browser limits. Numbered leftover chunk cookies from
+    a previous login are cleared so they cannot keep inflating the Cookie
+    header after a smaller cookie is written.
     """
 
     def set_single_cookie(cookie_name: str, value: str) -> None:
         _set_single_cookie(response, cookie_name, value)
 
     _delete_legacy_root_auth_cookies(response)
+    if request is not None:
+        if tokens:
+            _clear_cookie_chunk_siblings(response, request, TOKENS_COOKIE_NAME)
+        else:
+            _clear_single_auth_cookie_and_chunks(response, request, TOKENS_COOKIE_NAME)
 
     cookie_attr_size = _get_auth_cookie_attribute_size()
     set_cookie_with_chunks(
@@ -183,13 +195,14 @@ async def _set_auth_cookie(
         user_info,
         cookie_attr_size=cookie_attr_size,
     )
-    set_cookie_with_chunks(
-        set_single_cookie,
-        _create_signed_value_wrapper,
-        TOKENS_COOKIE_NAME,
-        tokens,
-        cookie_attr_size=cookie_attr_size,
-    )
+    if tokens:
+        set_cookie_with_chunks(
+            set_single_cookie,
+            _create_signed_value_wrapper,
+            TOKENS_COOKIE_NAME,
+            tokens,
+            cookie_attr_size=cookie_attr_size,
+        )
 
 
 def _get_auth_cookie_attribute_size() -> int:
@@ -270,6 +283,20 @@ def _delete_legacy_root_auth_cookies(response: Response) -> None:
         response.delete_cookie(cookie_name, path="/")
 
 
+def _clear_cookie_chunk_siblings(
+    response: Response, request: Request, cookie_name: str
+) -> None:
+    """Delete numbered chunk cookies left over from a previous split cookie.
+
+    The ``.isdigit()`` check matches only numeric siblings, so clearing
+    ``_streamlit_user`` does not delete ``_streamlit_user_tokens``.
+    """
+    chunk_prefix = f"{cookie_name}_"
+    for name in request.cookies:
+        if name.startswith(chunk_prefix) and name[len(chunk_prefix) :].isdigit():
+            _delete_cookie_at_current_and_legacy_paths(response, name)
+
+
 def _clear_single_auth_cookie_and_chunks(
     response: Response, request: Request, cookie_name: str
 ) -> None:
@@ -282,15 +309,7 @@ def _clear_single_auth_cookie_and_chunks(
     can no longer be decoded to read its chunk count.
     """
     _delete_cookie_at_current_and_legacy_paths(response, cookie_name)
-
-    # The `.isdigit()` check matches only numeric chunk siblings, so clearing
-    # `_streamlit_user` does not accidentally delete the separate
-    # `_streamlit_user_tokens` cookie (or its `_streamlit_user_tokens_<n>`
-    # chunks), even though the latter shares the `_streamlit_user_` prefix.
-    chunk_prefix = f"{cookie_name}_"
-    for name in request.cookies:
-        if name.startswith(chunk_prefix) and name[len(chunk_prefix) :].isdigit():
-            _delete_cookie_at_current_and_legacy_paths(response, name)
+    _clear_cookie_chunk_siblings(response, request, cookie_name)
 
 
 def _clear_auth_cookie(response: Response, request: Request) -> None:
@@ -614,9 +633,9 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
     response = await _redirect_to_base_clearing_invalid_cookies(request, base_url)
 
     cookie_value = dict(user, origin=origin, is_logged_in=True, provider=provider)
-    tokens = {k: token[k] for k in ["id_token", "access_token"] if k in token}
+    tokens = get_tokens_to_store(token)
     if user:
-        await _set_auth_cookie(response, cookie_value, tokens)
+        await _set_auth_cookie(response, cookie_value, tokens, request=request)
     else:  # pragma: no cover - error path
         _LOGGER.error(
             "OAuth provider '%s' did not return user information during callback.",
