@@ -243,7 +243,7 @@ describe("LinkColumn", () => {
     expect(cell.displayData).toBe("https://roadmap.streamlit.app")
   })
 
-  it("displays material icon when display_text is a material icon", () => {
+  it("displays the open_in_new material icon as a single-character codepoint", () => {
     const mockColumn = LinkColumn({
       ...MOCK_LINK_COLUMN_PROPS,
       columnTypeOptions: { display_text: ":material/open_in_new:" },
@@ -251,11 +251,29 @@ describe("LinkColumn", () => {
 
     const cell = mockColumn.getCell("https://streamlit.io", true) as UriCell
 
-    // The display should be the icon name for the icon font
-    expect(cell.displayData).toBe("open_in_new")
+    // Single-character codepoint so glide cannot truncate the ligature name.
+    expect(cell.displayData).toBe("\uE89E")
+    expect(cell.copyData).toBe("https://streamlit.io")
     // Should center align when using icon
     expect(cell.contentAlign).toBe("center")
     // Should have theme override for icon font
+    expect(cell.themeOverride).toBeDefined()
+  })
+
+  it("leaves other material icons as ligature names, which Glide can still truncate", () => {
+    const mockColumn = LinkColumn({
+      ...MOCK_LINK_COLUMN_PROPS,
+      columnTypeOptions: {
+        display_text: ":material/signal_cellular_connected_no_internet_0_bar:",
+      },
+    })
+
+    const cell = mockColumn.getCell("https://streamlit.io", true) as UriCell
+
+    expect(cell.displayData).toBe(
+      "signal_cellular_connected_no_internet_0_bar"
+    )
+    expect(cell.contentAlign).toBe("center")
     expect(cell.themeOverride).toBeDefined()
   })
 
