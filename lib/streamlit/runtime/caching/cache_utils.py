@@ -676,6 +676,9 @@ class BoundCachedFunc(Generic[P, R]):
     def __repr__(self) -> str:
         return f"<BoundCachedFunc: {self._cached_func._info.func} of {self._instance}>"
 
+    def task(self, *args: Any, **kwargs: Any) -> cache_task.Task[R]:
+        return self._cached_func.task(self._instance, *args, **kwargs)
+
     def clear(self, *args: Any, **kwargs: Any) -> None:
         if args or kwargs:
             # The instance is required as first parameter to allow
@@ -1025,6 +1028,55 @@ class CachedFunc(Generic[P, R]):
                 )
             finally:
                 cache.complete_async_compute(value_key, compute_future)
+
+    def task(self, *args: P.args, **kwargs: P.kwargs) -> cache_task.Task[R]:
+        """Run this cached function without blocking the script.
+
+        The call returns immediately with a handle on the computation. If the value
+        is already cached, the handle is already finished. Otherwise Streamlit runs
+        the function in the background and reruns the app when it finishes.
+
+        Apps that request the same value at the same time share a single
+        computation, and every one of them reruns when it finishes.
+
+        Parameters
+        ----------
+        *args : Any
+            Arguments of the cached function.
+
+        **kwargs : Any
+            Keyword arguments of the cached function.
+
+        Returns
+        -------
+        Task
+            A handle on the computation, with ``running``, ``done``, ``error``, and
+            ``result`` attributes. Reading ``result`` before the task is done raises.
+
+        Examples
+        --------
+        >>> import streamlit as st
+        >>> import time
+        >>>
+        >>> @st.cache_data
+        ... def slow_query(region):
+        ...     time.sleep(5)
+        ...     return f"rows for {region}"
+        >>>
+        >>> task = slow_query.task("emea")
+        >>> if task.running:
+        ...     st.info("Loading...")
+        ... elif task.error:
+        ...     st.error(f"Query failed: {task.error}")
+        ... else:
+        ...     st.write(task.result)
+
+        .. note::
+            A function run this way can't use session-specific features such as
+            ``st.session_state``, and Streamlit doesn't replay display commands it
+            issues. Pass any required session values as arguments instead.
+        """
+        return self._get_or_create_task(args, kwargs)
 
     def _get_or_create_task(
         self,
