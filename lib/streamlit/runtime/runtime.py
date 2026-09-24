@@ -309,6 +309,19 @@ class Runtime:
             return None
         return session_info.client
 
+    def get_active_session(self, session_id: str) -> AppSession | None:
+        """Get the AppSession for the given session_id, or None if no active
+        session has that id.
+
+        Notes
+        -----
+        Threading: SAFE. May be called on any thread.
+        """
+        session_info = self._session_mgr.get_active_session_info(session_id)
+        if session_info is None:
+            return None
+        return session_info.session
+
     def clear_user_info_for_session(self, session_id: str) -> None:
         """Clear the user_info for the given session_id.
 

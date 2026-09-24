@@ -51,7 +51,7 @@ from streamlit.errors import (
     StreamlitValueError,
 )
 from streamlit.logger import get_logger
-from streamlit.runtime.caching import cache_background_refresh
+from streamlit.runtime.caching import cache_background_refresh, cache_task
 from streamlit.runtime.caching.cache_errors import (
     CachedFunctionReturnedAwaitableError,
     CachedStFunctionInBackgroundModeWarning,
@@ -1026,6 +1026,78 @@ class CachedFunc(Generic[P, R]):
             finally:
                 cache.complete_async_compute(value_key, compute_future)
 
+    def _get_or_create_task(
+        self,
+        func_args: tuple[Any, ...],
+        func_kwargs: dict[str, Any],
+    ) -> cache_task.Task[R]:
+        """Return a handle on this call's value, computing it off the script thread.
+
+        A cache hit resolves synchronously, without using a worker. A miss joins the
+        app-wide task for this key (starting it if nothing is in flight) and returns a
+        still-running handle; the calling session is rerun once the task settles.
+        """
+        if self._info.is_async:
+            raise StreamlitAPIException(
+                "Coroutine functions (`async def`) cannot be run as tasks. Await the "
+                "cached coroutine instead.",
+                error_id="async-function-not-taskable",
+            )
+
+        cache = self._info.get_function_cache(self._function_key)
+        value_key = _make_value_key(
+            cache_type=self._info.cache_type,
+            func=self._info.func,
+            func_args=func_args,
+            func_kwargs=func_kwargs,
+            hash_funcs=self._info.hash_funcs,
+        )
+
+        try:
+            read = cache.read_result_and_freshness(value_key)
+        except CacheKeyNotFoundError:
+            pass
+        else:
+            if read.is_stale:
+                # Background mode, stale grace window: hand back the stale value now
+                # and let the existing refresh path replace it.
+                self._maybe_trigger_background_refresh(
+                    cache, value_key, func_args, func_kwargs
+                )
+            return cache_task.completed_task(self._handle_cache_hit(read.result))
+
+        entry = cache_task.get_task_manager().get_or_submit(
+            (self._function_key, value_key),
+            lambda: self._compute_task_value(cache, value_key, func_args, func_kwargs),
+            session=cache_task.get_current_session(),
+        )
+        return cache_task.Task(entry.snapshot())
+
+    def _compute_task_value(
+        self,
+        cache: Cache[R],
+        value_key: str,
+        func_args: tuple[Any, ...],
+        func_kwargs: dict[str, Any],
+    ) -> R:
+        """Compute a value on a task worker and write it into the cache.
+
+        Runs without a ScriptRunContext, so the cached function must be context-free.
+        The value is cached so that later plain calls hit rather than recompute; a
+        clear that lands while the function is running discards the write.
+        """
+        invalidation_token = cache.capture_invalidation_token(value_key)
+        computed_value = self._info.func(*func_args, **func_kwargs)
+        _reject_awaitable_return_value(
+            self._info.cache_type, self._info.func, computed_value
+        )
+        # Tasks never replay st.* output, for the same reason background refresh
+        # doesn't: the display commands ran on a thread with no session attached.
+        cache.write_result_if_current(
+            value_key, computed_value, [], invalidation_token=invalidation_token
+        )
+        return computed_value
+
     def _maybe_trigger_background_refresh(
         self,
         cache: Cache[R],
@@ -1187,6 +1259,9 @@ class CachedFunc(Generic[P, R]):
         else:
             key = None
         cache.clear(key=key)
+        # A failed task is sticky so that it is reported rather than retried on every
+        # rerun; clearing the cache is how an app asks for that retry.
+        cache_task.get_task_manager().clear(self._function_key, key)
 
 
 def _make_value_key(

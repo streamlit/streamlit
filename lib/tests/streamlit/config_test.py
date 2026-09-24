@@ -790,6 +790,7 @@ class ConfigTest(unittest.TestCase):
                 "runner.magicEnabled",
                 "runner.parallelMaxWorkers",
                 "runner.postScriptGC",
+                "runner.taskMaxWorkers",
                 "runner.fastReruns",
                 "runner.enumCoercion",
                 "magic.displayRootDocString",

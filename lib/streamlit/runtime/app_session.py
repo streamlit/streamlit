@@ -45,6 +45,7 @@ from streamlit.runtime.backend_operation_handler import (
     DismissSkillsNudgeHandler,
     InstallSkillsHandler,
 )
+from streamlit.runtime.caching import cache_task
 from streamlit.runtime.dataframe_chunk_handler import DataframeChunkHandler
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import FragmentStorage, MemoryFragmentStorage
@@ -357,6 +358,9 @@ class AppSession:
         """
         caching.clear_session_data_cache(self.id)
         caching.clear_session_resource_cache(self.id)
+        # Unsubscribe from any cached-function tasks, so tasks nobody is waiting on
+        # can be reaped.
+        cache_task.release_session(self.id)
 
     def flush_browser_queue(self) -> list[ForwardMsg]:
         """Clear the forward message queue and return the messages it contained.
@@ -500,6 +504,15 @@ class AppSession:
         self._call_soon_on_event_loop(
             lambda: self._enqueue_forward_msg(self._create_exception_message(e))
         )
+
+    def request_rerun_threadsafe(self) -> None:
+        """Request a rerun from a thread other than this session's event loop thread.
+
+        ``request_rerun`` touches ScriptRunner state owned by the event loop, so a
+        worker thread must hop onto that loop first. A session whose loop has already
+        closed is simply not rerun.
+        """
+        self._call_soon_on_event_loop(lambda: self.request_rerun(None))
 
     def request_rerun(self, client_state: ClientState | None) -> None:
         """Signal that we're interested in running the script.

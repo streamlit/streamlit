@@ -356,6 +356,11 @@ extend-safe-fixes = ["TC002", "TC003"]
   # misrepresent them as importable modules.
   "INP",
 ]
+"prototype_demos/**" = [
+  # Each demo is a standalone app, not a package. Adding __init__.py would
+  # misrepresent them as importable modules.
+  "INP",
+]
 
 [tool.ruff.lint.flake8-tidy-imports]
 # Disallow all relative imports.

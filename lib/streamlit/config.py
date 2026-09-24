@@ -829,6 +829,19 @@ _create_option(
 )
 
 _create_option(
+    "runner.taskMaxWorkers",
+    description="""
+        Maximum number of cached-function tasks that run concurrently off the
+        script thread. Sizes a single, process-wide thread pool shared by all
+        tasks; when it is saturated, further tasks wait for a free worker rather
+        than being skipped. Values below 1 are treated as 1.
+    """,
+    visibility="hidden",
+    default_val=4,
+    type_=int,
+)
+
+_create_option(
     "runner.cacheBackgroundRefreshTTLMultiplier",
     description="""
         Multiplier applied to a cached function's ttl to set the hard-expiration
