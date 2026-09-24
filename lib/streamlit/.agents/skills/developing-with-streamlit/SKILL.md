@@ -91,7 +91,7 @@ When selecting a Streamlit command, discovering functionality that may be newer 
 streamlit docs st.<command>
 ```
 
-Run this with the Streamlit installation relevant to the app being edited. Use `references/api-reference.md` to discover available public `st` commands and namespaces, then use `streamlit docs st.<command>` for exact signatures, parameters, and docstrings.
+Run this with the Streamlit installation relevant to the app being edited. Read the full output rather than piping it through `head`; the Returns and Examples sections come last. Use `references/api-reference.md` to discover available public `st` commands and namespaces, then use `streamlit docs st.<command>` for exact signatures, parameters, and docstrings.
 
 When annotating Streamlit-owned values returned by commands or stored in Session State, import the curated public types from `streamlit.typing` (also available as `st.typing`) instead of their internal implementation modules. See `references/api-reference.md` for the available types.
 
