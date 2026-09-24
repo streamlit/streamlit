@@ -194,6 +194,20 @@ if TYPE_CHECKING:
     )
 
     # =====================================================================
+    # Test alt parameter (str or None)
+    # =====================================================================
+
+    assert_type(
+        plotly_chart(fig, on_select="ignore", alt="Scatter of x versus y"),
+        DeltaGenerator,
+    )
+    assert_type(plotly_chart(fig, on_select="ignore", alt=None), DeltaGenerator)
+    assert_type(
+        plotly_chart(fig, alt="Scatter of x versus y", on_select="rerun"),
+        PlotlyState,
+    )
+
+    # =====================================================================
     # Test with all parameters combined (on_select="ignore" -> DeltaGenerator)
     # =====================================================================
 
@@ -208,6 +222,7 @@ if TYPE_CHECKING:
             on_select="ignore",
             selection_mode=("points", "box", "lasso"),
             config={"scrollZoom": False},
+            alt="Full chart description",
         ),
         DeltaGenerator,
     )
@@ -227,6 +242,7 @@ if TYPE_CHECKING:
             on_select="rerun",
             selection_mode=["points", "box"],
             config={"displayModeBar": True},
+            alt="Selectable chart description",
         ),
         PlotlyState,
     )
@@ -246,6 +262,7 @@ if TYPE_CHECKING:
             on_select=my_callback,
             selection_mode="points",
             config=None,
+            alt="Callback chart description",
         ),
         PlotlyState,
     )
@@ -263,3 +280,6 @@ if TYPE_CHECKING:
 
     # Invalid selection_mode value
     plotly_chart(fig, on_select="rerun", selection_mode="invalid")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
+
+    # Invalid alt type (str or None only)
+    plotly_chart(fig, alt=123)  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]

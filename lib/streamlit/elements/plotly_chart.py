@@ -44,7 +44,12 @@ from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.streamlit_plotly_theme import (
     configure_streamlit_plotly_theme,
 )
-from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
+from streamlit.elements.lib.utils import (
+    Key,
+    compute_and_register_element_id,
+    normalize_alt,
+    to_key,
+)
 from streamlit.errors import StreamlitValueError
 from streamlit.logger import get_logger
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
@@ -436,6 +441,7 @@ class PlotlyMixin:
             "lasso",
         ),
         config: dict[str, Any] | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator: ...
 
     @overload
@@ -456,6 +462,7 @@ class PlotlyMixin:
             "lasso",
         ),
         config: dict[str, Any] | None = None,
+        alt: str | None = None,
     ) -> PlotlyState: ...
 
     @gather_metrics("plotly_chart")
@@ -475,6 +482,7 @@ class PlotlyMixin:
             "lasso",
         ),
         config: dict[str, Any] | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator | PlotlyState:
         """Display an interactive Plotly chart.
 
@@ -615,6 +623,19 @@ class PlotlyMixin:
             configuration options, see Plotly's documentation on `Configuration
             in Python <https://plotly.com/python/configuration-options/>`_.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), Streamlit does not
+            provide an accessible name for the chart.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            Prefer a short, specific description; a vague one can be worse than
+            none. This is a short description of the chart, not a full text
+            alternative for dense graphics.
+
         Returns
         -------
         element or PlotlyState
@@ -646,7 +667,9 @@ class PlotlyMixin:
         ...     hist_data, group_labels, bin_size=[0.1, 0.25, 0.5]
         ... )
         >>>
-        >>> st.plotly_chart(fig)
+        >>> st.plotly_chart(
+        ...     fig, alt="Distribution of three groups of random samples"
+        ... )
 
         .. output::
            https://doc-plotly-chart.streamlit.app/
@@ -747,11 +770,17 @@ class PlotlyMixin:
         plotly_chart_proto.spec = plotly.io.to_json(figure, validate=False)
         plotly_chart_proto.config = json.dumps(config)
 
+        normalized_alt = normalize_alt(alt)
+        if normalized_alt is not None:
+            # Carry alt on its own proto field so it is not baked into the
+            # wire spec JSON (frontend applies it as the chart accessible name).
+            plotly_chart_proto.alt = normalized_alt
+
         ctx = get_script_run_ctx()
 
-        # We are computing the widget id for all plotly uses
-        # to also allow non-widget Plotly charts to keep their state
-        # when the frontend component gets unmounted and remounted.
+        # Compute an ID for every Plotly chart so the frontend can restore
+        # state after remount. Always hash command kwargs (including alt),
+        # even when the author set a key, so changing alt remounts the chart.
         plotly_chart_proto.id = compute_and_register_element_id(
             "plotly_chart",
             user_key=key,
@@ -764,6 +793,7 @@ class PlotlyMixin:
             theme=theme,
             width=width,
             height=height,
+            alt=normalized_alt,
         )
 
         # Handle "content" width and height by inspecting the figure's natural dimensions
