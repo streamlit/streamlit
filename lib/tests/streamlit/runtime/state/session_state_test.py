@@ -4795,7 +4795,7 @@ class RegisterWidgetValueChangedTest(DeltaGeneratorTestCase):
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=MockScriptRunCtx(),
     )
-    def test_value_changed_true_when_prior_run_user_key_exists(
+    def test_value_changed_true_when_widget_first_mounts_with_prior_run_session_state(
         self, mock_ctx: MagicMock
     ) -> None:
         """A previous-run user-key value (setdefault / assignment while the
@@ -4845,6 +4845,30 @@ class RegisterWidgetValueChangedTest(DeltaGeneratorTestCase):
         self.session_state._old_state["my_widget"] = "custom_value"
         self.session_state._set_key_widget_mapping(widget_id, "my_widget")
         metadata = _create_persist_state_metadata(widget_id, "page")
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "custom_value"
+        assert result.value_changed is True
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_prior_run_user_key_survives_non_persisted_unmount(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A user key written before first registration stays in old state after
+        a persist_state=None unmount. Remount adopts that original value, not
+        the last widget edit or the element default."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, None)
+
+        self.session_state._old_state["my_widget"] = "custom_value"
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "edited_value")
+        self.session_state._compact_state()
+        self.session_state._remove_stale_widgets(frozenset())
 
         result = self.session_state.register_widget(metadata, user_key="my_widget")
 

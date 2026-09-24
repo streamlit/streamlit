@@ -1736,18 +1736,23 @@ class SessionState:
             else:
                 self.query_params.discard_param_no_forward_msg(user_key)
 
-        # A keyed widget resolving to a non-default value already in old state
-        # must tell the frontend to adopt that value on (re)mount. Otherwise it
-        # renders at its default and the next rerun overwrites the stored value.
-        # This covers persist_state remounts (value preserved under the user key
-        # or widget id) and a previous-run user-key assignment that happened
-        # before the widget first registered (setdefault / session_state write
-        # while the widget was not on screen). persist_state=None unmount still
-        # resets: cleanup drops the widget id, and no independent user-key entry
-        # remains unless one was set as ordinary user state. For a bind +
-        # persist_state widget this can overlap with restored_bound_value; that
-        # is harmless since both only feed the OR below.
-        restored_persisted_value = False
+        # A keyed widget with a non-default value from a previous run must tell
+        # the frontend to adopt that value on (re)mount. Otherwise the UI mounts
+        # at the element default and the next rerun overwrites session state.
+        # This fires when:
+        # - persist_state preserved a value under the user key or widget id
+        # - a previous-run user-key write happened before the widget first
+        #   registered (setdefault / session_state assignment while off-screen)
+        # Unmounting a persist_state=None widget still resets it when cleanup
+        # drops the widget id and no independent user-key entry remains.
+        # A user-key written before first registration is ordinary session
+        # state: later compaction stores the live value under the widget id, so
+        # the original user-key entry is not refreshed. After unmount the
+        # widget id is dropped and remount adopts that original user-key value,
+        # not the last widget edit.
+        # Overlap with restored_bound_value is harmless; both only feed the
+        # OR below.
+        restored_session_state_value = False
         if (
             user_key is not None
             and not self.is_new_state_value(user_key)
@@ -1759,7 +1764,7 @@ class SessionState:
         ):
             default_value = metadata.deserializer(None)
             if widget_value != default_value:
-                restored_persisted_value = True
+                restored_session_state_value = True
 
         # widget_value_changed indicates to the caller that the widget's current
         # value is different from what is in the frontend. True when:
@@ -1774,7 +1779,7 @@ class SessionState:
         widget_value_changed = (
             (user_key is not None and self.is_new_state_value(user_key))
             or restored_bound_value
-            or restored_persisted_value
+            or restored_session_state_value
             or dropped_page_scoped_value
             or disabled_value_discarded
         )

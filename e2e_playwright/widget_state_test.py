@@ -19,12 +19,14 @@ from e2e_playwright.conftest import (
     ImageCompareFunction,
     rerun_app,
     wait_for_app_loaded,
+    wait_for_app_run,
 )
 from e2e_playwright.shared.app_utils import (
     click_button,
     click_checkbox,
     click_toggle,
     expect_markdown,
+    fill_number_input,
     get_element_by_key,
     get_number_input,
     get_text_input,
@@ -69,8 +71,9 @@ def test_doesnt_save_widget_state_on_redisplay(app: Page):
 
 
 def test_doesnt_save_widget_state_on_redisplay_with_keyed_widget(app: Page):
-    """Keyed persist_state=None widgets reset on redisplay, but a user key set
-    before first mount is adopted by the widget UI and survives a follow-up rerun.
+    """Keyed persist_state=None widgets reset on redisplay unless a user key was
+    set before first mount. That stored default is adopted on delayed first
+    mount and on remount after hide, not the last widget edit.
 
     Related to: https://github.com/streamlit/streamlit/issues/3512
     Related to: https://github.com/streamlit/streamlit/issues/17093
@@ -107,23 +110,36 @@ def test_doesnt_save_widget_state_on_redisplay_with_keyed_widget(app: Page):
     expect(foo_input).to_have_value("100.00")
     expect_markdown(app, "You entered: 100.0")
 
+    fill_number_input(app, "Foo", 5)
+    expect(foo_input).to_have_value("5.00")
+    click_toggle(app, "Show foo")
+    expect(app.get_by_test_id("stNumberInput").filter(has_text="Foo")).to_have_count(0)
+    click_toggle(app, "Show foo")
+    foo_input = get_number_input(app, "Foo").locator("input").first
+    expect(foo_input).to_have_value("100.00")
+    expect(foo_input).not_to_have_value("5.00")
+
     select_selectbox_option(app, "select delayed input", "B")
-    expect(get_text_input(app, "input 3").locator("input").first).to_have_value(
-        "input 3"
-    )
+    input3 = get_text_input(app, "input 3").locator("input").first
+    expect(input3).to_have_value("input 3")
     expect(app.get_by_test_id("stTextInput").filter(has_text="input 2")).to_have_count(
         0
     )
 
+    input3.fill("edited")
+    input3.press("Enter")
+    wait_for_app_run(app)
+    expect(input3).to_have_value("edited")
+
     select_selectbox_option(app, "select delayed input", "A")
-    expect(get_text_input(app, "input 2").locator("input").first).to_have_value(
-        "input 2"
-    )
+    input2 = get_text_input(app, "input 2").locator("input").first
+    expect(input2).to_have_value("")
+    expect(input2).not_to_have_value("input 2")
 
     select_selectbox_option(app, "select delayed input", "B")
-    expect(get_text_input(app, "input 3").locator("input").first).to_have_value(
-        "input 3"
-    )
+    input3 = get_text_input(app, "input 3").locator("input").first
+    expect(input3).to_have_value("input 3")
+    expect(input3).not_to_have_value("edited")
 
 
 # Skip webkit since the test is flaky there. It seems like the setTimeout wrapper for
