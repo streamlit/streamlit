@@ -941,8 +941,10 @@ function DataFrame({
   // Applied on a host wrapping Resizable (under the toolbar), not the outer
   // stDataFrame wrapper, so the named region is the data surface.
   // re-resizable's props type omits HTML a11y attributes, so we name a wrapper
-  // rather than casting onto Resizable. role="region" (not "img") keeps Glide's
-  // operable canvas / a11y tree available. Never aria-hidden the canvas.
+  // rather than casting onto Resizable. The wrapper must fill the container so
+  // height="stretch" (Resizable height: 100%) still resolves. role="region"
+  // (not "img") keeps Glide's operable canvas / a11y tree available. Never
+  // aria-hidden the canvas.
   const accessibleName = element.alt?.trim() || undefined
 
   return (
@@ -1107,6 +1109,9 @@ function DataFrame({
         data-testid="stDataFrameResizable"
         role={accessibleName ? "region" : undefined}
         aria-label={accessibleName}
+        // Fill the outer container so Resizable's height/width "100%" (stretch /
+        // content sizing) still resolves against the layout parent.
+        style={{ height: "100%", width: "100%" }}
       >
         <Resizable
           ref={resizableRef}
