@@ -30,21 +30,23 @@ from __future__ import annotations
 
 import multiprocessing
 import socket
-import subprocess
 import sys
 import time
 from dataclasses import dataclass
 from multiprocessing import Pool
+from pathlib import Path
 from typing import TYPE_CHECKING, Final
+from unittest.mock import MagicMock
 
 import pytest
 
 from e2e_playwright.conftest import is_port_available
+from e2e_playwright.load_testing import conftest as load_testing_conftest
 from e2e_playwright.load_testing.conftest import (
     ResultsCollector,
     get_scenario_path,
-    start_load_test_server,
-    wait_for_server,
+    start_healthy_load_test_server,
+    terminate_process,
 )
 from e2e_playwright.load_testing.metrics_collector import (
     MetricsCollector,
@@ -53,6 +55,7 @@ from e2e_playwright.load_testing.metrics_collector import (
 from e2e_playwright.load_testing.worker import run_worker_session
 
 if TYPE_CHECKING:
+    import subprocess
     from collections.abc import Generator
 
 
@@ -98,14 +101,64 @@ def test_port_availability_check_rejects_active_client_port() -> None:
                 assert not is_port_available(client_port, "localhost")
 
 
-def _terminate_process(process: subprocess.Popen[str], timeout: int = 10) -> None:
-    """Terminate a process, falling back to kill if it doesn't respond."""
-    process.terminate()
-    try:
-        process.wait(timeout=timeout)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        process.wait()
+def test_start_healthy_load_test_server_retries_on_new_port(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Retry startup on a newly chosen port after a failed health check."""
+    ports = iter([42_001, 42_002])
+    wait_ports: list[int] = []
+    started: list[MagicMock] = []
+
+    monkeypatch.setattr(
+        load_testing_conftest, "find_available_port", lambda: next(ports)
+    )
+
+    def fake_start(*_args: object, **_kwargs: object) -> MagicMock:
+        process = MagicMock()
+        started.append(process)
+        return process
+
+    def fake_wait(port: int, *_args: object, **_kwargs: object) -> bool:
+        wait_ports.append(port)
+        return port == 42_002
+
+    monkeypatch.setattr(load_testing_conftest, "start_load_test_server", fake_start)
+    monkeypatch.setattr(load_testing_conftest, "wait_for_server", fake_wait)
+
+    process, port = start_healthy_load_test_server(Path("caching_app.py"))
+
+    assert wait_ports == [42_001, 42_002]
+    assert port == 42_002
+    assert process is started[1]
+    started[0].terminate.assert_called_once()
+    started[1].terminate.assert_not_called()
+
+
+def test_start_healthy_load_test_server_fails_after_all_attempts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Fail only after every start attempt's health check misses."""
+    ports = iter([42_001, 42_002, 42_003])
+    wait_ports: list[int] = []
+
+    def fake_wait(port: int, *_args: object, **_kwargs: object) -> bool:
+        wait_ports.append(port)
+        return False
+
+    monkeypatch.setattr(
+        load_testing_conftest, "find_available_port", lambda: next(ports)
+    )
+    monkeypatch.setattr(
+        load_testing_conftest,
+        "start_load_test_server",
+        lambda *_args, **_kwargs: MagicMock(),
+    )
+    monkeypatch.setattr(load_testing_conftest, "wait_for_server", fake_wait)
+
+    with pytest.raises(RuntimeError, match=r"ports: \[42001, 42002, 42003\]"):
+        start_healthy_load_test_server(Path("caching_app.py"))
+
+    assert wait_ports == [42_001, 42_002, 42_003]
 
 
 def _run_worker_with_args(args: tuple[str, int, str, int]) -> SessionMetrics:
@@ -173,23 +226,21 @@ def _run_concurrent_load_test(
 
 @pytest.fixture
 def scenario_server(
-    load_test_port: int,
     request: pytest.FixtureRequest,
 ) -> Generator[tuple[subprocess.Popen[str], str, int], None, None]:
     """Start a Streamlit server for the current scenario."""
     scenario_name = request.param
     scenario_path = get_scenario_path(scenario_name)
-    process = start_load_test_server(load_test_port, scenario_path)
-
-    if not wait_for_server(load_test_port):
-        _terminate_process(process)
-        pytest.fail(f"Server failed to start on port {load_test_port}")
+    try:
+        process, port = start_healthy_load_test_server(scenario_path)
+    except RuntimeError as exc:
+        pytest.fail(str(exc))
 
     # Note: Direct localhost URL construction is intentional here. Load tests manage
     # their own server lifecycle outside the standard e2e fixtures (app_base_url, etc.)
-    yield process, f"http://localhost:{load_test_port}", process.pid
+    yield process, f"http://localhost:{port}", process.pid
 
-    _terminate_process(process)
+    terminate_process(process)
 
 
 @pytest.mark.only_browser("chromium")
