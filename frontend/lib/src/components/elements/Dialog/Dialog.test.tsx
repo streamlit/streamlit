@@ -365,6 +365,37 @@ describe("Dialog container", () => {
       expect(input).toHaveValue("test")
     })
 
+    it("ignores keydown events without a string key when dialog is non-dismissible", () => {
+      const props = getProps({ dismissible: false })
+      render(
+        <Dialog {...props}>
+          <div>test content</div>
+        </Dialog>
+      )
+
+      const event = new Event("keydown", { bubbles: true, cancelable: true })
+      const stopImmediateSpy = vi.spyOn(event, "stopImmediatePropagation")
+      const preventDefaultSpy = vi.spyOn(event, "preventDefault")
+
+      const listenerErrors: unknown[] = []
+      const onError = (errorEvent: ErrorEvent): void => {
+        listenerErrors.push(errorEvent.error)
+        errorEvent.preventDefault()
+      }
+      // jsdom reports throwing listeners as window `error` events instead of
+      // throwing from `dispatchEvent`.
+      window.addEventListener("error", onError)
+      try {
+        document.dispatchEvent(event)
+      } finally {
+        window.removeEventListener("error", onError)
+      }
+
+      expect(listenerErrors).toEqual([])
+      expect(preventDefaultSpy).not.toHaveBeenCalled()
+      expect(stopImmediateSpy).not.toHaveBeenCalled()
+    })
+
     it("does not intercept R keydown from a select in a non-dismissible dialog", () => {
       const props = getProps({ dismissible: false })
       render(
