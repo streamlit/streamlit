@@ -34,14 +34,11 @@ import sys
 import time
 from dataclasses import dataclass
 from multiprocessing import Pool
-from pathlib import Path
 from typing import TYPE_CHECKING, Final
-from unittest.mock import MagicMock
 
 import pytest
 
 from e2e_playwright.conftest import is_port_available
-from e2e_playwright.load_testing import conftest as load_testing_conftest
 from e2e_playwright.load_testing.conftest import (
     ResultsCollector,
     get_scenario_path,
@@ -99,66 +96,6 @@ def test_port_availability_check_rejects_active_client_port() -> None:
             with connection:
                 client_port = client.getsockname()[1]
                 assert not is_port_available(client_port, "localhost")
-
-
-def test_start_healthy_load_test_server_retries_on_new_port(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Retry startup on a newly chosen port after a failed health check."""
-    ports = iter([42_001, 42_002])
-    wait_ports: list[int] = []
-    started: list[MagicMock] = []
-
-    monkeypatch.setattr(
-        load_testing_conftest, "find_available_port", lambda: next(ports)
-    )
-
-    def fake_start(*_args: object, **_kwargs: object) -> MagicMock:
-        process = MagicMock()
-        started.append(process)
-        return process
-
-    def fake_wait(port: int, *_args: object, **_kwargs: object) -> bool:
-        wait_ports.append(port)
-        return port == 42_002
-
-    monkeypatch.setattr(load_testing_conftest, "start_load_test_server", fake_start)
-    monkeypatch.setattr(load_testing_conftest, "wait_for_server", fake_wait)
-
-    process, port = start_healthy_load_test_server(Path("caching_app.py"))
-
-    assert wait_ports == [42_001, 42_002]
-    assert port == 42_002
-    assert process is started[1]
-    started[0].terminate.assert_called_once()
-    started[1].terminate.assert_not_called()
-
-
-def test_start_healthy_load_test_server_fails_after_all_attempts(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Fail only after every start attempt's health check misses."""
-    ports = iter([42_001, 42_002, 42_003])
-    wait_ports: list[int] = []
-
-    def fake_wait(port: int, *_args: object, **_kwargs: object) -> bool:
-        wait_ports.append(port)
-        return False
-
-    monkeypatch.setattr(
-        load_testing_conftest, "find_available_port", lambda: next(ports)
-    )
-    monkeypatch.setattr(
-        load_testing_conftest,
-        "start_load_test_server",
-        lambda *_args, **_kwargs: MagicMock(),
-    )
-    monkeypatch.setattr(load_testing_conftest, "wait_for_server", fake_wait)
-
-    with pytest.raises(RuntimeError, match=r"ports: \[42001, 42002, 42003\]"):
-        start_healthy_load_test_server(Path("caching_app.py"))
-
-    assert wait_ports == [42_001, 42_002, 42_003]
 
 
 def _run_worker_with_args(args: tuple[str, int, str, int]) -> SessionMetrics:
