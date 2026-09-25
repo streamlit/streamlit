@@ -132,10 +132,27 @@ function extractAccessibilityInfo(source: string): {
 }
 
 /**
+ * Streamlit-authored accessible name from st.mermaid_chart(alt=...).
+ * Uses a %% comment so every Mermaid grammar ignores it (unlike accTitle).
+ * Value must be on the same line as the marker (do not let whitespace cross
+ * newlines, or an empty %% stAlt: would capture the next source line).
+ */
+function extractStreamlitAlt(source: string): string | undefined {
+  const match = /^\s*%%\s*stAlt\s*:[^\S\n]*(.+)$/m.exec(source)
+  return match ? match[1].trim() : undefined
+}
+
+/**
  * Generates accessible alt text for a mermaid diagram.
- * Prefers user-provided accTitle/accDescr directives, falls back to diagram type.
+ * Prefers Streamlit's %% stAlt: marker, then author accTitle/accDescr,
+ * then a type-derived fallback.
  */
 function getAltText(source: string): string {
+  const streamlitAlt = extractStreamlitAlt(source)
+  if (streamlitAlt) {
+    return streamlitAlt
+  }
+
   const { title, description } = extractAccessibilityInfo(source)
 
   if (title && description) {
