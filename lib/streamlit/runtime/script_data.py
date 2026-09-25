@@ -16,6 +16,10 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 @dataclass(frozen=True)
@@ -24,6 +28,7 @@ class ScriptData:
 
     main_script_path: str
     is_hello: bool = False
+    script_entrypoint: Callable[[], None] | None = None
     script_folder: str = field(init=False)
     name: str = field(init=False)
 
