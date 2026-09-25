@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { CSSProperties, memo, ReactElement } from "react"
+import { CSSProperties, memo, ReactElement, useId } from "react"
 
 import { getLogger } from "loglevel"
 
@@ -33,6 +33,7 @@ import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { isDangerousLinkUri } from "~lib/util/UriUtil"
+import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
   StyledCaption,
@@ -96,17 +97,24 @@ const Image = ({
   link?: string
 }): ReactElement => {
   const crossOrigin = useCrossOriginAttribute(image.url)
+  const captionDomId = useId()
   // Do not wrap a dangerous URI in an anchor. A neutralized href="#" is
   // still a nameless focusable control (WCAG SC 4.1.2).
   const safeLink = link && !isDangerousLinkUri(link) ? link : undefined
+  // optional proto: unset → undefined (omit attribute); "" → decorative.
+  const imgAlt: string | undefined = isNullOrUndefined(image.alt)
+    ? undefined
+    : image.alt
+  const hasCaption = Boolean(image.caption)
+  const nonEmptyImgAlt = imgAlt || undefined
 
   const imageElement = (
-    // Images have no accessible name unless the author supplies one; an
-    // invented placeholder would be a WCAG F30 failure.
+    // Omit alt when unset (detectable missing-alt). Empty string is decorative.
     // oxlint-disable-next-line jsx-a11y/alt-text
     <img
       style={imgStyle}
       src={buildMediaURL(image.url)}
+      {...(imgAlt !== undefined ? { alt: imgAlt } : {})}
       onError={handleImageError}
       crossOrigin={crossOrigin}
     />
@@ -122,7 +130,11 @@ const Image = ({
           href={safeLink}
           target="_blank"
           rel="noreferrer"
-          aria-label={image.caption || safeLink}
+          // Caption (rendered) → non-empty alt → URL. Use labelledby so
+          // markdown captions name the link without source markers.
+          {...(hasCaption
+            ? { "aria-labelledby": captionDomId }
+            : { "aria-label": nonEmptyImgAlt || safeLink })}
           data-testid="stImageLink"
         >
           {imageElement}
@@ -131,7 +143,11 @@ const Image = ({
         imageElement
       )}
       {image.caption && (
-        <StyledCaption data-testid="stImageCaption" style={imgStyle}>
+        <StyledCaption
+          id={captionDomId}
+          data-testid="stImageCaption"
+          style={imgStyle}
+        >
           <StreamlitMarkdown
             source={image.caption}
             allowHTML={false}
