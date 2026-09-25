@@ -61,7 +61,7 @@ _os.environ["MPLBACKEND"] = "Agg"
 from streamlit import logger as _logger
 from streamlit import config as _config
 from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STRING
-from typing import cast as _cast
+from typing import Final as _Final, cast as _cast
 
 # Give the package a version.
 __version__ = _STREAMLIT_VERSION_STRING
@@ -158,8 +158,12 @@ import streamlit.typing as _typing
 
 from streamlit.commands.echo import echo as echo
 from streamlit.commands.logo import logo as logo
-from streamlit.commands.navigation import navigation as navigation
 from streamlit.navigation.page import Page as Page
+from streamlit.commands.navigation import navigation as _navigation
+
+# Declare the command so type checkers resolve `st.navigation` to this callable,
+# not the `streamlit.navigation` package of the same name.
+navigation: _Final = _navigation
 
 from streamlit.commands.page_config import set_page_config as set_page_config
 from streamlit.commands.execution_control import (

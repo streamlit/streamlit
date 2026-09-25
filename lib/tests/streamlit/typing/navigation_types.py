@@ -22,8 +22,14 @@ from typing_extensions import assert_type
 if TYPE_CHECKING:
     from pathlib import Path
 
+    import streamlit as st
     from streamlit.commands.navigation import navigation
     from streamlit.navigation.page import Page, StreamlitPage
+
+    # Public `st.navigation` must resolve to the command, not the
+    # `streamlit.navigation` package.
+    assert_type(st.navigation(["page1.py"]), Page)
+    assert_type(st.navigation(["page1.py"], position="sidebar", expanded=True), Page)
 
     # Test basic list input
     assert_type(navigation(["page1.py"]), Page)
