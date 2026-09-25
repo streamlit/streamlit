@@ -343,7 +343,7 @@ By default, layout containers like `st.tabs`, `st.expander`, and `st.popover` al
 
 **Preferred: Dynamic tabs with `on_change="rerun"`**
 
-Keep the tabs UX. Setting `on_change="rerun"` makes tabs dynamic — each tab's `.open` property returns `True` for the selected tab and `False` otherwise, so you can guard expensive work. (With the default `on_change="ignore"`, all tab content runs on every rerun and `.open` is `None` for every tab.)
+Keep the tabs UX. Setting `on_change="rerun"` makes tabs dynamic — each tab's `.open` property returns `True` for the selected tab and `False` otherwise, so you can guard expensive work. (`bind="query-params"` with `key` also enables this. With the default `on_change="ignore"` and no `bind`, all tab content runs on every rerun and `.open` is `None` for every tab.)
 
 ```python
 # BAD: Heavy content loads even when tab not visible
@@ -380,7 +380,7 @@ elif view == "Heavy":
 
 **Preferred: Dynamic expander with `on_change="rerun"`**
 
-With `on_change="rerun"`, the `.open` property returns `True` when the expander is open and `False` when collapsed, so you can guard expensive work. (Without `on_change`, `.open` is `None` and all content runs regardless.)
+With `on_change="rerun"`, the `.open` property returns `True` when the expander is open and `False` when collapsed, so you can guard expensive work. (`bind="query-params"` with `key` also enables this. With the default `on_change="ignore"` and no `bind`, `.open` is `None` and all content runs regardless.)
 
 ```python
 # BAD: Expander content always loads
