@@ -23,6 +23,26 @@ st.dataframe(df)
 - Handles reconnection
 - Works with st.secrets
 
+## Lazy display of large Snowpark results
+
+`conn.query()` materializes its result as a pandas DataFrame. To keep a large
+result in Snowflake, create a Snowpark DataFrame through the connection's session
+and pass it directly to `st.dataframe`:
+
+```python
+conn = st.connection("snowflake")
+orders = conn.session().table("ORDERS")
+
+st.dataframe(orders)
+```
+
+With the default `lazy=None`, Streamlit loads Snowpark results with more than
+10,000 rows in chunks and pushes sorting into the Snowpark query. Use
+`lazy=True` to request lazy loading for smaller results; results with 1,000 rows
+or fewer are still loaded eagerly. Search, CSV download, selections, and Pandas
+Styler formatting aren't available in lazy mode. Deep scrolling uses Snowflake
+`OFFSET` queries and can consume additional time and warehouse credits.
+
 ## Caller's rights connection (Streamlit in Snowflake only)
 
 > **Prerequisite:** This feature requires running your app inside Snowflake (Streamlit in Snowflake). It is not available for OSS Streamlit deployments.
