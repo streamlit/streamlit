@@ -178,7 +178,6 @@ e2e_playwright/load_testing/
 ├── conftest.py              # Load test fixtures
 ├── metrics_collector.py     # psutil-based server metrics
 ├── test_load.py             # Main load test suite
-├── test_server_startup.py   # Unit tests for server startup retry
 ├── worker.py                # Per-session interaction logic
 ├── generate_report.py       # Results aggregation
 ├── scenarios/
