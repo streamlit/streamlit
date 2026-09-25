@@ -169,6 +169,23 @@ describe("ImageList Element", () => {
 
       expect(screen.getByRole("img")).not.toHaveAttribute("alt")
     })
+
+    it("omits index alt on every image in a list", () => {
+      const props = getProps({
+        imgs: [
+          { url: "/media/mockImage1.jpeg" },
+          { url: "/media/mockImage2.jpeg" },
+          { url: "/media/mockImage3.jpeg" },
+        ],
+      })
+      render(<ImageList {...props} />)
+
+      const images = screen.getAllByRole("img")
+      expect(images).toHaveLength(3)
+      for (const image of images) {
+        expect(image).not.toHaveAttribute("alt")
+      }
+    })
   })
 
   describe("New width configuration system", () => {

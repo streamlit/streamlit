@@ -369,3 +369,17 @@ def test_image_sanitizes_dangerous_link(app: Page):
     expect(dangerous_image.get_by_test_id("stImageCaption")).to_have_text(
         "Image with dangerous link."
     )
+
+
+def test_image_omits_index_alt(app: Page):
+    """Images must not use the list index as alt (e.g. alt="0")."""
+    single = get_image(app, "Black Square as JPEG.").locator("img")
+    expect(single).to_be_visible()
+    expect(single).not_to_have_attribute("alt")
+
+    list_images = get_image(app, "Image list").locator("img")
+    expect(list_images).to_have_count(3)
+    for i in range(3):
+        img = list_images.nth(i)
+        expect(img).to_be_visible()
+        expect(img).not_to_have_attribute("alt")
