@@ -146,35 +146,28 @@ describe("ImageList Element", () => {
       "JAVASCRIPT:alert(1)",
       "java\nscript:alert(1)",
       "vbscript:msgbox(1)",
-    ])("blocks dangerous link URLs: %s", linkUrl => {
+    ])(
+      "does not wrap the image when the link URL is dangerous: %s",
+      linkUrl => {
+        const props = getProps({
+          imgs: [{ caption: "a", url: "/media/mockImage1.jpeg" }],
+          link: linkUrl,
+        })
+        render(<ImageList {...props} />)
+
+        expect(screen.queryByTestId("stImageLink")).not.toBeInTheDocument()
+        expect(screen.getByRole("img")).toBeVisible()
+        expect(screen.getByTestId("stImageCaption")).toHaveTextContent("a")
+      }
+    )
+
+    it("omits the img alt attribute (no index placeholder)", () => {
       const props = getProps({
-        imgs: [{ caption: "a", url: "/media/mockImage1.jpeg" }],
-        link: linkUrl,
+        imgs: [{ url: "/media/mockImage1.jpeg" }],
       })
       render(<ImageList {...props} />)
 
-      const link = screen.getByTestId("stImageLink")
-      expect(link).toHaveAttribute("href", "#")
-      expect(link).toHaveAttribute("target", "_self")
-      expect(link).toHaveAttribute("rel", "noreferrer")
-    })
-
-    it("prevents navigation when a blocked link is clicked", () => {
-      const props = getProps({
-        imgs: [{ caption: "a", url: "/media/mockImage1.jpeg" }],
-        link: "javascript:alert(1)",
-      })
-      render(<ImageList {...props} />)
-
-      const link = screen.getByTestId("stImageLink")
-      const event = new MouseEvent("click", {
-        bubbles: true,
-        cancelable: true,
-      })
-      link.dispatchEvent(event)
-
-      expect(event.defaultPrevented).toBe(true)
-      expect(link).toHaveAttribute("href", "#")
+      expect(screen.getByRole("img")).not.toHaveAttribute("alt")
     })
   })
 

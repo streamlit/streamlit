@@ -357,13 +357,15 @@ def test_image_link_parameter(app: Page):
 
 
 def test_image_sanitizes_dangerous_link(app: Page):
-    """Test that a dangerous javascript: link URL is neutralized to '#'.
+    """Test that a dangerous javascript: link does not render a link wrapper.
 
-    This relies on real-browser URL normalization that jsdom cannot fully
-    replicate, so it complements the frontend unit tests.
+    Dropping the focusable neutralized href="#" wrapper avoids a nameless
+    control once images no longer carry an index-based alt. Complements the
+    frontend unit tests (jsdom cannot fully replicate real-browser URL rules).
     """
     dangerous_image = get_image(app, "Image with dangerous link.")
-    link = dangerous_image.get_by_test_id("stImageLink")
-
-    expect(link).to_have_attribute("href", "#")
-    expect(link).to_have_attribute("target", "_self")
+    expect(dangerous_image.get_by_test_id("stImageLink")).to_have_count(0)
+    expect(dangerous_image.locator("img")).to_be_visible()
+    expect(dangerous_image.get_by_test_id("stImageCaption")).to_have_text(
+        "Image with dangerous link."
+    )
