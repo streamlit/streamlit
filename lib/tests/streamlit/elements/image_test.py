@@ -707,6 +707,76 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         assert "single image" in str(exc_info.value)
         assert "2 images" in str(exc_info.value)
 
+    def test_st_image_marshals_nonempty_alt_and_omits_blank_values(self) -> None:
+        """Non-empty alt is stored; omitted/None/whitespace leave it unset; "" is decorative."""
+        url = "http://server/fake0.jpg"
+
+        st.image(url, alt="Sunrise over a mountain ridge")
+        el = self.get_delta_from_queue().new_element.imgs.imgs[0]
+        assert el.HasField("alt")
+        assert el.alt == "Sunrise over a mountain ridge"
+
+        st.image(url)
+        assert not self.get_delta_from_queue().new_element.imgs.imgs[0].HasField("alt")
+
+        st.image(url, alt=None)
+        assert not self.get_delta_from_queue().new_element.imgs.imgs[0].HasField("alt")
+
+        st.image(url, alt="")
+        el = self.get_delta_from_queue().new_element.imgs.imgs[0]
+        assert el.HasField("alt")
+        assert el.alt == ""
+
+        st.image(url, alt="  ")
+        assert not self.get_delta_from_queue().new_element.imgs.imgs[0].HasField("alt")
+
+    def test_st_image_alt_strips_whitespace(self) -> None:
+        """Leading and trailing whitespace is stripped from alt."""
+        st.image("http://server/fake0.jpg", alt="  Sunrise  ")
+        el = self.get_delta_from_queue().new_element.imgs.imgs[0]
+        assert el.HasField("alt")
+        assert el.alt == "Sunrise"
+
+    def test_st_image_alt_list_pairs_with_images(self) -> None:
+        """A sequence of alt values pairs positionally with multiple images."""
+        urls = ["http://server/a.jpg", "http://server/b.jpg"]
+        st.image(urls, alt=["Cat", None])
+        imgs = self.get_delta_from_queue().new_element.imgs.imgs
+        assert imgs[0].alt == "Cat"
+        assert not imgs[1].HasField("alt")
+
+        st.image(urls, alt=["", "Dog"])
+        imgs = self.get_delta_from_queue().new_element.imgs.imgs
+        assert imgs[0].HasField("alt")
+        assert imgs[0].alt == ""
+        assert imgs[1].alt == "Dog"
+
+    def test_st_image_alt_length_mismatch_raises(self) -> None:
+        """Alt list length must match image count; single string with many images fails."""
+        urls = ["http://server/a.jpg", "http://server/b.jpg"]
+
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.image(urls, alt=["only one"])
+        assert "alt" in str(exc_info.value).lower()
+
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.image(urls, alt="single string")
+        assert "single" in str(exc_info.value).lower()
+
+    def test_st_image_alt_with_set_of_images_raises(self) -> None:
+        """Sequence-valued alt cannot pair with a set of images."""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.image({"http://server/a.jpg", "http://server/b.jpg"}, alt=["a", "b"])
+        assert "set" in str(exc_info.value).lower()
+
+    def test_st_image_alt_preserves_adversarial_plain_text(self) -> None:
+        """Quotes, brackets, and script-like text stay literal on the proto."""
+        adversarial = 'Say "hi" <b>bold</b> <script>alert(1)</script>'
+        st.image("http://server/fake0.jpg", alt=adversarial)
+        el = self.get_delta_from_queue().new_element.imgs.imgs[0]
+        assert el.HasField("alt")
+        assert el.alt == adversarial
+
 
 @pytest.mark.parametrize(
     "static_url",

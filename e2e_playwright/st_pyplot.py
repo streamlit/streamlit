@@ -124,3 +124,11 @@ with st.container(border=True, key="content-pyplot-in-container"):
 
 with st.container(border=True, key="pixel-pyplot-in-container"):
     st.pyplot(fig_regression, width=500)
+
+st.header("alt parameter")
+fig_alt, ax_alt = plt.subplots()
+ax_alt.hist(np.random.normal(1, 1, size=50), bins=10)
+with st.container(key="pyplot_alt_labeled"):
+    st.pyplot(fig_alt, alt="Histogram of sample values")
+with st.container(key="pyplot_alt_unlabeled"):
+    st.pyplot(fig_alt)
