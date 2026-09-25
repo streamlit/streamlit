@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Literal, cast
 from streamlit import dataframe_util
 from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
+from streamlit.elements.lib.utils import normalize_alt
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Table_pb2 import Table as TableProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -161,6 +162,7 @@ class TableMixin:
         height: Height = "content",
         hide_index: bool | None = None,
         hide_header: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator:
         """Display a static table.
 
@@ -243,6 +245,20 @@ class TableMixin:
               of ``MultiIndex`` headers.
             - ``False``: Always show the column header row.
 
+        alt : str or None
+            A description of the table for screen readers and other assistive
+            technologies. If this is ``None`` (default), Streamlit does not
+            provide an accessible name for the table.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            Prefer a short, specific description. Describe what the data shows
+            rather than repeating text that is already visible on the page.
+            This is a short description of the table, not a full text
+            alternative for dense data.
+
         Examples
         --------
         **Example 1: Display a confusion matrix as a static table**
@@ -262,7 +278,10 @@ class TableMixin:
                 },
                 index=["Actual Cat", "Actual Dog", "Actual Bird", "Actual Fish"],
             )
-            st.table(confusion_matrix)
+            st.table(
+                confusion_matrix,
+                alt="Confusion matrix of predicted vs actual species",
+            )
 
         .. output::
            https://doc-table-confusion.streamlit.app/
@@ -387,6 +406,11 @@ class TableMixin:
         proto.border_mode = border_mode
         proto.hide_index = should_hide_index
         proto.hide_header = should_hide_header
+
+        normalized_alt = normalize_alt(alt)
+        if normalized_alt is not None:
+            proto.alt = normalized_alt
+
         return self.dg._enqueue("table", proto, layout_config=layout_config)
 
     @property

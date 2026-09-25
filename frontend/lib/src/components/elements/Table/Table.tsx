@@ -137,6 +137,12 @@ export function Table(props: Readonly<TableProps>): ReactElement {
   // With sticky index limited to single index columns, the offset is always 0
   const indexLeftOffsets = [0]
 
+  // Only name the <table> when the author provided a non-blank alt.
+  // Blank input is treated as absent: aria-label=" " computes to an empty
+  // accessible name, which is worse than none. Native <table> already has
+  // the table role — do not add role="figure" or role="img".
+  const accessibleName = element.alt?.trim() || undefined
+
   return (
     <StyledTableContainer className="stTable" data-testid="stTable">
       {cssStyles && <style>{cssStyles}</style>}
@@ -160,6 +166,7 @@ export function Table(props: Readonly<TableProps>): ReactElement {
           data-testid="stTableStyledTable"
           useContentWidth={useContentWidth}
           hasScrollableWidth={hasScrollableWidth}
+          aria-label={accessibleName}
         >
           {numHeaderRows > 0 &&
             !hideHeader &&

@@ -72,6 +72,15 @@ if TYPE_CHECKING:
             height=300,
             hide_index=True,
             hide_header=False,
+            alt="Sales by region",
         ),
         DeltaGenerator,
     )
+
+    assert_type(table(df, alt="Sales by region"), DeltaGenerator)
+    assert_type(table(df, alt=None), DeltaGenerator)
+
+    # =====================================================================
+    # Invalid usages - should NOT type check
+    # =====================================================================
+    table(df, alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]

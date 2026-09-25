@@ -312,11 +312,20 @@ large_df = pd.DataFrame(
 
 st.subheader("Fixed dimensions with custom index (scrollable)")
 indexed_df = large_df.set_index(large_df.columns[0])
-st.table(indexed_df, width=400, height=200)
+# The author alt lands on <table>; the scroll wrapper keeps its separate
+# "Scrollable table" region label.
+with st.container(key="table_with_alt"):
+    st.table(
+        indexed_df,
+        width=400,
+        height=200,
+        alt="Scrollable sample grid with custom row index",
+    )
 
 st.subheader("Content width sizing")
 small_df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
-st.table(small_df, width="content")
+with st.container(key="table_without_alt"):
+    st.table(small_df, width="content")
 
 st.header("Hide Index and Hide Header Parameters")
 
