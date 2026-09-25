@@ -1492,7 +1492,9 @@ class SessionState:
             )
         }
 
-        # Re-add the preserved values under their user keys.
+        # Persist/bind unmount: copy the current widget value onto the user
+        # key so remount restores the last edit. This overwrites a leftover
+        # pre-registration user-key entry if one exists.
         self._old_state.update(preserved_by_key)
 
         # A keyed widget can remount under a new element id this run (e.g. after
@@ -1736,23 +1738,40 @@ class SessionState:
             else:
                 self.query_params.discard_param_no_forward_msg(user_key)
 
-        # A persist_state widget resolving to a non-default value from a previous
-        # run (preserved while unmounted, or a compacted programmatic set) must
-        # tell the frontend to adopt the backend value on (re)mount. Otherwise it
-        # renders at its default and the next rerun overwrites the preserved value.
-        # For a bind + persist_state widget this can overlap with
-        # restored_bound_value; that is harmless since both only feed the OR below.
-        restored_persisted_value = False
+        # A keyed widget with a non-default value from a previous run must tell
+        # the frontend to adopt that value on (re)mount. Otherwise the UI mounts
+        # at the element default and the next rerun overwrites session state.
+        # This fires when:
+        # - persist_state preserved a value under the user key or widget id
+        # - a previous-run user-key write happened before the widget first
+        #   registered (setdefault / session_state assignment while off-screen)
+        #
+        # What remount shows after hide/show:
+        # - persist_state="session", or "page" on the same page: cleanup copies
+        #   the current widget value onto the user key, so remount restores the
+        #   last edit (not an earlier setdefault).
+        # - persist_state=None with no independent user-key entry: cleanup drops
+        #   the widget id and remount resets to the element default.
+        # - persist_state=None after a user-key write before first registration:
+        #   that user-key entry is ordinary session state and is not refreshed
+        #   (later compaction stores the live value under the widget id). After
+        #   unmount the widget id is dropped, so remount adopts the original
+        #   user-key value rather than the last edit.
+        # Overlap with restored_bound_value is harmless; both only feed the
+        # OR below.
+        restored_session_state_value = False
         if (
-            metadata.persist_state is not None
-            and user_key is not None
+            user_key is not None
             and not self.is_new_state_value(user_key)
             and widget_id not in self._new_widget_state
-            and (widget_id in self._old_state or user_key in self._old_state)
+            and (
+                user_key in self._old_state
+                or (metadata.persist_state is not None and widget_id in self._old_state)
+            )
         ):
             default_value = metadata.deserializer(None)
             if widget_value != default_value:
-                restored_persisted_value = True
+                restored_session_state_value = True
 
         # widget_value_changed indicates to the caller that the widget's current
         # value is different from what is in the frontend. True when:
@@ -1760,14 +1779,14 @@ class SessionState:
         # - a bound value was restored to the URL — the frontend renders the
         #   widget for the first time on this page and must use the backend's
         #   resolved value instead of the widget's default;
-        # - a persisted value was restored from session state on (re)mount, for
-        #   the same reason;
+        # - a previous-run user-key or persist_state value was restored from
+        #   session state on (re)mount, for the same reason;
         # - a "page"-scoped value was dropped on a page switch, so the frontend
         #   must fall back to the default for the reused widget id.
         widget_value_changed = (
             (user_key is not None and self.is_new_state_value(user_key))
             or restored_bound_value
-            or restored_persisted_value
+            or restored_session_state_value
             or dropped_page_scoped_value
             or disabled_value_discarded
         )
