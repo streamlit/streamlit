@@ -20,6 +20,7 @@ import asyncio
 import errno
 import select
 import socket
+from importlib.metadata import PackageNotFoundError
 from typing import TYPE_CHECKING
 from unittest import mock
 from unittest.mock import AsyncMock, patch
@@ -43,6 +44,7 @@ from streamlit.web.server.starlette.starlette_server import (
     _get_uvicorn_config_kwargs,
     _get_websocket_settings,
     _is_port_manually_set,
+    _maybe_warn_uvicorn_websockets_mismatch,
     _server_address_is_unix_socket,
 )
 from tests.testutil import patch_config_options
@@ -422,6 +424,88 @@ class TestGetUvicornConfigKwargs:
         assert kwargs["ws_per_message_deflate"] is False
         assert kwargs["use_colors"] is False
         assert kwargs["access_log"] is False
+
+
+class TestWarnUvicornWebsocketsMismatch:
+    """Tests for _maybe_warn_uvicorn_websockets_mismatch."""
+
+    def test_warns_when_websockets_17_and_uvicorn_below_052(self) -> None:
+        """Warn when websockets >= 17 is paired with uvicorn < 0.52.0."""
+
+        def fake_version(name: str) -> str:
+            return {"websockets": "17.0.0", "uvicorn": "0.51.0"}[name]
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._package_version",
+                side_effect=fake_version,
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._LOGGER.warning"
+            ) as mock_warning,
+        ):
+            _maybe_warn_uvicorn_websockets_mismatch()
+
+        mock_warning.assert_called_once()
+        message, websockets_version, uvicorn_version = mock_warning.call_args.args
+        assert "/_stcore/stream" in message
+        assert "0.52.0" in message
+        assert websockets_version == "17.0.0"
+        assert uvicorn_version == "0.51.0"
+
+    def test_does_not_warn_when_uvicorn_is_at_least_052(self) -> None:
+        """Do not warn when uvicorn is already >= 0.52.0."""
+
+        def fake_version(name: str) -> str:
+            return {"websockets": "17.0.0", "uvicorn": "0.52.0"}[name]
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._package_version",
+                side_effect=fake_version,
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._LOGGER.warning"
+            ) as mock_warning,
+        ):
+            _maybe_warn_uvicorn_websockets_mismatch()
+
+        mock_warning.assert_not_called()
+
+    def test_does_not_warn_when_websockets_is_16(self) -> None:
+        """Do not warn when websockets is still on 16.x."""
+
+        def fake_version(name: str) -> str:
+            return {"websockets": "16.0.0", "uvicorn": "0.51.0"}[name]
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._package_version",
+                side_effect=fake_version,
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._LOGGER.warning"
+            ) as mock_warning,
+        ):
+            _maybe_warn_uvicorn_websockets_mismatch()
+
+        mock_warning.assert_not_called()
+
+    def test_does_not_warn_when_metadata_lookup_fails(self) -> None:
+        """Do not warn if either package is missing from metadata."""
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._package_version",
+                side_effect=PackageNotFoundError("websockets"),
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._LOGGER.warning"
+            ) as mock_warning,
+        ):
+            _maybe_warn_uvicorn_websockets_mismatch()
+
+        mock_warning.assert_not_called()
 
 
 class TestServerPortIsManuallySet:

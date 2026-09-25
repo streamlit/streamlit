@@ -44,6 +44,8 @@ import errno
 import os
 import socket
 import sys
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _package_version
 from typing import TYPE_CHECKING, Any, Final
 
 from streamlit import config
@@ -211,12 +213,39 @@ def _get_websocket_protocol() -> str:
     return "websockets-sansio"
 
 
+def _maybe_warn_uvicorn_websockets_mismatch() -> None:
+    """Warn when websockets 17+ is paired with uvicorn older than 0.52.0.
+
+    uvicorn < 0.52.0 can abort the /_stcore/stream handshake when a reverse
+    proxy forwards non-ASCII identity headers (#16030).
+    """
+    try:
+        websockets_version = _package_version("websockets")
+        uvicorn_version = _package_version("uvicorn")
+    except PackageNotFoundError:
+        return
+
+    if is_version_less_than(websockets_version, "17") or not is_version_less_than(
+        uvicorn_version, "0.52.0"
+    ):
+        return
+
+    _LOGGER.warning(
+        "Installed websockets %s with uvicorn %s can drop the /_stcore/stream "
+        "handshake when a reverse proxy forwards non-ASCII headers. "
+        "Upgrade uvicorn to >= 0.52.0.",
+        websockets_version,
+        uvicorn_version,
+    )
+
+
 def _get_uvicorn_config_kwargs() -> dict[str, Any]:
     """Get common uvicorn configuration kwargs.
 
     Returns a dict of kwargs that can be passed to uvicorn.Config.
     Does NOT include app, host, or port - those must be provided separately.
     """
+    _maybe_warn_uvicorn_websockets_mismatch()
     cert_file, key_file = _validate_ssl_config()
     ws_ping_interval, ws_ping_timeout = _get_websocket_settings()
     ws_max_size = get_max_message_size_bytes()
