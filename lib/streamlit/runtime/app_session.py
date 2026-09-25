@@ -511,8 +511,32 @@ class AppSession:
         ``request_rerun`` touches ScriptRunner state owned by the event loop, so a
         worker thread must hop onto that loop first. A session whose loop has already
         closed is simply not rerun.
+
+        The last client state is replayed so the rerun stays on the current page of
+        a multipage app; an empty state would send the browser back to the default
+        page.
         """
-        self._call_soon_on_event_loop(lambda: self.request_rerun(None))
+        self._call_soon_on_event_loop(lambda: self.request_rerun(self._client_state))
+
+    def request_fragment_rerun_threadsafe(self, fragment_id: str) -> None:
+        """Rerun a single fragment from a thread other than the event loop thread.
+
+        Falls back to a whole-app rerun when the fragment is no longer registered,
+        which happens if a full rerun replaced it while the work was in flight.
+        """
+
+        def rerun() -> None:
+            if not self._fragment_storage.contains(fragment_id):
+                self.request_rerun(None)
+                return
+            client_state = ClientState()
+            client_state.CopyFrom(self._client_state)
+            client_state.fragment_id = fragment_id
+            # Nothing the user did triggered this rerun.
+            client_state.is_auto_rerun = True
+            self.request_rerun(client_state)
+
+        self._call_soon_on_event_loop(rerun)
 
     def request_rerun(self, client_state: ClientState | None) -> None:
         """Signal that we're interested in running the script.

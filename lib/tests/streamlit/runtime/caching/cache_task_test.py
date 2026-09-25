@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import threading
 from typing import Any
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -27,13 +27,18 @@ from streamlit.runtime.caching.cache_task import Task, _TaskManager, completed_t
 
 
 class _FakeSession:
-    """Stands in for an AppSession: an id plus a threadsafe rerun request."""
+    """Stands in for an AppSession: an id plus the threadsafe rerun requests."""
 
     def __init__(self, session_id: str) -> None:
         self.id = session_id
         self.rerun_requested = threading.Event()
+        self.rerun_fragment_ids: list[str] = []
 
     def request_rerun_threadsafe(self) -> None:
+        self.rerun_requested.set()
+
+    def request_fragment_rerun_threadsafe(self, fragment_id: str) -> None:
+        self.rerun_fragment_ids.append(fragment_id)
         self.rerun_requested.set()
 
 
@@ -193,10 +198,68 @@ def test_release_session_keeps_tasks_another_session_still_waits_on() -> None:
         manager.shutdown()
 
 
+def test_task_requested_inside_a_fragment_reruns_only_that_fragment() -> None:
+    manager = _TaskManager(max_workers=1)
+    session = _FakeSession("a")
+    try:
+        with patch(
+            "streamlit.runtime.caching.cache_task._current_fragment_id",
+            return_value="frag-1",
+        ):
+            entry = manager.get_or_submit(("f", "k"), lambda: "value", session=session)
+        _wait_for_settle(manager, entry)
+
+        assert session.rerun_requested.wait(timeout=5)
+        assert session.rerun_fragment_ids == ["frag-1"]
+    finally:
+        manager.shutdown()
+
+
+def test_task_requested_outside_a_fragment_reruns_the_whole_app() -> None:
+    manager = _TaskManager(max_workers=1)
+    session = _FakeSession("a")
+    try:
+        entry = manager.get_or_submit(("f", "k"), lambda: "value", session=session)
+        _wait_for_settle(manager, entry)
+
+        assert session.rerun_requested.wait(timeout=5)
+        assert session.rerun_fragment_ids == []
+    finally:
+        manager.shutdown()
+
+
+def test_a_key_wanted_by_both_a_fragment_and_the_script_reruns_the_whole_app() -> None:
+    """A main-script caller can only be refreshed by a whole-app rerun."""
+    manager = _TaskManager(max_workers=1)
+    release = threading.Event()
+    session = _FakeSession("a")
+    try:
+        with patch(
+            "streamlit.runtime.caching.cache_task._current_fragment_id",
+            return_value="frag-1",
+        ):
+            manager.get_or_submit(
+                ("f", "k"), lambda: release.wait(timeout=5), session=session
+            )
+        entry = manager.get_or_submit(
+            ("f", "k"), lambda: release.wait(timeout=5), session=session
+        )
+        release.set()
+        _wait_for_settle(manager, entry)
+
+        assert session.rerun_requested.wait(timeout=5)
+        assert session.rerun_fragment_ids == []
+    finally:
+        release.set()
+        manager.shutdown()
+
+
 def test_rerun_failure_does_not_block_other_subscribers() -> None:
     """One session failing to rerun must not stop the others from being woken."""
     manager = _TaskManager(max_workers=1)
-    broken = Mock(spec=["id", "request_rerun_threadsafe"])
+    broken = Mock(
+        spec=["id", "request_rerun_threadsafe", "request_fragment_rerun_threadsafe"]
+    )
     broken.id = "broken"
     broken.request_rerun_threadsafe.side_effect = RuntimeError("loop closed")
     healthy = _FakeSession("healthy")

@@ -24,7 +24,9 @@ is independently woken when that computation settles.
 When a task settles, every subscribed session is asked to rerun. Fanning out to
 all subscribers (not just the session that started the task) is what makes
 deduplication safe: a session that joined an in-flight task must still be woken
-when it finishes.
+when it finishes. A task requested from inside a fragment reruns only that
+fragment, so a slow value in one corner of a page does not re-execute the rest
+of it.
 
 A successful task writes its value into the function's cache and is then dropped
 from the registry, so a later cache miss for the same key starts a fresh
@@ -42,7 +44,7 @@ import copy
 import threading
 import weakref
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -149,6 +151,16 @@ def completed_task(value: T) -> Task[T]:
     return Task(_TaskSnapshot("done", value, None))
 
 
+@dataclass
+class _Subscription:
+    """One session's interest in one task, and where it asked from."""
+
+    entry: _TaskEntry
+    # The fragments the task was requested from. ``None`` stands for the main
+    # script body, which can only be refreshed by rerunning the whole app.
+    fragment_ids: set[str | None] = field(default_factory=set)
+
+
 class _SessionTasks:
     """The tasks one session is subscribed to.
 
@@ -162,32 +174,54 @@ class _SessionTasks:
         # collectable once the runtime drops it.
         self._session_ref = weakref.ref(session)
         self._lock = threading.Lock()
-        self._entries: dict[TaskEntryKey, _TaskEntry] = {}
+        self._subscriptions: dict[TaskEntryKey, _Subscription] = {}
 
     def __repr__(self) -> str:
         return f"<_SessionTasks: {self.session_id}>"
 
-    def track(self, entry: _TaskEntry) -> None:
+    def track(self, entry: _TaskEntry, fragment_id: str | None) -> None:
         with self._lock:
-            self._entries[entry.key] = entry
+            subscription = self._subscriptions.get(entry.key)
+            if subscription is None or subscription.entry is not entry:
+                subscription = _Subscription(entry)
+                self._subscriptions[entry.key] = subscription
+            subscription.fragment_ids.add(fragment_id)
 
     def forget(self, key: TaskEntryKey) -> None:
         with self._lock:
-            self._entries.pop(key, None)
+            self._subscriptions.pop(key, None)
 
     def drain(self) -> list[_TaskEntry]:
         """Remove and return every entry this session is subscribed to."""
         with self._lock:
-            entries = list(self._entries.values())
-            self._entries.clear()
+            entries = [
+                subscription.entry for subscription in self._subscriptions.values()
+            ]
+            self._subscriptions.clear()
         return entries
 
-    def request_rerun(self) -> None:
-        """Ask this session to rerun, if it is still connected."""
+    def rerun_targets(self, key: TaskEntryKey) -> set[str | None]:
+        """The fragments to refresh for this task. Must be read before unsubscribing."""
+        with self._lock:
+            subscription = self._subscriptions.get(key)
+            return set(subscription.fragment_ids) if subscription else {None}
+
+    def request_rerun(self, fragment_ids: set[str | None]) -> None:
+        """Refresh the given fragments, if the session is still connected.
+
+        A task requested outside any fragment can only be refreshed by rerunning
+        the whole app.
+        """
         session = self._session_ref()
         if session is None:
             return
-        session.request_rerun_threadsafe()
+
+        if not fragment_ids or None in fragment_ids:
+            session.request_rerun_threadsafe()
+            return
+        for fragment_id in fragment_ids:
+            # Narrowed by the check above.
+            session.request_fragment_rerun_threadsafe(cast("str", fragment_id))
 
 
 class _TaskEntry:
@@ -229,10 +263,10 @@ class _TaskEntry:
             return list(self._subscribers)
 
 
-def _request_rerun(session_tasks: _SessionTasks) -> None:
+def _request_rerun(session_tasks: _SessionTasks, fragment_ids: set[str | None]) -> None:
     """Wake one subscriber, keeping a failure from stranding the others."""
     try:
-        session_tasks.request_rerun()
+        session_tasks.request_rerun(fragment_ids)
     except Exception:
         _LOGGER.warning(
             "Failed to notify session %s that a task finished.",
@@ -317,7 +351,8 @@ class _TaskManager:
 
         if session_tasks is not None:
             entry.subscribe(session_tasks)
-            session_tasks.track(entry)
+            # Read on the script thread, where the fragment context is still set.
+            session_tasks.track(entry, _current_fragment_id())
 
         if is_new:
             self._start(entry, compute)
@@ -346,14 +381,19 @@ class _TaskManager:
         self, entry: _TaskEntry, value: Any, exception: BaseException | None
     ) -> None:
         subscribers = entry.settle(value, exception)
+        # Read before unsubscribing, which discards where each session asked from.
+        targets = [
+            (session_tasks, session_tasks.rerun_targets(entry.key))
+            for session_tasks in subscribers
+        ]
 
         if exception is None:
             # The value now lives in the cache, so keeping the entry would make a
             # later miss (ttl expiry, eviction) replay this result forever.
             self._discard(entry, subscribers)
 
-        for session_tasks in subscribers:
-            _request_rerun(session_tasks)
+        for session_tasks, fragment_ids in targets:
+            _request_rerun(session_tasks, fragment_ids)
 
     def _discard(self, entry: _TaskEntry, subscribers: list[_SessionTasks]) -> None:
         with self._lock:
@@ -413,6 +453,17 @@ def get_task_manager() -> _TaskManager:
 def release_session(session_id: str) -> None:
     """Drop a disconnected session's task subscriptions."""
     _task_manager.release_session(session_id)
+
+
+def _current_fragment_id() -> str | None:
+    """The fragment being executed on this thread, or ``None`` outside one."""
+    from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
+
+    try:
+        return ThreadState.get().fragment_id
+    except RuntimeError:
+        # No fragment state on this thread, so there is no fragment to rerun.
+        return None
 
 
 def get_current_session() -> AppSession | None:
