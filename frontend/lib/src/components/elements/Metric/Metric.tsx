@@ -38,7 +38,7 @@ import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { formatNumber, isNumericString } from "~lib/util/formatNumber"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
-import { getMetricBackgroundColor, getMetricColor } from "./metricColors"
+import { getMetricAreaGradient, getMetricColor } from "./metricColors"
 import {
   StyledDeltaContainer,
   StyledDeltaDescription,
@@ -56,8 +56,21 @@ const LOG = getLogger("Metric")
 
 const LARGE_DATASET_POINT_THRESHOLD = 1000
 
+interface AreaChartBaseline {
+  /** The baseline value (`y2`) that anchors the shaded region. */
+  value: number
+  /**
+   * Where the baseline sits inside the shaded region's bounding box, as a
+   * normalized offset from its top edge. This is `1` (the bottom edge) unless
+   * the fill diverges around the baseline, in which case it lands wherever the
+   * baseline falls between the data maximum and minimum.
+   */
+  offset: number
+}
+
 /**
- * Returns the baseline value (`y2`) to anchor an area chart's shaded region.
+ * Returns the baseline that anchors an area chart's shaded region, plus where
+ * that baseline sits inside the region so the fill can fade out at it.
  *
  * The baseline is `0` only when the data strictly crosses zero (i.e. it has
  * both a value below and a value above zero, so the fill diverges around the
@@ -70,11 +83,11 @@ const LARGE_DATASET_POINT_THRESHOLD = 1000
  * Uses a single pass instead of `Math.min(...chartData)` to avoid a potential
  * argument-spread `RangeError` on very large datasets.
  */
-function getAreaChartBaseline(chartData: number[]): number {
+function getAreaChartBaseline(chartData: number[]): AreaChartBaseline {
   if (chartData.length === 0) {
     // Defensive fallback: an empty dataset has no meaningful baseline, so
     // return `0` to keep the `y2` datum a valid finite number.
-    return 0
+    return { value: 0, offset: 1 }
   }
 
   let dataMin = chartData[0]
@@ -88,7 +101,15 @@ function getAreaChartBaseline(chartData: number[]): number {
     }
   }
 
-  return dataMin < 0 && dataMax > 0 ? 0 : dataMin
+  const value = dataMin < 0 && dataMax > 0 ? 0 : dataMin
+  const dataRange = dataMax - dataMin
+
+  return {
+    value,
+    // A flat series has no vertical extent to place the baseline within, so
+    // treat the baseline as the bottom edge.
+    offset: dataRange === 0 ? 1 : (dataMax - value) / dataRange,
+  }
 }
 
 /**
@@ -129,7 +150,12 @@ export function getMetricChartSpec(
   // charts need at least two points:
   const data =
     chartData.length === 1 ? [chartData[0], chartData[0]] : chartData
-  const isAreaChart = chartType === MetricProto.ChartType.AREA
+  // Only area charts have a shaded region to anchor, so line and bar charts
+  // skip the scan over the data this needs.
+  const areaBaseline =
+    chartType === MetricProto.ChartType.AREA
+      ? getAreaChartBaseline(data)
+      : null
 
   const spec: TopLevelSpec = {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
@@ -153,10 +179,16 @@ export function getMetricChartSpec(
             type: "bar",
             cornerRadius: Number.parseFloat(theme.radii.full),
           }),
-          ...(chartType === MetricProto.ChartType.AREA && {
+          ...(areaBaseline && {
             type: "area",
-            // Controls the color of the shaded area of area chart (bg color)
-            color: getMetricBackgroundColor(theme, metricColor),
+            // Controls the color of the shaded area of area chart (bg color).
+            // A vertical gradient fades the shading out towards the baseline so
+            // it blends into the space below the chart.
+            color: getMetricAreaGradient(
+              theme,
+              metricColor,
+              areaBaseline.offset
+            ),
             opacity: 1,
             line: {
               // Controls the color of the line in area chart (main color)
@@ -186,9 +218,9 @@ export function getMetricChartSpec(
               nice: false,
             },
           },
-          ...(isAreaChart && {
+          ...(areaBaseline && {
             y2: {
-              datum: getAreaChartBaseline(data),
+              datum: areaBaseline.value,
             },
           }),
         },
