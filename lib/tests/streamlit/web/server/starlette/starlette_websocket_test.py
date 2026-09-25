@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -32,6 +33,7 @@ from streamlit.web.server.starlette.starlette_websocket import (
     _get_signed_cookie_with_chunks,
     _is_host_allowed,
     _is_origin_allowed,
+    _is_same_origin,
     _parse_decoded_user_cookie,
     _parse_subprotocols,
     _parse_user_cookie_signed,
@@ -489,6 +491,41 @@ class TestIsOriginAllowed:
         assert _is_origin_allowed(origin, "localhost:8501") is expected
 
 
+class TestIsSameOrigin:
+    """Tests for _is_same_origin function."""
+
+    @pytest.mark.parametrize(
+        ("origin", "host", "expected"),
+        [
+            ("http://localhost:8501", "localhost:8501", True),
+            ("https://app.example.com", "app.example.com", True),
+            # A different port is a different origin, so the Vite dev server on
+            # port 3000 is cross-origin to the Streamlit server on port 8501.
+            ("http://localhost:3000", "localhost:8501", False),
+            # A host with an explicit default port does not match an origin
+            # that omits it.
+            ("https://app.example.com", "app.example.com:443", False),
+            ("http://evil.com", "localhost:8501", False),
+        ],
+        ids=[
+            "same_host_and_port",
+            "same_host_no_port",
+            "different_port",
+            "explicit_default_port",
+            "different_host",
+        ],
+    )
+    def test_compares_origin_host_to_request_host(
+        self, origin: str, host: str, expected: bool
+    ) -> None:
+        """The comparison includes the port."""
+        assert _is_same_origin(origin, host) is expected
+
+    def test_returns_false_for_missing_host(self) -> None:
+        """A request without a Host header cannot be same-origin."""
+        assert _is_same_origin("http://localhost:8501", None) is False
+
+
 class TestWebsocketHandlerUserInfoPrecedence:
     """Tests for user_info precedence in websocket handler."""
 
@@ -770,6 +807,288 @@ class TestWebsocketHandlerTokenExposure:
 
         # The misconfiguration must abort the connection rather than silently
         # proceeding with an empty token set.
+        mock_runtime.connect_session.assert_not_called()
+
+
+class TestWebsocketHandlerXsrfAdmission:
+    """Tests for XSRF admission control on the WebSocket handshake.
+
+    A cross-origin handshake needs a matching double-submit XSRF token. A
+    same-origin handshake and a handshake without an ``Origin`` header do not.
+    """
+
+    _SAME_ORIGIN = "http://localhost:8501"
+    _CROSS_ORIGIN = "http://evil.com"
+    _SAME_HOST_OTHER_PORT = "http://localhost:3001"
+    _HOST = "localhost:8501"
+
+    @staticmethod
+    def _make_websocket(
+        *,
+        origin: str | None,
+        xsrf_token: str | None = None,
+        cookies: dict[str, str] | None = None,
+    ) -> MagicMock:
+        """Build a mock websocket for admission tests."""
+        from starlette.websockets import WebSocketDisconnect
+
+        protocol = "streamlit" if xsrf_token is None else f"streamlit, {xsrf_token}"
+
+        mock_websocket = MagicMock()
+        mock_websocket.headers = MagicMock()
+        mock_websocket.headers.get.side_effect = lambda key: {
+            "Origin": origin,
+            "Host": TestWebsocketHandlerXsrfAdmission._HOST,
+            "sec-websocket-protocol": protocol,
+        }.get(key)
+        mock_websocket.headers.getlist.return_value = []
+        mock_websocket.cookies = cookies or {}
+        mock_websocket.accept = AsyncMock()
+        mock_websocket.close = AsyncMock()
+        mock_websocket.receive_bytes = AsyncMock(side_effect=WebSocketDisconnect())
+        return mock_websocket
+
+    @staticmethod
+    def _make_runtime() -> MagicMock:
+        """Build a mock runtime that records ``connect_session`` calls."""
+        mock_runtime = MagicMock()
+        mock_runtime.connect_session = MagicMock(return_value="test-session-id")
+        mock_runtime.disconnect_session = MagicMock()
+        return mock_runtime
+
+    @staticmethod
+    def _run_handler(handler: Any, mock_websocket: MagicMock) -> None:
+        """Run the handler with a stubbed session client."""
+        with patch(
+            "streamlit.web.server.starlette.starlette_websocket.StarletteSessionClient"
+        ) as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.aclose = AsyncMock()
+            mock_client_class.return_value = mock_client
+            asyncio.run(handler(mock_websocket))
+
+    @pytest.mark.parametrize(
+        ("xsrf_token", "cookies"),
+        [
+            pytest.param(None, {}, id="no_token_and_no_cookie"),
+            pytest.param(
+                starlette_app_utils.generate_xsrf_token_string(),
+                {},
+                id="token_without_cookie",
+            ),
+            pytest.param(
+                # Two generated tokens decode correctly but hold different bytes.
+                starlette_app_utils.generate_xsrf_token_string(),
+                {"_streamlit_xsrf": starlette_app_utils.generate_xsrf_token_string()},
+                id="mismatched_token",
+            ),
+        ],
+    )
+    # CORS is disabled so _is_origin_allowed admits every origin. Only the XSRF
+    # check can reject here, which is the cross-site hijacking scenario.
+    @patch_config_options(
+        {"server.enableXsrfProtection": True, "server.enableCORS": False}
+    )
+    def test_rejects_cross_origin_handshake_without_valid_xsrf_token(
+        self, xsrf_token: str | None, cookies: dict[str, str]
+    ) -> None:
+        """A cross-origin handshake without a valid token must not open a session."""
+        mock_websocket = self._make_websocket(
+            origin=self._CROSS_ORIGIN, xsrf_token=xsrf_token, cookies=cookies
+        )
+        mock_runtime = self._make_runtime()
+        handler = create_websocket_handler(mock_runtime)
+
+        asyncio.run(handler(mock_websocket))
+
+        mock_websocket.close.assert_called_once_with(code=1008)
+        mock_websocket.accept.assert_not_called()
+        mock_runtime.connect_session.assert_not_called()
+
+    @patch_config_options(
+        {"server.enableXsrfProtection": True, "server.enableCORS": False}
+    )
+    def test_accepts_cross_origin_handshake_with_valid_xsrf_token(self) -> None:
+        """A matching token admits the handshake whatever the origin is.
+
+        The check reads the token, not an origin allowlist. A page on another
+        host cannot reach this state, because it can neither read nor send the
+        XSRF cookie. See ``test_accepts_same_host_other_port_with_valid_token``
+        for the case a real browser can reach.
+        """
+        xsrf_token = starlette_app_utils.generate_xsrf_token_string()
+        mock_websocket = self._make_websocket(
+            origin=self._CROSS_ORIGIN,
+            xsrf_token=xsrf_token,
+            cookies={"_streamlit_xsrf": xsrf_token},
+        )
+        mock_runtime = self._make_runtime()
+        handler = create_websocket_handler(mock_runtime)
+
+        self._run_handler(handler, mock_websocket)
+
+        mock_websocket.accept.assert_called_once()
+        mock_websocket.close.assert_not_called()
+        mock_runtime.connect_session.assert_called_once()
+
+    @patch_config_options(
+        {"server.enableXsrfProtection": True, "server.enableCORS": False}
+    )
+    def test_accepts_same_host_other_port_with_valid_token(self) -> None:
+        """A page on the app's host but another port sends the token and connects.
+
+        The browser shares a cookie across ports, so this page reads the XSRF
+        cookie and fills the token slot. The dev servers run this shape: the
+        frontend serves on port 3001 under ``make debug``, or on port 3000 under
+        ``make frontend-dev``, and the backend listens on port 8501.
+        """
+        xsrf_token = starlette_app_utils.generate_xsrf_token_string()
+        mock_websocket = self._make_websocket(
+            origin=self._SAME_HOST_OTHER_PORT,
+            xsrf_token=xsrf_token,
+            cookies={"_streamlit_xsrf": xsrf_token},
+        )
+        mock_runtime = self._make_runtime()
+        handler = create_websocket_handler(mock_runtime)
+
+        self._run_handler(handler, mock_websocket)
+
+        mock_websocket.accept.assert_called_once()
+        mock_websocket.close.assert_not_called()
+        mock_runtime.connect_session.assert_called_once()
+
+    @patch_config_options(
+        {"server.enableXsrfProtection": True, "server.enableCORS": False}
+    )
+    def test_rejects_same_host_other_port_without_token(self) -> None:
+        """Another port is a different origin, so it still needs the token."""
+        mock_websocket = self._make_websocket(origin=self._SAME_HOST_OTHER_PORT)
+        mock_runtime = self._make_runtime()
+        handler = create_websocket_handler(mock_runtime)
+
+        asyncio.run(handler(mock_websocket))
+
+        mock_websocket.close.assert_called_once_with(code=1008)
+        mock_websocket.accept.assert_not_called()
+        mock_runtime.connect_session.assert_not_called()
+
+    @patch_config_options(
+        {"server.enableXsrfProtection": True, "server.enableCORS": False}
+    )
+    def test_accepts_same_origin_handshake_without_xsrf_token(self) -> None:
+        """A same-origin handshake connects without a token.
+
+        The browser sets Origin and scripts cannot forge it, so a same-origin
+        handshake comes from the app's own page. JavaScript can read the cookie
+        there, so the token would prove nothing.
+        """
+        mock_websocket = self._make_websocket(origin=self._SAME_ORIGIN)
+        mock_runtime = self._make_runtime()
+        handler = create_websocket_handler(mock_runtime)
+
+        self._run_handler(handler, mock_websocket)
+
+        mock_websocket.accept.assert_called_once()
+        mock_websocket.close.assert_not_called()
+        mock_runtime.connect_session.assert_called_once()
+
+    @patch_config_options(
+        {
+            "server.enableXsrfProtection": True,
+            "server.enableCORS": False,
+            "server.cookieSecret": "test-secret",
+        }
+    )
+    def test_same_origin_host_auth_token_connects_but_stays_anonymous(self) -> None:
+        """An embed that sends a host auth token connects with no user info.
+
+        The frontend puts either a host auth token or the XSRF cookie in the
+        second ``Sec-WebSocket-Protocol`` entry. A host auth token there fails
+        XSRF validation, so the session opens without reading the auth cookie.
+        """
+        cookie_payload = json.dumps(
+            {
+                "origin": self._SAME_ORIGIN,
+                "is_logged_in": True,
+                "email": "cookie@example.com",
+            }
+        )
+        signed_cookie = starlette_app_utils.create_signed_value(
+            "test-secret", "_streamlit_user", cookie_payload
+        )
+        mock_websocket = self._make_websocket(
+            origin=self._SAME_ORIGIN,
+            xsrf_token="host-auth-token-not-xsrf",
+            cookies={
+                "_streamlit_user": signed_cookie.decode("utf-8"),
+                "_streamlit_xsrf": starlette_app_utils.generate_xsrf_token_string(),
+            },
+        )
+        mock_runtime = self._make_runtime()
+        handler = create_websocket_handler(mock_runtime)
+
+        self._run_handler(handler, mock_websocket)
+
+        mock_websocket.accept.assert_called_once()
+        mock_runtime.connect_session.assert_called_once()
+        user_info = mock_runtime.connect_session.call_args.kwargs["user_info"]
+        assert user_info.get("email") is None
+        assert user_info.get("is_logged_in") is None
+
+    @patch_config_options(
+        {"server.enableXsrfProtection": True, "server.enableCORS": False}
+    )
+    def test_accepts_handshake_without_origin_header(self) -> None:
+        """No Origin header skips the check so programmatic clients connect."""
+        mock_websocket = self._make_websocket(origin=None)
+        mock_runtime = self._make_runtime()
+        handler = create_websocket_handler(mock_runtime)
+
+        self._run_handler(handler, mock_websocket)
+
+        mock_websocket.accept.assert_called_once()
+        mock_websocket.close.assert_not_called()
+        mock_runtime.connect_session.assert_called_once()
+
+    @patch_config_options(
+        {"server.enableXsrfProtection": False, "server.enableCORS": False}
+    )
+    def test_accepts_cross_origin_handshake_when_xsrf_disabled(self) -> None:
+        """Disabled XSRF protection removes the admission check."""
+        mock_websocket = self._make_websocket(origin=self._CROSS_ORIGIN)
+        mock_runtime = self._make_runtime()
+        handler = create_websocket_handler(mock_runtime)
+
+        self._run_handler(handler, mock_websocket)
+
+        mock_websocket.accept.assert_called_once()
+        mock_websocket.close.assert_not_called()
+        mock_runtime.connect_session.assert_called_once()
+
+    @patch(
+        "streamlit.web.server.starlette.starlette_websocket.is_xsrf_enabled",
+        return_value=True,
+    )
+    @patch_config_options(
+        {"server.enableXsrfProtection": False, "server.enableCORS": False}
+    )
+    def test_rejects_cross_origin_handshake_when_auth_section_enables_xsrf(
+        self, _mock_is_xsrf_enabled: MagicMock
+    ) -> None:
+        """An [auth] secrets section keeps the gate on when the option is false.
+
+        ``is_xsrf_enabled`` reports XSRF protection as on when secrets hold an
+        ``[auth]`` section, so ``server.enableXsrfProtection=false`` alone does
+        not admit a cross-origin handshake.
+        """
+        mock_websocket = self._make_websocket(origin=self._CROSS_ORIGIN)
+        mock_runtime = self._make_runtime()
+        handler = create_websocket_handler(mock_runtime)
+
+        asyncio.run(handler(mock_websocket))
+
+        mock_websocket.close.assert_called_once_with(code=1008)
+        mock_websocket.accept.assert_not_called()
         mock_runtime.connect_session.assert_not_called()
 
 
