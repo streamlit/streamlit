@@ -1979,20 +1979,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@luma.gl/core@npm:^9.4.0":
-  version: 9.4.1
-  resolution: "@luma.gl/core@npm:9.4.1"
-  dependencies:
-    "@math.gl/types": "npm:^4.1.0"
-    "@probe.gl/env": "npm:^4.1.1"
-    "@probe.gl/log": "npm:^4.1.1"
-    "@probe.gl/stats": "npm:^4.1.1"
-    "@types/offscreencanvas": "npm:^2019.7.3"
-  checksum: 10c0/17bef2b5332a6aad0da13455be3479fc9dea0c58a8e41327ddd4c38563196e59e21c834e942645ec68ad73878526b0601cf041c687b275a497e2f246ed4c3139
-  languageName: node
-  linkType: hard
-
-"@luma.gl/core@npm:^9.4.2":
+"@luma.gl/core@npm:^9.4.0, @luma.gl/core@npm:^9.4.2":
   version: 9.4.2
   resolution: "@luma.gl/core@npm:9.4.2"
   dependencies:
@@ -2005,22 +1992,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@luma.gl/engine@npm:^9.4.0":
-  version: 9.4.1
-  resolution: "@luma.gl/engine@npm:9.4.1"
-  dependencies:
-    "@math.gl/core": "npm:^4.1.0"
-    "@math.gl/types": "npm:^4.1.0"
-    "@probe.gl/log": "npm:^4.1.1"
-    "@probe.gl/stats": "npm:^4.1.1"
-  peerDependencies:
-    "@luma.gl/core": ~9.4.0
-    "@luma.gl/shadertools": ~9.4.0
-  checksum: 10c0/ce7e469a08297504cb98c74490192ef73b37e0a84d1db626112dd97f93b62048235b976a616545a53a9e94047d721dfcad122a891ea69c4a23d1a723f4353875
-  languageName: node
-  linkType: hard
-
-"@luma.gl/engine@npm:^9.4.2":
+"@luma.gl/engine@npm:^9.4.0, @luma.gl/engine@npm:^9.4.2":
   version: 9.4.2
   resolution: "@luma.gl/engine@npm:9.4.2"
   dependencies:
@@ -2068,19 +2040,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@luma.gl/shadertools@npm:^9.4.0":
-  version: 9.4.1
-  resolution: "@luma.gl/shadertools@npm:9.4.1"
-  dependencies:
-    "@math.gl/core": "npm:^4.1.0"
-    "@math.gl/types": "npm:^4.1.0"
-  peerDependencies:
-    "@luma.gl/core": ~9.4.0
-  checksum: 10c0/0b72460dccafafca027b0f0973f8593624f13fcdce14b205c904457348b649aee24a37e3cd8a81e7dcf8f47015efe6b8228689310bb4fdc416b77feec2707edf
-  languageName: node
-  linkType: hard
-
-"@luma.gl/shadertools@npm:^9.4.2":
+"@luma.gl/shadertools@npm:^9.4.0, @luma.gl/shadertools@npm:^9.4.2":
   version: 9.4.2
   resolution: "@luma.gl/shadertools@npm:9.4.2"
   dependencies:
