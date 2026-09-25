@@ -75,6 +75,7 @@ def oidc_app(
     environ: dict[str, Any],
     start_response: Callable[[str, list[tuple[str, str]]], Callable[[bytes], Any]],
     success: bool = True,
+    large_tokens: bool = False,
 ) -> list[bytes]:
     path = environ["PATH_INFO"]
     current_port = environ["SERVER_PORT"]
@@ -119,22 +120,34 @@ def oidc_app(
 
         code = parse_qs(body.decode())["code"][0]
 
+        claims: dict[str, Any] = {
+            "aud": "test-client-id",
+            "iss": f"http://localhost:{current_port}",
+            "sub": str(uuid.uuid4()),
+            "iat": int(time.time()),
+            "name": "John Doe",
+            "email": "authtest@example.com",
+            "exp": int(time.time()) + 3600,
+            "nonce": NONCE_REGISTRY[code],
+        }
+        if large_tokens:
+            claims["groups"] = [
+                f"authentik-group-{i:03d}-aaaaaaaaaaaaaaaa" for i in range(500)
+            ]
+
+        id_token = generate_token(claims)
+        if large_tokens:
+            access_claims = dict(claims)
+            access_claims["token_use"] = "access"
+            access_token = generate_token(access_claims)
+        else:
+            access_token = str(uuid.uuid4())
+
         # Return dummy token
         response = {
-            "access_token": str(uuid.uuid4()),
+            "access_token": access_token,
             "token_type": "Bearer",
-            "id_token": generate_token(
-                {
-                    "aud": "test-client-id",
-                    "iss": f"http://localhost:{current_port}",
-                    "sub": str(uuid.uuid4()),
-                    "iat": int(time.time()),
-                    "name": "John Doe",
-                    "email": "authtest@example.com",
-                    "exp": int(time.time()) + 3600,
-                    "nonce": NONCE_REGISTRY[code],
-                }
-            ),
+            "id_token": id_token,
         }
         status = "200 OK"
         headers = [("Content-Type", "application/json")]
@@ -188,10 +201,20 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=9999)
     parser.add_argument("--success", action="store_true", dest="success")
     parser.add_argument("--failure", action="store_false", dest="success")
+    parser.add_argument(
+        "--large-tokens",
+        action="store_true",
+        dest="large_tokens",
+        help="Issue large id/access JWTs with many group claims.",
+    )
 
     args = parser.parse_args()
     port = args.port
 
-    httpd = make_server("", port, partial(oidc_app, success=args.success))
+    httpd = make_server(
+        "",
+        port,
+        partial(oidc_app, success=args.success, large_tokens=args.large_tokens),
+    )
     print(f"Serving on port {port}...")
     httpd.serve_forever()
