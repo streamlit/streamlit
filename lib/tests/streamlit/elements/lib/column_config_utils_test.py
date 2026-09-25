@@ -24,6 +24,7 @@ import pyarrow as pa
 import pytest
 from parameterized import parameterized
 
+import streamlit as st
 from streamlit.dataframe_util import DataFormat
 from streamlit.elements.lib.column_config_utils import (
     _EDITING_COMPATIBILITY_MAPPING,
@@ -41,10 +42,13 @@ from streamlit.elements.lib.column_config_utils import (
     extract_button_column_configs,
     is_type_compatible,
     process_config_mapping,
+    register_button_column_widgets,
     update_column_config,
 )
 from streamlit.elements.lib.column_types import ButtonColumn
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 if TYPE_CHECKING:
     from streamlit.elements.lib.column_types import ColumnConfig
@@ -202,6 +206,7 @@ class ColumnConfigUtilsTest(unittest.TestCase):
                 ColumnDataKind.PERIOD,
             ),
             (pd.Series(["a", "b", "c"]), ColumnDataKind.STRING),
+            (pd.Series([Decimal("1.1"), Decimal("2.2")]), ColumnDataKind.DECIMAL),
             (
                 pd.Series([datetime.date(2000, 1, 1), datetime.date(2000, 1, 2)]),
                 ColumnDataKind.DATE,
@@ -417,6 +422,14 @@ class ColumnConfigUtilsTest(unittest.TestCase):
         with pytest.raises(StreamlitAPIException):
             process_config_mapping({"col1": ["a", "b"]})  # type: ignore
 
+    def test_process_config_mapping_copies_button_column_result(self) -> None:
+        """ButtonColumnResult configs are copied so later mutation is isolated."""
+        button_result = ButtonColumn("Actions", key="action_click")
+        processed_button = process_config_mapping({"actions": button_result})
+        assert processed_button["actions"] == button_result.config
+        processed_button["actions"]["label"] = "Changed"
+        assert button_result.config["label"] != "Changed"
+
     def test_extract_button_column_configs(self):
         """Test extraction of interactive ButtonColumn wrapper configs."""
         button_column = ButtonColumn("Actions", key="action_click")
@@ -581,3 +594,22 @@ class ColumnConfigUtilsTest(unittest.TestCase):
                     },
                 },
             )
+
+
+class RegisterButtonColumnWidgetsTest(DeltaGeneratorTestCase):
+    """Tests for registering interactive button-column widgets."""
+
+    def test_register_button_column_widgets_attaches_widget_ids(self) -> None:
+        """Each ButtonColumn is registered and mapped onto the dataframe proto."""
+        button_col = ButtonColumn("Actions", key="action_click")
+        proto = DataframeProto()
+        register_button_column_widgets(
+            dg=st._main,
+            proto=proto,
+            button_columns={"actions": button_col},
+            ctx=self.script_run_ctx,
+        )
+
+        widget_id = proto.button_click_widgets["actions"]
+        assert widget_id
+        assert widget_id in self.script_run_ctx.shared.widget_ids_this_run

@@ -1396,3 +1396,40 @@ class TestUvicornRunner:
             runner = UvicornRunner("myapp:app")
             with pytest.raises(RuntimeError, match="Unix sockets are not supported"):
                 runner.run()
+
+
+class TestServerProperties:
+    """Lightweight Server helpers that do not require a live uvicorn bind."""
+
+    def setup_method(self) -> None:
+        Runtime._instance = None
+
+    def teardown_method(self) -> None:
+        Runtime._instance = None
+
+    def test_repr_includes_class_name(self) -> None:
+        """repr() includes the class name."""
+        server = Server("mock/script/path", is_hello=False)
+        assert "Server" in repr(server)
+
+    def test_browser_is_connected_is_false_before_sessions(self) -> None:
+        """No connected sessions means the browser is not connected."""
+        server = Server("mock/script/path", is_hello=False)
+        assert server.browser_is_connected is False
+
+    def test_is_running_hello_compares_script_path(self) -> None:
+        """Hello detection is based on the script path, not the is_hello flag."""
+        from streamlit.hello import streamlit_app
+
+        hello_server = Server(streamlit_app.__file__, is_hello=False)
+        assert hello_server.is_running_hello is True
+        Runtime._instance = None
+        other_server = Server("mock/script/path", is_hello=True)
+        assert other_server.is_running_hello is False
+
+    def test_stop_without_starlette_server_stops_runtime(self) -> None:
+        """If uvicorn was never started, stop() still shuts down the runtime."""
+        server = Server("mock/script/path", is_hello=False)
+        with patch.object(server._runtime, "stop") as mock_stop:
+            server.stop()
+            mock_stop.assert_called_once()
