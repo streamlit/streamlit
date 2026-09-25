@@ -937,6 +937,11 @@ function DataFrame({
   // disabled in that case.
   const isSearchOpen = canSearch && showSearch
 
+  // Name the grid (not the toolbar wrapper) only when alt is non-blank.
+  // role="region" (not "img") exposes the name without making Glide's
+  // operable canvas presentational.
+  const accessibleName = element.alt?.trim() || undefined
+
   return (
     <StyledResizableContainer
       className="stDataFrame"
@@ -1098,6 +1103,8 @@ function DataFrame({
       <Resizable
         data-testid="stDataFrameResizable"
         ref={resizableRef}
+        aria-label={accessibleName}
+        {...(accessibleName ? { role: "region" } : {})}
         defaultSize={resizableSize}
         style={{
           border: `${gridTheme.tableBorderWidth}px solid ${gridTheme.glideTheme.borderColor}`,

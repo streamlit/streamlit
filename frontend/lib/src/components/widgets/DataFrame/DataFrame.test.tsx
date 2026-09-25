@@ -222,6 +222,58 @@ describe("DataFrame widget", () => {
     expect(styledResizableContainer).toHaveClass("stDataFrame")
   })
 
+  it("sets role=region and aria-label on the grid host when alt is provided", () => {
+    render(
+      <DataFrame
+        {...getProps(TEN_BY_TEN)}
+        element={DataframeProto.create({
+          arrowData: { data: TEN_BY_TEN },
+          editingMode: DataframeProto.EditingMode.READ_ONLY,
+          alt: "Top 20 customers by revenue",
+        })}
+      />
+    )
+
+    const gridHost = screen.getByTestId("stDataFrameResizable")
+    expect(gridHost).toHaveAttribute("role", "region")
+    expect(gridHost).toHaveAccessibleName("Top 20 customers by revenue")
+    // Outer wrapper stays unnamed so the toolbar is outside the named region.
+    expect(screen.getByTestId("stDataFrame")).not.toHaveAttribute("role")
+    expect(screen.getByTestId("stDataFrame")).not.toHaveAttribute("aria-label")
+    // Glide still mounts under the named host and is not aria-hidden
+    // (unit tests mock DataEditor as mock-data-editor).
+    const glideEditor = screen.getByTestId("mock-data-editor")
+    expect(glideEditor).toBeVisible()
+    expect(gridHost).toContainElement(glideEditor)
+    expect(gridHost).not.toHaveAttribute("aria-hidden")
+    expect(glideEditor).not.toHaveAttribute("aria-hidden")
+  })
+
+  it("omits role and aria-label when alt is not provided", () => {
+    render(<DataFrame {...props} />)
+
+    const gridHost = screen.getByTestId("stDataFrameResizable")
+    expect(gridHost).not.toHaveAttribute("role")
+    expect(gridHost).not.toHaveAttribute("aria-label")
+  })
+
+  it.each(["", "   "])("omits role and aria-label when alt is %j", alt => {
+    render(
+      <DataFrame
+        {...getProps(TEN_BY_TEN)}
+        element={DataframeProto.create({
+          arrowData: { data: TEN_BY_TEN },
+          editingMode: DataframeProto.EditingMode.READ_ONLY,
+          alt,
+        })}
+      />
+    )
+
+    const gridHost = screen.getByTestId("stDataFrameResizable")
+    expect(gridHost).not.toHaveAttribute("role")
+    expect(gridHost).not.toHaveAttribute("aria-label")
+  })
+
   it("should have a toolbar", () => {
     render(<DataFrame {...props} />)
 

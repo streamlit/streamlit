@@ -110,6 +110,7 @@ if TYPE_CHECKING:
             kwargs={},
             row_height=35,
             placeholder="-",
+            alt="Editable customer list",
         ),
         pd.DataFrame,
     )
