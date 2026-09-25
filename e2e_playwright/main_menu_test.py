@@ -17,7 +17,12 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_until
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_until,
+)
+from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
 
 def test_main_menu_images(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -323,6 +328,27 @@ def test_auto_rerun_toggle_changes_state(app: Page):
 
     # Menu should remain open after toggling
     expect(popover).to_be_visible()
+
+
+def test_auto_rerun_toggle_with_custom_border_color(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Auto-rerun off track must not follow a custom opaque theme.borderColor.
+
+    The unchecked track is a surface filled with `fadedText10`, not a border, so
+    it must stay neutral even when the theme sets an opaque `borderColor`
+    (same rule as `st.toggle`).
+    """
+    apply_theme_via_window(app, base="light", borderColor="#00008B")
+    app.reload()
+    wait_for_app_loaded(app)
+
+    app.get_by_test_id("stMainMenu").click()
+    toggle = app.get_by_test_id("stMainMenuItem-autoRerun")
+    expect(toggle).to_be_visible()
+    expect(toggle).to_have_attribute("aria-checked", "false")
+
+    assert_snapshot(toggle, name="main_menu-auto_rerun-custom-theme")
 
 
 def test_rerun_visible_in_dev_mode(app: Page):
