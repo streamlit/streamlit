@@ -97,13 +97,12 @@ const Image = ({
 }): ReactElement => {
   const crossOrigin = useCrossOriginAttribute(image.url)
   // Dangerous links must not render a focusable wrapper: a neutralized
-  // href="#" with preventDefault is still a nameless control once the
-  // index-based img alt is removed (spec phase 0).
+  // href="#" with preventDefault is still a nameless control once
+  // index-based img alt is gone.
   const safeLink = link && !isDangerousLinkUri(link) ? link : undefined
 
   const imageElement = (
-    // Omit alt until authors can supply one (phase 6). Do not use the
-    // array index — that announced as "0, image" (WCAG F30).
+    // Omit alt rather than using the array index (WCAG F30: "0, image").
     // oxlint-disable-next-line jsx-a11y/alt-text
     <img
       style={imgStyle}
