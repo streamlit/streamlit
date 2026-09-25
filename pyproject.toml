@@ -44,12 +44,15 @@ required-version = ">=0.11.8"
 environments = ["python_version < '3.15' and sys_platform != 'emscripten'"]
 # Exclude packages published in the last 24 hours to lower risk from supply chain attacks
 exclude-newer = "24 hours"
-# Explicit pandas version constraints by Python version:
-# - Python 3.10: use pandas 2.x (pandas 3.x requires Python >= 3.11)
-# - Python 3.11+: use pandas 3.x
+# Explicit version constraints by Python version:
+# - Python 3.10: pandas 2.x / websockets 16.x (pandas 3.x and websockets 17.x
+#   require Python >= 3.11)
+# - Python 3.11+: pandas 3.x / websockets 17.x
 override-dependencies = [
   "pandas>=1.4.0,<3; python_version < '3.11'",
   "pandas>=3.0.0,<4; python_version >= '3.11'",
+  "websockets>=12.0.0,<17; python_version < '3.11'",
+  "websockets>=17.0.0,<18; python_version >= '3.11'",
 ]
 
 [tool.uv.sources]
