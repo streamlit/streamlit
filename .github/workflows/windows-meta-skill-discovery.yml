@@ -1,0 +1,124 @@
+name: Windows Meta-Skill Discovery
+
+on:
+  push:
+    branches:
+      - "develop"
+    paths:
+      - "lib/streamlit/.agents/**"
+      - "lib/tests/streamlit/web/meta_skill_discover_test.py"
+      - "lib/streamlit/web/skills.py"
+      - "lib/pyproject.toml"
+      - ".github/actions/build_info/action.yml"
+      - ".github/workflows/windows-meta-skill-discovery.yml"
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "lib/streamlit/.agents/**"
+      - "lib/tests/streamlit/web/meta_skill_discover_test.py"
+      - "lib/streamlit/web/skills.py"
+      - "lib/pyproject.toml"
+      - ".github/actions/build_info/action.yml"
+      - ".github/workflows/windows-meta-skill-discovery.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-windows-meta-skill-discovery
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  meta-skill-discover:
+    runs-on: windows-latest
+    timeout-minutes: 25
+
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          enable-cache: true
+          ignore-nothing-to-cache: true
+          github-token: ${{ github.token }}
+
+      - name: Smoke discover.py on every supported Python
+        env:
+          DISCOVER_PY: lib/streamlit/.agents/meta-skill/developing-with-streamlit/scripts/discover.py
+        run: |
+          $ErrorActionPreference = "Stop"
+          $script = $env:DISCOVER_PY
+          $check = Join-Path $env:TEMP "compile_discover.py"
+          @'
+          import ast
+          import pathlib
+          import sys
+
+          path = pathlib.Path(sys.argv[1])
+          source = path.read_text(encoding="utf-8")
+          compile(source, str(path), "exec")
+          mod = ast.parse(source)
+          probe = None
+          for node in mod.body:
+              names = []
+              value = None
+              if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+                  names = [node.target.id]
+                  value = node.value
+              elif isinstance(node, ast.Assign):
+                  names = [t.id for t in node.targets if isinstance(t, ast.Name)]
+                  value = node.value
+              if "_PROBE_SNIPPET" in names:
+                  probe = ast.literal_eval(value)
+                  break
+          if not isinstance(probe, str):
+              raise SystemExit("_PROBE_SNIPPET missing")
+          compile(probe, "<probe>", "exec")
+          print("compiled script and probe")
+          '@ | Set-Content -Path $check -Encoding utf8
+
+          $labels = $env:PYTHON_VERSIONS | ConvertFrom-Json
+          foreach ($label in $labels) {
+            $py = switch ($label) {
+              "min" { $env:PYTHON_MIN_VERSION }
+              "max" { $env:PYTHON_MAX_VERSION }
+              default { $label }
+            }
+            Write-Host "Smoke discover.py on Python $py"
+            uv python install $py
+            if ($LASTEXITCODE -ne 0) { throw "uv python install failed for $py" }
+            # --no-project: do not sync this repo's uv.lock against the smoke interpreter.
+            uv run --python $py --no-project python $check $script
+            if ($LASTEXITCODE -ne 0) { throw "compile failed on $py" }
+            uv run --python $py --no-project python $script --help
+            if ($LASTEXITCODE -ne 0) { throw "--help failed on $py" }
+          }
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install pytest and editable Streamlit
+        run: |
+          # lib/pyproject.toml expects README.md beside it; the file lives at repo root.
+          Copy-Item README.md lib/README.md
+          python -m pip install pytest
+          python -m pip install -e lib
+
+      - name: Run meta-skill discovery tests
+        run: |
+          # -o addopts= drops pytest-cov from lib/pyproject.toml (not installed here).
+          # --noconftest skips lib/tests/conftest.py (imports Streamlit, needs protobufs).
+          python -m pytest -c lib/pyproject.toml lib/tests/streamlit/web/meta_skill_discover_test.py -o addopts= --noconftest -q
