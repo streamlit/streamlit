@@ -24,6 +24,7 @@ from streamlit.deprecation_util import (
     show_deprecation_warning,
 )
 from streamlit.elements.lib.layout_utils import create_layout_config
+from streamlit.elements.lib.utils import normalize_alt
 from streamlit.errors import StreamlitInvalidParameterTypeError
 from streamlit.proto.GraphVizChart_pb2 import GraphVizChart as GraphVizChartProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -49,6 +50,7 @@ class GraphvizMixin:
         *,  # keyword-only arguments:
         width: Width = "content",
         height: Height = "content",
+        alt: str | None = None,
     ) -> DeltaGenerator:
         """Display a graph using the d3-graphviz library and Graphviz WASM.
 
@@ -106,6 +108,19 @@ class GraphvizMixin:
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), Streamlit does not
+            provide an accessible name for the chart.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            Describe what the graph shows rather than repeating text that is
+            already visible on the page. This is a short description of the
+            chart, not a full text alternative for a dense diagram.
+
         Examples
         --------
         >>> import streamlit as st
@@ -127,7 +142,7 @@ class GraphvizMixin:
         >>> graph.edge("new", "runmem")
         >>> graph.edge("sleep", "runmem")
         >>>
-        >>> st.graphviz_chart(graph)
+        >>> st.graphviz_chart(graph, alt="Flow chart of process states")
 
         Or you can render the chart from the graph using GraphViz's Dot
         language:
@@ -169,13 +184,18 @@ class GraphvizMixin:
             )
             width = "stretch" if use_container_width else "content"
 
-        # Generate element ID from delta path
+        # The element ID hashes only the delta path, so `alt` does not affect
+        # it and changing `alt` never remounts the chart.
         delta_path = self.dg._get_delta_path_str()
         element_id = calc_hash(delta_path.encode())
 
         graphviz_chart_proto = GraphVizChartProto()
 
         marshall(graphviz_chart_proto, figure_or_dot, element_id)
+
+        normalized_alt = normalize_alt(alt)
+        if normalized_alt is not None:
+            graphviz_chart_proto.alt = normalized_alt
 
         # Validate and set layout configuration
         layout_config = create_layout_config(
