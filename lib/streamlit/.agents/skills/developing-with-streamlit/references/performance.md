@@ -14,8 +14,8 @@ def load_data(path):
     return pd.read_csv(path)
 
 
-# GOOD: Cached
-@st.cache_data
+# GOOD: Cached, bounded with max_entries
+@st.cache_data(max_entries=100)
 def load_data(path):
     return pd.read_csv(path)
 ```
