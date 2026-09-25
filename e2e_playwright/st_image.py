@@ -265,3 +265,23 @@ st.image(
     caption="Image with dangerous link.",
     link="javascript:alert('xss')",
 )
+
+st.header("alt parameter")
+with st.container(key="img_alt_labeled"):
+    st.image(
+        img,
+        width=100,
+        alt="Sunrise over a mountain ridge",
+    )
+with st.container(key="img_alt_decorative"):
+    st.image(img, width=100, alt="")
+with st.container(key="img_alt_unlabeled"):
+    st.image(img, width=100)
+with st.container(key="img_alt_linked_caption"):
+    st.image(
+        img,
+        width=100,
+        caption="**Revenue** by quarter",
+        link="https://streamlit.io",
+        alt="Should not name the link when caption exists",
+    )

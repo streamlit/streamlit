@@ -127,3 +127,15 @@ def test_pyplot_in_container(app: Page, assert_snapshot: ImageCompareFunction):
     container = get_element_by_key(app, "stretch-pyplot-in-container")
     expect(container).to_be_visible()
     assert_snapshot(container, name="st_pyplot-stretch-width-in-container")
+
+
+def test_pyplot_alt_sets_accessible_name(app: Page):
+    """Verify authored and omitted alt on the pyplot image."""
+    wait_for_all_images_to_be_loaded(app)
+
+    labeled = get_element_by_key(app, "pyplot_alt_labeled").locator("img")
+    expect(labeled).to_have_accessible_name("Histogram of sample values")
+    expect(labeled).to_have_attribute("alt", "Histogram of sample values")
+
+    unlabeled = get_element_by_key(app, "pyplot_alt_unlabeled").locator("img")
+    expect(unlabeled).not_to_have_attribute("alt")
