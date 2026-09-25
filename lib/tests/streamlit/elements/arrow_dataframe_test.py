@@ -222,6 +222,8 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         df = pd.DataFrame({"A": [1, 2]})
 
         def dataframe_id(**kwargs: object) -> str:
+            # Each call below produces the same element ID, so clear the registry
+            # to avoid a duplicate-ID error.
             self.script_run_ctx.shared.widget_ids_this_run.clear()
             st.dataframe(df, on_select="rerun", **kwargs)
             return self.get_delta_from_queue().new_element.dataframe.id

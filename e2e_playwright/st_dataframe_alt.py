@@ -23,8 +23,8 @@ import streamlit as st
 df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
 
 st.subheader("Dataframe alt")
-# Display-only dataframe keys are not element IDs — wrap unlabeled (and labeled)
-# cases in keyed containers so e2e can target them without nth().
+# A display-only st.dataframe does not register an element ID, so its `key` never
+# reaches the DOM. Wrap each case in a keyed container to target it without nth().
 with st.container(key="df_labeled"):
     st.dataframe(df, alt="Top 20 customers by revenue")
 with st.container(key="df_unlabeled"):

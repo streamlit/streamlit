@@ -39,14 +39,16 @@ def test_dataframe_and_data_editor_accessible_names(app: Page):
     expect(app.get_by_role("region", name="Top 20 customers by revenue")).to_have_count(
         1
     )
-    # Naming must not hide Glide's operable canvas (spec DOM-node gate). Full
-    # cell keyboard/AT navigation is Glide's surface and covered elsewhere.
+    # Glide's canvas must stay in the accessibility tree; naming the host must
+    # not hide it. Full cell keyboard/AT navigation is Glide's surface and
+    # covered elsewhere.
     labeled_canvas = labeled_df.get_by_test_id("data-grid-canvas")
     expect(labeled_canvas).to_be_visible()
     expect(labeled_canvas).not_to_have_attribute("aria-hidden", "true")
 
     expect(unlabeled_df).to_have_accessible_name("")
-    expect(unlabeled_df).not_to_have_attribute("role", "region")
+    expect(unlabeled_df).not_to_have_attribute("role")
+    expect(unlabeled_df).not_to_have_attribute("aria-label")
 
     expect(labeled_editor).to_have_accessible_name("Editable customer list")
     expect(labeled_editor).to_have_attribute("role", "region")
@@ -56,4 +58,5 @@ def test_dataframe_and_data_editor_accessible_names(app: Page):
     expect(labeled_editor_canvas).not_to_have_attribute("aria-hidden", "true")
 
     expect(unlabeled_editor).to_have_accessible_name("")
-    expect(unlabeled_editor).not_to_have_attribute("role", "region")
+    expect(unlabeled_editor).not_to_have_attribute("role")
+    expect(unlabeled_editor).not_to_have_attribute("aria-label")

@@ -939,8 +939,7 @@ function DataFrame({
 
   // Name the grid (not the toolbar wrapper) only when alt is non-blank.
   // role="region" (not "img") exposes the name without making Glide's
-  // operable canvas presentational. re-resizable forwards unknown props at
-  // runtime; its TS types omit `role`, so cast that attribute only.
+  // operable canvas presentational.
   const accessibleName = element.alt?.trim() || undefined
 
   return (
@@ -1105,7 +1104,7 @@ function DataFrame({
         data-testid="stDataFrameResizable"
         ref={resizableRef}
         aria-label={accessibleName}
-        {...(accessibleName ? ({ role: "region" } as { role: "region" }) : {})}
+        {...(accessibleName ? { role: "region" } : {})}
         defaultSize={resizableSize}
         style={{
           border: `${gridTheme.tableBorderWidth}px solid ${gridTheme.glideTheme.borderColor}`,

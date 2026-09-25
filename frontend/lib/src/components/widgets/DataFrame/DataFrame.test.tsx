@@ -246,6 +246,7 @@ describe("DataFrame widget", () => {
     expect(glideEditor).toBeVisible()
     expect(gridHost).toContainElement(glideEditor)
     expect(gridHost).not.toHaveAttribute("aria-hidden")
+    expect(glideEditor).not.toHaveAttribute("aria-hidden")
   })
 
   it("omits role and aria-label when alt is not provided", () => {

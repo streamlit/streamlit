@@ -1121,9 +1121,9 @@ class DataEditorMixin:
             and is logged so authors notice the dual meaning of ``alt=""``
             across commands (decorative only on ``st.image`` / ``st.pyplot``).
 
-            Prefer naming what the data is rather than pasting cell contents.
-            This is a short name for findability, not a full text alternative
-            for the table.
+            Prefer naming what the data is (for example, "Editable customer
+            list") rather than pasting cell contents. This is a short name
+            for findability, not a full text alternative for the table.
 
         Returns
         -------

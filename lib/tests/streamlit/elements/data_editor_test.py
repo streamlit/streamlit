@@ -1131,12 +1131,18 @@ class DataEditorTest(DeltaGeneratorTestCase):
         assert el.HasField("alt")
         assert el.alt == "Editable customer list"
 
+        # Each call below produces the same element ID, so clear the registry
+        # to avoid a duplicate-ID error.
         self.script_run_ctx.shared.widget_ids_this_run.clear()
         st.data_editor(df)
         assert not self.get_delta_from_queue().new_element.dataframe.HasField("alt")
 
         self.script_run_ctx.shared.widget_ids_this_run.clear()
         st.data_editor(df, alt=None)
+        assert not self.get_delta_from_queue().new_element.dataframe.HasField("alt")
+
+        self.script_run_ctx.shared.widget_ids_this_run.clear()
+        st.data_editor(df, alt="")
         assert not self.get_delta_from_queue().new_element.dataframe.HasField("alt")
 
         self.script_run_ctx.shared.widget_ids_this_run.clear()
@@ -1155,6 +1161,8 @@ class DataEditorTest(DeltaGeneratorTestCase):
         df = pd.DataFrame({"A": [1, 2]})
 
         def editor_id(**kwargs: object) -> str:
+            # Each call below produces the same element ID, so clear the registry
+            # to avoid a duplicate-ID error.
             self.script_run_ctx.shared.widget_ids_this_run.clear()
             st.data_editor(df, **kwargs)
             return self.get_delta_from_queue().new_element.dataframe.id
