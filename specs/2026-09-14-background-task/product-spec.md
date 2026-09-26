@@ -22,8 +22,16 @@ Keep the app responsive while long-running work runs off the script thread.
 ## Problem
 
 Streamlit's rerun model blocks the script thread for the entire duration of every
-function call. When a cached function has a cold miss, or a user triggers a slow query,
-the entire app freezes — no widget interactions are processed until the call returns.
+function call. When a cached function has a cold miss in the main script body, the entire
+app freezes — no widget interactions are processed until the call returns.
+
+`@st.fragment(parallel=True)` (1.58) narrows this but does not close it: a slow call
+inside a parallel fragment runs on a worker thread, so the rest of the page keeps
+responding. The script run is still held open until every worker joins, so the session
+occupies its script thread and a worker for the full duration, and interactions during
+the wait preempt and restart the run. Getting there also means restructuring the slow
+call into a fragment, which is not always possible — a value needed inline, or a cached
+helper shared with callers that do want to wait.
 
 Non-blocking execution is a long-standing community request:
 
@@ -31,19 +39,17 @@ Non-blocking execution is a long-standing community request:
   non-script-blocking functions (19 👍). Render the page, then "fill in" the slow part
   when it finishes — the canonical memoized-query case.
 - [#8488](https://github.com/streamlit/streamlit/issues/8488) — Native asyncio support
-  (148 👍), the strongest demand signal. We shipped the async library support (1.65's script-thread
+  (154 👍), the strongest demand signal. We shipped the async library support (1.65's script-thread
   event loop) request, but `await` still blocks the script thread which is another limitation highlighted in this issue.
-- [#10603](https://github.com/streamlit/streamlit/issues/10603) — Fragments as
-  independent non-blocking tasks. A fragment in progress should not freeze the rest of the
-  app — the same core need through the fragment metaphor.
 
 **`refresh_mode="background"` already covers half of this, but not cold start.** Cache
 background refresh keeps the *stale* path non-blocking: when a value exists but its TTL has
 expired, it serves the stale value immediately and refreshes behind the scenes. But on a
 **cold miss** (no value yet) it still blocks.
 
-Users cannot build this themselves: there is no public API to trigger a rerun from a
-background thread, so the closest workaround (a thread plus `run_every` polling) is fragile.
+Beyond fragments, users cannot build this themselves: there is no public API to trigger a
+rerun from a background thread, so the closest workaround (a thread plus `run_every`
+polling) is fragile.
 
 ### Two kinds of background work
 
@@ -166,11 +172,13 @@ The result lives in the cache (not `st.session_state`) and is copied per session
 `st.cache_data`, so cross-session sharing stays a pure performance optimization — one
 session's mutations never affect another.
 
-Cross-session dedup means several sessions requesting the same cold key run the computation
-once (via the cache's per-key compute lock). On completion, every session holding a handle
-for that key must be rerun — not just the one that initiated the compute — so no subscriber
-is left stuck at `running`. This fan-out to all subscribers is a requirement of the design,
-not only the initiator's rerun.
+Cross-session dedup is not new — the cache's per-key compute lock already means several
+sessions requesting the same cold key run the computation once. What changes is the cost of
+waiting: today the sessions that lose the race block on that lock, each holding a script
+thread, whereas here they subscribe and hold nothing. On completion, every session holding a
+handle for that key must be rerun — not just the one that initiated the compute — so no
+subscriber is left stuck at `running`. This fan-out to all subscribers is a requirement of
+the design, not only the initiator's rerun.
 
 #### Alternative tradeoffs
 
