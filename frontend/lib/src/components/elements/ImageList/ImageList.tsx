@@ -101,8 +101,8 @@ const Image = ({
   const safeLink = link && !isDangerousLinkUri(link) ? link : undefined
 
   const imageElement = (
-    // Images have no accessible name unless the author supplies one; an
-    // invented placeholder would be a WCAG F30 failure.
+    // Images currently have no authored alt; inventing a placeholder
+    // (e.g. the list index) is a WCAG F30 failure, so omit the attribute.
     // oxlint-disable-next-line jsx-a11y/alt-text
     <img
       style={imgStyle}

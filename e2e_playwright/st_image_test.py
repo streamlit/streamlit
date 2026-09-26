@@ -356,12 +356,8 @@ def test_image_link_parameter(app: Page):
     expect(unlinked_image.get_by_test_id("stImageLink")).to_have_count(0)
 
 
-def test_image_sanitizes_dangerous_link(app: Page):
-    """A dangerous javascript: link must not render a focusable wrapper.
-
-    Complements the frontend unit tests; jsdom cannot fully replicate
-    real-browser URL rules.
-    """
+def test_image_blocks_dangerous_link(app: Page):
+    """A dangerous javascript: link renders the image with no anchor at all."""
     dangerous_image = get_image(app, "Image with dangerous link.")
     expect(dangerous_image.get_by_test_id("stImageLink")).to_have_count(0)
     expect(dangerous_image.get_by_role("link")).to_have_count(0)
@@ -372,7 +368,7 @@ def test_image_sanitizes_dangerous_link(app: Page):
 
 
 def test_image_omits_index_alt(app: Page):
-    """Images must not use the list index as alt (e.g. alt="0")."""
+    """Images with no authored alt must omit the alt attribute, including when a caption is set."""
     single = get_image(app, "Black Square as JPEG.").locator("img")
     expect(single).to_be_visible()
     expect(single).not_to_have_attribute("alt")

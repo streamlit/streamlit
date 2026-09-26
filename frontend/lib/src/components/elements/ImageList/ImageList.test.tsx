@@ -163,7 +163,7 @@ describe("ImageList Element", () => {
     )
   })
 
-  describe("Accessible name", () => {
+  describe("Image alt attribute", () => {
     it("omits the img alt attribute when no alt is provided", () => {
       const props = getProps({
         imgs: [{ url: "/media/mockImage1.jpeg" }],
