@@ -156,12 +156,15 @@ describe("ImageList Element", () => {
         render(<ImageList {...props} />)
 
         expect(screen.queryByTestId("stImageLink")).not.toBeInTheDocument()
+        expect(screen.queryByRole("link")).not.toBeInTheDocument()
         expect(screen.getByRole("img")).toBeVisible()
         expect(screen.getByTestId("stImageCaption")).toHaveTextContent("a")
       }
     )
+  })
 
-    it("omits the img alt attribute (no index placeholder)", () => {
+  describe("Accessible name", () => {
+    it("omits the img alt attribute when no alt is provided", () => {
       const props = getProps({
         imgs: [{ url: "/media/mockImage1.jpeg" }],
       })
@@ -170,7 +173,7 @@ describe("ImageList Element", () => {
       expect(screen.getByRole("img")).not.toHaveAttribute("alt")
     })
 
-    it("omits index alt on every image in a list", () => {
+    it("omits the img alt attribute on every image in a list", () => {
       const props = getProps({
         imgs: [
           { url: "/media/mockImage1.jpeg" },
