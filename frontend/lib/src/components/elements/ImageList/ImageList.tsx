@@ -101,12 +101,11 @@ const Image = ({
   // Do not wrap a dangerous URI in an anchor. A neutralized href="#" is
   // still a nameless focusable control (WCAG SC 4.1.2).
   const safeLink = link && !isDangerousLinkUri(link) ? link : undefined
-  // optional proto: unset → undefined (omit attribute); "" → decorative.
+  // Unset means omit alt (detectable missing name). Empty string is decorative.
   const imgAlt: string | undefined = isNullOrUndefined(image.alt)
     ? undefined
     : image.alt
   const hasCaption = Boolean(image.caption)
-  const nonEmptyImgAlt = imgAlt || undefined
 
   const imageElement = (
     // Omit alt when unset (detectable missing-alt). Empty string is decorative.
@@ -114,7 +113,7 @@ const Image = ({
     <img
       style={imgStyle}
       src={buildMediaURL(image.url)}
-      {...(imgAlt !== undefined ? { alt: imgAlt } : {})}
+      alt={imgAlt}
       onError={handleImageError}
       crossOrigin={crossOrigin}
     />
@@ -130,11 +129,11 @@ const Image = ({
           href={safeLink}
           target="_blank"
           rel="noreferrer"
-          // Caption (rendered) → non-empty alt → URL. Use labelledby so
-          // markdown captions name the link without source markers.
+          // Name the link from the visible caption, then alt, then the URL.
+          // Label by the caption node so markdown is announced as plain text.
           {...(hasCaption
             ? { "aria-labelledby": captionDomId }
-            : { "aria-label": nonEmptyImgAlt || safeLink })}
+            : { "aria-label": imgAlt || safeLink })}
           data-testid="stImageLink"
         >
           {imageElement}

@@ -134,6 +134,19 @@ describe("ImageList Element", () => {
       expect(screen.getByRole("img")).toHaveAttribute("alt", "Product photo")
     })
 
+    it("keeps decorative empty alt on the img and names the link from the URL", () => {
+      const props = getProps({
+        imgs: [{ url: "/media/mockImage1.jpeg", alt: "" }],
+        link: "https://streamlit.io",
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).toHaveAttribute("aria-label", "https://streamlit.io")
+      const img = screen.getByTestId("stImageContainer").querySelector("img")
+      expect(img).toHaveAttribute("alt", "")
+    })
+
     it("sets decorative empty alt and omits alt when unset", () => {
       const { rerender } = render(
         <ImageList

@@ -707,7 +707,9 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         assert "single image" in str(exc_info.value)
         assert "2 images" in str(exc_info.value)
 
-    def test_st_image_marshals_nonempty_alt_and_omits_blank_values(self) -> None:
+    def test_st_image_marshals_alt_and_distinguishes_omitted_and_decorative_values(
+        self,
+    ) -> None:
         """Non-empty alt is stored; omitted/None/whitespace leave it unset; "" is decorative."""
         url = "http://server/fake0.jpg"
 
@@ -729,6 +731,30 @@ class ImageProtoTest(DeltaGeneratorTestCase):
 
         st.image(url, alt="  ")
         assert not self.get_delta_from_queue().new_element.imgs.imgs[0].HasField("alt")
+
+    def test_st_image_alt_coerces_non_string_scalars(self) -> None:
+        """Non-string scalars and bytes are coerced via to_str (spec value table)."""
+        url = "http://server/fake0.jpg"
+
+        st.image(url, alt=42)
+        el = self.get_delta_from_queue().new_element.imgs.imgs[0]
+        assert el.HasField("alt")
+        assert el.alt == "42"
+
+        st.image(url, alt=b"photo")
+        el = self.get_delta_from_queue().new_element.imgs.imgs[0]
+        assert el.HasField("alt")
+        assert el.alt == "b'photo'"
+
+        urls = ["http://server/a.jpg", "http://server/b.jpg"]
+        st.image(urls, alt=np.array(["Cat", "Dog"]))
+        imgs = self.get_delta_from_queue().new_element.imgs.imgs
+        assert imgs[0].alt == "Cat"
+        assert imgs[1].alt == "Dog"
+
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.image(urls, alt=42)
+        assert "single" in str(exc_info.value).lower()
 
     def test_st_image_alt_strips_whitespace(self) -> None:
         """Leading and trailing whitespace is stripped from alt."""
