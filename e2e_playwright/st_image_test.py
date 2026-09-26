@@ -357,13 +357,28 @@ def test_image_link_parameter(app: Page):
 
 
 def test_image_sanitizes_dangerous_link(app: Page):
-    """Test that a dangerous javascript: link URL is neutralized to '#'.
+    """A dangerous javascript: link must not render a focusable wrapper.
 
-    This relies on real-browser URL normalization that jsdom cannot fully
-    replicate, so it complements the frontend unit tests.
+    Complements the frontend unit tests; jsdom cannot fully replicate
+    real-browser URL rules.
     """
     dangerous_image = get_image(app, "Image with dangerous link.")
-    link = dangerous_image.get_by_test_id("stImageLink")
+    expect(dangerous_image.get_by_test_id("stImageLink")).to_have_count(0)
+    expect(dangerous_image.get_by_role("link")).to_have_count(0)
+    expect(dangerous_image.locator("img")).to_be_visible()
+    expect(dangerous_image.get_by_test_id("stImageCaption")).to_have_text(
+        "Image with dangerous link."
+    )
 
-    expect(link).to_have_attribute("href", "#")
-    expect(link).to_have_attribute("target", "_self")
+
+def test_image_omits_index_alt(app: Page):
+    """Images must not use the list index as alt (e.g. alt="0")."""
+    single = get_image(app, "Black Square as JPEG.").locator("img")
+    expect(single).to_be_visible()
+    expect(single).not_to_have_attribute("alt")
+
+    list_images = get_image(app, "Image list").locator("img")
+    expect(list_images).to_have_count(3)
+    for img in list_images.all():
+        expect(img).to_be_visible()
+        expect(img).not_to_have_attribute("alt")

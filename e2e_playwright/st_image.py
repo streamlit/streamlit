@@ -257,8 +257,8 @@ st.image(
     link="https://streamlit.io",
 )
 
-# Image with a dangerous javascript: link. The frontend must neutralize this to
-# "#" to prevent XSS when the link is clicked.
+# Image with a dangerous javascript: link. The frontend must not wrap the
+# image in an anchor (no focusable neutralized href).
 st.image(
     img,
     width=100,

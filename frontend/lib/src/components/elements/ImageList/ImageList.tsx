@@ -32,7 +32,7 @@ import Toolbar from "~lib/components/shared/Toolbar/Toolbar"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
-import { BLOCKED_LINK_URI, isDangerousLinkUri } from "~lib/util/UriUtil"
+import { isDangerousLinkUri } from "~lib/util/UriUtil"
 
 import {
   StyledCaption,
@@ -81,7 +81,6 @@ function getImageWidth(
 }
 
 const Image = ({
-  itemKey,
   image,
   imgStyle,
   buildMediaURL,
@@ -89,7 +88,6 @@ const Image = ({
   shouldStretch,
   link,
 }: {
-  itemKey: string
   image: ImageProto
   imgStyle: CSSProperties
   buildMediaURL: (url: string) => string
@@ -98,14 +96,17 @@ const Image = ({
   link?: string
 }): ReactElement => {
   const crossOrigin = useCrossOriginAttribute(image.url)
-  const isLinkBlocked = link ? isDangerousLinkUri(link) : false
-  const href = isLinkBlocked ? BLOCKED_LINK_URI : link
+  // Do not wrap a dangerous URI in an anchor. A neutralized href="#" is
+  // still a nameless focusable control (WCAG SC 4.1.2).
+  const safeLink = link && !isDangerousLinkUri(link) ? link : undefined
 
   const imageElement = (
+    // Images have no accessible name unless the author supplies one; an
+    // invented placeholder would be a WCAG F30 failure.
+    // oxlint-disable-next-line jsx-a11y/alt-text
     <img
       style={imgStyle}
       src={buildMediaURL(image.url)}
-      alt={itemKey}
       onError={handleImageError}
       crossOrigin={crossOrigin}
     />
@@ -116,15 +117,12 @@ const Image = ({
       data-testid="stImageContainer"
       shouldStretch={shouldStretch}
     >
-      {href ? (
+      {safeLink ? (
         <StyledImageLink
-          href={href}
-          target={isLinkBlocked ? "_self" : "_blank"}
+          href={safeLink}
+          target="_blank"
           rel="noreferrer"
-          onClick={isLinkBlocked ? event => event.preventDefault() : undefined}
-          // For blocked links, fall back to the image's alt text instead of the
-          // neutralized "#" href, which is meaningless to screen readers.
-          aria-label={image.caption || (isLinkBlocked ? undefined : link)}
+          aria-label={image.caption || safeLink}
           data-testid="stImageLink"
         >
           {imageElement}
@@ -226,7 +224,6 @@ function ImageList({
             // TODO: Update to match React best practices
             // eslint-disable-next-line @eslint-react/no-array-index-key
             key={idx}
-            itemKey={idx.toString()}
             image={iimage as ImageProto}
             imgStyle={imgStyle}
             buildMediaURL={(url: string) => endpoints.buildMediaURL(url)}

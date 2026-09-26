@@ -146,35 +146,48 @@ describe("ImageList Element", () => {
       "JAVASCRIPT:alert(1)",
       "java\nscript:alert(1)",
       "vbscript:msgbox(1)",
-    ])("blocks dangerous link URLs: %s", linkUrl => {
+    ])(
+      "does not wrap the image when the link URL is dangerous: %s",
+      linkUrl => {
+        const props = getProps({
+          imgs: [{ caption: "a", url: "/media/mockImage1.jpeg" }],
+          link: linkUrl,
+        })
+        render(<ImageList {...props} />)
+
+        expect(screen.queryByTestId("stImageLink")).not.toBeInTheDocument()
+        expect(screen.queryByRole("link")).not.toBeInTheDocument()
+        expect(screen.getByRole("img")).toBeVisible()
+        expect(screen.getByTestId("stImageCaption")).toHaveTextContent("a")
+      }
+    )
+  })
+
+  describe("Accessible name", () => {
+    it("omits the img alt attribute when no alt is provided", () => {
       const props = getProps({
-        imgs: [{ caption: "a", url: "/media/mockImage1.jpeg" }],
-        link: linkUrl,
+        imgs: [{ url: "/media/mockImage1.jpeg" }],
       })
       render(<ImageList {...props} />)
 
-      const link = screen.getByTestId("stImageLink")
-      expect(link).toHaveAttribute("href", "#")
-      expect(link).toHaveAttribute("target", "_self")
-      expect(link).toHaveAttribute("rel", "noreferrer")
+      expect(screen.getByRole("img")).not.toHaveAttribute("alt")
     })
 
-    it("prevents navigation when a blocked link is clicked", () => {
+    it("omits the img alt attribute on every image in a list", () => {
       const props = getProps({
-        imgs: [{ caption: "a", url: "/media/mockImage1.jpeg" }],
-        link: "javascript:alert(1)",
+        imgs: [
+          { url: "/media/mockImage1.jpeg" },
+          { url: "/media/mockImage2.jpeg" },
+          { url: "/media/mockImage3.jpeg" },
+        ],
       })
       render(<ImageList {...props} />)
 
-      const link = screen.getByTestId("stImageLink")
-      const event = new MouseEvent("click", {
-        bubbles: true,
-        cancelable: true,
-      })
-      link.dispatchEvent(event)
-
-      expect(event.defaultPrevented).toBe(true)
-      expect(link).toHaveAttribute("href", "#")
+      const images = screen.getAllByRole("img")
+      expect(images).toHaveLength(3)
+      for (const image of images) {
+        expect(image).not.toHaveAttribute("alt")
+      }
     })
   })
 
