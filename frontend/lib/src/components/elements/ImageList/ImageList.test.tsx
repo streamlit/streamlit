@@ -134,6 +134,26 @@ describe("ImageList Element", () => {
       expect(screen.getByRole("img")).toHaveAttribute("alt", "Product photo")
     })
 
+    it("falls back from a caption that renders no text to alt or the URL", () => {
+      // Label markdown strips horizontal rules, so `---` alone leaves no text.
+      const props = getProps({
+        imgs: [
+          {
+            caption: "---",
+            url: "/media/mockImage1.jpeg",
+            alt: "Product photo",
+          },
+        ],
+        link: "https://streamlit.io",
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).not.toHaveAttribute("aria-labelledby")
+      expect(link).toHaveAttribute("aria-label", "Product photo")
+      expect(link).toHaveAccessibleName("Product photo")
+    })
+
     it("keeps decorative empty alt on the img and names the link from the URL", () => {
       const props = getProps({
         imgs: [{ url: "/media/mockImage1.jpeg", alt: "" }],

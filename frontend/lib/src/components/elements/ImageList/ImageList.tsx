@@ -14,7 +14,15 @@
  * limitations under the License.
  */
 
-import { CSSProperties, memo, ReactElement, useId } from "react"
+import {
+  CSSProperties,
+  memo,
+  ReactElement,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react"
 
 import { getLogger } from "loglevel"
 
@@ -98,6 +106,11 @@ const Image = ({
 }): ReactElement => {
   const crossOrigin = useCrossOriginAttribute(image.url)
   const captionDomId = useId()
+  const captionRef = useRef<HTMLElement>(null)
+  // Caption markdown may render no text (e.g. `---` is stripped as a
+  // disallowed HR in labels). Only use labelledby when there is text to name
+  // the link; otherwise fall back to alt or the URL.
+  const [captionHasText, setCaptionHasText] = useState(false)
   // Do not wrap a dangerous URI in an anchor. A neutralized href="#" is
   // still a nameless focusable control (WCAG SC 4.1.2).
   const safeLink = link && !isDangerousLinkUri(link) ? link : undefined
@@ -105,7 +118,15 @@ const Image = ({
   const imgAlt: string | undefined = isNullOrUndefined(image.alt)
     ? undefined
     : image.alt
-  const hasCaption = Boolean(image.caption)
+
+  useLayoutEffect(() => {
+    if (!image.caption) {
+      setCaptionHasText(false)
+      return
+    }
+    const text = captionRef.current?.textContent?.trim() ?? ""
+    setCaptionHasText(text.length > 0)
+  }, [image.caption])
 
   const imageElement = (
     // Omit alt when unset (detectable missing-alt). Empty string is decorative.
@@ -131,7 +152,7 @@ const Image = ({
           rel="noreferrer"
           // Name the link from the visible caption, then alt, then the URL.
           // Label by the caption node so markdown is announced as plain text.
-          {...(hasCaption
+          {...(captionHasText
             ? { "aria-labelledby": captionDomId }
             : { "aria-label": imgAlt || safeLink })}
           data-testid="stImageLink"
@@ -143,6 +164,7 @@ const Image = ({
       )}
       {image.caption && (
         <StyledCaption
+          ref={captionRef}
           id={captionDomId}
           data-testid="stImageCaption"
           style={imgStyle}

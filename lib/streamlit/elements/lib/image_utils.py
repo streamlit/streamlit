@@ -378,7 +378,9 @@ def marshall_images(
     clamp: bool,
     channels: Channels = "RGB",
     output_format: ImageFormatOrAuto = "auto",
-    alt: str | Sequence[str | None] | None = None,
+    # Wider than the public st.image type: runtime coerces bytes, 1-D ndarrays,
+    # and non-string scalars per the alt-text value table.
+    alt: object | None = None,
 ) -> None:
     """Fill an ImageListProto with a list of images and their captions.
     The images will be resized and reformatted as necessary.
