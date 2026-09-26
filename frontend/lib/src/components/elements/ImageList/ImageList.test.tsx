@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { ImageList as ImageListProto, streamlit } from "@streamlit/protobuf"
@@ -152,6 +152,34 @@ describe("ImageList Element", () => {
       expect(link).not.toHaveAttribute("aria-labelledby")
       expect(link).toHaveAttribute("aria-label", "Product photo")
       expect(link).toHaveAccessibleName("Product photo")
+    })
+
+    it("switches to labelledby when caption text appears after async markdown", async () => {
+      // Start with a caption that renders no text (stripped HR), then simulate
+      // a plugin finishing and injecting visible caption content.
+      const props = getProps({
+        imgs: [
+          {
+            caption: "---",
+            url: "/media/mockImage1.jpeg",
+            alt: "Product photo",
+          },
+        ],
+        link: "https://streamlit.io",
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).toHaveAttribute("aria-label", "Product photo")
+
+      screen
+        .getByTestId("stImageCaption")
+        .appendChild(document.createTextNode("Loaded caption"))
+
+      await waitFor(() => {
+        expect(link).toHaveAttribute("aria-labelledby")
+        expect(link).toHaveAccessibleName("Loaded caption")
+      })
     })
 
     it("keeps decorative empty alt on the img and names the link from the URL", () => {

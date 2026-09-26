@@ -106,7 +106,7 @@ const Image = ({
 }): ReactElement => {
   const crossOrigin = useCrossOriginAttribute(image.url)
   const captionDomId = useId()
-  const captionRef = useRef<HTMLElement>(null)
+  const captionRef = useRef<HTMLDivElement>(null)
   // Caption markdown may render no text (e.g. `---` is stripped as a
   // disallowed HR in labels). Only use labelledby when there is text to name
   // the link; otherwise fall back to alt or the URL.
@@ -119,13 +119,29 @@ const Image = ({
     ? undefined
     : image.alt
 
+  // Re-check after async Markdown plugins (katex/emoji) replace a loading
+  // skeleton — same MutationObserver approach as useLabelTitleTooltip.
   useLayoutEffect(() => {
-    if (!image.caption) {
+    const node = captionRef.current
+    if (!image.caption || !node) {
       setCaptionHasText(false)
       return
     }
-    const text = captionRef.current?.textContent?.trim() ?? ""
-    setCaptionHasText(text.length > 0)
+
+    const syncCaptionHasText = (): void => {
+      const text = node.textContent?.trim() ?? ""
+      setCaptionHasText(text.length > 0)
+    }
+
+    syncCaptionHasText()
+
+    const observer = new MutationObserver(syncCaptionHasText)
+    observer.observe(node, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    })
+    return () => observer.disconnect()
   }, [image.caption])
 
   const imageElement = (
