@@ -382,3 +382,29 @@ def test_image_omits_index_alt(app: Page):
     for img in list_images.all():
         expect(img).to_be_visible()
         expect(img).not_to_have_attribute("alt")
+
+
+def test_image_alt_sets_accessible_name(app: Page):
+    """Verify authored, decorative, and omitted img alt, plus linked caption naming."""
+    labeled = get_element_by_key(app, "img_alt_labeled").locator("img")
+    expect(labeled).to_have_accessible_name("Sunrise over a mountain ridge")
+    expect(labeled).to_have_attribute("alt", "Sunrise over a mountain ridge")
+
+    decorative = get_element_by_key(app, "img_alt_decorative").locator("img")
+    expect(decorative).to_have_attribute("alt", "")
+    expect(decorative).to_have_accessible_name("")
+
+    unlabeled = get_element_by_key(app, "img_alt_unlabeled").locator("img")
+    expect(unlabeled).not_to_have_attribute("alt")
+
+    linked = get_element_by_key(app, "img_alt_linked_caption").get_by_test_id(
+        "stImageLink"
+    )
+    expect(linked).to_have_accessible_name("Revenue by quarter")
+    expect(linked).not_to_have_accessible_name(
+        "Should not name the link when caption exists"
+    )
+    linked_img = get_element_by_key(app, "img_alt_linked_caption").locator("img")
+    expect(linked_img).to_have_attribute(
+        "alt", "Should not name the link when caption exists"
+    )

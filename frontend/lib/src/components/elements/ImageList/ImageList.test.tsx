@@ -88,11 +88,27 @@ describe("ImageList Element", () => {
       expect(link).toHaveAttribute("href", "https://streamlit.io")
       expect(link).toHaveAttribute("target", "_blank")
       expect(link).toHaveAttribute("rel", "noreferrer")
-      expect(link).toHaveAttribute("aria-label", "a")
+      expect(link).toHaveAttribute("aria-labelledby")
+      expect(link).toHaveAccessibleName("a")
+      expect(link).not.toHaveAttribute("aria-label")
 
       // Image should be inside the link
       const image = screen.getByRole("img")
       expect(link).toContainElement(image)
+    })
+
+    it("names the link from rendered caption plain text, not markdown source", () => {
+      const props = getProps({
+        imgs: [
+          { caption: "**Revenue** by quarter", url: "/media/mockImage1.jpeg" },
+        ],
+        link: "https://streamlit.io",
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).toHaveAccessibleName("Revenue by quarter")
+      expect(link).not.toHaveAccessibleName("**Revenue** by quarter")
     })
 
     it("uses link URL as aria-label when no caption is provided", () => {
@@ -104,6 +120,59 @@ describe("ImageList Element", () => {
 
       const link = screen.getByTestId("stImageLink")
       expect(link).toHaveAttribute("aria-label", "https://streamlit.io")
+    })
+
+    it("uses non-empty alt as the link name when caption is absent", () => {
+      const props = getProps({
+        imgs: [{ url: "/media/mockImage1.jpeg", alt: "Product photo" }],
+        link: "https://streamlit.io",
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).toHaveAttribute("aria-label", "Product photo")
+      expect(screen.getByRole("img")).toHaveAttribute("alt", "Product photo")
+    })
+
+    it("keeps decorative empty alt on the img and names the link from the URL", () => {
+      const props = getProps({
+        imgs: [{ url: "/media/mockImage1.jpeg", alt: "" }],
+        link: "https://streamlit.io",
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).toHaveAttribute("aria-label", "https://streamlit.io")
+      const img = screen.getByTestId("stImageContainer").querySelector("img")
+      expect(img).toHaveAttribute("alt", "")
+    })
+
+    it("sets decorative empty alt and omits alt when unset", () => {
+      const { rerender } = render(
+        <ImageList
+          {...getProps({
+            imgs: [{ url: "/media/mockImage1.jpeg", alt: "" }],
+          })}
+        />
+      )
+      // Decorative images (alt="") are presentational and may be excluded
+      // from the accessibility tree / getByRole("img").
+      const decorativeImg = screen
+        .getByTestId("stImageContainer")
+        .querySelector("img")
+      expect(decorativeImg).toHaveAttribute("alt", "")
+
+      rerender(
+        <ImageList
+          {...getProps({
+            imgs: [{ url: "/media/mockImage1.jpeg" }],
+          })}
+        />
+      )
+      const unlabeledImg = screen
+        .getByTestId("stImageContainer")
+        .querySelector("img")
+      expect(unlabeledImg).not.toHaveAttribute("alt")
     })
 
     it("does not render link wrapper when link is not provided", () => {

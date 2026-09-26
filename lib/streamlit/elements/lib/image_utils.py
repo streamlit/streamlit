@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final, Literal, TypeAlias, Union, cast
 
 from streamlit import runtime, url_util
+from streamlit.elements.lib.utils import normalize_alt
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitValueError,
@@ -377,6 +378,7 @@ def marshall_images(
     clamp: bool,
     channels: Channels = "RGB",
     output_format: ImageFormatOrAuto = "auto",
+    alt: str | Sequence[str | None] | None = None,
 ) -> None:
     """Fill an ImageListProto with a list of images and their captions.
     The images will be resized and reformatted as necessary.
@@ -411,6 +413,10 @@ def marshall_images(
         while diagrams should use the PNG format for lossless compression.
         Defaults to 'auto' which identifies the compression type based
         on the type and format of the image argument.
+    alt
+        Accessible name(s) for the image(s). A single string pairs with a
+        single image; a sequence must match the image count. ``None`` omits
+        the attribute; ``""`` is decorative.
     """
     import numpy as np
 
@@ -418,6 +424,7 @@ def marshall_images(
 
     # Turn single image and caption into one element list.
     images: Sequence[AtomicImage]
+    images_from_set = isinstance(image, set)
     if isinstance(image, (list, set, tuple)):
         images = list(image)  # ty: ignore[invalid-assignment]
     elif isinstance(image, np.ndarray) and len(image.shape) == 4:
@@ -442,13 +449,75 @@ def marshall_images(
             error_id="image-caption-count-mismatch",
         )
 
+    if alt is None:
+        alts: Sequence[object | None] = [None] * len(images)
+    elif isinstance(alt, str):
+        if len(images) != 1:
+            raise StreamlitAPIException(
+                "A single `alt` string can only be used with a single image. "
+                f"You passed {len(images)} images; provide a sequence of "
+                f"{len(images)} alt values (use None to skip an image).",
+                error_id="image-alt-count-mismatch",
+            )
+        alts = [alt]
+    elif isinstance(alt, (bytes, bytearray)):
+        # bytes/bytearray are Sequences of ints; treat them as one scalar name.
+        if len(images) != 1:
+            raise StreamlitAPIException(
+                "A single `alt` value can only be used with a single image. "
+                f"You passed {len(images)} images; provide a sequence of "
+                f"{len(images)} alt values (use None to skip an image).",
+                error_id="image-alt-count-mismatch",
+            )
+        alts = [alt]
+    elif isinstance(alt, np.ndarray) and len(alt.shape) == 1:
+        if images_from_set:
+            raise StreamlitAPIException(
+                "A sequence-valued `alt` cannot be paired with a set of images "
+                "because set order is undefined. Pass a list or tuple of images.",
+                error_id="image-alt-with-set",
+            )
+        alts = alt.tolist()
+        if len(alts) != len(images):
+            raise StreamlitAPIException(
+                f"Cannot pair {len(alts)} alt values with {len(images)} images.",
+                error_id="image-alt-count-mismatch",
+            )
+    elif isinstance(alt, Sequence):
+        if images_from_set:
+            raise StreamlitAPIException(
+                "A sequence-valued `alt` cannot be paired with a set of images "
+                "because set order is undefined. Pass a list or tuple of images.",
+                error_id="image-alt-with-set",
+            )
+        alts = alt
+        if len(alts) != len(images):
+            raise StreamlitAPIException(
+                f"Cannot pair {len(alts)} alt values with {len(images)} images.",
+                error_id="image-alt-count-mismatch",
+            )
+    else:
+        # Non-string scalar (e.g. int): coerce via normalize_alt → to_str.
+        if len(images) != 1:
+            raise StreamlitAPIException(
+                "A single `alt` value can only be used with a single image. "
+                f"You passed {len(images)} images; provide a sequence of "
+                f"{len(images)} alt values (use None to skip an image).",
+                error_id="image-alt-count-mismatch",
+            )
+        alts = [alt]
+
     # Each image in an image list needs to be kept track of at its own coordinates.
-    for coord_suffix, (single_image, single_caption) in enumerate(
-        zip(images, captions, strict=False)
+    for coord_suffix, (single_image, single_caption, single_alt) in enumerate(
+        zip(images, captions, alts, strict=False)
     ):
         proto_img = proto_imgs.imgs.add()
         if single_caption is not None:
             proto_img.caption = str(single_caption)
+
+        normalized_alt = normalize_alt(single_alt, allow_empty=True)
+        if normalized_alt is not None:
+            proto_img.alt = normalized_alt
 
         # We use the index of the image in the input image list to identify this image inside
         # MediaFileManager. For this, we just add the index to the image's "coordinates".
