@@ -38,7 +38,7 @@ def test_displays_a_pyplot_figures(
     )
 
     pyplot_elements = themed_app.get_by_test_id("stImage").locator("img")
-    expect(pyplot_elements).to_have_count(13)
+    expect(pyplot_elements).to_have_count(15)
 
     assert_snapshot(pyplot_elements.nth(0), name="st_pyplot-normal_figure")
     assert_snapshot(pyplot_elements.nth(1), name="st_pyplot-resized_figure")
