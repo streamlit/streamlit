@@ -146,7 +146,8 @@ class PyplotMixin:
 
         alt : str or None
             A short, plain-text accessible name for the figure image. If this
-            is ``None`` (default), the ``<img>`` has no ``alt`` attribute.
+            is ``None`` (default), Streamlit does not provide an accessible
+            name for the figure.
 
             An empty string (``""``) marks the image as decorative. Whitespace-
             only values are treated as ``None`` and logged. Prefer naming the

@@ -167,9 +167,10 @@ class ImageMixin:
                 fully removed in a future version. Use ``width="stretch"``,
                 ``width="content"``, or an integer pixel value instead.
 
-        alt : str, Sequence of str or None, or None
+        alt : str, Sequence[str | None], or None
             A short, plain-text accessible name for the image(s). If this is
-            ``None`` (default), the ``<img>`` has no ``alt`` attribute.
+            ``None`` (default), Streamlit does not provide an accessible name
+            for the image.
 
             An empty string (``""``) marks the image as decorative. Whitespace-
             only values are treated as ``None`` and logged. For multiple

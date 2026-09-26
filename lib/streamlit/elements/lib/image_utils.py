@@ -450,7 +450,7 @@ def marshall_images(
         )
 
     if alt is None:
-        alts: Sequence[str | None] = [None] * len(images)
+        alts: Sequence[object | None] = [None] * len(images)
     elif isinstance(alt, str):
         if len(images) != 1:
             raise StreamlitAPIException(
@@ -460,6 +460,29 @@ def marshall_images(
                 error_id="image-alt-count-mismatch",
             )
         alts = [alt]
+    elif isinstance(alt, (bytes, bytearray)):
+        # bytes/bytearray are Sequences of ints; treat them as one scalar name.
+        if len(images) != 1:
+            raise StreamlitAPIException(
+                "A single `alt` value can only be used with a single image. "
+                f"You passed {len(images)} images; provide a sequence of "
+                f"{len(images)} alt values (use None to skip an image).",
+                error_id="image-alt-count-mismatch",
+            )
+        alts = [alt]
+    elif isinstance(alt, np.ndarray) and len(alt.shape) == 1:
+        if images_from_set:
+            raise StreamlitAPIException(
+                "A sequence-valued `alt` cannot be paired with a set of images "
+                "because set order is undefined. Pass a list or tuple of images.",
+                error_id="image-alt-with-set",
+            )
+        alts = alt.tolist()
+        if len(alts) != len(images):
+            raise StreamlitAPIException(
+                f"Cannot pair {len(alts)} alt values with {len(images)} images.",
+                error_id="image-alt-count-mismatch",
+            )
     elif isinstance(alt, Sequence):
         if images_from_set:
             raise StreamlitAPIException(
@@ -474,10 +497,15 @@ def marshall_images(
                 error_id="image-alt-count-mismatch",
             )
     else:
-        raise StreamlitAPIException(
-            "`alt` must be a string, a sequence of strings/None, or None.",
-            error_id="image-alt-invalid-type",
-        )
+        # Non-string scalar (e.g. int): coerce via normalize_alt → to_str.
+        if len(images) != 1:
+            raise StreamlitAPIException(
+                "A single `alt` value can only be used with a single image. "
+                f"You passed {len(images)} images; provide a sequence of "
+                f"{len(images)} alt values (use None to skip an image).",
+                error_id="image-alt-count-mismatch",
+            )
+        alts = [alt]
 
     # Each image in an image list needs to be kept track of at its own coordinates.
     for coord_suffix, (single_image, single_caption, single_alt) in enumerate(
