@@ -13,20 +13,22 @@ controls, wrapping button-like commands, and text display commands. Setting
 scrolling, a button keeps its standard height and ellipsizes its label, and text
 ellipsizes instead of wrapping. For controls placed inside a layout, the default is
 `wrap: bool | None = None` ("auto"): Streamlit picks `False` when the control is inside
-a horizontal container or is a direct layout child of an `st.columns` column, and
-`True` otherwise. A control therefore stays on one row exactly where compact, aligned
-controls matter most (toolbars, `st.container(horizontal=True)`, and column action
-rows), following the `st.markdown(width="auto")` precedent. Layout containers and text
-commands do not use this adaptive resolution: `st.container` and `st.columns` take
-`wrap: bool = True` (today's wrapping and stacking), and text commands take
-`wrap: bool = True` (today's line wrapping). A single row is requested only with an
-explicit `wrap=False`.
+a horizontal container or is a direct layout child of an `st.columns` column or an
+`st.grid` cell, and `True` otherwise. A control therefore stays on one row exactly where
+compact, aligned controls matter most (toolbars, `st.container(horizontal=True)`, and
+column action rows), following the `st.markdown(width="auto")` precedent. Layout containers
+and text commands do not use this adaptive resolution: `st.container` and `st.columns`
+take `wrap: bool = True` (today's wrapping and stacking); the proposed `st.grid` adopts
+the same default for wrapping of column *tracks* (see the
+[grid spec](../2026-05-14-grid-layout/product-spec.md)). Text commands take
+`wrap: bool = True` (today's line wrapping). A single row of the content each command
+controls is requested only with an explicit `wrap=False`.
 
 This is a layout control with an adaptive default for interactive controls. Existing
 apps keep their current behavior everywhere except for controls inside horizontal
 containers, where the auto default now favors a single row, and controls directly
-placed in columns, where the same default keeps neighboring controls aligned; layout
-containers and text commands keep their current defaults. The initial API covers
+placed in columns or grid cells, where the same default keeps neighboring controls
+aligned; layout containers and text commands keep their current defaults. The initial API covers
 `st.container`, `st.columns`, `st.multiselect`, `st.pills`, `st.segmented_control`,
 `st.button`, `st.download_button`, `st.link_button`, `st.form_submit_button`,
 `st.popover`, `st.menu_button`, `st.checkbox`, `st.toggle`, `st.markdown`, `st.title`,
@@ -216,7 +218,7 @@ st.markdown(
 
 | Value | Collections and multi-item controls | Single-label controls | Text |
 | --- | --- | --- | --- |
-| `None` (default for controls) | Multi-item controls use auto: `False` inside a horizontal container or when directly placed in a column, and `True` in any other layout. Not used by layout containers or text. | Auto: behaves like `False` inside a horizontal container or when directly placed in a column, and `True` in any other layout. | Not used. |
+| `None` (default for controls) | Multi-item controls use auto: `False` inside a horizontal container, when directly placed in a column, or when directly placed in a grid cell, and `True` in any other layout. Not used by layout containers or text. | Auto: behaves like `False` inside a horizontal container, when directly placed in a column, or when directly placed in a grid cell, and `True` in any other layout. | Not used. |
 | `True` (default for `st.container` / `st.columns` / text) | Items move to additional rows when they cannot fit (or, for `st.columns`, stack at the responsive breakpoint). | The label can wrap and increase the control height. | The text wraps onto additional lines (today's behavior). |
 | `False` | Items remain in one row and the element scrolls horizontally if needed. | The control keeps its standard height and ellipsizes an overflowing label. | The text stays on one line and ellipsizes. Markdown is limited to inline formatting and cannot be combined with `unsafe_allow_html=True`. |
 
@@ -225,9 +227,10 @@ the multi-item controls (`st.multiselect`, `st.pills`, `st.segmented_control`). 
 resolves `None` from its nearest real layout boundary: `False` inside a horizontal
 container (compact rows where they matter most, such as
 `st.container(horizontal=True)` and other toolbars) or when it is a direct layout child
-of an `st.columns` column, and `True` everywhere else. "Direct layout child" describes
+of an `st.columns` column or an `st.grid` cell, and `True` everywhere else. "Direct layout
+child" describes
 the Streamlit layout tree rather than literal DOM ancestry. A transparent block does not
-establish a layout boundary, so it preserves direct column placement. Any real nested
+establish a layout boundary, so it preserves direct column or grid-cell placement. Any real nested
 layout provider — including a vertical container, expander, tab, form, dialog, chat
 message, or popover body — resets it. Explicit `wrap=True` or `wrap=False` always wins.
 
@@ -235,9 +238,15 @@ message, or popover body — resets it. Explicit `wrap=True` or `wrap=False` alw
 | --- | --- |
 | Directly in a horizontal container | `False` |
 | Directly in an `st.columns` column | `False` |
+| Directly in an `st.grid` cell | `False` |
 | Behind a transparent block directly in a column | `False` |
+| Behind a transparent block directly in a grid cell | `False` |
 | Inside a nested horizontal container in a column | `False` (horizontal rule) |
 | Inside a nested vertical container, expander, tab, form, or popover body in a column | `True` |
+
+The nested-container rows apply to grid cells unchanged: a nested horizontal container
+inside a cell resolves `wrap=None` to `False`; a nested vertical container, expander, tab,
+form, or popover body inside a cell resolves to `True`.
 
 A form is a real nested layout, and `st.form_submit_button` must be inside a form.
 Therefore a submit button cannot be a direct column child and continues to wrap under
@@ -249,13 +258,14 @@ existing mobile breakpoint. Resolution follows the stable Streamlit layout tree,
 transient CSS viewport state; changing the value during responsive resize would make
 control heights unstable.
 
-The layout containers themselves — `st.container` and `st.columns` — do not use this
-adaptive resolution. Because `None` would not differ from today's wrapping/stacking
-behavior, they use a plain boolean default of `wrap=True` (a horizontal container wraps
-its children onto more rows; `st.columns` stacks responsively). A single row is requested
-only with an explicit `wrap=False`. Resolving a container's own default from whether it
-happens to be nested in another horizontal container would be surprising and could
-silently change existing layouts.
+The layout containers themselves — `st.container` and `st.columns`, and the proposed
+`st.grid` — do not use this adaptive resolution. Because `None` would not differ from
+today's wrapping/stacking behavior, they use a plain boolean default of `wrap=True` (a
+horizontal container wraps its children onto more rows; `st.columns` stacks responsively;
+`st.grid` may wrap to fewer column tracks). A single row of the content each command
+controls is requested only with an explicit `wrap=False`. Resolving a container's own
+default from whether it happens to be nested in another horizontal container would be
+surprising and could silently change existing layouts.
 
 Text commands (`st.markdown`, `st.title`, `st.header`, `st.subheader`,
 `st.caption`, `st.text`) likewise use a plain `wrap: bool = True`. Truncating
@@ -267,13 +277,14 @@ titles inside columns would change existing apps. Opt into one-line text only wi
 
 ### What `wrap` controls
 
-The controlled content differs by command, but the promise is always the same: it stays
-in one row when `wrap=False`.
+The controlled content differs by command, but the promise is always the same: the content
+this command controls stays in one row when `wrap=False`.
 
 | Command | Content controlled by `wrap` | Overflow behavior with `wrap=False` |
 | --- | --- | --- |
 | `st.container(horizontal=True)` | Direct child elements | Scroll the container |
 | `st.columns` | Column containers | Shrink columns, then scroll the group if needed |
+| `st.grid` | Declared column tracks (cells still wrap onto additional grid rows) | Shrink cells to `min_column_width`, then scroll the grid |
 | `st.multiselect` | Selected-value chips in the closed control | Scroll the chip area |
 | `st.pills` | Option buttons | Scroll the option group |
 | `st.segmented_control` | Option buttons | Scroll the option group |
@@ -294,7 +305,8 @@ columns in one row but does not change a long input-widget label inside a column
 
 When `wrap=False` on a collection:
 
-- The collection uses one horizontal row.
+- The collection uses one horizontal row of the content this command controls (for
+  `st.grid`, that is the column tracks, not the cells).
 - Overflow is contained by that command, never by the full app page.
 - Native horizontal scrolling is enabled only when the items cannot shrink enough to fit.
 - Touch, trackpad, mouse shift-wheel, and keyboard scrolling continue to use browser-native
@@ -750,11 +762,13 @@ clipped. This was intentionally deferred to avoid the frontend measurement machi
   set, is omitted when `help` is present (so `help` takes precedence), and uses plain text
   for Markdown labels.
 - Add tests that the auto default (`wrap=None`) resolves to no-wrap inside a horizontal
-  container and for direct column children, while resolving to wrapping in other layouts.
+  container, for direct column children, and for direct grid-cell children, while resolving
+  to wrapping in other layouts.
   Include transparent-block preservation, nested real-container reset, explicit-value
   precedence, the form-submit exception, and responsive column stacking. Verify that
   `st.container` and `st.columns` keep their fixed `wrap=True` default (today's wrapping
-  and stacking) regardless of the surrounding layout.
+  and stacking) regardless of the surrounding layout, and that `st.grid` (when implemented)
+  keeps `wrap=True` for wrapping of column tracks.
 - Add checkbox and toggle tests for ellipsis, fixed indicators, help icons, label
   visibility, and accessible names.
 - Add text-command tests for `wrap=False` ellipsis, label-mode markdown (inline only;
@@ -770,9 +784,10 @@ clipped. This was intentionally deferred to avoid the frontend measurement machi
   contexts.
 - Verify protobuf messages with an absent `wrap` field resolve via the auto default for
   controls — wrapping in ordinary vertical layouts and staying single-row inside
-  horizontal containers or when directly placed in a column — while `st.container`,
-  `st.columns`, and text commands keep today's wrapping via their fixed `wrap=True`
-  default. An absent text `wrap` field must wrap, not ellipsize.
+  horizontal containers or when directly placed in a column or grid cell — while
+  `st.container`, `st.columns`, and text commands keep today's wrapping via their fixed
+  `wrap=True` default. An absent text `wrap` field must wrap, not ellipsize. An absent
+  `st.grid` `wrap` field (when implemented) wraps column tracks.
 
 ## Checklist
 
