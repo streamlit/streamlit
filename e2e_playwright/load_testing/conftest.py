@@ -221,12 +221,20 @@ def start_load_test_server(
     )
 
 
-def wait_for_server(port: int, timeout: int = 60) -> bool:
+def wait_for_server(
+    port: int,
+    timeout: int = 60,
+    *,
+    process: subprocess.Popen[str] | None = None,
+) -> bool:
     """Wait for the server to become ready."""
     start = time.time()
     while time.time() - start < timeout:
         if is_app_server_running(port):
             return True
+        # Health will never come up if the child already exited.
+        if process is not None and process.poll() is not None:
+            return False
         time.sleep(0.5)
     return False
 
@@ -260,7 +268,7 @@ def start_healthy_load_test_server(
         port = find_available_port()
         tried_ports.append(port)
         process = start_load_test_server(port, scenario_path)
-        if wait_for_server(port):
+        if wait_for_server(port, process=process):
             return process, port
         terminate_process(process)
 
