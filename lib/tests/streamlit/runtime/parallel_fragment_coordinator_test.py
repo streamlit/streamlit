@@ -517,6 +517,8 @@ def test_submit_with_none_ctx(coordinator):
 def test_scoped_ctx_attach_restores_previous_context() -> None:
     """A worker that already had a ScriptRunContext gets it back after the block."""
     thread = threading.current_thread()
+    original = getattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None)
+    had_original = hasattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME)
     previous = object()
     inner = MagicMock()
     setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, previous)
@@ -525,7 +527,10 @@ def test_scoped_ctx_attach_restores_previous_context() -> None:
             assert getattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME) is inner
         assert getattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME) is previous
     finally:
-        delattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME)
+        if had_original:
+            setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, original)
+        elif hasattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME):
+            delattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME)
 
 
 def test_scoped_ctx_attach_ignores_missing_attr_on_cleanup() -> None:

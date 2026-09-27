@@ -23,6 +23,7 @@ Adapter logic is also covered without Polars via a stand-in lazy frame.
 
 from __future__ import annotations
 
+from functools import cmp_to_key
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from unittest.mock import patch
@@ -59,21 +60,32 @@ class _FakeCollected:
 class _FakeLazyFrame:
     """Stand-in for a Polars LazyFrame that Streamlit's adapter can drive."""
 
-    def __init__(self, table: pa.Table, *, support_with_row_index: bool = True) -> None:
+    def __init__(
+        self,
+        table: pa.Table,
+        *,
+        support_with_row_index: bool = True,
+        sort_calls: list[tuple[list[str], list[bool] | None]] | None = None,
+    ) -> None:
         self._table = table
         self._row_count = table.num_rows
+        self.collect_count = 0
+        self.sort_calls = sort_calls if sort_calls is not None else []
         if support_with_row_index:
             self.with_row_index = self._with_row_index
 
     def _clone(self, table: pa.Table) -> _FakeLazyFrame:
         return _FakeLazyFrame(
-            table, support_with_row_index=hasattr(self, "with_row_index")
+            table,
+            support_with_row_index=hasattr(self, "with_row_index"),
+            sort_calls=self.sort_calls,
         )
 
     def select(self, _expr: object) -> _FakeLazyFrame:
         return self
 
     def collect(self) -> _FakeCollected:
+        self.collect_count += 1
         return _FakeCollected(self._table, item=self._row_count)
 
     def head(self, n: int) -> _FakeLazyFrame:
@@ -92,14 +104,26 @@ class _FakeLazyFrame:
     def sort(
         self, columns: list[str], descending: list[bool] | None = None
     ) -> _FakeLazyFrame:
-        first = columns[0]
-        desc = bool(descending[0]) if descending else False
-        values = self._table.column(first).to_pylist()
-        order = sorted(
-            range(len(values)),
-            key=lambda i: (values[i] is None, values[i]),
-            reverse=desc,
+        desc_flags = (
+            list(descending) if descending is not None else [False] * len(columns)
         )
+        self.sort_calls.append((list(columns), list(desc_flags)))
+        column_values = [self._table.column(name).to_pylist() for name in columns]
+
+        def _compare(left: int, right: int) -> int:
+            for values, desc in zip(column_values, desc_flags, strict=True):
+                left_key = (values[left] is None, values[left])
+                right_key = (values[right] is None, values[right])
+                if left_key == right_key:
+                    continue
+                # None sorts last when ascending and first when descending.
+                less = left_key < right_key  # type: ignore[operator]
+                if desc:
+                    return 1 if less else -1
+                return -1 if less else 1
+            return 0
+
+        order = sorted(range(self._table.num_rows), key=cmp_to_key(_compare))
         return self._clone(self._table.take(pa.array(order)))
 
     def drop(self, name: str) -> _FakeLazyFrame:
@@ -234,7 +258,6 @@ def test_try_create_native_source_builds_polars_adapter_when_detected(
     )
     source = try_create_native_source(fake)
     assert isinstance(source, PolarsLazyFrameSource)
-    assert try_create_native_source(object()) is None
 
 
 def test_polars_lazyframe_source_exposes_schema_and_row_count(
@@ -247,10 +270,15 @@ def test_polars_lazyframe_source_exposes_schema_and_row_count(
     assert source.sortable is True
     assert source.access_mode is AccessMode.RANDOM_ACCESS
     assert schema.names == ["k", "v"]
+    # Schema collection uses a cloned frame (``head(0)``), so this counter
+    # only records ``row_count``'s ``select(pl.len()).collect()``.
+    assert source._lf.collect_count == 0
     assert source.row_count == 3
+    assert source._lf.collect_count == 1
     assert source.schema is schema
     # A later read must reuse the cached count instead of collecting again.
     assert source.row_count == 3
+    assert source._lf.collect_count == 1
 
 
 def test_polars_lazyframe_source_load_rows_without_sort() -> None:
@@ -269,18 +297,29 @@ def test_polars_lazyframe_source_load_rows_clamps_negative_offset() -> None:
 
 def test_polars_lazyframe_source_sort_drops_synthetic_row_index() -> None:
     """Sorting adds a synthetic index, then drops it before returning."""
-    chunk = _source().load_rows(0, 3, sort=SortSpec("k"))
+    source = _source()
+    chunk = source.load_rows(0, 3, sort=SortSpec("k"))
     assert chunk.column("k").to_pylist() == [1, 2, 2]
+    # Tied k=2 rows keep original order via the synthetic row-index key.
+    assert chunk.column("v").to_pylist() == [20, 10, 30]
     assert chunk.schema.names == ["k", "v"]
+    assert source._lf.sort_calls == [
+        (["k", PolarsLazyFrameSource._ROW_INDEX_COLUMN], [False, False])
+    ]
 
 
 def test_polars_lazyframe_source_sort_falls_back_to_with_row_count() -> None:
-    """Older Polars APIs without ``with_row_index`` still sort stably."""
-    chunk = _source(support_with_row_index=False).load_rows(
-        0, 3, sort=SortSpec("v", descending=True)
-    )
-    assert chunk.column("v").to_pylist() == [30, 20, 10]
+    """Older Polars APIs without ``with_row_index`` still sort via ``with_row_count``."""
+    source = _source(support_with_row_index=False)
+    assert not hasattr(source._lf, "with_row_index")
+    chunk = source.load_rows(0, 3, sort=SortSpec("k", descending=True))
+    assert chunk.column("k").to_pylist() == [2, 2, 1]
+    # Tied k=2 rows keep original order via the synthetic row-index key.
+    assert chunk.column("v").to_pylist() == [10, 30, 20]
     assert chunk.schema.names == ["k", "v"]
+    assert source._lf.sort_calls == [
+        (["k", PolarsLazyFrameSource._ROW_INDEX_COLUMN], [True, False])
+    ]
 
 
 def test_polars_lazyframe_source_sort_skips_unknown_column() -> None:

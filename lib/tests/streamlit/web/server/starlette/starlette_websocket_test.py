@@ -908,19 +908,27 @@ class TestStarletteSessionClient:
 
     @pytest.mark.anyio
     @pytest.mark.parametrize(
-        "error_type",
-        [WebSocketDisconnect, RuntimeError],
+        ("error_type", "expect_exception_log"),
+        [(WebSocketDisconnect, False), (RuntimeError, True)],
         ids=["disconnect", "generic-error"],
     )
     async def test_sender_closes_client_on_send_failure(
-        self, error_type: type[BaseException]
+        self, error_type: type[BaseException], expect_exception_log: bool
     ) -> None:
         """Send failures close the client without propagating to the caller."""
         mock_websocket = MagicMock()
         mock_websocket.send_bytes = AsyncMock(side_effect=error_type())
         client = StarletteSessionClient(mock_websocket)
-        await client._send_queue.put(b"payload")
-        await asyncio.wait_for(client._closed.wait(), timeout=1)
+        with patch(
+            "streamlit.web.server.starlette.starlette_websocket._LOGGER"
+        ) as mock_logger:
+            await client._send_queue.put(b"payload")
+            await asyncio.wait_for(client._closed.wait(), timeout=1)
+            mock_websocket.send_bytes.assert_awaited_once_with(b"payload")
+            if expect_exception_log:
+                mock_logger.exception.assert_called_once()
+            else:
+                mock_logger.exception.assert_not_called()
         await client.aclose()
 
 
@@ -940,8 +948,13 @@ class TestWebsocketOriginRejection:
         mock_runtime = MagicMock()
 
         handler = create_websocket_handler(mock_runtime)
-        asyncio.run(handler(mock_websocket))
+        with patch(
+            "streamlit.web.server.starlette.starlette_websocket.is_url_from_allowed_origins",
+            return_value=False,
+        ) as mock_allowed_origin:
+            asyncio.run(handler(mock_websocket))
 
+        mock_allowed_origin.assert_called_once_with("http://evil.com")
         mock_websocket.close.assert_awaited_once_with(code=1008)
         mock_websocket.accept.assert_not_called()
         mock_runtime.connect_session.assert_not_called()

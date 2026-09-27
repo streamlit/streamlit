@@ -34,5 +34,9 @@ class PlatformTest(DeltaGeneratorTestCase):
 
 def test_post_parent_message_is_noop_without_script_run_ctx() -> None:
     """Without a script run context, parent messages are dropped."""
-    with patch("streamlit.platform.get_script_run_ctx", return_value=None):
-        assert post_parent_message("hello") is None
+    with (
+        patch("streamlit.platform.get_script_run_ctx", return_value=None),
+        patch("streamlit.platform.ForwardMsg") as mock_forward_msg,
+    ):
+        post_parent_message("hello")
+        mock_forward_msg.assert_not_called()
