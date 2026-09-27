@@ -135,9 +135,14 @@ centered dialog:
   not apply to centered dialogs. Because the drawer overlays the page, resizing
   changes only the drawer's own width; the main content is not reflowed (unlike
   `st.sidebar`, where dragging resizes both the sidebar and the main area). The
-  handle stays available at every viewport size; the width is clamped so a strip
-  of the app always remains visible, and users can still drag narrower on small
-  screens. The pointer-only tradeoff is covered under **Accessibility** below.
+  handle stays available at every viewport size. Dragged width is clamped to a
+  minimum of ≈ 200px (matching `st.sidebar`) so the drawer cannot collapse to a
+  sliver, and to a maximum that always leaves a strip of the app visible; users
+  can still drag narrower than a `width` preset on small screens, down to that
+  minimum. A hover indicator on the resize handle (a visible line, not only a
+  cursor change) is optional: include it if it can reuse the existing
+  `st.sidebar` handle styling without extra overhead. The pointer-only tradeoff
+  is covered under **Accessibility** below.
 - **Geometry.** The panel is flush to its edge (no outer margin) and has square
   inner corners, so it reads as attached to the viewport rather than floating. A
   left drawer overlays the `st.sidebar` and the app header; a right drawer
@@ -397,4 +402,4 @@ committing to the larger companion-pane design.
 | No new dependencies | ✅ Reuses the existing Modal component and layout. |
 | Metrics collected | ✅ Covered by the existing `@st.dialog` `gather_metrics` tracking (records that the `position` keyword was passed — argument name, type, and length). We intentionally rely on this and do not add dedicated tracking of the specific `"left"`/`"center"`/`"right"` value. |
 | Any security/legal impact? | ✅ None. As with `dismissible`, a side drawer being modal is not a security guarantee — do not rely on it to block main-app interaction for security-critical checks. |
-| Any docs changes needed? | ✅ Update the `st.dialog` docstring/API reference and the layouts skill reference (both done in the implementation PR). Public docs mention only that side drawers are user-resizable — not the drag mechanics, starting-vs-dragged width, or rerun behavior (users discover drag, as with `st.sidebar`). |
+| Any docs changes needed? | ✅ Update the `st.dialog` docstring/API reference and the layouts skill reference (both done in the implementation PR). Public docs should mention that a `"left"`/`"right"` dialog is user-resizable. They do not need to cover drag mechanics, double-click restore, or that dragged width resets on dismiss. |
