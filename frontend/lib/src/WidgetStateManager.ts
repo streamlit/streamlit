@@ -37,6 +37,7 @@ import { assertNever } from "~lib/util/assertNever"
 import {
   isNullOrUndefined,
   isValidFormId,
+  normalizeQueryString,
   notNullOrUndefined,
 } from "~lib/util/utils"
 
@@ -1495,7 +1496,7 @@ export class WidgetStateManager {
       .replaceAll("%20", "+")
 
     // Skip replaceState if the URL wouldn't actually change
-    const currentSearch = window.location.search.replace(/^\?/, "")
+    const currentSearch = normalizeQueryString(window.location.search)
     if (newSearch === currentSearch) {
       return
     }

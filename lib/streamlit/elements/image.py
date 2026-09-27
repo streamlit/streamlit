@@ -21,7 +21,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
@@ -42,6 +42,11 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import Width
 
+_USE_COLUMN_WIDTH_REMOVED_WARNING: Final = (
+    "`use_column_width` was removed and has no effect. "
+    "Use `width='stretch'`, `width='content'`, or an integer pixel value instead."
+)
+
 
 class ImageMixin:
     @gather_metrics("image")
@@ -58,6 +63,8 @@ class ImageMixin:
         *,
         use_container_width: bool | None = None,
         link: str | None = None,
+        # Compatibility no-op for pre-1.61 callers.
+        use_column_width: Any = None,
     ) -> DeltaGenerator:
         """Display an image or list of images.
 
@@ -149,6 +156,14 @@ class ImageMixin:
 
             This parameter is only supported when displaying a single image.
 
+        use_column_width : any
+            This parameter is kept purely for compatibility.
+
+            .. deprecated::
+                ``use_column_width`` is deprecated, has no effect, and will be
+                fully removed in a future version. Use ``width="stretch"``,
+                ``width="content"``, or an integer pixel value instead.
+
         Examples
         --------
         >>> import streamlit as st
@@ -159,6 +174,11 @@ class ImageMixin:
            height: 710px
 
         """
+        if use_column_width is not None:
+            # Keep the keyword so pre-1.61 callers do not raise TypeError, but
+            # ignore the value so width and use_container_width stay authoritative.
+            show_deprecation_warning(_USE_COLUMN_WIDTH_REMOVED_WARNING)
+
         if use_container_width is not None:
             show_deprecation_warning(
                 make_deprecated_name_warning(

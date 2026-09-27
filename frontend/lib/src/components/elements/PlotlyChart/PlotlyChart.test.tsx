@@ -90,7 +90,11 @@ const createWidgetManager = (): WidgetStateManager => {
 }
 
 function getLastPlotProps(): PlotParams {
-  return MockPlot.mock.calls[MockPlot.mock.calls.length - 1][0] as PlotParams
+  const lastCall = MockPlot.mock.calls.at(-1)
+  if (!lastCall) {
+    throw new Error("Expected Plot to have been called")
+  }
+  return lastCall[0] as PlotParams
 }
 
 // Static test data - extracted to module level per coding guidelines
@@ -150,6 +154,46 @@ describe("PlotlyChart Component", () => {
     renderComponent()
     expect(screen.getByTestId("stPlotlyChart")).toBeVisible()
     expect(MockPlot).toHaveBeenCalled()
+  })
+
+  describe("alt (accessible name)", () => {
+    it("sets role=figure and aria-label when alt is provided", () => {
+      renderComponent({
+        element: new PlotlyChartProto({
+          ...DEFAULT_ELEMENT,
+          alt: "Scatter plot of three sample points",
+        }),
+      })
+      // figure (not img) keeps descendants non-presentational so Plotly's
+      // modebar buttons remain in the accessibility tree.
+      expect(
+        screen.getByRole("figure", {
+          name: "Scatter plot of three sample points",
+        })
+      ).toBeVisible()
+    })
+
+    it("omits role and aria-label entirely when alt is not provided", () => {
+      renderComponent()
+      // An empty aria-label is worse than none, so the attribute must be
+      // absent rather than present-but-empty. Unlabeled charts also omit
+      // role so their accessibility tree stays unchanged.
+      const chart = screen.getByTestId("stPlotlyChart")
+      expect(chart).not.toHaveAttribute("role")
+      expect(chart).not.toHaveAttribute("aria-label")
+    })
+
+    it.each([
+      ["an empty string", ""],
+      ["whitespace only", "   "],
+    ])("omits role and aria-label when alt is %s", (_label, alt) => {
+      renderComponent({
+        element: new PlotlyChartProto({ ...DEFAULT_ELEMENT, alt }),
+      })
+      const chart = screen.getByTestId("stPlotlyChart")
+      expect(chart).not.toHaveAttribute("role")
+      expect(chart).not.toHaveAttribute("aria-label")
+    })
   })
 
   it("initializes figure state correctly", () => {

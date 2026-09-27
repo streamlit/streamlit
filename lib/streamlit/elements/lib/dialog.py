@@ -27,7 +27,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     enqueue_message,
     get_script_run_ctx,
 )
-from streamlit.runtime.state import register_widget
+from streamlit.runtime.state import register_widget, validate_on_change_mode
 from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
@@ -109,11 +109,12 @@ class Dialog(DeltaGenerator):
         icon: str | None = None,
         on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     ) -> Dialog:
-        # Validation for on_dismiss parameter
-        if on_dismiss not in {"ignore", "rerun"} and not callable(on_dismiss):
-            raise StreamlitValueError(
-                "on_dismiss", ["'ignore'", "'rerun'", "a callback function"]
-            )
+        on_dismiss_callback = validate_on_change_mode(
+            on_dismiss,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+            param_name="on_dismiss",
+        )
 
         block_proto = BlockProto()
         block_proto.dialog.title = title
@@ -160,7 +161,7 @@ class Dialog(DeltaGenerator):
 
             register_widget(
                 element_id,
-                on_change_handler=on_dismiss if callable(on_dismiss) else None,
+                on_change_handler=on_dismiss_callback,
                 deserializer=lambda x: x,  # Simple passthrough for trigger values
                 serializer=lambda x: x,  # Simple passthrough for trigger values
                 ctx=ctx,

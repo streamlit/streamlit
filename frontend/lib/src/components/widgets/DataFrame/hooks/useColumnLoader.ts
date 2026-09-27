@@ -375,7 +375,7 @@ function useColumnLoader(
 
       if (
         element.editingMode !== DataframeProto.EditingMode.READ_ONLY &&
-        updatedColumn.isEditable == true
+        updatedColumn.isEditable
       ) {
         // Set editable icon for all editable columns:
         updatedColumn = {
@@ -433,7 +433,7 @@ function useColumnLoader(
 
         if (
           element.editingMode !== DataframeProto.EditingMode.READ_ONLY &&
-          updatedColumn.isEditable == true
+          updatedColumn.isEditable
         ) {
           // Set editable icon for all editable columns:
           updatedColumn = {

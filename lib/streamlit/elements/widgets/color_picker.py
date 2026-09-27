@@ -45,6 +45,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.string_util import to_help_str
 
@@ -268,6 +269,10 @@ class ColorPickerMixin:
         ctx: ScriptRunContext | None = None,
     ) -> str:
         key = to_key(key)
+        on_change = validate_on_change_mode(
+            on_change,
+            supported_modes=(),
+        )
 
         check_widget_policies(
             self.dg,

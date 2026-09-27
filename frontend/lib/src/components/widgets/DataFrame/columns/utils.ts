@@ -121,8 +121,8 @@ export type ColumnCreator = {
 }
 
 // See pydantic for inspiration: https://pydantic-docs.helpmanual.io/usage/types/#booleans
-const BOOLEAN_TRUE_VALUES = ["true", "t", "yes", "y", "on", "1"]
-const BOOLEAN_FALSE_VALUES = ["false", "f", "no", "n", "off", "0"]
+const BOOLEAN_TRUE_VALUES = new Set(["true", "t", "yes", "y", "on", "1"])
+const BOOLEAN_FALSE_VALUES = new Set(["false", "f", "no", "n", "off", "0"])
 
 /**
  * Interface used for indicating if a cell contains an error.
@@ -457,9 +457,9 @@ export function toSafeBoolean(value: unknown): boolean | null | undefined {
   const cleanedValue = toSafeString(value).toLowerCase().trim()
   if (cleanedValue === "") {
     return null
-  } else if (BOOLEAN_TRUE_VALUES.includes(cleanedValue)) {
+  } else if (BOOLEAN_TRUE_VALUES.has(cleanedValue)) {
     return true
-  } else if (BOOLEAN_FALSE_VALUES.includes(cleanedValue)) {
+  } else if (BOOLEAN_FALSE_VALUES.has(cleanedValue)) {
     return false
   }
   // The value cannot be interpreted as boolean
@@ -483,7 +483,7 @@ export function toSafeNumber(value: unknown): number | null {
   }
 
   if (Array.isArray(value)) {
-    return NaN
+    return Number.NaN
   }
 
   if (typeof value === "string") {
@@ -525,7 +525,7 @@ export function arrayToCopyValue(array?: unknown[] | null): string {
     array.map((x: unknown) =>
       // Replace commas with spaces since commas are used to
       // separate the list items.
-      typeof x === "string" && x.includes(",") ? x.replace(/,/g, " ") : x
+      typeof x === "string" && x.includes(",") ? x.replaceAll(",", " ") : x
     )
   )
 }
@@ -578,7 +578,7 @@ export function toSafeDate(value: unknown): Date | null | undefined {
 
   // Return the value as-is if it is already a date
   if (value instanceof Date) {
-    if (!isNaN(value.getTime())) {
+    if (!Number.isNaN(value.getTime())) {
       return value
     }
     return undefined
@@ -591,7 +591,7 @@ export function toSafeDate(value: unknown): Date | null | undefined {
 
   try {
     const parsedTimestamp = Number(value)
-    if (!isNaN(parsedTimestamp)) {
+    if (!Number.isNaN(parsedTimestamp)) {
       // Unix timestamps can be have different units.
       // As default, we handle the unit as second, but
       // if it larger than a certain threshold, we assume
@@ -659,7 +659,7 @@ export function countDecimals(value: number): number {
 
   let numberStr = value.toString()
 
-  if (numberStr.indexOf("e") !== -1) {
+  if (numberStr.includes("e")) {
     // Handle scientific notation
     numberStr = value.toLocaleString("fullwide", {
       useGrouping: false,
@@ -667,7 +667,7 @@ export function countDecimals(value: number): number {
     })
   }
 
-  if (numberStr.indexOf(".") === -1) {
+  if (!numberStr.includes(".")) {
     // Fallback to 0 decimals, this can happen with
     // extremely large or small numbers
     return 0
@@ -710,7 +710,7 @@ const LINE_BREAK_REGEX = new RegExp(/(\r\n|\n|\r)/gm)
  * @returns The text without line breaks.
  */
 export function removeLineBreaks(text: string): string {
-  if (text.indexOf("\n") !== -1) {
+  if (text.includes("\n")) {
     return text.replace(LINE_BREAK_REGEX, " ")
   }
   return text
@@ -744,7 +744,7 @@ export function getLinkDisplayValueFromRegex(
       // return the first matching group
       // Since this might be a URI encoded value, we decode it.
       // Note: we replace + with %20 to correctly convert + to whitespaces.
-      return decodeURIComponent(patternMatch[1].replace(/\+/g, "%20"))
+      return decodeURIComponent(patternMatch[1].replaceAll("+", "%20"))
     }
 
     // if the regex doesn't find a match with the url, just use the url as display value

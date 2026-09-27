@@ -527,3 +527,40 @@ class StMapWidthHeightTest(DeltaGeneratorTestCase):
         kwargs = {param_name: invalid_value}
         with pytest.raises(StreamlitAPIException):
             st.map(mock_df, **kwargs)
+
+    def test_map_alt_sets_proto_field_and_drops_blank_values(self):
+        """A non-empty alt is stored on the proto; omitted/None/blank leave it unset."""
+        st.map(mock_df, alt="Sample points near San Francisco")
+        el = self.get_delta_from_queue().new_element.deck_gl_json_chart
+        assert el.HasField("alt")
+        assert el.alt == "Sample points near San Francisco"
+
+        st.map(mock_df)
+        assert not self.get_delta_from_queue().new_element.deck_gl_json_chart.HasField(
+            "alt"
+        )
+
+        st.map(mock_df, alt=None)
+        assert not self.get_delta_from_queue().new_element.deck_gl_json_chart.HasField(
+            "alt"
+        )
+
+        st.map(mock_df, alt="  ")
+        assert not self.get_delta_from_queue().new_element.deck_gl_json_chart.HasField(
+            "alt"
+        )
+
+    def test_map_alt_strips_whitespace(self):
+        """Leading and trailing whitespace is stripped from alt."""
+        st.map(mock_df, alt="  Sample points near San Francisco  ")
+        el = self.get_delta_from_queue().new_element.deck_gl_json_chart
+        assert el.HasField("alt")
+        assert el.alt == "Sample points near San Francisco"
+
+    def test_map_alt_preserves_adversarial_plain_text(self):
+        """Quotes and angle brackets stay literal on the proto (no HTML path)."""
+        adversarial = 'Map of "A < B" & hubs <script>alert(1)</script>'
+        st.map(mock_df, alt=adversarial)
+        el = self.get_delta_from_queue().new_element.deck_gl_json_chart
+        assert el.HasField("alt")
+        assert el.alt == adversarial

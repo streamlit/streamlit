@@ -267,7 +267,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     // every position update. `contentMaxWidth` is a px token; `spacing.lg` is
     // rem — hence parseFloat vs convertRemToPx.
     const designMaxWidthPx =
-      parseFloat(theme.sizes.contentMaxWidth) -
+      Number.parseFloat(theme.sizes.contentMaxWidth) -
       2 * convertRemToPx(theme.spacing.lg)
     const cssMinWidthPx = stretchWidth
       ? Math.max(calculatedWidth, convertRemToPx("10rem"))

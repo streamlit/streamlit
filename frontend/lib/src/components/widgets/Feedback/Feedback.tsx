@@ -163,7 +163,7 @@ function getStateFromWidgetMgr(
   if (stringValue === "") {
     return null // User explicitly cleared
   }
-  return parseInt(stringValue, 10) // User selected a value
+  return Number.parseInt(stringValue, 10) // User selected a value
 }
 
 function getDefaultStateFromProto(element: FeedbackProto): FeedbackValue {

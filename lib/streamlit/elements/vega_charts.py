@@ -52,19 +52,31 @@ from streamlit.elements.lib.layout_utils import (
     validate_width,
 )
 from streamlit.elements.lib.policies import check_widget_policies
-from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
+from streamlit.elements.lib.utils import (
+    Key,
+    compute_and_register_element_id,
+    normalize_alt,
+    to_key,
+)
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
+from streamlit.logger import get_logger
 from streamlit.proto.VegaLiteChart_pb2 import (
     VegaLiteChart as VegaLiteChartProto,
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import WidgetCallback, register_widget
+from streamlit.runtime.state import (
+    WidgetCallback,
+    register_widget,
+    validate_on_change_mode,
+)
 from streamlit.util import ReadOnlyAttributeDictionary, calc_hash
+
+_LOGGER: Final = get_logger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -794,6 +806,7 @@ class VegaChartsMixin:
         width: Width = "stretch",
         height: Height = "content",
         use_container_width: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator:
         """Display a line chart.
 
@@ -918,6 +931,18 @@ class VegaChartsMixin:
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), the chart keeps its
+            default Vega accessible name.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            This is a short description of the chart, not a full text
+            alternative for dense graphics.
+
         Examples
         --------
         **Example 1: Basic line chart from a dataframe**
@@ -962,7 +987,13 @@ class VegaChartsMixin:
         ...     }
         ... )
         >>>
-        >>> st.line_chart(df, x="col1", y="col2", color="col3")
+        >>> st.line_chart(
+        ...     df,
+        ...     x="col1",
+        ...     y="col2",
+        ...     color="col3",
+        ...     alt="Three series over a shared x-axis",
+        ... )
 
         .. output::
            https://doc-line-chart1.streamlit.app/
@@ -1014,6 +1045,7 @@ class VegaChartsMixin:
                 theme="streamlit",
                 width=width,
                 height=height,
+                alt=alt,
             ),
         )
 
@@ -1031,6 +1063,7 @@ class VegaChartsMixin:
         width: Width = "stretch",
         height: Height = "content",
         use_container_width: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator:
         """Display an area chart.
 
@@ -1167,6 +1200,18 @@ class VegaChartsMixin:
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), the chart keeps its
+            default Vega accessible name.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            This is a short description of the chart, not a full text
+            alternative for dense graphics.
+
         Examples
         --------
         **Example 1: Basic area chart from a dataframe**
@@ -1211,7 +1256,13 @@ class VegaChartsMixin:
         ...     }
         ... )
         >>>
-        >>> st.area_chart(df, x="col1", y="col2", color="col3")
+        >>> st.area_chart(
+        ...     df,
+        ...     x="col1",
+        ...     y="col2",
+        ...     color="col3",
+        ...     alt="Three series over a shared x-axis",
+        ... )
 
         .. output::
            https://doc-area-chart1.streamlit.app/
@@ -1300,6 +1351,7 @@ class VegaChartsMixin:
                 theme="streamlit",
                 width=width,
                 height=height,
+                alt=alt,
             ),
         )
 
@@ -1319,6 +1371,7 @@ class VegaChartsMixin:
         width: Width = "stretch",
         height: Height = "content",
         use_container_width: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator:
         """Display a bar chart.
 
@@ -1475,6 +1528,18 @@ class VegaChartsMixin:
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), the chart keeps its
+            default Vega accessible name.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            This is a short description of the chart, not a full text
+            alternative for dense graphics.
+
         Examples
         --------
         **Example 1: Basic bar chart from a dataframe**
@@ -1519,7 +1584,13 @@ class VegaChartsMixin:
         ...     }
         ... )
         >>>
-        >>> st.bar_chart(df, x="col1", y="col2", color="col3")
+        >>> st.bar_chart(
+        ...     df,
+        ...     x="col1",
+        ...     y="col2",
+        ...     color="col3",
+        ...     alt="Values by group across the x-axis",
+        ... )
 
         .. output::
            https://doc-bar-chart1.streamlit.app/
@@ -1628,6 +1699,7 @@ class VegaChartsMixin:
                 theme="streamlit",
                 width=width,
                 height=height,
+                alt=alt,
             ),
         )
 
@@ -1645,6 +1717,7 @@ class VegaChartsMixin:
         width: Width = "stretch",
         height: Height = "content",
         use_container_width: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator:
         """Display a scatterplot chart.
 
@@ -1775,6 +1848,18 @@ class VegaChartsMixin:
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), the chart keeps its
+            default Vega accessible name.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            This is a short description of the chart, not a full text
+            alternative for dense graphics.
+
         Examples
         --------
         **Example 1: Basic scatter chart from a dataframe**
@@ -1823,6 +1908,7 @@ class VegaChartsMixin:
         ...     y="col2",
         ...     color="col4",
         ...     size="col3",
+        ...     alt="col2 versus col1, sized by col3",
         ... )
 
         .. output::
@@ -1878,6 +1964,7 @@ class VegaChartsMixin:
                 theme="streamlit",
                 width=width,
                 height=height,
+                alt=alt,
             ),
         )
 
@@ -1894,6 +1981,7 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["ignore"] = "ignore",
         selection_mode: str | Iterable[str] | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator: ...
 
     # When on_select=rerun, return VegaLiteState.
@@ -1909,6 +1997,7 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback,
         selection_mode: str | Iterable[str] | None = None,
+        alt: str | None = None,
     ) -> VegaLiteState: ...
 
     @gather_metrics("altair_chart")
@@ -1923,6 +2012,7 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         selection_mode: str | Iterable[str] | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator | VegaLiteState:
         """Display a chart using the Vega-Altair library.
 
@@ -2064,6 +2154,21 @@ class VegaChartsMixin:
 
             Selection parameters are identified by their ``name`` property.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), the chart keeps its
+            default Vega accessible name unless the spec sets a top-level
+            ``description``.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            When both ``alt`` and a top-level chart ``description`` are set,
+            ``alt`` overrides ``description`` for the accessible name. This is
+            a short description of the chart, not a full text alternative for
+            dense graphics.
+
         Returns
         -------
         element or VegaLiteState
@@ -2088,7 +2193,7 @@ class VegaChartsMixin:
         ...     .encode(x="a", y="b", size="c", color="c", tooltip=["a", "b", "c"])
         ... )
         >>>
-        >>> st.altair_chart(chart)
+        >>> st.altair_chart(chart, alt="Scatter plot of a vs b sized by c")
 
         .. output::
            https://doc-vega-lite-chart.streamlit.app/
@@ -2104,6 +2209,7 @@ class VegaChartsMixin:
             key=key,
             on_select=on_select,
             selection_mode=selection_mode,
+            alt=alt,
         )
 
     # When on_select=Ignore, return DeltaGenerator.
@@ -2120,6 +2226,7 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["ignore"] = "ignore",
         selection_mode: str | Iterable[str] | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator: ...
 
     # When on_select=rerun, return VegaLiteState.
@@ -2136,6 +2243,7 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback,
         selection_mode: str | Iterable[str] | None = None,
+        alt: str | None = None,
     ) -> VegaLiteState: ...
 
     @gather_metrics("vega_lite_chart")
@@ -2151,6 +2259,7 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         selection_mode: str | Iterable[str] | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator | VegaLiteState:
         """Display a chart using the Vega-Lite library.
 
@@ -2296,6 +2405,21 @@ class VegaChartsMixin:
 
             Selection parameters are identified by their ``name`` property.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), the chart keeps its
+            default Vega accessible name unless the spec sets a top-level
+            ``description``.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            When both ``alt`` and a top-level chart ``description`` are set,
+            ``alt`` overrides ``description`` for the accessible name. This is
+            a short description of the chart, not a full text alternative for
+            dense graphics.
+
         Returns
         -------
         element or VegaLiteState
@@ -2324,6 +2448,7 @@ class VegaChartsMixin:
         ...             "color": {"field": "c", "type": "quantitative"},
         ...         },
         ...     },
+        ...     alt="Scatter plot of a vs b sized by c",
         ... )
 
         .. output::
@@ -2345,6 +2470,7 @@ class VegaChartsMixin:
             selection_mode=selection_mode,
             width=width,
             height=height,
+            alt=alt,
         )
 
     def _altair_chart(
@@ -2357,6 +2483,7 @@ class VegaChartsMixin:
         selection_mode: str | Iterable[str] | None = None,
         width: Width | None = None,
         height: Height = "content",
+        alt: str | None = None,
     ) -> DeltaGenerator | VegaLiteState:
         """Internal method to enqueue a vega-lite chart element based on an Altair chart.
 
@@ -2383,6 +2510,7 @@ class VegaChartsMixin:
             selection_mode=selection_mode,
             width=width,
             height=height,
+            alt=alt,
         )
 
     def _vega_lite_chart(
@@ -2396,6 +2524,7 @@ class VegaChartsMixin:
         selection_mode: str | Iterable[str] | None = None,
         width: Width | None = None,
         height: Height = "content",
+        alt: str | None = None,
     ) -> DeltaGenerator | VegaLiteState:
         """Internal method to enqueue a vega-lite chart element based on a vega-lite spec.
 
@@ -2404,10 +2533,12 @@ class VegaChartsMixin:
         if theme not in {"streamlit", None}:
             raise StreamlitValueError("theme", ["'streamlit'", "None"])
 
-        if on_select not in {"ignore", "rerun"} and not callable(on_select):
-            raise StreamlitValueError(
-                "on_select", ["'rerun'", "'ignore'", "a callback function"]
-            )
+        on_select_callback = validate_on_change_mode(
+            on_select,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+            param_name="on_select",
+        )
 
         key = to_key(key)
         is_selection_activated = on_select != "ignore"
@@ -2415,13 +2546,11 @@ class VegaChartsMixin:
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
 
-            is_callback = callable(on_select)
+            is_callback = on_select_callback is not None
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_select)  # ty: ignore[redundant-cast]
-                if is_callback
-                else None,
+                on_change=on_select_callback,
                 default_value=None,
                 writes_allowed=False,
                 enable_check_callback_rules=is_callback,
@@ -2497,8 +2626,27 @@ class VegaChartsMixin:
         spec = _prepare_vega_lite_spec(spec, use_container_width_for_spec)
         _marshall_chart_data(vega_lite_proto, spec, data)
 
+        normalized_alt = normalize_alt(alt)
+        existing_description = spec.get("description")
+        # Warn when alt replaces an existing chart description. Truthiness
+        # covers None and empty strings and does not crash on invalid
+        # non-string values (e.g. a list).
+        if normalized_alt is not None and existing_description:
+            _LOGGER.warning(
+                "The Vega-Lite / Altair chart already sets description=%r. "
+                "The alt=%r parameter overrides it for the accessible name.",
+                existing_description,
+                normalized_alt,
+                stack_info=True,
+            )
+
         # Prevent the spec from changing across reruns:
         vega_lite_proto.spec = _stabilize_vega_json_spec(json.dumps(spec))
+
+        if normalized_alt is not None:
+            # Carry alt on its own proto field so it is not baked into the
+            # hashed spec JSON (applied on the frontend as description).
+            vega_lite_proto.alt = normalized_alt
 
         if use_container_width is not None:
             vega_lite_proto.use_container_width = use_container_width
@@ -2515,6 +2663,9 @@ class VegaChartsMixin:
             vega_lite_proto.form_id = current_form_id(self.dg)
 
             ctx = get_script_run_ctx()
+            # Include `alt` like other stable kwargs. Changing `alt` remounts an
+            # unkeyed selection chart. Keyed charts ignore it because
+            # key_as_main_identity stays {"selection_mode"}.
             vega_lite_proto.id = compute_and_register_element_id(
                 "vega_lite_chart",
                 user_key=key,
@@ -2533,13 +2684,14 @@ class VegaChartsMixin:
                 theme=theme,
                 use_container_width=use_container_width,
                 selection_mode=parsed_selection_modes,
+                alt=normalized_alt,
             )
 
             serde = VegaLiteStateSerde(parsed_selection_modes)
 
             widget_state = register_widget(
                 vega_lite_proto.id,
-                on_change_handler=on_select if callable(on_select) else None,
+                on_change_handler=on_select_callback,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,
                 ctx=ctx,

@@ -117,6 +117,23 @@ describe("DateTimeInput widget", () => {
     expect(segments.length).toBeGreaterThanOrEqual(5)
   })
 
+  it("keeps trailing controls outside the field scroller", () => {
+    const props = getProps({
+      default: [],
+      value: ["2025-03-15T10:30"],
+      setValue: true,
+    })
+    render(<DateTimeInput {...props} />)
+
+    const field = screen.getByTestId("stDateTimeInputField")
+    const scroller = screen.getByTestId("stDateTimeInputFieldsScroller")
+    const clearButton = screen.getByTestId("stDateTimeInputClearButton")
+
+    expect(scroller.parentElement).toBe(field)
+    expect(field).toContainElement(clearButton)
+    expect(scroller).not.toContainElement(clearButton)
+  })
+
   it("can be disabled", () => {
     const props = getProps({}, true)
     render(<DateTimeInput {...props} />)
@@ -525,6 +542,9 @@ describe("DateTimeInput widget", () => {
       await waitFor(() => {
         expect(screen.getByTestId("stDateTimeInputError")).toBeVisible()
       })
+      expect(
+        screen.getByTestId("stDateTimeInputFieldsScroller")
+      ).not.toContainElement(screen.getByTestId("stDateTimeInputError"))
 
       // Blur reverts display to committed value and clears error
       await user.click(document.body)
@@ -2489,7 +2509,11 @@ describe("DateTimeInput widget", () => {
       // Tab off the last segment closes the popover, so the merge has to happen
       // while it is still mounted — otherwise its half is unreadable and both
       // halves are discarded.
-      await user.click(inline[inline.length - 1])
+      const lastInline = inline.at(-1)
+      if (!lastInline) {
+        throw new Error("Expected a date-time segment")
+      }
+      await user.click(lastInline)
       await user.tab()
 
       await expectCommitted(spy, props, "2025-11-19T09:45")

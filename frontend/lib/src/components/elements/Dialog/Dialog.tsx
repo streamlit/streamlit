@@ -90,7 +90,7 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   children,
   widgetMgr,
   fragmentId,
-}): ReactElement => {
+}): ReactElement | null => {
   const {
     title,
     dismissible,
@@ -136,6 +136,12 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   // must stopImmediatePropagation so GlobalHotkeys never sees the event.
   const handleRKeySuppress = useCallback(
     (e: KeyboardEvent): void => {
+      // Skip events with a non-string `key` so `toLowerCase` does not throw
+      // (synthetic `Event`s from hosts, extensions, or tests omit `key`).
+      if (typeof e.key !== "string") {
+        return
+      }
+
       if (isOpen && e.key.toLowerCase() === "r" && !element.dismissible) {
         const target = e.target as HTMLElement
 
@@ -174,7 +180,7 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   // on mount (`data-entering`); an exit animation would need the overlay to
   // stay mounted after close.
   if (!isOpen) {
-    return <></>
+    return null
   }
   return (
     <Modal

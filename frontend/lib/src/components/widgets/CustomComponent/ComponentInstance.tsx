@@ -226,13 +226,19 @@ function ComponentInstance(props: Props): ReactElement {
   parsedArgsRef.current.dataframeArgs = parsedDataframeArgs
 
   const [isReadyTimeout, setIsReadyTimeout] = useState<boolean>()
-  // By passing the args.height here, we can derive the initial height for
-  // custom components that define a height property, e.g. in Python
-  // my_custom_component(height=100). undefined means no explicit height
-  // was specified, but will be set to the default height of 0.
+  // Initial iframe height comes from args.height, e.g. my_custom_component(height=100)
+  // or st.pdf, which sends a numeric string. Numbers and numeric strings are used;
+  // "stretch", empty, boolean, and missing values are unspecified and the iframe
+  // falls back to height 0 until setFrameHeight.
   const [frameHeight, setFrameHeight] = useState<number | undefined>(() => {
-    const height = parsedNewArgs.height as number | undefined
-    return height === undefined || isNaN(height) ? undefined : height
+    const height = parsedNewArgs.height
+    const numericHeight =
+      typeof height === "number"
+        ? height
+        : typeof height === "string" && height.trim() !== ""
+          ? Number(height)
+          : Number.NaN
+    return Number.isFinite(numericHeight) ? numericHeight : undefined
   })
 
   // Use a ref for the ready-state so that we can differentiate between sending renderMessages due to props-changes

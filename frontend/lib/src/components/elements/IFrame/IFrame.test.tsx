@@ -56,6 +56,34 @@ describe("st.iframe", () => {
     expect(iframeElement).toHaveClass("stIFrame")
   })
 
+  describe("title (accessible name)", () => {
+    it("falls back to st.iframe when alt is unset", () => {
+      render(<IFrame {...getProps()} />)
+      expect(screen.getByTestId("stIFrame")).toHaveAttribute(
+        "title",
+        "st.iframe"
+      )
+    })
+
+    it("uses alt as the iframe title when provided", () => {
+      render(
+        <IFrame {...getProps({ elementProps: { alt: "Streamlit docs" } })} />
+      )
+      expect(screen.getByTestId("stIFrame")).toHaveAttribute(
+        "title",
+        "Streamlit docs"
+      )
+    })
+
+    it.each(["", "   "])("falls back to st.iframe when alt is %j", alt => {
+      render(<IFrame {...getProps({ elementProps: { alt } })} />)
+      expect(screen.getByTestId("stIFrame")).toHaveAttribute(
+        "title",
+        "st.iframe"
+      )
+    })
+  })
+
   describe("tabIndex attribute", () => {
     it("should not have tabIndex attribute when not provided", () => {
       const props = getProps({})
@@ -371,8 +399,8 @@ describe("st.iframe", () => {
     })
 
     it.each([
-      { width: NaN, height: 100, description: "NaN width" },
-      { width: 100, height: NaN, description: "NaN height" },
+      { width: Number.NaN, height: 100, description: "NaN width" },
+      { width: 100, height: Number.NaN, description: "NaN height" },
       { width: Infinity, height: 100, description: "Infinity width" },
       { width: 100, height: -100, description: "negative height" },
       { width: -100, height: 100, description: "negative width" },

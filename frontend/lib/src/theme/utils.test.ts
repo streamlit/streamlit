@@ -112,8 +112,8 @@ describe("Styling utils", () => {
   // These tests verify theme integration only
   describe("theme.shadows (integration)", () => {
     it("light and dark themes have shadows with the same property keys", () => {
-      const lightKeys = Object.keys(lightTheme.emotion.shadows).sort()
-      const darkKeys = Object.keys(darkTheme.emotion.shadows).sort()
+      const lightKeys = Object.keys(lightTheme.emotion.shadows).toSorted()
+      const darkKeys = Object.keys(darkTheme.emotion.shadows).toSorted()
 
       expect(lightKeys).toEqual(darkKeys)
     })

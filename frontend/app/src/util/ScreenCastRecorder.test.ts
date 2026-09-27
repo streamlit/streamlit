@@ -32,7 +32,12 @@ interface MockMediaRecorder {
   stop: Mock<() => void>
   ondataavailable?: (event: { data: Blob }) => void
   onstop?: () => void
-  onerror?: (event: Event) => void
+  addEventListener: (
+    type: string,
+    listener: (event: Event) => void,
+    options?: { once?: boolean }
+  ) => void
+  dispatchEvent: (event: Event) => boolean
 }
 
 let mockMediaRecorderInstance: MockMediaRecorder | undefined
@@ -91,7 +96,31 @@ const installMediaMocks = (): void => {
     public stop = vi.fn<() => void>()
     public ondataavailable?: (event: { data: Blob }) => void
     public onstop?: () => void
-    public onerror?: (event: Event) => void
+    private readonly listeners = new Map<string, ((event: Event) => void)[]>()
+
+    public addEventListener(
+      type: string,
+      listener: (event: Event) => void,
+      options?: { once?: boolean }
+    ): void {
+      const wrapped = (event: Event): void => {
+        if (options?.once) {
+          this.listeners.set(
+            type,
+            (this.listeners.get(type) ?? []).filter(item => item !== wrapped)
+          )
+        }
+        listener(event)
+      }
+      const existing = this.listeners.get(type) ?? []
+      existing.push(wrapped)
+      this.listeners.set(type, existing)
+    }
+
+    public dispatchEvent(event: Event): boolean {
+      this.listeners.get(event.type)?.forEach(listener => listener(event))
+      return true
+    }
 
     constructor() {
       // eslint-disable-next-line @typescript-eslint/no-this-alias -- Capturing the constructed instance is the whole point of the mock.
@@ -255,7 +284,8 @@ describe("ScreenCastRecorder lifecycle", () => {
     await recorder.initialize()
     recorder.start()
 
-    getMediaRecorder().onerror?.(new Event("error"))
+    getMediaRecorder().dispatchEvent(new Event("error"))
+    getMediaRecorder().dispatchEvent(new Event("error"))
     expect(onErrorOrStop).toHaveBeenCalledTimes(1)
   })
 

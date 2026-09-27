@@ -67,6 +67,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.runtime.state.query_params import process_query_params
 from streamlit.string_util import to_help_str, to_str, validate_icon_or_emoji
@@ -1219,7 +1220,8 @@ class ButtonMixin:
         icon : str or None
             An optional emoji or icon to display next to the link label. If
             ``icon`` is ``None`` (default), the icon is inferred from the
-            ``Page`` object or no icon is displayed. If ``icon`` is a
+            ``Page`` object or no icon is displayed. Pass ``icon=""`` to show
+            no icon even when the page has one. If ``icon`` is a non-empty
             string, the following options are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``
@@ -1386,10 +1388,10 @@ class ButtonMixin:
         key = to_key(key)
         label = "" if label is None else to_str(label)
 
-        on_click_callback: WidgetCallback | None = (
-            None
-            if on_click is None or on_click in {"ignore", "rerun"}
-            else cast("WidgetCallback", on_click)  # ty: ignore[redundant-cast]
+        on_click_callback = validate_on_change_mode(
+            on_click,
+            supported_modes=("rerun", "ignore"),
+            param_name="on_click",
         )
 
         normalized_shortcut: str | None = None
@@ -1496,13 +1498,13 @@ class ButtonMixin:
     ) -> bool | DeltaGenerator:
         key = to_key(key)
         label = "" if label is None else to_str(label)
+        on_click_callback = validate_on_change_mode(
+            on_click,
+            supported_modes=("rerun", "ignore"),
+            param_name="on_click",
+        )
         ignore_rerun = on_click == "ignore"
         is_rerun_mode = not ignore_rerun
-        on_click_callback: WidgetCallback | None = (
-            None
-            if on_click in {"ignore", "rerun"}
-            else cast("WidgetCallback", on_click)  # ty: ignore[redundant-cast]
-        )
 
         link_button_proto = LinkButtonProto()
         normalized_shortcut = (
@@ -1712,6 +1714,11 @@ class ButtonMixin:
     ) -> bool:
         key = to_key(key)
         label = "" if label is None else to_str(label)
+        on_click = validate_on_change_mode(
+            on_click,
+            supported_modes=(),
+            param_name="on_click",
+        )
 
         normalized_shortcut: str | None = None
         if shortcut is not None:

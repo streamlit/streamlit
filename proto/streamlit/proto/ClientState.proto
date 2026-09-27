@@ -38,4 +38,7 @@ message ClientState {
   // the frontend forward message cache.
   repeated string cached_message_hashes = 7;
   ContextInfo context_info = 8;
+  // True when the rerun was triggered by browser back/forward (popstate).
+  // Bound widgets should seed from the URL instead of stale frontend state.
+  bool is_history_navigation = 9;
 }

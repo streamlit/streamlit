@@ -37,8 +37,8 @@ class TabContainer(DeltaGenerator):
     ----------
     open : bool or None
         Whether this tab is the currently active tab. This is ``True`` if this
-        tab is active and ``False`` if it is inactive, or ``None`` if state
-        tracking isn't enabled.
+        tab is active and ``False`` if it is inactive, or ``None`` when the tabs
+        don't track state (``on_change="ignore"`` without ``bind="query-params"``).
 
     Examples
     --------
@@ -128,8 +128,8 @@ class TabContainer(DeltaGenerator):
         -------
         bool or None
             ``True`` if this tab is active, ``False`` if inactive, or ``None``
-            if state tracking is not enabled (``on_change`` was not set or
-            set to ``"ignore"``).
+            if the tabs don't track state (``on_change="ignore"`` without
+            ``bind="query-params"``).
         """
         return self._open
 

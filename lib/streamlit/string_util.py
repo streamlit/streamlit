@@ -19,9 +19,9 @@ import fractions
 import numbers
 import re
 import textwrap
-from typing import TYPE_CHECKING, Any, Final, TypeAlias, Union, cast
+from typing import TYPE_CHECKING, Any, Final, NoReturn, TypeAlias, Union, cast
 
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -30,7 +30,14 @@ if TYPE_CHECKING:
 
     from streamlit.type_util import SupportsStr
 
-_ALPHANUMERIC_CHAR_REGEX: Final = re.compile(r"^[a-zA-Z0-9_&\-\. ]+$")
+# Matches GitHub-style shortcodes (:rocket:, :+1:) so we can reject them.
+# Anchors are omitted; callers use ``fullmatch``.
+_EMOJI_SHORTCODE_RE: Final = re.compile(r":[a-zA-Z0-9_+-]+:")
+# Zero-width space keeps Markdown from rewriting the slash in this example.
+_ICON_FORMAT_HINT: Final = (
+    "Please use a single emoji or a Material icon shortcode "
+    "like `:material\u200b/thumb_up:`."
+)
 
 
 def clean_text(text: SupportsStr) -> str:
@@ -51,22 +58,17 @@ def to_help_str(help: object) -> str:
     return textwrap.dedent(to_str(help))
 
 
-def _contains_special_chars(text: str) -> bool:
-    """Check if a string contains any special chars.
-
-    Special chars in that case are all chars that are not
-    alphanumeric, underscore, hyphen or whitespace.
-    """
-    return re.match(_ALPHANUMERIC_CHAR_REGEX, text) is None if text else False
-
-
 def is_emoji(text: str) -> bool:
     """Check if input string is a valid emoji."""
-    if not _contains_special_chars(text):
+    # ASCII cannot contain emoji, so skip loading the catalog.
+    if not text or text.isascii():
         return False
 
     from streamlit.emojis import ALL_EMOJIS
 
+    # Only the variation selector is normalized; ZWJ, skin-tone, and
+    # regional-indicator code points are part of valid sequences and must
+    # be preserved.
     return text.replace("\U0000fe0f", "") in ALL_EMOJIS
 
 
@@ -77,17 +79,69 @@ def is_material_icon(maybe_icon: str) -> bool:
     return maybe_icon in ALL_MATERIAL_ICONS
 
 
+def _raise_invalid_image(icon: str) -> NoReturn:
+    shown = icon if len(icon) <= 60 else f"{icon[:60]}…"
+    raise StreamlitAPIException(
+        f'The value "{shown}" looks like a URL. Images are not supported '
+        f"for `icon`. {_ICON_FORMAT_HINT} To follow support for image icons, "
+        "see https://github.com/streamlit/streamlit/issues/9770.",
+        error_id="invalid-image",
+    )
+
+
+def _looks_like_url(icon: str) -> bool:
+    """True for ``scheme://``, ``data:``, or scheme-relative ``//`` values."""
+    return "://" in icon or icon[:5].lower() == "data:" or icon.startswith("//")
+
+
 def validate_icon_or_emoji(icon: str | None) -> str:
-    """Validate an icon or emoji and return it in normalized format if valid."""
+    """Validate an icon or emoji and return it in normalized form if valid.
+
+    ``None`` and whitespace-only strings mean no icon. URL-shaped values
+    raise ``StreamlitAPIException`` with ``error_id="invalid-image"``
+    without fetching.
+    """
     if icon is None:
         return ""
+    if not isinstance(icon, str):
+        raise StreamlitInvalidParameterTypeError(
+            "icon",
+            type(icon).__name__,
+            ["str", "None"],
+        )
 
-    # Support the special case of the spinner icon:
+    icon = icon.strip()
+    if not icon:
+        return ""
+
+    # "spinner" is a built-in icon name, not an emoji or Material shortcode.
     if icon == "spinner":
         return "spinner"
 
-    if icon.startswith(":material"):
-        return validate_material_icon(icon)
+    # Only values starting with ":" can be Material or emoji shortcodes.
+    if icon.startswith(":"):
+        # Prefer Material so unknown names raise invalid-material-icon, not
+        # invalid-emoji.
+        if icon.lower().startswith(":material"):
+            return validate_material_icon(icon)
+
+        if _EMOJI_SHORTCODE_RE.fullmatch(icon):
+            raise StreamlitAPIException(
+                f'The value "{icon}" is not a valid icon. Emoji shortcodes are '
+                f"not supported. {_ICON_FORMAT_HINT}",
+                error_id="invalid-emoji-shortcode",
+            )
+
+    if _looks_like_url(icon):
+        _raise_invalid_image(icon)
+
+    # Remaining ASCII cannot be emoji; fail without loading the catalog.
+    if icon.isascii():
+        raise StreamlitAPIException(
+            f'The value "{icon}" is not a valid icon. {_ICON_FORMAT_HINT}',
+            error_id="invalid-icon",
+        )
+
     return validate_emoji(icon)
 
 
@@ -98,8 +152,7 @@ def validate_emoji(maybe_emoji: str | None) -> str:
     if is_emoji(maybe_emoji):
         return maybe_emoji
     raise StreamlitAPIException(
-        f'The value "{maybe_emoji}" is not a valid emoji. Shortcodes are not allowed, '
-        "please use a single character instead.",
+        f'The value "{maybe_emoji}" is not a valid emoji. Please use a single emoji.',
         error_id="invalid-emoji",
     )
 
@@ -153,10 +206,8 @@ def extract_leading_emoji(text: str) -> tuple[str, str]:
     the rest of the string (minus an optional separator between the two).
     """
 
-    if not _contains_special_chars(text):
-        # If the string only contains basic alphanumerical chars and/or
-        # underscores, hyphen & whitespaces, then it's guaranteed that there
-        # is no emoji in the string.
+    if not text or text.isascii():
+        # ASCII strings cannot contain emoji, so skip loading the catalog.
         return "", text
 
     from streamlit.emojis import EMOJI_EXTRACTION_REGEX

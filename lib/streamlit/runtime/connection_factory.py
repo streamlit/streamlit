@@ -149,7 +149,7 @@ def connection_factory(
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SQLConnection:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 @overload
@@ -161,7 +161,7 @@ def connection_factory(
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SQLConnection:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 @overload
@@ -172,7 +172,7 @@ def connection_factory(
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SnowflakeConnection:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 @overload
@@ -184,7 +184,7 @@ def connection_factory(
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SnowflakeConnection:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 @overload
@@ -195,7 +195,7 @@ def connection_factory(
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SnowflakeCallersRightsConnection:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 @overload
@@ -207,7 +207,7 @@ def connection_factory(
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SnowflakeCallersRightsConnection:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 @overload
@@ -218,7 +218,7 @@ def connection_factory(
     ttl: float | timedelta | None = None,
     **kwargs: Any,
 ) -> ConnectionClass:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 @overload
@@ -229,7 +229,7 @@ def connection_factory(
     ttl: float | timedelta | None = None,
     **kwargs: Any,
 ) -> BaseConnection[Any]:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 def connection_factory(  # type: ignore

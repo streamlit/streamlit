@@ -110,7 +110,7 @@ describe("TransientNode", () => {
       const debug = node.debug()
 
       expect(debug.split("\n")[0]).toBe(
-        `└── TransientNode [2 transient] (run: ${"run-xyz".substring(0, MAX_HASH_LENGTH)})`
+        `└── TransientNode [2 transient] (run: ${"run-xyz".slice(0, MAX_HASH_LENGTH)})`
       )
       expect(debug).toContain("anchor:")
       expect(debug).toContain("ElementNode [text]")

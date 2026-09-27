@@ -40,7 +40,7 @@ export interface TextProps {
  * which would otherwise honor newlines as extra rows.
  */
 function collapseNewlines(body: string): string {
-  return body.replace(/\r\n|\r|\n/g, " ")
+  return body.replaceAll(/\r\n|\r|\n/g, " ")
 }
 
 /**

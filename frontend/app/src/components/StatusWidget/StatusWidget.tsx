@@ -183,9 +183,7 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
           onClick={handleStopScriptClick}
         />
       </StyledAppStatus>
-    ) : (
-      <></>
-    )
+    ) : null
   }
 
   const renderRerunScriptPrompt = (): ReactNode => {
@@ -268,7 +266,7 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   curViewRef.current = renderWidget()
 
   if (isNullOrUndefined(curViewRef.current) && isNullOrUndefined(prevView)) {
-    return <></>
+    return null
   }
 
   let animateIn: boolean

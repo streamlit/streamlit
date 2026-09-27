@@ -130,6 +130,10 @@ const updateWidgetMgrState = (
     formId: element.formId,
     fragmentId,
     fromUser: valueWithSource.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
   })
 }
 
@@ -598,7 +602,7 @@ const Multiselect: FC<Props> = props => {
         }
       } else if (e.key === "End") {
         e.preventDefault()
-        const last = tags[tags.length - 1]
+        const last = tags.at(-1)
         if (last && last !== tag) {
           tag.tabIndex = -1
           last.tabIndex = 0

@@ -42,12 +42,13 @@ import { fonts } from "./primitives/typography"
 import { baseTheme, darkTheme, lightTheme } from "./themeConfigs"
 import type {
   CachedTheme,
+  DerivedColors,
   EmotionTheme,
+  EmotionThemeColors,
   ThemeConfig,
   ThemeSelection,
   ThemeSpacing,
 } from "./types"
-import { DerivedColors, EmotionThemeColors } from "./types"
 
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
@@ -92,7 +93,7 @@ export function sortThemeInputKeys(obj: unknown): unknown {
   if (typeof obj === "object") {
     const sorted: Record<string, unknown> = {}
     Object.keys(obj)
-      .sort()
+      .toSorted()
       .forEach(key => {
         sorted[key] = sortThemeInputKeys((obj as Record<string, unknown>)[key])
       })
@@ -431,13 +432,13 @@ export const parseRadius = (
   } else if (processedRadius === "full") {
     radiusValue = 1.4
   } else if (processedRadius.endsWith("rem")) {
-    radiusValue = parseFloat(processedRadius)
+    radiusValue = Number.parseFloat(processedRadius)
   } else if (processedRadius.endsWith("px")) {
-    radiusValue = parseFloat(processedRadius)
+    radiusValue = Number.parseFloat(processedRadius)
     cssUnit = "px"
-  } else if (!isNaN(parseFloat(processedRadius))) {
+  } else if (!Number.isNaN(Number.parseFloat(processedRadius))) {
     // Fallback: if the value can be parsed as a number, treat it as pixels
-    radiusValue = parseFloat(processedRadius)
+    radiusValue = Number.parseFloat(processedRadius)
     cssUnit = "px"
   }
 
@@ -461,7 +462,7 @@ export const parseFontSize = (
     // If string, check its valid (ends with "rem" or "px")
     // and can be parsed as a number
     const processedFontSize = fontSize.trim().toLowerCase()
-    const parsedFontSize = parseFloat(processedFontSize)
+    const parsedFontSize = Number.parseFloat(processedFontSize)
     if (
       parsedFontSize &&
       (processedFontSize.endsWith("rem") || processedFontSize.endsWith("px"))
@@ -547,7 +548,7 @@ const convertHeadingFontSizeToRem = (
     return validatedSize
   } else if (validatedSize?.endsWith("px")) {
     // Convert the font size to rem, and round to nearest 8th
-    const remValue = parseFloat(validatedSize) / baseFontSize
+    const remValue = Number.parseFloat(validatedSize) / baseFontSize
     return `${remValue}rem`
   }
 
@@ -919,7 +920,7 @@ export const createEmotionTheme = (
   if (notNullOrUndefined(baseRadius)) {
     const [radiusValue, cssUnit] = parseRadius(baseRadius)
 
-    if (notNullOrUndefined(radiusValue) && !isNaN(radiusValue)) {
+    if (notNullOrUndefined(radiusValue) && !Number.isNaN(radiusValue)) {
       const radiusWithCssUnit = addCssUnit(radiusValue, cssUnit)
       conditionalOverrides.radii.default = radiusWithCssUnit
 
@@ -955,7 +956,7 @@ export const createEmotionTheme = (
   if (notNullOrUndefined(buttonRadius)) {
     const [radiusValue, cssUnit] = parseRadius(buttonRadius)
 
-    if (notNullOrUndefined(radiusValue) && !isNaN(radiusValue)) {
+    if (notNullOrUndefined(radiusValue) && !Number.isNaN(radiusValue)) {
       // If valid buttonRadius set, override baseRadius fallback
       conditionalOverrides.radii.button = addCssUnit(radiusValue, cssUnit)
     } else {
@@ -1004,7 +1005,7 @@ export const createEmotionTheme = (
     )
     if (parsedSize) {
       // Additional validation: must be greater than 0
-      const numericValue = parseFloat(parsedSize)
+      const numericValue = Number.parseFloat(parsedSize)
       if (numericValue <= 0) {
         LOG.warn(
           `Invalid metricValueFontSize: ${metricValueFontSize} in theme. The metricValueFontSize must be greater than 0. Falling back to default metricValueFontSize.`
@@ -1155,11 +1156,7 @@ export const createTheme = (
   const bgColor = completedThemeInput.backgroundColor
   const startingTheme = merge(
     cloneDeep(
-      baseThemeConfig
-        ? baseThemeConfig
-        : getLuminance(bgColor) > 0.5
-          ? lightTheme
-          : darkTheme
+      baseThemeConfig || (getLuminance(bgColor) > 0.5 ? lightTheme : darkTheme)
     ),
     { emotion: { inSidebar } }
   )
@@ -1347,7 +1344,7 @@ export function addCssUnit(n: number, unit: "px" | "rem"): string {
 }
 
 function roundToTwoDecimals(n: number): number {
-  return parseFloat(n.toFixed(2))
+  return Number.parseFloat(n.toFixed(2))
 }
 
 export function blend(color: string, background: string | undefined): string {
@@ -1369,14 +1366,15 @@ export function blend(color: string, background: string | undefined): string {
  * @returns pixel value of the given rem value
  */
 export const convertRemToPx = (cssValue: string): number => {
-  const remValue = parseFloat(cssValue.replace(/rem$/, ""))
+  const remValue = Number.parseFloat(cssValue.replace(/rem$/, ""))
   return (
     // TODO(lukasmasuch): We might want to somehow cache this value at some point.
     // However, I did experimented with the performance of calling this, and
     // it seems not like a big deal to call it many times.
     remValue *
     // We fallback to 16px if the fontSize is not defined (should only happen in tests)
-    (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16)
+    (Number.parseFloat(getComputedStyle(document.documentElement).fontSize) ||
+      16)
   )
 }
 

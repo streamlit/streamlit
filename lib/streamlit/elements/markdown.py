@@ -618,7 +618,8 @@ class MarkdownMixin:
             height: 220px
 
         """
-        icon_str = validate_icon_or_emoji(icon) + " " if icon is not None else ""
+        validated_icon = validate_icon_or_emoji(icon)
+        icon_str = f"{validated_icon} " if validated_icon else ""
 
         # Escape [ and ] characters in the label to prevent breaking the directive syntax
         escaped_label = label.replace("[", "\\[").replace("]", "\\]")

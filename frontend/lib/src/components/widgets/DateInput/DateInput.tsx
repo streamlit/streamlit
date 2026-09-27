@@ -24,7 +24,7 @@ import {
   useState,
 } from "react"
 
-import { CalendarDate, getLocalTimeZone, today } from "@internationalized/date"
+import { CalendarDate } from "@internationalized/date"
 
 import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
@@ -42,8 +42,10 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   calendarDateToIso,
   createDateErrorMessage,
+  datesEqual,
   DateValidationErrorType,
   formatCalendarDate,
+  getFocusedDateFallback,
   getInitialFocusedDate,
   getMaxDate as getMaxCalendarDate,
   getMinDate,
@@ -123,7 +125,7 @@ function DateInput({
   // visible-month. Seeded with a concrete date so it stays controlled for
   // the component's entire lifetime (see getInitialFocusedDate).
   const [focusedValue, setFocusedValue] = useState<CalendarDate>(() =>
-    getInitialFocusedDate(value, minDateCalendar)
+    getInitialFocusedDate(value, minDateCalendar, maxDateCalendar)
   )
 
   const enableQuickSelect = useMemo(() => {
@@ -309,22 +311,23 @@ function DateInput({
     if (singleValue) {
       setFocusedValue(singleValue)
     } else {
-      // After clear: reset to today (clamped to minDate) so the calendar
-      // shows a sensible month instead of the stale previous value.
-      const now = today(getLocalTimeZone())
-      setFocusedValue(now.compare(minDateCalendar) < 0 ? minDateCalendar : now)
+      // No committed value (initial render or after a clear): show today,
+      // clamped to the widget's bounds, rather than a stale month.
+      const fallback = getFocusedDateFallback(minDateCalendar, maxDateCalendar)
+      setFocusedValue(prev => (datesEqual(prev, fallback) ? prev : fallback))
     }
-  }, [element.isRange, singleValue, minDateCalendar])
+  }, [element.isRange, singleValue, minDateCalendar, maxDateCalendar])
 
   useEffect(() => {
     if (!element.isRange) return
     if (rangeStartValue) {
       setFocusedValue(rangeStartValue)
     } else {
-      const now = today(getLocalTimeZone())
-      setFocusedValue(now.compare(minDateCalendar) < 0 ? minDateCalendar : now)
+      // Same fallback as single mode — see above.
+      const fallback = getFocusedDateFallback(minDateCalendar, maxDateCalendar)
+      setFocusedValue(prev => (datesEqual(prev, fallback) ? prev : fallback))
     }
-  }, [element.isRange, rangeStartValue, minDateCalendar])
+  }, [element.isRange, rangeStartValue, minDateCalendar, maxDateCalendar])
 
   return (
     <div className="stDateInput" data-testid="stDateInput">

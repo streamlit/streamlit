@@ -66,6 +66,7 @@ from streamlit.testing.v1.element_tree import (
     Header,
     Image,
     Info,
+    InitialValue,
     Json,
     Latex,
     Markdown,
@@ -92,6 +93,10 @@ from streamlit.testing.v1.element_tree import (
     Toggle,
     Warning,  # noqa: A004
     WidgetList,
+    _form_clear_flags,
+    _submitted_form_ids,
+    _use_form_clear_defaults,
+    _widget_form_id,
     repr_,
 )
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
@@ -278,6 +283,10 @@ class AppTest:
         # still resolvable by callbacks that fire before the script body
         # re-registers them in the next run.
         self._fragment_storage = MemoryFragmentStorage()
+        # Form ids whose last submit used clear_on_submit. The next submit of
+        # those forms serializes proto defaults for widgets the test has not
+        # set, matching frontend pending-clear without an extra rerun.
+        self._cleared_form_ids: set[str] = set()
 
         tree = ElementTree()
         tree._runner = self
@@ -529,13 +538,32 @@ class AppTest:
         """Register files from FileUploader widgets with the file manager."""
         from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 
+        submitted = _submitted_form_ids(self._tree)
+        form_clears = _form_clear_flags(self._tree)
         for widget in self._tree.file_uploader:
+            form_id = _widget_form_id(widget)
+            saved_files = widget._files
+            if form_id and form_id not in submitted:
+                # Re-register only the files committed by the last submit;
+                # newly staged uploads wait for this form's submit button.
+                widget._files = InitialValue()
+            elif _use_form_clear_defaults(
+                widget,
+                submitted=submitted,
+                cleared=self._cleared_form_ids,
+                form_clears=form_clears,
+            ):
+                continue
+            try:
+                files_to_register = widget._get_files_to_register()
+            finally:
+                widget._files = saved_files
             for (
                 file_id,
                 filename,
                 content,
                 mime_type,
-            ) in widget._get_files_to_register():
+            ) in files_to_register:
                 file_rec = UploadedFileRec(
                     file_id=file_id,
                     name=filename,
@@ -1408,24 +1436,25 @@ class AppTest:
         """Get elements or widgets of the specified type.
 
         This method returns the collection of all elements or widgets of
-        the specified type on the current page. Retrieve a specific element by
-        using its index (order on page) or key lookup.
+        the specified type on the current page. Retrieve a specific element
+        by index. Key lookup lives on typed collections
+        (``at.slider(key=...)``) or ``get_by_key``.
 
         Parameters
         ----------
         element_type: str
-            An element attribute of ``AppTest``. For example, "button",
-            "caption", or "chat_input".
+            An ``AppTest`` collection name such as ``"button"``,
+            ``"datetime_input"``, ``"pills"``, or ``"tabs"``. Internal node
+            type names such as ``"date_time_input"`` also work. ``"help"``
+            selects ``st.help`` elements (node type ``help_info``).
 
         Returns
         -------
         Sequence of Elements
-            Sequence of elements of the given type. Individual elements can
-            be accessed from a Sequence by index (order on the page). When
-            getting and ``element_type`` that is a widget, individual widgets
-            can be accessed by key. For example, ``at.get("text")[0]`` for the
-            first ``st.text`` element or ``at.get("slider")(key="my_key")`` for
-            the ``st.slider`` widget with a given key.
+            Sequence of matching nodes, accessed by index. For example,
+            ``at.get("text")[0]`` for the first ``st.text`` element. Widgets
+            with a key are looked up on the typed collection
+            (``at.slider(key="my_key")``) or with ``get_by_key``.
         """
         return self._tree.get(element_type)
 

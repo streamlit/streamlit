@@ -273,7 +273,9 @@ describe("withScreencast HOC", () => {
       // Initialization rejects asynchronously; flush pending microtasks so the
       // resulting state update is wrapped in act().
       await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0))
+        await new Promise(resolve => {
+          setTimeout(resolve, 0)
+        })
       })
 
       expect(

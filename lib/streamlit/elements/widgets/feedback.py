@@ -38,7 +38,7 @@ from streamlit.errors import StreamlitValueError, StreamlitValueOutOfRangeError
 from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import register_widget
+from streamlit.runtime.state import register_widget, validate_on_change_mode
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -269,6 +269,10 @@ class FeedbackMixin:
             raise StreamlitValueOutOfRangeError("default", default, 0, num_options - 1)
 
         key = to_key(key)
+        on_change = validate_on_change_mode(
+            on_change,
+            supported_modes=(),
+        )
         layout_config = create_layout_config(width=width, allow_content_width=True)
 
         check_widget_policies(self.dg, key, on_change, default_value=default)

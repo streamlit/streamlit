@@ -14,11 +14,19 @@
  * limitations under the License.
  */
 
+import { parseToRgba, rgba, transparentize } from "color2k"
 import { describe, expect, it } from "vitest"
 
+import { darkTheme, lightTheme } from "@streamlit/lib"
 import { PageConfig } from "@streamlit/protobuf"
 
-import { clampSidebarWidth, DEFAULT_WIDTH, shouldCollapse } from "./utils"
+import {
+  clampSidebarWidth,
+  DEFAULT_WIDTH,
+  getSidebarResizeHandleBackgroundImage,
+  getSidebarResizeHandleHoverBorderColor,
+  shouldCollapse,
+} from "./utils"
 
 const MIN_SIDEBAR_WIDTH = 200
 const MAX_SIDEBAR_WIDTH = 600
@@ -125,5 +133,83 @@ describe("clampSidebarWidth", () => {
       expect(clampSidebarWidth(Number.MAX_VALUE)).toBe(MAX_SIDEBAR_WIDTH)
       expect(clampSidebarWidth(Number.MIN_VALUE)).toBe(MIN_SIDEBAR_WIDTH)
     })
+  })
+})
+
+describe("getSidebarResizeHandleHoverBorderColor", () => {
+  it("increases borderColor opacity by the documented step", () => {
+    expect(
+      getSidebarResizeHandleHoverBorderColor(transparentize("#000000", 0.8))
+    ).toBe("rgba(0, 0, 0, 0.3)")
+  })
+
+  it("preserves the rgb of an opaque custom borderColor", () => {
+    const borderColor = "#00008B"
+    const [r, g, b] = parseToRgba(borderColor)
+
+    expect(getSidebarResizeHandleHoverBorderColor(borderColor)).toBe(
+      rgba(r, g, b, 1)
+    )
+  })
+
+  it("clamps alpha at 1 for near-opaque custom borderColor", () => {
+    const borderColor = "rgba(0, 0, 139, 0.95)"
+
+    expect(
+      parseToRgba(getSidebarResizeHandleHoverBorderColor(borderColor))[3]
+    ).toBe(1)
+  })
+
+  it.each([
+    ["light", lightTheme.emotion.colors.borderColor],
+    ["dark", darkTheme.emotion.colors.borderColor],
+  ] as const)(
+    "uses the fadedText10 → fadedText20 alpha step for the default %s theme",
+    (_name, borderColor) => {
+      const [, , , alpha] = parseToRgba(borderColor)
+      const [, , , hoverAlpha] = parseToRgba(
+        getSidebarResizeHandleHoverBorderColor(borderColor)
+      )
+
+      expect(alpha).toBe(0.2)
+      expect(hoverAlpha).toBe(0.3)
+    }
+  )
+})
+
+describe("getSidebarResizeHandleBackgroundImage", () => {
+  it("uses a wider gradient fade on hover", () => {
+    const borderColor = "#cccccc"
+
+    expect(
+      getSidebarResizeHandleBackgroundImage(borderColor, { isHovered: false })
+    ).toContain("transparent 36%")
+    expect(
+      getSidebarResizeHandleBackgroundImage(borderColor, { isHovered: true })
+    ).toContain("transparent 44%")
+  })
+
+  it("uses the provided borderColor in the gradient", () => {
+    const hoverBorderColor = getSidebarResizeHandleHoverBorderColor(
+      transparentize("#000000", 0.8)
+    )
+
+    expect(
+      getSidebarResizeHandleBackgroundImage(hoverBorderColor, {
+        isHovered: true,
+      })
+    ).toBe(
+      `linear-gradient(to right, transparent 20%, ${hoverBorderColor} 28%, transparent 44%)`
+    )
+  })
+
+  it("keeps the provided borderColor when building a rest gradient", () => {
+    const borderColor = "#cccccc"
+
+    expect(
+      getSidebarResizeHandleBackgroundImage(borderColor, { isHovered: false })
+    ).toBe(
+      `linear-gradient(to right, transparent 20%, ${borderColor} 28%, transparent 36%)`
+    )
   })
 })
