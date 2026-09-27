@@ -178,8 +178,8 @@ describe("ImageList Element", () => {
 
       await waitFor(() => {
         expect(link).toHaveAttribute("aria-labelledby")
-        expect(link).toHaveAccessibleName("Loaded caption")
       })
+      expect(link).toHaveAccessibleName("Loaded caption")
     })
 
     it("keeps decorative empty alt on the img and names the link from the URL", () => {
