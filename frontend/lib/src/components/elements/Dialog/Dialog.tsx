@@ -67,7 +67,7 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   children,
   widgetMgr,
   fragmentId,
-}): ReactElement => {
+}): ReactElement | null => {
   const {
     title,
     dismissible,
@@ -109,6 +109,12 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   // must stopImmediatePropagation so GlobalHotkeys never sees the event.
   const handleRKeySuppress = useCallback(
     (e: KeyboardEvent): void => {
+      // Skip events with a non-string `key` so `toLowerCase` does not throw
+      // (synthetic `Event`s from hosts, extensions, or tests omit `key`).
+      if (typeof e.key !== "string") {
+        return
+      }
+
       if (isOpen && e.key.toLowerCase() === "r" && !element.dismissible) {
         const target = e.target as HTMLElement
 
@@ -145,7 +151,7 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
 
   // don't use the Modal's isOpen prop as it feels laggy when using it
   if (!isOpen) {
-    return <></>
+    return null
   }
   return (
     <Modal

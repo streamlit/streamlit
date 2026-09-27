@@ -583,7 +583,7 @@ describe("Sidebar Component", () => {
         { initial: 150, expected: "200px", description: "clamps to minimum" },
         { initial: 800, expected: "600px", description: "clamps to maximum" },
         { initial: 400, expected: "400px", description: "uses value as-is" },
-        { initial: NaN, expected: "300px", description: "handles NaN" },
+        { initial: Number.NaN, expected: "300px", description: "handles NaN" },
       ])("$description", ({ initial, expected }) => {
         renderSidebar(
           {},

@@ -28,6 +28,14 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import TimeInput, { Props } from "./TimeInput"
 
+function lastItem<T>(items: T[]): T {
+  const last = items.at(-1)
+  if (last === undefined) {
+    throw new Error("Expected a last item")
+  }
+  return last
+}
+
 const getProps = (
   elementProps: Partial<TimeInputProto> = {},
   disabled = false
@@ -593,7 +601,7 @@ describe("TimeInput widget", () => {
 
     // Focus the last segment and tab out of the entire wrapper
     const segments = screen.getAllByRole("spinbutton")
-    const lastSegment = segments[segments.length - 1]
+    const lastSegment = lastItem(segments)
     await user.click(lastSegment)
     await user.tab()
 
@@ -642,7 +650,7 @@ describe("TimeInput widget", () => {
 
     // Focus the last segment (minute) so a single Tab leaves the wrapper entirely
     const segments = screen.getAllByRole("spinbutton")
-    const minuteSegment = segments[segments.length - 1]
+    const minuteSegment = lastItem(segments)
     await user.click(minuteSegment)
 
     // Type a new value — displayValue updates but commit is deferred to blur.
@@ -667,7 +675,7 @@ describe("TimeInput widget", () => {
     vi.mocked(props.widgetMgr.setStringValue).mockClear()
 
     const segments = screen.getAllByRole("spinbutton")
-    const minuteSegment = segments[segments.length - 1]
+    const minuteSegment = lastItem(segments)
     await user.click(minuteSegment)
     await user.keyboard("30")
 
@@ -693,7 +701,7 @@ describe("TimeInput widget", () => {
     vi.mocked(props.widgetMgr.setStringValue).mockClear()
 
     const segments = screen.getAllByRole("spinbutton")
-    const minuteSegment = segments[segments.length - 1]
+    const minuteSegment = lastItem(segments)
     await user.click(minuteSegment)
     await user.keyboard("30")
     await user.tab()
@@ -710,7 +718,7 @@ describe("TimeInput widget", () => {
     vi.mocked(props.widgetMgr.setStringValue).mockClear()
 
     const segments = screen.getAllByRole("spinbutton")
-    const minuteSegment = segments[segments.length - 1]
+    const minuteSegment = lastItem(segments)
     await user.click(minuteSegment)
 
     // Arrow key commits immediately
@@ -1353,7 +1361,7 @@ describe("TimeInput widget", () => {
       render(<TimeInput {...props} />)
 
       const segments = screen.getAllByRole("spinbutton")
-      const minuteSegment = segments[segments.length - 1]
+      const minuteSegment = lastItem(segments)
       await user.click(minuteSegment)
       await user.keyboard("3")
       expect(screen.getByTestId("InputInstructions")).toBeInTheDocument()

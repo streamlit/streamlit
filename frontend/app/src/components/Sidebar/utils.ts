@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { parseToRgba, rgba } from "color2k"
+
 import { PageConfig } from "@streamlit/protobuf"
 import { localStorageAvailable } from "@streamlit/utils"
 
@@ -24,7 +26,7 @@ export const DEFAULT_WIDTH = "300"
  * `max-width` convention (exclusive upper bound).
  */
 export function calculateMaxBreakpoint(value: string): number {
-  return parseInt(value, 10) - 0.02
+  return Number.parseInt(value, 10) - 0.02
 }
 
 export function shouldCollapse(
@@ -82,4 +84,44 @@ export function clampSidebarWidth(width: number): number {
     return Number.parseInt(DEFAULT_WIDTH, 10)
   }
   return Math.min(600, Math.max(200, width))
+}
+
+/**
+ * Alpha increase applied to a visible sidebar border on hover.
+ *
+ * Matches the default theme step from `fadedText10` (alpha 0.2) to
+ * `fadedText20` (alpha 0.3). Already-opaque custom `borderColor` values clamp
+ * at 1, so their hover feedback is only the wider gradient fade.
+ */
+const SIDEBAR_RESIZE_HANDLE_HOVER_ALPHA_BUMP = 0.1
+
+/**
+ * Increase `borderColor` opacity for a visible sidebar border on hover.
+ *
+ * Keep the same RGB so the line gets darker in light themes and lighter in
+ * dark themes. Callers should only apply this when `showSidebarBorder` is
+ * true — when the border is hidden, the line appearing on hover is feedback
+ * enough.
+ */
+export function getSidebarResizeHandleHoverBorderColor(
+  borderColor: string
+): string {
+  const [r, g, b, a] = parseToRgba(borderColor)
+  return rgba(r, g, b, Math.min(1, a + SIDEBAR_RESIZE_HANDLE_HOVER_ALPHA_BUMP))
+}
+
+/**
+ * Build the sidebar resize-handle border as a CSS gradient.
+ *
+ * The stops place a ~1px line about 2px into the 8px hit target. Hover uses a
+ * wider fade (44% vs 36%). Pass the already-resolved line color — including
+ * any hover opacity bump — as `borderColor`.
+ */
+export function getSidebarResizeHandleBackgroundImage(
+  borderColor: string,
+  { isHovered }: { isHovered: boolean }
+): string {
+  const fadeEnd = isHovered ? "44%" : "36%"
+
+  return `linear-gradient(to right, transparent 20%, ${borderColor} 28%, transparent ${fadeEnd})`
 }

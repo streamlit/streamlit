@@ -119,7 +119,7 @@ message Block {
     string label = 1;
     optional bool expanded = 2;
     string icon = 3;
-    // ID for dynamic expanders. Only set when on_change="rerun",
+    // ID for dynamic expanders. Only set when on_change="rerun" or bind="query-params",
     // signaling the frontend to treat this as a stateful widget.
     optional string id = 4;
     // Visual style of the expandable container.
@@ -127,6 +127,12 @@ message Block {
     // Progress state, only set by st.status. The frontend uses it to pick the
     // step icon and to announce the state to screen readers.
     State state = 6;
+    // Query parameter name the expander's open state syncs with. Only set when
+    // bind="query-params".
+    optional string query_param_key = 7;
+    // Original `expanded=` default. The frontend omits the query param when the
+    // expander matches this value. Distinct from `expanded`, which is current state.
+    optional bool default_expanded = 8;
   }
 
   message Dialog {
@@ -157,11 +163,17 @@ message Block {
 
   message TabContainer {
     int32 default_tab_index = 1;
-    // Widget ID for dynamic tabs. Only set when on_change="rerun",
-    // signaling the frontend to treat this as a stateful widget.
-    // When absent, tabs may still have a block-level id for CSS key
-    // styling but should not trigger reruns on tab change.
+    // Widget ID for dynamic tabs. Only set when on_change="rerun" or
+    // bind="query-params", signaling the frontend to treat this as a
+    // stateful widget. When absent, tabs may still have a block-level id
+    // for CSS key styling but should not trigger reruns on tab change.
     optional string id = 2;
+    // Query parameter name the active tab syncs with. Only set when
+    // bind="query-params".
+    optional string query_param_key = 3;
+    // Original default tab label (from `default=` or the first tab). Omitted
+    // from the URL when the active tab matches.
+    optional string default_tab_label = 4;
   }
 
   message Tab {

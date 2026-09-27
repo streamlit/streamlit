@@ -229,14 +229,17 @@ interface RawElementNodeRendererProps extends ElementNodeRendererProps {
   isStale: boolean
 }
 
-function hideIfStale(isStale: boolean, component: ReactElement): ReactElement {
-  return isStale ? <></> : component
+function hideIfStale(
+  isStale: boolean,
+  component: ReactElement
+): ReactElement | null {
+  return isStale ? null : component
 }
 
 // Render ElementNodes (i.e. leaf nodes).
 const RawElementNodeRenderer = (
   props: RawElementNodeRendererProps
-): ReactElement => {
+): ReactElement | null => {
   const { node, isStale } = props
   const { isInRoot, isInHorizontalLayout } = useRequiredContext(FlexContext)
 

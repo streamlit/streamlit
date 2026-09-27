@@ -76,6 +76,8 @@ if TYPE_CHECKING:
         bool,
     )
     assert_type(checkbox("Accept terms", on_change=None), bool)
+    assert_type(checkbox("Accept terms", on_change="rerun"), bool)
+    assert_type(checkbox("Accept terms", on_change="ignore"), bool)
 
     assert_type(
         checkbox(
@@ -137,6 +139,8 @@ if TYPE_CHECKING:
         bool,
     )
     assert_type(toggle("Enable feature", on_change=None), bool)
+    assert_type(toggle("Enable feature", on_change="rerun"), bool)
+    assert_type(toggle("Enable feature", on_change="ignore"), bool)
 
     assert_type(
         toggle(

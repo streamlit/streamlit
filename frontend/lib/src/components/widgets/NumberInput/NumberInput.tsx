@@ -84,6 +84,8 @@ export interface Props {
   fragmentId?: string
 }
 
+const REQUIRED_FIELD_MESSAGE = "This field is required."
+
 const NumberInput: React.FC<Props> = ({
   disabled,
   element,
@@ -139,6 +141,7 @@ const NumberInput: React.FC<Props> = ({
     })
   })
   const [validationError, setValidationError] = useState<string | null>(null)
+  const [hasRequiredError, setHasRequiredError] = useState(false)
 
   const queryParamBinding = element.queryParamKey
     ? {
@@ -167,6 +170,7 @@ const NumberInput: React.FC<Props> = ({
       setDirty(false)
       setFormattedValue(formatCurrentValue(newValue))
       setValidationError(null)
+      setHasRequiredError(false)
     }, [elementDefault, formatCurrentValue]),
     queryParamBinding,
   })
@@ -174,6 +178,7 @@ const NumberInput: React.FC<Props> = ({
   // Additional local state for UI interactions
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const formSubmitValidatorRef = useRef<() => boolean>(() => true)
   const id = useId()
   const validationErrorId = `${id}-validation-error`
 
@@ -230,15 +235,28 @@ const NumberInput: React.FC<Props> = ({
     [formatCurrentValue, hasMax, hasMin, max, min]
   )
 
-  // Commit a value: validate, update widget manager, and sync to URL
+  /**
+   * Writes a value after required-then-range checks. Returns false without
+   * writing when either check fails. `skipRequired` stages an empty in-form
+   * value so submit-time validators can still paint the required error.
+   */
   const commitValue = useCallback(
     ({
       value: valueArg,
       fromUser,
+      skipRequired = false,
     }: {
       value: number | null
       fromUser: boolean
+      skipRequired?: boolean
     }): boolean => {
+      const newValue = valueArg ?? elementDefault ?? null
+
+      if (element.required && newValue === null && !skipRequired) {
+        setHasRequiredError(true)
+        return false
+      }
+
       // Validate range and show Streamlit-styled error message if out of range.
       if (notNullOrUndefined(valueArg)) {
         const rangeValidationError = getRangeValidationMessage(valueArg)
@@ -248,8 +266,7 @@ const NumberInput: React.FC<Props> = ({
         }
       }
 
-      const newValue = valueArg ?? elementDefault ?? null
-
+      setHasRequiredError(false)
       setValidationError(null)
       setValueWithSource({ value: newValue, fromUser })
 
@@ -286,7 +303,10 @@ const NumberInput: React.FC<Props> = ({
 
   // When the widget has no default, the user can clear the value to null.
   // `clearable` is false when disabled, so the clear button is never shown in that state.
-  const clearable = isNullOrUndefined(element.default) && !disabled
+  // Required fields hide the clear button because it would commit an empty value.
+  // Users can still empty the field by selecting the text and deleting it.
+  const clearable =
+    isNullOrUndefined(element.default) && !disabled && !element.required
 
   const handleClear = useCallback(() => {
     commitValue({ value: null, fromUser: true })
@@ -320,18 +340,11 @@ const NumberInput: React.FC<Props> = ({
       const { value: targetValue } = e.target
 
       setValidationError(null)
-
-      if (targetValue === "") {
-        setDirty(true)
-        setFormattedValue(null)
-      } else {
-        setDirty(true)
-        setFormattedValue(targetValue)
-
-        // We don't call setValueWithSource here because we want to allow
-        // intermediate values (like "1." for floats). The value is committed
-        // on blur or enter.
-      }
+      setHasRequiredError(false)
+      setDirty(true)
+      // Don't call setValueWithSource here: intermediate values (like "1."
+      // for floats) are committed on blur or enter.
+      setFormattedValue(targetValue === "" ? null : targetValue)
     },
     []
   )
@@ -342,12 +355,40 @@ const NumberInput: React.FC<Props> = ({
       return null
     }
     if (element.dataType === NumberInputProto.DataType.INT) {
-      const parsed = parseInt(formattedValue, 10)
-      return isNaN(parsed) ? null : parsed
+      const parsed = Number.parseInt(formattedValue, 10)
+      return Number.isNaN(parsed) ? null : parsed
     }
-    const parsed = parseFloat(formattedValue)
-    return isNaN(parsed) ? null : parsed
+    const parsed = Number.parseFloat(formattedValue)
+    return Number.isNaN(parsed) ? null : parsed
   }, [formattedValue, element.dataType])
+
+  /**
+   * True when the value, after the default fallback, is empty — i.e. what
+   * commitValue would write is null.
+   */
+  const isRequiredEmpty = (valueArg: number | null): boolean =>
+    (valueArg ?? elementDefault ?? null) === null
+
+  // Clear the stored error once it is no longer visible. Keyed widgets preserve
+  // local state across required changes and programmatic values, so otherwise
+  // re-enabling required could resurrect a stale error.
+  const requiredError =
+    element.required &&
+    hasRequiredError &&
+    isRequiredEmpty(currentNumericValue)
+      ? REQUIRED_FIELD_MESSAGE
+      : null
+  if (
+    hasRequiredError &&
+    (!element.required || !isRequiredEmpty(currentNumericValue))
+  ) {
+    setHasRequiredError(false)
+  }
+  const displayedError = requiredError ?? validationError
+  const errorAlertText =
+    requiredError ?? (validationError ? `Error: ${validationError}` : null)
+  const errorTooltipSource =
+    requiredError ?? (validationError ? `**Error**: ${validationError}` : null)
 
   // Calculate button enabled states based on the currently displayed value, not the committed value
   const canDec = canDecrement(currentNumericValue, step, min)
@@ -355,12 +396,17 @@ const NumberInput: React.FC<Props> = ({
 
   const handleBlur = useCallback((): void => {
     if (dirty) {
-      // Use currentNumericValue (parsed from formattedValue) not value (from useBasicWidgetState)
-      // because value isn't updated until commit, but the user has typed a new value
-      commitValue({ value: currentNumericValue, fromUser: true })
+      // Validate the user's current edit, not the last committed value. In a
+      // form, stage empty values here and let the submit validator enforce
+      // requiredness.
+      commitValue({
+        value: currentNumericValue,
+        fromUser: true,
+        skipRequired: inForm,
+      })
     }
     setIsFocused(false)
-  }, [dirty, currentNumericValue, commitValue])
+  }, [dirty, currentNumericValue, commitValue, inForm])
 
   const increment = useCallback(() => {
     if (canInc) {
@@ -407,10 +453,13 @@ const NumberInput: React.FC<Props> = ({
           let shouldSubmitForm = true
           if (dirty) {
             // When committing, if currentNumericValue is null (empty input),
-            // commitValue will fall back to elementDefault
+            // commitValue will fall back to elementDefault. In-form Enter
+            // stages without the required check so submitForm can run every
+            // validator (including this field's required/range checks).
             shouldSubmitForm = commitValue({
               value: currentNumericValue,
               fromUser: true,
+              skipRequired: inForm,
             })
           }
           // Also gate on `!validationError`: a step on an out-of-range value
@@ -437,12 +486,49 @@ const NumberInput: React.FC<Props> = ({
       dirty,
       currentNumericValue,
       commitValue,
+      inForm,
       validationError,
       widgetMgr,
       elementFormId,
       fragmentId,
     ]
   )
+
+  /** Returns false to abort the form submit, painting the required or range error. Runs on both submit-button click and Enter. */
+  formSubmitValidatorRef.current = () => {
+    if (dirty) {
+      return commitValue({
+        value: currentNumericValue,
+        fromUser: true,
+      })
+    }
+
+    // Do not write a clean value. commitValue parses the display-formatted
+    // string, so an untouched 0.075 with default %0.2f would become 0.08.
+    if (element.required && isRequiredEmpty(value)) {
+      setHasRequiredError(true)
+      return false
+    }
+
+    // A step on an out-of-range value can set validationError while dirty
+    // stays false. Keep blocking submit while that error is visible.
+    return !validationError
+  }
+
+  // Register for every in-form number input so submit checks required and range.
+  // Dirty fields validate the live edit; clean fields preserve the stored value.
+  useEffect(() => {
+    if (!inForm) {
+      return undefined
+    }
+
+    const validator = (): boolean => formSubmitValidatorRef.current()
+    widgetMgr.addFormSubmitValidator(elementFormId, element.id, validator)
+
+    return () => {
+      widgetMgr.removeFormSubmitValidator(elementFormId, element.id)
+    }
+  }, [element.id, elementFormId, inForm, widgetMgr])
 
   // Adjust breakpoint for icon so the total width of the input element
   // is same when input controls hidden
@@ -467,6 +553,7 @@ const NumberInput: React.FC<Props> = ({
       <WidgetLabel
         label={element.label}
         disabled={disabled}
+        required={element.required}
         labelVisibility={labelVisibilityProtoValueToEnum(
           element.labelVisibility?.value
         )}
@@ -487,20 +574,20 @@ const NumberInput: React.FC<Props> = ({
        * `validationBehavior="aria"` disables React Aria's native constraint
        * validation. Otherwise React Aria reflects the input's native `min`/`max`
        * `ValidityState` into `aria-invalid`/`data-invalid` independently of our
-       * `validationError`, which leaves the field styled red (and marked invalid
+       * `displayedError`, which leaves the field styled red (and marked invalid
        * for screen readers) after the user corrects an out-of-range value.
-       * Driving `isInvalid` from `validationError` makes our custom range
-       * validation the single source of truth for the invalid state.
+       * Driving `isInvalid` from `displayedError` makes our custom required and
+       * range validation the single source of truth for the invalid state.
        */}
       <TextField
         isDisabled={disabled}
         aria-label={element.label}
         validationBehavior="aria"
-        isInvalid={!!validationError}
+        isInvalid={!!displayedError}
       >
         <StyledInputContainer
           $isFocused={isFocused}
-          $hasError={!!validationError}
+          $hasError={!!displayedError}
           data-testid="stNumberInputContainer"
         >
           {element.icon && (
@@ -527,18 +614,19 @@ const NumberInput: React.FC<Props> = ({
             value={formattedValue ?? ""}
             placeholder={element.placeholder}
             // `aria-invalid` is driven by the TextField's `isInvalid` prop.
-            aria-describedby={validationError ? validationErrorId : undefined}
+            aria-required={element.required ? true : undefined}
+            aria-describedby={displayedError ? validationErrorId : undefined}
             onFocus={handleFocus}
             onBlur={handleBlur}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
           />
-          {validationError && (
+          {errorTooltipSource && (
             <StyledEndEnhancer>
               <Tooltip
                 content={
                   <StreamlitMarkdown
-                    source={`**Error**: ${validationError}`}
+                    source={errorTooltipSource}
                     allowHTML={false}
                   />
                 }
@@ -600,9 +688,9 @@ const NumberInput: React.FC<Props> = ({
               </StyledInputControl>
             </StyledInputControls>
           )}
-          {validationError && (
+          {errorAlertText && (
             <StyledVisuallyHidden id={validationErrorId} role="alert">
-              {`Error: ${validationError}`}
+              {errorAlertText}
             </StyledVisuallyHidden>
           )}
         </StyledInputContainer>
@@ -610,7 +698,7 @@ const NumberInput: React.FC<Props> = ({
       {shouldShowInstructions && (
         <StyledInstructionsContainer
           $clearable={clearable}
-          $hasError={!!validationError}
+          $hasError={!!displayedError}
         >
           <InputInstructions
             dirty={dirty}

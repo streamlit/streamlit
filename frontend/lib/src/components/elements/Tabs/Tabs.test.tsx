@@ -45,7 +45,13 @@ function makeTab(label: string, children: BlockNode[] = []): BlockNode {
 
 function makeTabsNode(
   tabs: number,
-  options?: { blockId?: string; widgetId?: string }
+  options?: {
+    blockId?: string
+    widgetId?: string
+    queryParamKey?: string
+    defaultTabLabel?: string
+    defaultTabIndex?: number
+  }
 ): BlockNode {
   return new BlockNode(
     FAKE_SCRIPT_HASH,
@@ -55,6 +61,9 @@ function makeTabsNode(
       id: options?.blockId ?? "",
       tabContainer: {
         id: options?.widgetId ?? undefined,
+        defaultTabIndex: options?.defaultTabIndex ?? 0,
+        queryParamKey: options?.queryParamKey,
+        defaultTabLabel: options?.defaultTabLabel,
       },
     })
   )
@@ -674,5 +683,93 @@ describe("st.tabs", () => {
         "false"
       )
     })
+  })
+})
+
+describe("Tabs query param binding", () => {
+  it("registers query param binding on mount when queryParamKey is set", () => {
+    const widgetMgr = createWidgetMgr()
+    const node = makeTabsNode(3, {
+      widgetId: "tabs-qp",
+      queryParamKey: "my_tabs",
+      defaultTabLabel: "Tab 0",
+    })
+    vi.spyOn(widgetMgr, "registerQueryParamBinding")
+
+    render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+    expect(widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      "tabs-qp",
+      "my_tabs",
+      "string_value",
+      "Tab 0",
+      false,
+      undefined
+    )
+  })
+
+  it("uses defaultTabLabel rather than the current selection as the binding default", () => {
+    const widgetMgr = createWidgetMgr()
+    const node = makeTabsNode(3, {
+      widgetId: "tabs-qp",
+      queryParamKey: "my_tabs",
+      defaultTabLabel: "Tab 0",
+      defaultTabIndex: 2,
+    })
+    vi.spyOn(widgetMgr, "registerQueryParamBinding")
+
+    render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+    expect(widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      "tabs-qp",
+      "my_tabs",
+      "string_value",
+      "Tab 0",
+      false,
+      undefined
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const widgetMgr = createWidgetMgr()
+    const node = makeTabsNode(3, {
+      widgetId: "tabs-qp",
+      queryParamKey: "my_tabs",
+      defaultTabLabel: "Tab 0",
+    })
+    const unregisterSpy = vi.spyOn(widgetMgr, "unregisterQueryParamBinding")
+
+    const { unmount } = render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+    unregisterSpy.mockClear()
+
+    unmount()
+
+    expect(widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      "tabs-qp"
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const widgetMgr = createWidgetMgr()
+    const node = makeTabsNode(3, { widgetId: "tabs-qp" })
+    vi.spyOn(widgetMgr, "registerQueryParamBinding")
+
+    render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+    expect(widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+
+  it("does not register query param binding without widget id", () => {
+    const widgetMgr = createWidgetMgr()
+    const node = makeTabsNode(3, {
+      queryParamKey: "my_tabs",
+      defaultTabLabel: "Tab 0",
+    })
+    vi.spyOn(widgetMgr, "registerQueryParamBinding")
+
+    render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+    expect(widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
   })
 })

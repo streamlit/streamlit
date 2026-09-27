@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "streamlit"
-version = "1.63.0"
+version = "1.64.0"
 description = "A faster way to build and share data apps"
 # Note: README.md is in the repo root. The build process copies it to lib/
 # before building. See .github/workflows/release.yml.
@@ -94,8 +94,8 @@ dependencies = [
   "anyio>=4.0.0,<5",
   # Required for file-upload support:
   "python-multipart>=0.0.10,<1",
-  # Required for websocket support:
-  "websockets>=12.0.0,<17",
+  # Required for websocket support. Websockets 17.x requires Python >= 3.11.
+  "websockets>=12.0.0,<18",
   # Required for cookie signing:
   "itsdangerous>=2.1.2,<3",
   # Don't require watchdog on MacOS, since it'll fail without xcode tools.

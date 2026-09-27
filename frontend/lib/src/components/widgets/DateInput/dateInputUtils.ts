@@ -31,6 +31,12 @@ import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
 type FormatToken = "Y" | "M" | "D"
 
+/**
+ * Editable segments. Matched on `data-type` rather than `role`, which React Aria
+ * replaces with `textbox` on iOS. Literals are the separators between segments.
+ */
+export const SEGMENT_SELECTOR = '[data-type]:not([data-type="literal"])'
+
 const TOKEN_TO_SEGMENT_TYPE: Record<FormatToken, "year" | "month" | "day"> = {
   Y: "year",
   M: "month",
@@ -134,16 +140,43 @@ export function getMaxDate(element: DateInputProto): CalendarDate | undefined {
     : undefined
 }
 
-/** Seeds the calendar focused date so it stays controlled from mount
- * (avoids react-stately's uncontrolled→controlled warning). */
+/** Clamps to min first, then max; assumes the backend-validated min <= max. */
+function clampCalendarDateToBounds(
+  date: CalendarDate,
+  minDate: CalendarDate,
+  maxDate?: CalendarDate
+): CalendarDate {
+  let result = date.compare(minDate) < 0 ? minDate : date
+  if (maxDate && result.compare(maxDate) > 0) {
+    result = maxDate
+  }
+  return result
+}
+
+/**
+ * Today, clamped to the widget's bounds. Used as the calendar's visible month
+ * when nothing is committed yet — no value in single mode, no start date in
+ * range mode.
+ */
+export function getFocusedDateFallback(
+  minDate: CalendarDate,
+  maxDate?: CalendarDate
+): CalendarDate {
+  return clampCalendarDateToBounds(today(getLocalTimeZone()), minDate, maxDate)
+}
+
+/**
+ * Seeds calendar focus with a concrete date to keep it controlled from mount.
+ * Uses the first parsable value, or today clamped to the allowed range.
+ */
 export function getInitialFocusedDate(
   value: string[],
-  minDate: CalendarDate
+  minDate: CalendarDate,
+  maxDate?: CalendarDate
 ): CalendarDate {
   const fromValue = value[0] ? isoToCalendarDate(value[0]) : null
   if (fromValue) return fromValue
-  const now = today(getLocalTimeZone())
-  return now.compare(minDate) < 0 ? minDate : now
+  return getFocusedDateFallback(minDate, maxDate)
 }
 
 /** Gate for enabling quick-select: only when `minDate` is more than 2 years in the past. */
@@ -218,7 +251,11 @@ export function formatCalendarDate(
     .join(separator)
 }
 
-/** Builds the user-facing error message for out-of-range dates. */
+/**
+ * Builds the out-of-range tooltip. In range mode, the message identifies the
+ * violated bound rather than the edited field because either endpoint can
+ * violate either bound.
+ */
 export function createDateErrorMessage(
   errorType: DateValidationErrorType,
   isRange: boolean,
@@ -227,19 +264,10 @@ export function createDateErrorMessage(
 ): string | null {
   if (!errorType) return null
 
-  if (isRange) {
-    const label = errorType === "afterMax" ? "End" : "Start"
-    const messageEnding =
-      errorType === "afterMax"
-        ? `before ${maxDateString}`
-        : `after ${minDateString}`
-    return `**Error**: ${label} date set outside allowed range. Please select a date ${messageEnding}.`
-  }
-
   if (errorType === "afterMax") {
     return `**Error**: Date set outside allowed range. Please select a date on or before ${maxDateString}.`
   }
-  if (!maxDateString) {
+  if (isRange || !maxDateString) {
     return `**Error**: Date set outside allowed range. Please select a date on or after ${minDateString}.`
   }
   return `**Error**: Date set outside allowed range. Please select a date between ${minDateString} and ${maxDateString}.`
@@ -255,7 +283,7 @@ export function parsePastedDate(
   format: string
 ): CalendarDate | null {
   const { order, separator } = parseFormatOrder(format)
-  const escapedSep = separator.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  const escapedSep = separator.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")
   const re = new RegExp(
     `^(\\d{1,4})${escapedSep}(\\d{1,4})${escapedSep}(\\d{1,4})$`
   )
@@ -284,6 +312,84 @@ export function parsePastedDate(
 }
 
 export type DateSegmentType = "year" | "month" | "day"
+
+/**
+ * Delimiters for a whole-range paste:
+ * - en dash or em dash (optional surrounding whitespace)
+ * - a hyphen with spaces on both sides
+ * - the word "to"
+ *
+ * A bare hyphen is not a delimiter, so hyphenated dates (YYYY-MM-DD) stay intact.
+ */
+const RANGE_PASTE_SEPARATOR = /\s*[\u2013\u2014]\s*|\s+-\s+|\s+to\s+/i
+
+export type ParsedDateFieldPaste =
+  | { kind: "date"; date: CalendarDate }
+  | { kind: "range"; start: CalendarDate; end: CalendarDate }
+  | { kind: "partial"; segmentType: DateSegmentType; value: number }
+
+/**
+ * Parses a pasted start–end string using `format` for each half.
+ * Returns null unless the text splits into exactly two dates that both parse.
+ */
+export function parsePastedDateRange(
+  text: string,
+  format: string
+): { start: CalendarDate; end: CalendarDate } | null {
+  const parts = text.trim().split(RANGE_PASTE_SEPARATOR)
+  if (parts.length !== 2) return null
+
+  const start = parsePastedDate(parts[0].trim(), format)
+  const end = parsePastedDate(parts[1].trim(), format)
+  if (!start || !end) return null
+  return { start, end }
+}
+
+/**
+ * Parses clipboard text for a DateField. Tries, in order:
+ * - a full start–end range, when `allowRangePaste` is set
+ * - a single full date
+ * - a partial year/month/day paste, when `segmentType` is a segment token
+ */
+export function parseDateFieldPaste(
+  text: string,
+  format: string,
+  options: {
+    allowRangePaste?: boolean
+    segmentType?: string | null
+  } = {}
+): ParsedDateFieldPaste | null {
+  const trimmed = text.trim()
+
+  if (options.allowRangePaste) {
+    const range = parsePastedDateRange(trimmed, format)
+    if (range) return { kind: "range", ...range }
+  }
+
+  const date = parsePastedDate(trimmed, format)
+  if (date) return { kind: "date", date }
+
+  const partial = parsePartialSegmentPaste(
+    trimmed,
+    options.segmentType ?? null
+  )
+  if (!partial) return null
+  return { kind: "partial", ...partial }
+}
+
+/**
+ * Applies a partial segment paste to `base`. Returns null when the result
+ * would be invalid — `CalendarDate` clamps overflow (April 31 becomes
+ * April 30) rather than rejecting, so the round-trip is compared explicitly.
+ */
+export function applyPartialSegmentToDate(
+  base: CalendarDate,
+  partial: { segmentType: DateSegmentType; value: number }
+): CalendarDate | null {
+  const newDate = base.set({ [partial.segmentType]: partial.value })
+  if (newDate[partial.segmentType] !== partial.value) return null
+  return newDate
+}
 
 /** Parses a partial paste (pure digits, no separator) targeting a single segment. */
 export function parsePartialSegmentPaste(

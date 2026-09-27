@@ -103,7 +103,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   const mapboxToken = element.mapboxToken || contextMapboxToken
   const usesMapbox =
     deck.mapProvider === "mapbox" ||
-    (deck?.mapStyle && deck.mapStyle?.indexOf("mapbox") >= 0)
+    (deck?.mapStyle && deck.mapStyle?.includes("mapbox") === true)
   const showBasemap = useMemo(
     () =>
       shouldShowBasemap({
@@ -228,11 +228,18 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     })
   }, [setSelection])
 
+  // Name the chart only when alt is non-blank. Pair aria-label with
+  // role="figure" so the name is exposed on this generic div without
+  // role="img", which would make the toolbar and Mapbox controls presentational.
+  const accessibleName = element.alt?.trim() || undefined
+
   return (
     <StyledDeckGlChart
       className="stDeckGlJsonChart"
       data-testid="stDeckGlJsonChart"
       isStretchHeight={isStretchHeight}
+      role={accessibleName ? "figure" : undefined}
+      aria-label={accessibleName}
     >
       {usesMapbox ? <MapBoxCss /> : null}
       <Toolbar

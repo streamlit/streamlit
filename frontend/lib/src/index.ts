@@ -74,6 +74,7 @@ export {
   getOverlayZIndex,
   getPopoverContainerStyle,
 } from "./components/shared/Base/styled-components"
+export { getToggleTrackColor } from "./components/shared/Checkbox/toggleTrackStyles"
 export {
   default as BaseButton,
   BaseButtonKind,
@@ -234,6 +235,7 @@ export {
   isScrollingHidden,
   isToolbarDisplayed,
   makeElementWithInfoText,
+  normalizeQueryString,
   notUndefined,
   preserveEmbedQueryParams,
   setCookie,

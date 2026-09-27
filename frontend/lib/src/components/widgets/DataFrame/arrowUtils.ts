@@ -103,7 +103,7 @@ export function extractCssProperty(
     "gm"
   )
   // Makes the regex simpler to match the element correctly:
-  cssStyle = cssStyle.replace(/{/g, " {")
+  cssStyle = cssStyle.replaceAll("{", " {")
 
   const match = regex.exec(cssStyle)
   if (match) {
@@ -239,10 +239,7 @@ function parseColumnHeaderNames(columnHeaderNames: string[]): {
   title: string
   group: string | undefined
 } {
-  const title =
-    columnHeaderNames.length > 0
-      ? columnHeaderNames[columnHeaderNames.length - 1]
-      : ""
+  const title = columnHeaderNames.at(-1) ?? ""
 
   // If there are > 1 header columns, join all these headers with a "/"
   // and use it as the group name, but ignore empty strings headers.

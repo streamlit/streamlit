@@ -90,3 +90,10 @@ with st.container(
     border=True, horizontal=True, key="test_fixed_width_in_horizontal_container"
 ):
     st.line_chart(df, width=300)
+
+# Keep accessible-name cases last because existing E2E assertions use positional
+# chart indexes.
+with st.container(key="line_alt"):
+    st.line_chart(df, alt="Line chart of columns a, b, and c")
+with st.container(key="line_no_alt"):
+    st.line_chart(df)

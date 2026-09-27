@@ -476,7 +476,7 @@ export function computeDateTimeStatistics(
     // toSafeDate handles Date objects, bigints, numbers, and strings. It returns
     // null/undefined for empty or unparseable values.
     const date = isNullOrUndefined(v) ? null : toSafeDate(v)
-    const timestamp = notNullOrUndefined(date) ? date.getTime() : NaN
+    const timestamp = notNullOrUndefined(date) ? date.getTime() : Number.NaN
     if (Number.isFinite(timestamp)) {
       timestamps.push(timestamp)
     } else {

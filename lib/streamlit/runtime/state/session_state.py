@@ -48,6 +48,12 @@ from streamlit.runtime.runtime_util import (
     WidgetStateSizeError,
     get_max_widget_state_size_bytes,
 )
+from streamlit.runtime.scriptrunner_utils.script_requests import (
+    _TRIGGER_PROTO_FIELDS,
+    _coalesce_replay_trigger_states,
+    _coalesce_replay_trigger_values,
+    _has_active_trigger_value,
+)
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     RunLocation,
     ScriptRunContext,
@@ -88,15 +94,6 @@ if TYPE_CHECKING:
 STREAMLIT_INTERNAL_KEY_PREFIX: Final = "$$STREAMLIT_INTERNAL_KEY"
 SCRIPT_RUN_WITHOUT_ERRORS_KEY: Final = (
     f"{STREAMLIT_INTERNAL_KEY_PREFIX}_SCRIPT_RUN_WITHOUT_ERRORS"
-)
-
-_TRIGGER_PROTO_FIELDS: Final = frozenset(
-    {
-        "trigger_value",
-        "string_trigger_value",
-        "chat_input_value",
-        "json_trigger_value",
-    }
 )
 
 
@@ -197,7 +194,7 @@ class WStates(MutableMapping[str, Any]):
         )
         value = (
             wstate.value.__getattribute__(value_field_name)
-            if value_field_name  # Field name is None if the widget value was cleared
+            if value_field_name is not None  # None if the widget value was cleared
             else None
         )
 
@@ -688,12 +685,8 @@ class SessionState:
         default_factory=PersistedWidgetTracker
     )
 
-    # The widget_states proto for the current interaction.
-    # on_script_will_rerun stashes this so _request_full_app_rerun can forward
-    # the values (including triggers) in its follow-up rerun.  Without the
-    # stash the proto would be a local variable unreachable by the time the
-    # escalation fires.  Cleared after callbacks finish or when
-    # suppress_callbacks skips dispatch.
+    # Preserve fresh browser state through callback dispatch so a targeted rerun can
+    # replay consumed triggers whenever it preempts this body. Cleared after callbacks.
     _current_interaction_widget_states: WidgetStatesProto | None = field(
         default=None, repr=False
     )
@@ -900,37 +893,64 @@ class SessionState:
 
     def on_script_will_rerun(
         self,
-        latest_widget_states: WidgetStatesProto,
+        fresh_widget_states: WidgetStatesProto | None,
         *,
-        suppress_callbacks: bool = False,
+        replay_trigger_states: WidgetStatesProto | None = None,
+        replay_trigger_values: Mapping[str, Any] | None = None,
+        is_history_navigation: bool = False,
     ) -> None:
-        """Called by ScriptRunner before its script re-runs.
+        """Prepare widget state before a script rerun.
 
-        Update widget data and call callbacks on widgets whose value changed
-        between the previous and current script runs.
+        Dispatch callbacks for fresh browser input, then overlay replay triggers whose
+        callbacks already ran so the script body can still observe them.
 
         Parameters
         ----------
-        suppress_callbacks
-            When True, apply widget values but skip callback dispatch.
-            Set on the full-app rerun queued by ``_request_full_app_rerun``
-            after callbacks have already run in this interaction.
+        fresh_widget_states : WidgetStatesProto | None
+            Browser-provided widget states for this interaction. Changes in these
+            states are eligible for callback dispatch.
+        replay_trigger_states : WidgetStatesProto | None
+            Active trigger states whose callbacks already ran. These are applied after
+            fresh callbacks without dispatching their callbacks again.
+        replay_trigger_values : Mapping[str, Any] | None
+            Hydrated chat-input values for replay trigger states, keyed by widget ID.
+            They preserve uploaded files and audio because chat deserialization
+            consumes their records and cannot safely be repeated.
+        is_history_navigation : bool
+            Whether this rerun was triggered by browser back/forward. When true,
+            stale widget states for query-bound widgets are ignored so the URL
+            can restore their values.
         """
         self._reset_triggers()
         self._compact_state()
-        self.set_widgets_from_proto(latest_widget_states)
-        if suppress_callbacks:
-            return
-        self._current_interaction_widget_states = latest_widget_states
-        try:
-            self._call_callbacks()
-        finally:
-            self._current_interaction_widget_states = None
+        if fresh_widget_states is not None:
+            if is_history_navigation:
+                fresh_widget_states = self._omit_query_bound_widget_states(
+                    fresh_widget_states
+                )
+            self.set_widgets_from_proto(fresh_widget_states)
+            self._current_interaction_widget_states = fresh_widget_states
+            try:
+                self._call_callbacks(
+                    incoming_replay_trigger_states=replay_trigger_states,
+                    incoming_replay_trigger_values=replay_trigger_values,
+                )
+            finally:
+                self._current_interaction_widget_states = None
+        if replay_trigger_states is not None:
+            self._overlay_replay_trigger_states(
+                replay_trigger_states,
+                replay_trigger_values,
+                fresh_widget_states,
+            )
 
-    def _call_callbacks(self) -> None:
-        """Call callbacks for widgets whose value changed or whose trigger fired,
-        then queue the reruns they asked for.
-        """
+    def _call_callbacks(
+        self,
+        *,
+        incoming_replay_trigger_states: WidgetStatesProto | None = None,
+        incoming_replay_trigger_values: Mapping[str, Any] | None = None,
+    ) -> None:
+        """Run changed-widget callbacks, collect rerun votes, and submit reruns atomically."""
         votes = _CallbackRerunVotes()
 
         # Skip callbacks for disabled widgets: a reported change can only come
@@ -995,21 +1015,25 @@ class SessionState:
         #
         # No try/finally: if a callback raised, the interaction errored and queueing a
         # rerun anyway would clear the exception element on the next SCRIPT_STARTED.
+        rerun_batch: list[RerunData] = []
         if ctx and ctx.script_requests:
             # Queue a navigating request last: request_rerun takes page_script_hash
             # (and query_string) from the newest request, so an st.rerun() coalesced
             # after an st.switch_page() would point the rerun back at the page the
             # user asked to leave.
             current_page = ctx.page_script_hash
-            for rerun_data in sorted(
-                votes.pending_reruns,
-                key=lambda data: data.page_script_hash != current_page,
-            ):
-                ctx.script_requests.request_rerun(rerun_data)
+            rerun_batch.extend(
+                sorted(
+                    votes.pending_reruns,
+                    key=lambda data: data.page_script_hash != current_page,
+                )
+            )
 
         if (
             votes.requested_targeted
             and votes.wants_interaction_default
+            and ctx
+            and ctx.script_requests
             and _interaction_default_is_app_wide(ctx)
             and not _navigation_is_pending(votes.pending_reruns, ctx)
         ):
@@ -1020,7 +1044,51 @@ class SessionState:
             #
             # A pending navigation already reruns the whole app, so this request would
             # add nothing but its own page — the one being navigated away from.
-            self._request_full_app_rerun()
+            rerun_batch.append(self._build_full_app_rerun(ctx))
+
+        if ctx and ctx.script_requests and rerun_batch:
+            replay_trigger_states = incoming_replay_trigger_states
+            replay_trigger_values = incoming_replay_trigger_values
+            # Include current-interaction triggers only for targeted reruns: they
+            # preempt this body, whose follow-up reset would lose dispatched triggers.
+            # Attach replay only to the first batch item; _request_rerun_locked unions
+            # it while folding the batch.
+            if votes.requested_targeted:
+                current_replay_trigger_states = (
+                    self._filter_active_trigger_widget_states(
+                        self._current_interaction_widget_states
+                    )
+                )
+                current_replay_trigger_values = self._capture_replay_trigger_values(
+                    current_replay_trigger_states
+                )
+                coalesced_replay_states = _coalesce_replay_trigger_states(
+                    replay_trigger_states,
+                    current_replay_trigger_states,
+                )
+                replay_trigger_values = _coalesce_replay_trigger_values(
+                    new_states=current_replay_trigger_states,
+                    old_values=replay_trigger_values,
+                    new_values=current_replay_trigger_values,
+                    coalesced_states=coalesced_replay_states,
+                )
+                replay_trigger_states = coalesced_replay_states
+            if replay_trigger_states is not None:
+                coalesced_replay_states = _coalesce_replay_trigger_states(
+                    rerun_batch[0].replay_trigger_states,
+                    replay_trigger_states,
+                )
+                rerun_batch[0] = replace(
+                    rerun_batch[0],
+                    replay_trigger_states=coalesced_replay_states,
+                    replay_trigger_values=_coalesce_replay_trigger_values(
+                        new_states=replay_trigger_states,
+                        old_values=rerun_batch[0].replay_trigger_values,
+                        new_values=replay_trigger_values,
+                        coalesced_states=coalesced_replay_states,
+                    ),
+                )
+            ctx.script_requests.request_rerun_batch(rerun_batch)
 
     def _execute_widget_callback(
         self,
@@ -1068,51 +1136,97 @@ class SessionState:
         else:
             votes.wants_interaction_default = True
 
-    def _request_full_app_rerun(self) -> None:
-        """Queue a full-app rerun that replays trigger values without re-firing callbacks.
+    def _build_full_app_rerun(self, ctx: ScriptRunContext) -> RerunData:
+        """Build the full-app escalation entry for a mixed main-script rerun batch.
 
-        Called when a normally-returning callback's default vote coexists with
-        a targeted rerun in a main-script interaction. Only trigger widget
-        states are forwarded — non-trigger values already live in session state
-        from callback execution. Replaying the full proto would overwrite any
-        mutations callbacks made via ``st.session_state["key"] = new_value``.
+        This entry carries no widget state. Trigger replay is attached separately to
+        ``rerun_batch[0]`` and folded by ``request_rerun_batch``.
         """
         from streamlit.runtime.scriptrunner import RerunData
 
-        ctx = get_script_run_ctx()
-        if ctx and ctx.script_requests:
-            trigger_only_states = self._filter_trigger_widget_states(
-                self._current_interaction_widget_states
-            )
-            ctx.script_requests.request_rerun(
-                RerunData(
-                    query_string=ctx.query_string,
-                    page_script_hash=ctx.page_script_hash,
-                    widget_states=trigger_only_states,
-                    suppress_callbacks=True,
-                    cached_message_hashes=ctx.cached_message_hashes,
-                    context_info=ctx.context_info,
-                )
-            )
+        return RerunData(
+            query_string=ctx.query_string,
+            page_script_hash=ctx.page_script_hash,
+            widget_states=None,
+            cached_message_hashes=ctx.cached_message_hashes,
+            context_info=ctx.context_info,
+        )
 
-    def _filter_trigger_widget_states(
+    def _omit_query_bound_widget_states(
+        self, widget_states: WidgetStatesProto
+    ) -> WidgetStatesProto:
+        """Drop query-bound widgets so browser history can restore them from the URL.
+
+        Omitting them before callback dispatch means their ``on_change`` handlers
+        do not run on back/forward. ``register_widget`` re-seeds the values from
+        the URL, matching initial page load.
+        """
+        if not self._query_param_bound_widget_ids:
+            return widget_states
+
+        filtered = WidgetStatesProto()
+        for widget in widget_states.widgets:
+            if widget.id not in self._query_param_bound_widget_ids:
+                filtered.widgets.append(widget)
+        return filtered
+
+    def _filter_active_trigger_widget_states(
         self, widget_states: WidgetStatesProto | None
     ) -> WidgetStatesProto | None:
-        """Return a new WidgetStatesProto containing only trigger-type entries.
+        """Return only active trigger entries from ``widget_states``.
 
-        Trigger widgets have ephemeral values that reset after each run, so
-        they must be replayed for the script body to observe them. Non-trigger
-        values persist in session state and replaying them would overwrite
-        any callback mutations.
+        Inactive triggers need not be replayed, and non-trigger values already persist
+        in session state; replaying either could overwrite callback mutations.
         """
         if widget_states is None:
             return None
 
         filtered = WidgetStatesProto()
         for widget in widget_states.widgets:
-            if widget.WhichOneof("value") in _TRIGGER_PROTO_FIELDS:
+            if _has_active_trigger_value(widget):
                 filtered.widgets.append(widget)
         return filtered if filtered.widgets else None
+
+    def _overlay_replay_trigger_states(
+        self,
+        replay_trigger_states: WidgetStatesProto,
+        replay_trigger_values: Mapping[str, Any] | None,
+        fresh_widget_states: WidgetStatesProto | None,
+    ) -> None:
+        """Apply replay triggers without replacing an active fresh trigger."""
+        active_fresh_states = self._filter_active_trigger_widget_states(
+            fresh_widget_states
+        )
+        active_fresh_ids = (
+            {widget.id for widget in active_fresh_states.widgets}
+            if active_fresh_states is not None
+            else set()
+        )
+        for widget in replay_trigger_states.widgets:
+            if widget.id in active_fresh_ids or not _has_active_trigger_value(widget):
+                continue
+            if replay_trigger_values is not None and widget.id in replay_trigger_values:
+                self._new_widget_state.set_from_value(
+                    widget.id, replay_trigger_values[widget.id]
+                )
+            else:
+                self._new_widget_state.set_widget_from_proto(widget)
+
+    def _capture_replay_trigger_values(
+        self, replay_trigger_states: WidgetStatesProto | None
+    ) -> Mapping[str, Any] | None:
+        """Snapshot hydrated chat inputs whose uploaded files were consumed."""
+        if replay_trigger_states is None:
+            return None
+
+        values: dict[str, Any] = {}
+        for widget in replay_trigger_states.widgets:
+            if widget.WhichOneof("value") != "chat_input_value":
+                continue
+            state = self._new_widget_state.states.get(widget.id)
+            if isinstance(state, Value) and state.value is not None:
+                values[widget.id] = state.value
+        return values or None
 
     def _dispatch_trigger_callbacks(
         self,
@@ -1378,7 +1492,9 @@ class SessionState:
             )
         }
 
-        # Re-add the preserved values under their user keys.
+        # Persist/bind unmount: copy the current widget value onto the user
+        # key so remount restores the last edit. This overwrites a leftover
+        # pre-registration user-key entry if one exists.
         self._old_state.update(preserved_by_key)
 
         # A keyed widget can remount under a new element id this run (e.g. after
@@ -1486,12 +1602,18 @@ class SessionState:
             self._set_key_widget_mapping(widget_id, user_key)
 
         # Handle query param binding
-        url_value_seeded = False
+        url_binding_resolved = False
         if metadata.bind == "query-params" and user_key is not None:
             self._query_param_bound_widget_ids.add(widget_id)
-            url_value_seeded = self._handle_query_param_binding(
+            url_binding_resolved = self._handle_query_param_binding(
                 metadata, user_key, widget_id
             )
+            # Whenever the URL (or its absence) decided this widget's value, the
+            # wire labels captured above belong to a discarded frontend value.
+            # Clear them so callers do not reconcile options against it.
+            if url_binding_resolved:
+                incoming_serialized_value = None
+                incoming_serialized_values = None
         elif metadata.bind is None and user_key is not None:
             # Widget stopped using bind — clean up any stale binding
             self._query_param_bound_widget_ids.discard(widget_id)
@@ -1522,7 +1644,7 @@ class SessionState:
         # frontend value and must be dropped, so resolution falls back to the
         # widget's previous value (or its default on first registration).
         # URL-seeded values are exempt: they populate widget state legitimately
-        # for bound widgets (url_value_seeded). A programmatic st.session_state
+        # for bound widgets (url_binding_resolved). A programmatic st.session_state
         # assignment lives in _new_session_state and still wins during
         # resolution, so dropping the forged widget-state entry never affects it
         # while preventing the forged value from lingering there until compaction.
@@ -1530,15 +1652,16 @@ class SessionState:
         if (
             metadata.disabled
             and widget_id in self._new_widget_state
-            and not url_value_seeded
+            and not url_binding_resolved
         ):
             del self._new_widget_state[widget_id]
-            # The captured wire label belongs to the dropped frontend value, so
-            # it must not leak to callers. Otherwise a caller like st.selectbox
-            # could reconcile options against this attacker-controlled label (see
-            # resolve_value_against_options) and hand back an option that differs
-            # from the value we resolve below.
+            # The captured wire labels belong to the dropped frontend value, so
+            # they must not leak to callers. Otherwise a caller like st.selectbox
+            # or st.multiselect could reconcile options against this attacker-
+            # controlled label (see resolve_value_against_options) and hand back
+            # an option that differs from the value we resolve below.
             incoming_serialized_value = None
+            incoming_serialized_values = None
             if user_key is None or user_key not in self._new_session_state:
                 # No programmatic value is taking over resolution, so the discard
                 # itself changes the resolved value; flag the frontend to re-sync.
@@ -1547,7 +1670,7 @@ class SessionState:
         if (
             widget_id not in self
             and (user_key is None or user_key not in self)
-            and not url_value_seeded
+            and not url_binding_resolved
         ):
             # This is the first time the widget is registered, so we save its
             # value in widget state (unless we already seeded from URL).
@@ -1595,7 +1718,7 @@ class SessionState:
                     restored_bound_value = True
                 elif (
                     user_key in self._new_session_state
-                    and not url_value_seeded
+                    and not url_binding_resolved
                     and (widget_id in self._old_state or user_key in self._old_state)
                 ):
                     serialized = metadata.serializer(widget_value)
@@ -1607,7 +1730,7 @@ class SessionState:
                         )
             elif (
                 user_key in self._new_session_state
-                and not url_value_seeded
+                and not url_binding_resolved
                 and self.query_params.has_param(user_key)
                 and (widget_id in self._old_state or user_key in self._old_state)
             ):
@@ -1615,23 +1738,40 @@ class SessionState:
             else:
                 self.query_params.discard_param_no_forward_msg(user_key)
 
-        # A persist_state widget resolving to a non-default value from a previous
-        # run (preserved while unmounted, or a compacted programmatic set) must
-        # tell the frontend to adopt the backend value on (re)mount. Otherwise it
-        # renders at its default and the next rerun overwrites the preserved value.
-        # For a bind + persist_state widget this can overlap with
-        # restored_bound_value; that is harmless since both only feed the OR below.
-        restored_persisted_value = False
+        # A keyed widget with a non-default value from a previous run must tell
+        # the frontend to adopt that value on (re)mount. Otherwise the UI mounts
+        # at the element default and the next rerun overwrites session state.
+        # This fires when:
+        # - persist_state preserved a value under the user key or widget id
+        # - a previous-run user-key write happened before the widget first
+        #   registered (setdefault / session_state assignment while off-screen)
+        #
+        # What remount shows after hide/show:
+        # - persist_state="session", or "page" on the same page: cleanup copies
+        #   the current widget value onto the user key, so remount restores the
+        #   last edit (not an earlier setdefault).
+        # - persist_state=None with no independent user-key entry: cleanup drops
+        #   the widget id and remount resets to the element default.
+        # - persist_state=None after a user-key write before first registration:
+        #   that user-key entry is ordinary session state and is not refreshed
+        #   (later compaction stores the live value under the widget id). After
+        #   unmount the widget id is dropped, so remount adopts the original
+        #   user-key value rather than the last edit.
+        # Overlap with restored_bound_value is harmless; both only feed the
+        # OR below.
+        restored_session_state_value = False
         if (
-            metadata.persist_state is not None
-            and user_key is not None
+            user_key is not None
             and not self.is_new_state_value(user_key)
             and widget_id not in self._new_widget_state
-            and (widget_id in self._old_state or user_key in self._old_state)
+            and (
+                user_key in self._old_state
+                or (metadata.persist_state is not None and widget_id in self._old_state)
+            )
         ):
             default_value = metadata.deserializer(None)
             if widget_value != default_value:
-                restored_persisted_value = True
+                restored_session_state_value = True
 
         # widget_value_changed indicates to the caller that the widget's current
         # value is different from what is in the frontend. True when:
@@ -1639,14 +1779,14 @@ class SessionState:
         # - a bound value was restored to the URL — the frontend renders the
         #   widget for the first time on this page and must use the backend's
         #   resolved value instead of the widget's default;
-        # - a persisted value was restored from session state on (re)mount, for
-        #   the same reason;
+        # - a previous-run user-key or persist_state value was restored from
+        #   session state on (re)mount, for the same reason;
         # - a "page"-scoped value was dropped on a page switch, so the frontend
         #   must fall back to the default for the reused widget id.
         widget_value_changed = (
             (user_key is not None and self.is_new_state_value(user_key))
             or restored_bound_value
-            or restored_persisted_value
+            or restored_session_state_value
             or dropped_page_scoped_value
             or disabled_value_discarded
         )
@@ -1666,15 +1806,26 @@ class SessionState:
         Registers the binding, then attempts to seed the widget's value from URL
         based on priority rules:
 
-        - On initial load, URL wins (enables shareable URLs)
-        - On subsequent reruns, session_state values win
+        Normal reruns:
+        - Initial load: URL wins (enables shareable URLs)
+        - Subsequent reruns: session_state values win
         - User interaction (frontend value) always wins
 
-        Returns True if the widget's value was seeded from URL, False otherwise.
+        History navigation (``is_history_navigation``):
+        - URL wins, including when the param is missing or invalid
+        - Code-assigned ``st.session_state`` values for this run are overridden
+        - A missing param restores the widget default, overriding a value
+          assigned in ``st.session_state`` before the widget call. Initial load
+          leaves that assignment in place; on history navigation the restored
+          entry had no param, so the default is what the URL asks for.
+
+        Returns True if the widget's value was resolved here (seeded from the URL,
+        or reset to the default on history navigation), False otherwise.
         """
         # Register the widget binding
         ctx = get_script_run_ctx()
         script_hash = ThreadState.get().active_script_hash if ctx is not None else ""
+        is_history_navigation = ctx is not None and ctx.is_history_navigation
         self.query_params.bind_widget(
             param_key=user_key,
             widget_id=widget_id,
@@ -1687,16 +1838,36 @@ class SessionState:
         # _new_widget_state is a stale/forged frontend value. Let URL seeding proceed;
         # disabled enforcement in register_widget then discards the forged value.
         if widget_id in self._new_widget_state and not metadata.disabled:
-            return False
+            if not is_history_navigation:
+                return False
+            # History navigation must discard preserved widget state so the URL
+            # can seed. Omit only strips the incoming proto; this also drops
+            # values copied into _new_widget_state on MPA page change and
+            # first-time binds.
+            del self._new_widget_state[widget_id]
         is_initial_load = widget_id not in self._old_state
-        if not is_initial_load and user_key in self._new_session_state:
+        if (
+            not is_initial_load
+            and user_key in self._new_session_state
+            and not is_history_navigation
+        ):
             return False  # Code set value after first run
 
         url_value = self.query_params.get_initial_value(user_key)
-        if url_value is None:
+        if url_value is not None and self._seed_widget_from_url(
+            metadata, user_key, widget_id, url_value
+        ):
+            return True
+        if not is_history_navigation:
             return False
-
-        return self._seed_widget_from_url(metadata, user_key, widget_id, url_value)
+        # The restored history entry carried no usable value for this param, so
+        # the default is what the URL asks for — even over a same-run
+        # st.session_state assignment. Initial load leaves that assignment in
+        # place when the param is absent.
+        default_value = metadata.deserializer(None)
+        self._new_widget_state.set_from_value(widget_id, default_value)
+        self._new_session_state[user_key] = default_value
+        return True
 
     def _seed_widget_from_url(
         self,

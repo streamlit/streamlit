@@ -2388,7 +2388,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
           false
         )
 
-        widgetMgr.setDoubleArrayValue(widget.id, [10, NaN, 90], {
+        widgetMgr.setDoubleArrayValue(widget.id, [10, Number.NaN, 90], {
           formId: widget.formId,
           fragmentId: undefined,
           fromUser: true,
@@ -2421,7 +2421,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
 
         // Now set all invalid values - should clear the URL
         mockOnQueryParamsChange.mockClear()
-        widgetMgr.setDoubleArrayValue(widget.id, [NaN, NaN], {
+        widgetMgr.setDoubleArrayValue(widget.id, [Number.NaN, Number.NaN], {
           formId: widget.formId,
           fragmentId: undefined,
           fromUser: true,
@@ -2443,7 +2443,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
           false
         )
 
-        widgetMgr.setDoubleArrayValue(widget.id, [NaN, NaN], {
+        widgetMgr.setDoubleArrayValue(widget.id, [Number.NaN, Number.NaN], {
           formId: widget.formId,
           fragmentId: undefined,
           fromUser: false,

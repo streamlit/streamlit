@@ -54,7 +54,7 @@ export interface Props {
 function DownloadButton(props: Props): ReactElement {
   const { disabled, element, widgetMgr, endpoints, fragmentId } = props
   const { help, label, icon, ignoreRerun, type, url, deferredFileId } = element
-  const shortcut = element.shortcut ? element.shortcut : undefined
+  const shortcut = element.shortcut || undefined
 
   // When wrap resolves to no-wrap, reveal the full label on hover via a native
   // title, skipped when help is set since help provides the tooltip.

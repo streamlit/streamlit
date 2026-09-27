@@ -71,6 +71,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.type_util import is_list_like, is_type
 from streamlit.util import ReadOnlyAttributeDictionary, calc_hash, create_fast_hasher
@@ -1201,6 +1202,10 @@ class DataEditorMixin:
         import pyarrow as pa
 
         key = to_key(key)
+        on_change = validate_on_change_mode(
+            on_change,
+            supported_modes=(),
+        )
 
         validate_width(width, allow_content=True)
         validate_height(

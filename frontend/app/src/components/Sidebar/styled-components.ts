@@ -18,6 +18,11 @@ import styled from "@emotion/styled"
 
 import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
 
+import {
+  getSidebarResizeHandleBackgroundImage,
+  getSidebarResizeHandleHoverBorderColor,
+} from "./utils"
+
 /**
  * Returns the horizontal spacing for the sidebar, taking into consideration
  * the scrollbar gutters (one on each side) which are present when the OS
@@ -129,20 +134,36 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
 
 export const RESIZE_HANDLE_WIDTH = "8px"
 
-export const StyledResizeHandle = styled.div(({ theme }) => ({
-  position: "absolute",
-  width: RESIZE_HANDLE_WIDTH,
-  height: "100%",
-  cursor: "col-resize",
-  zIndex: theme.zIndices.sidebarMobile,
-  backgroundImage: theme.showSidebarBorder
-    ? `linear-gradient(to right, transparent 20%, ${theme.colors.borderColor} 28%, transparent 36%)`
-    : "none",
+export const StyledResizeHandle = styled.div(({ theme }) => {
+  const { borderColor } = theme.colors
+  // When the border is already visible, bump opacity on hover. Hidden-border
+  // hover still reveals the un-bumped borderColor via the gradient below.
+  const hoverBorderColor = theme.showSidebarBorder
+    ? getSidebarResizeHandleHoverBorderColor(borderColor)
+    : borderColor
 
-  "&:hover": {
-    backgroundImage: `linear-gradient(to right, transparent 20%, ${theme.colors.borderColor} 28%, transparent 44%)`,
-  },
-}))
+  return {
+    position: "absolute",
+    width: RESIZE_HANDLE_WIDTH,
+    height: "100%",
+    cursor: "col-resize",
+    zIndex: theme.zIndices.sidebarMobile,
+    backgroundImage: theme.showSidebarBorder
+      ? getSidebarResizeHandleBackgroundImage(borderColor, {
+          isHovered: false,
+        })
+      : "none",
+
+    "&:hover": {
+      backgroundImage: getSidebarResizeHandleBackgroundImage(
+        hoverBorderColor,
+        {
+          isHovered: true,
+        }
+      ),
+    },
+  }
+})
 
 export const StyledSidebarHeaderContainer = styled.div(({ theme }) => ({
   display: "flex",

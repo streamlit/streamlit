@@ -1898,17 +1898,15 @@ describe("WebsocketConnection FSM fast-path behavior", () => {
   })
 
   it("handles background ping cancellation gracefully on disconnect", async () => {
-    globalThis.fetch = vi
-      .fn()
-      .mockImplementation(
-        () =>
-          new Promise(resolve =>
-            setTimeout(
-              () => resolve(createSuccessResponse(MOCK_HEALTH_RESPONSE)),
-              1000
-            )
+    globalThis.fetch = vi.fn().mockImplementation(
+      () =>
+        new Promise(resolve => {
+          setTimeout(
+            () => resolve(createSuccessResponse(MOCK_HEALTH_RESPONSE)),
+            1000
           )
-      )
+        })
+    )
 
     const args = createMockArgs({ enableBypass: true })
     const ws = new WebsocketConnection(args)

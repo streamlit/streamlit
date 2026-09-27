@@ -109,7 +109,7 @@ const HTML_ESCAPE_MAP: Record<string, string> = {
  * @returns {string} - The HTML-escaped string.
  */
 const escapeHtml = (value: unknown): string =>
-  String(value).replace(/[&<>"']/g, char => HTML_ESCAPE_MAP[char])
+  String(value).replaceAll(/[&<>"']/g, char => HTML_ESCAPE_MAP[char])
 
 export type UseDeckGlProps = Omit<DeckGLProps, "width"> & {
   isLightTheme: boolean
@@ -146,7 +146,7 @@ const interpolate = (
   const matchedVariables = body.match(/{(.*?)}/g)
   if (matchedVariables) {
     matchedVariables.forEach((match: string) => {
-      const variable = match.substring(1, match.length - 1)
+      const variable = match.slice(1, match.length - 1)
 
       let rawValue: unknown
       if (Object.hasOwn(info.object, variable)) {
@@ -451,7 +451,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
     const isUsingCarto =
       jsonCopy?.mapProvider === "carto" ||
-      (jsonCopy?.mapStyle && jsonCopy.mapStyle?.indexOf("cartocdn") >= 0)
+      (jsonCopy?.mapStyle && jsonCopy.mapStyle?.includes("cartocdn") === true)
 
     if (isUsingCarto && !jsonCopy.cartoKey) {
       jsonCopy.cartoKey = CARTO_STREAMLIT_API_KEY
@@ -593,7 +593,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     if (
       !cartoKey &&
       typeof mapStyle === "string" &&
-      mapStyle.indexOf("cartocdn") >= 0
+      mapStyle.includes("cartocdn")
     ) {
       cartoKey = CARTO_STREAMLIT_API_KEY
     }

@@ -62,7 +62,10 @@ export const StyledDateField = styled("div", {
   }),
 }))
 
-/** Outer border wrapper for date/datetime fields. Scrolls in narrow layouts. */
+/**
+ * Outer border wrapper for date and datetime fields. Clips overflow so the
+ * inner scroller, not this border, scrolls horizontally.
+ */
 export const StyledDateInputWrapper = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
@@ -73,12 +76,7 @@ export const StyledDateInputWrapper = styled.div(({ theme }) => ({
   borderStyle: "solid",
   borderColor: getBorderColor(theme.colors, false),
   backgroundColor: theme.colors.secondaryBg,
-  // Scroll horizontally in narrow layouts instead of overflowing the border.
-  // Hidden scrollbar avoids stealing height (same pattern as Tabs/Multiselect).
-  overflowX: "auto" as const,
-  overflowY: "hidden" as const,
-  scrollbarWidth: "none",
-  "&::-webkit-scrollbar": { display: "none" },
+  overflow: "hidden",
   cursor: "text",
   fontSize: theme.fontSizes.sm,
   lineHeight: theme.lineHeights.inputWidget,
@@ -96,6 +94,24 @@ export const StyledDateInputWrapper = styled.div(({ theme }) => ({
     cursor: "not-allowed",
   },
 }))
+
+/**
+ * Scrolls date and time segments so trailing error and clear controls stay
+ * pinned. Hiding the native scrollbar keeps it from adding height to the field.
+ * The shared overflow fade is omitted because it requires runtime scroll state.
+ */
+export const StyledDateFieldsScroller = styled.div({
+  display: "flex",
+  alignItems: "center",
+  flex: 1,
+  minWidth: 0,
+  overflowX: "auto",
+  overflowY: "hidden",
+  // Prevent a swipe at the row boundary from triggering browser back/forward.
+  overscrollBehaviorX: "contain",
+  scrollbarWidth: "none",
+  "&::-webkit-scrollbar": { display: "none" },
+})
 
 /** Uses RAC `Group` instead of `DateInput` to allow custom segment ordering. */
 export const StyledDateFieldInput = styled(Group, {
@@ -170,7 +186,6 @@ export const StyledErrorIconContainer = styled.div(({ theme }) => ({
 export const StyledTrailingIcons = styled.div({
   display: "flex",
   alignItems: "center",
-  marginLeft: "auto",
   flexShrink: 0,
 })
 

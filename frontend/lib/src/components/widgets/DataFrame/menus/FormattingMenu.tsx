@@ -185,7 +185,7 @@ function FormattingMenu({
   onChangeFormat,
   onCloseMenu,
   children,
-}: FormattingMenuProps): ReactElement {
+}: FormattingMenuProps): ReactElement | null {
   const formats = COLUMN_KIND_FORMAT_MAPPING[columnKind] || []
 
   const { floatingStyles, setAnchorRef, setFloatingRef } = useHoverSubmenu({
@@ -197,7 +197,7 @@ function FormattingMenu({
   if (formats.length === 0) {
     // If there are no formats available for the column kind,
     // we don't show the formatting menu option.
-    return <></>
+    return null
   }
 
   return (

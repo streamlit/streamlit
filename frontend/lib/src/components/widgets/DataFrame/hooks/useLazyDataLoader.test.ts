@@ -175,7 +175,9 @@ describe("useLazyDataLoader", () => {
     // Wait once for the debounce to flush (re-polling would keep resetting it).
     result.current.getCellContent([0, 2])
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 300))
+      await new Promise(resolve => {
+        setTimeout(resolve, 300)
+      })
     })
     expect(isErrorCell(result.current.getCellContent([0, 2]))).toBe(true)
   })
@@ -282,7 +284,9 @@ describe("useLazyDataLoader", () => {
   it("bounds concurrent requests for a large visible range", async () => {
     const { client, request } = makeClient(
       () =>
-        new Promise<DataframeChunkResponsePayload.$Properties>(() => undefined)
+        new Promise<DataframeChunkResponsePayload.$Properties>(() => {
+          // Never resolves; used to keep in-flight requests outstanding.
+        })
     )
     const { result } = renderLoader(client, PAGE_SIZE, 200)
 

@@ -76,7 +76,7 @@ describe("Dialog container", () => {
       </Dialog>
     )
 
-    expect(() => screen.getByText("test")).toThrow()
+    expect(screen.queryByText("test")).not.toBeInTheDocument()
   })
 
   it("renders an icon when provided", () => {
@@ -114,8 +114,8 @@ describe("Dialog container", () => {
 
     expect(screen.getByText("test")).toBeVisible()
     await user.click(screen.getByLabelText("Close"))
-    // dialog should be closed by clicking outside and, thus, the content should be gone
-    expect(() => screen.getByText("test")).toThrow()
+    // Close dismisses the dialog, so the content should unmount
+    expect(screen.queryByText("test")).not.toBeInTheDocument()
   })
 
   it("should not close when not dismissible", () => {
@@ -128,7 +128,7 @@ describe("Dialog container", () => {
 
     expect(screen.getByText("test")).toBeVisible()
     // close button - and hence dismiss - does not exist
-    expect(() => screen.getByLabelText("Close")).toThrow()
+    expect(screen.queryByLabelText("Close")).not.toBeInTheDocument()
   })
 
   it("should handle modal close events when dismissible", async () => {
@@ -147,7 +147,7 @@ describe("Dialog container", () => {
     await user.click(closeButton)
 
     // Dialog should be closed (content no longer visible)
-    expect(() => screen.getByText("test content")).toThrow()
+    expect(screen.queryByText("test content")).not.toBeInTheDocument()
   })
 
   describe("on_dismiss functionality", () => {
@@ -268,7 +268,7 @@ describe("Dialog container", () => {
       )
 
       // No close button should exist, so no way to trigger dismiss event
-      expect(() => screen.getByLabelText("Close")).toThrow()
+      expect(screen.queryByLabelText("Close")).not.toBeInTheDocument()
       expect(mockWidgetMgr.setTriggerValue).not.toHaveBeenCalled()
     })
   })
@@ -363,6 +363,38 @@ describe("Dialog container", () => {
       await user.type(input, "test")
 
       expect(input).toHaveValue("test")
+    })
+
+    it("ignores keydown events without a string key when dialog is non-dismissible", () => {
+      const props = getProps({ dismissible: false })
+      render(
+        <Dialog {...props}>
+          <div>test content</div>
+        </Dialog>
+      )
+      expect(screen.getByText("test content")).toBeVisible()
+
+      const event = new Event("keydown", { bubbles: true, cancelable: true })
+      const stopImmediateSpy = vi.spyOn(event, "stopImmediatePropagation")
+      const preventDefaultSpy = vi.spyOn(event, "preventDefault")
+
+      const listenerErrors: unknown[] = []
+      const onError = (errorEvent: ErrorEvent): void => {
+        listenerErrors.push(errorEvent.error)
+        errorEvent.preventDefault()
+      }
+      // jsdom reports throwing listeners as window `error` events instead of
+      // throwing from `dispatchEvent`.
+      window.addEventListener("error", onError)
+      try {
+        document.dispatchEvent(event)
+      } finally {
+        window.removeEventListener("error", onError)
+      }
+
+      expect(listenerErrors).toEqual([])
+      expect(preventDefaultSpy).not.toHaveBeenCalled()
+      expect(stopImmediateSpy).not.toHaveBeenCalled()
     })
 
     it("does not intercept R keydown from a select in a non-dismissible dialog", () => {

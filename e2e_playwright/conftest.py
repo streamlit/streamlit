@@ -1338,8 +1338,8 @@ def delete_output_dir(pytestconfig: Any) -> None:
     # To prevent this issue, we are not deleting the output dir when running with
     # reruns and xdist.
 
-    uses_xdist = (
-        pytestconfig.getoption("workerinput", None) or os.getenv("PYTEST_XDIST_WORKER"),
+    uses_xdist = pytestconfig.getoption("workerinput", None) or os.getenv(
+        "PYTEST_XDIST_WORKER"
     )
     uses_reruns = pytestconfig.getoption("reruns", None)
 

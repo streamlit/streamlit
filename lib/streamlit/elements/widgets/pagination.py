@@ -40,6 +40,7 @@ from streamlit.runtime.state import (
     PersistStateOption,
     get_session_state,
     register_widget,
+    validate_on_change_mode,
 )
 
 if TYPE_CHECKING:
@@ -256,6 +257,10 @@ class PaginationMixin:
     ) -> int:
 
         key = to_key(key)
+        on_change = validate_on_change_mode(
+            on_change,
+            supported_modes=(),
+        )
 
         # Validate num_pages
         if (

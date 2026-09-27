@@ -269,6 +269,15 @@ class ButtonTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.button("invalid", shortcut="A+B")
 
+    @parameterized.expand([("ignore",), ("rerun",)])
+    def test_on_click_mode_not_supported(self, mode: str) -> None:
+        """st.button only accepts a callback, and the error names on_click."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=f'`on_click="{mode}"` is not supported on this widget',
+        ):
+            st.button("the label", on_click=mode)  # type: ignore[arg-type]
+
     def test_stable_id_button_with_key(self):
         """Test that the button ID is stable when a stable key is provided."""
         with patch(
@@ -886,3 +895,35 @@ class ButtonTest(DeltaGeneratorTestCase):
         st.download_button("test", data="data", on_click=callback)
         c = self.get_delta_from_queue().new_element.download_button
         assert c.ignore_rerun is False
+
+    def test_download_button_on_click_invalid_value_names_on_click(self) -> None:
+        """Invalid on_click values report on_click, not on_change."""
+        with pytest.raises(StreamlitValueError, match="Invalid `on_click` value"):
+            st.download_button("test", data="data", on_click=123)  # type: ignore[arg-type]
+
+    def test_download_button_on_click_typo_lists_supported_modes(self) -> None:
+        """Typos on download_button list ignore/rerun, not only a callback."""
+        with pytest.raises(
+            StreamlitValueError, match="Invalid `on_click` value"
+        ) as exc:
+            st.download_button("test", data="data", on_click="ignroe")  # type: ignore[arg-type]
+        message = str(exc.value)
+        assert "'ignore'" in message
+        assert "'rerun'" in message
+        assert "a callback function" in message
+
+    def test_link_button_on_click_typo_lists_supported_modes(self) -> None:
+        """Typos on link_button list ignore/rerun, not only a callback."""
+        with pytest.raises(
+            StreamlitValueError, match="Invalid `on_click` value"
+        ) as exc:
+            st.link_button("test", url="https://example.com", on_click="ignroe")  # type: ignore[arg-type]
+        message = str(exc.value)
+        assert "'ignore'" in message
+        assert "'rerun'" in message
+        assert "a callback function" in message
+
+    def test_link_button_on_click_invalid_value_names_on_click(self) -> None:
+        """Invalid on_click values report on_click, not on_change."""
+        with pytest.raises(StreamlitValueError, match="Invalid `on_click` value"):
+            st.link_button("test", url="https://example.com", on_click=123)  # type: ignore[arg-type]

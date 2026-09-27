@@ -132,6 +132,38 @@ describe("DeckGlJsonChart", () => {
     expect(element).toHaveClass("stDeckGlJsonChart")
   })
 
+  describe("alt (accessible name)", () => {
+    it("sets role=figure with accessible name when alt is provided", () => {
+      const props = getProps({
+        alt: "Delivery hubs across the Pacific Northwest",
+      })
+      render(<DeckGlJsonChart {...props} />)
+      // figure (not img) keeps toolbar and Mapbox navigation controls operable.
+      expect(
+        screen.getByRole("figure", {
+          name: "Delivery hubs across the Pacific Northwest",
+        })
+      ).toBeVisible()
+    })
+
+    it("omits role and aria-label when alt is not provided", () => {
+      render(<DeckGlJsonChart {...getProps()} />)
+      const chart = screen.getByTestId("stDeckGlJsonChart")
+      expect(chart).not.toHaveAttribute("role")
+      expect(chart).not.toHaveAttribute("aria-label")
+    })
+
+    it.each([
+      ["an empty string", ""],
+      ["whitespace only", "   "],
+    ])("omits role and aria-label when alt is %s", (_label, alt) => {
+      render(<DeckGlJsonChart {...getProps({ alt })} />)
+      const chart = screen.getByTestId("stDeckGlJsonChart")
+      expect(chart).not.toHaveAttribute("role")
+      expect(chart).not.toHaveAttribute("aria-label")
+    })
+  })
+
   describe("basemap chrome", () => {
     it.each([
       { name: "MapView", extra: {} },
@@ -299,7 +331,9 @@ describe("DeckGlJsonChart", () => {
       // (that something does NOT appear). Unlike positive assertions where we can
       // wait for an element to appear, there's no reliable way to "wait for something
       // to not appear" - we need to give sufficient time for it to potentially render.
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => {
+        setTimeout(resolve, 100)
+      })
       expect(screen.queryByLabelText("Fullscreen")).not.toBeInTheDocument()
     })
   })

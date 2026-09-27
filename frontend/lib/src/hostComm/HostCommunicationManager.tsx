@@ -20,6 +20,7 @@ import { type CustomThemeConfig, WidgetStates } from "@streamlit/protobuf"
 
 import { PresetThemeName } from "~lib/theme/types"
 import { isValidOrigin } from "~lib/util/UriUtil"
+import { normalizeQueryString } from "~lib/util/utils"
 
 import {
   AppConfig,
@@ -63,7 +64,8 @@ interface HostCommunicationProps {
   readonly streamlitExecutionStartedAt: number
   readonly sendRerunBackMsg: (
     widgetStates?: WidgetStates,
-    pageScriptHash?: string
+    pageScriptHash?: string,
+    queryStringOverride?: string
   ) => void
   readonly closeModal: () => void
   readonly stopScript: () => void
@@ -380,8 +382,9 @@ export default class HostCommunicationManager {
     }
 
     if (message.type === "UPDATE_FROM_QUERY_PARAMS") {
-      this.props.queryParamsChanged(message.queryParams)
-      this.props.sendRerunBackMsg()
+      const queryString = normalizeQueryString(message.queryParams)
+      this.props.queryParamsChanged(queryString)
+      this.props.sendRerunBackMsg(undefined, undefined, queryString)
     }
 
     if (message.type === "UPDATE_HASH") {

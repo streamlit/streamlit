@@ -189,9 +189,10 @@ class ChatTest(DeltaGeneratorTestCase):
         """Test that it selects inline position when nested in any of layout containers."""
         container_call().chat_input()
 
+        message = self.get_message_from_queue()
+        assert message.metadata.delta_path[0] != RootContainerProto.BOTTOM
         assert (
-            self.get_message_from_queue().metadata.delta_path[0]
-            != RootContainerProto.BOTTOM
+            message.delta.new_element.chat_input.is_auto_positioned_at_bottom is False
         )
 
     @parameterized.expand(
@@ -204,9 +205,30 @@ class ChatTest(DeltaGeneratorTestCase):
         """Test that it selects bottom position when called in the main dg."""
         container_call().chat_input()
 
+        message = self.get_message_from_queue()
+        assert message.metadata.delta_path[0] == RootContainerProto.BOTTOM
+        assert message.delta.new_element.chat_input.is_auto_positioned_at_bottom is True
+
+    @parameterized.expand(
+        [
+            ("context_manager", True),
+            ("method_call", False),
+        ]
+    )
+    def test_chat_input_in_explicit_bottom_is_not_auto_positioned(
+        self, _name: str, use_context_manager: bool
+    ) -> None:
+        """Test that explicit bottom placement is not automatic positioning."""
+        if use_context_manager:
+            with st.bottom:
+                st.chat_input()
+        else:
+            st.bottom.chat_input()
+
+        message = self.get_message_from_queue()
+        assert message.metadata.delta_path[0] == RootContainerProto.BOTTOM
         assert (
-            self.get_message_from_queue().metadata.delta_path[0]
-            == RootContainerProto.BOTTOM
+            message.delta.new_element.chat_input.is_auto_positioned_at_bottom is False
         )
 
     def test_supports_programmatic_value_assignment(self):
@@ -1148,17 +1170,29 @@ class ChatInputSerdeFilesAudioTest(DeltaGeneratorTestCase):
         )
 
         proto = ChatInputValueProto()
-        proto.data = "msg"
+        proto.data = ""
         info = proto.file_uploader_state.uploaded_file_info.add()
         info.file_id = "file1"
+        info.file_urls.file_id = "file1"
+        info.file_urls.upload_url = "upload"
+        info.file_urls.delete_url = "delete"
 
         serde = ChatInputSerde(accept_files=True, accept_audio=False)
         result = serde.deserialize(proto)
 
         assert isinstance(result, ChatInputValue)
-        assert result.text == "msg"
+        assert result.text == ""
         assert len(result.files) == 1
         assert result.files[0].name == "doc.txt"
+        assert result.files[0].type == "text/plain"
+        assert result.files[0].getvalue() == b"abc"
+        assert (
+            self.script_run_ctx.uploaded_file_mgr.get_files(
+                session_id=self.script_run_ctx.session_id,
+                file_ids=["file1"],
+            )
+            == []
+        )
         # Anti-regression: when accept_audio is False, audio access raises.
         with pytest.raises(AttributeError):
             _ = result.audio

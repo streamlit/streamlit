@@ -396,7 +396,7 @@ describe("Pagination widget", () => {
 
       const pageButtons = getPageButtons()
       expect(pageButtons[0]).toHaveTextContent("1")
-      expect(pageButtons[pageButtons.length - 1]).toHaveTextContent("20")
+      expect(pageButtons.at(-1)).toHaveTextContent("20")
       expect(screen.queryAllByTestId("stPaginationEllipsis")).toHaveLength(1)
       expect(getActivePageButton()).toHaveTextContent("19")
     })
@@ -407,7 +407,7 @@ describe("Pagination widget", () => {
 
       const pageButtons = getPageButtons()
       expect(pageButtons[0]).toHaveTextContent("1")
-      expect(pageButtons[pageButtons.length - 1]).toHaveTextContent("20")
+      expect(pageButtons.at(-1)).toHaveTextContent("20")
       expect(screen.queryAllByTestId("stPaginationEllipsis")).toHaveLength(1)
       expect(getActivePageButton()).toHaveTextContent("2")
     })
@@ -418,7 +418,7 @@ describe("Pagination widget", () => {
 
       const pageButtons = getPageButtons()
       expect(pageButtons[0]).toHaveTextContent("1")
-      expect(pageButtons[pageButtons.length - 1]).toHaveTextContent("20")
+      expect(pageButtons.at(-1)).toHaveTextContent("20")
       expect(screen.queryAllByTestId("stPaginationEllipsis")).toHaveLength(2)
       expect(getActivePageButton()).toHaveTextContent("10")
     })

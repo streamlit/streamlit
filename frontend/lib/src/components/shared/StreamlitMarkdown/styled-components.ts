@@ -89,7 +89,7 @@ function convertFontSizes(
     // Dialogs also reduce the font size of the headings to 65% of the base font size
     // Round the font size to the nearest eighth of a rem to try to keep to round px values
     const roundedFontSize = roundFontSizeToNearestEighth(
-      parseFloat(fontSize) * 0.65
+      Number.parseFloat(fontSize) * 0.65
     )
 
     // Ensure the font size is at least 0.75rem

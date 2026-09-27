@@ -90,6 +90,7 @@ function SkillsNudgeToast({
       .then(detail => {
         setSuccessDetail(detail ?? "")
         setStatus("success")
+        return
       })
       .catch((error: unknown) => {
         setStatus("error")
