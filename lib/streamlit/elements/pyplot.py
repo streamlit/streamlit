@@ -145,9 +145,9 @@ class PyplotMixin:
                 ``width="content"``.
 
         alt : str or None
-            A short, plain-text accessible name for the figure image. If this
-            is ``None`` (default), Streamlit does not provide an accessible
-            name for the figure.
+            A description of the figure image for screen readers and other
+            assistive technologies. If this is ``None`` (default), Streamlit
+            does not provide an accessible name for the figure.
 
             An empty string (``""``) marks the image as decorative. Whitespace-
             only values are treated as ``None`` and logged. Prefer naming the

@@ -154,7 +154,7 @@ describe("ImageList Element", () => {
       expect(link).toHaveAccessibleName("Product photo")
     })
 
-    it("switches to labelledby when caption text appears after async markdown", async () => {
+    it("uses asynchronously rendered caption text as the link name", async () => {
       // Start with a caption that renders no text (stripped HR), then simulate
       // a plugin finishing and injecting visible caption content.
       const props = getProps({
@@ -193,34 +193,6 @@ describe("ImageList Element", () => {
       expect(link).toHaveAttribute("aria-label", "https://streamlit.io")
       const img = screen.getByTestId("stImageContainer").querySelector("img")
       expect(img).toHaveAttribute("alt", "")
-    })
-
-    it("sets decorative empty alt and omits alt when unset", () => {
-      const { rerender } = render(
-        <ImageList
-          {...getProps({
-            imgs: [{ url: "/media/mockImage1.jpeg", alt: "" }],
-          })}
-        />
-      )
-      // Decorative images (alt="") are presentational and may be excluded
-      // from the accessibility tree / getByRole("img").
-      const decorativeImg = screen
-        .getByTestId("stImageContainer")
-        .querySelector("img")
-      expect(decorativeImg).toHaveAttribute("alt", "")
-
-      rerender(
-        <ImageList
-          {...getProps({
-            imgs: [{ url: "/media/mockImage1.jpeg" }],
-          })}
-        />
-      )
-      const unlabeledImg = screen
-        .getByTestId("stImageContainer")
-        .querySelector("img")
-      expect(unlabeledImg).not.toHaveAttribute("alt")
     })
 
     it("does not render link wrapper when link is not provided", () => {
@@ -305,6 +277,34 @@ describe("ImageList Element", () => {
       for (const image of images) {
         expect(image).not.toHaveAttribute("alt")
       }
+    })
+
+    it("sets decorative empty alt and omits alt when unset", () => {
+      const { rerender } = render(
+        <ImageList
+          {...getProps({
+            imgs: [{ url: "/media/mockImage1.jpeg", alt: "" }],
+          })}
+        />
+      )
+      // Decorative images (alt="") are presentational and may be excluded
+      // from the accessibility tree / getByRole("img").
+      const decorativeImg = screen
+        .getByTestId("stImageContainer")
+        .querySelector("img")
+      expect(decorativeImg).toHaveAttribute("alt", "")
+
+      rerender(
+        <ImageList
+          {...getProps({
+            imgs: [{ url: "/media/mockImage1.jpeg" }],
+          })}
+        />
+      )
+      const unlabeledImg = screen
+        .getByTestId("stImageContainer")
+        .querySelector("img")
+      expect(unlabeledImg).not.toHaveAttribute("alt")
     })
   })
 

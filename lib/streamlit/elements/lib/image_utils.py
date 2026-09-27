@@ -378,8 +378,9 @@ def marshall_images(
     clamp: bool,
     channels: Channels = "RGB",
     output_format: ImageFormatOrAuto = "auto",
-    # Wider than the public st.image type: runtime coerces bytes, 1-D ndarrays,
-    # and non-string scalars per the alt-text value table.
+    # Typed as object rather than st.image's public
+    # str | Sequence[str | None] | None because the runtime also coerces bytes,
+    # 1-D ndarrays, and other non-string scalars to strings.
     alt: object | None = None,
 ) -> None:
     """Fill an ImageListProto with a list of images and their captions.
@@ -499,7 +500,7 @@ def marshall_images(
                 error_id="image-alt-count-mismatch",
             )
     else:
-        # Non-string scalar (e.g. int): coerce via normalize_alt → to_str.
+        # A non-string scalar (e.g. an int) is stringified later by normalize_alt.
         if len(images) != 1:
             raise StreamlitAPIException(
                 "A single `alt` value can only be used with a single image. "

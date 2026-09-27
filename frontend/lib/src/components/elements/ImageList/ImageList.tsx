@@ -107,9 +107,9 @@ const Image = ({
   const crossOrigin = useCrossOriginAttribute(image.url)
   const captionDomId = useId()
   const captionRef = useRef<HTMLDivElement>(null)
-  // Caption markdown may render no text (e.g. `---` is stripped as a
-  // disallowed HR in labels). Only use labelledby when there is text to name
-  // the link; otherwise fall back to alt or the URL.
+  // Name the link from the caption only when the caption actually renders
+  // text. Label Markdown strips some constructs (a lone `---` becomes
+  // nothing), which would otherwise point aria-labelledby at an empty node.
   const [captionHasText, setCaptionHasText] = useState(false)
   // Do not wrap a dangerous URI in an anchor. A neutralized href="#" is
   // still a nameless focusable control (WCAG SC 4.1.2).
@@ -119,11 +119,12 @@ const Image = ({
     ? undefined
     : image.alt
 
-  // Re-check after async Markdown plugins (katex/emoji) replace a loading
-  // skeleton — same MutationObserver approach as useLabelTitleTooltip.
+  // Watch the caption for text that arrives late: async Markdown plugins
+  // (KaTeX, emoji) swap a loading skeleton for real content after the first
+  // render. Only linked images consume captionHasText.
   useLayoutEffect(() => {
     const node = captionRef.current
-    if (!image.caption || !node) {
+    if (!safeLink || !image.caption || !node) {
       setCaptionHasText(false)
       return
     }
@@ -142,10 +143,9 @@ const Image = ({
       characterData: true,
     })
     return () => observer.disconnect()
-  }, [image.caption])
+  }, [image.caption, safeLink])
 
   const imageElement = (
-    // Omit alt when unset (detectable missing-alt). Empty string is decorative.
     // oxlint-disable-next-line jsx-a11y/alt-text
     <img
       style={imgStyle}

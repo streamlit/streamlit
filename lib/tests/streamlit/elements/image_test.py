@@ -707,7 +707,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         assert "single image" in str(exc_info.value)
         assert "2 images" in str(exc_info.value)
 
-    def test_st_image_marshals_alt_and_distinguishes_omitted_and_decorative_values(
+    def test_st_image_alt_distinguishes_omitted_empty_and_whitespace(
         self,
     ) -> None:
         """Non-empty alt is stored; omitted/None/whitespace leave it unset; "" is decorative."""
@@ -732,7 +732,9 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         st.image(url, alt="  ")
         assert not self.get_delta_from_queue().new_element.imgs.imgs[0].HasField("alt")
 
-    def test_st_image_alt_coerces_non_string_scalars(self) -> None:
+    def test_st_image_alt_coerces_non_string_values_and_rejects_scalar_with_many_images(
+        self,
+    ) -> None:
         """Non-string scalars and bytes are coerced via to_str (spec value table)."""
         url = "http://server/fake0.jpg"
 

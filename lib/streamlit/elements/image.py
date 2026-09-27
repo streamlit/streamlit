@@ -167,16 +167,16 @@ class ImageMixin:
                 fully removed in a future version. Use ``width="stretch"``,
                 ``width="content"``, or an integer pixel value instead.
 
-        alt : str, Sequence[str | None], or None
-            A short, plain-text accessible name for the image(s). If this is
-            ``None`` (default), Streamlit does not provide an accessible name
-            for the image.
+        alt : str, sequence of str or None, or None
+            A description of the image(s) for screen readers and other assistive
+            technologies. If this is ``None`` (default), Streamlit does not
+            provide an accessible name for the image.
 
             An empty string (``""``) marks the image as decorative. Whitespace-
             only values are treated as ``None`` and logged. For multiple
             images, pass a sequence of the same length (use ``None`` to skip
             an image, or ``""`` for a decorative entry). A single string with
-            several images raises.
+            several images raises a ``StreamlitAPIException``.
 
             Prefer describing what the image shows rather than repeating a
             visible ``caption``. Caption and ``alt`` are independent; a

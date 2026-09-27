@@ -30,7 +30,7 @@ from e2e_playwright.shared.app_utils import (
     goto_app,
 )
 
-IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 36
+IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 40
 
 
 def check_image_source_error_count(messages: list[str], expected_count: int):
@@ -380,7 +380,7 @@ def test_image_omits_index_alt(app: Page):
         expect(img).not_to_have_attribute("alt")
 
 
-def test_image_alt_sets_accessible_name(app: Page):
+def test_image_alt_and_link_accessible_names(app: Page):
     """Verify authored, decorative, and omitted img alt, plus linked caption naming."""
     labeled = get_element_by_key(app, "img_alt_labeled").locator("img")
     expect(labeled).to_have_accessible_name("Sunrise over a mountain ridge")
