@@ -138,6 +138,20 @@ if TYPE_CHECKING:
     assert_type(echarts_chart(spec, renderer="svg", on_select="rerun"), EChartsState)
 
     # =====================================================================
+    # Test alt parameter (str or None)
+    # =====================================================================
+
+    assert_type(
+        echarts_chart(spec, on_select="ignore", alt="Bar chart of categories"),
+        DeltaGenerator,
+    )
+    assert_type(echarts_chart(spec, on_select="ignore", alt=None), DeltaGenerator)
+    assert_type(
+        echarts_chart(spec, alt="Bar chart of categories", on_select="rerun"),
+        EChartsState,
+    )
+
+    # =====================================================================
     # Test with all parameters combined (on_select="ignore" -> DeltaGenerator)
     # =====================================================================
 
@@ -150,6 +164,7 @@ if TYPE_CHECKING:
             key="full_chart",
             on_select="ignore",
             renderer="canvas",
+            alt="Full parameter chart",
         ),
         DeltaGenerator,
     )
@@ -167,6 +182,7 @@ if TYPE_CHECKING:
             key="selectable_chart",
             on_select="rerun",
             renderer="svg",
+            alt="Selectable chart description",
         ),
         EChartsState,
     )
@@ -190,3 +206,6 @@ if TYPE_CHECKING:
     echarts_chart(  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
         spec, on_select="rerun", selection_mode="points"
     )
+
+    # Invalid alt type (str or None only)
+    echarts_chart(spec, alt=123)  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]

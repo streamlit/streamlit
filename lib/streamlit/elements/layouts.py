@@ -1207,6 +1207,7 @@ class LayoutsMixin:
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        bind: BindOption = None,
     ) -> ExpanderContainer:
         r"""Insert a multi-element container that can be expanded/collapsed.
 
@@ -1221,9 +1222,10 @@ class LayoutsMixin:
         By default, all content within the expander is computed and sent to the
         frontend, even if the expander is closed. To enable lazy execution
         where content only runs when the expander is open, use
-        ``on_change="rerun"`` or pass a callable to ``on_change``. The ``.open``
-        property indicates whether the expander is currently open, letting you
-        conditionally render expensive content.
+        ``on_change="rerun"``, pass a callable to ``on_change``, or set
+        ``bind="query-params"`` (with ``key``). The ``.open`` property
+        indicates whether the expander is currently open when state tracking is
+        enabled, letting you conditionally render expensive content.
 
         .. note::
 
@@ -1259,9 +1261,10 @@ class LayoutsMixin:
             generated for the widget based on the values of the other
             parameters. No two widgets may have the same key.
 
-            When ``on_change`` is set to ``"rerun"`` or a callable, setting a
-            key lets you read or update the expanded state via
-            ``st.session_state[key]``. For more details, see `Widget behavior
+            When ``on_change`` is set to ``"rerun"`` or a callable, or when
+            ``bind="query-params"`` is set, setting a key lets you read or update
+            the expanded state via ``st.session_state[key]``. For more details,
+            see `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
             Additionally, if ``key`` is provided, it will be used as a
@@ -1318,10 +1321,11 @@ class LayoutsMixin:
             collapses it. This controls whether the expander tracks state
             and triggers reruns. ``on_change`` can be one of the following:
 
-            - ``"ignore"`` (default): The expander doesn't track state. All
-              expander content runs regardless of whether the expander is open
-              or closed. The ``.open`` attribute of the expander container
-              returns ``None``.
+            - ``"ignore"`` (default): Unless ``bind="query-params"`` is set,
+              the expander doesn't track state. All expander content runs
+              regardless of whether the expander is open or closed. The
+              ``.open`` attribute of the expander container returns ``None``
+              when state tracking is disabled.
 
             - ``"rerun"``: The expander tracks state. Streamlit reruns the app
               when the user expands or collapses the expander. The ``.open``
@@ -1347,6 +1351,24 @@ class LayoutsMixin:
         kwargs : dict or None
             An optional dict of kwargs to pass to the ``on_change``
             callback.
+
+        bind : "query-params" or None
+            Binding mode for syncing the expander's expanded state with a URL
+            query parameter. If this is ``None`` (default), the expanded state
+            is not synced to the URL. When this is set to ``"query-params"``,
+            changes to the expander update the URL, and the expander can be
+            initialized or updated through a query parameter in the URL. This
+            requires ``key`` to be set. The key is used as the query parameter
+            name.
+
+            When ``bind="query-params"`` is set, the expander tracks state even
+            if ``on_change`` is ``"ignore"`` (the default). Toggling still
+            reruns the app, like ``on_change="rerun"``, so ``.open`` and Session
+            State stay in sync. When the expander's state equals its default,
+            the query parameter is removed from the URL to keep it clean. A
+            bound query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed through
+            ``st.session_state``.
 
         Returns
         -------
@@ -1404,8 +1426,9 @@ class LayoutsMixin:
         **Example 3: Programmatically control the expander state**
 
         You can use a key to programmatically control the expander state or
-        access the state in callbacks. You must set the ``on_change`` parameter
-        for the expander to track state.
+        access the state in callbacks. Set ``on_change`` to ``"rerun"`` or a
+        callable, or set ``bind="query-params"``, for the expander to track
+        state.
 
         .. code-block:: python
             :filename: streamlit_app.py
@@ -1470,8 +1493,13 @@ class LayoutsMixin:
                 "type", [repr(name) for name in EXPANDABLE_TYPE_TO_PROTO_MAPPING]
             )
 
+        # register_widget validates bind too, but an invalid value leaves the
+        # expander non-stateful, so that check is never reached. Validate up front.
+        if bind is not None and bind != "query-params":
+            raise StreamlitValueError("bind", ["'query-params'", "None"])
+
         key = to_key(key)
-        is_stateful = on_change != "ignore"
+        is_stateful = on_change != "ignore" or bind == "query-params"
 
         current_expanded = expanded
         element_id: str | None = None
@@ -1514,6 +1542,8 @@ class LayoutsMixin:
                 on_change_handler=on_change_callback,
                 args=args if is_callback else None,
                 kwargs=kwargs if is_callback else None,
+                bind=bind,
+                clearable=False,
             )
 
             current_expanded = expander_state.value
@@ -1534,6 +1564,12 @@ class LayoutsMixin:
 
         if is_stateful and element_id is not None:
             expandable_proto.id = element_id
+
+        # register_widget already requires a key when bind="query-params"; keep
+        # the guard for symmetry with checkbox.py.
+        if bind == "query-params" and key is not None:
+            expandable_proto.query_param_key = str(key)
+            expandable_proto.default_expanded = expanded
 
         block_proto = BlockProto()
         block_proto.allow_empty = True

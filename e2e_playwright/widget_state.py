@@ -42,6 +42,9 @@ if number:
 
 st.header("Widget State - Redisplayed Widget Test")
 # Test for https://github.com/streamlit/streamlit/issues/3512
+# Delayed first mount after a prior-run session-state default:
+# https://github.com/streamlit/streamlit/issues/17093
+# https://github.com/streamlit/streamlit/issues/9082
 
 if st.checkbox("Display widgets"):
     if st.checkbox("Show hello"):
@@ -49,6 +52,22 @@ if st.checkbox("Display widgets"):
 
     if st.checkbox("Show goodbye", key="c3"):
         st.write("goodbye")
+
+st.session_state.setdefault("foo", 100.0)
+st.session_state.setdefault("input1", "input 1")
+st.session_state.setdefault("input2", "input 2")
+st.session_state.setdefault("input3", "input 3")
+
+if st.toggle("Show foo"):
+    foo = st.number_input("Foo", key="foo")
+    st.write("You entered:", foo)
+
+st.text_input("input 1", key="input1")
+select = st.selectbox("select delayed input", ["A", "B"])
+if select == "A":
+    st.text_input("input 2", key="input2")
+else:
+    st.text_input("input 3", key="input3")
 
 st.header("Test for input change & button click in one motion")
 # Test for https://github.com/streamlit/streamlit/issues/10007

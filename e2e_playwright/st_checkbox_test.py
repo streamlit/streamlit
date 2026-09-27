@@ -100,6 +100,21 @@ def test_checkbox_widget_display(
     )
 
 
+def test_checkbox_unchecked_hover(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Verify unchecked checkbox hover matches the secondary button in both themes."""
+    checkbox = get_checkbox(themed_app, "checkbox 2 (False)")
+    label = checkbox.locator("label").first
+
+    reset_hovering(themed_app)
+    expect(checkbox.locator("[data-hovered]")).to_have_count(0)
+
+    label.hover()
+    expect(label).to_have_attribute("data-hovered", "true")
+    assert_snapshot(checkbox, name="st_checkbox-unchecked_hover")
+
+
 def test_help_tooltip_works(app: Page):
     leading_indent_code_tooltip = """
     Code:

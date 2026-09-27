@@ -224,9 +224,15 @@ const generateSpec = (
   selectionMode: string[],
   theme: EmotionTheme,
   containerWidth: number,
-  containerHeight?: number
+  containerHeight?: number,
+  alt: string = ""
 ): VegaLiteSpec => {
   const spec = JSON.parse(inputSpec)
+
+  // Author `alt` wins over any top-level description already in the spec JSON.
+  if (alt) {
+    spec.description = alt
+  }
 
   // Normalize legacy "0"/non-positive sizing semantics: Historically, a
   // top-level width/height of 0 behaved like "unspecified" (Vega-Lite fell back
@@ -354,6 +360,7 @@ export const useVegaElementPreprocessor = (
     datasets,
     vegaLiteTheme,
     selectionMode: inputSelectionMode,
+    alt = "",
   } = element
 
   // Selection Mode is an array, so we want to update it only when the contents
@@ -378,7 +385,8 @@ export const useVegaElementPreprocessor = (
         selectionMode,
         theme,
         0, // Use 0 for container dimensions
-        0
+        0,
+        alt
       ),
     [
       inputSpec,
@@ -387,6 +395,7 @@ export const useVegaElementPreprocessor = (
       vegaLiteTheme,
       selectionMode,
       theme,
+      alt,
     ]
   )
 
@@ -451,7 +460,8 @@ export const useVegaElementPreprocessor = (
         selectionMode,
         theme,
         containerWidth,
-        containerHeight
+        containerHeight,
+        alt
       ),
     [
       inputSpec,
@@ -462,6 +472,7 @@ export const useVegaElementPreprocessor = (
       theme,
       containerWidth,
       containerHeight,
+      alt,
     ]
   )
 
@@ -477,6 +488,7 @@ export const useVegaElementPreprocessor = (
     data,
     datasets,
     useContainerWidth,
+    alt,
     baseSpecKey,
   }
 }

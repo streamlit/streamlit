@@ -17,6 +17,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.iframe import IframeMixin, _is_file, marshall
@@ -233,6 +234,36 @@ class StIframeTest(DeltaGeneratorTestCase):
         assert element.iframe.scrolling is True
         assert element.width_config.use_stretch is True
         assert element.height_config.pixel_height == 600
+
+    def test_iframe_alt_is_forwarded(self):
+        """Non-empty alt is stripped and set on the proto."""
+        st.iframe("https://example.com", alt="  Streamlit documentation  ")
+
+        element = self.get_delta_from_queue().new_element
+        assert element.iframe.HasField("alt")
+        assert element.iframe.alt == "Streamlit documentation"
+
+    @parameterized.expand(["", "   "])
+    def test_iframe_empty_alt_is_unset(self, blank_alt: str):
+        """Empty or whitespace-only alt must not set the proto field."""
+        st.iframe("https://example.com", alt=blank_alt)
+
+        element = self.get_delta_from_queue().new_element
+        assert not element.iframe.HasField("alt")
+
+    def test_iframe_omitted_alt_is_unset(self):
+        """Omitting alt leaves the proto field unset."""
+        st.iframe("https://example.com")
+
+        element = self.get_delta_from_queue().new_element
+        assert not element.iframe.HasField("alt")
+
+    def test_components_v1_iframe_does_not_set_alt(self):
+        """Deprecated components.v1.iframe does not accept or set alt."""
+        st.components.v1.iframe("https://example.com")
+
+        element = self.get_delta_from_queue().new_element
+        assert not element.iframe.HasField("alt")
 
     def test_iframe_with_data_url(self):
         """Test st.iframe with a data: URL."""

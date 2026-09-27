@@ -64,6 +64,7 @@ class SafeSessionState:
         *,
         replay_trigger_states: WidgetStatesProto | None = None,
         replay_trigger_values: Mapping[str, Any] | None = None,
+        is_history_navigation: bool = False,
     ) -> None:
         self._yield_callback()
         with self._lock:
@@ -75,6 +76,7 @@ class SafeSessionState:
                 fresh_widget_states,
                 replay_trigger_states=replay_trigger_states,
                 replay_trigger_values=replay_trigger_values,
+                is_history_navigation=is_history_navigation,
             )
 
     def on_script_finished(

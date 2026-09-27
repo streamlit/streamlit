@@ -298,6 +298,31 @@ describe("Audio Element", () => {
     )
   })
 
+  describe("alt (accessible description)", () => {
+    it("sets aria-label when alt is provided", () => {
+      render(<Audio {...getProps({ alt: "A cat purring" })} />)
+      expect(screen.getByTestId("stAudio")).toHaveAttribute(
+        "aria-label",
+        "A cat purring"
+      )
+    })
+
+    it("omits aria-label entirely when alt is not provided", () => {
+      render(<Audio {...getProps()} />)
+      // An empty aria-label is worse than none, so the attribute must be
+      // absent rather than present-but-empty.
+      expect(screen.getByTestId("stAudio")).not.toHaveAttribute("aria-label")
+    })
+
+    it.each([
+      ["an empty string", ""],
+      ["whitespace only", "   "],
+    ])("omits aria-label when alt is %s", (_label, alt) => {
+      render(<Audio {...getProps({ alt })} />)
+      expect(screen.getByTestId("stAudio")).not.toHaveAttribute("aria-label")
+    })
+  })
+
   describe("crossOrigin attribute", () => {
     it.each([
       { resourceCrossOriginMode: "anonymous" },

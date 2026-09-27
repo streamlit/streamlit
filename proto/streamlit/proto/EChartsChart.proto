@@ -39,7 +39,11 @@ message EChartsChart {
   // frontend cannot treat a non-empty ID as "this is a selection widget".
   bool selection_activated = 6;
 
-  // Next ID: 7
+  // Accessible name for the chart (author `alt`). Applied on the frontend as
+  // ECharts `aria.label.description` (→ aria-label on role="img").
+  optional string alt = 7;
+
+  // Next ID: 8
 
   // Available renderers:
   enum Renderer {

@@ -223,3 +223,33 @@ st.vega_lite_chart(
     width="stretch",
     theme="streamlit",
 )
+
+# Keep accessible-name cases last because existing E2E assertions use positional
+# chart indexes.
+_a11y_df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+_a11y_spec = {
+    "mark": "bar",
+    "encoding": {
+        "x": {"field": "a", "type": "ordinal"},
+        "y": {"field": "b", "type": "quantitative"},
+    },
+}
+
+with st.container(key="vega_lite_alt"):
+    st.vega_lite_chart(
+        _a11y_df,
+        _a11y_spec,
+        alt="Bar chart of values by category",
+        width="content",
+    )
+
+with st.container(key="vega_lite_no_alt"):
+    st.vega_lite_chart(_a11y_df, _a11y_spec, width="content")
+
+with st.container(key="vega_lite_alt_overrides_description"):
+    st.vega_lite_chart(
+        _a11y_df,
+        {**_a11y_spec, "description": "Spec description"},
+        alt="Streamlit alt overrides description",
+        width="content",
+    )

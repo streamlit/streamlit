@@ -65,6 +65,8 @@ class RerunData:
     is_fragment_scoped_rerun: bool = False
     # set to true when a script is rerun by the fragment auto-rerun mechanism
     is_auto_rerun: bool = False
+    # set to true when browser back/forward changed the URL (popstate)
+    is_history_navigation: bool = False
     # Active trigger values whose callbacks already ran. These are applied after
     # fresh widget callbacks so the script body can observe them without
     # dispatching their callbacks again.
@@ -410,6 +412,23 @@ class ScriptRequests:
                 cached_message_hashes=new_data.cached_message_hashes,
                 is_fragment_scoped_rerun=is_fragment_scoped_rerun,
                 is_auto_rerun=new_data.is_auto_rerun,
+                # Use the newer request's history flag. Preserve a pending flag
+                # only across an automatic rerun so a timer cannot cancel URL
+                # restoration. A widget interaction that lands while a history
+                # rerun is still pending therefore drops the history bit: the
+                # coalesced run keeps the restored query_string, but stale
+                # widget state can win and will not be written back to the URL
+                # (has_param is already true). Leaving that desync until the
+                # next interaction is an accepted limitation; writing the
+                # surviving widget value back would fight the user's click and
+                # the restored URL.
+                is_history_navigation=(
+                    new_data.is_history_navigation
+                    or (
+                        self._rerun_data.is_history_navigation
+                        and new_data.is_auto_rerun
+                    )
+                ),
                 replay_trigger_states=coalesced_replay_states,
                 replay_trigger_values=coalesced_replay_values,
                 context_info=new_data.context_info,

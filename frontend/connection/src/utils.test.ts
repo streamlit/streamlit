@@ -603,7 +603,9 @@ describe("fetchWithTimeout", () => {
     const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout")
     globalThis.fetch = vi.fn().mockRejectedValue(new Error("Network error"))
 
-    await expect(fetchWithTimeout(mockUrl, 5000)).rejects.toThrow()
+    await expect(fetchWithTimeout(mockUrl, 5000)).rejects.toThrow(
+      "Network error"
+    )
     expect(clearTimeoutSpy).toHaveBeenCalled()
   })
 })

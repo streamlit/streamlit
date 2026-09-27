@@ -172,11 +172,12 @@ function Checkbox({
       aria-label={element.label}
     >
       <StyledCheckboxButton $truncate={truncate}>
-        {({ isSelected, isFocusVisible, isDisabled: isDisab }) => (
+        {({ isSelected, isFocusVisible, isHovered, isDisabled: isDisab }) => (
           <>
             <StyledCheckboxIndicator
               $isSelected={isSelected}
               $isFocusVisible={isFocusVisible}
+              $isHovered={isHovered}
               $isDisabled={isDisab}
             >
               {isSelected && (
