@@ -75,8 +75,8 @@ export const DynamicButtonLabel = ({
     label
   )
 
-  // Material/emoji icons are aria-hidden. When there is no visible label, expose
-  // a name here so icon-only buttons stay named for assistive tech.
+  // Dynamic icons are hidden from assistive technology. Give icon-only controls
+  // a name so they stay operable after the glyph is excluded from the tree.
   const iconOnlyAccessibleName =
     icon && !label?.trim() ? getIconAccessibleName(icon) : undefined
 

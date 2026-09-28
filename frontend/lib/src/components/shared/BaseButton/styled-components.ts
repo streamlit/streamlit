@@ -598,7 +598,7 @@ export const StyledButtonMainLabel = styled.span<{ $truncate?: boolean }>(
   })
 )
 
-/** Visually hidden but accessible to screen readers. */
+/** Screen-reader-only text used to name icon-only buttons. */
 export const StyledVisuallyHidden = styled.span(VISUALLY_HIDDEN_STYLES)
 
 export const StyledButtonShortcut = styled.kbd(({ theme }) => ({

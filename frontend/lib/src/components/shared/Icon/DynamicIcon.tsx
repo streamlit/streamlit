@@ -113,8 +113,8 @@ export function isMenuStyleIconLabel(
 }
 
 /**
- * Accessible name for an icon when it is the sole content of a control.
- * Matches Markdown's material-icon naming (`"{name} icon"`).
+ * Accessible name for an icon-only control.
+ * Uses the same `"{name} icon"` wording as the Markdown material-icon plugin.
  */
 export function getIconAccessibleName(iconValue: string): string {
   const { pack, icon } = parseIconPackEntry(iconValue)

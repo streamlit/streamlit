@@ -110,4 +110,28 @@ describe("ToolbarActions", () => {
       key: "share",
     })
   })
+
+  it("falls back to the host key when the label is whitespace-only", () => {
+    render(
+      <ToolbarActions
+        {...getProps({
+          hostToolbarItems: [
+            { key: "favorite", icon: "star.svg", label: "   " },
+          ],
+        })}
+      />
+    )
+
+    expect(screen.getByRole("button", { name: "favorite" })).toBeVisible()
+    expect(
+      screen.queryByTestId("stToolbarActionButtonLabel")
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not set aria-label when a visible label is present", () => {
+    render(<ToolbarActions {...getProps()} />)
+
+    const shareButton = screen.getByRole("button", { name: "Share" })
+    expect(shareButton).not.toHaveAttribute("aria-label")
+  })
 })

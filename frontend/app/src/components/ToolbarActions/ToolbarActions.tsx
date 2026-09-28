@@ -33,7 +33,10 @@ import {
 export interface ActionButtonProps {
   label?: string
   icon?: string
-  /** Accessible name; falls back to host key when label is omitted. */
+  /**
+   * Accessible name for icon-only actions that have no visible label.
+   * Ignored when `label` is non-empty (visible text is the name).
+   */
   ariaLabel: string
   onClick: () => void
 }
@@ -44,12 +47,15 @@ export function ActionButton({
   ariaLabel,
   onClick,
 }: ActionButtonProps): ReactElement {
+  const visibleLabel = label?.trim() || undefined
+
   return (
     <div className="stToolbarActionButton" data-testid="stToolbarActionButton">
       <BaseButton
         onClick={onClick}
         kind={BaseButtonKind.HEADER_BUTTON}
-        aria-label={ariaLabel}
+        // aria-label overrides contents; only set it when there is no visible label.
+        aria-label={visibleLabel ? undefined : ariaLabel}
       >
         <StyledActionButtonContainer>
           {icon && (
@@ -59,8 +65,10 @@ export function ActionButton({
               aria-hidden="true"
             />
           )}
-          {label && (
-            <span data-testid="stToolbarActionButtonLabel">{label}</span>
+          {visibleLabel && (
+            <span data-testid="stToolbarActionButtonLabel">
+              {visibleLabel}
+            </span>
           )}
         </StyledActionButtonContainer>
       </BaseButton>
@@ -89,7 +97,7 @@ function ToolbarActions({
           key={key}
           label={label}
           icon={icon}
-          ariaLabel={label || key}
+          ariaLabel={label?.trim() || key}
           onClick={() => {
             metricsMgr.enqueue("menuClick", {
               label: key,

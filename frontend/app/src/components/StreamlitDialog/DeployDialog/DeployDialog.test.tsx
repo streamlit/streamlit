@@ -113,16 +113,9 @@ describe("DeployDialog", () => {
 
     expect(screen.getByText("Deploy this app using...")).toBeVisible()
 
-    // Decorative illustrations sit next to headings; empty alt skips them in AT.
-    expect(
-      screen.getByTestId("stDeployDialogCommunityCloudIcon")
-    ).toHaveAttribute("alt", "")
-    expect(
-      screen.getByTestId("stDeployDialogSnowflakeDeploymentIcon")
-    ).toHaveAttribute("alt", "")
-    expect(
-      screen.getByTestId("stDeployDialogCustomDeploymentIcon")
-    ).toHaveAttribute("alt", "")
+    // Decorative illustrations sit next to their headings, so they are
+    // excluded from the accessibility tree (empty alt / presentational).
+    expect(screen.queryAllByRole("img")).toHaveLength(0)
 
     expect(screen.getByText("Streamlit Community Cloud")).toBeVisible()
     expect(screen.getByText("Snowflake")).toBeVisible()
