@@ -84,6 +84,57 @@ export function useDrawerResize({
     }
   }, [])
 
+  const applyDragClientX = useCallback(
+    (clientX: number): void => {
+      const drag = dragRef.current
+      if (!drag) {
+        return
+      }
+      const deltaX = clientX - drag.startX
+      const nextWidth =
+        position === "left"
+          ? drag.startWidth + deltaX
+          : drag.startWidth - deltaX
+      const viewportWidthPx = innerWidth > 0 ? innerWidth : minDrawerWidthPx
+      const maxDrawerWidthPx = Math.max(0, viewportWidthPx - drawerGutterPx)
+      setResizedWidthPx(
+        clampDrawerWidth(nextWidth, minDrawerWidthPx, maxDrawerWidthPx)
+      )
+    },
+    [drawerGutterPx, innerWidth, minDrawerWidthPx, position]
+  )
+
+  const endDrag = useCallback((): void => {
+    if (dragRef.current === null) {
+      return
+    }
+    dragRef.current = null
+    document.body.style.userSelect = ""
+  }, [])
+
+  useEffect(() => {
+    // Window listeners keep the drag alive after the cursor leaves the 8px
+    // handle. Pointer capture is not reliable in all Playwright browsers.
+    const onMove = (event: globalThis.PointerEvent | MouseEvent): void => {
+      applyDragClientX(event.clientX)
+    }
+    const onUp = (): void => {
+      endDrag()
+    }
+    window.addEventListener("pointermove", onMove)
+    window.addEventListener("mousemove", onMove)
+    window.addEventListener("pointerup", onUp)
+    window.addEventListener("mouseup", onUp)
+    window.addEventListener("pointercancel", onUp)
+    return () => {
+      window.removeEventListener("pointermove", onMove)
+      window.removeEventListener("mousemove", onMove)
+      window.removeEventListener("pointerup", onUp)
+      window.removeEventListener("mouseup", onUp)
+      window.removeEventListener("pointercancel", onUp)
+    }
+  }, [applyDragClientX, endDrag])
+
   const handlePointerDown = useCallback(
     (event: PointerEvent<HTMLDivElement>): void => {
       if (event.button !== 0) {
@@ -108,36 +159,19 @@ export function useDrawerResize({
 
   const handlePointerMove = useCallback(
     (event: PointerEvent<HTMLDivElement>): void => {
-      const drag = dragRef.current
-      if (!drag) {
-        return
-      }
-      const deltaX = event.clientX - drag.startX
-      const nextWidth =
-        position === "left"
-          ? drag.startWidth + deltaX
-          : drag.startWidth - deltaX
-      const viewportWidthPx = innerWidth > 0 ? innerWidth : minDrawerWidthPx
-      const maxDrawerWidthPx = Math.max(0, viewportWidthPx - drawerGutterPx)
-      setResizedWidthPx(
-        clampDrawerWidth(nextWidth, minDrawerWidthPx, maxDrawerWidthPx)
-      )
+      applyDragClientX(event.clientX)
     },
-    [drawerGutterPx, innerWidth, minDrawerWidthPx, position]
+    [applyDragClientX]
   )
 
   const handlePointerUp = useCallback(
     (event: PointerEvent<HTMLDivElement>): void => {
-      if (dragRef.current === null) {
-        return
-      }
-      dragRef.current = null
-      document.body.style.userSelect = ""
       if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
         event.currentTarget.releasePointerCapture(event.pointerId)
       }
+      endDrag()
     },
-    []
+    [endDrag]
   )
 
   const handleDoubleClick = useCallback((): void => {

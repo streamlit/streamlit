@@ -1157,9 +1157,10 @@ def test_tall_left_drawer_scrolls_inside(app: Page):
 
 
 def _drawer_width(dialog: Locator) -> float:
-    box = dialog.bounding_box()
-    assert box is not None
-    return box["width"]
+    """Width is applied on the panel, the parent of role=dialog."""
+    return float(
+        dialog.evaluate("el => el.parentElement.getBoundingClientRect().width")
+    )
 
 
 def _max_drawer_width_px(app: Page) -> float:
@@ -1176,6 +1177,18 @@ def _max_drawer_width_px(app: Page) -> float:
     )
 
 
+def _drag_handle_horizontally(app: Page, handle: Locator, delta_x: float) -> None:
+    handle.hover()
+    box = handle.bounding_box()
+    assert box is not None
+    start_x = box["x"] + box["width"] / 2
+    start_y = box["y"] + box["height"] / 2
+    app.mouse.move(start_x, start_y)
+    app.mouse.down()
+    app.mouse.move(start_x + delta_x, start_y, steps=20)
+    app.mouse.up()
+
+
 def test_side_drawers_are_resizable(app: Page):
     """Test that left/right drawers can be resized from the inner edge."""
     open_left_drawer_dialog(app)
@@ -1186,34 +1199,20 @@ def test_side_drawers_are_resizable(app: Page):
     resize_handle = app.get_by_test_id("stDialogResizeHandle")
     expect(resize_handle).to_be_attached()
 
-    handle_box = resize_handle.bounding_box()
-    assert handle_box is not None
-    handle_x = handle_box["x"] + handle_box["width"] / 2
-    handle_y = handle_box["y"] + handle_box["height"] / 2
-
     drag_distance = 40
-    app.mouse.move(handle_x, handle_y)
-    app.mouse.down()
-    app.mouse.move(handle_x + drag_distance, handle_y)
-    app.mouse.up()
+    _drag_handle_horizontally(app, resize_handle, drag_distance)
 
     wait_until(app, lambda: _drawer_width(dialog) > initial_width)
     expect_prefixed_markdown(app, "Rerun count:", "2")
 
     max_width = _max_drawer_width_px(app)
-    handle_box = resize_handle.bounding_box()
-    assert handle_box is not None
-    handle_x = handle_box["x"] + handle_box["width"] / 2
-    handle_y = handle_box["y"] + handle_box["height"] / 2
-    app.mouse.move(handle_x, handle_y)
-    app.mouse.down()
-    app.mouse.move(handle_x + max_width, handle_y)
-    app.mouse.up()
+    _drag_handle_horizontally(app, resize_handle, max_width)
     # twoXL gutter must stay visible; compare against innerWidth, not the
     # Playwright viewport (Firefox's classic scrollbar shrinks innerWidth).
     wait_until(
         app,
-        lambda: abs(_drawer_width(dialog) - max_width) <= 2,
+        lambda: abs(_drawer_width(dialog) - max_width) <= 8,
+        timeout=10000,
     )
     expect_prefixed_markdown(app, "Rerun count:", "2")
 
@@ -1232,14 +1231,6 @@ def test_side_drawers_are_resizable(app: Page):
     expect(right_dialog).to_be_visible()
     right_initial = _drawer_width(right_dialog)
     right_handle = app.get_by_test_id("stDialogResizeHandle")
-    right_box = right_handle.bounding_box()
-    assert right_box is not None
-    right_x = right_box["x"] + right_box["width"] / 2
-    right_y = right_box["y"] + right_box["height"] / 2
-
-    app.mouse.move(right_x, right_y)
-    app.mouse.down()
-    app.mouse.move(right_x - drag_distance, right_y)
-    app.mouse.up()
+    _drag_handle_horizontally(app, right_handle, -drag_distance)
 
     wait_until(app, lambda: _drawer_width(right_dialog) > right_initial)

@@ -178,4 +178,21 @@ describe("useDrawerResize", () => {
     )
     expect(result.current.dialogWidth).toBe(`${minDrawerWidthPx}px`)
   })
+
+  it("keeps resizing from window mousemove after leaving the handle", () => {
+    const handle = createHandleWithPanel(500)
+    const { result } = renderHook(
+      () => useDrawerResize({ position: "left", presetWidth: "31.25rem" }),
+      { wrapper: TestAppWrapper }
+    )
+
+    act(() => {
+      result.current.resizeHandleProps.onPointerDown(pointerEvent(handle, 500))
+      window.dispatchEvent(
+        new MouseEvent("mousemove", { clientX: 560, bubbles: true })
+      )
+    })
+
+    expect(result.current.dialogWidth).toBe("560px")
+  })
 })
