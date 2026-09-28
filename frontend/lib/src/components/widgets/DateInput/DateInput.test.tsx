@@ -3819,3 +3819,310 @@ describe("DateInput query param binding", () => {
     expect(end.day).toHaveTextContent("10")
   })
 })
+
+describe("on_change='ignore' mode", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Let a scheduled rerun flush before asserting whether one was sent.
+  async function flushScheduledRerun(): Promise<void> {
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+  }
+
+  const openCalendar = async (
+    user: ReturnType<typeof userEvent.setup>
+  ): Promise<HTMLElement> => {
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getSingleDateSegments(region)
+    await user.click(year)
+    return screen.findByTestId("stDateInputCalendar")
+  }
+
+  it("passes triggerRerun: false when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true }, { widgetMgr })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+    await typeIntoSegment(user, year, "2020")
+    await typeIntoSegment(user, month, "02")
+    await typeIntoSegment(user, day, "06")
+    await user.click(document.body)
+
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+        props.element.id,
+        [newDateWire],
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+          triggerRerun: false,
+        }
+      )
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("does not pass triggerRerun when ignoreRerun is false", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: false }, { widgetMgr })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+    await typeIntoSegment(user, year, "2020")
+    await typeIntoSegment(user, month, "02")
+    await typeIntoSegment(user, day, "06")
+    await user.click(document.body)
+
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+        props.element.id,
+        [newDateWire],
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        }
+      )
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).toHaveBeenCalled()
+  })
+
+  it("does not change form batching when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    let pendingFormIds = new Set<string>()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(newData => {
+        pendingFormIds = newData.formsWithPendingChanges
+      }),
+    })
+    const props = getProps(
+      {
+        ignoreRerun: true,
+        formId: "testForm",
+      },
+      { widgetMgr }
+    )
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+    await typeIntoSegment(user, year, "2020")
+    await typeIntoSegment(user, month, "02")
+    await typeIntoSegment(user, day, "06")
+    await user.click(document.body)
+
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+        props.element.id,
+        [newDateWire],
+        {
+          formId: "testForm",
+          fragmentId: undefined,
+          fromUser: true,
+          triggerRerun: false,
+        }
+      )
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(pendingFormIds).toEqual(new Set(["testForm"]))
+  })
+
+  it("does not commit on keystroke outside a form when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ ignoreRerun: true })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+    await typeIntoSegment(user, year, "2020")
+    await typeIntoSegment(user, month, "02")
+    await typeIntoSegment(user, day, "06")
+
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when a calendar date is clicked", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true }, { widgetMgr })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const calendar = await openCalendar(user)
+    const otherDay = within(calendar).getByRole("button", {
+      name: /January 25, 1970/,
+    })
+    await user.click(otherDay)
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+
+    expect(setStringArrayValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      ["1970-01-25"],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when clear is clicked", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps(
+      {
+        ignoreRerun: true,
+        default: [],
+        value: [originalDateWire],
+        setValue: true,
+      },
+      { widgetMgr }
+    )
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const clearButton = await screen.findByTestId("stDateInputClearButton")
+    await user.click(clearButton)
+
+    expect(setStringArrayValueSpy).toHaveBeenCalledWith(props.element.id, [], {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false for range commits", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps(
+      {
+        ignoreRerun: true,
+        isRange: true,
+        default: [],
+        min: "2020-01-01",
+        max: "2020-12-31",
+      },
+      { widgetMgr }
+    )
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const start = getRangeDateSegments(region, "start")
+    const end = getRangeDateSegments(region, "end")
+    await typeIntoSegment(user, start.year, "2020")
+    await typeIntoSegment(user, start.month, "02")
+    await typeIntoSegment(user, start.day, "01")
+    await typeIntoSegment(user, end.year, "2020")
+    await typeIntoSegment(user, end.month, "02")
+    await typeIntoSegment(user, end.day, "07")
+    await user.click(document.body)
+
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2020-02-01", "2020-02-07"],
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+          triggerRerun: false,
+        }
+      )
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+})
