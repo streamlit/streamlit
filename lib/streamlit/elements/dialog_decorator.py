@@ -342,6 +342,10 @@ def dialog_decorator(
     >>> if st.button("Open details"):
     >>>     show_details("Order #1234")
 
+    .. output::
+        https://doc-modal-dialog-drawer.streamlit.app/
+        height: 350px
+
     """
 
     func_or_title = title
