@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { type CSSProperties } from "react"
+import type { CSSProperties } from "react"
 
 import { assertNever } from "~lib/util/assertNever"
 import { isFileTypeAllowed } from "~lib/util/FileHelper"

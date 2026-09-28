@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { type AppPage } from "@streamlit/protobuf"
+import type { AppPage } from "@streamlit/protobuf"
 
 import { StreamlitEndpoints } from "./types"
 

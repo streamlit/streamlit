@@ -23,7 +23,7 @@ import {
 } from "./emotionBaseTheme/themeColors"
 import { ThemeShadows } from "./getShadows"
 import type { NamedColor } from "./namedColors"
-import { type PrimitiveColors } from "./primitives/colors"
+import type { PrimitiveColors } from "./primitives/colors"
 
 /**
  * Comprehensive type for emotion theme colors.
