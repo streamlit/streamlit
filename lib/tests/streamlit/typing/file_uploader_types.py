@@ -207,8 +207,18 @@ if TYPE_CHECKING:
         UploadedFile | None,
     )
     assert_type(file_uploader("Upload", on_change=None), UploadedFile | None)
+    assert_type(file_uploader("Upload", on_change="rerun"), UploadedFile | None)
+    assert_type(file_uploader("Upload", on_change="ignore"), UploadedFile | None)
     assert_type(
         file_uploader("Upload", accept_multiple_files=True, on_change=my_callback),
+        list[UploadedFile],
+    )
+    assert_type(
+        file_uploader("Upload", accept_multiple_files=True, on_change="rerun"),
+        list[UploadedFile],
+    )
+    assert_type(
+        file_uploader("Upload", accept_multiple_files=True, on_change="ignore"),
         list[UploadedFile],
     )
     assert_type(
