@@ -163,9 +163,10 @@ export const StyledDialogPanel = styled(RAModal, {
     flexDirection: "column",
     position: "relative",
     margin: isDrawer ? theme.spacing.none : theme.spacing.lg,
-    // Cap minWidth so the panel can shrink below minPopupWidth on very narrow
-    // screens instead of overflowing the viewport.
-    minWidth: `min(${theme.sizes.minPopupWidth}, ${maxWidth})`,
+    // Cap minWidth so the panel can shrink below its theme floor on very
+    // narrow screens instead of overflowing the viewport. Drawers share the
+    // sidebar minimum; centered dialogs keep minPopupWidth.
+    minWidth: `min(${isDrawer ? theme.sizes.minSidebarWidth : theme.sizes.minPopupWidth}, ${maxWidth})`,
     maxWidth,
     ...($dialogWidth !== undefined && { width: $dialogWidth }),
     ...(isDrawer

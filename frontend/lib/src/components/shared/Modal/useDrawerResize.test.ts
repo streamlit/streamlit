@@ -160,4 +160,22 @@ describe("useDrawerResize", () => {
       `${result.current.innerWidth - gutterPx}px`
     )
   })
+
+  it("clamps a dragged drawer to minSidebarWidth", () => {
+    const handle = createHandleWithPanel(500)
+    const { result } = renderHook(
+      () => useDrawerResize({ position: "left", presetWidth: "31.25rem" }),
+      { wrapper: TestAppWrapper }
+    )
+
+    act(() => {
+      result.current.resizeHandleProps.onPointerDown(pointerEvent(handle, 500))
+      result.current.resizeHandleProps.onPointerMove(pointerEvent(handle, 0))
+    })
+
+    const minDrawerWidthPx = convertRemToPx(
+      mockTheme.emotion.sizes.minSidebarWidth
+    )
+    expect(result.current.dialogWidth).toBe(`${minDrawerWidthPx}px`)
+  })
 })

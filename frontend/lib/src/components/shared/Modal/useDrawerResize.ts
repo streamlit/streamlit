@@ -72,7 +72,7 @@ export function useDrawerResize({
     undefined
   )
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null)
-  const minDrawerWidthPx = convertRemToPx(sizes.minPopupWidth)
+  const minDrawerWidthPx = convertRemToPx(sizes.minSidebarWidth)
   const drawerGutterPx = convertRemToPx(spacing.twoXL)
   const resizeSide = position === "center" ? null : position
   const dialogWidth =

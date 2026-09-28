@@ -310,6 +310,7 @@ describe("Modal subcomponents", () => {
       expect(panel).toHaveStyle({
         margin: "0",
         height: "100%",
+        minWidth: "min(12.5rem, calc(100% - 1.5rem))",
         maxWidth: "calc(100% - 1.5rem)",
         borderRadius: "0",
       })
