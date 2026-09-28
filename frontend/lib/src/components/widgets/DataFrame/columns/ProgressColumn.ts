@@ -68,6 +68,19 @@ export interface ProgressColumnParams {
 }
 
 /**
+ * A range cell that also carries the original, unclipped data value.
+ *
+ * `data.value` is clipped to min_value/max_value because the progress bar can
+ * only render within its range. `data.rawValue` keeps the underlying value so
+ * consumers of `getCellValue` (e.g. the CSV export) see the real data.
+ */
+type ProgressCellType = RangeCellType & {
+  readonly data: RangeCellType["data"] & {
+    readonly rawValue: number
+  }
+}
+
+/**
  * A read-only column type to support rendering values that have a defined
  * range. This is rendered via a progress-bar-like visualization.
  */
@@ -229,6 +242,7 @@ function ProgressColumn(
         data: {
           ...cellTemplate.data,
           value: normalizeCellValue,
+          rawValue: cellData,
           label: displayData,
           measureLabel:
             displayData.length > measureLabel.length
@@ -240,10 +254,21 @@ function ProgressColumn(
         },
       } as RangeCellType
     },
-    getCellValue(cell: RangeCellType | LoadingCell): number | null {
+    getCellValue(
+      cell: ProgressCellType | RangeCellType | LoadingCell
+    ): number | null {
       if (cell.kind === GridCellKind.Loading) {
         return null
       }
+
+      // Prefer the unclipped value so that consumers such as the CSV export
+      // get the underlying data rather than the value clipped to the
+      // min_value/max_value range used for the progress bar visualization.
+      const rawValue = (cell as ProgressCellType).data?.rawValue
+      if (rawValue !== undefined) {
+        return rawValue
+      }
+
       return cell.data?.value === undefined ? null : cell.data?.value
     },
   }
