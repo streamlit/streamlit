@@ -195,7 +195,9 @@ def test_form_submits_on_enter(app: Page):
 
 
 def _form_with_disabled_first_submit(app: Page) -> tuple[Locator, Locator]:
-    """Return form 7 after both submit buttons are mounted."""
+    """Return form 7 and its submit buttons after they are mounted in
+    disabled-then-enabled order.
+    """
     form = app.get_by_test_id("stForm").nth(6)
     submit_buttons = form.get_by_test_id("stFormSubmitButton")
     expect(submit_buttons).to_have_count(2)

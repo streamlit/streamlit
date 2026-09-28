@@ -799,7 +799,7 @@ const RawElementNodeRenderer = (
           isStale={isStale}
         >
           {buttonProto.isFormSubmitter ? (
-            // Eager so sibling submit buttons register in script order.
+            // Eager so enter-to-submit follows the first-registered submit button.
             // Lazy + Suspense can mount an enabled secondary button first.
             <FormSubmitContent element={buttonProto} {...widgetProps} />
           ) : (
