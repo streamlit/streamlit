@@ -406,7 +406,7 @@ describe("side drawer resize handle", () => {
   })
 
   it.each([
-    { position: "left" as const, edge: "right", offset: "0.375rem" },
+    { position: "left" as const, edge: "right", offset: "0.5rem" },
     { position: "right" as const, edge: "left", offset: "0" },
   ])(
     "places the $position drawer handle on the $edge edge",

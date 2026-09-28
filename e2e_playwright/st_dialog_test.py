@@ -1162,6 +1162,18 @@ def _drawer_width(dialog: Locator) -> float:
     return box["width"]
 
 
+def _max_drawer_width_px(app: Page) -> float:
+    """Match frontend clamp: innerWidth minus theme.spacing.twoXL (1.5rem)."""
+    return app.evaluate(
+        """() => {
+            const rootFontSize = parseFloat(
+                getComputedStyle(document.documentElement).fontSize
+            )
+            return window.innerWidth - 1.5 * rootFontSize
+        }"""
+    )
+
+
 def test_side_drawers_are_resizable(app: Page):
     """Test that left/right drawers can be resized from the inner edge."""
     open_left_drawer_dialog(app)
@@ -1186,20 +1198,20 @@ def test_side_drawers_are_resizable(app: Page):
     wait_until(app, lambda: _drawer_width(dialog) > initial_width)
     expect_prefixed_markdown(app, "Rerun count:", "2")
 
-    viewport = app.viewport_size
-    assert viewport is not None
+    max_width = _max_drawer_width_px(app)
     handle_box = resize_handle.bounding_box()
     assert handle_box is not None
     handle_x = handle_box["x"] + handle_box["width"] / 2
     handle_y = handle_box["y"] + handle_box["height"] / 2
     app.mouse.move(handle_x, handle_y)
     app.mouse.down()
-    app.mouse.move(handle_x + viewport["width"], handle_y)
+    app.mouse.move(handle_x + max_width, handle_y)
     app.mouse.up()
-    # twoXL gutter (1.5rem = 24px at 16px root) must stay visible.
+    # twoXL gutter must stay visible; compare against innerWidth, not the
+    # Playwright viewport (Firefox's classic scrollbar shrinks innerWidth).
     wait_until(
         app,
-        lambda: abs(_drawer_width(dialog) - (viewport["width"] - 24)) <= 2,
+        lambda: abs(_drawer_width(dialog) - max_width) <= 2,
     )
     expect_prefixed_markdown(app, "Rerun count:", "2")
 

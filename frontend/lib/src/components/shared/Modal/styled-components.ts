@@ -220,11 +220,12 @@ export const StyledDialogResizeHandle = styled.div<{
   top: 0,
   bottom: 0,
   width: DIALOG_RESIZE_HANDLE_WIDTH,
-  // Left drawers inset the handle by the thin scrollbar width so dragging
-  // the thumb scrolls instead of resizing. Right drawers keep the handle on
-  // the inner (left) edge, away from the scrollbar.
+  // Left drawers inset the handle by the thin-scrollbar gutter so dragging
+  // the thumb scrolls instead of resizing. `sm` (8px) covers Firefox's thin
+  // bar; the webkit fallback is 6px. Right drawers keep the handle on the
+  // inner (left) edge, away from the scrollbar.
   ...($position === "left"
-    ? { right: theme.spacing.xs }
+    ? { right: theme.spacing.sm }
     : { left: theme.spacing.none }),
   cursor: "col-resize",
   zIndex: theme.zIndices.priority,
