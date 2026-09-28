@@ -400,7 +400,7 @@ class FileUploaderMixin:
             with the file uploader. ``on_change`` can be one of the following:
 
             - ``"rerun"`` (default): Streamlit will rerun the app when the
-              user commits a new value (when an upload completes, a file is
+              user commits a new value (after an upload completes, a file is
               deleted, or a file is replaced in single-file mode).
 
             - ``"ignore"``: Streamlit will not rerun the app when the user

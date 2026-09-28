@@ -303,9 +303,6 @@ const FileUploader = ({
       formId: element.formId,
       fragmentId,
       fromUser: true,
-      // Form batching already ignores triggerRerun; kept for symmetry with
-      // the user-commit path above.
-      ...(element.ignoreRerun ? { triggerRerun: false } : {}),
     })
   }, [element, fragmentId, setFilesImmediate, widgetMgr])
 
