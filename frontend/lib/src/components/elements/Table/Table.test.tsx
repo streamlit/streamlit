@@ -26,10 +26,14 @@ import { render } from "~lib/test_util"
 
 import { FALLBACK_HEADER_ROW_OFFSET_REM, Table, TableProps } from "./Table"
 
-const getProps = (data: Uint8Array): TableProps => ({
+const getProps = (
+  data: Uint8Array,
+  elementOverrides?: Partial<TableProto.$Properties>
+): TableProps => ({
   element: TableProto.create({
     borderMode: TableProto.BorderMode.ALL,
     arrowData: { data },
+    ...elementOverrides,
   }),
   elementHash: "test-hash",
 })
@@ -229,6 +233,74 @@ describe("st.table", () => {
     expect(scrollableWrapper).toHaveAttribute("role", "region")
     expect(scrollableWrapper).toHaveAttribute("tabindex", "0")
     expect(scrollableWrapper).toHaveAttribute("aria-label", "Scrollable table")
+  })
+
+  describe("alt (accessible name)", () => {
+    it("sets aria-label on the table when alt is provided", () => {
+      render(
+        <Table
+          {...getProps(UNICODE, { alt: "Confusion matrix of species" })}
+        />
+      )
+      const table = screen.getByTestId("stTableStyledTable")
+      expect(table).toHaveAccessibleName("Confusion matrix of species")
+      expect(table).toHaveAttribute(
+        "aria-label",
+        "Confusion matrix of species"
+      )
+      // Native <table> already has the table role — do not invent figure/img.
+      expect(table.tagName).toBe("TABLE")
+      expect(table).not.toHaveAttribute("role")
+    })
+
+    it("omits aria-label when alt is not provided", () => {
+      render(<Table {...getProps(UNICODE)} />)
+      const table = screen.getByTestId("stTableStyledTable")
+      expect(table).not.toHaveAttribute("aria-label")
+    })
+
+    it.each([
+      ["an empty string", ""],
+      ["whitespace only", "   "],
+    ])("omits aria-label when alt is %s", (_label, alt) => {
+      render(<Table {...getProps(UNICODE, { alt })} />)
+      const table = screen.getByTestId("stTableStyledTable")
+      expect(table).not.toHaveAttribute("aria-label")
+    })
+
+    it("keeps scroll-region label separate from author alt on the table", () => {
+      const props: TableProps = {
+        ...getProps(UNICODE, {
+          alt: "Confusion matrix of predicted vs actual species",
+        }),
+        widthConfig: {
+          pixelWidth: 300,
+        },
+        heightConfig: {
+          pixelHeight: 200,
+        },
+      }
+
+      const { container } = render(<Table {...props} />)
+
+      const scrollableWrapper = container.querySelector(
+        '[data-testid="stTable"] > div'
+      ) as HTMLElement
+      expect(scrollableWrapper).toHaveAttribute("role", "region")
+      expect(scrollableWrapper).toHaveAttribute(
+        "aria-label",
+        "Scrollable table"
+      )
+
+      const table = screen.getByTestId("stTableStyledTable")
+      expect(table).toHaveAccessibleName(
+        "Confusion matrix of predicted vs actual species"
+      )
+      expect(table).toHaveAttribute(
+        "aria-label",
+        "Confusion matrix of predicted vs actual species"
+      )
+    })
   })
 
   it("does not add a11y attributes to non-scrollable tables", () => {
