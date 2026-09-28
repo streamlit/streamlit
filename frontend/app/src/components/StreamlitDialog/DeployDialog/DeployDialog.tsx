@@ -152,7 +152,7 @@ export function DeployDialog(
           <StyledDeployCardBody $flexGrow={1}>
             <img
               src={StreamlitLogo}
-              alt={"Streamlit Logo"}
+              alt=""
               data-testid={"stDeployDialogCommunityCloudIcon"}
             />
             <StyledHeader>Streamlit Community Cloud</StyledHeader>
@@ -189,7 +189,7 @@ export function DeployDialog(
           <StyledDeployCardBody $flexGrow={1}>
             <img
               src={Snowflake}
-              alt={"Snowflake"}
+              alt=""
               data-testid={"stDeployDialogSnowflakeDeploymentIcon"}
             />
             <StyledHeader>Snowflake</StyledHeader>
@@ -236,7 +236,7 @@ export function DeployDialog(
           <StyledDeployCardBody $flexGrow={2}>
             <img
               src={Rocket}
-              alt={"Rocket"}
+              alt=""
               data-testid={"stDeployDialogCustomDeploymentIcon"}
             />
             <StyledHeader>Other platforms</StyledHeader>

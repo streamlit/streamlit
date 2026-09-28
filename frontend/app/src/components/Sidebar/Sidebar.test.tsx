@@ -190,7 +190,7 @@ describe("Sidebar Component", () => {
         // Click the collapse button
         const collapseButton = within(
           screen.getByTestId("stSidebarCollapseButton")
-        ).getByRole("button")
+        ).getByRole("button", { name: "Collapse sidebar" })
         await user.click(collapseButton)
 
         expect(mockOnToggleCollapse).toHaveBeenCalledWith(expectedToggleValue)

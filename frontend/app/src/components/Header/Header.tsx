@@ -92,6 +92,7 @@ const Header = ({
                     kind={BaseButtonKind.HEADER_NO_PADDING}
                     onClick={onToggleSidebar}
                     data-testid="stExpandSidebarButton"
+                    aria-label="Expand sidebar"
                   >
                     <DynamicIcon
                       size="xl"

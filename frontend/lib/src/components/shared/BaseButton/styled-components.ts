@@ -21,6 +21,7 @@ import { darken, transparentize } from "color2k"
 import { ToggleButton, ToggleButtonGroup } from "react-aria-components"
 
 import { getHorizontalOverflowFadeStyles } from "~lib/components/shared/horizontalOverflowFade"
+import { VISUALLY_HIDDEN_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
 
 export enum BaseButtonKind {
@@ -596,6 +597,9 @@ export const StyledButtonMainLabel = styled.span<{ $truncate?: boolean }>(
     ...($truncate && { maxWidth: "100%" }),
   })
 )
+
+/** Visually hidden but accessible to screen readers. */
+export const StyledVisuallyHidden = styled.span(VISUALLY_HIDDEN_STYLES)
 
 export const StyledButtonShortcut = styled.kbd(({ theme }) => ({
   display: "inline-flex",

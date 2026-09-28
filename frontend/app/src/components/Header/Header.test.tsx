@@ -136,6 +136,9 @@ describe("Header", () => {
         <Header {...getProps({ hasSidebar: true, isSidebarOpen: false })} />
       )
       expect(screen.queryByTestId("stExpandSidebarButton")).toBeInTheDocument()
+      expect(
+        screen.getByRole("button", { name: "Expand sidebar" })
+      ).toBeVisible()
     })
 
     it.each([

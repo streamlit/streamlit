@@ -146,6 +146,12 @@ describe("Test Webcam Component", () => {
       screen.getByTestId("stCameraInputWebcamComponent")
     ).toBeInTheDocument()
     expect(screen.getByTestId("stCameraInputSwitchButton")).toBeInTheDocument()
+    expect(
+      within(screen.getByTestId("stCameraInputSwitchButton")).getByRole(
+        "button",
+        { name: "Switch camera" }
+      )
+    ).toBeVisible()
   })
 
   it("changes `facingMode` when SwitchFacingMode button clicked", async () => {

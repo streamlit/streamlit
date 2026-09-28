@@ -113,9 +113,16 @@ describe("DeployDialog", () => {
 
     expect(screen.getByText("Deploy this app using...")).toBeVisible()
 
-    expect(screen.getByAltText("Streamlit Logo")).toBeVisible()
-    expect(screen.getByAltText("Snowflake")).toBeVisible()
-    expect(screen.getByAltText("Rocket")).toBeVisible()
+    // Decorative illustrations sit next to headings; empty alt skips them in AT.
+    expect(
+      screen.getByTestId("stDeployDialogCommunityCloudIcon")
+    ).toHaveAttribute("alt", "")
+    expect(
+      screen.getByTestId("stDeployDialogSnowflakeDeploymentIcon")
+    ).toHaveAttribute("alt", "")
+    expect(
+      screen.getByTestId("stDeployDialogCustomDeploymentIcon")
+    ).toHaveAttribute("alt", "")
 
     expect(screen.getByText("Streamlit Community Cloud")).toBeVisible()
     expect(screen.getByText("Snowflake")).toBeVisible()

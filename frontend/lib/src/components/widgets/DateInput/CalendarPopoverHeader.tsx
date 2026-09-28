@@ -154,7 +154,7 @@ function HeaderPickerSelect({
       >
         {selectedLabel}
         <StyledCalendarHeaderSelectChevron>
-          <KeyboardArrowDown size={theme.iconSizes.base} />
+          <KeyboardArrowDown size={theme.iconSizes.base} aria-hidden="true" />
         </StyledCalendarHeaderSelectChevron>
       </StyledCalendarHeaderSelectTrigger>
       <StyledDropdownPopover

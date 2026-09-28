@@ -53,6 +53,9 @@ const MaterialFontIcon = ({
     <StyledMaterialIcon
       {...getDefaultProps(props)}
       data-testid={props.testid || "stIconMaterial"}
+      // Decorative by default; icon-only controls must name the control
+      // (aria-label / visually-hidden text), not this ligature span.
+      aria-hidden="true"
       // Prevent the icon text from being translated
       // this would break the icon display in the UI.
       // https://github.com/streamlit/streamlit/issues/10168

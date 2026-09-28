@@ -33,22 +33,30 @@ import {
 export interface ActionButtonProps {
   label?: string
   icon?: string
+  /** Accessible name; falls back to host key when label is omitted. */
+  ariaLabel: string
   onClick: () => void
 }
 
 export function ActionButton({
   label,
   icon,
+  ariaLabel,
   onClick,
 }: ActionButtonProps): ReactElement {
   return (
     <div className="stToolbarActionButton" data-testid="stToolbarActionButton">
-      <BaseButton onClick={onClick} kind={BaseButtonKind.HEADER_BUTTON}>
+      <BaseButton
+        onClick={onClick}
+        kind={BaseButtonKind.HEADER_BUTTON}
+        aria-label={ariaLabel}
+      >
         <StyledActionButtonContainer>
           {icon && (
             <StyledActionButtonIcon
               data-testid="stToolbarActionButtonIcon"
               icon={icon}
+              aria-hidden="true"
             />
           )}
           {label && (
@@ -81,6 +89,7 @@ function ToolbarActions({
           key={key}
           label={label}
           icon={icon}
+          ariaLabel={label || key}
           onClick={() => {
             metricsMgr.enqueue("menuClick", {
               label: key,

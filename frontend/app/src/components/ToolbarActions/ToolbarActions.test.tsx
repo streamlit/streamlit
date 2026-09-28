@@ -33,6 +33,7 @@ describe("ActionButton", () => {
   ): ActionButtonProps => ({
     label: "the label",
     icon: "star.svg",
+    ariaLabel: "the label",
     onClick: vi.fn(),
     ...extended,
   })
@@ -53,12 +54,17 @@ describe("ActionButton", () => {
   })
 
   it("does not render label if not provided", () => {
-    render(<ActionButton {...getProps({ label: undefined })} />)
+    render(
+      <ActionButton
+        {...getProps({ label: undefined, ariaLabel: "favorite" })}
+      />
+    )
 
     expect(screen.getByTestId("stToolbarActionButton")).toBeInTheDocument()
     expect(
       screen.queryByTestId("stToolbarActionButtonLabel")
     ).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "favorite" })).toBeVisible()
   })
 })
 
@@ -90,7 +96,7 @@ describe("ToolbarActions", () => {
     const props = getProps()
     render(<ToolbarActions {...props} />)
 
-    const favoriteButton = screen.getAllByTestId("stBaseButton-header")[0]
+    const favoriteButton = screen.getByRole("button", { name: "favorite" })
     await user.click(favoriteButton)
     expect(props.sendMessageToHost).toHaveBeenLastCalledWith({
       type: "TOOLBAR_ITEM_CALLBACK",

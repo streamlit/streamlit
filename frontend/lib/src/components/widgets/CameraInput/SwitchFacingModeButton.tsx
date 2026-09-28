@@ -42,7 +42,11 @@ const SwitchFacingModeButton = ({
   return (
     <StyledSwitchFacingModeButton data-testid="stCameraInputSwitchButton">
       <Tooltip content="Switch camera" placement={Placement.TOP_RIGHT}>
-        <BaseButton kind={BaseButtonKind.MINIMAL} onClick={switchFacingMode}>
+        <BaseButton
+          kind={BaseButtonKind.MINIMAL}
+          onClick={switchFacingMode}
+          aria-label="Switch camera"
+        >
           <Icon
             content={SwitchCamera}
             size="twoXL"

@@ -85,7 +85,7 @@ const IconRunning: React.FC = () => {
       {isNewYear ? (
         <img
           src={newYearsRunning}
-          alt="New Year's Celebration"
+          alt=""
           style={{
             width: "100%",
             height: "100%",

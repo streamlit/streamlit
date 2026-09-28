@@ -113,6 +113,19 @@ export function isMenuStyleIconLabel(
 }
 
 /**
+ * Accessible name for an icon when it is the sole content of a control.
+ * Matches Markdown's material-icon naming (`"{name} icon"`).
+ */
+export function getIconAccessibleName(iconValue: string): string {
+  const { pack, icon } = parseIconPackEntry(iconValue)
+  if (pack === "material" && icon) {
+    return `${icon} icon`
+  }
+  // Match EmojiIcon's stripping of an optional `emoji:` prefix.
+  return (icon || iconValue).replace(/^emoji:/, "")
+}
+
+/**
  *
  * @returns returns an img tag with a yellow filled star icon svg as base64 data
  */
@@ -156,6 +169,7 @@ const DynamicIconDispatcher = ({
             <StyledDynamicIcon {...props}>
               <StyledImageIcon
                 src={getFilledStarIconSrc()}
+                alt=""
                 data-testid={props.testid || "stImageIcon"}
               />
             </StyledDynamicIcon>
