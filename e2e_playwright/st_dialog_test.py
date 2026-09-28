@@ -1164,13 +1164,15 @@ def _drawer_width(dialog: Locator) -> float:
 
 def _max_drawer_width_px(app: Page) -> float:
     """Match frontend clamp: innerWidth minus theme.spacing.twoXL (1.5rem)."""
-    return app.evaluate(
-        """() => {
-            const rootFontSize = parseFloat(
-                getComputedStyle(document.documentElement).fontSize
-            )
-            return window.innerWidth - 1.5 * rootFontSize
-        }"""
+    return float(
+        app.evaluate(
+            """() => {
+                const rootFontSize = parseFloat(
+                    getComputedStyle(document.documentElement).fontSize
+                )
+                return window.innerWidth - 1.5 * rootFontSize
+            }"""
+        )
     )
 
 
