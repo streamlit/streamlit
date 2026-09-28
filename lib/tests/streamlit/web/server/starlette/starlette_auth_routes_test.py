@@ -1077,6 +1077,70 @@ class TestAuthCookieFlags:
     @patch_config_options(
         {"server.cookieSecret": "test-secret", "server.baseUrlPath": ""}
     )
+    def test_set_auth_cookie_falls_back_to_id_token_when_full_tokens_do_not_fit(
+        self,
+    ) -> None:
+        """An oversized tokens payload is retried with the ID token alone."""
+        original_set_cookie_with_chunks = starlette_auth_routes.set_cookie_with_chunks
+
+        def mock_set_cookie_with_chunks(
+            set_single_cookie_fn: Any,
+            create_signed_value_fn: Any,
+            cookie_name: str,
+            value: dict[str, Any],
+            *,
+            cookie_attr_size: int,
+        ) -> None:
+            if cookie_name == TOKENS_COOKIE_NAME and "access_token" in value:
+                raise StreamlitAuthError("too large to split")
+            original_set_cookie_with_chunks(
+                set_single_cookie_fn,
+                create_signed_value_fn,
+                cookie_name,
+                value,
+                cookie_attr_size=cookie_attr_size,
+            )
+
+        request = Request({"type": "http", "headers": []})
+        response = PlainTextResponse("ok")
+        starlette_auth_routes.set_cookie_with_chunks = mock_set_cookie_with_chunks
+        try:
+            asyncio.run(
+                starlette_auth_routes._set_auth_cookie(
+                    response,
+                    {"email": "user@example.com"},
+                    {"id_token": "id-token", "access_token": "access-token"},
+                    request=request,
+                )
+            )
+        finally:
+            starlette_auth_routes.set_cookie_with_chunks = (
+                original_set_cookie_with_chunks
+            )
+
+        tokens_header = next(
+            (
+                header
+                for header in response.headers.getlist("set-cookie")
+                if header.startswith(f"{TOKENS_COOKIE_NAME}=")
+                and f"Max-Age={AUTH_COOKIE_MAX_AGE_SECONDS}" in header
+            ),
+            None,
+        )
+        assert tokens_header is not None
+        cookies = SimpleCookie()
+        cookies.load(tokens_header)
+        decoded = starlette_app_utils.decode_signed_value(
+            "test-secret",
+            TOKENS_COOKIE_NAME,
+            cookies[TOKENS_COOKIE_NAME].value,
+        )
+        assert decoded is not None
+        assert json.loads(decoded) == {"id_token": "id-token"}
+
+    @patch_config_options(
+        {"server.cookieSecret": "test-secret", "server.baseUrlPath": ""}
+    )
     def test_auth_cookie_has_correct_flags(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:

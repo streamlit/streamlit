@@ -176,9 +176,10 @@ async def _set_auth_cookie(
     login are cleared so they cannot keep inflating the Cookie header after a
     smaller cookie is written.
 
-    If the token cookie cannot be stored without overflowing size limits, the
-    identity cookie is still written and login continues without persisted
-    tokens.
+    If the full token cookie cannot be stored without overflowing size limits,
+    we retry with the ID token only so RP-initiated logout can still send
+    ``id_token_hint``. If that also cannot be stored, the identity cookie is
+    still written and login continues without persisted tokens.
     """
 
     def set_single_cookie(cookie_name: str, value: str) -> None:
@@ -200,21 +201,37 @@ async def _set_auth_cookie(
         cookie_attr_size=cookie_attr_size,
     )
     if tokens:
-        try:
-            set_cookie_with_chunks(
-                set_single_cookie,
-                _create_signed_value_wrapper,
-                TOKENS_COOKIE_NAME,
-                tokens,
-                cookie_attr_size=cookie_attr_size,
-            )
-        except StreamlitAuthError:
-            _LOGGER.warning(
-                "Token cookie exceeded size limits; continuing login without "
-                "persisted tokens.",
-                exc_info=True,
-            )
-            _clear_single_auth_cookie_and_chunks(response, request, TOKENS_COOKIE_NAME)
+        token_payloads: list[dict[str, Any]] = [tokens]
+        id_token = tokens.get("id_token")
+        if isinstance(id_token, str) and set(tokens) != {"id_token"}:
+            token_payloads.append({"id_token": id_token})
+
+        for index, payload in enumerate(token_payloads):
+            try:
+                set_cookie_with_chunks(
+                    set_single_cookie,
+                    _create_signed_value_wrapper,
+                    TOKENS_COOKIE_NAME,
+                    payload,
+                    cookie_attr_size=cookie_attr_size,
+                )
+                break
+            except StreamlitAuthError:
+                if index < len(token_payloads) - 1:
+                    _LOGGER.warning(
+                        "Token cookie exceeded size limits; retrying with the "
+                        "ID token only.",
+                        exc_info=True,
+                    )
+                    continue
+                _LOGGER.warning(
+                    "Token cookie exceeded size limits; continuing login "
+                    "without persisted tokens.",
+                    exc_info=True,
+                )
+                _clear_single_auth_cookie_and_chunks(
+                    response, request, TOKENS_COOKIE_NAME
+                )
 
 
 def _get_auth_cookie_attribute_size() -> int:
