@@ -102,15 +102,13 @@ class PdfMixin:
 
         key : str or None
             An optional string to uniquely identify this component instance.
-            If this is ``None`` (default), identity is derived from the
+            If this is ``None`` (default), Streamlit derives identity from the
             component's arguments. Providing a stable ``key`` avoids remounting
             when other arguments change.
 
         alt : str or None
-            A short, plain-text accessible name for the PDF viewer. Streamlit
-            forwards this to ``streamlit-pdf``, which sets ``aria-label`` (and
-            ``role="region"``) on the viewer root. If this is ``None``
-            (default), the viewer has no accessible name.
+            A short, plain-text accessible name for the PDF viewer. If this is
+            ``None`` (default), the viewer has no accessible name.
 
             An empty or whitespace-only string is treated the same as ``None``
             and is logged so authors notice the dual meaning of ``alt=""``

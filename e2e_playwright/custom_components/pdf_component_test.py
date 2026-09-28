@@ -19,7 +19,11 @@ import re
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
-from e2e_playwright.shared.app_utils import reset_hovering, select_selectbox_option
+from e2e_playwright.shared.app_utils import (
+    get_element_by_key,
+    reset_hovering,
+    select_selectbox_option,
+)
 
 
 def _select_pdf_scenario(app: Page, scenario: str):
@@ -392,14 +396,13 @@ def test_st_pdf_accessible_names(app: Page):
     _select_pdf_scenario(app, "altText")
     wait_for_app_run(app)
 
-    containers = app.get_by_test_id("pdf-container")
-    expect(containers).to_have_count(2)
-
-    labeled = containers.nth(0)
-    unlabeled = containers.nth(1)
+    labeled = get_element_by_key(app, "pdf_with_alt").get_by_test_id("pdf-container")
+    unlabeled = get_element_by_key(app, "pdf_without_alt").get_by_test_id(
+        "pdf-container"
+    )
 
     expect(labeled).to_have_accessible_name("Q3 2026 financial report")
     expect(labeled).to_have_attribute("role", "region")
-    # Playwright requires a value for not_to_have_attribute.
-    expect(unlabeled).not_to_have_attribute("aria-label", re.compile(r".+"))
+    expect(unlabeled).to_have_accessible_name("")
+    expect(unlabeled).not_to_have_attribute("aria-label")
     expect(unlabeled).not_to_have_attribute("role", "region")

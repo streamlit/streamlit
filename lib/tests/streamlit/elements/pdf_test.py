@@ -303,19 +303,11 @@ class PdfTest(DeltaGeneratorTestCase):
 
         assert mock_component.call_args.kwargs["alt"] == "Q3 report"
 
-    def test_pdf_alt_reaches_component_data_when_supported(self) -> None:
-        """When streamlit-pdf accepts alt, it appears on the bidi component JSON."""
-        import inspect
-
-        import streamlit_pdf
-
-        if "alt" not in inspect.signature(streamlit_pdf.pdf_viewer).parameters:
-            pytest.skip("Installed streamlit-pdf does not accept alt yet")
-
+    def test_pdf_alt_reaches_component_data(self) -> None:
+        """Non-empty alt appears on the bidi component JSON (streamlit-pdf>=2.1.0)."""
         url = "https://example.com/fake-document.pdf"
         st.pdf(url, alt="Q3 2026 financial report")
 
         element = self.get_delta_from_queue().new_element
         json_args = json.loads(element.bidi_component.json)
         assert json_args["alt"] == "Q3 2026 financial report"
-        assert "alt" in json_args
