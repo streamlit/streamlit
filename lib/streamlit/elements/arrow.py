@@ -952,9 +952,7 @@ class ArrowMixin:
             Cell values remain available through the grid's own accessibility
             tree.
 
-            An empty or whitespace-only string is treated the same as ``None``
-            and is logged so authors notice the dual meaning of ``alt=""``
-            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+            An empty or whitespace-only string is treated the same as ``None``.
 
             Prefer naming what the data is (for example, "Top 20 customers by
             revenue") rather than pasting cell contents. This is a short name
