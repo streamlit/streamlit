@@ -1184,6 +1184,7 @@ def test_side_drawers_are_resizable(app: Page):
     app.mouse.up()
 
     wait_until(app, lambda: _drawer_width(dialog) > initial_width)
+    expect_prefixed_markdown(app, "Rerun count:", "2")
 
     viewport = app.viewport_size
     assert viewport is not None
@@ -1195,7 +1196,12 @@ def test_side_drawers_are_resizable(app: Page):
     app.mouse.down()
     app.mouse.move(handle_x + viewport["width"], handle_y)
     app.mouse.up()
-    wait_until(app, lambda: _drawer_width(dialog) < viewport["width"])
+    # twoXL gutter (1.5rem = 24px at 16px root) must stay visible.
+    wait_until(
+        app,
+        lambda: abs(_drawer_width(dialog) - (viewport["width"] - 24)) <= 2,
+    )
+    expect_prefixed_markdown(app, "Rerun count:", "2")
 
     resize_handle.dblclick()
     wait_until(app, lambda: abs(_drawer_width(dialog) - initial_width) <= 2)

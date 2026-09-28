@@ -19,7 +19,6 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react"
@@ -84,10 +83,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 }): ReactElement => {
   const theme = useEmotionTheme()
   const mediumBreakpointPx = calculateMaxBreakpoint(theme.breakpoints.md)
-  const sidebarWidthLimits = useMemo(
-    () => getSidebarWidthLimits(theme.sizes),
-    [theme.sizes]
-  )
+  const sidebarWidthLimits = getSidebarWidthLimits(theme.sizes)
   const { innerWidth } = useWindowDimensionsContext()
 
   const { appPages } = useContext(NavigationContext)

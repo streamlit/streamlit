@@ -20,7 +20,7 @@ import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensi
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { convertRemToPx } from "~lib/theme/utils"
 
-import { type ModalPosition } from "./styled-components"
+import type { ModalPosition } from "./styled-components"
 
 export interface UseDrawerResizeArgs {
   position: ModalPosition

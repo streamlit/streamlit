@@ -304,9 +304,9 @@ describe("Dialog container", () => {
   describe("dialog position", () => {
     it("renders a centered dialog when position is omitted", () => {
       const props = getProps()
-      // Simulate a payload that never set the enum (proto3 default not applied).
-      delete (props.element as { position?: BlockProto.Dialog.DialogPosition })
-        .position
+      // Simulate a payload that never set the enum. protobufjs keeps the
+      // proto3 default on the prototype, so `delete` would be a no-op.
+      Object.defineProperty(props.element, "position", { value: undefined })
       render(
         <Dialog {...props}>
           <div>test</div>

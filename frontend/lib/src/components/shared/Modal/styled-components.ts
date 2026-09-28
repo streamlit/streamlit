@@ -220,7 +220,12 @@ export const StyledDialogResizeHandle = styled.div<{
   top: 0,
   bottom: 0,
   width: DIALOG_RESIZE_HANDLE_WIDTH,
-  ...($position === "left" ? { right: 0 } : { left: 0 }),
+  // Left drawers inset the handle by the thin scrollbar width so dragging
+  // the thumb scrolls instead of resizing. Right drawers keep the handle on
+  // the inner (left) edge, away from the scrollbar.
+  ...($position === "left"
+    ? { right: theme.spacing.xs }
+    : { left: theme.spacing.none }),
   cursor: "col-resize",
   zIndex: theme.zIndices.priority,
   touchAction: "none",
