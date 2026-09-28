@@ -193,7 +193,9 @@ function rangeEqual(a: CalendarDate[], b: CalendarDate[]): boolean {
 }
 
 /** True when close/blur should notify the parent, including a full clear
- * that matches an already-empty committed value after a real edit. */
+ * that matches an already-empty committed value after a real edit.
+ * Callers must clear `hasEdited` after the pending edit is committed or
+ * discarded so later empty blurs do not notify again. */
 function shouldNotifyRangePending(
   pending: CalendarDate[],
   committed: CalendarDate[],
@@ -385,6 +387,7 @@ function RangeDateInput({
         if (hasPartiallyTypedField(triggerRef.current)) {
           setDisplayStart(startValue)
           setDisplayEnd(endValue)
+          hasEditedRef.current = false
           onCloseRef.current(true)
         } else {
           // Use the DOM as ground truth: if EVERY spinbutton segment shows
@@ -412,6 +415,7 @@ function RangeDateInput({
           if (
             shouldNotifyRangePending(pending, committed, hasEditedRef.current)
           ) {
+            hasEditedRef.current = false
             onChangeRef.current(pending)
           }
         }
@@ -493,6 +497,7 @@ function RangeDateInput({
         if (hasPartiallyTypedField(triggerRef.current)) {
           // Will revert on next render. Clear pending now so a concurrent
           // form submit does not commit the discarded partial edit.
+          hasEditedRef.current = false
           onCloseRef.current(true)
         } else if (formCommit) {
           const pending = compact([
@@ -503,6 +508,7 @@ function RangeDateInput({
           if (
             shouldNotifyRangePending(pending, committed, hasEditedRef.current)
           ) {
+            hasEditedRef.current = false
             formCommit(pending)
             skipCloseCommitRef.current = true
           }
@@ -622,6 +628,7 @@ function RangeDateInput({
         onEdit(dates.map(calendarDateToIso))
         return
       }
+      hasEditedRef.current = false
       onChange(dates)
     },
     [onChange, onEdit, required]
@@ -668,6 +675,7 @@ function RangeDateInput({
               : [range.start, anchor]
           setDisplayStart(start)
           setDisplayEnd(end)
+          hasEditedRef.current = false
           onChange([start, end])
           skipCloseCommitRef.current = true
           setIsOpenState(false)
@@ -682,6 +690,7 @@ function RangeDateInput({
       selfCommittedAnchorRef.current = null
       setDisplayStart(range.start)
       setDisplayEnd(range.end)
+      hasEditedRef.current = false
       onChange([range.start, range.end])
       skipCloseCommitRef.current = true
       setIsOpenState(false)
@@ -795,6 +804,7 @@ function RangeDateInput({
     selfCommittedAnchorRef.current = null
     setDisplayStart(null)
     setDisplayEnd(null)
+    hasEditedRef.current = false
     onChange([])
   }, [onChange])
 
@@ -806,6 +816,7 @@ function RangeDateInput({
       selfCommittedAnchorRef.current = null
       setDisplayStart(preset.start)
       setDisplayEnd(preset.end)
+      hasEditedRef.current = false
       onChange([preset.start, preset.end])
       setIsQuickSelectOpen(false)
     },
@@ -872,6 +883,7 @@ function RangeDateInput({
               : [parsed.end, parsed.start]
           setDisplayStart(start)
           setDisplayEnd(end)
+          hasEditedRef.current = false
           onChange([start, end])
           return
         }
@@ -920,6 +932,7 @@ function RangeDateInput({
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
       if (hasPartiallyTypedField(triggerRef.current)) {
+        hasEditedRef.current = false
         onCloseRef.current(true)
         return
       }
@@ -930,11 +943,15 @@ function RangeDateInput({
       ) {
         return
       }
+      hasEditedRef.current = false
+      if (isOpen) {
+        // Tab-away closes the popover in the same interaction. Skip the
+        // close-effect commit so an optional empty-default range does not
+        // write twice.
+        skipCloseCommitRef.current = true
+      }
       if (formCommit) {
         formCommit(pending)
-        if (isOpen) {
-          skipCloseCommitRef.current = true
-        }
       } else {
         onChangeRef.current(pending)
       }
@@ -972,7 +989,9 @@ function RangeDateInput({
                   aria-label={`${label} start date`}
                   aria-describedby={error ? errorId : undefined}
                   isInvalid={!!error}
-                  isRequired={required}
+                  // Keep invalid state tied to Streamlit's error, not native
+                  // constraint validation. The wrapper owns `aria-required`.
+                  validationBehavior="aria"
                   value={displayStart}
                   onChange={handleStartFieldChange}
                   minValue={minDate}
@@ -992,7 +1011,7 @@ function RangeDateInput({
                   aria-label={`${label} end date`}
                   aria-describedby={error ? errorId : undefined}
                   isInvalid={!!error}
-                  isRequired={required}
+                  validationBehavior="aria"
                   value={displayEnd}
                   onChange={handleEndFieldChange}
                   minValue={minDate}

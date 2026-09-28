@@ -199,16 +199,13 @@ if TYPE_CHECKING:
         DateWidgetRangeReturn,
     )
 
-    def on_required_change(d: date | None) -> None:
-        pass
-
     assert_type(
         date_input(
             "foo",
             date(2024, 1, 1),
             key="required_date",
             help="Pick a date",
-            on_change=on_required_change,
+            on_change=on_change_callback,
             disabled=False,
             required=True,
             label_visibility="visible",

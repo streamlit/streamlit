@@ -223,6 +223,9 @@ function DateInput({
       let errorType: DateValidationErrorType = null
       for (const iso of toWrite) {
         const calendarDate = isoToCalendarDate(iso)
+        // Unreachable for values produced by calendarDateToIso. Refuse the
+        // write rather than send an unparsable string or fail submit with a
+        // user-facing error that cannot be acted on.
         if (!calendarDate) {
           return false
         }
@@ -342,9 +345,20 @@ function DateInput({
     [resetError]
   )
 
-  // Incoming setValue (session_state / script) changes the committed ISO
-  // without our write: clear dirty so children can sync the new value.
+  // Incoming setValue (session_state / script) is authoritative even when
+  // the ISO value equals the last user write: a blocked empty attempt
+  // leaves dirty display that must yield to the script.
+  const incomingSetValue = element.setValue
+  const protoValue = element.value
   useEffect(() => {
+    if (incomingSetValue) {
+      const incoming = protoValue ?? []
+      lastWrittenIsoRef.current = incoming
+      pendingIsoRef.current = incoming
+      setDirty(false)
+      setHasRequiredError(false)
+      return
+    }
     const lastWritten = lastWrittenIsoRef.current
     if (lastWritten !== undefined && !isoArraysEqual(value, lastWritten)) {
       lastWrittenIsoRef.current = value
@@ -352,7 +366,7 @@ function DateInput({
       setDirty(false)
       setHasRequiredError(false)
     }
-  }, [value])
+  }, [incomingSetValue, protoValue, value])
 
   const requiredError =
     element.required &&

@@ -127,7 +127,9 @@ interface SingleDateInputProps {
 }
 
 /** True when close/blur should notify the parent, including a full clear
- * that matches an already-empty committed value after a real edit. */
+ * that matches an already-empty committed value after a real edit.
+ * Callers must clear `hasEdited` after the pending edit is committed or
+ * discarded so later empty blurs do not notify again. */
 function shouldNotifySinglePending(
   pending: CalendarDate | null,
   committed: CalendarDate | null,
@@ -282,6 +284,7 @@ function SingleDateInput({
           // non-empty: revert display to the committed value. Empty-default
           // fields notify the parent so required can paint.
           setDisplayValue(value)
+          hasEditedRef.current = false
           onCloseRef.current(true /* shouldClearError */)
         } else {
           const pending = allCleared ? null : displayValueRef.current
@@ -294,6 +297,7 @@ function SingleDateInput({
               allowEmptyCommit
             )
           ) {
+            hasEditedRef.current = false
             onChangeRef.current(pending)
           }
         }
@@ -398,6 +402,7 @@ function SingleDateInput({
           if (isPartiallyTyped || (isFullyCleared && !allowEmptyCommit)) {
             // Will revert on next render — don't commit stale/invalid state.
             // Clear pending now so a concurrent form submit does not use it.
+            hasEditedRef.current = false
             onCloseRef.current(true)
           } else {
             const pending = isFullyCleared ? null : displayValueRef.current
@@ -410,6 +415,7 @@ function SingleDateInput({
                 allowEmptyCommit
               )
             ) {
+              hasEditedRef.current = false
               formCommit(pending)
               skipCloseCommitRef.current = true
             }
@@ -460,6 +466,7 @@ function SingleDateInput({
   const handleCalendarChange = useCallback(
     (date: CalendarDate): void => {
       setDisplayValue(date)
+      hasEditedRef.current = false
       onChange(date)
       skipCloseCommitRef.current = true
       setIsOpen(false)
@@ -491,6 +498,7 @@ function SingleDateInput({
 
   const handleClear = useCallback((): void => {
     setDisplayValue(null)
+    hasEditedRef.current = false
     onChange(null)
   }, [onChange])
 
@@ -512,6 +520,7 @@ function SingleDateInput({
 
       if (parsed.kind === "date") {
         setDisplayValue(parsed.date)
+        hasEditedRef.current = false
         onChange(parsed.date)
         return
       }
@@ -524,6 +533,7 @@ function SingleDateInput({
       const newDate = applyPartialSegmentToDate(base, parsed)
       if (!newDate) return
       setDisplayValue(newDate)
+      hasEditedRef.current = false
       onChange(newDate)
     },
     [disabled, format, onChange, displayValue, minDate]
@@ -620,10 +630,12 @@ function SingleDateInput({
         const isPartiallyTyped =
           placeholders.length > 0 && placeholders.length < segments.length
         if (isPartiallyTyped) {
+          hasEditedRef.current = false
           onCloseRef.current(true)
           return
         }
         if (isFullyCleared && !allowEmptyCommit) {
+          hasEditedRef.current = false
           onCloseRef.current(true)
           return
         }
@@ -640,11 +652,15 @@ function SingleDateInput({
       ) {
         return
       }
+      hasEditedRef.current = false
+      if (isOpen) {
+        // Tab-away closes the popover in the same interaction. Skip the
+        // close-effect commit so an optional empty-default field does not
+        // write twice.
+        skipCloseCommitRef.current = true
+      }
       if (formCommit) {
         formCommit(pending)
-        if (isOpen) {
-          skipCloseCommitRef.current = true
-        }
       } else {
         onChangeRef.current(pending)
       }
@@ -680,7 +696,9 @@ function SingleDateInput({
                 aria-label={label}
                 aria-describedby={error ? errorId : undefined}
                 isInvalid={!!error}
-                isRequired={required}
+                // Keep invalid state tied to Streamlit's error, not native
+                // constraint validation. The wrapper owns `aria-required`.
+                validationBehavior="aria"
                 value={displayValue}
                 onChange={handleFieldChange}
                 minValue={minDate}
