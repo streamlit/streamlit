@@ -612,8 +612,7 @@ def test_time_input_on_change_ignore(app: Page):
     minute_segment = spinbuttons.nth(1)
 
     # Typing without committing must not update the URL or Python.
-    hour_segment.press_sequentially("14")
-    minute_segment.press_sequentially("30")
+    type_time(time_display, "14", "30", commit=False)
     wait_for_app_run(app)
     expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
     expect_prefixed_markdown(app, "Ignore time value:", "08:45:00")
@@ -641,8 +640,7 @@ def test_time_input_on_change_ignore(app: Page):
     ).to_be_visible()
 
     # Type-then-click: blur commits the dirty value, then the button reruns.
-    hour_segment.press_sequentially("16")
-    minute_segment.press_sequentially("00")
+    type_time(time_display, "16", "00", commit=False)
     app.get_by_role("button", name="Apply ignore time", exact=True).click()
     wait_for_app_run(app)
 
