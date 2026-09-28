@@ -201,13 +201,15 @@ function SingleDateInput({
 
   // Sync from parent when value changes externally (session_state, form
   // clear, close-commit, calendar click). Render-time adjustment pattern per
-  // React docs. Always accept the parent's value — during editing the parent
-  // doesn't change (we buffer locally), so this only fires on real external
-  // updates.
+  // React docs. Identity-only echoes while dirty are ignored so a sibling
+  // rerun does not clobber an in-progress edit; a real date change still
+  // updates display.
   const [prevValue, setPrevValue] = useState(value)
   if (prevValue !== value) {
     setPrevValue(value)
-    if (!suppressCommittedSync) {
+    // Skip identity-only echoes while dirty (sibling rerun). A real date
+    // change (session_state / setValue) must still update the display.
+    if (!suppressCommittedSync || !datesEqual(prevValue, value)) {
       setDisplayValue(value)
     }
   }

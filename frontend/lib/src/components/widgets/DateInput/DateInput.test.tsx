@@ -4376,6 +4376,42 @@ describe("required", () => {
     )
   })
 
+  it("does not submit empty after a partial-segment revert in a form", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    widgetMgr.setFormSubmitBehaviors("form", true)
+    const props = getProps({ formId: "form" }, { widgetMgr })
+    const setStringArrayValueSpy = vi.spyOn(widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+    await clearSegment(user, year)
+    await clearSegment(user, month)
+    expect(year).toHaveTextContent("yyyy")
+    expect(month).toHaveTextContent("mm")
+    expect(day).toHaveTextContent("20")
+
+    await user.click(document.body)
+
+    const restored = getSingleDateSegments(region)
+    expect(restored.year).toHaveTextContent("1970")
+    expect(restored.month).toHaveTextContent("01")
+    expect(restored.day).toHaveTextContent("20")
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(sendRerunBackMsg).toHaveBeenCalled()
+    expect(setStringArrayValueSpy).not.toHaveBeenCalledWith(
+      props.element.id,
+      [],
+      expect.anything()
+    )
+  })
+
   it("does not render a clear button when required", async () => {
     const user = userEvent.setup()
     const props = getRequiredEmptyProps()
@@ -4442,7 +4478,7 @@ describe("required", () => {
 
   it("runs all form validators so every required field can show an error", () => {
     const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
-    const amountProps = getRequiredEmptyProps(
+    const dateProps = getRequiredEmptyProps(
       { id: "required-date", formId: "form", label: "Date" },
       { widgetMgr }
     )
@@ -4457,7 +4493,7 @@ describe("required", () => {
     )
     render(
       <>
-        <DateInput {...amountProps} />
+        <DateInput {...dateProps} />
         <DateInput {...rangeProps} />
       </>
     )
@@ -4614,6 +4650,42 @@ describe("required", () => {
     expect(year).toHaveTextContent("2020")
     expect(month).toHaveTextContent("02")
     expect(day).toHaveTextContent("06")
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("stDateInputError")).not.toBeInTheDocument()
+  })
+
+  it("applies a programmatic setValue after a blocked empty required commit", async () => {
+    const user = userEvent.setup()
+    const props = getRequiredEmptyProps()
+    const { rerender } = render(<DateInput {...props} />)
+
+    const region = screen.getByTestId("stDateInput")
+    await typeSingleDate(user, region, "2020", "02", "06")
+    await user.click(document.body)
+    await clearAllSingleSegments(user, region)
+    await user.click(document.body)
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+
+    rerender(
+      <DateInput
+        {...props}
+        element={DateInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: ["2020-03-15"],
+        })}
+      />
+    )
+
+    const { year, month, day } = getSingleDateSegments(
+      screen.getByTestId("stDateInput")
+    )
+    expect(year).toHaveTextContent("2020")
+    expect(month).toHaveTextContent("03")
+    expect(day).toHaveTextContent("15")
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
     expect(screen.queryByTestId("stDateInputError")).not.toBeInTheDocument()
   })

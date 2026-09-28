@@ -371,6 +371,19 @@ function DateInput({
   /** Returns false to abort the form submit, painting the required error. */
   formSubmitValidatorRef.current = () => {
     if (dirty) {
+      // Non-clearable single dates revert locally; do not commit the discarded
+      // empty pending if overlay/blur has not already dropped it.
+      if (
+        !element.isRange &&
+        !allowEmptyCommit &&
+        isRequiredEmptyDateValue(pendingIsoRef.current, false)
+      ) {
+        pendingIsoRef.current = lastWrittenIsoRef.current ?? []
+        setDirty(false)
+        setHasRequiredError(false)
+        resetError()
+        return true
+      }
       const committed = commitIsoValue({
         isoValues: pendingIsoRef.current,
         fromUser: true,
