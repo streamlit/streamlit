@@ -19,6 +19,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react"
@@ -83,9 +84,10 @@ const Sidebar: React.FC<SidebarProps> = ({
 }): ReactElement => {
   const theme = useEmotionTheme()
   const mediumBreakpointPx = calculateMaxBreakpoint(theme.breakpoints.md)
-  const sidebarWidthLimits = getSidebarWidthLimits(theme.sizes)
-  const sidebarWidthLimitsRef = useRef(sidebarWidthLimits)
-  sidebarWidthLimitsRef.current = sidebarWidthLimits
+  const sidebarWidthLimits = useMemo(
+    () => getSidebarWidthLimits(theme.sizes, theme.fontSizes.baseFontSize),
+    [theme.sizes, theme.fontSizes.baseFontSize]
+  )
   const { innerWidth } = useWindowDimensionsContext()
 
   const { appPages } = useContext(NavigationContext)
@@ -151,19 +153,19 @@ const Sidebar: React.FC<SidebarProps> = ({
     setShowSidebarCollapse(false)
   }, [])
 
-  const initializeSidebarWidth = useCallback((width: number): void => {
-    const clampedWidth = clampSidebarWidth(
-      width,
-      sidebarWidthLimitsRef.current
-    )
-    const newWidth = clampedWidth.toString()
+  const initializeSidebarWidth = useCallback(
+    (width: number): void => {
+      const clampedWidth = clampSidebarWidth(width, sidebarWidthLimits)
+      const newWidth = clampedWidth.toString()
 
-    setSidebarWidth(newWidth)
+      setSidebarWidth(newWidth)
 
-    if (localStorageAvailable()) {
-      window.localStorage.setItem("sidebarWidth", newWidth)
-    }
-  }, [])
+      if (localStorageAvailable()) {
+        window.localStorage.setItem("sidebarWidth", newWidth)
+      }
+    },
+    [sidebarWidthLimits]
+  )
 
   const onResizeStop = useCallback<ResizeCallback>(
     (

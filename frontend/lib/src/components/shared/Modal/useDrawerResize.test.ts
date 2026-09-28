@@ -146,7 +146,10 @@ describe("useDrawerResize", () => {
       )
     })
 
-    const gutterPx = convertRemToPx(mockTheme.emotion.spacing.twoXL)
+    const gutterPx = convertRemToPx(
+      mockTheme.emotion.spacing.twoXL,
+      mockTheme.emotion.fontSizes.baseFontSize
+    )
     expect(result.current.dialogWidth).toBe(
       // eslint-disable-next-line no-restricted-properties -- Assert against the same live viewport the hook reads.
       `${window.innerWidth - gutterPx}px`
@@ -166,7 +169,8 @@ describe("useDrawerResize", () => {
     })
 
     const minDrawerWidthPx = convertRemToPx(
-      mockTheme.emotion.sizes.minSidebarWidth
+      mockTheme.emotion.sizes.minSidebarWidth,
+      mockTheme.emotion.fontSizes.baseFontSize
     )
     expect(result.current.dialogWidth).toBe(`${minDrawerWidthPx}px`)
   })
@@ -186,5 +190,19 @@ describe("useDrawerResize", () => {
     })
 
     expect(result.current.dialogWidth).toBe("560px")
+  })
+
+  it("does not attach window drag listeners for a centered dialog", () => {
+    const addSpy = vi.spyOn(window, "addEventListener")
+
+    renderHook(
+      () => useDrawerResize({ position: "center", presetWidth: "31.25rem" }),
+      { wrapper: TestAppWrapper }
+    )
+
+    expect(addSpy.mock.calls.some(call => call[0] === "pointermove")).toBe(
+      false
+    )
+    addSpy.mockRestore()
   })
 })

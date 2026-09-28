@@ -27,12 +27,13 @@ export interface SidebarWidthLimits {
 
 /** Convert the theme sidebar width tokens to pixels for clamp/resize math. */
 export function getSidebarWidthLimits(
-  sizes: EmotionTheme["sizes"]
+  sizes: EmotionTheme["sizes"],
+  rootFontSizePx: number
 ): SidebarWidthLimits {
   return {
-    minWidthPx: convertRemToPx(sizes.minSidebarWidth),
-    maxWidthPx: convertRemToPx(sizes.maxSidebarWidth),
-    defaultWidthPx: convertRemToPx(sizes.defaultSidebarWidth),
+    minWidthPx: convertRemToPx(sizes.minSidebarWidth, rootFontSizePx),
+    maxWidthPx: convertRemToPx(sizes.maxSidebarWidth, rootFontSizePx),
+    defaultWidthPx: convertRemToPx(sizes.defaultSidebarWidth, rootFontSizePx),
   }
 }
 

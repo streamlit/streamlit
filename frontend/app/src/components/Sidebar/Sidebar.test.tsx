@@ -34,7 +34,8 @@ import Sidebar, { SidebarProps } from "./Sidebar"
 import { getSidebarWidthLimits } from "./utils"
 
 const { minWidthPx, maxWidthPx, defaultWidthPx } = getSidebarWidthLimits(
-  mockTheme.emotion.sizes
+  mockTheme.emotion.sizes,
+  mockTheme.emotion.fontSizes.baseFontSize
 )
 
 // Mock for controlling window dimensions in tests

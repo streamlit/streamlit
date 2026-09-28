@@ -420,6 +420,7 @@ describe("side drawer resize handle", () => {
       const handle = screen.getByTestId("stDialogResizeHandle")
       expect(handle).toHaveStyle({
         [edge]: offset,
+        width: "0.5rem",
         cursor: "col-resize",
       })
       expect(handle).toHaveAttribute("aria-hidden", "true")

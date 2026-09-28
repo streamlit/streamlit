@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { PointerEvent, useCallback, useEffect, useRef, useState } from "react"
+import {
+  PointerEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { convertRemToPx } from "~lib/theme/utils"
@@ -65,13 +72,19 @@ export function useDrawerResize({
   position,
   presetWidth,
 }: UseDrawerResizeArgs): UseDrawerResizeResult {
-  const { sizes, spacing } = useEmotionTheme()
+  const { sizes, spacing, fontSizes } = useEmotionTheme()
   const [resizedWidthPx, setResizedWidthPx] = useState<number | undefined>(
     undefined
   )
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null)
-  const minDrawerWidthPx = convertRemToPx(sizes.minSidebarWidth)
-  const drawerGutterPx = convertRemToPx(spacing.twoXL)
+  const minDrawerWidthPx = useMemo(
+    () => convertRemToPx(sizes.minSidebarWidth, fontSizes.baseFontSize),
+    [fontSizes.baseFontSize, sizes.minSidebarWidth]
+  )
+  const drawerGutterPx = useMemo(
+    () => convertRemToPx(spacing.twoXL, fontSizes.baseFontSize),
+    [fontSizes.baseFontSize, spacing.twoXL]
+  )
   const resizeSide = position === "center" ? null : position
   const dialogWidth =
     resizedWidthPx === undefined ? presetWidth : `${resizedWidthPx}px`
@@ -113,8 +126,11 @@ export function useDrawerResize({
   }, [])
 
   useEffect(() => {
-    // Window listeners keep the drag alive after the cursor leaves the 8px
-    // handle. Pointer capture is not reliable in all Playwright browsers.
+    if (resizeSide === null) {
+      return undefined
+    }
+    // Window listeners keep the drag alive after the cursor leaves the narrow
+    // handle; pointer capture alone is not reliable across all browsers.
     const onMove = (event: globalThis.PointerEvent | MouseEvent): void => {
       applyDragClientX(event.clientX)
     }
@@ -133,7 +149,7 @@ export function useDrawerResize({
       window.removeEventListener("mouseup", onUp)
       window.removeEventListener("pointercancel", onUp)
     }
-  }, [applyDragClientX, endDrag])
+  }, [applyDragClientX, endDrag, resizeSide])
 
   const handlePointerDown = useCallback(
     (event: PointerEvent<HTMLDivElement>): void => {

@@ -100,9 +100,8 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     icon,
     position,
   } = element
-  // Open on the first paint when the proto says so. Starting closed and
-  // flipping in an effect delayed the drawer by a frame, so the fully-rendered
-  // panel popped in with no chance to play the enter animation.
+  // Open on the first paint when the proto says so. Starting closed would
+  // skip the drawer's CSS enter animation.
   const [isOpen, setIsOpen] = useState<boolean>(() => Boolean(initialIsOpen))
 
   useEffect(() => {

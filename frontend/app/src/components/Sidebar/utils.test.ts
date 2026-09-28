@@ -28,7 +28,10 @@ import {
   shouldCollapse,
 } from "./utils"
 
-const sidebarWidthLimits = getSidebarWidthLimits(mockTheme.emotion.sizes)
+const sidebarWidthLimits = getSidebarWidthLimits(
+  mockTheme.emotion.sizes,
+  mockTheme.emotion.fontSizes.baseFontSize
+)
 const { minWidthPx, maxWidthPx, defaultWidthPx } = sidebarWidthLimits
 
 describe("shouldCollapse", () => {
@@ -78,6 +81,13 @@ describe("getSidebarWidthLimits", () => {
     expect(minWidthPx).toBe(200)
     expect(defaultWidthPx).toBe(300)
     expect(maxWidthPx).toBe(600)
+  })
+
+  it("scales the rem tokens with a custom baseFontSize", () => {
+    const limits = getSidebarWidthLimits(mockTheme.emotion.sizes, 14)
+    expect(limits.minWidthPx).toBe(175)
+    expect(limits.defaultWidthPx).toBe(262.5)
+    expect(limits.maxWidthPx).toBe(525)
   })
 })
 
