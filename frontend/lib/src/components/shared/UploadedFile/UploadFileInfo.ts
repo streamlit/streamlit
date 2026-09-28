@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { type FileURLs } from "@streamlit/protobuf"
+import type { FileURLs } from "@streamlit/protobuf"
 
 export interface UploadingStatus {
   type: "uploading"

@@ -1,4 +1,4 @@
-import { type CustomThemeConfig } from "@streamlit/protobuf"
+import type { CustomThemeConfig } from "@streamlit/protobuf"
 /**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *

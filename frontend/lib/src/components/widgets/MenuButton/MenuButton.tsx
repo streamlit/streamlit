@@ -25,7 +25,7 @@ import {
 } from "react"
 
 import { FloatingPortal } from "@floating-ui/react"
-import { type Key } from "react-aria-components"
+import type { Key } from "react-aria-components"
 
 import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
 

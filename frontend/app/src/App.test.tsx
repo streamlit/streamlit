@@ -27,7 +27,7 @@ import userEvent, {
   PointerEventsCheckLevel,
 } from "@testing-library/user-event"
 import { cloneDeep } from "lodash-es"
-import { type Mock, type MockInstance } from "vitest"
+import type { Mock, MockInstance } from "vitest"
 
 import {
   getMenuLabels,
