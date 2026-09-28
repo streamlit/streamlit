@@ -1191,6 +1191,8 @@ def _clear_date_segments(field: Locator, page: Page) -> None:
     count = spinbuttons.count()
     for i in range(count):
         spinbuttons.nth(i).click()
+        # Four presses cover the year segment; extra presses are harmless
+        # after a segment is empty.
         for _ in range(4):
             page.keyboard.press("Backspace")
     page.keyboard.press("Escape")

@@ -67,6 +67,7 @@ export interface Props {
   fragmentId?: string
 }
 
+/** True when two ISO date arrays have the same length and the same values in order. */
 function isoArraysEqual(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((iso, i) => iso === b[i])
 }
@@ -375,11 +376,11 @@ function DateInput({
       // empty pending if overlay/blur has not already dropped it. Only skip
       // when last written is a real date — an empty last written (e.g.
       // session_state None) must still run required validation.
-      if (
+      const revertedNonClearableSingle =
         !element.isRange &&
         !allowEmptyCommit &&
         isRequiredEmptyDateValue(pendingIsoRef.current, false)
-      ) {
+      if (revertedNonClearableSingle) {
         const lastWritten = lastWrittenIsoRef.current ?? []
         if (!isRequiredEmptyDateValue(lastWritten, false)) {
           pendingIsoRef.current = lastWritten

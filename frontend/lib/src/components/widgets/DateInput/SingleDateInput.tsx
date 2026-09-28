@@ -112,9 +112,9 @@ interface SingleDateInputProps {
    * committing the value to widget state. Used for real-time error
    * feedback during segment editing. */
   onValidate: (date: CalendarDate | null) => void
-  /** Called when close requires parent-level cleanup (segments left in
-   * placeholder state after an edit). Parent clears the validation error;
-   * the display revert is handled locally. */
+  /** Called when close/blur leaves placeholder segments. The parent
+   * discards the pending edit (restore last written ISO, clear dirty) and
+   * the validation error; display revert is local. */
   onClose: (shouldClearError: boolean) => void
   /** In a form, commit the pending value with the same required/range rules
    * as `onChange`, including a synchronous WidgetStateManager write so
@@ -207,9 +207,8 @@ function SingleDateInput({
   const [prevValue, setPrevValue] = useState(value)
   if (prevValue !== value) {
     // Skip identity-only echoes and null staging writes while dirty so an
-    // incomplete required range keeps its start date. Do not advance
-    // prevValue in that case: a later empty setValue can still sync once
-    // dirty clears.
+    // in-progress edit stays visible. Do not advance prevValue in that
+    // case: a later empty setValue can still sync once dirty clears.
     const applyDisplay =
       !suppressCommittedSync ||
       (value !== null && !datesEqual(prevValue, value))
@@ -615,6 +614,8 @@ function SingleDateInput({
       const placeholders = triggerRef.current?.querySelectorAll(
         '[role="spinbutton"][data-placeholder="true"]'
       )
+      const isFullyCleared =
+        !!segments && placeholders?.length === segments.length
       if (segments && placeholders) {
         const isPartiallyTyped =
           placeholders.length > 0 && placeholders.length < segments.length
@@ -622,15 +623,12 @@ function SingleDateInput({
           onCloseRef.current(true)
           return
         }
-        const isFullyCleared = placeholders.length === segments.length
         if (isFullyCleared && !allowEmptyCommit) {
           onCloseRef.current(true)
           return
         }
       }
       const pending = displayValueRef.current
-      const isFullyCleared =
-        !!segments && placeholders?.length === segments.length
       if (
         !shouldNotifySinglePending(
           pending,

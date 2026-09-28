@@ -96,8 +96,10 @@ class DateInputTest(DeltaGeneratorTestCase):
             assert id1 != id2
 
     def test_required_not_in_keyed_widget_id(self) -> None:
-        """Toggling required does not change a keyed widget ID; it is not on the
-        format allowlist.
+        """Test that toggling required with a key keeps the widget ID.
+
+        Unlike format, required cannot make a stored date illegal, so it is
+        not on the keyed-identity allowlist.
         """
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
