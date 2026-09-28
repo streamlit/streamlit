@@ -31,6 +31,7 @@ import {
   getQuickSelectPresets,
   isOlderThanTwoYears,
   isoToCalendarDate,
+  isRequiredEmptyDateValue,
   isValidSegmentValue,
   normalizeRangeOrder,
   parseDateFieldPaste,
@@ -625,5 +626,17 @@ describe("normalizeRangeOrder", () => {
 
   it("no-op for empty array", () => {
     expect(normalizeRangeOrder([])).toEqual([])
+  })
+})
+
+describe("isRequiredEmptyDateValue", () => {
+  it.each([
+    ["empty single", [], false, true],
+    ["one-element single", ["2024-03-06"], false, false],
+    ["empty range", [], true, true],
+    ["one-element range", ["2024-03-06"], true, true],
+    ["two-element range", ["2024-03-06", "2024-03-08"], true, false],
+  ] as const)("%s", (_label, isoValues, isRange, expected) => {
+    expect(isRequiredEmptyDateValue([...isoValues], isRange)).toBe(expected)
   })
 })

@@ -64,6 +64,7 @@ import {
 } from "./CalendarPopoverHeader"
 import {
   applyPartialSegmentToDate,
+  calendarDateToIso,
   datesEqual,
   getQuickSelectPresets,
   getSafeLocale,
@@ -110,6 +111,11 @@ interface RangeDateInputProps {
   format: string
   disabled: boolean
   clearable: boolean
+  required: boolean
+  /** Skip parent→display sync while dirty so a sibling rerun does not restore
+   * the last accepted range over an in-progress edit. */
+  suppressCommittedSync: boolean
+  onEdit: (isoValues: string[]) => void
   label: string
   error: string | null
   locale: string
@@ -119,9 +125,9 @@ interface RangeDateInputProps {
   onFocusChange: (value: CalendarDate) => void
   onValidate: (date: CalendarDate | null) => void
   onClose: (hasPlaceholderSegments: boolean) => void
-  /** When inside a form, writes the pending range to WidgetStateManager
-   * synchronously on blur so a concurrent form submit reads the correct
-   * value. Undefined when not in a form. */
+  /** In a form, commit the pending range with the same required/range rules
+   * as `onChange`, including a synchronous WidgetStateManager write so
+   * submit sees the staged value. Undefined when not in a form. */
   formCommit?: (dates: CalendarDate[]) => void
   /** Incremented when the parent form is cleared. Signals this component to
    * reset its local display state to the parent's value props (which may not
@@ -186,6 +192,16 @@ function rangeEqual(a: CalendarDate[], b: CalendarDate[]): boolean {
   return a.every((d, i) => datesEqual(d, b[i]))
 }
 
+/** True when close/blur should notify the parent, including a full clear
+ * that matches an already-empty committed value after a real edit. */
+function shouldNotifyRangePending(
+  pending: CalendarDate[],
+  committed: CalendarDate[],
+  hasEdited: boolean
+): boolean {
+  return !rangeEqual(pending, committed) || (pending.length === 0 && hasEdited)
+}
+
 function hasPartiallyTypedField(container: HTMLElement | null): boolean {
   const fields = container?.querySelectorAll("[data-range-field]")
   if (!fields) return false
@@ -210,6 +226,9 @@ function RangeDateInput({
   format,
   disabled,
   clearable,
+  required,
+  suppressCommittedSync,
+  onEdit,
   label,
   error,
   locale,
@@ -242,6 +261,9 @@ function RangeDateInput({
 
   const clearButtonRef = useRef<HTMLButtonElement | null>(null)
   const skipCloseCommitRef = useRef(false)
+  // A full clear that matches an empty default still needs to notify the
+  // parent so a required field can paint.
+  const hasEditedRef = useRef(false)
   // Guards against `handleFocus` reopening the popover during programmatic
   // focus restoration (see `restoreFocusToField` below).
   const isRestoringFocusRef = useRef(false)
@@ -293,11 +315,15 @@ function RangeDateInput({
   }
   if (prevStart !== startValue) {
     setPrevStart(startValue)
-    setDisplayStart(startValue)
+    if (!suppressCommittedSync) {
+      setDisplayStart(startValue)
+    }
   }
   if (prevEnd !== endValue) {
     setPrevEnd(endValue)
-    setDisplayEnd(endValue)
+    if (!suppressCommittedSync) {
+      setDisplayEnd(endValue)
+    }
   }
 
   // Form clear: display may have diverged without value changing
@@ -309,6 +335,7 @@ function RangeDateInput({
     inAnchorModeRef.current = false
     selfCommittedAnchorRef.current = null
     activeOriginRef.current = null
+    hasEditedRef.current = false
     // Reading the DOM during render is safe here because this write sits inside
     // the same condition that advances `prevResetKey`: a discarded render
     // retries against live focus rather than keeping a stale `true`. Strict
@@ -376,7 +403,9 @@ function RangeDateInput({
           }
 
           const committed = compact([startValue, endValue])
-          if (!rangeEqual(pending, committed)) {
+          if (
+            shouldNotifyRangePending(pending, committed, hasEditedRef.current)
+          ) {
             onChangeRef.current(pending)
           }
         }
@@ -461,8 +490,11 @@ function RangeDateInput({
             displayEndRef.current,
           ])
           const committed = compact([startValue, endValue])
-          if (!rangeEqual(pending, committed)) {
+          if (
+            shouldNotifyRangePending(pending, committed, hasEditedRef.current)
+          ) {
             formCommit(pending)
+            skipCloseCommitRef.current = true
           }
         }
       },
@@ -552,20 +584,37 @@ function RangeDateInput({
       if (!date) {
         setDisplayEnd(null)
       }
+      const pending = compact([date, date ? displayEndRef.current : null])
+      hasEditedRef.current = true
+      onEdit(pending.map(calendarDateToIso))
       validateBothFields(date, date ? displayEndRef.current : null)
       if (date) onFocusChange(date)
     },
-    [onFocusChange, validateBothFields]
+    [onEdit, onFocusChange, validateBothFields]
   )
 
   const handleEndFieldChange = useCallback(
     (date: CalendarDate | null): void => {
       if (date && !displayStartRef.current) return
       setDisplayEnd(date)
+      hasEditedRef.current = true
+      onEdit(compact([displayStartRef.current, date]).map(calendarDateToIso))
       validateBothFields(displayStartRef.current, date)
       if (date) onFocusChange(date)
     },
-    [onFocusChange, validateBothFields]
+    [onEdit, onFocusChange, validateBothFields]
+  )
+
+  // When required, incomplete ranges stay in local display until close/blur.
+  const emitRangeSelection = useCallback(
+    (dates: CalendarDate[]): void => {
+      if (required && dates.length !== 2) {
+        onEdit(dates.map(calendarDateToIso))
+        return
+      }
+      onChange(dates)
+    },
+    [onChange, onEdit, required]
   )
 
   // Null when start > end prevents RangeCalendar from rewriting state
@@ -595,7 +644,7 @@ function RangeDateInput({
           selfCommittedAnchorRef.current = range.start
           setDisplayStart(range.start)
           setDisplayEnd(null)
-          onChange([range.start])
+          emitRangeSelection([range.start])
           return
         }
         if (inAnchorModeRef.current && displayStartRef.current) {
@@ -629,7 +678,7 @@ function RangeDateInput({
       restoreFocusToField()
       setIsCalendarActive(false)
     },
-    [onChange, restoreFocusToField]
+    [emitRangeSelection, onChange, restoreFocusToField]
   )
 
   // Alt+ArrowDown enters active calendar mode; Tab from edge segments
@@ -726,9 +775,9 @@ function RangeDateInput({
       selfCommittedAnchorRef.current = date
       setDisplayStart(date)
       setDisplayEnd(null)
-      onChange([date])
+      emitRangeSelection([date])
     },
-    [onChange]
+    [emitRangeSelection]
   )
 
   const handleClear = useCallback((): void => {
@@ -819,12 +868,11 @@ function RangeDateInput({
 
         if (parsed.kind === "date") {
           setDisplay(parsed.date)
-          onChange(
-            compact([
-              isStartField ? parsed.date : displayStartRef.current,
-              isStartField ? displayEndRef.current : parsed.date,
-            ])
-          )
+          const next = compact([
+            isStartField ? parsed.date : displayStartRef.current,
+            isStartField ? displayEndRef.current : parsed.date,
+          ])
+          emitRangeSelection(next)
           return
         }
 
@@ -836,14 +884,13 @@ function RangeDateInput({
         const newDate = applyPartialSegmentToDate(base, parsed)
         if (!newDate) return
         setDisplay(newDate)
-        onChange(
-          compact([
-            isStartField ? newDate : displayStartRef.current,
-            isStartField ? displayEndRef.current : newDate,
-          ])
-        )
+        const next = compact([
+          isStartField ? newDate : displayStartRef.current,
+          isStartField ? displayEndRef.current : newDate,
+        ])
+        emitRangeSelection(next)
       },
-    [disabled, format, minDate, onChange]
+    [disabled, emitRangeSelection, format, minDate, onChange]
   )
 
   const handleStartPaste = useMemo(
@@ -865,11 +912,21 @@ function RangeDateInput({
       if (hasPartiallyTypedField(triggerRef.current)) return
       const pending = compact([displayStartRef.current, displayEndRef.current])
       const committed = compact([startValue, endValue])
-      if (rangeEqual(pending, committed)) return
-      onChangeRef.current(pending)
-      formCommit?.(pending)
+      if (
+        !shouldNotifyRangePending(pending, committed, hasEditedRef.current)
+      ) {
+        return
+      }
+      if (formCommit) {
+        formCommit(pending)
+        if (isOpen) {
+          skipCloseCommitRef.current = true
+        }
+      } else {
+        onChangeRef.current(pending)
+      }
     },
-    [formCommit, startValue, endValue]
+    [formCommit, isOpen, startValue, endValue]
   )
 
   const hasValue = displayStart !== null || displayEnd !== null
@@ -885,6 +942,7 @@ function RangeDateInput({
         data-testid="stDateInputField"
         data-disabled={disabled || undefined}
         data-has-error={error ? "" : undefined}
+        aria-required={required ? true : undefined}
         onFocus={handleFocus}
         onBlur={handleBlur}
         onClickCapture={handleClickCapture}
@@ -901,6 +959,7 @@ function RangeDateInput({
                   aria-label={`${label} start date`}
                   aria-describedby={error ? errorId : undefined}
                   isInvalid={!!error}
+                  isRequired={required}
                   value={displayStart}
                   onChange={handleStartFieldChange}
                   minValue={minDate}
@@ -920,6 +979,7 @@ function RangeDateInput({
                   aria-label={`${label} end date`}
                   aria-describedby={error ? errorId : undefined}
                   isInvalid={!!error}
+                  isRequired={required}
                   value={displayEnd}
                   onChange={handleEndFieldChange}
                   minValue={minDate}

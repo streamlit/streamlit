@@ -442,3 +442,13 @@ export function getSafeLocale(locale: string): string {
     return "en-US"
   }
 }
+
+export const REQUIRED_FIELD_MESSAGE = "This field is required."
+
+/** True when `required` treats the pending/committed ISO array as empty. */
+export function isRequiredEmptyDateValue(
+  isoValues: string[],
+  isRange: boolean
+): boolean {
+  return isRange ? isoValues.length !== 2 : isoValues.length === 0
+}

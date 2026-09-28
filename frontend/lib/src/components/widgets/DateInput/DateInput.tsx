@@ -21,6 +21,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
@@ -51,7 +52,9 @@ import {
   getMinDate,
   isOlderThanTwoYears,
   isoToCalendarDate,
+  isRequiredEmptyDateValue,
   normalizeRangeOrder,
+  REQUIRED_FIELD_MESSAGE,
   validateDate,
 } from "./dateInputUtils"
 import RangeDateInput from "./RangeDateInput"
@@ -64,6 +67,10 @@ export interface Props {
   fragmentId?: string
 }
 
+function isoArraysEqual(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((iso, i) => iso === b[i])
+}
+
 function DateInput({
   disabled,
   element,
@@ -72,18 +79,28 @@ function DateInput({
 }: Props): ReactElement {
   const isInSidebar = useContext(IsSidebarContext)
   const [error, setError] = useState<string | null>(null)
+  const [dirty, setDirty] = useState(false)
+  const [hasRequiredError, setHasRequiredError] = useState(false)
   // Incremented on form clear to signal child components to reset local
   // display state (which may have diverged from widget state due to buffering).
   const [formResetKey, setFormResetKey] = useState(0)
+  const formSubmitValidatorRef = useRef<() => boolean>(() => true)
+  const lastWrittenIsoRef = useRef<string[] | undefined>(undefined)
+  const pendingIsoRef = useRef<string[]>([])
 
   const resetError = useCallback(() => {
     setError(null)
   }, [])
 
   const handleFormCleared = useCallback(() => {
+    const defaultIso = element.default ?? []
+    lastWrittenIsoRef.current = defaultIso
+    pendingIsoRef.current = defaultIso
+    setDirty(false)
+    setHasRequiredError(false)
     resetError()
     setFormResetKey(k => k + 1)
-  }, [resetError])
+  }, [element.default, resetError])
 
   /**
    * An array with start and end date specified by the user via the UI. If the user
@@ -95,6 +112,7 @@ function DateInput({
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_array_value" as const,
+        // Query-param emptiness follows the default, not requiredness.
         clearable: element.default.length === 0,
         urlFormat: element.isRange ? ("repeated" as const) : undefined,
       }
@@ -116,6 +134,11 @@ function DateInput({
     onFormCleared: handleFormCleared,
   })
 
+  if (lastWrittenIsoRef.current === undefined) {
+    lastWrittenIsoRef.current = value
+    pendingIsoRef.current = value
+  }
+
   const { locale } = useContext(LibConfigContext)
 
   const minDateCalendar = useMemo(() => getMinDate(element), [element])
@@ -136,7 +159,12 @@ function DateInput({
     return isOlderThanTwoYears(minDateCalendar)
   }, [element.isRange, minDateCalendar])
 
-  const clearable = element.default.length === 0 && !disabled
+  // Hide the clear X when required. Keyboard emptying still notifies the
+  // parent when the default is empty (`allowEmptyCommit`); non-empty defaults
+  // revert locally.
+  const defaultEmpty = element.default.length === 0
+  const allowEmptyCommit = defaultEmpty && !disabled
+  const clearable = allowEmptyCommit && !element.required
 
   const minDateString = useMemo(
     () => formatCalendarDate(minDateCalendar, element.format),
@@ -162,31 +190,105 @@ function DateInput({
     [element.isRange, minDateString, maxDateString]
   )
 
-  // Single mode's change handler (fed by SingleDateInput's CalendarDate).
-  const handleSingleChange = useCallback(
-    (date: CalendarDate | null): void => {
-      resetError()
+  const inForm = isInForm({ formId: element.formId })
 
-      if (!date) {
-        setValueWithSource({ value: [], fromUser: true })
-        return
+  /**
+   * Writes a value after required-then-range checks. Returns false without
+   * writing when either check fails. `skipRequired` stages an empty in-form
+   * value so submit-time validators can still paint the required error.
+   */
+  const commitIsoValue = useCallback(
+    ({
+      isoValues,
+      fromUser,
+      skipRequired = false,
+    }: {
+      isoValues: string[]
+      fromUser: boolean
+      skipRequired?: boolean
+    }): boolean => {
+      const isEmpty = isRequiredEmptyDateValue(isoValues, element.isRange)
+      if (element.required && isEmpty && !skipRequired) {
+        setHasRequiredError(true)
+        setDirty(true)
+        setError(null)
+        return false
       }
 
-      const errorType = validateDate(date, minDateCalendar, maxDateCalendar)
+      // Incomplete required ranges stage as [] so form pending matches empty.
+      const toWrite =
+        element.isRange && isEmpty && element.required ? [] : isoValues
+
+      let errorType: DateValidationErrorType = null
+      for (const iso of toWrite) {
+        const calendarDate = isoToCalendarDate(iso)
+        if (!calendarDate) {
+          return false
+        }
+        const err = validateDate(
+          calendarDate,
+          minDateCalendar,
+          maxDateCalendar
+        )
+        if (err) {
+          errorType = err
+        }
+      }
       if (errorType) {
         setError(buildErrorMessage(errorType))
-        return
+        return false
       }
-      setValueWithSource({ value: [calendarDateToIso(date)], fromUser: true })
+
+      const written = element.isRange ? normalizeRangeOrder(toWrite) : toWrite
+      // Staging [] for an incomplete required range must not snap the visible
+      // start date. Keep dirty so children skip parent→display sync.
+      const keepIncompleteDisplay =
+        skipRequired &&
+        element.required &&
+        element.isRange &&
+        isoValues.length > 0 &&
+        isoValues.length !== 2
+
+      setHasRequiredError(false)
+      setError(null)
+      lastWrittenIsoRef.current = written
+      pendingIsoRef.current = keepIncompleteDisplay ? isoValues : written
+      setValueWithSource({ value: written, fromUser })
+      // Inside a form, write synchronously so submit in the same event sees
+      // the staged value. Form widget writes do not schedule a rerun.
+      if (inForm) {
+        updateWidgetMgrState(
+          element,
+          widgetMgr,
+          { value: written, fromUser },
+          fragmentId
+        )
+      }
+      setDirty(keepIncompleteDisplay)
+      return true
     },
     [
       buildErrorMessage,
+      element,
+      fragmentId,
+      inForm,
       maxDateCalendar,
       minDateCalendar,
-      resetError,
-      setError,
       setValueWithSource,
+      widgetMgr,
     ]
+  )
+
+  // Single mode's change handler (fed by SingleDateInput's CalendarDate).
+  const handleSingleChange = useCallback(
+    (date: CalendarDate | null): void => {
+      commitIsoValue({
+        isoValues: date ? [calendarDateToIso(date)] : [],
+        fromUser: true,
+        skipRequired: inForm,
+      })
+    },
+    [commitIsoValue, inForm]
   )
 
   // Real-time validation during segment editing — shows error tooltip
@@ -200,45 +302,26 @@ function DateInput({
         setError(buildErrorMessage(errorType))
       }
     },
-    [buildErrorMessage, maxDateCalendar, minDateCalendar, resetError, setError]
+    [buildErrorMessage, maxDateCalendar, minDateCalendar, resetError]
   )
 
   // Range mode's change handler — validates each date independently.
   const handleRangeChange = useCallback(
     (dates: CalendarDate[]): void => {
-      resetError()
-
-      if (dates.length === 0) {
-        setValueWithSource({ value: [], fromUser: true })
-        return
-      }
-
-      let errorType: DateValidationErrorType = null
-      const newIsoDates: string[] = []
-      dates.forEach(d => {
-        const err = validateDate(d, minDateCalendar, maxDateCalendar)
-        if (err) errorType = err
-        newIsoDates.push(calendarDateToIso(d))
-      })
-
-      if (errorType) {
-        setError(buildErrorMessage(errorType))
-        return
-      }
-      setValueWithSource({
-        value: normalizeRangeOrder(newIsoDates),
+      commitIsoValue({
+        isoValues: dates.map(calendarDateToIso),
         fromUser: true,
+        skipRequired: inForm,
       })
     },
-    [
-      buildErrorMessage,
-      maxDateCalendar,
-      minDateCalendar,
-      resetError,
-      setError,
-      setValueWithSource,
-    ]
+    [commitIsoValue, inForm]
   )
+
+  const handleEdit = useCallback((isoValues: string[]): void => {
+    pendingIsoRef.current = isoValues
+    setDirty(true)
+    setHasRequiredError(false)
+  }, [])
 
   // Revert to last committed value on close when segments still show
   // placeholders (partially typed, or fully cleared on a non-clearable widget).
@@ -255,39 +338,63 @@ function DateInput({
     [resetError]
   )
 
-  // Synchronous WidgetStateManager write for form-submit races: clicking a
-  // form's Submit button causes blur before effects fire. The child's blur
-  // handler calls onChange (async state update) + formCommit (sync WM write).
-  const inForm = isInForm({ formId: element.formId })
-  const handleFormCommit = useCallback(
-    (date: CalendarDate | null): void => {
-      if (!inForm) return
-      const isoValue = date ? [calendarDateToIso(date)] : []
-      updateWidgetMgrState(
-        element,
-        widgetMgr,
-        { value: isoValue, fromUser: true },
-        fragmentId
-      )
-    },
-    [inForm, element, widgetMgr, fragmentId]
-  )
+  // Incoming setValue (session_state / script) changes the committed ISO
+  // without our write: clear dirty so children can sync the new value.
+  useEffect(() => {
+    const lastWritten = lastWrittenIsoRef.current
+    if (lastWritten !== undefined && !isoArraysEqual(value, lastWritten)) {
+      lastWrittenIsoRef.current = value
+      pendingIsoRef.current = value
+      setDirty(false)
+      setHasRequiredError(false)
+    }
+  }, [value])
 
-  const handleRangeFormCommit = useCallback(
-    (dates: CalendarDate[]): void => {
-      if (!inForm) return
-      updateWidgetMgrState(
-        element,
-        widgetMgr,
-        {
-          value: normalizeRangeOrder(dates.map(calendarDateToIso)),
-          fromUser: true,
-        },
-        fragmentId
-      )
-    },
-    [inForm, element, widgetMgr, fragmentId]
-  )
+  const requiredError =
+    element.required &&
+    hasRequiredError &&
+    isRequiredEmptyDateValue(pendingIsoRef.current, element.isRange)
+      ? REQUIRED_FIELD_MESSAGE
+      : null
+  if (
+    hasRequiredError &&
+    (!element.required ||
+      !isRequiredEmptyDateValue(pendingIsoRef.current, element.isRange))
+  ) {
+    setHasRequiredError(false)
+  }
+  const displayedError = requiredError ?? error
+
+  /** Returns false to abort the form submit, painting the required error. */
+  formSubmitValidatorRef.current = () => {
+    if (dirty) {
+      const committed = commitIsoValue({
+        isoValues: pendingIsoRef.current,
+        fromUser: true,
+      })
+      // Min/max is a commit-time check only, so a non-required dirty field
+      // must not abort submit.
+      return element.required ? committed : true
+    }
+    if (element.required && isRequiredEmptyDateValue(value, element.isRange)) {
+      setHasRequiredError(true)
+      return false
+    }
+    return true
+  }
+
+  useEffect(() => {
+    if (!inForm) {
+      return undefined
+    }
+
+    const validator = (): boolean => formSubmitValidatorRef.current()
+    widgetMgr.addFormSubmitValidator(element.formId, element.id, validator)
+
+    return () => {
+      widgetMgr.removeFormSubmitValidator(element.formId, element.id)
+    }
+  }, [element.formId, element.id, inForm, widgetMgr])
 
   const singleValue = useMemo(
     () => isoToCalendarDate(value[0] ?? "") ?? null,
@@ -337,6 +444,7 @@ function DateInput({
         labelVisibility={labelVisibilityProtoValueToEnum(
           element.labelVisibility?.value
         )}
+        required={element.required}
       >
         {element.help && (
           <WidgetLabelHelpIcon content={element.help} label={element.label} />
@@ -352,8 +460,11 @@ function DateInput({
           format={element.format}
           disabled={disabled}
           clearable={clearable}
+          required={element.required}
+          suppressCommittedSync={dirty}
+          onEdit={handleEdit}
           label={element.label}
-          error={error}
+          error={displayedError}
           locale={locale}
           isInSidebar={isInSidebar}
           enableQuickSelect={enableQuickSelect}
@@ -361,7 +472,7 @@ function DateInput({
           onFocusChange={setFocusedValue}
           onValidate={handleValidate}
           onClose={handleClose}
-          formCommit={inForm ? handleRangeFormCommit : undefined}
+          formCommit={inForm ? handleRangeChange : undefined}
           formResetKey={formResetKey}
         />
       ) : (
@@ -373,15 +484,19 @@ function DateInput({
           format={element.format}
           disabled={disabled}
           clearable={clearable}
+          allowEmptyCommit={allowEmptyCommit}
+          required={element.required}
+          suppressCommittedSync={dirty}
+          onEdit={handleEdit}
           label={element.label}
-          error={error}
+          error={displayedError}
           locale={locale}
           isInSidebar={isInSidebar}
           focusedValue={focusedValue}
           onFocusChange={setFocusedValue}
           onValidate={handleValidate}
           onClose={handleClose}
-          formCommit={inForm ? handleFormCommit : undefined}
+          formCommit={inForm ? handleSingleChange : undefined}
           formResetKey={formResetKey}
         />
       )}
