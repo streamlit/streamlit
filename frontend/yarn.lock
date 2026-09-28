@@ -2309,9 +2309,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@microlink/react-json-view@npm:^1.31.36":
-  version: 1.31.36
-  resolution: "@microlink/react-json-view@npm:1.31.36"
+"@microlink/react-json-view@npm:^1.31.37":
+  version: 1.31.37
+  resolution: "@microlink/react-json-view@npm:1.31.37"
   dependencies:
     react-base16-styling: "npm:~0.10.0"
     react-lifecycles-compat: "npm:~3.0.4"
@@ -2319,7 +2319,7 @@ __metadata:
   peerDependencies:
     react: ">= 15"
     react-dom: ">= 15"
-  checksum: 10c0/a1919f4c7fd1d32439d53269f16fd7bfa45cf65cba516056a3d2b502cd6d43e05c67bd60918754bf4db49e61f9651d65f9f444bea627a6b98460614fc6cc1e74
+  checksum: 10c0/bbd81a5a70d17c317206d5debe62fb493ffa44fe9430a7f697528ad2064a9dbebd8d6f8a6e8f52b7f9398738906a42eda7b77717bf250516cc74059c44aeeaee
   languageName: node
   linkType: hard
 
@@ -3563,7 +3563,7 @@ __metadata:
     "@luma.gl/core": "npm:^9.4.2"
     "@luma.gl/engine": "npm:^9.4.2"
     "@luma.gl/shadertools": "npm:^9.4.2"
-    "@microlink/react-json-view": "npm:^1.31.36"
+    "@microlink/react-json-view": "npm:^1.31.37"
     "@sindresorhus/slugify": "npm:^3.0.1"
     "@streamlit/component-v2-lib": "workspace:^"
     "@streamlit/connection": "workspace:^"
@@ -3605,7 +3605,7 @@ __metadata:
     lodash-es: "npm:^4.18.1"
     loglevel: "npm:^1.9.2"
     mapbox-gl: "npm:^1.13.2"
-    marked: "npm:^18.0.13"
+    marked: "npm:^18.0.14"
     mdast-util-find-and-replace: "npm:^3.0.2"
     mermaid: "npm:^11.17.2"
     moment: "npm:^2.31.0"
@@ -10471,12 +10471,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"marked@npm:^18.0.13":
-  version: 18.0.13
-  resolution: "marked@npm:18.0.13"
+"marked@npm:^18.0.14":
+  version: 18.0.14
+  resolution: "marked@npm:18.0.14"
   bin:
     marked: bin/marked.js
-  checksum: 10c0/420039a67d7cebddee022cfc4766fa9b4f965b83848d0f252d6782dcbdca06c972a83f6dc0242dfbd392652aa1f7ef25eaecf18856c7ec80da61d3176342e20f
+  checksum: 10c0/1214c7553fdcb1db6c5adad29a7d019f9350f861bc9783ed41a2d177f021551fb22884de012ea26be446af8650d8abbf76d822b9ad5b0c5d592628f66663c42e
   languageName: node
   linkType: hard
 
