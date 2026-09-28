@@ -955,7 +955,7 @@ describe("on_change='ignore' mode", () => {
     })
   }
 
-  function createIgnoreWidgetMgr(): {
+  function createWidgetMgrWithRerunSpy(): {
     widgetMgr: WidgetStateManager
     sendRerunBackMsg: ReturnType<typeof vi.fn>
   } {
@@ -969,7 +969,7 @@ describe("on_change='ignore' mode", () => {
 
   it("passes triggerRerun: false when ignoreRerun is true", async () => {
     const user = userEvent.setup()
-    const { widgetMgr, sendRerunBackMsg } = createIgnoreWidgetMgr()
+    const { widgetMgr, sendRerunBackMsg } = createWidgetMgrWithRerunSpy()
     const props = getProps({ ignoreRerun: true }, { widgetMgr })
     const setFileUploaderStateValueSpy = vi.spyOn(
       props.widgetMgr,
@@ -1011,7 +1011,7 @@ describe("on_change='ignore' mode", () => {
 
   it("does not pass triggerRerun when ignoreRerun is false", async () => {
     const user = userEvent.setup()
-    const { widgetMgr, sendRerunBackMsg } = createIgnoreWidgetMgr()
+    const { widgetMgr, sendRerunBackMsg } = createWidgetMgrWithRerunSpy()
     const props = getProps({ ignoreRerun: false }, { widgetMgr })
     const setFileUploaderStateValueSpy = vi.spyOn(
       props.widgetMgr,
@@ -1049,7 +1049,7 @@ describe("on_change='ignore' mode", () => {
 
   it("passes triggerRerun: false when an uploaded file is deleted", async () => {
     const user = userEvent.setup()
-    const { widgetMgr, sendRerunBackMsg } = createIgnoreWidgetMgr()
+    const { widgetMgr, sendRerunBackMsg } = createWidgetMgrWithRerunSpy()
     const props = getProps(
       { ignoreRerun: true, multipleFiles: true },
       { widgetMgr }
@@ -1099,7 +1099,7 @@ describe("on_change='ignore' mode", () => {
 
   it("passes triggerRerun: false when a single file is replaced", async () => {
     const user = userEvent.setup()
-    const { widgetMgr, sendRerunBackMsg } = createIgnoreWidgetMgr()
+    const { widgetMgr, sendRerunBackMsg } = createWidgetMgrWithRerunSpy()
     const props = getProps({ ignoreRerun: true }, { widgetMgr })
     const setFileUploaderStateValueSpy = vi.spyOn(
       props.widgetMgr,
@@ -1149,7 +1149,7 @@ describe("on_change='ignore' mode", () => {
 
   it("passes triggerRerun: false when another file is added", async () => {
     const user = userEvent.setup()
-    const { widgetMgr, sendRerunBackMsg } = createIgnoreWidgetMgr()
+    const { widgetMgr, sendRerunBackMsg } = createWidgetMgrWithRerunSpy()
     const props = getProps(
       { ignoreRerun: true, multipleFiles: true },
       { widgetMgr }

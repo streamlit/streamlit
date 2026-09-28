@@ -406,10 +406,12 @@ class FileUploaderMixin:
             - ``"ignore"``: Streamlit will not rerun the app when the user
               commits a new value. The file uploader still updates in the UI.
               The new value is available on the next rerun triggered by
-              something else, such as another widget interaction. Ignored
-              commits are held in the browser and are lost if the page is
-              refreshed before that rerun. Inside ``st.form``, this has no
-              effect: the form already defers all commits until submit.
+              something else, such as another widget interaction. The file
+              itself is still uploaded to the server immediately; only the
+              rerun is deferred. Ignored commits are held in the browser and
+              are lost if the page is refreshed before that rerun. Inside
+              ``st.form``, this has no effect: the form already defers all
+              commits until submit.
 
             - A ``callable``: Streamlit will rerun the app and execute the
               ``callable`` as a callback function before the rest of the app.
