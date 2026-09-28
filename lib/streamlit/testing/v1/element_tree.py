@@ -2598,12 +2598,6 @@ class Status(Block):
 
     @property
     def state(self) -> str:
-        # Only st.status sets expandable.state. Expandable blocks without a
-        # state are classified as Expander, including those with a custom icon.
-        if self.proto.state == self.proto.State.STATE_UNDEFINED:
-            raise ValueError(
-                "This block has no status state. Only st.status sets a state."
-            )
         return self.proto.State.Name(self.proto.state).lower()
 
 

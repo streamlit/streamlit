@@ -1110,7 +1110,7 @@ def test_status():
     assert at.status[2].state == "error"
 
 
-def test_status_state_requires_a_status_container():
+def test_expander_with_icon_is_not_classified_as_status():
     """An expander with an icon stays in at.expander, not at.status.
 
     Status classification uses expandable.state, not the presence of an icon,
