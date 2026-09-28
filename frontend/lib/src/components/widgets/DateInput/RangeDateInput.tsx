@@ -315,13 +315,19 @@ function RangeDateInput({
   }
   if (prevStart !== startValue) {
     setPrevStart(startValue)
-    if (!suppressCommittedSync || !datesEqual(prevStart, startValue)) {
+    if (
+      !suppressCommittedSync ||
+      (startValue !== null && !datesEqual(prevStart, startValue))
+    ) {
       setDisplayStart(startValue)
     }
   }
   if (prevEnd !== endValue) {
     setPrevEnd(endValue)
-    if (!suppressCommittedSync || !datesEqual(prevEnd, endValue)) {
+    if (
+      !suppressCommittedSync ||
+      (endValue !== null && !datesEqual(prevEnd, endValue))
+    ) {
       setDisplayEnd(endValue)
     }
   }

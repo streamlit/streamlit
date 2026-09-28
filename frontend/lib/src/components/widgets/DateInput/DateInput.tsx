@@ -372,17 +372,22 @@ function DateInput({
   formSubmitValidatorRef.current = () => {
     if (dirty) {
       // Non-clearable single dates revert locally; do not commit the discarded
-      // empty pending if overlay/blur has not already dropped it.
+      // empty pending if overlay/blur has not already dropped it. Only skip
+      // when last written is a real date — an empty last written (e.g.
+      // session_state None) must still run required validation.
       if (
         !element.isRange &&
         !allowEmptyCommit &&
         isRequiredEmptyDateValue(pendingIsoRef.current, false)
       ) {
-        pendingIsoRef.current = lastWrittenIsoRef.current ?? []
-        setDirty(false)
-        setHasRequiredError(false)
-        resetError()
-        return true
+        const lastWritten = lastWrittenIsoRef.current ?? []
+        if (!isRequiredEmptyDateValue(lastWritten, false)) {
+          pendingIsoRef.current = lastWritten
+          setDirty(false)
+          setHasRequiredError(false)
+          resetError()
+          return true
+        }
       }
       const committed = commitIsoValue({
         isoValues: pendingIsoRef.current,

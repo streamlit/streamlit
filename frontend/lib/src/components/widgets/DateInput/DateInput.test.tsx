@@ -4690,6 +4690,38 @@ describe("required", () => {
     expect(screen.queryByTestId("stDateInputError")).not.toBeInTheDocument()
   })
 
+  it("still blocks required submit when session_state emptied a non-empty default", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    const props = getProps({ required: true, formId: "form" }, { widgetMgr })
+    const { rerender } = render(<DateInput {...props} />)
+
+    rerender(
+      <DateInput
+        {...props}
+        element={DateInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: [],
+        })}
+      />
+    )
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month } = getSingleDateSegments(region)
+    await clearSegment(user, year)
+    await clearSegment(user, month)
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+  })
+
   it("does not show a leftover required error after a programmatic fill-then-clear", () => {
     const props = getRequiredEmptyProps({
       formId: "form",
