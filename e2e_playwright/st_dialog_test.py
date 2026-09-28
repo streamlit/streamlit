@@ -1164,29 +1164,65 @@ def _drawer_width(dialog: Locator) -> float:
 
 
 def _max_drawer_width_px(app: Page) -> float:
-    """Match frontend clamp: innerWidth minus theme.spacing.twoXL (1.5rem)."""
+    """Painted max: min(JS innerWidth clamp, CSS overlay 100% - twoXL)."""
     return float(
         app.evaluate(
             """() => {
                 const rootFontSize = parseFloat(
                     getComputedStyle(document.documentElement).fontSize
                 )
-                return window.innerWidth - 1.5 * rootFontSize
+                const gutter = 1.5 * rootFontSize
+                const overlay = document.querySelector('[data-testid="stDialog"]')
+                const overlayWidth = overlay
+                    ? overlay.getBoundingClientRect().width
+                    : window.innerWidth
+                return Math.min(window.innerWidth, overlayWidth) - gutter
             }"""
         )
     )
 
 
-def _drag_handle_horizontally(app: Page, handle: Locator, delta_x: float) -> None:
-    handle.hover()
-    box = handle.bounding_box()
-    assert box is not None
-    start_x = box["x"] + box["width"] / 2
-    start_y = box["y"] + box["height"] / 2
-    app.mouse.move(start_x, start_y)
-    app.mouse.down()
-    app.mouse.move(start_x + delta_x, start_y, steps=20)
-    app.mouse.up()
+def _drag_handle_horizontally(handle: Locator, delta_x: float) -> None:
+    # Dispatch pointer events on the handle so Firefox does not depend on
+    # Playwright mouse hit-testing of an 8px strip.
+    handle.evaluate(
+        """(el, dx) => {
+            const rect = el.getBoundingClientRect()
+            const x = rect.left + rect.width / 2
+            const y = rect.top + rect.height / 2
+            const fire = (type, clientX, target) => {
+                target.dispatchEvent(
+                    new PointerEvent(type, {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window,
+                        pointerId: 1,
+                        pointerType: "mouse",
+                        isPrimary: true,
+                        button: 0,
+                        buttons: type === "pointerup" ? 0 : 1,
+                        clientX,
+                        clientY: y,
+                    })
+                )
+            }
+            fire("pointerdown", x, el)
+            fire("pointermove", x + dx, window)
+            window.dispatchEvent(
+                new MouseEvent("mousemove", {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window,
+                    button: 0,
+                    buttons: 1,
+                    clientX: x + dx,
+                    clientY: y,
+                })
+            )
+            fire("pointerup", x + dx, el)
+        }""",
+        delta_x,
+    )
 
 
 def test_side_drawers_are_resizable(app: Page):
@@ -1200,13 +1236,13 @@ def test_side_drawers_are_resizable(app: Page):
     expect(resize_handle).to_be_attached()
 
     drag_distance = 40
-    _drag_handle_horizontally(app, resize_handle, drag_distance)
+    _drag_handle_horizontally(resize_handle, drag_distance)
 
     wait_until(app, lambda: _drawer_width(dialog) > initial_width)
     expect_prefixed_markdown(app, "Rerun count:", "2")
 
     max_width = _max_drawer_width_px(app)
-    _drag_handle_horizontally(app, resize_handle, max_width)
+    _drag_handle_horizontally(resize_handle, max_width)
     # twoXL gutter must stay visible; compare against innerWidth, not the
     # Playwright viewport (Firefox's classic scrollbar shrinks innerWidth).
     wait_until(
@@ -1231,6 +1267,6 @@ def test_side_drawers_are_resizable(app: Page):
     expect(right_dialog).to_be_visible()
     right_initial = _drawer_width(right_dialog)
     right_handle = app.get_by_test_id("stDialogResizeHandle")
-    _drag_handle_horizontally(app, right_handle, -drag_distance)
+    _drag_handle_horizontally(right_handle, -drag_distance)
 
     wait_until(app, lambda: _drawer_width(right_dialog) > right_initial)

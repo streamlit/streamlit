@@ -19,7 +19,6 @@ import { PointerEvent } from "react"
 import { act, renderHook } from "@testing-library/react"
 import { vi } from "vitest"
 
-import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensions/useWindowDimensionsContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { TestAppWrapper } from "~lib/test_util"
 import { convertRemToPx } from "~lib/theme/utils"
@@ -136,28 +135,21 @@ describe("useDrawerResize", () => {
   it("leaves a gutter of the app visible instead of filling the viewport", () => {
     const handle = createHandleWithPanel(500)
     const { result } = renderHook(
-      () => ({
-        resize: useDrawerResize({
-          position: "left",
-          presetWidth: "31.25rem",
-        }),
-        innerWidth: useWindowDimensionsContext().innerWidth,
-      }),
+      () => useDrawerResize({ position: "left", presetWidth: "31.25rem" }),
       { wrapper: TestAppWrapper }
     )
 
     act(() => {
-      result.current.resize.resizeHandleProps.onPointerDown(
-        pointerEvent(handle, 500)
-      )
-      result.current.resize.resizeHandleProps.onPointerMove(
+      result.current.resizeHandleProps.onPointerDown(pointerEvent(handle, 500))
+      result.current.resizeHandleProps.onPointerMove(
         pointerEvent(handle, 5000)
       )
     })
 
     const gutterPx = convertRemToPx(mockTheme.emotion.spacing.twoXL)
-    expect(result.current.resize.dialogWidth).toBe(
-      `${result.current.innerWidth - gutterPx}px`
+    expect(result.current.dialogWidth).toBe(
+      // eslint-disable-next-line no-restricted-properties -- Assert against the same live viewport the hook reads.
+      `${window.innerWidth - gutterPx}px`
     )
   })
 

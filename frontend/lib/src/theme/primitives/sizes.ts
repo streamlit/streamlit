@@ -27,6 +27,7 @@ export const sizes = {
   fullScreenHeaderHeight: "2.875rem",
   sidebarTopSpace: "6rem",
   // Sidebar width bounds and default (200px / 300px / 600px at a 16px root).
+  // These rem tokens scale with theme.baseFontSize by design.
   // minSidebarWidth is also the drag floor for st.dialog left/right drawers.
   minSidebarWidth: "12.5rem",
   defaultSidebarWidth: "18.75rem",

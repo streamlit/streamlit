@@ -16,7 +16,6 @@
 
 import { PointerEvent, useCallback, useEffect, useRef, useState } from "react"
 
-import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensions/useWindowDimensionsContext"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { convertRemToPx } from "~lib/theme/utils"
 
@@ -67,7 +66,6 @@ export function useDrawerResize({
   presetWidth,
 }: UseDrawerResizeArgs): UseDrawerResizeResult {
   const { sizes, spacing } = useEmotionTheme()
-  const { innerWidth } = useWindowDimensionsContext()
   const [resizedWidthPx, setResizedWidthPx] = useState<number | undefined>(
     undefined
   )
@@ -95,13 +93,15 @@ export function useDrawerResize({
         position === "left"
           ? drag.startWidth + deltaX
           : drag.startWidth - deltaX
-      const viewportWidthPx = innerWidth > 0 ? innerWidth : minDrawerWidthPx
+      const viewportWidthPx =
+        // eslint-disable-next-line no-restricted-properties, streamlit-custom/no-force-reflow-access -- Live viewport needed to clamp drawer width during drag.
+        window.innerWidth > 0 ? window.innerWidth : minDrawerWidthPx
       const maxDrawerWidthPx = Math.max(0, viewportWidthPx - drawerGutterPx)
       setResizedWidthPx(
         clampDrawerWidth(nextWidth, minDrawerWidthPx, maxDrawerWidthPx)
       )
     },
-    [drawerGutterPx, innerWidth, minDrawerWidthPx, position]
+    [drawerGutterPx, minDrawerWidthPx, position]
   )
 
   const endDrag = useCallback((): void => {

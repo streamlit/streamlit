@@ -84,6 +84,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   const theme = useEmotionTheme()
   const mediumBreakpointPx = calculateMaxBreakpoint(theme.breakpoints.md)
   const sidebarWidthLimits = getSidebarWidthLimits(theme.sizes)
+  const sidebarWidthLimitsRef = useRef(sidebarWidthLimits)
+  sidebarWidthLimitsRef.current = sidebarWidthLimits
   const { innerWidth } = useWindowDimensionsContext()
 
   const { appPages } = useContext(NavigationContext)
@@ -149,19 +151,19 @@ const Sidebar: React.FC<SidebarProps> = ({
     setShowSidebarCollapse(false)
   }, [])
 
-  const initializeSidebarWidth = useCallback(
-    (width: number): void => {
-      const clampedWidth = clampSidebarWidth(width, sidebarWidthLimits)
-      const newWidth = clampedWidth.toString()
+  const initializeSidebarWidth = useCallback((width: number): void => {
+    const clampedWidth = clampSidebarWidth(
+      width,
+      sidebarWidthLimitsRef.current
+    )
+    const newWidth = clampedWidth.toString()
 
-      setSidebarWidth(newWidth)
+    setSidebarWidth(newWidth)
 
-      if (localStorageAvailable()) {
-        window.localStorage.setItem("sidebarWidth", newWidth)
-      }
-    },
-    [sidebarWidthLimits]
-  )
+    if (localStorageAvailable()) {
+      window.localStorage.setItem("sidebarWidth", newWidth)
+    }
+  }, [])
 
   const onResizeStop = useCallback<ResizeCallback>(
     (

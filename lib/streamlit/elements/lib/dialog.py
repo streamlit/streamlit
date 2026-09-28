@@ -60,7 +60,8 @@ def _process_dialog_position_input(
 ) -> BlockProto.Dialog.DialogPosition.ValueType:
     """Map a user-facing position literal to the DialogPosition proto enum.
 
-    Invalid values raise StreamlitValueError instead of falling back to center.
+    Invalid values raise StreamlitValueError. Unlike width, which falls back
+    to SMALL, an unrecognized position does not default to center.
     """
     if position == "left":
         return BlockProto.Dialog.DialogPosition.LEFT
