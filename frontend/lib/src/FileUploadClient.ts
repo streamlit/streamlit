@@ -18,7 +18,7 @@ import type { AxiosProgressEvent } from "axios"
 import { isEqual } from "lodash-es"
 import { getLogger } from "loglevel"
 
-import { type FileURLs, type FileURLsResponse } from "@streamlit/protobuf"
+import type { FileURLs, FileURLsResponse } from "@streamlit/protobuf"
 import { generateUuid } from "@streamlit/utils"
 
 import { SessionInfo } from "./SessionInfo"

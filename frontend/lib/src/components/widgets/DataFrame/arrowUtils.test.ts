@@ -34,7 +34,7 @@ import {
   Utf8,
 } from "apache-arrow"
 
-import { type ArrowData } from "@streamlit/protobuf"
+import type { ArrowData } from "@streamlit/protobuf"
 
 import { ArrowType, DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { getStyledCell, StyledCell } from "~lib/dataframes/pandasStylerUtils"

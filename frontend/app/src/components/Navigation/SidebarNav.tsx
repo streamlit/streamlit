@@ -33,7 +33,7 @@ import {
   NavigationContext,
   SidebarConfigContext,
 } from "@streamlit/lib"
-import { type AppPage } from "@streamlit/protobuf"
+import type { AppPage } from "@streamlit/protobuf"
 import { localStorageAvailable, notNullOrUndefined } from "@streamlit/utils"
 
 import NavSection from "./NavSection"

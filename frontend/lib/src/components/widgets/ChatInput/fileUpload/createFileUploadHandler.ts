@@ -16,7 +16,7 @@
 
 import type { AxiosProgressEvent } from "axios"
 
-import { type FileURLs } from "@streamlit/protobuf"
+import type { FileURLs } from "@streamlit/protobuf"
 
 import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { FileUploadClient } from "~lib/FileUploadClient"

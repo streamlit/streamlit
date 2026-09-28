@@ -36,7 +36,7 @@ import {
 
 import slugify from "@sindresorhus/slugify"
 import { parseToRgba } from "color2k"
-import { type Element, type Root as HastRoot } from "hast"
+import type { Element, Root as HastRoot } from "hast"
 import { omit, once } from "lodash-es"
 import type { Root as MdastRoot, Text } from "mdast"
 import { findAndReplace } from "mdast-util-find-and-replace"

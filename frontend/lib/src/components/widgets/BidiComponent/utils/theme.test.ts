@@ -20,7 +20,7 @@ import {
   StreamlitTheme,
   StreamlitThemeCssProperties,
 } from "@streamlit/component-v2-lib"
-import { type CustomThemeConfig } from "@streamlit/protobuf"
+import type { CustomThemeConfig } from "@streamlit/protobuf"
 
 import {
   extractComponentsV2Theme,
