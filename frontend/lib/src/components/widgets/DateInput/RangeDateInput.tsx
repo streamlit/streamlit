@@ -484,7 +484,11 @@ function RangeDateInput({
         setIsCalendarActive(false)
         // Synchronous form commit: outside-click dismiss can race form submit
         // (the close-commit effect fires after paint). Mirrors handleBlur.
-        if (formCommit && !hasPartiallyTypedField(triggerRef.current)) {
+        if (hasPartiallyTypedField(triggerRef.current)) {
+          // Will revert on next render. Clear pending now so a concurrent
+          // form submit does not commit the discarded partial edit.
+          onCloseRef.current(true)
+        } else if (formCommit) {
           const pending = compact([
             displayStartRef.current,
             displayEndRef.current,
@@ -909,7 +913,10 @@ function RangeDateInput({
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
-      if (hasPartiallyTypedField(triggerRef.current)) return
+      if (hasPartiallyTypedField(triggerRef.current)) {
+        onCloseRef.current(true)
+        return
+      }
       const pending = compact([displayStartRef.current, displayEndRef.current])
       const committed = compact([startValue, endValue])
       if (

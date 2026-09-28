@@ -4314,6 +4314,68 @@ describe("required", () => {
     )
   })
 
+  it("submits the restored date after a non-clearable required field reverts in a form", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    widgetMgr.setFormSubmitBehaviors("form", true)
+    const props = getProps({ required: true, formId: "form" }, { widgetMgr })
+    const setStringArrayValueSpy = vi.spyOn(widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    await clearAllSingleSegments(user, region)
+    await user.click(document.body)
+
+    const { year, month, day } = getSingleDateSegments(region)
+    expect(year).toHaveTextContent("1970")
+    expect(month).toHaveTextContent("01")
+    expect(day).toHaveTextContent("20")
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(sendRerunBackMsg).toHaveBeenCalled()
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    expect(setStringArrayValueSpy).not.toHaveBeenCalledWith(
+      props.element.id,
+      [],
+      expect.anything()
+    )
+  })
+
+  it("does not submit empty after a non-clearable optional field reverts in a form", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    widgetMgr.setFormSubmitBehaviors("form", true)
+    const props = getProps({ formId: "form" }, { widgetMgr })
+    const setStringArrayValueSpy = vi.spyOn(widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    await clearAllSingleSegments(user, region)
+    await user.click(document.body)
+
+    const { year, month, day } = getSingleDateSegments(region)
+    expect(year).toHaveTextContent("1970")
+    expect(month).toHaveTextContent("01")
+    expect(day).toHaveTextContent("20")
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(sendRerunBackMsg).toHaveBeenCalled()
+    expect(setStringArrayValueSpy).not.toHaveBeenCalledWith(
+      props.element.id,
+      [],
+      expect.anything()
+    )
+  })
+
   it("does not render a clear button when required", async () => {
     const user = userEvent.setup()
     const props = getRequiredEmptyProps()

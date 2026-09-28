@@ -325,14 +325,17 @@ function DateInput({
 
   // Revert to last committed value on close when segments still show
   // placeholders (partially typed, or fully cleared on a non-clearable widget).
-  // The display revert is handled by SingleDateInput/RangeDateInput locally;
-  // here we only clear the validation error. No setValueWithSource needed
-  // because the committed value never changed (edits were buffered locally).
+  // The display revert is handled by SingleDateInput/RangeDateInput locally.
+  // Drop the buffered pending edit so form submit does not commit empty or
+  // block on a required field that is already showing the restored date.
   const handleClose = useCallback(
     (shouldClearError?: boolean): void => {
       if (!shouldClearError) {
         return
       }
+      pendingIsoRef.current = lastWrittenIsoRef.current ?? []
+      setDirty(false)
+      setHasRequiredError(false)
       resetError()
     },
     [resetError]
