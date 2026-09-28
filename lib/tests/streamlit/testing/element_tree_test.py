@@ -1111,10 +1111,10 @@ def test_status():
 
 
 def test_status_state_requires_a_status_container():
-    """An expander with an icon is exposed via at.status but has no state.
+    """An expander with an icon stays in at.expander, not at.status.
 
-    The state comes from the proto rather than being reverse-mapped from the
-    icon, so an icon that happens to match a status icon no longer implies one.
+    Status classification uses expandable.state, not the presence of an icon,
+    so an icon that happens to match a status icon does not imply a status.
     """
 
     def script():
@@ -1123,9 +1123,10 @@ def test_status_state_requires_a_status_container():
         st.expander("expander with a status-like icon", icon=":material/check:")
 
     at = AppTest.from_function(script).run()
-    assert len(at.status) == 1
-    with pytest.raises(ValueError, match="no status state"):
-        _ = at.status[0].state
+    assert len(at.status) == 0
+    assert len(at.expander) == 1
+    assert at.expander[0].label == "expander with a status-like icon"
+    assert at.expander[0].icon == ":material/check:"
 
 
 def test_table():
