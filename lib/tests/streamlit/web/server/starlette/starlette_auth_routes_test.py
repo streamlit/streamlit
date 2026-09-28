@@ -31,7 +31,7 @@ from starlette.responses import PlainTextResponse, RedirectResponse, Response
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
-from streamlit.errors import StreamlitMissingAuthlibError
+from streamlit.errors import StreamlitAuthError, StreamlitMissingAuthlibError
 from streamlit.web.server.starlette import starlette_app_utils, starlette_auth_routes
 from streamlit.web.server.starlette.starlette_auth_routes import (
     _AuthlibConfig,
@@ -514,6 +514,47 @@ def test_auth_callback_omits_access_token_by_default(
         assert payload == {"id_token": "id-tok"}
 
 
+@patch_config_options({"server.cookieSecret": "test-secret"})
+def test_auth_callback_redirects_when_auth_cookie_cannot_be_stored(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Oversized identity cookies fail login with a redirect instead of HTTP 500."""
+
+    class _DummyClient:
+        async def authorize_access_token(self, request: Any) -> dict[str, Any]:
+            return {"userinfo": {"email": "user@example.com"}}
+
+    monkeypatch.setattr(
+        starlette_auth_routes,
+        "_create_oauth_client",
+        lambda provider: (_DummyClient(), "/redirect"),
+    )
+    monkeypatch.setattr(
+        starlette_auth_routes,
+        "_get_provider_by_state",
+        lambda request, state: "default",
+    )
+    monkeypatch.setattr(
+        starlette_auth_routes,
+        "_get_origin_from_secrets",
+        lambda: "http://testserver",
+    )
+
+    async def _raise_auth_error(*_args: Any, **_kwargs: Any) -> None:
+        raise StreamlitAuthError("too large to split")
+
+    monkeypatch.setattr(starlette_auth_routes, "_set_auth_cookie", _raise_auth_error)
+
+    app = Starlette(routes=create_auth_routes(""))
+    with TestClient(app) as client:
+        response = client.get("/oauth2callback?state=abc", follow_redirects=False)
+
+    assert response.status_code == 302
+    assert response.headers["location"].endswith("/")
+    assert _has_auth_cookie_deletion(response, USER_COOKIE_NAME)
+    assert _has_auth_cookie_deletion(response, TOKENS_COOKIE_NAME)
+
+
 def test_login_initializes_session(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that login endpoint initializes a session for OAuth flow."""
     captured_session: dict[str, Any] | None = None
@@ -971,6 +1012,67 @@ class TestAuthCookieFlags:
         assert _is_deleted(f"{TOKENS_COOKIE_NAME}_3")
         assert _is_set(USER_COOKIE_NAME)
         assert _is_set(TOKENS_COOKIE_NAME)
+
+    @patch_config_options(
+        {"server.cookieSecret": "test-secret", "server.baseUrlPath": ""}
+    )
+    def test_set_auth_cookie_skips_tokens_when_they_do_not_fit(self) -> None:
+        """Login still writes the identity cookie if the tokens cookie overflows."""
+        original_set_cookie_with_chunks = starlette_auth_routes.set_cookie_with_chunks
+
+        def mock_set_cookie_with_chunks(
+            set_single_cookie_fn: Any,
+            create_signed_value_fn: Any,
+            cookie_name: str,
+            value: dict[str, Any],
+            *,
+            cookie_attr_size: int,
+        ) -> None:
+            if cookie_name == TOKENS_COOKIE_NAME:
+                raise StreamlitAuthError("too large to split")
+            original_set_cookie_with_chunks(
+                set_single_cookie_fn,
+                create_signed_value_fn,
+                cookie_name,
+                value,
+                cookie_attr_size=cookie_attr_size,
+            )
+
+        request = Request({"type": "http", "headers": []})
+        response = PlainTextResponse("ok")
+        starlette_auth_routes.set_cookie_with_chunks = mock_set_cookie_with_chunks
+        try:
+            asyncio.run(
+                starlette_auth_routes._set_auth_cookie(
+                    response,
+                    {"email": "user@example.com"},
+                    {"id_token": "id-token"},
+                    request=request,
+                )
+            )
+        finally:
+            starlette_auth_routes.set_cookie_with_chunks = (
+                original_set_cookie_with_chunks
+            )
+
+        set_cookie_headers = response.headers.getlist("set-cookie")
+
+        def _is_deleted(cookie_name: str) -> bool:
+            return any(
+                header.startswith(f"{cookie_name}=") and "Max-Age=0" in header
+                for header in set_cookie_headers
+            )
+
+        def _is_set(cookie_name: str) -> bool:
+            return any(
+                header.startswith(f"{cookie_name}=")
+                and f"Max-Age={AUTH_COOKIE_MAX_AGE_SECONDS}" in header
+                for header in set_cookie_headers
+            )
+
+        assert _is_set(USER_COOKIE_NAME)
+        assert _is_deleted(TOKENS_COOKIE_NAME)
+        assert not _is_set(TOKENS_COOKIE_NAME)
 
     @patch_config_options(
         {"server.cookieSecret": "test-secret", "server.baseUrlPath": ""}

@@ -175,6 +175,10 @@ async def _set_auth_cookie(
     they exceed browser limits. Numbered leftover chunk cookies from a previous
     login are cleared so they cannot keep inflating the Cookie header after a
     smaller cookie is written.
+
+    If the token cookie cannot be stored without overflowing size limits, the
+    identity cookie is still written and login continues without persisted
+    tokens.
     """
 
     def set_single_cookie(cookie_name: str, value: str) -> None:
@@ -196,13 +200,21 @@ async def _set_auth_cookie(
         cookie_attr_size=cookie_attr_size,
     )
     if tokens:
-        set_cookie_with_chunks(
-            set_single_cookie,
-            _create_signed_value_wrapper,
-            TOKENS_COOKIE_NAME,
-            tokens,
-            cookie_attr_size=cookie_attr_size,
-        )
+        try:
+            set_cookie_with_chunks(
+                set_single_cookie,
+                _create_signed_value_wrapper,
+                TOKENS_COOKIE_NAME,
+                tokens,
+                cookie_attr_size=cookie_attr_size,
+            )
+        except StreamlitAuthError:
+            _LOGGER.warning(
+                "Token cookie exceeded size limits; continuing login without "
+                "persisted tokens.",
+                exc_info=True,
+            )
+            _clear_single_auth_cookie_and_chunks(response, request, TOKENS_COOKIE_NAME)
 
 
 def _get_auth_cookie_attribute_size() -> int:
@@ -635,7 +647,18 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
     cookie_value = dict(user, origin=origin, is_logged_in=True, provider=provider)
     tokens = get_tokens_to_store(token)
     if user:
-        await _set_auth_cookie(response, cookie_value, tokens, request=request)
+        try:
+            await _set_auth_cookie(response, cookie_value, tokens, request=request)
+        except StreamlitAuthError:
+            _LOGGER.warning(
+                "Failed to persist auth cookies after OAuth callback for "
+                "provider '%s'.",
+                provider,
+                exc_info=True,
+            )
+            response = await _redirect_to_base(base_url)
+            _clear_auth_cookie(response, request)
+            return response
     else:  # pragma: no cover - error path
         _LOGGER.error(
             "OAuth provider '%s' did not return user information during callback.",

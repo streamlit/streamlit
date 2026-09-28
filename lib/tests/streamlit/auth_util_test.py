@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import importlib.util
 import json
 import secrets
@@ -29,8 +30,10 @@ import pytest
 from streamlit import auth_util
 from streamlit.auth_util import (
     _MAX_COOKIE_HEADER_BYTES,
+    MAX_COOKIE_BYTES,
     AuthCache,
     _set_split_cookie,
+    _signed_cookie_size,
     generate_default_provider_section,
     get_cookie_with_chunks,
     get_expose_tokens_config,
@@ -568,7 +571,15 @@ def _jwt_like_token(groups: list[str], salt: str) -> str:
     payload_b64 = (
         base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
     )
-    signature = base64.urlsafe_b64encode(bytes(range(256))).decode().rstrip("=")
+    # Distinct per-token signatures so the two JWTs do not compress together.
+    digest = salt.encode("utf-8")
+    signature_bytes = bytearray()
+    while len(signature_bytes) < 256:
+        digest = hashlib.sha256(digest).digest()
+        signature_bytes.extend(digest)
+    signature = (
+        base64.urlsafe_b64encode(bytes(signature_bytes[:256])).decode().rstrip("=")
+    )
     return f"{header}.{payload_b64}.{signature}"
 
 
@@ -582,7 +593,7 @@ def test_compressible_oidc_tokens_stay_under_websocket_header_limit() -> None:
     secret = "test-cookie-secret"
     cookie_name = "_streamlit_user_tokens"
     cookie_attr_size = len("; Path=/; HttpOnly; SameSite=lax; Max-Age=2592000")
-    groups = [f"authentik-group-{i:03d}-aaaaaaaaaaaaaaaa" for i in range(500)]
+    groups = [f"authentik-group-{i:03d}-aaaaaaaaaaaaaaaa" for i in range(580)]
     tokens = {
         "id_token": _jwt_like_token(groups, "id"),
         "access_token": _jwt_like_token(groups, "access"),
@@ -595,6 +606,12 @@ def test_compressible_oidc_tokens_stay_under_websocket_header_limit() -> None:
 
     def sign(name: str, value: str) -> bytes:
         return create_signed_value(secret, name, value)
+
+    serialized = json.dumps(tokens)
+    assert (
+        _signed_cookie_size(sign, cookie_name, serialized, cookie_attr_size)
+        > MAX_COOKIE_BYTES
+    )
 
     set_cookie_with_chunks(
         set_cookie,
@@ -625,6 +642,7 @@ def test_compressible_oidc_tokens_stay_under_websocket_header_limit() -> None:
     cookie_header = "; ".join([*request_parts, extra_header])
 
     assert len(cookie_header) < _MAX_COOKIE_HEADER_BYTES
+    assert cookies[cookie_name].startswith("z:")
     chunk_keys = [name for name in cookies if name.startswith(f"{cookie_name}_")]
     assert chunk_keys == []
 

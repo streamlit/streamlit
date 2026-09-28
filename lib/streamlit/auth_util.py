@@ -47,6 +47,10 @@ _COMPRESSED_COOKIE_PREFIX: Final = "z:"
 # proxy Cookie header limits anyway.
 _MAX_COOKIE_CHUNKS: Final = 32
 # uvicorn and many reverse proxies reject Cookie headers longer than 8KiB.
+# Applied per split cookie family on the split path only — not a guarantee for
+# the combined ``_streamlit_user`` + ``_streamlit_user_tokens`` + ``_xsrf`` +
+# ``session`` header. Unsplit cookies that each fit in ``MAX_COOKIE_BYTES``
+# never reach this guard.
 _MAX_COOKIE_HEADER_BYTES: Final = 8192
 _PROVIDER_TOKEN_ALGORITHM: Final = "HS256"  # noqa: S105
 # joserfc emits SecurityWarning when the symmetric key is shorter than 14 bytes
@@ -500,7 +504,7 @@ def _compress_cookie_payload(serialized: str) -> str:
     return f"{_COMPRESSED_COOKIE_PREFIX}{encoded}"
 
 
-def _decompress_cookie_payload(payload: bytes) -> bytes | None:
+def _decompress_cookie_payload(payload: bytes, cookie_name: str) -> bytes | None:
     """Return the original bytes, or ``None`` if a ``z:`` payload is corrupt.
 
     Payloads that do not start with ``z:`` are returned unchanged so legacy
@@ -515,7 +519,7 @@ def _decompress_cookie_payload(payload: bytes) -> bytes | None:
         padded = encoded + b"=" * ((4 - len(encoded) % 4) % 4)
         return zlib.decompress(base64.urlsafe_b64decode(padded))
     except (ValueError, zlib.error, binascii.Error):
-        _LOGGER.warning("Failed to decompress cookie payload")
+        _LOGGER.warning("Failed to decompress payload for cookie '%s'", cookie_name)
         return None
 
 
@@ -592,7 +596,7 @@ def _set_split_cookie(
     for chunk_count in range(1, _MAX_COOKIE_CHUNKS + 1):
         chunk_len = max(1, (len(value) + chunk_count - 1) // chunk_count)
         chunks = [value[i : i + chunk_len] for i in range(0, len(value), chunk_len)]
-        if not chunks:
+        if not chunks:  # pragma: no cover - defensive
             chunks = [""]
         chunk_names = [f"{cookie_name}_{i + 1}" for i in range(len(chunks))]
         if any(
@@ -661,7 +665,7 @@ def get_cookie_with_chunks(
 
     match = _chunks_regex.match(cookie_value)
     if match is None:
-        return _decompress_cookie_payload(cookie_value)
+        return _decompress_cookie_payload(cookie_value, cookie_name)
 
     # Parse chunk count
     try:
@@ -682,7 +686,7 @@ def get_cookie_with_chunks(
         chunks.append(chunk_value)
 
     reconstructed_value = b"".join(chunks)
-    return _decompress_cookie_payload(reconstructed_value)
+    return _decompress_cookie_payload(reconstructed_value, cookie_name)
 
 
 def validate_auth_credentials(provider: str) -> None:

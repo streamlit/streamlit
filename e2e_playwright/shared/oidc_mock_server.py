@@ -131,9 +131,9 @@ def oidc_app(
             "nonce": NONCE_REGISTRY[code],
         }
         if large_tokens:
-            claims["groups"] = [
-                f"authentik-group-{i:03d}-aaaaaaaaaaaaaaaa" for i in range(500)
-            ]
+            # Enough distinct groups that the signed JSON exceeds 4KiB after
+            # zlib, while the pre-compressed cookie still fits in one cookie.
+            claims["groups"] = [f"authentik-group-{i:03d}" for i in range(700)]
 
         id_token = generate_token(claims)
         if large_tokens:
