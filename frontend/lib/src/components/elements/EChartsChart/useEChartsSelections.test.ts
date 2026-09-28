@@ -418,6 +418,74 @@ describe("useEChartsSelections", () => {
     )
   })
 
+  it("flushes a pending selection write on bindSelections cleanup", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+    const chart = createFakeChart()
+    let cleanup: () => void = () => {}
+    act(() => {
+      cleanup = result.current.bindSelections(chart)
+      chart.trigger("selectchanged", {
+        selected: [{ seriesIndex: 0, dataIndex: [0] }],
+      })
+    })
+
+    expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+
+    act(() => {
+      cleanup()
+    })
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expectSelectionWrite(
+      [
+        {
+          series_index: 0,
+          series_id: null,
+          series_name: null,
+          data_type: "main",
+          data_indices: [0],
+        },
+      ],
+      []
+    )
+  })
+
+  it("flushes a pending selection write on cleanup even if the chart is disposed", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+    const chart = createFakeChart()
+    let cleanup: () => void = () => {}
+    act(() => {
+      cleanup = result.current.bindSelections(chart)
+      chart.trigger("selectchanged", {
+        selected: [{ seriesIndex: 0, dataIndex: [0] }],
+      })
+    })
+
+    chart.isDisposed.mockReturnValue(true)
+    act(() => {
+      cleanup()
+    })
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expectSelectionWrite(
+      [
+        {
+          series_index: 0,
+          series_id: null,
+          series_name: null,
+          data_type: "main",
+          data_indices: [0],
+        },
+      ],
+      []
+    )
+    expect(chart.off).not.toHaveBeenCalled()
+  })
+
   it("leaves a selection widget option untouched", () => {
     const { result } = renderHook(() =>
       useEChartsSelections(createElement(), widgetMgr)
@@ -1260,6 +1328,19 @@ describe("useEChartsSelections", () => {
       "brushSelection",
       [pixelOnly]
     )
+
+    widgetMgr.getElementState.mockImplementation((_id: string, key: string) =>
+      key === "brushSelection" ? [pixelOnly] : undefined
+    )
+    chart.dispatchAction.mockClear()
+    act(() => {
+      result.current.restoreSelection(chart)
+    })
+    expect(chart.dispatchAction).toHaveBeenCalledWith({
+      type: "brush",
+      brushIndex: 0,
+      areas: pixelOnly.areas,
+    })
   })
 
   it("does not emit an in-progress brush when a point selection writes", () => {
@@ -2207,6 +2288,35 @@ describe("useEChartsSelections", () => {
       (payload: Record<string, unknown>) => {
         if (payload.type === "select") {
           chart.trigger("selectchanged", { selected: selectedPoints })
+        }
+      }
+    )
+    act(() => {
+      result.current.bindSelections(chart)
+      result.current.restoreSelection(chart)
+    })
+    flush()
+
+    expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+  })
+
+  it("does not emit while restoreSelection dispatches brush selection", () => {
+    const brush = createBrushSelection({
+      brushId: "brush-0",
+      brushIndex: 0,
+      areas: [{ brushType: "lineX", coordRange: [0, 2] }],
+    })
+    widgetMgr.getElementState.mockImplementation((_id: string, key: string) =>
+      key === "brushSelection" ? [brush] : undefined
+    )
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+    const chart = createFakeChart()
+    chart.dispatchAction.mockImplementation(
+      (payload: Record<string, unknown>) => {
+        if (payload.type === "brush") {
+          chart.trigger("brushSelected", { batch: [brush] })
         }
       }
     )

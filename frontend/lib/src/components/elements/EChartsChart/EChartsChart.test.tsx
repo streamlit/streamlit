@@ -343,6 +343,18 @@ describe("EChartsChart", () => {
   })
 
   it("does not bind selection handlers when disabled", () => {
+    widgetMgr.setElementState("chart-id", "selectedPoints", [
+      { seriesIndex: 0, dataIndex: [0] },
+    ])
+    widgetMgr.setElementState("chart-id", "brushSelection", [
+      {
+        brushId: "brush-0",
+        brushIndex: 0,
+        areas: [{ brushType: "lineX", coordRange: [0, 2] }],
+        selected: [],
+      },
+    ])
+
     render(
       <Wrapper
         element={createElement({ id: "chart-id", selectionActivated: true })}
@@ -352,6 +364,18 @@ describe("EChartsChart", () => {
 
     expect(mockInit).toHaveBeenCalledTimes(1)
     expect(mockChart.on).not.toHaveBeenCalled()
+    // Disabled bind still restores the overlay so a disconnect / setOption
+    // cannot drop the highlight. Handlers stay unbound.
+    expect(mockChart.dispatchAction).toHaveBeenCalledWith({
+      type: "select",
+      seriesIndex: 0,
+      dataIndex: [0],
+    })
+    expect(mockChart.dispatchAction).toHaveBeenCalledWith({
+      type: "brush",
+      brushIndex: 0,
+      areas: [{ brushType: "lineX", coordRange: [0, 2] }],
+    })
   })
 
   it("disables pointer events on a disabled selection widget", () => {

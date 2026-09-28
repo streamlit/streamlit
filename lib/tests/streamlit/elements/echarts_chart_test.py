@@ -866,6 +866,19 @@ class EChartsChartTest(DeltaGeneratorTestCase):
                     ],
                 },
             ),
+            (
+                "media_variant",
+                {
+                    "media": [
+                        {
+                            "option": {
+                                "series": [{"type": "bar", "selectedMode": "multiple"}]
+                            }
+                        }
+                    ],
+                    "series": [],
+                },
+            ),
         ]
     )
     def test_no_warning_when_spec_enables_selection(self, _name, spec):
@@ -874,6 +887,16 @@ class EChartsChartTest(DeltaGeneratorTestCase):
             st.echarts_chart(spec, on_select="rerun")
 
         mock_warning.assert_not_called()
+
+    def test_selected_mode_false_does_not_enable_selection(self):
+        """An explicitly-off series ``selectedMode`` is not treated as enabled."""
+        with self.assertLogs(_ECHARTS_LOGGER, level="WARNING") as logs:
+            st.echarts_chart(
+                {"series": [{"type": "bar", "selectedMode": False}]},
+                on_select="rerun",
+            )
+
+        assert "doesn't enable any" in logs.output[0]
 
     def test_legend_selected_mode_is_not_data_selection(self):
         """``legend.selectedMode`` is a different feature and doesn't count."""

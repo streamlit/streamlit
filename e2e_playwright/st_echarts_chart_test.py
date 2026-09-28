@@ -205,10 +205,15 @@ def test_point_selection_persists_and_toggles(
     wait_for_app_run(app)
     expect(app.get_by_text("echarts selection groups: 0")).to_be_visible()
     expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+    # Visual counterpart to the count: a leftover highlight would still match
+    # ``point_selected`` if only widget state were cleared.
+    assert_snapshot(chart, name="st_echarts_chart-point_unselected")
 
 
 @pytest.mark.only_browser("chromium")
-def test_brush_selection_persists_and_clears(app: Page):
+def test_brush_selection_persists_and_clears(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     """A rect brush is reported, kept across rerun, and cleared by double-click."""
     expect(app.get_by_text("echarts brush areas: 0")).to_be_visible()
 
@@ -242,14 +247,19 @@ def test_brush_selection_persists_and_clears(app: Page):
 
     expect(app.get_by_text("echarts brush areas: 1")).to_be_visible()
     expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+    assert_snapshot(chart, name="st_echarts_chart-brush_selected")
 
     click_button(app, "rerun helper")
     expect(app.get_by_text("echarts brush areas: 1")).to_be_visible()
+    # Same snapshot as before the helper rerun so a restore that keeps
+    # ``areas: 1`` but drops the overlay fails.
+    assert_snapshot(chart, name="st_echarts_chart-brush_selected")
 
     canvas.dblclick()
     wait_for_app_run(app)
     expect(app.get_by_text("echarts brush areas: 0")).to_be_visible()
     expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+    assert_snapshot(chart, name="st_echarts_chart-brush_cleared")
 
 
 @pytest.mark.only_browser("chromium")
