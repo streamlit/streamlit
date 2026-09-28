@@ -82,7 +82,7 @@ describe("ChatMessage", () => {
         avatarType: BlockProto.ChatMessage.AvatarType.IMAGE,
       })
       render(<ChatMessage {...props} />)
-      const chatAvatar = screen.getByAltText("user avatar")
+      const chatAvatar = screen.getByAltText("")
       expect(chatAvatar).toHaveAttribute(
         "src",
         "http://example.com/avatar.jpg"
@@ -109,7 +109,7 @@ describe("ChatMessage", () => {
           },
         })
 
-        const chatAvatar = screen.getByAltText("user avatar")
+        const chatAvatar = screen.getByAltText("")
         expect(chatAvatar).toHaveAttribute("crossOrigin", "anonymous")
       })
 
@@ -124,7 +124,7 @@ describe("ChatMessage", () => {
           },
         })
 
-        const chatAvatar = screen.getByAltText("user avatar")
+        const chatAvatar = screen.getByAltText("")
         expect(chatAvatar).not.toHaveAttribute("crossOrigin")
       })
 
@@ -152,7 +152,7 @@ describe("ChatMessage", () => {
             },
           })
 
-          const chatAvatar = screen.getByAltText("user avatar")
+          const chatAvatar = screen.getByAltText("")
           expect(chatAvatar).not.toHaveAttribute("crossOrigin")
         }
       )

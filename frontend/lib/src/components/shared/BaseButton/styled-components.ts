@@ -66,12 +66,12 @@ export interface BaseButtonProps {
   "aria-expanded"?: boolean
 }
 
-// Most props become required via defaults in BaseButton, but ARIA popup
-// attributes stay optional so they only appear in the DOM when explicitly set.
+// Most props become required via defaults in BaseButton, but ARIA attributes
+// stay optional so they only appear in the DOM when explicitly set.
 type RequiredBaseButtonProps = Required<
-  Omit<BaseButtonProps, "aria-haspopup" | "aria-expanded">
+  Omit<BaseButtonProps, "aria-haspopup" | "aria-expanded" | "aria-label">
 > &
-  Pick<BaseButtonProps, "aria-haspopup" | "aria-expanded">
+  Pick<BaseButtonProps, "aria-haspopup" | "aria-expanded" | "aria-label">
 
 function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
   switch (size) {

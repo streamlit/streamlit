@@ -54,7 +54,8 @@ function ChatMessageAvatar(
         return (
           <StyledAvatarImage
             src={endpoints.buildMediaURL(avatar)}
-            alt={`${name} avatar`}
+            // Decorative: author is named on the message content region.
+            alt=""
             crossOrigin={crossOrigin}
           />
         )
