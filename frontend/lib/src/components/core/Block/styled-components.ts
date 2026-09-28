@@ -371,6 +371,20 @@ interface StyledLayoutWrapperProps {
   flex?: React.CSSProperties["flex"]
 }
 
+/**
+ * In-flow spacer after the last dialog widget. Drawer bodies scroll a
+ * height:100% child, so padding on ModalBody never appears below that content.
+ * margin-top cancels the vertical-block SMALL gap so the pad is exactly
+ * threeXL below the last widget.
+ */
+export const StyledDialogContentEndPad = styled.div(({ theme }) => ({
+  flexShrink: 0,
+  marginTop: `-${theme.spacing.lg}`,
+  height: theme.spacing.threeXL,
+  width: "100%",
+  pointerEvents: "none",
+}))
+
 export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
   ({ width, height, flex }) => ({
     display: "flex",

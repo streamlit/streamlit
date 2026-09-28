@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { FunctionComponent, ReactElement, ReactNode } from "react"
+import {
+  createContext,
+  FunctionComponent,
+  ReactElement,
+  ReactNode,
+  useContext,
+} from "react"
 
 import BaseButton, {
   BaseButtonProps,
@@ -22,15 +28,21 @@ import BaseButton, {
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
+  type ModalPosition,
   StyledDialogClose,
   StyledDialogInner,
   StyledDialogOverlay,
   StyledDialogPanel,
+  StyledDialogResizeHandle,
   StyledModalBody,
   StyledModalButton,
   StyledModalFooter,
   StyledModalHeader,
 } from "./styled-components"
+import { useDrawerResize } from "./useDrawerResize"
+
+const ModalPositionContext = createContext<ModalPosition>("center")
+ModalPositionContext.displayName = "ModalPositionContext"
 
 interface ModalHeaderProps {
   children: ReactNode
@@ -45,7 +57,8 @@ interface ModalBodyProps {
 }
 
 function ModalBody({ children }: Readonly<ModalBodyProps>): ReactElement {
-  return <StyledModalBody>{children}</StyledModalBody>
+  const position = useContext(ModalPositionContext)
+  return <StyledModalBody $position={position}>{children}</StyledModalBody>
 }
 
 interface ModalFooterProps {
@@ -87,6 +100,8 @@ interface StreamlitModalProps {
   size?: "auto" | "default" | "medium" | "large"
   /** Explicit CSS width override, takes precedence over size. Used for non-standard widths like "80vw". */
   width?: string
+  /** Placement of the dialog. `"center"` is a modal; `"left"` / `"right"` are full-height drawers. */
+  position?: ModalPosition
   children?: ReactNode
 }
 
@@ -129,15 +144,22 @@ function Modal({
   closeable = true,
   size,
   width,
+  position = "center",
   children,
 }: Readonly<StreamlitModalProps>): ReactElement {
   const { sizes, spacing } = useEmotionTheme()
-  const dialogWidth = calculateModalSize(
-    size,
-    sizes.contentMaxWidth,
-    spacing.lg,
-    sizes.dialogLargeWidth
-  )
+  const presetWidth =
+    width ??
+    calculateModalSize(
+      size,
+      sizes.contentMaxWidth,
+      spacing.lg,
+      sizes.dialogLargeWidth
+    )
+  const { dialogWidth, resizeSide, resizeHandleProps } = useDrawerResize({
+    position,
+    presetWidth,
+  })
 
   const handleOpenChange = (open: boolean): void => {
     if (!open) onClose?.()
@@ -152,11 +174,20 @@ function Modal({
       onOpenChange={handleOpenChange}
       className="stDialog"
       data-testid="stDialog"
+      $position={position}
     >
-      <StyledDialogPanel $dialogWidth={width ?? dialogWidth}>
-        <StyledDialogInner>
+      <StyledDialogPanel $dialogWidth={dialogWidth} $position={position}>
+        {resizeSide !== null && (
+          <StyledDialogResizeHandle
+            $position={resizeSide}
+            data-testid="stDialogResizeHandle"
+            aria-hidden="true"
+            {...resizeHandleProps}
+          />
+        )}
+        <StyledDialogInner $position={position}>
           {({ close }) => (
-            <>
+            <ModalPositionContext.Provider value={position}>
               {closeable && (
                 <StyledDialogClose
                   aria-label="Close"
@@ -180,7 +211,7 @@ function Modal({
                 </StyledDialogClose>
               )}
               {children}
-            </>
+            </ModalPositionContext.Provider>
           )}
         </StyledDialogInner>
       </StyledDialogPanel>

@@ -421,6 +421,41 @@ if st.button("Open Dialog with JSON Path Tooltip"):
     dialog_with_json_path_tooltip()
 
 
+@st.dialog("Left drawer", position="left")
+def left_drawer_dialog() -> None:
+    st.write("Drawer content on the left")
+    if st.button("Submit", key="left-dialog-btn"):
+        st.rerun()
+
+
+if st.button("Open Left Drawer"):
+    left_drawer_dialog()
+
+
+@st.dialog("Right drawer", position="right")
+def right_drawer_dialog() -> None:
+    st.write("Drawer content on the right")
+    if st.button("Submit", key="right-dialog-btn"):
+        st.rerun()
+
+
+if st.button("Open Right Drawer"):
+    right_drawer_dialog()
+
+
+@st.dialog("Tall left drawer", position="left")
+def tall_left_drawer_dialog() -> None:
+    st.write("Top of tall drawer")
+    for i in range(40):
+        st.write(f"Row {i}")
+    if st.button("Submit", key="tall-left-dialog-btn"):
+        st.rerun()
+
+
+if st.button("Open Tall Left Drawer"):
+    tall_left_drawer_dialog()
+
+
 # Regression coverage for #9405: a dialog closed via st.rerun() must disappear
 # as soon as the next full-app run starts, even if that run then blocks.
 # Keep this longer than the hide-assertion window in
