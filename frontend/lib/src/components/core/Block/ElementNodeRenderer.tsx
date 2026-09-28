@@ -84,6 +84,7 @@ import { AppSkeleton } from "~lib/components/elements/Skeleton/AppSkeleton"
 import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
 import TextElement from "~lib/components/elements/TextElement/TextElement"
 import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
+import { FormSubmitContent } from "~lib/components/widgets/Form/FormSubmitContent"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 
 import { ElementContainer } from "./ElementContainer"
@@ -184,11 +185,6 @@ const Feedback = lazy(
 )
 const FileUploader = lazy(
   () => import("~lib/components/widgets/FileUploader/FileUploader")
-)
-const FormSubmitContent = lazy(() =>
-  import("~lib/components/widgets/Form/FormSubmitContent").then(module => ({
-    default: module.FormSubmitContent,
-  }))
 )
 const Multiselect = lazy(
   () => import("~lib/components/widgets/Multiselect/Multiselect")
@@ -803,6 +799,8 @@ const RawElementNodeRenderer = (
           isStale={isStale}
         >
           {buttonProto.isFormSubmitter ? (
+            // Eager so sibling submit buttons register in script order.
+            // Lazy + Suspense can mount an enabled secondary button first.
             <FormSubmitContent element={buttonProto} {...widgetProps} />
           ) : (
             <Button element={buttonProto} {...widgetProps} />
