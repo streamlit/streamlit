@@ -327,6 +327,21 @@ def dialog_decorator(
         https://doc-modal-dialog.streamlit.app/
         height: 350px
 
+    You can also show the dialog as a side drawer. Set ``position`` to
+    ``"right"`` (or ``"left"``) to attach a user-resizable, full-height
+    drawer to that side of the viewport. In this app, clicking "**Open
+    details**" opens a right-side drawer with more information about an
+    item.
+
+    >>> import streamlit as st
+    >>>
+    >>> @st.dialog("Details", position="right")
+    >>> def show_details(item):
+    >>>     st.write(f"Details for {item}")
+    >>>
+    >>> if st.button("Open details"):
+    >>>     show_details("Order #1234")
+
     """
 
     func_or_title = title

@@ -406,11 +406,11 @@ describe("side drawer resize handle", () => {
   })
 
   it.each([
-    { position: "left" as const, edge: "right", offset: "0.5rem" },
-    { position: "right" as const, edge: "left", offset: "0" },
+    { position: "left" as const, edge: "right" },
+    { position: "right" as const, edge: "left" },
   ])(
     "places the $position drawer handle on the $edge edge",
-    ({ position, edge, offset }) => {
+    ({ position, edge }) => {
       render(
         <Modal isOpen position={position}>
           <ModalBody>content</ModalBody>
@@ -419,7 +419,7 @@ describe("side drawer resize handle", () => {
 
       const handle = screen.getByTestId("stDialogResizeHandle")
       expect(handle).toHaveStyle({
-        [edge]: offset,
+        [edge]: "0",
         width: "0.5rem",
         cursor: "col-resize",
       })

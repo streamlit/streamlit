@@ -1163,6 +1163,26 @@ def _drawer_width(dialog: Locator) -> float:
     )
 
 
+def _assert_resize_handle_flush_with_inner_edge(
+    dialog: Locator, handle: Locator, inner_edge: str
+) -> None:
+    """The handle must sit on the panel's inner edge, not inset from it."""
+    panel = dialog.evaluate(
+        """el => {
+            const r = el.parentElement.getBoundingClientRect()
+            return { x: r.x, width: r.width }
+        }"""
+    )
+    handle_box = handle.bounding_box()
+    assert handle_box is not None
+    if inner_edge == "right":
+        assert handle_box["x"] + handle_box["width"] == pytest.approx(
+            panel["x"] + panel["width"], abs=1
+        )
+    else:
+        assert handle_box["x"] == pytest.approx(panel["x"], abs=1)
+
+
 def _max_drawer_width_px(app: Page) -> float:
     """Painted max: min(JS innerWidth clamp, CSS overlay 100% - twoXL)."""
     return float(
@@ -1203,6 +1223,7 @@ def test_side_drawers_are_resizable(app: Page, browser_name: str):
     initial_width = _drawer_width(dialog)
     resize_handle = app.get_by_test_id("stDialogResizeHandle")
     expect(resize_handle).to_be_attached()
+    _assert_resize_handle_flush_with_inner_edge(dialog, resize_handle, "right")
 
     drag_distance = 40
     _drag_handle_horizontally(app, resize_handle, drag_distance)
@@ -1238,6 +1259,7 @@ def test_side_drawers_are_resizable(app: Page, browser_name: str):
     expect(right_dialog).to_be_visible()
     right_initial = _drawer_width(right_dialog)
     right_handle = app.get_by_test_id("stDialogResizeHandle")
+    _assert_resize_handle_flush_with_inner_edge(right_dialog, right_handle, "left")
     _drag_handle_horizontally(app, right_handle, -drag_distance)
 
     wait_until(app, lambda: _drawer_width(right_dialog) > right_initial)

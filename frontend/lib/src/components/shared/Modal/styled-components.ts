@@ -209,7 +209,8 @@ export const StyledDialogInner = styled(Dialog, {
 /**
  * Inner-edge drag handle for left/right drawers. Kept inside the panel so
  * pointerdown does not count as an overlay dismiss. The handle itself is
- * invisible; `col-resize` is the only affordance.
+ * invisible; `col-resize` is the only affordance. It sits flush on the inner
+ * edge so the cursor lines up with the visual border on both sides.
  */
 export const StyledDialogResizeHandle = styled.div<{
   $position: "left" | "right"
@@ -218,13 +219,7 @@ export const StyledDialogResizeHandle = styled.div<{
   top: 0,
   bottom: 0,
   width: theme.spacing.sm,
-  // Left drawers inset the handle by the thin-scrollbar gutter so dragging
-  // the thumb scrolls instead of resizing. `sm` (8px) covers Firefox's thin
-  // bar; the webkit fallback is 6px. Right drawers keep the handle on the
-  // inner (left) edge, away from the scrollbar.
-  ...($position === "left"
-    ? { right: theme.spacing.sm }
-    : { left: theme.spacing.none }),
+  [$position === "left" ? "right" : "left"]: theme.spacing.none,
   cursor: "col-resize",
   zIndex: theme.zIndices.priority,
   touchAction: "none",
