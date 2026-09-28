@@ -195,8 +195,11 @@ def test_form_submits_on_enter(app: Page):
 
 
 def _form_with_disabled_first_submit(app: Page) -> tuple[Locator, Locator]:
-    """Return form 7 and its submit buttons after they are mounted in
-    disabled-then-enabled order.
+    """Return the form whose first submit is disabled, after both buttons
+    are mounted in disabled-then-enabled order.
+
+    The tests below depend on that order. Asserting before both buttons
+    mount lets those tests pass for the wrong reason.
     """
     form = app.get_by_test_id("stForm").nth(6)
     submit_buttons = form.get_by_test_id("stFormSubmitButton")
@@ -208,7 +211,7 @@ def _form_with_disabled_first_submit(app: Page) -> tuple[Locator, Locator]:
 
 def test_form_disabled_submit_on_enter(app: Page):
     """Tests that submit on enter does not work when 1st submit button disabled."""
-    form_7, _submit_buttons = _form_with_disabled_first_submit(app)
+    form_7, _ = _form_with_disabled_first_submit(app)
     text_input = form_7.get_by_test_id("stTextInput").locator("input")
     text_input.fill("Test")
     expect(form_7.get_by_test_id("InputInstructions")).to_have_text("")
