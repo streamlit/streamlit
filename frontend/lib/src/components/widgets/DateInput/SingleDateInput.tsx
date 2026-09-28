@@ -206,14 +206,15 @@ function SingleDateInput({
   // updates display.
   const [prevValue, setPrevValue] = useState(value)
   if (prevValue !== value) {
-    setPrevValue(value)
-    // Skip identity-only echoes while dirty (sibling rerun). A real
-    // non-empty date (session_state / setValue) must still update display.
-    // Null while dirty is the incomplete-range staging write — keep display.
-    if (
+    // Skip identity-only echoes and null staging writes while dirty so an
+    // incomplete required range keeps its start date. Do not advance
+    // prevValue in that case: a later empty setValue can still sync once
+    // dirty clears.
+    const applyDisplay =
       !suppressCommittedSync ||
       (value !== null && !datesEqual(prevValue, value))
-    ) {
+    if (applyDisplay) {
+      setPrevValue(value)
       setDisplayValue(value)
     }
   }

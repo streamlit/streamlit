@@ -4690,6 +4690,33 @@ describe("required", () => {
     expect(screen.queryByTestId("stDateInputError")).not.toBeInTheDocument()
   })
 
+  it("applies an empty programmatic setValue after a dirty in-progress edit", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ required: true, formId: "form" })
+    const { rerender } = render(<DateInput {...props} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month } = getSingleDateSegments(region)
+    await clearSegment(user, year)
+    await clearSegment(user, month)
+
+    rerender(
+      <DateInput
+        {...props}
+        element={DateInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: [],
+        })}
+      />
+    )
+
+    const restored = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    expect(restored.year).toHaveTextContent("yyyy")
+    expect(restored.month).toHaveTextContent("mm")
+    expect(restored.day).toHaveTextContent("dd")
+  })
+
   it("still blocks required submit when session_state emptied a non-empty default", async () => {
     const user = userEvent.setup()
     const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
