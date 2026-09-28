@@ -1110,23 +1110,26 @@ def test_status():
     assert at.status[2].state == "error"
 
 
-def test_expander_with_icon_is_not_classified_as_status():
+def test_expander_with_icon_is_not_classified_as_status() -> None:
     """An expander with an icon stays in at.expander, not at.status.
 
     Status classification uses expandable.state, not the presence of an icon,
     so an icon that happens to match a status icon does not imply a status.
+    A real st.status in the same script still lands in at.status.
     """
 
     def script():
         import streamlit as st
 
         st.expander("expander with a status-like icon", icon=":material/check:")
+        st.status("a real status")
 
     at = AppTest.from_function(script).run()
-    assert len(at.status) == 0
+    assert len(at.status) == 1
     assert len(at.expander) == 1
     assert at.expander[0].label == "expander with a status-like icon"
     assert at.expander[0].icon == ":material/check:"
+    assert at.status[0].label == "a real status"
 
 
 def test_table():
