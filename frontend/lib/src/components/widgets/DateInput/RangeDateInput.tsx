@@ -188,23 +188,52 @@ function compact(dates: (CalendarDate | null)[]): CalendarDate[] {
   return dates.filter((d): d is CalendarDate => d !== null)
 }
 
-/** Commit payload for close/blur. Prefer controlled display state; fill a
- * missing bound from the DOM when React Aria has painted typed digits but
- * has not flushed `onChange` yet (Escape after typing the end date). */
+function isFieldPartiallyTyped(field: Element): boolean {
+  const segs = field.querySelectorAll('[role="spinbutton"]')
+  const placeholders = field.querySelectorAll(
+    '[role="spinbutton"][data-placeholder="true"]'
+  )
+  return placeholders.length > 0 && placeholders.length < segs.length
+}
+
+/** DOM digits if present; skip stale display state while the field is
+ * mid-edit (some segments still placeholders). Otherwise fill from display
+ * when React Aria has not flushed `onChange` yet. */
+function resolveRangeBound(
+  field: Element | null,
+  display: CalendarDate | null
+): CalendarDate | null {
+  const fromDom = readCalendarDateFromField(field)
+  if (field && isFieldPartiallyTyped(field)) {
+    return fromDom
+  }
+  return fromDom ?? display
+}
+
+/** Commit payload for close/blur. Prefer painted segment digits so a typed
+ * complete range commits even when `onChange` has not flushed; ignore
+ * controlled display while a field is only partially typed. */
 function getPendingRange(
   container: HTMLElement | null,
   displayStart: CalendarDate | null,
   displayEnd: CalendarDate | null
 ): CalendarDate[] {
+  const start = resolveRangeBound(
+    container?.querySelector('[data-range-field="start"]') ?? null,
+    displayStart
+  )
+  // A range cannot start from an end-only paint: handleEndFieldChange
+  // ignores end typing when start is empty, so compacting that date would
+  // wrongly promote it to start.
+  if (!start) {
+    return []
+  }
   return compact([
-    displayStart ??
-      readCalendarDateFromField(
-        container?.querySelector('[data-range-field="start"]') ?? null
-      ),
-    displayEnd ??
-      readCalendarDateFromField(
-        container?.querySelector('[data-range-field="end"]') ?? null
-      ),
+    start,
+    resolveRangeBound(
+      container?.querySelector('[data-range-field="end"]') ?? null,
+      displayEnd
+    ),
   ])
 }
 
@@ -213,9 +242,12 @@ function isRangeFullyCleared(container: HTMLElement | null): boolean {
   return (
     !!segments &&
     segments.length > 0 &&
-    Array.from(segments).every(segment =>
-      segment.matches('[data-placeholder="true"]')
-    )
+    Array.from(segments).every(segment => {
+      const text = segment.textContent?.trim() ?? ""
+      return (
+        segment.matches('[data-placeholder="true"]') && !/^\d+$/.test(text)
+      )
+    })
   )
 }
 
@@ -228,6 +260,14 @@ function getClosePendingRange(
     return []
   }
   return getPendingRange(container, displayStart, displayEnd)
+}
+
+/** True when the user is mid-edit and we cannot yet parse a complete range. */
+function shouldRevertPartialRange(
+  container: HTMLElement | null,
+  pending: CalendarDate[]
+): boolean {
+  return pending.length !== 2 && hasPartiallyTypedField(container)
 }
 
 function rangeEqual(a: CalendarDate[], b: CalendarDate[]): boolean {
@@ -250,16 +290,7 @@ function shouldNotifyRangePending(
 function hasPartiallyTypedField(container: HTMLElement | null): boolean {
   const fields = container?.querySelectorAll("[data-range-field]")
   if (!fields) return false
-  for (const field of fields) {
-    const segs = field.querySelectorAll('[role="spinbutton"]')
-    const placeholders = field.querySelectorAll(
-      '[role="spinbutton"][data-placeholder="true"]'
-    )
-    if (placeholders.length > 0 && placeholders.length < segs.length) {
-      return true
-    }
-  }
-  return false
+  return Array.from(fields).some(isFieldPartiallyTyped)
 }
 
 function RangeDateInput({
@@ -427,7 +458,12 @@ function RangeDateInput({
       if (skipCloseCommitRef.current) {
         skipCloseCommitRef.current = false
       } else {
-        if (hasPartiallyTypedField(triggerRef.current)) {
+        const pending = getClosePendingRange(
+          triggerRef.current,
+          displayStartRef.current,
+          displayEndRef.current
+        )
+        if (shouldRevertPartialRange(triggerRef.current, pending)) {
           setDisplayStart(startValue)
           setDisplayEnd(endValue)
           hasEditedRef.current = false
@@ -435,12 +471,6 @@ function RangeDateInput({
         } else {
           // Range mode intentionally commits [] on full clear (including
           // non-clearable widgets); SingleDateInput reverts to last committed.
-          const pending = getClosePendingRange(
-            triggerRef.current,
-            displayStartRef.current,
-            displayEndRef.current
-          )
-
           const committed = compact([startValue, endValue])
           if (
             shouldNotifyRangePending(pending, committed, hasEditedRef.current)
@@ -522,25 +552,33 @@ function RangeDateInput({
       onClose: () => {
         setIsOpenState(false)
         setIsCalendarActive(false)
-        // Synchronous form commit: outside-click dismiss can race form submit
-        // (the close-commit effect fires after paint). Mirrors handleBlur.
-        if (hasPartiallyTypedField(triggerRef.current)) {
+        // Calendar click-to-commit and field blur already notified the parent.
+        if (skipCloseCommitRef.current) {
+          return
+        }
+        // Commit before the close effect (after paint). Escape after typing
+        // does not blur, so this is the synchronous path for a complete range.
+        const pending = getClosePendingRange(
+          triggerRef.current,
+          displayStartRef.current,
+          displayEndRef.current
+        )
+        if (shouldRevertPartialRange(triggerRef.current, pending)) {
           // Will revert on next render. Clear pending now so a concurrent
           // form submit does not commit the discarded partial edit.
           hasEditedRef.current = false
           onCloseRef.current(true)
-        } else if (formCommit) {
-          const pending = getClosePendingRange(
-            triggerRef.current,
-            displayStartRef.current,
-            displayEndRef.current
-          )
+        } else {
           const committed = compact([startValue, endValue])
           if (
             shouldNotifyRangePending(pending, committed, hasEditedRef.current)
           ) {
             hasEditedRef.current = false
-            formCommit(pending)
+            if (formCommit) {
+              formCommit(pending)
+            } else {
+              onChangeRef.current(pending)
+            }
             skipCloseCommitRef.current = true
           }
         }
@@ -965,16 +1003,17 @@ function RangeDateInput({
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
-      if (hasPartiallyTypedField(triggerRef.current)) {
-        hasEditedRef.current = false
-        onCloseRef.current(true)
-        return
-      }
+      if (skipCloseCommitRef.current) return
       const pending = getClosePendingRange(
         triggerRef.current,
         displayStartRef.current,
         displayEndRef.current
       )
+      if (shouldRevertPartialRange(triggerRef.current, pending)) {
+        hasEditedRef.current = false
+        onCloseRef.current(true)
+        return
+      }
       const committed = compact([startValue, endValue])
       if (
         !shouldNotifyRangePending(pending, committed, hasEditedRef.current)

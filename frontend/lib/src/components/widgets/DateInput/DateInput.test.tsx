@@ -5338,4 +5338,29 @@ describe("optional empty default", () => {
       expect.anything()
     )
   })
+
+  it("does not promote an end-only typed date to start on Escape", async () => {
+    const user = userEvent.setup()
+    const props = getOptionalEmptyProps({ isRange: true })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const end = getRangeDateSegments(region, "end")
+    await typeIntoSegment(user, end.year, "2020")
+    await typeIntoSegment(user, end.month, "01")
+    await typeIntoSegment(user, end.day, "10")
+    await user.keyboard("{Escape}")
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+  })
 })

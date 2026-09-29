@@ -671,6 +671,18 @@ describe("readCalendarDateFromField", () => {
     ).toBe("2020-01-10")
   })
 
+  it("reads a complete date even when data-placeholder is still set", () => {
+    expect(
+      readCalendarDateFromField(
+        makeField([
+          { type: "year", text: "2020", placeholder: true },
+          { type: "month", text: "01", placeholder: true },
+          { type: "day", text: "10", placeholder: true },
+        ])
+      )?.toString()
+    ).toBe("2020-01-10")
+  })
+
   it("returns null when a segment is still a placeholder", () => {
     expect(
       readCalendarDateFromField(
@@ -678,6 +690,18 @@ describe("readCalendarDateFromField", () => {
           { type: "year", text: "2020" },
           { type: "month", text: "01" },
           { type: "day", text: "dd", placeholder: true },
+        ])
+      )
+    ).toBeNull()
+  })
+
+  it("returns null for an incomplete year", () => {
+    expect(
+      readCalendarDateFromField(
+        makeField([
+          { type: "year", text: "20" },
+          { type: "month", text: "01" },
+          { type: "day", text: "10" },
         ])
       )
     ).toBeNull()

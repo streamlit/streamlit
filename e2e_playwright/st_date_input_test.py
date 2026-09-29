@@ -1270,6 +1270,7 @@ def test_date_input_required_blocks_empty_commits_and_form_submits(app: Page):
     expect(standalone_widget.get_by_test_id("stDateInputError")).not_to_be_visible()
 
     range_standalone_widget = get_element_by_key(app, "required_standalone_range")
+    range_standalone_widget.scroll_into_view_if_needed()
     range_standalone_field = range_standalone_widget.get_by_test_id("stDateInputField")
     type_date(range_standalone_field, "2020", "01", "01", "2020", "01", "10")
     wait_for_app_run(app)
