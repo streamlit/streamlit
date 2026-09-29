@@ -2481,8 +2481,9 @@ _create_theme_options(
         The text color of the dataframe's header.
 
         This color applies to column headers and grouped column headers. It
-        does not restyle body cells or row-selection checkboxes. If this
-        isn't set, Streamlit uses a faded version of `theme.textColor`.
+        doesn't apply to the text in body cells. If this isn't set, Streamlit
+        uses a faded version of `theme.textColor`. Selected header text stays
+        white.
     """,
 )
 

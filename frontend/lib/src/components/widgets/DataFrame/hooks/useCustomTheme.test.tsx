@@ -184,15 +184,16 @@ describe("useCustomTheme hook", () => {
     )
 
     const { result } = renderHook(() => useCustomTheme(), { wrapper })
-    const { textHeader, textGroupHeader, textHeaderSelected } =
+    const { textHeader, textGroupHeader, textHeaderSelected, bgIconHeader } =
       result.current.glideTheme
 
     expect(textHeader).toBe("#00ff00")
     expect(textGroupHeader).toBe("#00ff00")
     expect(textHeaderSelected).toBe(mockTheme.emotion.colors.white)
+    expect(bgIconHeader).toBe(mockTheme.emotion.colors.fadedText60)
   })
 
-  it("uses fadedText60 for header text when dataframeHeaderTextColor is unset", () => {
+  it("uses the fadedText60 default for header text", () => {
     const wrapper = ({
       children,
     }: {

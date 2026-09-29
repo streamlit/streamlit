@@ -115,6 +115,8 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       bgHeaderHovered: flatHeaderInteractionBg,
       bgButtonHovered: buttonHoverBg,
       textHeader: theme.colors.dataframeHeaderTextColor,
+      // Keep selected header text white so it stays readable on the
+      // selection highlight.
       textHeaderSelected: theme.colors.white,
       textGroupHeader: theme.colors.dataframeHeaderTextColor,
       headerIconSize: Math.round(convertRemToPx("1.125rem")),

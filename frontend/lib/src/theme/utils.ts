@@ -816,8 +816,9 @@ export const createEmotionTheme = (
     dataframeHeaderBackgroundColor ??
     conditionalOverrides.colors.dataframeHeaderBackgroundColor
 
-  // Dataframe header text should use the config if provided,
-  // otherwise use the derived fadedText60 (configured/derived or default) above
+  // Use the configured header text color when set. Otherwise keep the
+  // fadedText60 default from createEmotionColors (which already tracks
+  // textColor).
   conditionalOverrides.colors.dataframeHeaderTextColor =
     dataframeHeaderTextColor ??
     conditionalOverrides.colors.dataframeHeaderTextColor

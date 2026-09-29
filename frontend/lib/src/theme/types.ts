@@ -84,7 +84,7 @@ type SpecialEmotionColors = {
   dataframeBorderColor: string
   // Used for dataframe header background
   dataframeHeaderBackgroundColor: string
-  // Foreground color for dataframe column and group headers
+  // Used for dataframe column and group header text
   dataframeHeaderTextColor: string
 
   headingColor: string
