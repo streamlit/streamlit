@@ -184,13 +184,19 @@ describe("useCustomTheme hook", () => {
     )
 
     const { result } = renderHook(() => useCustomTheme(), { wrapper })
-    const { textHeader, textGroupHeader, textHeaderSelected, bgIconHeader } =
-      result.current.glideTheme
+    const {
+      textHeader,
+      textGroupHeader,
+      textHeaderSelected,
+      bgIconHeader,
+      fgIconHeader,
+    } = result.current.glideTheme
 
     expect(textHeader).toBe("#00ff00")
     expect(textGroupHeader).toBe("#00ff00")
+    expect(bgIconHeader).toBe("#00ff00")
     expect(textHeaderSelected).toBe(mockTheme.emotion.colors.white)
-    expect(bgIconHeader).toBe(mockTheme.emotion.colors.fadedText60)
+    expect(fgIconHeader).toBe(mockTheme.emotion.colors.white)
   })
 
   it("uses the fadedText60 default for header text", () => {
@@ -203,9 +209,11 @@ describe("useCustomTheme hook", () => {
     )
 
     const { result } = renderHook(() => useCustomTheme(), { wrapper })
-    const { textHeader, textGroupHeader } = result.current.glideTheme
+    const { textHeader, textGroupHeader, bgIconHeader } =
+      result.current.glideTheme
 
     expect(textHeader).toBe(mockTheme.emotion.colors.fadedText60)
     expect(textGroupHeader).toBe(mockTheme.emotion.colors.fadedText60)
+    expect(bgIconHeader).toBe(mockTheme.emotion.colors.fadedText60)
   })
 })

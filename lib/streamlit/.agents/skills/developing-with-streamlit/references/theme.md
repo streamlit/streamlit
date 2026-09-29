@@ -95,7 +95,7 @@ dataframeHeaderTextColor = "#ffffff"
 ```
 
 Set `dataframeHeaderTextColor` when the header background is dark or tinted.
-If unset, header text uses a faded `textColor`.
+If unset, header text and icons use a faded `textColor`.
 
 ## Typography
 
