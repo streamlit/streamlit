@@ -167,10 +167,10 @@ $ brew install gh
 $ brew install ripgrep
 ```
 
-**Installing Node JS and yarn**
+**Installing nvm**
 
 We recommend that you [manage your nodejs installation with nvm](https://github.com/nvm-sh/nvm#install--update-script).
-Install `nvm` now using those instructions. After you clone the repo in the next section, you will install the Node version pinned in `.nvmrc` and enable Corepack (Yarn ships via Corepack).
+Install `nvm` now using those instructions. In step 2 ("Grab the code") you will install the Node version pinned in `.nvmrc` and enable Corepack (Yarn ships via Corepack).
 
 #### Ubuntu
 
@@ -239,6 +239,9 @@ From the repo root, install the Node version pinned in `.nvmrc` and enable Corep
 ```bash
 nvm install
 corepack enable
+
+# Re-activate the pinned version in new shells with `nvm use`,
+# or make it your default with `nvm alias default $(cat .nvmrc)`.
 ```
 
 On macOS you may need to `brew install corepack` depending on how you installed Node.
