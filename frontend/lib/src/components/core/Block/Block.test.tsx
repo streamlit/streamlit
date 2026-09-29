@@ -26,7 +26,7 @@ import {
   streamlit,
 } from "@streamlit/protobuf"
 
-import { AppNode, BlockNode, ElementNode } from "~lib/AppNode"
+import { AppNode, BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
 import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { text, textInput } from "~lib/render-tree/test-utils"
@@ -1184,6 +1184,31 @@ describe("GridContainer Component", () => {
     expect(screen.getByTestId("stGrid")).toHaveStyle("height: 100%")
   })
 
+  it("scrolls overflowing content when the grid has a pixel height", () => {
+    const block = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        heightConfig: { pixelHeight: 160 },
+        gridContainer: {
+          maxColumns: 2,
+          minColumnWidthPx: 220,
+          rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
+          showCellBorder: false,
+          cellHeightMode: BlockProto.GridContainer.CellHeightMode.CONTENT,
+        },
+      })
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    expect(gridContainer).toHaveStyle("height: 100%")
+    expect(gridContainer).toHaveStyle("overflow-y: auto")
+  })
+
   it("keeps content-height grids auto-sized", () => {
     const block = makeGridBlock()
     renderWithContexts(makeGridNodeRendererComponent(block))
@@ -1348,6 +1373,16 @@ describe("GridContainer Component", () => {
 
     expect(screen.getAllByTestId("stGridCell")).toHaveLength(1)
     expect(screen.getAllByTestId("stElementContainer")).toHaveLength(1)
+  })
+
+  it("does not create a cell for an empty transient child", () => {
+    const block = makeGridBlock({}, [
+      new TransientNode(FAKE_SCRIPT_HASH),
+      textInput("Kept", "grid-cell-kept"),
+    ])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getAllByTestId("stGridCell")).toHaveLength(1)
   })
 
   it("uses the grid pixel width for first-paint column count", () => {

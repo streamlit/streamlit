@@ -80,6 +80,8 @@ if TYPE_CHECKING:
 SpecType: TypeAlias = int | Sequence[int | float]
 
 _GRID_COLUMNS_MIN = 1
+# Keep in sync with GRID_AUTO_COLUMN_CAP in
+# frontend/lib/src/components/core/Block/gridUtils.ts.
 _GRID_COLUMNS_MAX = 24
 
 
@@ -832,8 +834,9 @@ class LayoutsMixin:
             the child. The default is ``"top"``.
 
         border : bool
-            Border and padding around each cell, matching ``st.columns``
-            / ``st.container``. Default ``False``.
+            Whether to show a border around each cell. If this is
+            ``False`` (default), no border is shown. If this is ``True``,
+            a border is shown around each cell.
 
         row_height : "content", "equal", or int
             Height of each row.
@@ -844,13 +847,28 @@ class LayoutsMixin:
             - A positive integer: Every row is that many pixels.
 
         width : "stretch" or int
-            Grid container width, matching ``st.columns``. Default
-            ``"stretch"``.
+            The width of the grid. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the grid matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The grid has a
+              fixed width. If the specified width is greater than the
+              width of the parent container, the width of the grid
+              matches the width of the parent container.
 
         height : "content", "stretch", or int
-            Grid container height, matching ``st.container``. Default
-            ``"content"`` grows and the page scrolls. An integer bounds
-            the grid. ``"stretch"`` fills a height-bounded ancestor.
+            The height of the grid. This can be one of the following:
+
+            - ``"content"`` (default): The height of the grid matches the
+              height of its content.
+            - ``"stretch"``: The height of the grid matches the height of
+              its content or the height of the parent container,
+              whichever is larger. If the grid is not in a parent
+              container, the height of the grid matches the height of
+              its content.
+            - An integer specifying the height in pixels: The grid has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
 
         key : str, int, or None
             An optional string or integer to give this element a stable
@@ -861,10 +879,11 @@ class LayoutsMixin:
             CSS class name prefixed with ``st-key-``.
 
         dense : bool
-            When ``True``, backfill gaps left by spanning cells. This
-            can place later cells visually ahead of earlier ones, so
-            keyboard and screen-reader order (DOM order) may not match
-            visual order. Default ``False``.
+            Whether spanning cells may leave holes that later cells fill.
+            If this is ``False`` (default), cells keep source order. If
+            this is ``True``, later cells can be placed visually ahead of
+            earlier ones to fill gaps, so keyboard and screen-reader
+            order (DOM order) may not match visual order.
 
         Returns
         -------
@@ -885,7 +904,7 @@ class LayoutsMixin:
         ...     ("Conversion", "12.4%", "+1.1%"),
         ...     ("Retention", "96%", "-0.4%"),
         ... ]
-        >>> grid = st.grid(4, border=True, row_height="equal")
+        >>> grid = st.grid(4, wrap=False, border=True, row_height="equal")
         >>> for label, value, delta in metrics:
         ...     with grid.cell():
         ...         st.metric(label, value, delta)
@@ -1081,13 +1100,12 @@ class LayoutsMixin:
                 "grid", user_key=maybe_key, dg=None, key_as_main_identity=False
             )
 
-        from streamlit.elements.lib.grid_container import (
-            GridContainer as GridContainerClass,
-        )
-
         grid_dg = cast(
             "GridContainer",
-            self.dg._block(block_proto, dg_type=GridContainerClass),
+            self.dg._block(
+                block_proto,
+                dg_type=get_dg_singleton_instance().grid_container_cls,
+            ),
         )
         grid_dg._declared_columns = validated_columns
         return grid_dg

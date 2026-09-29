@@ -478,6 +478,15 @@ export const StyledGridContainerBlock =
           paddingBlock: theme.sizes.focusRingWidth,
           marginBlock: `-${theme.sizes.focusRingWidth}`,
         }),
+        // Pixel / stretch height: the layout wrapper is definite-sized but
+        // only interpolates width/height/flex, so the inner grid must be the
+        // vertical scrollport. Cell-level overflow is separate (fixed/equal
+        // rows). This override must follow wrap=False so overflowY becomes
+        // auto instead of remaining visible.
+        ...($fillHeight && {
+          overflowY: "auto" as const,
+          overflowX: $wrap ? ("clip" as const) : ("auto" as const),
+        }),
         // Dense packing mode fills gaps by reordering items
         ...($dense && { gridAutoFlow: "dense" }),
       }

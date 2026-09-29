@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-/** Cap on auto-resolved column count so a tiny min_column_width cannot explode tracks. */
+/**
+ * Cap on auto-resolved column count so a tiny min_column_width cannot explode
+ * tracks. Keep in sync with `_GRID_COLUMNS_MAX` in
+ * `lib/streamlit/elements/layouts.py`.
+ */
 export const GRID_AUTO_COLUMN_CAP = 24
 
 /**

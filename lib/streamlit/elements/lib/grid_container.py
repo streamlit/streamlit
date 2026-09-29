@@ -85,7 +85,7 @@ class GridContainer(DeltaGenerator):
 
         >>> import streamlit as st
         >>>
-        >>> grid = st.grid(4, border=True, row_height="equal")
+        >>> grid = st.grid(4, wrap=False, border=True, row_height="equal")
         >>> with grid.cell():
         ...     st.metric("Revenue", "$1.2M", "+8%")
         ...     st.caption("Trailing 30 days")

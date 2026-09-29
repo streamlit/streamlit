@@ -55,7 +55,7 @@ For more control over card layout, use `st.grid`:
 
 ```python
 # Grid with equal-height cells and borders
-grid = st.grid(4, border=True, row_height="equal", gap="medium")
+grid = st.grid(4, wrap=False, border=True, row_height="equal", gap="medium")
 with grid.cell():
     st.metric("Revenue", "$1.2M", "-7%")
 with grid.cell():

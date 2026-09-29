@@ -93,7 +93,7 @@ metrics = [
     ("Conversion", "12.4%", "+1.1%"),
     ("Retention", "96%", "-0.4%"),
 ]
-grid = st.grid(4, border=True, row_height="equal")
+grid = st.grid(4, wrap=False, border=True, row_height="equal")
 for label, value, delta in metrics:
     with grid.cell():
         st.metric(label, value, delta)

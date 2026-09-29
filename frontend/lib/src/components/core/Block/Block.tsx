@@ -511,7 +511,12 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
       // instead of indexing into reactElements, since the visitor may
       // push 0, 1, or multiple elements per node (e.g., transient nodes).
       const childElement = childNode.accept(visitor)
-      if (isNullOrUndefined(childElement)) {
+      // Transient nodes (e.g. a cleared spinner) can return [] — that is not
+      // null, but it must not become an empty bordered grid cell.
+      if (
+        isNullOrUndefined(childElement) ||
+        (Array.isArray(childElement) && childElement.length === 0)
+      ) {
         return []
       }
 

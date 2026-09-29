@@ -90,6 +90,7 @@ from streamlit.elements.lib.mutable_popover_container import (
 from streamlit.elements.lib.skeleton_placeholder import (
     SkeletonPlaceholder as _SkeletonPlaceholder,
 )
+from streamlit.elements.lib.grid_container import GridContainer as _GridContainer
 
 # instantiate the DeltaGeneratorSingleton
 _dg_singleton = _DeltaGeneratorSingleton(
@@ -100,6 +101,7 @@ _dg_singleton = _DeltaGeneratorSingleton(
     tab_container_cls=_TabContainer,
     popover_container_cls=_PopoverContainer,
     skeleton_placeholder_cls=_SkeletonPlaceholder,
+    grid_container_cls=_GridContainer,
 )
 _main: _DeltaGenerator = _dg_singleton._main_dg
 sidebar: _DeltaGenerator = _dg_singleton._sidebar_dg
