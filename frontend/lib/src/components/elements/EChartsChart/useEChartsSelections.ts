@@ -19,12 +19,15 @@ import { useCallback, useEffect, useMemo, useRef } from "react"
 import { debounce, isEqual, isPlainObject } from "lodash-es"
 import { getLogger } from "loglevel"
 
-import { EChartsChart as EChartsChartProto } from "@streamlit/protobuf"
+import type { EChartsChart as EChartsChartProto } from "@streamlit/protobuf"
 
 import { isNullOrUndefined } from "~lib/util/utils"
-import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { EChartsOptionObject, withDefaultSeriesCursor } from "./CustomTheme"
+import {
+  type EChartsOptionObject,
+  withDefaultSeriesCursor,
+} from "./CustomTheme"
 
 const LOG = getLogger("useEChartsSelections")
 

@@ -45,7 +45,7 @@ import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { downloadDataUrl } from "~lib/util/downloadDataUrl"
 import { ensureError } from "~lib/util/ErrorHandling"
 import { isNullOrUndefined } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   applyAltToOption,
