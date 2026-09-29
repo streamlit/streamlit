@@ -29,7 +29,7 @@ import {
 import { AppNode, BlockNode, ElementNode } from "~lib/AppNode"
 import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
 import { mockEndpoints } from "~lib/mocks/mocks"
-import { text } from "~lib/render-tree/test-utils"
+import { text, textInput } from "~lib/render-tree/test-utils"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -1057,7 +1057,7 @@ describe("BlockNodeRenderer container types", () => {
 describe("GridContainer Component", () => {
   function makeGridBlock(
     gridContainerProps: Partial<BlockProto.GridContainer.$Properties> = {},
-    children: BlockNode[] = []
+    children: AppNode[] = []
   ): BlockNode {
     return new BlockNode(
       FAKE_SCRIPT_HASH,
@@ -1248,5 +1248,19 @@ describe("GridContainer Component", () => {
 
     const gridContainer = screen.getByTestId("stGrid")
     expect(gridContainer).toHaveClass("st-key-my_grid")
+  })
+
+  it("renders element children as cells with a public stGridCell class", () => {
+    const block = makeGridBlock({}, [
+      textInput("First", "grid-cell-a"),
+      textInput("Second", "grid-cell-b"),
+    ])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const cells = screen.getAllByTestId("stGridCell")
+    expect(cells).toHaveLength(2)
+    expect(cells[0]).toHaveClass("stGridCell")
+    expect(cells[1]).toHaveClass("stGridCell")
+    expect(cells[0]).not.toBe(cells[1])
   })
 })

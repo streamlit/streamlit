@@ -24,7 +24,7 @@ import {
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
-import { BlockNode } from "~lib/AppNode"
+import { BlockNode, ElementNode } from "~lib/AppNode"
 import {
   FlexContext,
   FlexContextProvider,
@@ -54,7 +54,7 @@ import {
 } from "~lib/hooks/useResizeObserver"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
 import { convertRemToPx } from "~lib/theme/utils"
-import { notNullOrUndefined } from "~lib/util/utils"
+import { getElementId, notNullOrUndefined } from "~lib/util/utils"
 
 import {
   clampColumnSpan,
@@ -394,6 +394,8 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
             rowSpan = gridCell.rowSpan
           }
         }
+      } else if (childNode instanceof ElementNode) {
+        nodeId = getElementId(childNode.element)
       }
 
       // Render the child element using the return value from accept()
@@ -433,6 +435,7 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
       verticalAlignment={verticalAlignment}
       showBorder={showCellBorder}
       hasFixedHeight={hasFixedHeight}
+      className="stGridCell"
       data-testid="stGridCell"
       columnSpan={
         child.columnSpanAll || !child.columnSpan

@@ -38,10 +38,10 @@ def _is_int(value: object) -> bool:
 
 
 class GridContainer(DeltaGenerator):
-    """A DeltaGenerator for grid containers that supports ``cell()``.
+    """Container returned by ``st.grid``.
 
-    This class extends DeltaGenerator to provide the ``cell()`` method,
-    which groups elements into one cell and can span columns or rows.
+    Use ``with`` notation or method chaining to add cells. ``cell()`` groups
+    several elements into one cell and can span columns or rows.
     """
 
     def __init__(

@@ -2864,6 +2864,11 @@ class GridTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitValueError):
             st.grid(gap=("small", "medium", "large"))
 
+    def test_grid_invalid_scalar_gap_names_gap_parameter(self):
+        """A scalar invalid gap is reported as `gap`, not `row_gap`."""
+        with pytest.raises(StreamlitValueError, match=r"`gap`"):
+            st.grid(gap="tiny")
+
     @parameterized.expand(
         [
             ("top", BlockProto.GridContainer.VerticalAlignment.TOP),

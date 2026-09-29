@@ -799,16 +799,28 @@ class LayoutsMixin:
             declared count and scrolls the grid horizontally. Invalid
             with ``columns="auto"``.
 
-        gap : str, int, tuple, list, or None
-            Space between cells. A scalar matches ``st.columns``. A
-            2-tuple or 2-list is ``(row_gap, column_gap)``. ``None``
-            means no gap. Named sizes are ``"xxsmall"``, ``"xsmall"``,
-            ``"small"`` (default), ``"medium"``, ``"large"``,
-            ``"xlarge"``, and ``"xxlarge"``. An integer is pixels.
+        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", int, tuple, list, or None
+            The size of the gap between cells. A scalar matches
+            ``st.columns``. A 2-tuple or 2-list is ``(row_gap, column_gap)``.
+            This can be one of the following:
+
+            - ``"xxsmall"``: 0.25rem gap between the cells.
+            - ``"xsmall"``: 0.5rem gap between the cells.
+            - ``"small"`` (default): 1rem gap between the cells.
+            - ``"medium"``: 2rem gap between the cells.
+            - ``"large"``: 4rem gap between the cells.
+            - ``"xlarge"``: 6rem gap between the cells.
+            - ``"xxlarge"``: 8rem gap between the cells.
+            - A non-negative integer specifying the gap in pixels. For
+              example, ``gap=20`` sets a 20-pixel gap.
+            - ``None``: No gap between the cells.
+
+            The rem unit is relative to the ``theme.baseFontSize``
+            configuration option.
 
         vertical_alignment : "top", "center", or "bottom"
-            Placement of a child when its cell is taller. Default
-            ``"top"``.
+            The vertical alignment of a child when its cell is taller than
+            the child. The default is ``"top"``.
 
         border : bool
             Border and padding around each cell, matching ``st.columns``
@@ -832,14 +844,18 @@ class LayoutsMixin:
             the grid. ``"stretch"`` fills a height-bounded ancestor.
 
         key : str, int, or None
-            An optional string or integer to use as the unique key for
-            the widget. If this is omitted, a key will be generated for
-            the widget based on its content. No two widgets may have
-            the same key.
+            An optional string or integer to give this element a stable
+            identity. If this is ``None`` (default), the element's identity
+            will be determined based on the values of the other parameters.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         dense : bool
             When ``True``, backfill gaps left by spanning cells. This
-            can reorder visual vs DOM order. Default ``False``.
+            can place later cells visually ahead of earlier ones, so
+            keyboard and screen-reader order (DOM order) may not match
+            visual order. Default ``False``.
 
         Returns
         -------
@@ -881,7 +897,7 @@ class LayoutsMixin:
 
         .. output::
             https://doc-grid2.streamlit.app/
-            height: 180px
+            height: 200px
 
         **Example 3: Fixed column count (no wrap)**
 
@@ -963,8 +979,11 @@ class LayoutsMixin:
                     detail=f"Got a sequence with {len(gap)} elements.",
                 )
             row_gap, col_gap = gap
+            row_gap_parameter = "row_gap"
+            col_gap_parameter = "column_gap"
         else:
             row_gap = col_gap = gap
+            row_gap_parameter = col_gap_parameter = "gap"
 
         valid_alignments = ["top", "center", "bottom"]
         if vertical_alignment not in valid_alignments:
@@ -1011,10 +1030,10 @@ class LayoutsMixin:
             grid_container.min_column_width_px = validated_min_column_width
 
         grid_container.row_gap_config.CopyFrom(
-            get_gap_config(row_gap, parameter="row_gap")
+            get_gap_config(row_gap, parameter=row_gap_parameter)
         )
         grid_container.column_gap_config.CopyFrom(
-            get_gap_config(col_gap, parameter="column_gap")
+            get_gap_config(col_gap, parameter=col_gap_parameter)
         )
 
         alignment_mapping = {

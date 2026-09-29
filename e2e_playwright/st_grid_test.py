@@ -15,13 +15,14 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import get_element_by_key
+from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
 
 
 def test_grid_renders(app: Page):
     """Test that all grids render correctly."""
     grids = app.get_by_test_id("stGrid")
     expect(grids).to_have_count(6)
+    check_top_level_class(app, "stGrid")
 
 
 def test_auto_sizing_grid(app: Page):

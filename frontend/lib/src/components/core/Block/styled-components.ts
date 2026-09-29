@@ -512,8 +512,10 @@ export const StyledGridCell = styled.div<StyledGridCellProps>(
         minWidth: 0,
         minHeight: 0,
         maxWidth: "100%",
-        // For fixed height cells, use overflow-y auto to allow scrolling
-        // but keep overflow-x clipped so toolbars/menus aren't clipped by x
+        // For fixed-height cells, overflow-y: auto scrolls tall content.
+        // overflow-x: clip avoids a spurious horizontal scrollbar.
+        // Content painted inside this cell (including popovers/tooltips)
+        // is clipped by the scroll container.
         ...(hasFixedHeight && { overflowY: "auto", overflowX: "clip" }),
         ...(showBorder && {
           border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
