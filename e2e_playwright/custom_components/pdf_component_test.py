@@ -405,4 +405,4 @@ def test_st_pdf_accessible_names(app: Page):
     expect(labeled).to_have_attribute("role", "region")
     expect(unlabeled).to_have_accessible_name("")
     expect(unlabeled).not_to_have_attribute("aria-label")
-    expect(unlabeled).not_to_have_attribute("role", "region")
+    expect(unlabeled).not_to_have_attribute("role")
