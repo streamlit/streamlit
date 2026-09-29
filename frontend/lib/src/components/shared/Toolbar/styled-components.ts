@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ComponentSelector } from "@emotion/serialize"
+import type { ComponentSelector } from "@emotion/serialize"
 import styled from "@emotion/styled"
 
 import { hasLightBackgroundColor } from "~lib/theme/getColors"

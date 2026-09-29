@@ -106,6 +106,7 @@ const loadingPromises: Record<
 }
 
 /** Lazy load rehype-katex for math rendering */
+// oxlint-disable-next-line typescript/consistent-type-imports -- typeof import() types the lazy load without a static runtime import
 export const loadKatexPlugin = (): Promise<typeof import("rehype-katex")> =>
   import("rehype-katex")
 
@@ -115,10 +116,12 @@ export const loadKatexStyles = once((): void => {
 })
 
 /** Lazy load rehype-raw for HTML parsing (pulls in parse5) */
+// oxlint-disable-next-line typescript/consistent-type-imports -- typeof import() types the lazy load without a static runtime import
 export const loadRehypeRaw = (): Promise<typeof import("rehype-raw")> =>
   import("rehype-raw")
 
 /** Lazy load remark-emoji for emoji shortcode conversion */
+// oxlint-disable-next-line typescript/consistent-type-imports -- typeof import() types the lazy load without a static runtime import
 export const loadRemarkEmoji = (): Promise<typeof import("remark-emoji")> =>
   import("remark-emoji")
 

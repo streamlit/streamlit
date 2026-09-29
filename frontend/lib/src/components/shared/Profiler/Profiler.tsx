@@ -15,9 +15,9 @@
  */
 
 import {
-  FC,
-  ProfilerOnRenderCallback,
-  PropsWithChildren,
+  type FC,
+  type ProfilerOnRenderCallback,
+  type PropsWithChildren,
   Profiler as ReactProfiler,
 } from "react"
 

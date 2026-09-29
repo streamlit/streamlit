@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useMemo } from "react"
+import { memo, type ReactElement, useMemo } from "react"
 
 import { range } from "lodash-es"
 
-import { streamlit, Table as TableProto } from "@streamlit/protobuf"
+import { type streamlit, Table as TableProto } from "@streamlit/protobuf"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { format as formatArrowCell } from "~lib/dataframes/arrowFormatUtils"
@@ -34,7 +34,7 @@ import { Quiver } from "~lib/dataframes/Quiver"
 import { convertRemToPx } from "~lib/theme/utils"
 
 import {
-  StickyType,
+  type StickyType,
   StyledEmptyTableCell,
   StyledTable,
   StyledTableBorder,

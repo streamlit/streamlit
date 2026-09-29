@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { RefObject, useEffect, useRef } from "react"
+import { type RefObject, useEffect, useRef } from "react"
 
 /**
  * Read plain text from a label, inserting a space where leftover block

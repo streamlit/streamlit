@@ -21,8 +21,8 @@ import { getLogger } from "loglevel"
 import type { FileURLs, FileURLsResponse } from "@streamlit/protobuf"
 import { generateUuid } from "@streamlit/utils"
 
-import { SessionInfo } from "./SessionInfo"
-import { StreamlitEndpoints } from "./StreamlitEndpoints"
+import type { SessionInfo } from "./SessionInfo"
+import type { StreamlitEndpoints } from "./StreamlitEndpoints"
 import { isValidFormId } from "./util/utils"
 
 /** Common widget protobuf fields that are used by the FileUploadClient. */

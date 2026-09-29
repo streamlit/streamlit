@@ -20,7 +20,7 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import type { EmotionTheme } from "~lib/theme/types"
 import { isNullOrUndefined } from "~lib/util/utils"
 
-import { VegaLiteChartElement } from "./arrowUtils"
+import type { VegaLiteChartElement } from "./arrowUtils"
 import { resolveNamedColorsInSpec } from "./colorUtils"
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 

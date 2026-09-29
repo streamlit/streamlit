@@ -15,7 +15,7 @@
  */
 
 import {
-  PointerEvent,
+  type PointerEvent,
   useCallback,
   useEffect,
   useMemo,

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { keyframes, Theme } from "@emotion/react"
+import { keyframes, type Theme } from "@emotion/react"
 import styled from "@emotion/styled"
 
 import { roundFontSizeToNearestEighth } from "~lib/theme/utils"
