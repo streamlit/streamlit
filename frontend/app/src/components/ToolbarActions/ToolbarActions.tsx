@@ -97,9 +97,10 @@ function ToolbarActions({
           key={key}
           label={label}
           icon={icon}
-          // Host keys are often opaque IDs; icon is a CSS background URL, not
-          // a Material/emoji token. Prefer a stable generic name over key.
-          ariaLabel={label?.trim() || "Toolbar action"}
+          // Icon is a CSS background URL (no Material/emoji token to name from).
+          // Prefer label, then key so multiple icon-only actions stay distinct,
+          // then a generic name if the host sends an empty key.
+          ariaLabel={label?.trim() || key.trim() || "Toolbar action"}
           onClick={() => {
             metricsMgr.enqueue("menuClick", {
               label: key,

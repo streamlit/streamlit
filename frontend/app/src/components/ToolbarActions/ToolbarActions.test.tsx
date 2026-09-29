@@ -96,9 +96,7 @@ describe("ToolbarActions", () => {
     const props = getProps()
     render(<ToolbarActions {...props} />)
 
-    const favoriteButton = screen.getByRole("button", {
-      name: "Toolbar action",
-    })
+    const favoriteButton = screen.getByRole("button", { name: "favorite" })
     await user.click(favoriteButton)
     expect(props.sendMessageToHost).toHaveBeenLastCalledWith({
       type: "TOOLBAR_ITEM_CALLBACK",
@@ -113,13 +111,30 @@ describe("ToolbarActions", () => {
     })
   })
 
-  it("falls back to a generic name when the label is omitted or whitespace-only", () => {
+  it("uses distinct key fallbacks for multiple icon-only actions", () => {
     render(
       <ToolbarActions
         {...getProps({
           hostToolbarItems: [
-            { key: "toolbar-item-7f3a", icon: "star.svg", label: "   " },
+            { key: "favorite", icon: "star.svg", label: "   " },
+            { key: "download", icon: "download.svg" },
           ],
+        })}
+      />
+    )
+
+    expect(screen.getByRole("button", { name: "favorite" })).toBeVisible()
+    expect(screen.getByRole("button", { name: "download" })).toBeVisible()
+    expect(
+      screen.queryByTestId("stToolbarActionButtonLabel")
+    ).not.toBeInTheDocument()
+  })
+
+  it("falls back to a generic name when label and key are empty", () => {
+    render(
+      <ToolbarActions
+        {...getProps({
+          hostToolbarItems: [{ key: "  ", icon: "star.svg" }],
         })}
       />
     )
@@ -127,9 +142,6 @@ describe("ToolbarActions", () => {
     expect(
       screen.getByRole("button", { name: "Toolbar action" })
     ).toBeVisible()
-    expect(
-      screen.queryByTestId("stToolbarActionButtonLabel")
-    ).not.toBeInTheDocument()
   })
 
   it("does not set aria-label when a visible label is present", () => {
