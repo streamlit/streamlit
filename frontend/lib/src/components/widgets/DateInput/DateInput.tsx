@@ -31,6 +31,7 @@ import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
+import { requiredFieldError } from "~lib/components/widgets/BaseWidget/requiredField"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
@@ -54,7 +55,6 @@ import {
   isoToCalendarDate,
   isRequiredEmptyDateValue,
   normalizeRangeOrder,
-  REQUIRED_FIELD_MESSAGE,
   validateDate,
 } from "./dateInputUtils"
 import RangeDateInput from "./RangeDateInput"
@@ -368,17 +368,12 @@ function DateInput({
     }
   }, [incomingSetValue, protoValue, value])
 
-  const requiredError =
-    element.required &&
-    hasRequiredError &&
+  const requiredError = requiredFieldError(
+    element.required,
+    hasRequiredError,
     isRequiredEmptyDateValue(pendingIsoRef.current, element.isRange)
-      ? REQUIRED_FIELD_MESSAGE
-      : null
-  if (
-    hasRequiredError &&
-    (!element.required ||
-      !isRequiredEmptyDateValue(pendingIsoRef.current, element.isRange))
-  ) {
+  )
+  if (hasRequiredError && requiredError === null) {
     setHasRequiredError(false)
   }
   const displayedError = requiredError ?? error

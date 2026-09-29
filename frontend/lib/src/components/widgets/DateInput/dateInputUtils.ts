@@ -443,14 +443,64 @@ export function getSafeLocale(locale: string): string {
   }
 }
 
-export const REQUIRED_FIELD_MESSAGE = "This field is required."
-
 /** True when `required` treats the pending/committed ISO array as empty. */
 export function isRequiredEmptyDateValue(
   isoValues: string[],
   isRange: boolean
 ): boolean {
   return isRange ? isoValues.length !== 2 : isoValues.length === 0
+}
+
+/**
+ * Builds a `CalendarDate` from year/month/day segment nodes.
+ *
+ * Strict mode (default) aborts on the first non-numeric or short-year
+ * segment. Lenient mode skips those nodes so a complete painted date can
+ * still parse when extra wrappers or incomplete sibling nodes are present
+ * (range close/Escape fallback over all six spinbuttons).
+ */
+export function calendarDateFromSegments(
+  segments: Iterable<Element>,
+  { lenient = false }: { lenient?: boolean } = {}
+): CalendarDate | null {
+  let year: number | undefined
+  let month: number | undefined
+  let day: number | undefined
+  for (const segment of segments) {
+    const type = segment.getAttribute("data-type")
+    if (type !== "year" && type !== "month" && type !== "day") {
+      continue
+    }
+    const text = segment.textContent?.trim() ?? ""
+    if (!/^\d+$/.test(text)) {
+      if (lenient) {
+        continue
+      }
+      return null
+    }
+    const value = Number(text)
+    if (type === "year") {
+      if (text.length !== 4) {
+        if (lenient) {
+          continue
+        }
+        return null
+      }
+      year = value
+    } else if (type === "month") {
+      month = value
+    } else {
+      day = value
+    }
+  }
+  if (year === undefined || month === undefined || day === undefined) {
+    return null
+  }
+  try {
+    return new CalendarDate(year, month, day)
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -475,37 +525,5 @@ export function readCalendarDateFromField(
   if (segments.length === 0) {
     return null
   }
-
-  let year: number | undefined
-  let month: number | undefined
-  let day: number | undefined
-  for (const segment of segments) {
-    const type = segment.getAttribute("data-type")
-    if (type !== "year" && type !== "month" && type !== "day") {
-      continue
-    }
-    const text = segment.textContent?.trim() ?? ""
-    if (!/^\d+$/.test(text)) {
-      return null
-    }
-    const value = Number(text)
-    if (type === "year") {
-      if (text.length !== 4) {
-        return null
-      }
-      year = value
-    } else if (type === "month") {
-      month = value
-    } else {
-      day = value
-    }
-  }
-  if (year === undefined || month === undefined || day === undefined) {
-    return null
-  }
-  try {
-    return new CalendarDate(year, month, day)
-  } catch {
-    return null
-  }
+  return calendarDateFromSegments(segments)
 }
