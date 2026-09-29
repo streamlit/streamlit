@@ -15,7 +15,7 @@ st.image(
 
 Accepts a file path, URL, `PIL.Image`, NumPy array, or bytes.
 
-- Width: `width="content"` (default) sizes to the content; `width="stretch"` fills the container; `width=<pixels>` is a fixed size. Do not use deprecated `use_container_width` (`True` → `"stretch"`, `False` → `"content"`).
+- Width: `width="content"` (default) sizes to the content; `width="stretch"` fills the container; `width=<pixels>` is a fixed size. Do not use deprecated `use_container_width` (`True` → `"stretch"`; `False` → `"content"` unless `width` is an integer, in which case keep that width).
 - Accessibility: pass `alt=` for screen readers; it is independent of `caption`. Use `alt=""` for decorative images.
 
 ## Video: st.video
