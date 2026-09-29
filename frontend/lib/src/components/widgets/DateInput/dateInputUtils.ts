@@ -465,7 +465,13 @@ export function readCalendarDateFromField(
   if (!field) {
     return null
   }
-  const segments = field.querySelectorAll(SEGMENT_SELECTOR)
+  // Prefer spinbuttons: extra `[data-type]` nodes (literals, hidden copies)
+  // must not fail the parse. Unit tests pass synthetic `[data-type]` spans.
+  const spinbuttons = field.querySelectorAll('[role="spinbutton"]')
+  const segments =
+    spinbuttons.length > 0
+      ? spinbuttons
+      : field.querySelectorAll(SEGMENT_SELECTOR)
   if (segments.length === 0) {
     return null
   }
@@ -475,6 +481,9 @@ export function readCalendarDateFromField(
   let day: number | undefined
   for (const segment of segments) {
     const type = segment.getAttribute("data-type")
+    if (type !== "year" && type !== "month" && type !== "day") {
+      continue
+    }
     const text = segment.textContent?.trim() ?? ""
     if (!/^\d+$/.test(text)) {
       return null
@@ -487,7 +496,7 @@ export function readCalendarDateFromField(
       year = value
     } else if (type === "month") {
       month = value
-    } else if (type === "day") {
+    } else {
       day = value
     }
   }

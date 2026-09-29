@@ -210,6 +210,52 @@ function resolveRangeBound(
   return fromDom ?? display
 }
 
+function calendarDateFromSpinbuttons(nodes: Element[]): CalendarDate | null {
+  let year: number | undefined
+  let month: number | undefined
+  let day: number | undefined
+  for (const segment of nodes) {
+    const type = segment.getAttribute("data-type")
+    const text = segment.textContent?.trim() ?? ""
+    if (!/^\d+$/.test(text)) {
+      continue
+    }
+    const value = Number(text)
+    if (type === "year") {
+      if (text.length !== 4) {
+        continue
+      }
+      year = value
+    } else if (type === "month") {
+      month = value
+    } else if (type === "day") {
+      day = value
+    }
+  }
+  if (year === undefined || month === undefined || day === undefined) {
+    return null
+  }
+  try {
+    return new CalendarDate(year, month, day)
+  } catch {
+    return null
+  }
+}
+
+/** Last-resort parse of a complete range from the six painted spinbuttons. */
+function readCompleteRangeFromSpinbuttons(
+  container: HTMLElement | null
+): CalendarDate[] {
+  const buttons = container?.querySelectorAll('[role="spinbutton"]')
+  if (!buttons || buttons.length < 6) {
+    return []
+  }
+  const nodes = Array.from(buttons)
+  const start = calendarDateFromSpinbuttons(nodes.slice(0, 3))
+  const end = calendarDateFromSpinbuttons(nodes.slice(3, 6))
+  return start && end ? [start, end] : []
+}
+
 /** Commit payload for close/blur. Prefer painted segment digits so a typed
  * complete range commits even when `onChange` has not flushed; ignore
  * controlled display while a field is only partially typed. */
@@ -222,19 +268,24 @@ function getPendingRange(
     container?.querySelector('[data-range-field="start"]') ?? null,
     displayStart
   )
+  const end = resolveRangeBound(
+    container?.querySelector('[data-range-field="end"]') ?? null,
+    displayEnd
+  )
+  if (start && end) {
+    return [start, end]
+  }
+  const fromButtons = readCompleteRangeFromSpinbuttons(container)
+  if (fromButtons.length === 2) {
+    return fromButtons
+  }
   // A range cannot start from an end-only paint: handleEndFieldChange
   // ignores end typing when start is empty, so compacting that date would
   // wrongly promote it to start.
   if (!start) {
     return []
   }
-  return compact([
-    start,
-    resolveRangeBound(
-      container?.querySelector('[data-range-field="end"]') ?? null,
-      displayEnd
-    ),
-  ])
+  return compact([start, end])
 }
 
 function isRangeFullyCleared(container: HTMLElement | null): boolean {
@@ -812,6 +863,31 @@ function RangeDateInput({
   // closes the passive popover and lets focus leave the widget naturally.
   const handleFieldKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
+      if (e.key === "Escape") {
+        // type_date and keyboard users commit with Escape even when the
+        // calendar is not open (no overlay onClose / close effect).
+        const pending = getClosePendingRange(
+          e.currentTarget,
+          displayStartRef.current,
+          displayEndRef.current
+        )
+        if (pending.length === 2 && !committedOnThisCloseRef.current) {
+          const committed = compact([startValue, endValue])
+          if (
+            shouldNotifyRangePending(pending, committed, hasEditedRef.current)
+          ) {
+            hasEditedRef.current = false
+            committedOnThisCloseRef.current = true
+            skipCloseCommitRef.current = true
+            if (formCommit) {
+              formCommit(pending)
+            } else {
+              onChangeRef.current(pending)
+            }
+          }
+        }
+      }
+
       if (e.altKey && e.key === "ArrowDown") {
         e.preventDefault()
         activeOriginRef.current = e.target as HTMLElement
@@ -834,7 +910,7 @@ function RangeDateInput({
         setIsOpenState(false)
       }
     },
-    [isOpen]
+    [isOpen, startValue, endValue, formCommit]
   )
 
   // In active mode: Tab cycles focus within the popover (focus trap).

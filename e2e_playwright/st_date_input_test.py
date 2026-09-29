@@ -1273,6 +1273,8 @@ def test_date_input_required_blocks_empty_commits_and_form_submits(app: Page):
     range_standalone_widget.scroll_into_view_if_needed()
     range_standalone_field = range_standalone_widget.get_by_test_id("stDateInputField")
     type_date(range_standalone_field, "2020", "01", "01", "2020", "01", "10")
+    # Click away so blur commits if Escape ran before React Aria flushed.
+    app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
     wait_for_app_run(app)
     expect_markdown(
         app,
