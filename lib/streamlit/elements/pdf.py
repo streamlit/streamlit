@@ -101,10 +101,9 @@ class PdfMixin:
               of the viewer matches the height of its content.
 
         key : str or None
-            An optional string to uniquely identify this component instance.
-            If this is ``None`` (default), Streamlit derives identity from the
-            component's arguments. Providing a stable ``key`` avoids remounting
-            when other arguments change.
+            An optional string to use for giving this element a stable
+            identity. If this is ``None`` (default), the element's identity
+            will be determined based on the values of the other parameters.
 
         alt : str or None
             A short, plain-text accessible name for the PDF viewer. If this is

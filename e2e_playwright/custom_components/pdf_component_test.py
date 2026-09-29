@@ -391,7 +391,7 @@ def test_st_pdf_different_heights_snapshots(
     assert_snapshot(pdf_container, name="st_pdf-height_maximum")
 
 
-def test_st_pdf_accessible_names(app: Page):
+def test_st_pdf_alt_sets_accessible_name(app: Page):
     """Verify authored and omitted alt map to the viewer accessible name."""
     _select_pdf_scenario(app, "altText")
     wait_for_app_run(app)

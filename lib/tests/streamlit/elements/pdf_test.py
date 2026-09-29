@@ -303,7 +303,7 @@ class PdfTest(DeltaGeneratorTestCase):
 
         assert mock_component.call_args.kwargs["alt"] == "Q3 report"
 
-    def test_pdf_alt_reaches_component_data(self) -> None:
+    def test_pdf_alt_appears_in_component_json(self) -> None:
         """Non-empty alt appears on the bidi component JSON (streamlit-pdf>=2.1.0)."""
         url = "https://example.com/fake-document.pdf"
         st.pdf(url, alt="Q3 2026 financial report")
@@ -311,3 +311,11 @@ class PdfTest(DeltaGeneratorTestCase):
         element = self.get_delta_from_queue().new_element
         json_args = json.loads(element.bidi_component.json)
         assert json_args["alt"] == "Q3 2026 financial report"
+
+    def test_pdf_alt_preserves_adversarial_plain_text(self) -> None:
+        """Quotes and angle brackets stay literal in the component JSON."""
+        adversarial = 'Report of "A < B" & totals <script>alert(1)</script>'
+        st.pdf("https://example.com/fake-document.pdf", alt=adversarial)
+
+        element = self.get_delta_from_queue().new_element
+        assert json.loads(element.bidi_component.json)["alt"] == adversarial
