@@ -17,7 +17,6 @@
 import { ReactElement } from "react"
 
 import { cleanup, screen, within } from "@testing-library/react"
-import { transparentize } from "color2k"
 import type { Element } from "hast"
 import ReactMarkdown from "react-markdown"
 
@@ -26,7 +25,6 @@ import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render, renderWithContexts } from "~lib/test_util"
 import { getThemeBackgroundColors } from "~lib/theme/getColors"
-import { colors } from "~lib/theme/primitives/colors"
 
 import StreamlitMarkdown, {
   containsEmojiShortcodes,
@@ -1084,17 +1082,17 @@ describe("StreamlitMarkdown", () => {
   })
 
   it("colours text properly", () => {
-    const grayTextColor = transparentize(colors.gray85, 0.4)
+    const textColors = mockTheme.emotion.colors
 
     const colorMapping = new Map([
-      ["red", colors.red90],
-      ["orange", colors.orange95],
-      ["yellow", colors.yellow115],
-      ["blue", colors.blue90],
-      ["green", colors.green90],
-      ["violet", colors.purple90],
-      ["gray", grayTextColor],
-      ["grey", grayTextColor],
+      ["red", textColors.redTextColor],
+      ["orange", textColors.orangeTextColor],
+      ["yellow", textColors.yellowTextColor],
+      ["blue", textColors.blueTextColor],
+      ["green", textColors.greenTextColor],
+      ["violet", textColors.violetTextColor],
+      ["gray", textColors.grayTextColor],
+      ["grey", textColors.grayTextColor],
       ["rainbow", "rgba(0, 0, 0, 0)"],
     ])
 

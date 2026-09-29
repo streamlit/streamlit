@@ -16,8 +16,6 @@
 
 /** A mock theme definition for use in unit tests. */
 
-import { transparentize } from "color2k"
-
 import { createEmotionColors } from "~lib/theme/getColors"
 import { createShadows } from "~lib/theme/getShadows"
 import { breakpoints } from "~lib/theme/primitives/breakpoints"
@@ -46,31 +44,32 @@ const requiredThemeColors = {
   secondary: colors.blue70,
 
   // Default main theme colors (light theme)
-  redColor: colors.red70,
-  orangeColor: colors.orange70,
-  yellowColor: colors.yellow80,
-  blueColor: colors.blue70,
-  greenColor: colors.green70,
-  violetColor: colors.purple70,
-  grayColor: colors.gray60,
+  // Keep in sync with emotionBaseTheme/themeColors.ts
+  redColor: "#D94A57",
+  orangeColor: "#E0682B",
+  yellowColor: "#E0A61F",
+  blueColor: "#3B82F6",
+  greenColor: "#079464",
+  violetColor: "#9B5DE5",
+  grayColor: "#716A63",
 
   // Default background theme colors (light theme)
-  redBackgroundColor: transparentize(colors.red80, 0.9),
-  orangeBackgroundColor: transparentize(colors.orange70, 0.9),
-  yellowBackgroundColor: transparentize(colors.yellow65, 0.9),
-  blueBackgroundColor: transparentize(colors.blue65, 0.9),
-  greenBackgroundColor: transparentize(colors.green70, 0.9),
-  violetBackgroundColor: transparentize(colors.purple60, 0.9),
-  grayBackgroundColor: transparentize(colors.gray85, 0.9),
+  redBackgroundColor: "#FFF1F2",
+  orangeBackgroundColor: "#FFF6ED",
+  yellowBackgroundColor: "#FFFAE5",
+  blueBackgroundColor: "#EDF5FF",
+  greenBackgroundColor: "#F1FBF6",
+  violetBackgroundColor: "#F8F2FF",
+  grayBackgroundColor: "#F5F4F2",
 
   // Default text theme colors (light theme)
-  redTextColor: colors.red90,
-  orangeTextColor: colors.orange95,
-  yellowTextColor: colors.yellow115,
-  blueTextColor: colors.blue90,
-  greenTextColor: colors.green90,
-  violetTextColor: colors.purple90,
-  grayTextColor: transparentize(colors.gray85, 0.4),
+  redTextColor: "#9E303B",
+  orangeTextColor: "#9B4519",
+  yellowTextColor: "#9D7110",
+  blueTextColor: "#244FB4",
+  greenTextColor: "#0C5A44",
+  violetTextColor: "#6F33B8",
+  grayTextColor: "#3F3A34",
 }
 
 interface OptionalThemeColors {
