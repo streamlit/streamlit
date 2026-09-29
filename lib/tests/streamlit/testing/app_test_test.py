@@ -147,7 +147,9 @@ def test_from_file_raises_immediately_for_missing_script():
     assert str(missing_script.resolve()) in str(exc_info.value)
 
 
-def test_get_query_params():
+def test_get_query_params() -> None:
+    """Query params set on AppTest are visible to the script as strings."""
+
     def script():
         import streamlit as st
 
@@ -159,17 +161,50 @@ def test_get_query_params():
     at.query_params["bar"] = "baz"
     at.run()
     assert at.json[0].value == '{"foo": "5", "bar": "baz"}'
+    assert at.query_params["foo"] == "5"
+    assert at.query_params["bar"] == "baz"
 
 
-def test_set_query_params():
+def test_set_query_params() -> None:
+    """Single query param values set by the app stay str after .run()."""
+
     def script():
         import streamlit as st
 
         st.query_params["foo"] = "bar"
 
     at = AppTest.from_function(script).run()
-    # parse.parse_qs puts everything in lists
-    assert at.query_params["foo"] == ["bar"]
+    assert at.query_params["foo"] == "bar"
+
+
+def test_query_params_round_trip() -> None:
+    """AppTest preserves single, repeated, and blank query parameters across runs."""
+
+    def script():
+        import streamlit as st
+
+        st.query_params["from_app"] = "bar"
+
+    at = AppTest.from_function(script)
+    at.query_params["x"] = "1"
+    at.query_params["one"] = ["solo"]
+    at.query_params["tags"] = ["a", "b"]
+    at.query_params["empty"] = ""
+    at.run()
+
+    assert at.query_params["x"] == "1"
+    assert at.query_params["one"] == "solo"
+    assert at.query_params["tags"] == ["a", "b"]
+    assert at.query_params["empty"] == ""
+    assert at.query_params["from_app"] == "bar"
+
+    # Second run re-encodes the collapsed dict; values must stay stable.
+    at.run()
+    assert at.query_params["x"] == "1"
+    assert at.query_params["one"] == "solo"
+    assert at.query_params["tags"] == ["a", "b"]
+    assert at.query_params["empty"] == ""
+    assert at.query_params["from_app"] == "bar"
 
 
 def test_secrets():
