@@ -150,6 +150,13 @@ describe("PageLink", () => {
     expect(pageLinkIcon).toHaveTextContent("home")
   })
 
+  it("names an icon-only page link when the label is empty", () => {
+    const props = getProps({ label: "", icon: ":material/home:" })
+    render(<PageLink {...props} />)
+
+    expect(screen.getByRole("link", { name: "home icon" })).toBeVisible()
+  })
+
   it("renders an emoji icon when provided", () => {
     const props = getProps({ icon: "🏠" })
     render(<PageLink {...props} />)

@@ -82,11 +82,12 @@ describe("ChatMessage", () => {
         avatarType: BlockProto.ChatMessage.AvatarType.IMAGE,
       })
       render(<ChatMessage {...props} />)
-      const chatAvatar = screen.getByAltText("")
+      const chatAvatar = screen.getByTestId("stChatMessageAvatarImage")
       expect(chatAvatar).toHaveAttribute(
         "src",
         "http://example.com/avatar.jpg"
       )
+      expect(chatAvatar).toHaveAttribute("alt", "")
     })
 
     describe("crossOrigin attribute", () => {
@@ -109,7 +110,7 @@ describe("ChatMessage", () => {
           },
         })
 
-        const chatAvatar = screen.getByAltText("")
+        const chatAvatar = screen.getByTestId("stChatMessageAvatarImage")
         expect(chatAvatar).toHaveAttribute("crossOrigin", "anonymous")
       })
 
@@ -124,7 +125,7 @@ describe("ChatMessage", () => {
           },
         })
 
-        const chatAvatar = screen.getByAltText("")
+        const chatAvatar = screen.getByTestId("stChatMessageAvatarImage")
         expect(chatAvatar).not.toHaveAttribute("crossOrigin")
       })
 
@@ -152,7 +153,7 @@ describe("ChatMessage", () => {
             },
           })
 
-          const chatAvatar = screen.getByAltText("")
+          const chatAvatar = screen.getByTestId("stChatMessageAvatarImage")
           expect(chatAvatar).not.toHaveAttribute("crossOrigin")
         }
       )
@@ -258,13 +259,20 @@ describe("ChatMessage", () => {
     )
   })
 
-  it("sets an aria label on the chat message", () => {
-    const props = getProps()
+  it("exposes speaker identity on a namable content region", () => {
+    const props = getProps({
+      name: "Alice",
+      avatar: "http://example.com/avatar.jpg",
+      avatarType: BlockProto.ChatMessage.AvatarType.IMAGE,
+    })
     render(<ChatMessage {...props} />)
 
-    const chatMessageContent = screen.getByTestId("stChatMessageContent")
-    expect(chatMessageContent.getAttribute("aria-label")).toEqual(
-      "Chat message from user"
+    expect(
+      screen.getByRole("group", { name: "Chat message from Alice" })
+    ).toBeVisible()
+    expect(screen.getByTestId("stChatMessageAvatarImage")).toHaveAttribute(
+      "alt",
+      ""
     )
   })
 })

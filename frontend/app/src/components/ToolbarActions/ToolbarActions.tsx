@@ -45,8 +45,8 @@ function trimHostString(value: unknown): string {
  * cannot contribute a Material/emoji name.
  */
 export function getToolbarActionAccessibleName(
-  label: unknown,
-  key: unknown
+  label?: string | null,
+  key?: string | null
 ): string {
   return (
     trimHostString(label) || trimHostString(key) || DEFAULT_TOOLBAR_ACTION_NAME

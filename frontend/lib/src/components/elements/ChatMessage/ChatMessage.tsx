@@ -53,8 +53,9 @@ function ChatMessageAvatar(
       case BlockProto.ChatMessage.AvatarType.IMAGE:
         return (
           <StyledAvatarImage
+            data-testid="stChatMessageAvatarImage"
             src={endpoints.buildMediaURL(avatar)}
-            // Decorative: author is named on the message content region.
+            // Decorative: speaker identity is on the content region (role=group).
             alt=""
             crossOrigin={crossOrigin}
           />
@@ -128,6 +129,8 @@ const ChatMessage: React.FC<React.PropsWithChildren<ChatMessageProps>> = ({
       />
       <StyledMessageContent
         data-testid="stChatMessageContent"
+        // Namable role so aria-label is exposed (ignored on role=generic).
+        role="group"
         aria-label={`Chat message from ${name}`}
       >
         {children}

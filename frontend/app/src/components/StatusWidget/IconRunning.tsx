@@ -83,7 +83,7 @@ const IconRunning: React.FC = () => {
       data-testid="stStatusWidgetRunningIcon"
     >
       {isNewYear ? (
-        // Wrapper already exposes role="img" + aria-label="Running...".
+        // Inner image is decorative; the wrapper already names this "Running...".
         <img
           src={newYearsRunning}
           alt=""

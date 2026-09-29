@@ -75,8 +75,8 @@ export const DynamicButtonLabel = ({
     label
   )
 
-  // Dynamic icons are hidden from assistive technology. Give icon-only controls
-  // a name so they stay operable after the glyph is excluded from the tree.
+  // Dynamic icons are hidden from assistive technology, so an icon-only control
+  // would otherwise have no accessible name.
   const iconOnlyAccessibleName =
     icon && !label?.trim() ? getIconAccessibleName(icon) : undefined
 

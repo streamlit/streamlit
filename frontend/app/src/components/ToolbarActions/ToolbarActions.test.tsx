@@ -61,8 +61,9 @@ describe("getToolbarActionAccessibleName", () => {
       expected: "Toolbar action",
     },
     {
-      label: 1,
-      key: { id: "x" },
+      // Runtime host payloads may still send non-strings via postMessage.
+      label: 1 as unknown as string,
+      key: { id: "x" } as unknown as string,
       expected: "Toolbar action",
     },
   ])(
