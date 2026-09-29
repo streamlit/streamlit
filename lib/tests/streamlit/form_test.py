@@ -258,9 +258,9 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
 
         message = str(ctx.value)
         assert "key='foo'" in message
-        assert "app-wide" in message
-        assert "element type" in message
-        assert "container" in message
+        assert "Form keys" in message
+        assert "separate namespace" in message
+        assert "element type" not in message
 
     def test_multiple_forms_same_labels_different_keys(self):
         """Multiple forms with different keys are allowed."""

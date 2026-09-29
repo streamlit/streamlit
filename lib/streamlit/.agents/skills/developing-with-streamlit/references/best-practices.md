@@ -312,7 +312,9 @@ st.session_state.setdefault("filters", {})
 st.session_state.setdefault("selected_account", None)
 ```
 
-Use widget keys when widgets repeat, parameters change dynamically, or code needs programmatic access. Keys are unique app-wide during a run — not per widget type or container (`st.tabs`, `st.columns`, sidebar). `st.form` keys must be unique among forms, and `@st.fragment` keys among fragment definitions that render in the run; those namespaces are separate from widget keys.
+Use widget keys when widgets repeat, parameters change dynamically, or code needs programmatic access. Widget and keyed-container keys are unique app-wide during a run, regardless of element type or container (`st.tabs`, `st.columns`, or the sidebar).
+
+`st.form` keys are unique among forms, while `@st.fragment` keys are unique among fragment definitions that render in that run. Both namespaces are separate from widget keys.
 
 ```python
 # BAD: Changing category changes widget identity and can reset input

@@ -337,7 +337,7 @@ def test_value_error_with_detail() -> None:
 
 @pytest.mark.parametrize("user_key", ["shared", "my-key", "the key"])
 def test_duplicate_element_key_message_is_app_wide(user_key: str) -> None:
-    """Duplicate user keys are app-wide and not scoped by type or container."""
+    """Duplicate widget keys are app-wide and not scoped by type or container."""
     exc = errors.StreamlitDuplicateElementKey(user_key)
     message = str(exc)
 
@@ -346,12 +346,35 @@ def test_duplicate_element_key_message_is_app_wide(user_key: str) -> None:
     assert "element type" in message
     assert "container" in message
     assert "unique key" in message
+    assert "Form keys" not in message
+    assert "Fragment keys" not in message
     assert isinstance(exc, errors.DuplicateWidgetID)
-    assert isinstance(exc, errors.StreamlitAPIException)
     assert not isinstance(exc, errors.LocalizableStreamlitException)
     # Keys stay in the displayed message only, never in telemetry suffixes.
     assert getattr(exc, "error_id", None) is None
     assert not hasattr(exc, "exec_kwargs")
+
+
+def test_duplicate_form_key_message_describes_form_namespace() -> None:
+    """Duplicate form keys describe the form namespace, not widget uniqueness."""
+    message = str(errors.StreamlitDuplicateElementKey("foo", scope="form"))
+
+    assert "key='foo'" in message
+    assert "Form keys" in message
+    assert "separate namespace" in message
+    assert "app-wide" not in message
+    assert "element type" not in message
+
+
+def test_duplicate_fragment_key_message_describes_fragment_namespace() -> None:
+    """Duplicate fragment keys describe the fragment namespace, not widget uniqueness."""
+    message = str(errors.StreamlitDuplicateElementKey("shared_key", scope="fragment"))
+
+    assert "key='shared_key'" in message
+    assert "Fragment keys" in message
+    assert "separate namespace" in message
+    assert "app-wide" not in message
+    assert "element type" not in message
 
 
 @pytest.mark.parametrize("key", ["my_key", "my-key", "the key"])

@@ -146,13 +146,31 @@ class StreamlitDuplicateElementKey(
 ):  # pragma: no cover - simple f-string
     """An exception raised when the key of an element is not unique."""
 
-    def __init__(self, user_key: str) -> None:
+    def __init__(
+        self,
+        user_key: str,
+        *,
+        scope: Literal["element", "form", "fragment"] = "element",
+    ) -> None:
+        if scope == "form":
+            detail = (
+                "Form keys must be unique among forms in a run; they are a "
+                "separate namespace from widget keys."
+            )
+        elif scope == "fragment":
+            detail = (
+                "Fragment keys must be unique among fragment definitions that "
+                "render in a run; they are a separate namespace from widget keys."
+            )
+        else:
+            detail = (
+                "Keys must be unique app-wide during a run. They are not scoped "
+                "by element type or container, so a different widget type or an "
+                "element in another tab, column, or sidebar cannot reuse this key."
+            )
         super().__init__(
             f"There are multiple elements with the same `key='{user_key}'`. "
-            "This key is unique app-wide during a run. It is not scoped by "
-            "element type or container, so a different widget type or an "
-            "element in another tab, column, or sidebar cannot reuse it.\n\n"
-            "To fix this, give each element its own unique key."
+            f"{detail}\n\nTo fix this, give each element its own unique key."
         )
 
 

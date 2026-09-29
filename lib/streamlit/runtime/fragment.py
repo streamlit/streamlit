@@ -659,7 +659,7 @@ def _fragment(
                 f"{get_object_name(non_optional_func)}{additional_hash_info}"
             )
             if not ctx.shared.register_fragment_user_key(key, fragment_definition_id):
-                raise StreamlitDuplicateElementKey(key)
+                raise StreamlitDuplicateElementKey(key, scope="fragment")
 
         # We intentionally want to capture the active script hash here to ensure
         # that the fragment is associated with the correct script running.

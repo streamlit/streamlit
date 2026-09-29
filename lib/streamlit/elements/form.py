@@ -202,7 +202,7 @@ class FormMixin:
 
         ctx = get_script_run_ctx()
         if ctx is not None and not ctx.shared.form_ids_this_run.check_and_add(form_id):
-            raise StreamlitDuplicateElementKey(key)
+            raise StreamlitDuplicateElementKey(key, scope="form")
 
         block_proto = Block_pb2.Block()
         block_proto.form.form_id = form_id
