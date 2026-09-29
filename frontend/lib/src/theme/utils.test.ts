@@ -1143,6 +1143,20 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.dataframeHeaderTextColor).not.toBe("#123456")
   })
 
+  it("keeps configured dataframeHeaderTextColor when textColor is also set", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      textColor: "#123456",
+      dataframeHeaderTextColor: "#FFC0CB",
+    }
+
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.dataframeHeaderTextColor).toBe("#FFC0CB")
+    expect(theme.colors.dataframeHeaderTextColor).not.toBe(
+      theme.colors.fadedText60
+    )
+    expect(theme.colors.bodyText).toBe("#123456")
+  })
+
   it.each(["codeBackgroundColor", "dataframeHeaderBackgroundColor"] as const)(
     "derives %s from custom secondaryBackgroundColor",
     colorKey => {
