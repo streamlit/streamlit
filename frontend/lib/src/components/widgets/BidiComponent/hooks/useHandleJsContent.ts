@@ -16,7 +16,7 @@
 
 import { useEffect, useMemo, useRef } from "react"
 
-import {
+import type {
   CleanupFunction,
   FrontendRendererArgs,
   FrontendState,
