@@ -64,11 +64,11 @@ import {
 } from "./CalendarPopoverHeader"
 import {
   applyPartialSegmentToDate,
+  calendarDateFromSegments,
   calendarDateToIso,
   datesEqual,
   getQuickSelectPresets,
   getSafeLocale,
-  isoToCalendarDate,
   isValidSegmentValue,
   noop,
   parseDateFieldPaste,
@@ -197,9 +197,22 @@ function isFieldPartiallyTyped(field: Element): boolean {
   return placeholders.length > 0 && placeholders.length < segs.length
 }
 
+function isFieldFullyCleared(field: Element): boolean {
+  const segs = field.querySelectorAll('[role="spinbutton"]')
+  if (segs.length === 0) {
+    return false
+  }
+  return Array.from(segs).every(segment => {
+    const text = segment.textContent?.trim() ?? ""
+    return segment.matches('[data-placeholder="true"]') && !/^\d+$/.test(text)
+  })
+}
+
 /** DOM digits if present; skip stale display state while the field is
- * mid-edit (some segments still placeholders). Otherwise fill from display
- * when React Aria has not flushed `onChange` yet. */
+ * mid-edit (some segments still placeholders). A fully cleared field is
+ * explicit `null` — do not fall back to display, because placeholder text
+ * also makes `readCalendarDateFromField` return null. Otherwise fill from
+ * display when React Aria has not flushed `onChange` yet. */
 function resolveRangeBound(
   field: Element | null,
   display: CalendarDate | null
@@ -208,40 +221,14 @@ function resolveRangeBound(
   if (field && isFieldPartiallyTyped(field)) {
     return fromDom
   }
+  if (field && isFieldFullyCleared(field)) {
+    return null
+  }
   return fromDom ?? display
 }
 
-function calendarDateFromSpinbuttons(nodes: Element[]): CalendarDate | null {
-  let year: number | undefined
-  let month: number | undefined
-  let day: number | undefined
-  for (const segment of nodes) {
-    const type = segment.getAttribute("data-type")
-    const text = segment.textContent?.trim() ?? ""
-    if (!/^\d+$/.test(text)) {
-      continue
-    }
-    const value = Number(text)
-    if (type === "year") {
-      if (text.length !== 4) {
-        continue
-      }
-      year = value
-    } else if (type === "month") {
-      month = value
-    } else if (type === "day") {
-      day = value
-    }
-  }
-  if (year === undefined || month === undefined || day === undefined) {
-    return null
-  }
-  return isoToCalendarDate(
-    `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
-  )
-}
-
-/** Last-resort parse of a complete range from the six painted spinbuttons. */
+/** Last-resort parse of a complete range from the six painted spinbuttons.
+ * Lenient so non-digit wrapper nodes do not abort a complete painted range. */
 function readCompleteRangeFromSpinbuttons(
   container: HTMLElement | null
 ): CalendarDate[] {
@@ -250,8 +237,8 @@ function readCompleteRangeFromSpinbuttons(
     return []
   }
   const nodes = Array.from(buttons)
-  const start = calendarDateFromSpinbuttons(nodes.slice(0, 3))
-  const end = calendarDateFromSpinbuttons(nodes.slice(3, 6))
+  const start = calendarDateFromSegments(nodes.slice(0, 3), { lenient: true })
+  const end = calendarDateFromSegments(nodes.slice(3, 6), { lenient: true })
   return start && end ? [start, end] : []
 }
 
@@ -391,9 +378,6 @@ function RangeDateInput({
 
   const clearButtonRef = useRef<HTMLButtonElement | null>(null)
   const skipCloseCommitRef = useRef(false)
-  // Set when close/blur already notified the parent so a late DateField
-  // onChange after Escape does not write twice.
-  const committedOnThisCloseRef = useRef(false)
   const lastNotifiedRangeKeyRef = useRef("")
   // A full clear that matches an empty default still needs to notify the
   // parent so a required field can paint.
@@ -445,6 +429,13 @@ function RangeDateInput({
       // fail-safe outcome: handlers cannot retain a superseded interaction.
       inAnchorModeRef.current = false
       selfCommittedAnchorRef.current = null
+    }
+    // Script/session_state updates replace the last user-notified range.
+    // Keep the key when committed props echo the same range so close/blur
+    // and a late DateField onChange do not double-write.
+    const committedKey = rangeIsoKey(compact([startValue, endValue]))
+    if (committedKey !== lastNotifiedRangeKeyRef.current) {
+      lastNotifiedRangeKeyRef.current = committedKey
     }
   }
   if (prevStart !== startValue) {
@@ -512,9 +503,6 @@ function RangeDateInput({
 
   const wasOpenRef = useRef(isOpen)
   useEffect(() => {
-    if (isOpen) {
-      committedOnThisCloseRef.current = false
-    }
     if (wasOpenRef.current && !isOpen) {
       inAnchorModeRef.current = false
       selfCommittedAnchorRef.current = null
@@ -539,7 +527,6 @@ function RangeDateInput({
             shouldNotifyRangePending(pending, committed, hasEditedRef.current)
           ) {
             hasEditedRef.current = false
-            committedOnThisCloseRef.current = true
             lastNotifiedRangeKeyRef.current = rangeIsoKey(pending)
             onChangeRef.current(pending)
           }
@@ -553,7 +540,6 @@ function RangeDateInput({
   // instance. Drop the last-notified key so re-entering the same range writes.
   useEffect(() => {
     lastNotifiedRangeKeyRef.current = ""
-    committedOnThisCloseRef.current = false
     skipCloseCommitRef.current = false
   }, [formResetKey])
 
@@ -653,7 +639,6 @@ function RangeDateInput({
               onChangeRef.current(pending)
             }
             skipCloseCommitRef.current = true
-            committedOnThisCloseRef.current = true
             lastNotifiedRangeKeyRef.current = rangeIsoKey(pending)
           }
         }
@@ -761,7 +746,6 @@ function RangeDateInput({
           lastNotifiedRangeKeyRef.current
       ) {
         hasEditedRef.current = false
-        committedOnThisCloseRef.current = true
         lastNotifiedRangeKeyRef.current = rangeIsoKey([
           date,
           displayEndRef.current,
@@ -791,7 +775,6 @@ function RangeDateInput({
           lastNotifiedRangeKeyRef.current
       ) {
         hasEditedRef.current = false
-        committedOnThisCloseRef.current = true
         lastNotifiedRangeKeyRef.current = rangeIsoKey([
           displayStartRef.current,
           date,
@@ -859,7 +842,6 @@ function RangeDateInput({
           hasEditedRef.current = false
           onChange([start, end])
           skipCloseCommitRef.current = true
-          committedOnThisCloseRef.current = true
           lastNotifiedRangeKeyRef.current = rangeIsoKey([start, end])
           setIsOpenState(false)
           restoreFocusToField()
@@ -876,7 +858,6 @@ function RangeDateInput({
       hasEditedRef.current = false
       onChange([range.start, range.end])
       skipCloseCommitRef.current = true
-      committedOnThisCloseRef.current = true
       lastNotifiedRangeKeyRef.current = rangeIsoKey([range.start, range.end])
       setIsOpenState(false)
       restoreFocusToField()
@@ -905,7 +886,6 @@ function RangeDateInput({
             shouldNotifyRangePending(pending, committed, hasEditedRef.current)
           ) {
             hasEditedRef.current = false
-            committedOnThisCloseRef.current = true
             lastNotifiedRangeKeyRef.current = pendingKey
             if (formCommit) {
               formCommit(pending)
@@ -1167,7 +1147,6 @@ function RangeDateInput({
         return
       }
       hasEditedRef.current = false
-      committedOnThisCloseRef.current = true
       lastNotifiedRangeKeyRef.current = rangeIsoKey(pending)
       if (isOpen) {
         // Tab-away closes the popover in the same interaction. Skip the

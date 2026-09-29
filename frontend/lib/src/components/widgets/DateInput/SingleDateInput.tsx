@@ -626,7 +626,9 @@ function SingleDateInput({
         '[role="spinbutton"][data-placeholder="true"]'
       )
       const isFullyCleared =
-        !!segments && placeholders?.length === segments.length
+        !!segments &&
+        segments.length > 0 &&
+        placeholders?.length === segments.length
       if (segments && placeholders) {
         const isPartiallyTyped =
           placeholders.length > 0 && placeholders.length < segments.length
@@ -641,7 +643,7 @@ function SingleDateInput({
           return
         }
       }
-      const pending = displayValueRef.current
+      const pending = isFullyCleared ? null : displayValueRef.current
       if (
         !shouldNotifySinglePending(
           pending,

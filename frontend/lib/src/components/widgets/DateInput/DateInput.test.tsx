@@ -5035,6 +5035,99 @@ describe("required", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
 
+  it("re-commits a previously notified range after a programmatic change to a different range", async () => {
+    const user = userEvent.setup()
+    const props = getRequiredEmptyProps({ isRange: true })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+    const { rerender } = render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    await typeRangeDate(
+      user,
+      region,
+      ["2020", "01", "01"],
+      ["2020", "01", "10"]
+    )
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2020-01-01", "2020-01-10"],
+        expect.anything()
+      )
+    })
+    setStringArrayValueSpy.mockClear()
+
+    rerender(
+      <DateInput
+        {...props}
+        element={DateInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: ["2020-02-01", "2020-02-10"],
+        })}
+      />
+    )
+
+    const updated = screen.getByTestId("stDateInput")
+    const start = getRangeDateSegments(updated, "start")
+    const end = getRangeDateSegments(updated, "end")
+    expect(start.month).toHaveTextContent("02")
+    expect(end.month).toHaveTextContent("02")
+
+    await typeRangeDate(
+      user,
+      updated,
+      ["2020", "01", "01"],
+      ["2020", "01", "10"]
+    )
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2020-01-01", "2020-01-10"],
+        expect.anything()
+      )
+    })
+  })
+
+  it("does not keep a stale end when the end field is fully cleared", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      required: true,
+      default: ["2020-01-01", "2020-01-10"],
+      min: "1970-01-01",
+      max: "2030-12-31",
+    })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const end = getRangeDateSegments(region, "end")
+    await clearSegment(user, end.year)
+    await clearSegment(user, end.month)
+    await clearSegment(user, end.day)
+    await user.click(document.body)
+
+    expect(setStringArrayValueSpy).not.toHaveBeenCalledWith(
+      props.element.id,
+      ["2020-01-01", "2020-01-10"],
+      expect.anything()
+    )
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+  })
+
   it("does not write a one-element range while re-editing a complete required range", async () => {
     const user = userEvent.setup()
     vi.setSystemTime(new Date(2019, 6, 15))
