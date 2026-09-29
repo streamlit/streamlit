@@ -15,7 +15,7 @@
  */
 
 import type WaveSurfer from "wavesurfer.js"
-import type RecordPlugin from "wavesurfer.js/dist/plugins/record"
+import type RecordPlugin from "wavesurfer.js/dist/plugins/record.js"
 
 /**
  * Check if an error is a permission denied error from getUserMedia.
