@@ -16,11 +16,11 @@
 
 import {
   DataType as ArrowDataType,
-  Dictionary,
-  Field,
-  Struct,
-  StructRow,
-  Vector,
+  type Dictionary,
+  type Field,
+  type Struct,
+  type StructRow,
+  type Vector,
 } from "apache-arrow"
 
 import { isNullOrUndefined } from "~lib/util/utils"

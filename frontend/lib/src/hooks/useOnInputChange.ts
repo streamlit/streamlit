@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { Dispatch, SetStateAction, useCallback } from "react"
+import { type Dispatch, type SetStateAction, useCallback } from "react"
 
-import { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
+import type { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
 import { isInForm } from "~lib/util/utils"
 
 type OnInputChangeEventType = {

@@ -15,14 +15,14 @@
  */
 
 import {
-  AppNode,
-  BlockNode,
-  ElementNode,
+  type AppNode,
+  type BlockNode,
+  type ElementNode,
   NO_SCRIPT_RUN_ID,
-  TransientNode,
+  type TransientNode,
 } from "~lib/AppNode"
 
-import { AppNodeVisitor } from "./AppNodeVisitor.interface"
+import type { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
 export const MAX_HASH_LENGTH = 6
 

@@ -17,7 +17,7 @@
 import isPropValid from "@emotion/is-prop-valid"
 import { keyframes } from "@emotion/react"
 import styled from "@emotion/styled"
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
+import type { EmotionIcon } from "@emotion-icons/emotion-icon"
 
 import type { IconSizeProp } from "~lib/theme/types"
 import { computeSpacingStyle } from "~lib/theme/utils"

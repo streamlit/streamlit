@@ -15,9 +15,9 @@
  */
 
 import {
-  CSSProperties,
+  type CSSProperties,
   memo,
-  ReactElement,
+  type ReactElement,
   useId,
   useLayoutEffect,
   useRef,
@@ -26,7 +26,7 @@ import {
 
 import { getLogger } from "loglevel"
 
-import {
+import type {
   ImageList as ImageListProto,
   Image as ImageProto,
   streamlit,
@@ -39,7 +39,7 @@ import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/st
 import Toolbar from "~lib/components/shared/Toolbar/Toolbar"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
-import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { isDangerousLinkUri } from "~lib/util/UriUtil"
 import { isNullOrUndefined } from "~lib/util/utils"
 

@@ -16,7 +16,7 @@
 
 import {
   type JSX,
-  ReactElement,
+  type ReactElement,
   type ReactNode,
   type Ref,
   useContext,
@@ -38,7 +38,7 @@ import {
 import {
   Direction,
   getDirectionOfBlock,
-  MinFlexElementWidth,
+  type MinFlexElementWidth,
   shouldWidthStretch,
 } from "~lib/components/core/Layout/utils"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
@@ -73,7 +73,7 @@ import {
   StyledColumn,
   StyledDialogContentEndPad,
   StyledFlexContainerBlock,
-  StyledFlexContainerBlockProps,
+  type StyledFlexContainerBlockProps,
   StyledGridCell,
   StyledGridCellBody,
   StyledGridCellContent,
@@ -85,7 +85,7 @@ import {
 } from "./styled-components"
 import {
   assignDividerColor,
-  BaseBlockProps,
+  type BaseBlockProps,
   checkFlexContainerBackwardsCompatibile,
   convertKeyToClassName,
   getBorderBackwardsCompatible,

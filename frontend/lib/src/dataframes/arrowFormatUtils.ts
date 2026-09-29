@@ -19,7 +19,13 @@
  * a human-readable format.
  */
 
-import { Field, Struct, StructRow, TimeUnit, util } from "apache-arrow"
+import {
+  type Field,
+  Struct,
+  type StructRow,
+  TimeUnit,
+  util,
+} from "apache-arrow"
 import { trimEnd } from "lodash-es"
 import { getLogger } from "loglevel"
 import moment from "moment-timezone"
@@ -28,9 +34,9 @@ import numbro from "numbro"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
-  ArrowType,
+  type ArrowType,
   DataFrameCellType,
-  DataType,
+  type DataType,
   isDatetimeType,
   isDateType,
   isDecimalType,
