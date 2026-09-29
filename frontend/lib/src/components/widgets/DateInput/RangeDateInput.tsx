@@ -550,6 +550,14 @@ function RangeDateInput({
     wasOpenRef.current = isOpen
   }, [isOpen, startValue, endValue])
 
+  // clear_on_submit remounts the DateFields via formResetKey but keeps this
+  // instance. Drop the last-notified key so re-entering the same range writes.
+  useEffect(() => {
+    lastNotifiedRangeKeyRef.current = ""
+    committedOnThisCloseRef.current = false
+    skipCloseCommitRef.current = false
+  }, [formResetKey])
+
   // Restore focus to the first editable segment after the form-reset remount.
   // Suppress handleFocus while focusin dispatches synchronously so the calendar
   // does not reopen; clearing the guard after a frame could stall in hidden tabs.
