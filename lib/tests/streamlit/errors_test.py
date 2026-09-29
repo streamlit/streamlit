@@ -335,6 +335,25 @@ def test_value_error_with_detail() -> None:
     assert exc.exec_kwargs["detail"] == "Connection class Foo has an invalid scope."
 
 
+@pytest.mark.parametrize("user_key", ["shared", "my-key", "the key"])
+def test_duplicate_element_key_message_is_app_wide(user_key: str) -> None:
+    """Duplicate user keys are app-wide and not scoped by type or container."""
+    exc = errors.StreamlitDuplicateElementKey(user_key)
+    message = str(exc)
+
+    assert f"key='{user_key}'" in message
+    assert "app-wide" in message
+    assert "element type" in message
+    assert "container" in message
+    assert "unique key" in message
+    assert isinstance(exc, errors.DuplicateWidgetID)
+    assert isinstance(exc, errors.StreamlitAPIException)
+    assert not isinstance(exc, errors.LocalizableStreamlitException)
+    # Keys stay in the displayed message only, never in telemetry suffixes.
+    assert getattr(exc, "error_id", None) is None
+    assert not hasattr(exc, "exec_kwargs")
+
+
 @pytest.mark.parametrize("key", ["my_key", "my-key", "the key"])
 def test_widget_already_instantiated_error_message(key: str) -> None:
     """Messages use bracket access and tell the caller how to assign safely."""

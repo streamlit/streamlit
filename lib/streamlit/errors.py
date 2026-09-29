@@ -149,8 +149,10 @@ class StreamlitDuplicateElementKey(
     def __init__(self, user_key: str) -> None:
         super().__init__(
             f"There are multiple elements with the same `key='{user_key}'`. "
-            "To fix this, please make sure that the `key` argument is unique for "
-            "each element you create."
+            "This key is unique app-wide during a run. It is not scoped by "
+            "element type or container, so a different widget type or an "
+            "element in another tab, column, or sidebar cannot reuse it.\n\n"
+            "To fix this, give each element its own unique key."
         )
 
 

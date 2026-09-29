@@ -312,7 +312,7 @@ st.session_state.setdefault("filters", {})
 st.session_state.setdefault("selected_account", None)
 ```
 
-Use widget keys when widgets repeat, parameters change dynamically, or code needs programmatic access.
+Use widget keys when widgets repeat, parameters change dynamically, or code needs programmatic access. Keys are unique app-wide during a run — not per widget type or container (`st.tabs`, `st.columns`, sidebar). `st.form` keys must be unique among forms, and `@st.fragment` keys among fragment definitions that render in the run; those namespaces are separate from widget keys.
 
 ```python
 # BAD: Changing category changes widget identity and can reset input
@@ -320,6 +320,31 @@ query = st.text_input(f"Search {category}")
 
 # GOOD: Stable widget identity and session-state access
 query = st.text_input(f"Search {category}", key="search_query")
+```
+
+In loops, include a stable data ID in the key. A loop index is not enough if items can reorder.
+
+```python
+# BAD: Reordering rows recycles keys and mixes widget state
+for i, item in enumerate(items):
+    st.button("Delete", key=f"delete_{i}")
+
+# GOOD: The key follows the item, not its position
+for item in items:
+    st.button("Delete", key=f"delete_{item.id}")
+```
+
+Identical unkeyed `st.plotly_chart` calls collide even across tabs or columns because auto-generated IDs ignore layout context. Pass a distinct `key` for each chart.
+
+```python
+# BAD: Same figure in two tabs shares one auto-generated ID
+tab1, tab2 = st.tabs(["Overview", "Details"])
+tab1.plotly_chart(fig)
+tab2.plotly_chart(fig)
+
+# GOOD: Each chart gets its own key
+tab1.plotly_chart(fig, key="overview_chart")
+tab2.plotly_chart(fig, key="details_chart")
 ```
 
 Sync a widget to the URL with `bind="query-params"` rather than hand-rolling `st.query_params`.

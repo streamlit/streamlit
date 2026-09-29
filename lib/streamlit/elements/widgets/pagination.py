@@ -128,7 +128,8 @@ class PaginationMixin:
             An optional string or integer to use as the unique key for
             the widget. If this is ``None`` (default), a key will be
             generated for the widget based on the values of the other
-            parameters. No two widgets may have the same key. Assigning
+            parameters. Keys are unique app-wide during a run; they
+            are not scoped by element type or container. Assigning
             a key stabilizes the widget's identity and preserves its
             state across reruns even when other parameters change.
 

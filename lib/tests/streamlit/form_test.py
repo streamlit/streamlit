@@ -256,11 +256,11 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
             st.form(key="foo")
             st.form(key="foo")
 
-        assert str(ctx.value) == (
-            "There are multiple elements with the same `key='foo'`. "
-            "To fix this, please make sure that the `key` argument is unique for "
-            "each element you create."
-        )
+        message = str(ctx.value)
+        assert "key='foo'" in message
+        assert "app-wide" in message
+        assert "element type" in message
+        assert "container" in message
 
     def test_multiple_forms_same_labels_different_keys(self):
         """Multiple forms with different keys are allowed."""

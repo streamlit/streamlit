@@ -829,7 +829,8 @@ class LayoutsMixin:
             An optional string or integer to use as the unique key for
             the widget. If this is ``None`` (default), a key will be
             generated for the widget based on the values of the other
-            parameters. No two widgets may have the same key.
+            parameters. Keys are unique app-wide during a run; they
+            are not scoped by element type or container.
 
             When ``on_change`` is set to ``"rerun"`` or a callable, or when
             ``bind="query-params"`` is set, setting a key lets you read or
@@ -1259,7 +1260,8 @@ class LayoutsMixin:
             An optional string or integer to use as the unique key for
             the widget. If this is ``None`` (default), a key will be
             generated for the widget based on the values of the other
-            parameters. No two widgets may have the same key.
+            parameters. Keys are unique app-wide during a run; they
+            are not scoped by element type or container.
 
             When ``on_change`` is set to ``"rerun"`` or a callable, or when
             ``bind="query-params"`` is set, setting a key lets you read or update
@@ -1753,7 +1755,8 @@ class LayoutsMixin:
             An optional string or integer to use as the unique key for
             the widget. If this is ``None`` (default), a key will be
             generated for the widget based on the values of the other
-            parameters. No two widgets may have the same key.
+            parameters. Keys are unique app-wide during a run; they
+            are not scoped by element type or container.
 
             When ``on_change`` is set to ``"rerun"`` or a callable, setting a
             key lets you read or update the open/closed state via
