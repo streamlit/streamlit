@@ -80,7 +80,7 @@ describe("ActionButton", () => {
   ): ActionButtonProps => ({
     label: "the label",
     icon: "star.svg",
-    ariaLabel: "the label",
+    itemKey: "the-label",
     onClick: vi.fn(),
     ...extended,
   })
@@ -102,9 +102,7 @@ describe("ActionButton", () => {
 
   it("does not render label if not provided", () => {
     render(
-      <ActionButton
-        {...getProps({ label: undefined, ariaLabel: "favorite" })}
-      />
+      <ActionButton {...getProps({ label: undefined, itemKey: "favorite" })} />
     )
 
     expect(screen.getByTestId("stToolbarActionButton")).toBeInTheDocument()
@@ -177,7 +175,7 @@ describe("ToolbarActions", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("keeps rendering when a host item key is missing or non-string", () => {
+  it("falls back to a generic name when a host item key is missing or non-string", () => {
     render(
       <ToolbarActions
         {...getProps({

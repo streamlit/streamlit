@@ -259,7 +259,7 @@ describe("ChatMessage", () => {
     )
   })
 
-  it("exposes speaker identity on a namable content region", () => {
+  it("exposes speaker identity on a nameable content region", () => {
     const props = getProps({
       name: "Alice",
       avatar: "http://example.com/avatar.jpg",
@@ -274,5 +274,34 @@ describe("ChatMessage", () => {
       "alt",
       ""
     )
+  })
+
+  it("hides emoji and letter-fallback avatars from the accessibility tree", () => {
+    const emojiProps = getProps({
+      name: "Alice",
+      avatar: "😃",
+      avatarType: BlockProto.ChatMessage.AvatarType.EMOJI,
+    })
+    const { rerender } = render(<ChatMessage {...emojiProps} />)
+
+    expect(
+      screen.getByRole("group", { name: "Chat message from Alice" })
+    ).toBeVisible()
+    expect(screen.getByText("😃")).toHaveAttribute("aria-hidden", "true")
+
+    rerender(
+      <ChatMessage
+        {...getProps({
+          name: "Alice",
+          avatar: undefined,
+          avatarType: undefined,
+        })}
+      />
+    )
+
+    expect(
+      screen.getByRole("group", { name: "Chat message from Alice" })
+    ).toBeVisible()
+    expect(screen.getByText("A")).toHaveAttribute("aria-hidden", "true")
   })
 })

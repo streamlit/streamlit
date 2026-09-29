@@ -56,21 +56,19 @@ export function getToolbarActionAccessibleName(
 export interface ActionButtonProps {
   label?: string
   icon?: string
-  /**
-   * Accessible name for icon-only actions that have no visible label.
-   * Ignored when `label` is non-empty (visible text is the name).
-   */
-  ariaLabel: string
+  /** Host item key, used as the accessible name when there is no visible label. */
+  itemKey?: string
   onClick: () => void
 }
 
 export function ActionButton({
   label,
   icon,
-  ariaLabel,
+  itemKey,
   onClick,
 }: ActionButtonProps): ReactElement {
   const visibleLabel = trimHostString(label) || undefined
+  const accessibleName = getToolbarActionAccessibleName(label, itemKey)
 
   return (
     <div className="stToolbarActionButton" data-testid="stToolbarActionButton">
@@ -78,7 +76,7 @@ export function ActionButton({
         onClick={onClick}
         kind={BaseButtonKind.HEADER_BUTTON}
         // aria-label overrides contents; only set it when there is no visible label.
-        aria-label={visibleLabel ? undefined : ariaLabel}
+        aria-label={visibleLabel ? undefined : accessibleName}
       >
         <StyledActionButtonContainer>
           {icon && (
@@ -120,7 +118,7 @@ function ToolbarActions({
           key={key}
           label={label}
           icon={icon}
-          ariaLabel={getToolbarActionAccessibleName(label, key)}
+          itemKey={key}
           onClick={() => {
             metricsMgr.enqueue("menuClick", {
               label: key,

@@ -71,6 +71,33 @@ describe("Expander container", () => {
     expect(list).not.toBeInTheDocument()
   })
 
+  it("names an empty-label expander from its material icon", () => {
+    const props = getProps({
+      label: "",
+      icon: ":material/info:",
+      expanded: false,
+    })
+    render(
+      <Expander {...props}>
+        <div>content</div>
+      </Expander>
+    )
+
+    // jsdom does not expose <summary> as role=button; aria-label is still the name.
+    expect(screen.getByLabelText("info icon")).toBeVisible()
+  })
+
+  it("falls back to a generic name when label and icon are empty", () => {
+    const props = getProps({ label: "", icon: "", expanded: false })
+    render(
+      <Expander {...props}>
+        <div>content</div>
+      </Expander>
+    )
+
+    expect(screen.getByLabelText("Expander")).toBeVisible()
+  })
+
   it("renders expander label as expected", () => {
     const props = getProps()
     render(

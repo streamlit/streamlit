@@ -122,8 +122,7 @@ describe("DeployDialog", () => {
     expect(
       screen.getByTestId("stDeployDialogCustomDeploymentIcon")
     ).toBeVisible()
-    // Decorative illustrations sit next to their headings, so they stay out of
-    // the accessibility tree.
+    // The adjacent heading names each card, so the illustrations stay decorative.
     expect(screen.queryAllByRole("img")).toHaveLength(0)
 
     expect(screen.getByText("Streamlit Community Cloud")).toBeVisible()

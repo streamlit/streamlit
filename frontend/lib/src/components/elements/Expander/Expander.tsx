@@ -19,7 +19,10 @@ import { memo, ReactElement, useCallback, useState } from "react"
 import { Block as BlockProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
 
-import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import {
+  DynamicIcon,
+  getIconAccessibleName,
+} from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
@@ -268,6 +271,13 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   const stepState = STEP_STATES[state]
   const stepIcon = resolveStepIcon(stepState, icon)
   const stepStateLabel = isStep ? stepState?.stateLabel : undefined
+  // Material/emoji icons and chevrons are aria-hidden; name blank-label
+  // summaries so the <summary> stays findable after glyphs are excluded.
+  const iconOnlySummaryName = !label?.trim()
+    ? icon
+      ? getIconAccessibleName(icon)
+      : "Expander"
+    : undefined
 
   const summaryHeading = (
     <StyledSummaryHeading expanderType={type}>
@@ -377,6 +387,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
           // collapse animation. Default and compact keep the native <details>
           // mapping.
           aria-expanded={isStep ? isOpen : undefined}
+          aria-label={iconOnlySummaryName}
         >
           {summaryHeading}
         </StyledSummary>

@@ -61,13 +61,18 @@ function ChatMessageAvatar(
           />
         )
       case BlockProto.ChatMessage.AvatarType.EMOJI:
-        return <StyledAvatarBackground>{avatar}</StyledAvatarBackground>
+        return (
+          <StyledAvatarBackground aria-hidden="true">
+            {avatar}
+          </StyledAvatarBackground>
+        )
       case BlockProto.ChatMessage.AvatarType.ICON:
         if (avatar === "user") {
           return (
             <StyledAvatarIcon
               data-testid="stChatMessageAvatarUser"
               background={theme.colors.redColor}
+              aria-hidden="true"
             >
               <DynamicIcon size="lg" iconValue=":material/face:" />
             </StyledAvatarIcon>
@@ -77,13 +82,17 @@ function ChatMessageAvatar(
             <StyledAvatarIcon
               data-testid="stChatMessageAvatarAssistant"
               background={theme.colors.orangeColor}
+              aria-hidden="true"
             >
               <DynamicIcon size="lg" iconValue=":material/smart_toy:" />
             </StyledAvatarIcon>
           )
         } else if (avatar.startsWith(":material")) {
           return (
-            <StyledAvatarBackground data-testid="stChatMessageAvatarCustom">
+            <StyledAvatarBackground
+              data-testid="stChatMessageAvatarCustom"
+              aria-hidden="true"
+            >
               <DynamicIcon
                 size="lg"
                 iconValue={avatar}
@@ -97,7 +106,7 @@ function ChatMessageAvatar(
 
   // Fallback to first character of the name label if nothing else can be matched:
   return (
-    <StyledAvatarBackground>
+    <StyledAvatarBackground aria-hidden="true">
       {name ? name.charAt(0).toUpperCase() : "🧑‍💻"}
     </StyledAvatarBackground>
   )
@@ -129,7 +138,7 @@ const ChatMessage: React.FC<React.PropsWithChildren<ChatMessageProps>> = ({
       />
       <StyledMessageContent
         data-testid="stChatMessageContent"
-        // Namable role so aria-label is exposed (ignored on role=generic).
+        // Nameable role so screen readers expose aria-label (they ignore it on a generic div).
         role="group"
         aria-label={`Chat message from ${name}`}
       >

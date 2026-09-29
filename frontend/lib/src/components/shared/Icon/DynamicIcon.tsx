@@ -117,11 +117,15 @@ export function isMenuStyleIconLabel(
  * Uses the same `"{name} icon"` wording as the Markdown material-icon plugin.
  */
 export function getIconAccessibleName(iconValue: string): string {
+  // DynamicIconDispatcher special-cases this sentinel as a spinner glyph.
+  if (iconValue === "spinner") {
+    return "Loading"
+  }
   const { pack, icon } = parseIconPackEntry(iconValue)
   if (pack === "material" && icon) {
     return `${icon} icon`
   }
-  // Match EmojiIcon's stripping of an optional `emoji:` prefix.
+  // Strip the optional "emoji:" prefix so the name matches what EmojiIcon renders.
   return (icon || iconValue).replace(/^emoji:/, "")
 }
 

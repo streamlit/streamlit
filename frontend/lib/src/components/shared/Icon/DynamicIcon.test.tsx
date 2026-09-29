@@ -124,6 +124,7 @@ describe("getIconAccessibleName", () => {
   it.each([
     [":material/thumb_up:", "thumb_up icon"],
     [":material/add_circle:", "add_circle icon"],
+    ["spinner", "Loading"],
     ["😀", "😀"],
     ["emoji:⛰️", "⛰️"],
   ])("getIconAccessibleName(%s) returns %s", (input, expected) => {

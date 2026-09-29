@@ -75,8 +75,9 @@ export const DynamicButtonLabel = ({
     label
   )
 
-  // Dynamic icons are hidden from assistive technology, so an icon-only control
-  // would otherwise have no accessible name.
+  // Icon glyphs are aria-hidden, so an icon-only control would have no accessible
+  // name. Use hidden text rather than aria-label here: this component does not own
+  // the button, and content-based naming lets a parent aria-label take precedence.
   const iconOnlyAccessibleName =
     icon && !label?.trim() ? getIconAccessibleName(icon) : undefined
 
