@@ -180,10 +180,13 @@ The serializer is used by both public commands and must:
 3. Populate shared fields in `ThemeOverride.values` and populate the optional one-level
    `values.light`/`values.dark` messages with the same field schema.
 4. Reject `base`, `light`, or `dark` inside a variant mapping to prevent recursive sections.
-5. Validate colors with `lib/streamlit/elements/lib/color_util.py` (`is_css_color_like`: hex,
-   `rgb()`, and `rgba()`). Reject CSS named colors, `hsl()`, `currentColor`, and `transparent`.
-   Do not reuse the frontend `isColor` helper: it runs in the browser and also accepts those
-   extra forms, which this API excludes. Mirror the same allowlist in the frontend check.
+5. Validate colors by parsing them, not with the lightweight `is_css_color_like` prefix
+   check. That helper accepts `#GGG` and any `rgb(...` / `rgba(...` string. Start from
+   `lib/streamlit/elements/lib/color_util.py`, but require a complete parse: hex digits must
+   convert as base-16, and `rgb()`/`rgba()` components must be valid numbers. Reject CSS named
+   colors, `hsl()`, `currentColor`, `transparent`, and malformed values with
+   `StreamlitInvalidColorError`. Do not reuse the frontend `isColor` helper. Mirror the same
+   complete allowlist in the frontend check.
 6. Validate radius literals/units and chart-palette lengths before enqueueing.
 7. Reject excluded fields rather than silently ignoring them.
 
@@ -265,8 +268,10 @@ containerElement = (
 )
 ```
 
-`ScopedThemeProvider` must no-op (return children unchanged, without a new provider) when
-`override` is absent.
+`ScopedThemeProvider` must always render the same inner tree: `ScopedThemeContext.Provider`
+wrapping `ThemeProvider` wrapping `children`. When `override` is absent, pass the inherited
+context through those providers rather than returning `children` unwrapped. Unwrapping would
+change `FlexBoxContainer`'s React parent and remount the subtree.
 
 The provider must wrap the `FlexBoxContainer`, not just `ChildRenderer`, so the container's border,
 radii, gap-related styles, and surface use the effective scope. Gate surface painting on the
@@ -351,10 +356,11 @@ next client-originated rerun. Do not trigger a rerun automatically.
 
 ### Performance
 
-Only blocks with a theme mapping create a nested provider. Memoize the full theme by the decoded
-override, inherited scoped context (emotion, mode, themeInput), and available-theme identities.
-Theme creation is pure and does not traverse descendants; Emotion updates only consumers in that
-subtree.
+Every `FlexBoxContainer` is wrapped so the React parent type stays stable. When there is no
+override, the provider passes through the inherited theme without creating a new `ThemeConfig`.
+Memoize by override, inherited scoped context (emotion, mode, themeInput), and available-theme
+identities. Only a present override recomputes a derived theme. Theme creation is pure and does
+not traverse descendants; Emotion updates only consumers in that subtree.
 
 The runtime layer creates one full theme per change. It replaces the root theme once and has the
 same render cost as a user changing the theme in Streamlit's menu today.
@@ -380,7 +386,8 @@ same render cost as a user changing the theme in Streamlit's menu today.
 - Verify base enum presence for inherit/light/dark, and that `values.base` is ignored/cleared.
 - Serialize shared plus optional light/dark sections and reject recursive sections.
 - Reject unknown/camelCase keys, invalid colors/radii, and invalid chart palettes. Named CSS
-  colors such as `"green"` are invalid.
+  colors such as `"green"` are invalid. Malformed values such as `#GGG` and `rgb(foo)` must also
+  raise, not pass a prefix check.
 - Verify changing the theme does not change a keyed container ID.
 - Add AppTest coverage: new `Block.theme` / `PageConfig.theme` fields must not break existing
   element traversal. Decide during implementation whether the override is inspectable from an
