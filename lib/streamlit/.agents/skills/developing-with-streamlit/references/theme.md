@@ -80,6 +80,9 @@ chartCategoricalColors = ["#0969da", "#1a7f37", "#bf3989", "#8250df", "#cf222e",
 # Sequential/gradient data (heatmaps) - exactly 10 colors required
 chartSequentialColors = ["#f0f6fc", "#c8e1ff", "#79c0ff", "#58a6ff", "#388bfd", "#1f6feb", "#1158c7", "#0d419d", "#0a3069", "#04244a"]
 
+# Diverging data (midpoint scales) - exactly 10 colors; Plotly/Altair/Vega-Lite only
+chartDivergingColors = ["#7d353b", "#bd4043", "#ff4b4b", "#ff8c8c", "#ffc7c7", "#a6dcff", "#60b4ff", "#1c83e1", "#0054a3", "#004280"]
+
 [theme.dark]
 # Brighter palette for dark backgrounds
 chartCategoricalColors = ["#58a6ff", "#3fb950", "#db61a2", "#a371f7", "#f85149", "#d29922", "#8b949e"]

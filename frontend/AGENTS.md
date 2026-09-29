@@ -21,6 +21,7 @@
 - **Protobuf message types**: Use `Type.$Properties` for plain objects instead of generated `IType` aliases; use the message class for constructed or decoded instances. Alias as `Type as TypeProto` only when the generated name collides with a local or DOM name.
 - **Prefer JSDoc over regular comments**: When documenting functions, types, interfaces, classes, or their members, use JSDoc (`/** ... */`) instead of regular comments (`//` or `/* */`). JSDoc enables IDE tooltips, auto-completion hints, and better documentation generation.
 - **No barrel files**: Do not create `index.ts`/`index.tsx` barrel files that only re-export from sibling modules. Import directly from the source file instead (e.g., `import Foo from "./Foo/Foo"` not `import Foo from "./Foo"`). The only exceptions are package entry points (`app/src/index.tsx`, `lib/src/index.ts`, `connection/src/index.ts`, `utils/src/index.ts`) and `component-v2-lib/src/index.ts` (shipped as an npm library). Files named `index.ts` that contain actual logic (e.g., `DataFrame/columns/index.ts`, `WindowDimensions/index.ts`, emotion theme files) are fine — the rule applies only to files whose sole purpose is re-exporting.
+- **Prefer type-only imports** in `frontend/lib` production code: use inline `import { type Foo, bar }` (oxlint `typescript/consistent-type-imports`). Tests are exempt.
 
 ## Key Frontend Principles
 
@@ -170,6 +171,7 @@ Run from the repo root (requires Node major version from `.nvmrc`):
   - Presence: `getBy*` / `findBy*` + `toBeVisible()`
   - Absence: `queryBy*` + `not.toBeInTheDocument()` or `not.toBeVisible()`
 - Framework Exclusivity: Only use Vitest syntax; do not use Jest.
+- `toThrow` / `toThrowError` must include an expected message (oxlint `vitest/require-to-throw-message`).
 
 ### Running Tests
 

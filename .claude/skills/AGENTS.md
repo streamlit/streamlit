@@ -78,6 +78,7 @@ Key points:
 1. Create a new directory in `.claude/skills/` with a descriptive name
 2. Add a `SKILL.md` file with the required frontmatter
 3. Write clear, actionable instructions for the AI agent
+4. Allowlist the skill directory in `.claude/.gitignore` (`!skills/<name>/`)
 
 ## Contributing
 
@@ -89,3 +90,4 @@ When adding or modifying skills:
 4. Read the [best practices for skill writing](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices.md)
 5. Review the skill against the best practices you just read
 6. **Update the overview table in `CONTRIBUTING.md`** under "AI Agent Skills and Subagents" to include the new or modified skill/subagent with a brief description of when to use it
+7. When adding a new skill, allowlist the directory in `.claude/.gitignore` (`!skills/<name>/`)

@@ -5,10 +5,10 @@ Use the typed media command for images, video, audio, and PDFs — each renders 
 ## Images: st.image
 
 ```python
-st.image("chart.png", caption="Q3 revenue", width="stretch")
+st.image("chart.png", caption="Q3 revenue", alt="Bar chart of Q3 revenue", width="stretch")
 ```
 
-Accepts a file path, URL, `PIL.Image`, NumPy array, or bytes. Use `width="stretch"` to fill the container or `width=<pixels>` for a fixed size. Do NOT use `use_container_width` — it is deprecated; use `width=`.
+Accepts a file path, URL, `PIL.Image`, NumPy array, or bytes. Use `width="stretch"` to fill the container or `width=<pixels>` for a fixed size. Do NOT use `use_container_width` — it is deprecated; use `width=`. Pass `alt=` for screen readers; it is independent of `caption`. Use `alt=""` for decorative images.
 
 ## Video: st.video
 

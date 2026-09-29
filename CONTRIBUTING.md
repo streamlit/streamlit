@@ -170,11 +170,11 @@ $ brew install ripgrep
 **Installing Node JS and yarn**
 
 We recommend that you [manage your nodejs installation with nvm](https://github.com/nvm-sh/nvm#install--update-script).
-After following the instructions linked above to install `nvm`, use the following command to install the latest supported node version
+After following the instructions linked above to install `nvm`, install the Node version from `.nvmrc`:
 
 ```bash
-# Install node
-nvm install node
+# Install the Node version in .nvmrc
+nvm install
 ```
 
 **Note:** Node has added Corepack which is a manager of package managers 🥳. It supports yarn! You can enable it by running the following:
@@ -195,7 +195,7 @@ $ sudo apt-get install -y sudo make build-essential curl git rsync unzip protobu
 # Set frontend dependencies:
 $ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 $ source ~/.bashrc
-$ nvm install node
+$ nvm install
 $ corepack enable
 
 # Install uv for Python
@@ -217,7 +217,7 @@ $ sudo dnf install -y make gcc-c++ curl git rsync unzip protobuf-compiler
 # Set frontend dependencies:
 $ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 $ source ~/.bashrc
-$ nvm install node
+$ nvm install
 $ corepack enable
 
 # Install uv for Python
@@ -366,10 +366,11 @@ You should always write unit tests and end-to-end tests! This is true for new fe
   uv run pytest lib/tests/streamlit/the_test_name.py -k test_that_something_works
   ```
 
-- Some tests require you to set up credentials to connect to Snowflake and install [the `snowflake-snowpark-python` package](https://pypi.org/project/snowflake-snowpark-python/). Information on how the Snowflake environment is set up is in our [test utils](./lib/tests/testutil.py) including environment variables to be set. They are skipped by default when running tests. To enable them and disable all others, pass the `--require-integration` flag to `pytest`.
+- Integration tests need the `integration` dependency group (Snowflake, Polars, Pydantic, and others). Some also need Snowflake credentials described in [test utils](./lib/tests/testutil.py). They are skipped by default. Install that environment, then run `make python-integration-tests` (do not use a bare `uv run pytest --require-integration`, which can re-sync away the integration group):
 
   ```bash
-  uv run pytest --require-integration
+  PYTHON_DEPENDENCY_GROUP=integration make python-init
+  make python-integration-tests
   ```
 
 #### JS unit tests
