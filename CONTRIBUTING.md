@@ -170,20 +170,7 @@ $ brew install ripgrep
 **Installing Node JS and yarn**
 
 We recommend that you [manage your nodejs installation with nvm](https://github.com/nvm-sh/nvm#install--update-script).
-After following the instructions linked above to install `nvm`, install the Node version from `.nvmrc`:
-
-```bash
-# Install the Node version in .nvmrc
-nvm install
-```
-
-**Note:** Node has added Corepack which is a manager of package managers 🥳. It supports yarn! You can enable it by running the following:
-
-```bash
-corepack enable
-```
-
-You may need to `brew install corepack` depending on how you installed node.
+Install `nvm` now using those instructions. After you clone the repo in the next section, you will install the Node version pinned in `.nvmrc` and enable Corepack (Yarn ships via Corepack).
 
 #### Ubuntu
 
@@ -192,11 +179,9 @@ You may need to `brew install corepack` depending on how you installed node.
 $ sudo apt-get update
 $ sudo apt-get install -y sudo make build-essential curl git rsync unzip protobuf-compiler
 
-# Set frontend dependencies:
+# Install nvm (Node version from .nvmrc is installed after cloning)
 $ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 $ source ~/.bashrc
-$ nvm install
-$ corepack enable
 
 # Install uv for Python
 $ curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -214,11 +199,9 @@ $ sudo apt-get install -y ripgrep
 # Install some essentials
 $ sudo dnf install -y make gcc-c++ curl git rsync unzip protobuf-compiler
 
-# Set frontend dependencies:
+# Install nvm (Node version from .nvmrc is installed after cloning)
 $ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 $ source ~/.bashrc
-$ nvm install
-$ corepack enable
 
 # Install uv for Python
 $ curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -250,6 +233,15 @@ git remote add remote https://github.com/streamlit/streamlit.git
 git checkout develop
 git checkout -b ${BRANCH_NAME}
 ```
+
+From the repo root, install the Node version pinned in `.nvmrc` and enable Corepack:
+
+```bash
+nvm install
+corepack enable
+```
+
+On macOS you may need to `brew install corepack` depending on how you installed Node.
 
 ### 3. Create a new Python environment
 
@@ -366,7 +358,9 @@ You should always write unit tests and end-to-end tests! This is true for new fe
   uv run pytest lib/tests/streamlit/the_test_name.py -k test_that_something_works
   ```
 
-- Integration tests need the `integration` dependency group (Snowflake, Polars, Pydantic, and others). Some also need Snowflake credentials described in [test utils](./lib/tests/testutil.py). They are skipped by default. Install that environment, then run `make python-integration-tests` (do not use a bare `uv run pytest --require-integration`, which can re-sync away the integration group):
+- Integration tests need the `integration` dependency group (Snowflake, Polars, Pydantic, and others). Some also need Snowflake credentials described in [test utils](./lib/tests/testutil.py). They are skipped by default.
+
+  Install the integration environment, then run `make python-integration-tests`. Do not use a bare `uv run pytest --require-integration`: a default `uv run` re-syncs to the `dev` group and drops integration-only packages.
 
   ```bash
   PYTHON_DEPENDENCY_GROUP=integration make python-init
