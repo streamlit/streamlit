@@ -36,7 +36,7 @@ import {
 } from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
 import { FloatingPortal } from "@floating-ui/react"
-import { CalendarDate } from "@internationalized/date"
+import type { CalendarDate } from "@internationalized/date"
 import {
   CalendarGridBody,
   CalendarGridHeader,
@@ -68,6 +68,7 @@ import {
   datesEqual,
   getQuickSelectPresets,
   getSafeLocale,
+  isoToCalendarDate,
   isValidSegmentValue,
   noop,
   parseDateFieldPaste,
@@ -235,11 +236,9 @@ function calendarDateFromSpinbuttons(nodes: Element[]): CalendarDate | null {
   if (year === undefined || month === undefined || day === undefined) {
     return null
   }
-  try {
-    return new CalendarDate(year, month, day)
-  } catch {
-    return null
-  }
+  return isoToCalendarDate(
+    `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+  )
 }
 
 /** Last-resort parse of a complete range from the six painted spinbuttons. */
