@@ -90,10 +90,12 @@ chartCategoricalColors = ["#58a6ff", "#3fb950", "#db61a2", "#a371f7", "#f85149",
 ```toml
 [theme]
 dataframeBorderColor = "#d0d7de"
-dataframeHeaderBackgroundColor = "#f6f8fa"
+dataframeHeaderBackgroundColor = "#1f2937"
+dataframeHeaderTextColor = "#ffffff"
 ```
 
-Ensure `textColor` is readable against `dataframeHeaderBackgroundColor`—headers use the main text color.
+Set `dataframeHeaderTextColor` when the header background is dark or tinted.
+If unset, header text and icons use a faded `textColor`.
 
 ## Typography
 
