@@ -273,6 +273,18 @@ wrapping `ThemeProvider` wrapping `children`. When `override` is absent, pass th
 context through those providers rather than returning `children` unwrapped. Unwrapping would
 change `FlexBoxContainer`'s React parent and remount the subtree.
 
+Seed `ScopedThemeContext` at every existing theme boundary so pass-through providers inherit the
+correct theme, not the page-level app theme:
+
+- Next to `RootStyleProvider` / `ThemedApp`, seed the context from the effective `activeTheme`
+  (including its `emotion`, mode, and `themeInput`).
+- In `ThemedSidebar`, seed the context from `createSidebarTheme(activeTheme)` after the sidebar
+  `ThemeProvider`, including `inSidebar: true`.
+
+`useScopedThemeContext` reads the nearest seeded context. It must not fall back to
+`ThemeContext.activeTheme` inside the sidebar; that would replace sidebar colors for unthemed
+sidebar containers and their descendants.
+
 The provider must wrap the `FlexBoxContainer`, not just `ChildRenderer`, so the container's border,
 radii, gap-related styles, and surface use the effective scope. Gate surface painting on the
 tokens the current layer actually sets after variant selection and before parent inheritance:
@@ -357,10 +369,11 @@ next client-originated rerun. Do not trigger a rerun automatically.
 ### Performance
 
 Every `FlexBoxContainer` is wrapped so the React parent type stays stable. When there is no
-override, the provider passes through the inherited theme without creating a new `ThemeConfig`.
-Memoize by override, inherited scoped context (emotion, mode, themeInput), and available-theme
-identities. Only a present override recomputes a derived theme. Theme creation is pure and does
-not traverse descendants; Emotion updates only consumers in that subtree.
+override, the provider passes through the nearest seeded scoped context (app root or sidebar)
+without creating a new `ThemeConfig`. Memoize by override, inherited scoped context (emotion,
+mode, themeInput), and available-theme identities. Only a present override recomputes a derived
+theme. Theme creation is pure and does not traverse descendants; Emotion updates only consumers in
+that subtree.
 
 The runtime layer creates one full theme per change. It replaces the root theme once and has the
 same render cost as a user changing the theme in Streamlit's menu today.
@@ -408,7 +421,8 @@ same render cost as a user changing the theme in Streamlit's menu today.
 - Nested partial scopes inherit unspecified tokens and override specified tokens.
 - A scope with light/dark sections switches variants when its inherited mode changes; an explicit
   base stays fixed. Mode comes from the scoped context, not background luminance.
-- A scope inside the sidebar inherits the sidebar theme and preserves `inSidebar`.
+- A scope inside the sidebar inherits the sidebar theme and preserves `inSidebar`. An unthemed
+  sidebar container's pass-through provider must also keep sidebar colors and `inSidebar`.
 - Portaled content receives the scoped Emotion theme.
 - Plotly/Vega/DataFrame and Components v1/v2 receive the local theme.
 - Runtime override replacement, empty reset, user selection changes, and static theme refreshes
