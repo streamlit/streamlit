@@ -411,6 +411,7 @@ export interface StyledGridContainerBlockProps {
   cellHeightMode: BlockProto.GridContainer.CellHeightMode
   cellHeightPx?: number
   $dense?: boolean
+  $fillHeight?: boolean
 }
 
 export const StyledGridContainerBlock =
@@ -425,6 +426,7 @@ export const StyledGridContainerBlock =
       cellHeightMode,
       cellHeightPx,
       $dense,
+      $fillHeight,
     }) => {
       const rowGapPx = translateGapWidth(rowGap, theme)
       const columnGapPx = translateGapWidth(columnGap, theme)
@@ -434,7 +436,10 @@ export const StyledGridContainerBlock =
       const { CellHeightMode } = BlockProto.GridContainer
       switch (cellHeightMode) {
         case CellHeightMode.EQUAL:
-          gridAutoRows = "1fr"
+          // minmax(0, 1fr) lets bounded equal rows shrink below content
+          // so the inner cell scrollport can activate. Plain 1fr keeps a
+          // min-content floor and the grid grows past a pixel/stretch height.
+          gridAutoRows = "minmax(0, 1fr)"
           break
         case CellHeightMode.FIXED:
           gridAutoRows = cellHeightPx ? `${cellHeightPx}px` : "auto"
@@ -448,12 +453,10 @@ export const StyledGridContainerBlock =
         display: "grid",
         width: "100%",
         maxWidth: "100%",
-        // Fill the layout wrapper so height="stretch" / pixel height resolve
-        // for equal-row tracks and stretch children. Percentage height of an
-        // auto-sized wrapper computes to auto, so content-height grids are
-        // unchanged.
-        height: "100%",
-        flex: 1,
+        // Fill a definite-height layout wrapper so stretch / pixel height
+        // resolve for equal-row tracks. Content-height grids stay auto so a
+        // stretched sibling in a horizontal container cannot inflate them.
+        ...($fillHeight ? { height: "100%", flex: 1 } : { height: "auto" }),
         minWidth: "1rem",
         minHeight: 0,
         gap: `${rowGapPx} ${columnGapPx}`,

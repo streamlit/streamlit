@@ -1161,11 +1161,34 @@ describe("GridContainer Component", () => {
     expect(gridContainer).toHaveAttribute("data-test-wrap", "false")
   })
 
-  it("fills the layout wrapper so stretch height can resolve", () => {
-    const block = makeGridBlock()
+  it("fills the layout wrapper when the grid has a bounded height", () => {
+    const block = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        heightConfig: { useStretch: true },
+        gridContainer: {
+          maxColumns: 0,
+          minColumnWidthPx: 220,
+          rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
+          showCellBorder: false,
+          cellHeightMode: BlockProto.GridContainer.CellHeightMode.CONTENT,
+        },
+      })
+    )
     renderWithContexts(makeGridNodeRendererComponent(block))
 
     expect(screen.getByTestId("stGrid")).toHaveStyle("height: 100%")
+  })
+
+  it("keeps content-height grids auto-sized", () => {
+    const block = makeGridBlock()
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getByTestId("stGrid")).toHaveStyle("height: auto")
   })
 
   it("does not clip cell content until in-flow overflow is measured", () => {
@@ -1265,9 +1288,9 @@ describe("GridContainer Component", () => {
       "grid-auto-rows: auto;",
     ],
     [
-      "auto rows: 1fr for equal mode",
+      "auto rows: minmax 1fr for equal mode",
       { cellHeightMode: BlockProto.GridContainer.CellHeightMode.EQUAL },
-      "grid-auto-rows: 1fr;",
+      "grid-auto-rows: minmax(0, 1fr);",
     ],
     [
       "auto rows: fixed px for fixed mode",

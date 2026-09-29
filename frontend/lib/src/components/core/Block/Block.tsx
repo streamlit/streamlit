@@ -339,13 +339,13 @@ const OverflowAwareGridCell = ({
   rowSpan,
   children,
 }: GridCellShellProps): ReactElement => {
-  const { values: cellHeights, elementRef: cellRef } =
+  const { values: bodyHeights, elementRef: bodyRef } =
     useResizeObserver<HTMLDivElement>(GRID_CELL_OBSERVED_PROPERTIES)
   const { values: contentHeights, elementRef: contentRef } =
     useResizeObserver<HTMLDivElement>(GRID_CELL_OBSERVED_PROPERTIES)
   const scroll = shouldScrollGridCell(
     contentHeights[0] ?? 0,
-    cellHeights[0] ?? 0
+    bodyHeights[0] ?? 0
   )
 
   return (
@@ -355,9 +355,9 @@ const OverflowAwareGridCell = ({
       columnSpan={columnSpan}
       columnSpanAll={columnSpanAll}
       rowSpan={rowSpan}
-      cellRef={cellRef}
     >
       <StyledGridCellBody
+        ref={bodyRef}
         $scroll={scroll}
         data-testid="stGridCellBody"
         data-test-scroll={String(scroll)}
@@ -483,7 +483,7 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
       componentRegistry,
     })
 
-    return (node.children ?? []).flatMap(childNode => {
+    return (node.children ?? []).flatMap((childNode, sourceIndex) => {
       // Get grid cell config from BlockNode children
       let columnSpan: number | undefined
       let columnSpanAll = false
@@ -519,6 +519,7 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
         {
           element: childElement,
           nodeId,
+          sourceIndex,
           columnSpan,
           columnSpanAll,
           rowSpan,
@@ -548,13 +549,13 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
 
   // Wrap each child in a grid cell with span information.
   // Use nodeId for stable React keys so width-driven template updates do not
-  // remount cells. Fall back to index if nodeId unavailable.
+  // remount cells. Fall back to the source child index so filtering a
+  // duplicate widget does not shift later cell() keys.
   const wrappedChildren = useMemo(
     () =>
-      childrenWithCells.map((child, index) => (
+      childrenWithCells.map(child => (
         <GridCell
-          // eslint-disable-next-line @eslint-react/no-array-index-key -- nodeId is preferred; index is only used when the child has no identity
-          key={child.nodeId ?? index}
+          key={child.nodeId ?? `grid-child-${child.sourceIndex}`}
           constrainOverflow={constrainOverflow}
           verticalAlignment={verticalAlignment}
           showBorder={showCellBorder}
@@ -596,6 +597,7 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
       cellHeightMode={cellHeightMode}
       cellHeightPx={cellHeightPx}
       $dense={dense}
+      $fillHeight={gridHasBoundedHeight}
       className={["stGrid", convertKeyToClassName(userKey)]
         .filter(Boolean)
         .join(" ")}
