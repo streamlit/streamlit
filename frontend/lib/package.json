@@ -130,7 +130,7 @@
     "vega-interpreter": "^2.3.2",
     "vega-lite": "6.4.3",
     "vfile": "^6.0.0",
-    "wavesurfer.js": "^7.12.12",
+    "wavesurfer.js": "^8.0.0",
     "xxhashjs": "^0.2.2"
   },
   "peerDependencies": {

@@ -3646,7 +3646,7 @@ __metadata:
     vite-plugin-dts: "npm:^5.1.1"
     vitest: "npm:^5.0.1"
     vitest-fetch-mock: "npm:^0.4.5"
-    wavesurfer.js: "npm:^7.12.12"
+    wavesurfer.js: "npm:^8.0.0"
     xxhashjs: "npm:^0.2.2"
   peerDependencies:
     react: ^17.0.0 || ^18.0.0
@@ -15912,10 +15912,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"wavesurfer.js@npm:^7.12.12":
-  version: 7.12.12
-  resolution: "wavesurfer.js@npm:7.12.12"
-  checksum: 10c0/9e71525ab68a994e5284e257837db0929747d01439baed0d99146d999be1662741508e5bf18545de069fefd9d8108e1b35ba34410ea341b3b4d0591d98b3f32d
+"wavesurfer.js@npm:^8.0.0":
+  version: 8.0.0
+  resolution: "wavesurfer.js@npm:8.0.0"
+  checksum: 10c0/bb122e7b23b1252c0b357e784dc925e54c8fae2eceb06c6e08fe0e17b7d9ac1da40ee696bf8b22463b7ce5d4781c8c9e6188caf88ad19c80761bb027cc32cb77
   languageName: node
   linkType: hard
 
