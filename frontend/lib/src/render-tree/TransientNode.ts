@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { AppNode } from "./AppNode.interface"
-import { ElementNode } from "./ElementNode"
-import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
+import type { AppNode } from "./AppNode.interface"
+import type { ElementNode } from "./ElementNode"
+import type { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
 import { DebugVisitor } from "./visitors/DebugVisitor"
 
 /**

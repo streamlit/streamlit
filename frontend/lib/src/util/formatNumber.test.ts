@@ -236,7 +236,7 @@ describe("formatNumber", () => {
     (input: number, format: string) => {
       expect(() => {
         formatNumber(input, format)
-      }).toThrow()
+      }).toThrow(/\[sprintf\]/)
     }
   )
 

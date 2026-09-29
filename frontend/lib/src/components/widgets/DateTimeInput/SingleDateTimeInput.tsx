@@ -15,12 +15,12 @@
  */
 
 import {
-  ClipboardEvent,
-  FocusEvent,
-  KeyboardEvent,
+  type ClipboardEvent,
+  type FocusEvent,
+  type KeyboardEvent,
   memo,
-  MouseEvent,
-  ReactElement,
+  type MouseEvent,
+  type ReactElement,
   useCallback,
   useEffect,
   useId,

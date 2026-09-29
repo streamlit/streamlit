@@ -21,7 +21,7 @@ import type {
 } from "axios"
 import { getLogger } from "loglevel"
 
-import { type AppPage } from "@streamlit/protobuf"
+import type { AppPage } from "@streamlit/protobuf"
 import {
   buildHttpUri,
   getCookie,

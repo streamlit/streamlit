@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect, useRef, useState } from "react"
+import { memo, type ReactElement, useEffect, useRef, useState } from "react"
 
-import { Spinner as SpinnerProto } from "@streamlit/protobuf"
+import type { Spinner as SpinnerProto } from "@streamlit/protobuf"
 
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"

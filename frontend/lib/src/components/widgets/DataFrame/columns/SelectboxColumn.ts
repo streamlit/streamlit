@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
-import { DropdownCellType } from "@glideapps/glide-data-grid-cells"
+import { type GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import type { DropdownCellType } from "@glideapps/glide-data-grid-cells"
 
 import { isBooleanType } from "~lib/dataframes/arrowTypeUtils"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
-  BaseColumn,
-  BaseColumnProps,
+  type BaseColumn,
+  type BaseColumnProps,
   getErrorCell,
   mergeColumnParameters,
   toSafeBoolean,

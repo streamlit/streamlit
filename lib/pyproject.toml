@@ -94,8 +94,8 @@ dependencies = [
   "anyio>=4.0.0,<5",
   # Required for file-upload support:
   "python-multipart>=0.0.10,<1",
-  # Required for websocket support:
-  "websockets>=12.0.0,<17",
+  # Required for websocket support. Websockets 17.x requires Python >= 3.11.
+  "websockets>=12.0.0,<18",
   # Required for cookie signing:
   "itsdangerous>=2.1.2,<3",
   # Don't require watchdog on MacOS, since it'll fail without xcode tools.

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect } from "react"
+import { memo, type ReactElement, useEffect } from "react"
 
 import styled from "@emotion/styled"
 

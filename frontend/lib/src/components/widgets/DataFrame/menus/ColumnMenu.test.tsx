@@ -43,6 +43,7 @@ describe("DataFrame ColumnMenu", () => {
   )
 
   beforeEach(() => {
+    vi.clearAllMocks()
     mockWriteText.mockReset()
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
@@ -96,10 +97,6 @@ describe("DataFrame ColumnMenu", () => {
     onChangeFormat: vi.fn(),
     onAutosize: vi.fn(),
   }
-
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
 
   it("renders the column menu at the correct position", () => {
     render(<ColumnMenu {...defaultProps} />)

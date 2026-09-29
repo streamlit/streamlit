@@ -16,14 +16,14 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
   useRef,
   useState,
 } from "react"
 
-import { Config, Exception as ExceptionProto } from "@streamlit/protobuf"
+import { Config, type Exception as ExceptionProto } from "@streamlit/protobuf"
 import { isLocalhost } from "@streamlit/utils"
 
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"

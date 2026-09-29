@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-import { FC, memo, useCallback } from "react"
+import { type FC, memo, useCallback } from "react"
 
-import { Selectbox as SelectboxProto } from "@streamlit/protobuf"
+import type { Selectbox as SelectboxProto } from "@streamlit/protobuf"
 
 import UISelectbox from "~lib/components/shared/Dropdown/Selectbox"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
   disabled: boolean

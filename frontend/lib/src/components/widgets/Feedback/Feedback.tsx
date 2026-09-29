@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useMemo, useRef } from "react"
+import { memo, type ReactElement, useCallback, useMemo, useRef } from "react"
 
-import { Feedback as FeedbackProto, streamlit } from "@streamlit/protobuf"
+import { Feedback as FeedbackProto, type streamlit } from "@streamlit/protobuf"
 
 import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   StyledFeedbackButton,

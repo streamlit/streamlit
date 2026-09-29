@@ -19,12 +19,12 @@
  */
 
 import {
-  Schema as ArrowSchema,
+  type Schema as ArrowSchema,
   Dictionary,
   Field,
   Int,
   Null,
-  Table,
+  type Table,
   tableFromIPC,
   Vector,
 } from "apache-arrow"
@@ -33,12 +33,12 @@ import { range, unzip } from "lodash-es"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
-  ArrowType,
+  type ArrowType,
   convertVectorToList,
   DataFrameCellType,
-  PandasRangeIndex,
+  type PandasRangeIndex,
   PandasRangeIndexType,
-  PandasSchema,
+  type PandasSchema,
 } from "./arrowTypeUtils"
 
 /**

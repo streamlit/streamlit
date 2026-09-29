@@ -187,7 +187,8 @@ export function useWaveformController({
     try {
       const [WaveSurferModule, RecordPluginModule] = await Promise.all([
         import("wavesurfer.js"),
-        import("wavesurfer.js/dist/plugins/record"),
+        // v8 package exports require the .js suffix for dist/plugins imports.
+        import("wavesurfer.js/dist/plugins/record.js"),
       ])
       const WaveSurfer = WaveSurferModule.default
       const RecordPluginClass = RecordPluginModule.default

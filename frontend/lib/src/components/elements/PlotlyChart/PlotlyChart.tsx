@@ -15,9 +15,9 @@
  */
 
 import {
-  FC,
+  type FC,
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useEffect,
   useMemo,
@@ -38,7 +38,7 @@ import useTimeout from "~lib/hooks/useTimeout"
 import Plot, {
   type Figure as PlotlyFigureType,
 } from "~lib/util/reactPlotlyCompat"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   migratePlotlyMapboxConfig,
@@ -497,11 +497,20 @@ export function PlotlyChart({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [plotlyFigure.layout?.dragmode])
 
+  // Only name the container when the author provided a non-blank alt.
+  // Blank input is treated as absent: aria-label=" " computes to an empty
+  // accessible name, which is worse than none. role="figure" (not "img")
+  // is required to legally expose aria-label on this otherwise-generic div
+  // without making Plotly's focusable modebar presentational.
+  const accessibleName = element.alt?.trim() || undefined
+
   return (
     <StyledPlotlyChartContainer
       ref={containerRef}
       className="stPlotlyChart"
       data-testid="stPlotlyChart"
+      role={accessibleName ? "figure" : undefined}
+      aria-label={accessibleName}
     >
       <Plot
         data={plotlyFigure.data}

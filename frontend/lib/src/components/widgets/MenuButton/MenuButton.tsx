@@ -16,7 +16,7 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useId,
   useMemo,
@@ -25,9 +25,9 @@ import {
 } from "react"
 
 import { FloatingPortal } from "@floating-ui/react"
-import { type Key } from "react-aria-components"
+import type { Key } from "react-aria-components"
 
-import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
+import type { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
 
 import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { Box } from "~lib/components/shared/Base/styled-components"
@@ -48,7 +48,7 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 import { convertRemToPx } from "~lib/theme/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   StyledMenuButtonExpansionIcon,

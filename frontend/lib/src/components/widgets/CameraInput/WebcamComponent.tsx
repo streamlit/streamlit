@@ -16,7 +16,7 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useEffect,
   useMemo,
@@ -41,7 +41,9 @@ import {
   StyledDescription,
   StyledLink,
 } from "./styled-components"
-import SwitchFacingModeButton, { FacingMode } from "./SwitchFacingModeButton"
+import SwitchFacingModeButton, {
+  type FacingMode,
+} from "./SwitchFacingModeButton"
 
 export interface Props {
   handleCapture: (capturedPhoto: string | null) => void

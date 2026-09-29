@@ -17,12 +17,12 @@
 import { useCallback, useMemo } from "react"
 
 import {
-  BaseDrawArgs,
-  DataEditorProps,
-  DrawCellCallback,
+  type BaseDrawArgs,
+  type DataEditorProps,
+  type DrawCellCallback,
   drawTextCell,
-  Theme as GlideTheme,
-  Rectangle,
+  type Theme as GlideTheme,
+  type Rectangle,
 } from "@glideapps/glide-data-grid"
 import {
   DatePickerCell,
@@ -32,7 +32,7 @@ import {
 } from "@glideapps/glide-data-grid-cells"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   CustomCells,
   isErrorCell,
   isMissingValueCell,

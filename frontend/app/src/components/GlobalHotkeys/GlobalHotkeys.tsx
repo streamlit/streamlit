@@ -54,6 +54,12 @@ export function GlobalHotkeys({
     const activeKeys = new Set<string>()
 
     const handleKeyDown = (event: KeyboardEvent): void => {
+      // Skip events with a non-string `key` so `normalizeKey` does not throw
+      // (synthetic `Event`s from hosts, extensions, or tests omit `key`).
+      if (typeof event.key !== "string") {
+        return
+      }
+
       const normalizedKey = normalizeKey(event.key)
       // Shift is allowed on single-character keys so advertised shortcuts
       // like R and C still work. Multi-character keys such as esc still
@@ -78,6 +84,12 @@ export function GlobalHotkeys({
     }
 
     const handleKeyUp = (event: KeyboardEvent): void => {
+      // Skip events with a non-string `key` so `normalizeKey` does not throw
+      // (synthetic `Event`s from hosts, extensions, or tests omit `key`).
+      if (typeof event.key !== "string") {
+        return
+      }
+
       const normalizedKey = normalizeKey(event.key)
       if (!activeKeys.delete(normalizedKey)) {
         return

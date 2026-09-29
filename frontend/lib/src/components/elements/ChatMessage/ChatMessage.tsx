@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, type ReactElement } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 
 import {
   StyledAvatarBackground,

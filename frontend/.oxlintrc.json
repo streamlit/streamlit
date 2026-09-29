@@ -29,6 +29,7 @@
     "eslint/no-promise-executor-return": "error",
     "oxc/no-accumulating-spread": "error",
     "typescript/no-dynamic-delete": "error",
+    "typescript/no-import-type-side-effects": "error",
     "jsx-a11y/control-has-associated-label": "error",
     "jsx-a11y/lang": "off",
     "jsx-a11y/no-aria-hidden-on-focusable": "error",
@@ -96,11 +97,12 @@
     "vitest/no-commented-out-tests": "error",
     "vitest/no-conditional-expect": "off",
     "vitest/no-disabled-tests": "off",
+    "vitest/no-duplicate-hooks": "error",
     "vitest/no-focused-tests": "error",
     "vitest/no-standalone-expect": "off",
     "vitest/require-local-test-context-for-concurrent-snapshots": "off",
     "vitest/require-mock-type-parameters": "off",
-    "vitest/require-to-throw-message": "off",
+    "vitest/require-to-throw-message": "error",
     "vitest/valid-describe-callback": "off",
     "vitest/valid-expect": "off",
     "vitest/valid-expect-in-promise": "off",
@@ -111,5 +113,30 @@
     "promise/no-callback-in-promise": "error",
     "promise/no-new-statics": "error",
     "promise/valid-params": "error"
-  }
+  },
+  "overrides": [
+    {
+      "files": [
+        "lib/src/**/*.ts",
+        "lib/src/**/*.tsx"
+      ],
+      "rules": {
+        "typescript/consistent-type-imports": [
+          "error",
+          {
+            "fixStyle": "inline-type-imports"
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "lib/src/**/*.test.ts",
+        "lib/src/**/*.test.tsx"
+      ],
+      "rules": {
+        "typescript/consistent-type-imports": "off"
+      }
+    }
+  ]
 }

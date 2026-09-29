@@ -21,7 +21,7 @@ import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
 import type { EmotionTheme } from "~lib/theme/types"
 import type { Figure as PlotlyFigureType } from "~lib/util/reactPlotlyCompat"
 import { keysToSnakeCase, notNullOrUndefined } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   applyStreamlitTheme,

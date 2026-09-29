@@ -80,7 +80,9 @@ describe("DefaultStreamlitEndpoints", () => {
         csrfEnabled: true,
         sendClientError: vi.fn(),
       })
-      expect(() => endpoint.buildComponentURL("foo", "index.html")).toThrow()
+      expect(() => endpoint.buildComponentURL("foo", "index.html")).toThrow(
+        "not connected to a server!"
+      )
     })
 
     it("uses current or cached serverURI if present", () => {

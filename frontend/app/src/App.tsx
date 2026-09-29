@@ -335,6 +335,30 @@ export class App extends PureComponent<Props, State> {
   // This will allow us to ignore finished messages from previous script runs.
   private hasReceivedNewSession: boolean = false
 
+  /**
+   * History-navigation PageInfo should use replaceState, not pushState, so the
+   * restored back/forward entry is not duplicated. Only relevant when the
+   * backend changes the query string during a history rerun; an unchanged
+   * query string never reaches the history API (see handlePageInfoChanged).
+   *
+   * Attribution is best-effort (PageInfo has no run id):
+   * - {@link rerunEpoch}: increments on every rerun request the frontend sends.
+   * - {@link historyNavigationEpoch}: set to that epoch on a history BackMsg;
+   *   advanced with the epoch only for an auto-rerun that immediately follows
+   *   a still-pending history BackMsg (no NewSession yet, no intervening
+   *   non-history BackMsg) — matching backend sticky coalesce. Left unchanged
+   *   on other non-history BackMsgs; cleared on a superseding NewSession
+   *   (epoch mismatch) or on a successful finish for the latest run.
+   * - PageInfo uses replaceState while historyNavigationEpoch !== null.
+   * - FINISHED_EARLY_FOR_RERUN does not clear the epoch.
+   *
+   * Known limitation: a stale history NewSession after a newer non-history
+   * BackMsg can clear the epoch early (same class as hasReceivedNewSession).
+   * Closing that requires a run id on PageInfo.
+   */
+  private rerunEpoch: number = 0
+  private historyNavigationEpoch: number | null = null
+
   // Active `run_every` auto-rerun timers, keyed by fragment id. These are
   // imperative resources (setInterval handles), so they live outside of React
   // state. Keying by fragment id lets us keep a single timer per fragment: we
@@ -1274,7 +1298,14 @@ export class App extends PureComponent<Props, State> {
     // fill the back stack with no-op entries. React state and the host message
     // below are still updated so embeds stay in sync.
     if (queryString !== currentSearch) {
-      window.history.pushState({}, "", targetUrl)
+      if (this.historyNavigationEpoch !== null) {
+        // PageInfo can arrive in multiple messages during one history rerun.
+        // replaceState keeps the address bar and host query params aligned
+        // without polluting the back stack.
+        window.history.replaceState({}, "", targetUrl)
+      } else {
+        window.history.pushState({}, "", targetUrl)
+      }
     }
 
     this.setState({ queryParams: queryString })
@@ -1519,6 +1550,13 @@ export class App extends PureComponent<Props, State> {
     // Set this flag to indicate that we have received a NewSession message
     // after the latest rerun request:
     this.hasReceivedNewSession = true
+
+    // NewSession is attributed to the latest BackMsg (rerunEpoch). Keep
+    // history replaceState only when that BackMsg was history navigation;
+    // otherwise end it so this run's PageInfo can pushState.
+    if (this.historyNavigationEpoch !== this.rerunEpoch) {
+      this.historyNavigationEpoch = null
+    }
 
     // First, handle initialization logic. Each NewSession message has
     // initialization data. If this is the _first_ time we're receiving
@@ -1858,14 +1896,21 @@ export class App extends PureComponent<Props, State> {
       document.location.pathname
     )
 
-    const hasAnchor = document.location.toString().includes("#")
-    const isSamePage = targetAppPage?.pageScriptHash === currentPageScriptHash
-    const queryString = normalizeQueryString(document.location.search)
-    const stateQueryString = normalizeQueryString(queryParams)
-
-    if (isNullOrUndefined(targetAppPage)) {
+    // Before Navigation metadata arrives, findPageByUrlPath returns null.
+    // Fall back to the current page hash so query-only back/forward still reruns
+    // instead of being ignored as unknown-page navigation.
+    const pageScriptHash =
+      targetAppPage?.pageScriptHash ?? currentPageScriptHash
+    if (!pageScriptHash) {
       return
     }
+
+    const hasAnchor = document.location.toString().includes("#")
+    const isSamePage =
+      isNullOrUndefined(targetAppPage) ||
+      targetAppPage.pageScriptHash === currentPageScriptHash
+    const queryString = normalizeQueryString(document.location.search)
+    const stateQueryString = normalizeQueryString(queryParams)
 
     // Do not rerun for anchor-only navigation on the same page.
     if (hasAnchor && isSamePage && queryString === stateQueryString) {
@@ -1876,10 +1921,13 @@ export class App extends PureComponent<Props, State> {
     // explicitly to onPageChange because syncQueryParams' setState has not
     // flushed yet, and preserve it across page changes.
     this.syncQueryParams(queryString)
+    const preserveQueryParams = true
+    const isHistoryNavigation = true
     this.onPageChange(
-      targetAppPage.pageScriptHash as string,
+      pageScriptHash,
       queryString,
-      true
+      preserveQueryParams,
+      isHistoryNavigation
     )
   }
 
@@ -1997,6 +2045,17 @@ export class App extends PureComponent<Props, State> {
       scriptRunFinishedSequence: prevState.scriptRunFinishedSequence + 1,
       scriptRunFinishedFragmentIds: prevState.fragmentIdsThisRun,
     }))
+
+    // Clear history replaceState only on a real finish for the latest
+    // requested run. An interrupt (FINISHED_EARLY_FOR_RERUN) from an older
+    // history run must not drop the flag for a newer history request that is
+    // still pending.
+    if (
+      this.hasReceivedNewSession &&
+      status !== ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+    ) {
+      this.historyNavigationEpoch = null
+    }
 
     if (
       status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
@@ -2298,7 +2357,8 @@ export class App extends PureComponent<Props, State> {
   onPageChange = (
     pageScriptHash: string,
     queryString?: string,
-    preserveQueryParams?: boolean
+    preserveQueryParams?: boolean,
+    isHistoryNavigation?: boolean
   ): void => {
     const { elements, mainScriptHash } = this.state
 
@@ -2326,7 +2386,8 @@ export class App extends PureComponent<Props, State> {
       pageScriptHash,
       undefined,
       queryString,
-      preserveQueryParams
+      preserveQueryParams,
+      isHistoryNavigation
     )
   }
 
@@ -2345,7 +2406,8 @@ export class App extends PureComponent<Props, State> {
     pageScriptHash?: string,
     isAutoRerun?: boolean,
     queryStringOverride?: string,
-    preserveQueryParams?: boolean
+    preserveQueryParams?: boolean,
+    isHistoryNavigation?: boolean
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -2416,6 +2478,22 @@ export class App extends PureComponent<Props, State> {
     const cachedMessageHashes =
       this.connectionManager?.getCachedMessageHashes() ?? []
 
+    this.rerunEpoch += 1
+    if (isHistoryNavigation) {
+      this.historyNavigationEpoch = this.rerunEpoch
+    } else if (
+      isAutoRerun &&
+      // Only re-stick while a history BackMsg is still awaiting NewSession
+      // (backend pending coalesce). Do not re-stick after the history run's
+      // NewSession (a later auto-rerun is a separate interrupt) or after a
+      // superseding widget BackMsg (epoch gap — last-wins already dropped the
+      // history bit on the backend).
+      !this.hasReceivedNewSession &&
+      this.historyNavigationEpoch === this.rerunEpoch - 1
+    ) {
+      this.historyNavigationEpoch = this.rerunEpoch
+    }
+
     this.sendBackMsg(
       new BackMsg({
         rerunScript: {
@@ -2425,6 +2503,7 @@ export class App extends PureComponent<Props, State> {
           pageName,
           fragmentId,
           isAutoRerun,
+          isHistoryNavigation,
           cachedMessageHashes,
           contextInfo,
         },

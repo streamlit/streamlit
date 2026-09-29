@@ -15,7 +15,7 @@
  */
 
 import {
-  FC,
+  type FC,
   memo,
   type ReactElement,
   useCallback,
@@ -57,7 +57,7 @@ import { isMobile } from "~lib/util/isMobile"
 import {
   getSelectPlaceholder,
   isNullOrUndefined,
-  LabelVisibilityOptions,
+  type LabelVisibilityOptions,
 } from "~lib/util/utils"
 
 import {

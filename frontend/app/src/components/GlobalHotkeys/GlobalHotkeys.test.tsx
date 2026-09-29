@@ -74,6 +74,37 @@ describe("GlobalHotkeys", () => {
     expect(onKeyDown).not.toHaveBeenCalled()
   })
 
+  it.each(["keydown", "keyup"] as const)(
+    "ignores %s events without a string key",
+    eventType => {
+      const onKeyDown = vi.fn()
+      const onKeyUp = vi.fn()
+      render(
+        <GlobalHotkeys keyName="c" onKeyDown={onKeyDown} onKeyUp={onKeyUp}>
+          <div>content</div>
+        </GlobalHotkeys>
+      )
+
+      const listenerErrors: unknown[] = []
+      const onError = (event: ErrorEvent): void => {
+        listenerErrors.push(event.error)
+        event.preventDefault()
+      }
+      // jsdom reports throwing listeners as window `error` events instead of
+      // throwing from `dispatchEvent`.
+      window.addEventListener("error", onError)
+      try {
+        document.dispatchEvent(new Event(eventType))
+      } finally {
+        window.removeEventListener("error", onError)
+      }
+
+      expect(listenerErrors).toEqual([])
+      expect(onKeyDown).not.toHaveBeenCalled()
+      expect(onKeyUp).not.toHaveBeenCalled()
+    }
+  )
+
   it("removes document listeners on unmount", async () => {
     const user = userEvent.setup()
     const onKeyDown = vi.fn()

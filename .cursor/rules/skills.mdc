@@ -86,6 +86,7 @@ Key points:
 1. Create a new directory in `.claude/skills/` with a descriptive name
 2. Add a `SKILL.md` file with the required frontmatter
 3. Write clear, actionable instructions for the AI agent
+4. Allowlist the skill directory in `.claude/.gitignore` (`!skills/<name>/`)
 
 ## Contributing
 

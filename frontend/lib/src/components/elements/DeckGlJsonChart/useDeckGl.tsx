@@ -16,8 +16,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
-import {
-  type DeckProps,
+import type {
+  DeckProps,
   PickingInfo,
   ViewStateChangeParameters,
 } from "@deck.gl/core"
@@ -25,20 +25,20 @@ import { parseToRgba } from "color2k"
 import JSON5 from "json5"
 import { isEqual } from "lodash-es"
 
-import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
+import type { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
 
 import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import {
   useBasicWidgetClientState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useStWidthHeight } from "~lib/hooks/useStWidthHeight"
 import type { EmotionTheme } from "~lib/theme/types"
 import { isNullOrUndefined } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import type {
   DeckGlElementState,
@@ -47,7 +47,7 @@ import type {
   ParsedDeckGlConfig,
 } from "./types"
 import {
-  FillFunction,
+  type FillFunction,
   getContextualFillColor,
   LAYER_TYPE_TO_FILL_FUNCTION,
 } from "./utils/colors"

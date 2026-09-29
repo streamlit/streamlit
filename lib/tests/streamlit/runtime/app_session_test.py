@@ -1011,6 +1011,7 @@ def _mock_get_options_for_section(
         "textColor": "black",
         "codeBackgroundColor": "blue",
         "dataframeHeaderBackgroundColor": "purple",
+        "dataframeHeaderTextColor": "white",
         "redColor": "red",
         "orangeColor": "orange",
         "yellowColor": "yellow",
@@ -1085,6 +1086,7 @@ def _mock_get_options_for_section(
         "codeTextColor": "#09ab3b",
         "codeBackgroundColor": "blue",
         "dataframeHeaderBackgroundColor": "purple",
+        "dataframeHeaderTextColor": "white",
         "chartCategoricalColors": [
             "#7fc97f",
             "#beaed4",
@@ -1759,6 +1761,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "codeTextColor": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
+                    "dataframeHeaderTextColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
                     "chartDivergingColors": None,
@@ -1825,6 +1828,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "codeTextColor": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
+                    "dataframeHeaderTextColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
                     "chartDivergingColors": None,
@@ -1891,6 +1895,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "codeTextColor": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
+                    "dataframeHeaderTextColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
                     "chartDivergingColors": None,
@@ -1937,6 +1942,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                         "codeTextColor": None,
                         "codeBackgroundColor": None,
                         "dataframeHeaderBackgroundColor": None,
+                        "dataframeHeaderTextColor": None,
                         "redColor": None,
                         "orangeColor": None,
                         "yellowColor": None,
@@ -1996,6 +2002,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.HasField(
             "dataframe_header_background_color"
         )
+        assert not new_session_msg.custom_theme.HasField("dataframe_header_text_color")
         assert not new_session_msg.custom_theme.HasField("red_color")
         assert not new_session_msg.custom_theme.HasField("orange_color")
         assert not new_session_msg.custom_theme.HasField("yellow_color")
@@ -2044,6 +2051,9 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.sidebar.HasField(
             "dataframe_header_background_color"
         )
+        assert not new_session_msg.custom_theme.sidebar.HasField(
+            "dataframe_header_text_color"
+        )
         assert not new_session_msg.custom_theme.sidebar.HasField("red_color")
         assert not new_session_msg.custom_theme.sidebar.HasField("orange_color")
         assert not new_session_msg.custom_theme.sidebar.HasField("yellow_color")
@@ -2091,6 +2101,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert (
             new_session_msg.custom_theme.dataframe_header_background_color == "purple"
         )
+        assert new_session_msg.custom_theme.dataframe_header_text_color == "white"
         assert new_session_msg.custom_theme.red_color == "#7d353b"
         assert new_session_msg.custom_theme.orange_color == "#d95a00"
         assert new_session_msg.custom_theme.yellow_color == "#916e10"
@@ -2226,6 +2237,9 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert (
             new_session_msg.custom_theme.sidebar.dataframe_header_background_color
             == "purple"
+        )
+        assert (
+            new_session_msg.custom_theme.sidebar.dataframe_header_text_color == "white"
         )
         assert new_session_msg.custom_theme.sidebar.red_color == "red"
         assert new_session_msg.custom_theme.sidebar.orange_color == "orange"

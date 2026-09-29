@@ -897,6 +897,7 @@ class SessionState:
         *,
         replay_trigger_states: WidgetStatesProto | None = None,
         replay_trigger_values: Mapping[str, Any] | None = None,
+        is_history_navigation: bool = False,
     ) -> None:
         """Prepare widget state before a script rerun.
 
@@ -915,10 +916,18 @@ class SessionState:
             Hydrated chat-input values for replay trigger states, keyed by widget ID.
             They preserve uploaded files and audio because chat deserialization
             consumes their records and cannot safely be repeated.
+        is_history_navigation : bool
+            Whether this rerun was triggered by browser back/forward. When true,
+            stale widget states for query-bound widgets are ignored so the URL
+            can restore their values.
         """
         self._reset_triggers()
         self._compact_state()
         if fresh_widget_states is not None:
+            if is_history_navigation:
+                fresh_widget_states = self._omit_query_bound_widget_states(
+                    fresh_widget_states
+                )
             self.set_widgets_from_proto(fresh_widget_states)
             self._current_interaction_widget_states = fresh_widget_states
             try:
@@ -1142,6 +1151,24 @@ class SessionState:
             cached_message_hashes=ctx.cached_message_hashes,
             context_info=ctx.context_info,
         )
+
+    def _omit_query_bound_widget_states(
+        self, widget_states: WidgetStatesProto
+    ) -> WidgetStatesProto:
+        """Drop query-bound widgets so browser history can restore them from the URL.
+
+        Omitting them before callback dispatch means their ``on_change`` handlers
+        do not run on back/forward. ``register_widget`` re-seeds the values from
+        the URL, matching initial page load.
+        """
+        if not self._query_param_bound_widget_ids:
+            return widget_states
+
+        filtered = WidgetStatesProto()
+        for widget in widget_states.widgets:
+            if widget.id not in self._query_param_bound_widget_ids:
+                filtered.widgets.append(widget)
+        return filtered
 
     def _filter_active_trigger_widget_states(
         self, widget_states: WidgetStatesProto | None
@@ -1465,7 +1492,9 @@ class SessionState:
             )
         }
 
-        # Re-add the preserved values under their user keys.
+        # Persist/bind unmount: copy the current widget value onto the user
+        # key so remount restores the last edit. This overwrites a leftover
+        # pre-registration user-key entry if one exists.
         self._old_state.update(preserved_by_key)
 
         # A keyed widget can remount under a new element id this run (e.g. after
@@ -1573,12 +1602,18 @@ class SessionState:
             self._set_key_widget_mapping(widget_id, user_key)
 
         # Handle query param binding
-        url_value_seeded = False
+        url_binding_resolved = False
         if metadata.bind == "query-params" and user_key is not None:
             self._query_param_bound_widget_ids.add(widget_id)
-            url_value_seeded = self._handle_query_param_binding(
+            url_binding_resolved = self._handle_query_param_binding(
                 metadata, user_key, widget_id
             )
+            # Whenever the URL (or its absence) decided this widget's value, the
+            # wire labels captured above belong to a discarded frontend value.
+            # Clear them so callers do not reconcile options against it.
+            if url_binding_resolved:
+                incoming_serialized_value = None
+                incoming_serialized_values = None
         elif metadata.bind is None and user_key is not None:
             # Widget stopped using bind — clean up any stale binding
             self._query_param_bound_widget_ids.discard(widget_id)
@@ -1609,7 +1644,7 @@ class SessionState:
         # frontend value and must be dropped, so resolution falls back to the
         # widget's previous value (or its default on first registration).
         # URL-seeded values are exempt: they populate widget state legitimately
-        # for bound widgets (url_value_seeded). A programmatic st.session_state
+        # for bound widgets (url_binding_resolved). A programmatic st.session_state
         # assignment lives in _new_session_state and still wins during
         # resolution, so dropping the forged widget-state entry never affects it
         # while preventing the forged value from lingering there until compaction.
@@ -1617,15 +1652,16 @@ class SessionState:
         if (
             metadata.disabled
             and widget_id in self._new_widget_state
-            and not url_value_seeded
+            and not url_binding_resolved
         ):
             del self._new_widget_state[widget_id]
-            # The captured wire label belongs to the dropped frontend value, so
-            # it must not leak to callers. Otherwise a caller like st.selectbox
-            # could reconcile options against this attacker-controlled label (see
-            # resolve_value_against_options) and hand back an option that differs
-            # from the value we resolve below.
+            # The captured wire labels belong to the dropped frontend value, so
+            # they must not leak to callers. Otherwise a caller like st.selectbox
+            # or st.multiselect could reconcile options against this attacker-
+            # controlled label (see resolve_value_against_options) and hand back
+            # an option that differs from the value we resolve below.
             incoming_serialized_value = None
+            incoming_serialized_values = None
             if user_key is None or user_key not in self._new_session_state:
                 # No programmatic value is taking over resolution, so the discard
                 # itself changes the resolved value; flag the frontend to re-sync.
@@ -1634,7 +1670,7 @@ class SessionState:
         if (
             widget_id not in self
             and (user_key is None or user_key not in self)
-            and not url_value_seeded
+            and not url_binding_resolved
         ):
             # This is the first time the widget is registered, so we save its
             # value in widget state (unless we already seeded from URL).
@@ -1682,7 +1718,7 @@ class SessionState:
                     restored_bound_value = True
                 elif (
                     user_key in self._new_session_state
-                    and not url_value_seeded
+                    and not url_binding_resolved
                     and (widget_id in self._old_state or user_key in self._old_state)
                 ):
                     serialized = metadata.serializer(widget_value)
@@ -1694,7 +1730,7 @@ class SessionState:
                         )
             elif (
                 user_key in self._new_session_state
-                and not url_value_seeded
+                and not url_binding_resolved
                 and self.query_params.has_param(user_key)
                 and (widget_id in self._old_state or user_key in self._old_state)
             ):
@@ -1702,23 +1738,40 @@ class SessionState:
             else:
                 self.query_params.discard_param_no_forward_msg(user_key)
 
-        # A persist_state widget resolving to a non-default value from a previous
-        # run (preserved while unmounted, or a compacted programmatic set) must
-        # tell the frontend to adopt the backend value on (re)mount. Otherwise it
-        # renders at its default and the next rerun overwrites the preserved value.
-        # For a bind + persist_state widget this can overlap with
-        # restored_bound_value; that is harmless since both only feed the OR below.
-        restored_persisted_value = False
+        # A keyed widget with a non-default value from a previous run must tell
+        # the frontend to adopt that value on (re)mount. Otherwise the UI mounts
+        # at the element default and the next rerun overwrites session state.
+        # This fires when:
+        # - persist_state preserved a value under the user key or widget id
+        # - a previous-run user-key write happened before the widget first
+        #   registered (setdefault / session_state assignment while off-screen)
+        #
+        # What remount shows after hide/show:
+        # - persist_state="session", or "page" on the same page: cleanup copies
+        #   the current widget value onto the user key, so remount restores the
+        #   last edit (not an earlier setdefault).
+        # - persist_state=None with no independent user-key entry: cleanup drops
+        #   the widget id and remount resets to the element default.
+        # - persist_state=None after a user-key write before first registration:
+        #   that user-key entry is ordinary session state and is not refreshed
+        #   (later compaction stores the live value under the widget id). After
+        #   unmount the widget id is dropped, so remount adopts the original
+        #   user-key value rather than the last edit.
+        # Overlap with restored_bound_value is harmless; both only feed the
+        # OR below.
+        restored_session_state_value = False
         if (
-            metadata.persist_state is not None
-            and user_key is not None
+            user_key is not None
             and not self.is_new_state_value(user_key)
             and widget_id not in self._new_widget_state
-            and (widget_id in self._old_state or user_key in self._old_state)
+            and (
+                user_key in self._old_state
+                or (metadata.persist_state is not None and widget_id in self._old_state)
+            )
         ):
             default_value = metadata.deserializer(None)
             if widget_value != default_value:
-                restored_persisted_value = True
+                restored_session_state_value = True
 
         # widget_value_changed indicates to the caller that the widget's current
         # value is different from what is in the frontend. True when:
@@ -1726,14 +1779,14 @@ class SessionState:
         # - a bound value was restored to the URL — the frontend renders the
         #   widget for the first time on this page and must use the backend's
         #   resolved value instead of the widget's default;
-        # - a persisted value was restored from session state on (re)mount, for
-        #   the same reason;
+        # - a previous-run user-key or persist_state value was restored from
+        #   session state on (re)mount, for the same reason;
         # - a "page"-scoped value was dropped on a page switch, so the frontend
         #   must fall back to the default for the reused widget id.
         widget_value_changed = (
             (user_key is not None and self.is_new_state_value(user_key))
             or restored_bound_value
-            or restored_persisted_value
+            or restored_session_state_value
             or dropped_page_scoped_value
             or disabled_value_discarded
         )
@@ -1753,15 +1806,26 @@ class SessionState:
         Registers the binding, then attempts to seed the widget's value from URL
         based on priority rules:
 
-        - On initial load, URL wins (enables shareable URLs)
-        - On subsequent reruns, session_state values win
+        Normal reruns:
+        - Initial load: URL wins (enables shareable URLs)
+        - Subsequent reruns: session_state values win
         - User interaction (frontend value) always wins
 
-        Returns True if the widget's value was seeded from URL, False otherwise.
+        History navigation (``is_history_navigation``):
+        - URL wins, including when the param is missing or invalid
+        - Code-assigned ``st.session_state`` values for this run are overridden
+        - A missing param restores the widget default, overriding a value
+          assigned in ``st.session_state`` before the widget call. Initial load
+          leaves that assignment in place; on history navigation the restored
+          entry had no param, so the default is what the URL asks for.
+
+        Returns True if the widget's value was resolved here (seeded from the URL,
+        or reset to the default on history navigation), False otherwise.
         """
         # Register the widget binding
         ctx = get_script_run_ctx()
         script_hash = ThreadState.get().active_script_hash if ctx is not None else ""
+        is_history_navigation = ctx is not None and ctx.is_history_navigation
         self.query_params.bind_widget(
             param_key=user_key,
             widget_id=widget_id,
@@ -1774,16 +1838,36 @@ class SessionState:
         # _new_widget_state is a stale/forged frontend value. Let URL seeding proceed;
         # disabled enforcement in register_widget then discards the forged value.
         if widget_id in self._new_widget_state and not metadata.disabled:
-            return False
+            if not is_history_navigation:
+                return False
+            # History navigation must discard preserved widget state so the URL
+            # can seed. Omit only strips the incoming proto; this also drops
+            # values copied into _new_widget_state on MPA page change and
+            # first-time binds.
+            del self._new_widget_state[widget_id]
         is_initial_load = widget_id not in self._old_state
-        if not is_initial_load and user_key in self._new_session_state:
+        if (
+            not is_initial_load
+            and user_key in self._new_session_state
+            and not is_history_navigation
+        ):
             return False  # Code set value after first run
 
         url_value = self.query_params.get_initial_value(user_key)
-        if url_value is None:
+        if url_value is not None and self._seed_widget_from_url(
+            metadata, user_key, widget_id, url_value
+        ):
+            return True
+        if not is_history_navigation:
             return False
-
-        return self._seed_widget_from_url(metadata, user_key, widget_id, url_value)
+        # The restored history entry carried no usable value for this param, so
+        # the default is what the URL asks for — even over a same-run
+        # st.session_state assignment. Initial load leaves that assignment in
+        # place when the param is absent.
+        default_value = metadata.deserializer(None)
+        self._new_widget_state.set_from_value(widget_id, default_value)
+        self._new_session_state[user_key] = default_value
+        return True
 
     def _seed_widget_from_url(
         self,

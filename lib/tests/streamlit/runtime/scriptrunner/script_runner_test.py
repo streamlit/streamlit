@@ -154,6 +154,17 @@ class ScriptRunnerTest(unittest.TestCase):
         finally:
             scriptrunner.join()
 
+    def test_start_raises_if_already_started(self) -> None:
+        """ScriptRunner.start() may be called only once."""
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner.request_stop()
+        scriptrunner.start()
+        try:
+            with pytest.raises(RuntimeError, match="already started"):
+                scriptrunner.start()
+        finally:
+            scriptrunner.join()
+
     def test_callable_entrypoint_runs_on_full_rerun(self):
         """Callable entrypoints run on full reruns without compiling the script path."""
         call_count = 0
@@ -1251,6 +1262,7 @@ class ScriptRunnerTest(unittest.TestCase):
             None,
             replay_trigger_states=replay,
             replay_trigger_values=None,
+            is_history_navigation=False,
         )
 
     @patch(
@@ -2024,6 +2036,18 @@ class ScriptRunnerTest(unittest.TestCase):
         )
         assert scriptrunner.events == [ScriptRunnerEvent.SHUTDOWN]
         assert scriptrunner._event_loop is None
+
+    def test_missing_event_loop_fails_without_replacement(self) -> None:
+        """ScriptRunner raises when its caller-owned loop has been cleared."""
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._event_loop = None
+        scriptrunner.start()
+        scriptrunner.join()
+
+        assert len(scriptrunner.script_thread_exceptions) == 1
+        assert str(scriptrunner.script_thread_exceptions[0]) == (
+            "ScriptRunner event loop is no longer available"
+        )
 
     def test_event_loop_persists_across_reruns(self):
         """The same loop object is current on every rerun of a session."""

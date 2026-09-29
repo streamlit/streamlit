@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { ReactElement } from "react"
 
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
+import type { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Fullscreen, FullscreenExit } from "@emotion-icons/material-outlined"
 
 import Button, {
