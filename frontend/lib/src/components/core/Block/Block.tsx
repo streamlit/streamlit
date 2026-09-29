@@ -624,13 +624,18 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
     ]
   )
 
+  const useOverflowPort =
+    gridHasBoundedHeight &&
+    cellHeightMode !== BlockProto.GridContainer.CellHeightMode.EQUAL
+
   const grid = (
     <StyledGridContainerBlock
       ref={elementRef}
       columnCount={columnCount}
       minColumnWidthPx={minColumnWidthPx}
       $wrap={wrap}
-      $applyOverflow={!gridHasBoundedHeight}
+      $applyOverflow={!useOverflowPort}
+      $fillHeight={gridHasBoundedHeight && !useOverflowPort}
       rowGap={rowGap}
       columnGap={columnGap}
       cellHeightMode={cellHeightMode}
@@ -647,7 +652,7 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
     </StyledGridContainerBlock>
   )
 
-  if (!gridHasBoundedHeight) {
+  if (!useOverflowPort) {
     return grid
   }
 

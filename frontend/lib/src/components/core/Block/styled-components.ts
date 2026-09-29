@@ -411,9 +411,10 @@ export interface StyledGridContainerBlockProps {
   cellHeightMode: BlockProto.GridContainer.CellHeightMode
   cellHeightPx?: number
   $dense?: boolean
+  $fillHeight?: boolean
   /**
    * When false, skip wrap=False overflow on this element. Bounded-height
-   * grids apply overflow on StyledGridScrollBody instead.
+   * content/fixed grids apply overflow on StyledGridScrollBody instead.
    */
   $applyOverflow?: boolean
 }
@@ -430,6 +431,7 @@ export const StyledGridContainerBlock =
       cellHeightMode,
       cellHeightPx,
       $dense,
+      $fillHeight,
       $applyOverflow = true,
     }) => {
       const rowGapPx = translateGapWidth(rowGap, theme)
@@ -458,7 +460,10 @@ export const StyledGridContainerBlock =
         display: "grid",
         width: "100%",
         maxWidth: "100%",
-        height: "auto",
+        // Equal rows need a definite height so minmax(0, 1fr) shares the
+        // bounded box. Content/fixed tracks stay auto inside the overflow
+        // port so they can grow and be measured.
+        ...($fillHeight ? { height: "100%", flex: 1 } : { height: "auto" }),
         minWidth: "1rem",
         minHeight: 0,
         gap: `${rowGapPx} ${columnGapPx}`,

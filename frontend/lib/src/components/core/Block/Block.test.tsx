@@ -1187,6 +1187,31 @@ describe("GridContainer Component", () => {
     expect(screen.getByTestId("stGrid")).toHaveStyle("height: auto")
   })
 
+  it("fills the bounded box with equal-height rows", () => {
+    const block = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        heightConfig: { pixelHeight: 400 },
+        gridContainer: {
+          maxColumns: 2,
+          minColumnWidthPx: 220,
+          rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
+          showCellBorder: false,
+          cellHeightMode: BlockProto.GridContainer.CellHeightMode.EQUAL,
+        },
+      })
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.queryByTestId("stGridScrollBody")).not.toBeInTheDocument()
+    expect(screen.getByTestId("stGrid")).toHaveStyle("height: 100%")
+    expect(screen.getByTestId("stGrid")).not.toHaveStyle("overflow-y: auto")
+  })
+
   it("does not clip a pixel-height grid until in-flow tracks overflow", () => {
     const block = new BlockNode(
       FAKE_SCRIPT_HASH,
